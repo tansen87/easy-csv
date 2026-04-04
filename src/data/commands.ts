@@ -643,11 +643,10 @@ export const xanCommands: XanCommand[] = [
     category: "Format, convert & recombobulate",
     parameters: [
       {
-        name: "delimiter",
+        name: "out-delimiter",
         type: "select",
         description: "New delimiter",
         required: true,
-        isPositional: true,
         options: [",", "\\t", ";", "|", "^"],
       },
       outputParam,
