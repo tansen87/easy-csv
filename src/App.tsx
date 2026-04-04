@@ -65,7 +65,6 @@ function App() {
 
     setPipeline((prev) => [...prev, newStep]);
     setSelectedStep(newStep);
-    addLog("info", `Added command: ${command.name}`);
   };
 
   const handleStepClick = (step: PipelineStep) => {
@@ -77,7 +76,6 @@ function App() {
     if (selectedStep?.id === stepId) {
       setSelectedStep(null);
     }
-    addLog("info", `Removed step: ${stepId}`);
   };
 
   const handleStepUpdate = (stepId: string, parameters: Record<string, any>) => {
@@ -198,27 +196,19 @@ function App() {
   return (
     <div className="h-screen flex flex-col bg-background">
       <header className="h-14 border-b flex items-center justify-between px-4 bg-card">
-        <div className="flex items-center gap-2">
-          <PlayCircle className="h-6 w-6 text-primary" />
-          <h1 className="text-xl font-bold">Xan GUI</h1>
+        <div className="flex-1 flex items-center gap-2">
+          <input
+            type="text"
+            value={inputFile || ''}
+            onChange={handleFileInput}
+            placeholder="Enter input file path"
+            className="text-sm border border-input rounded-md px-3 py-2 w-full"
+          />
+          <Button variant="outline" size="sm" onClick={handleOpenFile}>
+            Browse
+          </Button>
         </div>
-        <div className="flex items-center gap-4">
-          <div
-            className="flex items-center gap-2"
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-          >
-            <input
-              type="text"
-              value={inputFile || ''}
-              onChange={handleFileInput}
-              placeholder="Enter input file path or drag and drop a file here"
-              className="text-sm border border-input rounded-md px-3 py-2 w-96"
-            />
-            <Button variant="outline" size="sm" onClick={handleOpenFile}>
-              Browse
-            </Button>
-          </div>
+        <div className="flex items-center gap-4 ml-4">
           {isXanInstalled === null ? (
             <span className="text-sm text-muted-foreground">
               Checking xan installation...
