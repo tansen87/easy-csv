@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X } from "lucide-react";
+import { X, Settings2, Info } from "lucide-react";
 
 interface ParameterPanelProps {
   step: PipelineStep | null;
@@ -18,15 +18,32 @@ export function ParameterPanel({
 }: ParameterPanelProps) {
   if (!step) {
     return (
-      <div className="h-full flex flex-col bg-background border-l">
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold">Parameters</h2>
-          <p className="text-sm text-muted-foreground">
-            Select a step to edit parameters
-          </p>
+      <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10 border-l border-border/50">
+        <div className="p-4 border-b bg-card/50 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center border border-primary/20">
+              <Settings2 className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                Parameters
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Select a step to edit parameters
+              </p>
+            </div>
+          </div>
         </div>
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
-          <p className="text-sm">No step selected</p>
+          <div className="text-center px-4">
+            <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
+              <Settings2 className="h-8 w-8 text-muted-foreground/50" />
+            </div>
+            <p className="text-sm font-medium text-muted-foreground mb-1">No step selected</p>
+            <p className="text-xs text-muted-foreground/70">
+              Click on a pipeline step to edit its parameters
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -122,47 +139,78 @@ export function ParameterPanel({
   };
 
   return (
-    <div className="h-full flex flex-col bg-background border-l">
-      <div className="p-4 border-b">
+    <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10 border-l border-border/50">
+      <div className="p-4 border-b bg-card/50 backdrop-blur-sm">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Parameters</h2>
-            <p className="text-sm text-muted-foreground">
-              {step.command.name} - {step.command.description}
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center border border-primary/20">
+              <Settings2 className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                Parameters
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {step.command.name}
+              </p>
+            </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose}
+            className="h-8 w-8 rounded-lg hover:bg-accent transition-colors"
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
       </div>
+      <div className="px-4 py-2 border-b bg-background/50">
+        <div className="flex items-start gap-2">
+          <Info className="h-3.5 w-3.5 text-muted-foreground/70 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground/80 leading-relaxed">
+            {step.command.description}
+          </p>
+        </div>
+      </div>
       <ScrollArea className="flex-1">
         <div className="p-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-semibold">
                 Command Parameters
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {step.command.parameters.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    This command has no parameters
-                  </p>
+                  <div className="text-center py-8">
+                    <div className="w-12 h-12 mx-auto mb-3 bg-muted/50 rounded-xl flex items-center justify-center">
+                      <Info className="h-6 w-6 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">No parameters</p>
+                    <p className="text-xs text-muted-foreground/70">
+                      This command has no configurable parameters
+                    </p>
+                  </div>
                 ) : (
                   step.command.parameters.map((param) => (
-                    <div key={param.name} className="space-y-2">
+                    <div key={param.name} className="space-y-2.5">
                       <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium">
+                        <label className="text-sm font-semibold">
                           {param.name}
                         </label>
                         {param.required && (
-                          <span className="text-xs text-destructive">
+                          <span className="text-xs text-destructive font-medium">
                             *
                           </span>
                         )}
                       </div>
+                      {param.description && (
+                        <p className="text-xs text-muted-foreground/80 leading-relaxed">
+                          {param.description}
+                        </p>
+                      )}
                       {renderParameterInput(
                         param,
                         step.parameters[param.name]

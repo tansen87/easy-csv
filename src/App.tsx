@@ -10,7 +10,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { Button } from "@/components/ui/button";
 
-import { Settings, X } from "lucide-react";
+import { Settings, X, FileText, CheckCircle, XCircle, Loader2 } from "lucide-react";
 
 function App() {
   const [pipeline, setPipeline] = useState<PipelineStep[]>([]);
@@ -265,36 +265,65 @@ function App() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      <header className="h-14 border-b flex items-center justify-between px-4 bg-card">
-        <div className="flex-1 flex items-center gap-2">
-          <input
-            type="text"
-            value={inputFile || ''}
-            onChange={handleFileInput}
-            placeholder="Enter input file path"
-            className="text-sm border border-input rounded-md px-3 py-2 w-full"
-          />
-          <Button variant="outline" size="sm" onClick={handleOpenFile}>
-            Browse
-          </Button>
+    <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20">
+      <header className="h-16 border-b bg-card/80 backdrop-blur-sm shadow-sm flex items-center justify-between px-6">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/60 rounded-lg flex items-center justify-center">
+              <FileText className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                Xan GUI
+              </h1>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-4 ml-4">
+
+        <div className="flex-1 max-w-2xl mx-8">
+          <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1.5 border border-border/50">
+            <input
+              type="text"
+              value={inputFile || ''}
+              onChange={handleFileInput}
+              placeholder="Select or enter input file path..."
+              className="flex-1 bg-transparent text-sm px-3 py-1.5 outline-none placeholder:text-muted-foreground/60"
+            />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleOpenFile}
+              className="h-7 px-3 text-xs font-medium hover:bg-accent"
+            >
+              Browse
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
           {isXanInstalled === null ? (
-            <span className="text-sm text-muted-foreground">
-              Checking xan installation...
-            </span>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Checking...</span>
+            </div>
           ) : isXanInstalled ? (
-            <span className="text-sm text-green-600">
-              xan {xanVersion && `(${xanVersion.trim()})`}
-            </span>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 text-green-600 rounded-full text-xs font-medium border border-green-500/20">
+              <CheckCircle className="h-3.5 w-3.5" />
+              <span>xan {xanVersion && `v${xanVersion.trim()}`}</span>
+            </div>
           ) : (
-            <span className="text-sm text-red-600">
-              xan not found - please install xan
-            </span>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 text-red-600 rounded-full text-xs font-medium border border-red-500/20">
+              <XCircle className="h-3.5 w-3.5" />
+              <span>xan not found</span>
+            </div>
           )}
-          <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
-            <Settings className="h-5 w-5" />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setShowSettings(true)}
+            className="h-9 w-9 rounded-lg hover:bg-accent transition-colors"
+          >
+            <Settings className="h-4.5 w-4.5" />
           </Button>
         </div>
       </header>

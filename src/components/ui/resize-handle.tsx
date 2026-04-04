@@ -58,7 +58,9 @@ export function ResizeHandle({ direction, onResize, className }: ResizeHandlePro
       onMouseDown={handleMouseDown}
     >
       {direction === "vertical" ? (
-        <div className={`absolute top-0 left-0 right-0 h-1 cursor-ns-resize ${isResizing ? "bg-primary" : "bg-border hover:bg-muted"}`} />
+        <div className={`absolute top-0 left-0 right-0 h-3 cursor-ns-resize flex items-center justify-center ${isResizing ? "bg-primary/20" : "hover:bg-muted/50"}`}>
+          <div className={`w-12 h-1 rounded-full transition-colors ${isResizing ? "bg-primary" : "bg-border hover:bg-muted-foreground/30"}`} />
+        </div>
       ) : (
         <div className={`absolute top-0 bottom-0 left-0 w-1 cursor-ew-resize ${isResizing ? "bg-primary" : "bg-border hover:bg-muted"}`} />
       )}
