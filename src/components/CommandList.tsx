@@ -2,7 +2,7 @@ import { XanCommand } from "@/types/xan";
 import { commandCategories } from "@/data/commands";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronRight, Search, Terminal, Sparkles } from "lucide-react";
+import { ChevronRight, Terminal, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 interface CommandListProps {
@@ -34,13 +34,13 @@ export function CommandList({
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10 border-r border-border/50">
-      <div className="p-4 border-b bg-card/50 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center border border-primary/20">
-            <Terminal className="h-4 w-4 text-primary" />
+      <div className="p-5 border-b bg-card/50 backdrop-blur-sm">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center border border-primary/20">
+            <Terminal className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h2 className="text-base font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            <h2 className="text-lg font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
               Commands
             </h2>
             <p className="text-xs text-muted-foreground">
@@ -50,16 +50,13 @@ export function CommandList({
         </div>
       </div>
       <div className="p-3 border-b bg-background/50">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
-          <input
-            type="text"
-            placeholder="Search commands..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 text-sm border border-border/50 rounded-lg bg-background/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
-          />
-        </div>
+        <input
+          type="text"
+          placeholder="Search commands..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full px-4 py-2.5 text-sm border border-border/50 rounded-lg bg-background/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
+        />
       </div>
       <ScrollArea className="flex-1">
         <div className="p-3">

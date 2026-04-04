@@ -9,10 +9,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/components/ThemeProvider";
 
-import { Settings, X, FileText, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Settings, X, FileText, CheckCircle, XCircle, Loader2, Sun, Moon } from "lucide-react";
 
 function App() {
+  const { theme, setTheme } = useTheme();
   const [pipeline, setPipeline] = useState<PipelineStep[]>([]);
   const [selectedStep, setSelectedStep] = useState<PipelineStep | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -24,6 +26,7 @@ function App() {
   const [xanPath, setXanPath] = useState<string>('');
   const [noQuoting, setNoQuoting] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
+  const [themeTransition, setThemeTransition] = useState<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
 
   useEffect(() => {
     checkXanInstallation();
@@ -264,8 +267,48 @@ function App() {
     }
   };
 
+  const handleThemeToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    
+    setThemeTransition({ x, y, active: true });
+    
+    setTimeout(() => {
+      setTheme(theme === "dark" ? "light" : "dark");
+    }, 400);
+    
+    setTimeout(() => {
+      setThemeTransition(prev => ({ ...prev, active: false }));
+    }, 800);
+  };
+
+  const getNewTheme = () => {
+    return theme === "dark" ? "light" : "dark";
+  };
+
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20 relative overflow-hidden">
+      {themeTransition.active && (
+        <div 
+          className="fixed inset-0 pointer-events-none z-50"
+          style={{
+            background: theme === "light" ? "hsl(210 40% 98%)" : "hsl(222.2 84% 4.9%)",
+            clipPath: `circle(0% at ${themeTransition.x}px ${themeTransition.y}px)`,
+            animation: "themeExpand 0.8s ease-out forwards"
+          }}
+        />
+      )}
+      <style>{`
+        @keyframes themeExpand {
+          0% {
+            clip-path: circle(0% at ${themeTransition.x}px ${themeTransition.y}px);
+          }
+          100% {
+            clip-path: circle(150% at ${themeTransition.x}px ${themeTransition.y}px);
+          }
+        }
+      `}</style>
       <header className="h-16 border-b bg-card/80 backdrop-blur-sm shadow-sm flex items-center justify-between px-6">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -317,6 +360,18 @@ function App() {
               <span>xan not found</span>
             </div>
           )}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handleThemeToggle}
+            className="h-9 w-9 rounded-lg hover:bg-accent transition-all hover:scale-110 active:scale-95"
+          >
+            {theme === "dark" ? (
+              <Sun className="h-4.5 w-4.5 transition-transform duration-300 rotate-0 hover:rotate-45" />
+            ) : (
+              <Moon className="h-4.5 w-4.5 transition-transform duration-300 rotate-0 hover:-rotate-12" />
+            )}
+          </Button>
           <Button 
             variant="ghost" 
             size="icon" 
