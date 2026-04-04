@@ -67,9 +67,7 @@ async fn execute_xan_pipeline(
 
         for param in &cmd.parameters {
             if param.value == "true" {
-                if let Some(flag) = param.name.chars().next() {
-                    optional_args.push(format!("-{}", flag));
-                }
+                optional_args.push(format!("--{}", param.name));
             } else if !param.value.is_empty() {
                 if param.is_positional.unwrap_or(false) {
                     positional_args.push(param.value.clone());
