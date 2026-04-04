@@ -21,11 +21,13 @@ function App() {
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(',');
   const [xanPath, setXanPath] = useState<string>('');
+  const [noQuoting, setNoQuoting] = useState<boolean>(false);
 
   useEffect(() => {
     checkXanInstallation();
     loadXanPath();
     loadDefaultDelimiter();
+    loadNoQuoting();
   }, []);
 
   const loadXanPath = async () => {
@@ -47,6 +49,17 @@ function App() {
       }
     } catch (error) {
       console.error("Failed to load default delimiter:", error);
+    }
+  };
+
+  const loadNoQuoting = async () => {
+    try {
+      const savedNoQuoting = await invoke<boolean | null>("get_no_quoting");
+      if (savedNoQuoting !== null) {
+        setNoQuoting(savedNoQuoting);
+      }
+    } catch (error) {
+      console.error("Failed to load no quoting setting:", error);
     }
   };
 
@@ -316,6 +329,20 @@ function App() {
                   This delimiter will be used for all commands that require it
                 </p>
               </div>
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={noQuoting}
+                    onChange={(e) => setNoQuoting(e.target.checked)}
+                    className="w-4 h-4 rounded border-input"
+                  />
+                  <span className="text-sm font-medium">Disable Quoting</span>
+                </label>
+                <p className="text-xs text-muted-foreground mt-1 ml-6">
+                  Disable quoting completely for input command
+                </p>
+              </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setShowSettings(false)}>
                   Cancel
@@ -325,12 +352,10 @@ function App() {
                     try {
                       if (xanPath) {
                         await invoke("set_xan_path", { path: xanPath });
-                        addLog("success", "Xan path saved successfully");
-                        // Re-check xan installation after saving path
                         await checkXanInstallation();
                       }
-                      // Save default delimiter
                       await invoke("set_default_delimiter", { delimiter: defaultDelimiter });
+                      await invoke("set_no_quoting", { noQuoting });
                       addLog("success", "Settings saved successfully");
                       setShowSettings(false);
                     } catch (error) {

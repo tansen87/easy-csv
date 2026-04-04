@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 pub struct AppConfig {
     pub xan_path: Option<String>,
     pub default_delimiter: Option<String>,
+    pub no_quoting: Option<bool>,
 }
 
 impl Default for AppConfig {
@@ -17,6 +18,7 @@ impl Default for AppConfig {
         Self {
             xan_path: None,
             default_delimiter: None,
+            no_quoting: None,
         }
     }
 }
@@ -54,20 +56,21 @@ async fn execute_xan_pipeline(
         return Err(format!("Input file does not exist: {}", input_file));
     }
 
-    // Build argument list for each command
-    // Note: xan always outputs comma-separated CSV, so pipeline commands
-    // after the first should use comma as delimiter
+    let config = load_config();
+    let no_quoting_enabled = config.no_quoting.unwrap_or(false);
+
     let mut cmd_args_list = Vec::new();
     for (i, cmd) in commands.iter().enumerate() {
         let mut args = vec![cmd.name.clone()];
 
-        // Some commands don't support -d (delimiter) parameter
+        if cmd.name == "input" && no_quoting_enabled {
+            args.push("--no-quoting".to_string());
+        }
+
         let supports_delimiter = !matches!(cmd.name.as_str(), "from" | "range" | "eval");
 
         if supports_delimiter {
             args.push("-d".to_string());
-            // First command uses user's delimiter, subsequent commands use comma
-            // (because xan always outputs comma-separated CSV)
             if i == 0 {
                 args.push(default_delimiter.clone());
             } else {
@@ -117,7 +120,7 @@ async fn execute_xan_pipeline(
         if num_commands == 1 {
             // Single command: feed input file and wait for it
             eprintln!("Single command execution");
-            
+
             // Feed input file content into first command's stdin
             {
                 let mut stdin = first_child.stdin.take().unwrap();
@@ -139,13 +142,16 @@ async fn execute_xan_pipeline(
                 }
                 // stdin closed automatically here
             }
-            
+
             first_child
                 .wait_with_output()
                 .map_err(|e| format!("Wait for command failed: {}", e))
         } else {
             // Multi-command pipeline with concurrent stderr reading
-            eprintln!("Multi-command pipeline execution with {} commands", num_commands);
+            eprintln!(
+                "Multi-command pipeline execution with {} commands",
+                num_commands
+            );
             let all_stderr = Arc::new(Mutex::new(Vec::new()));
             let mut children = Vec::new();
             let mut stderr_threads = Vec::new();
@@ -167,7 +173,12 @@ async fn execute_xan_pipeline(
 
             // Start all remaining commands and connect pipes BEFORE feeding input
             for (idx, args) in cmd_args_list.into_iter().skip(1).enumerate() {
-                eprintln!("Spawning command {} (index {}): {}", idx + 2, idx, args.join(" "));
+                eprintln!(
+                    "Spawning command {} (index {}): {}",
+                    idx + 2,
+                    idx,
+                    args.join(" ")
+                );
                 let mut child = Command::new(&xan_path)
                     .args(args)
                     .stdin(Stdio::piped())
@@ -186,7 +197,7 @@ async fn execute_xan_pipeline(
                     let mut reader = std::io::BufReader::new(prev_stdout);
                     let mut writer = child_stdin;
                     let mut buffer = vec![0; 256 * 1024]; // 256KB buffer for better performance
-                    
+
                     loop {
                         match reader.read(&mut buffer) {
                             Ok(0) => break, // EOF
@@ -249,7 +260,7 @@ async fn execute_xan_pipeline(
             // Wait for all pipe threads to finish and check for errors
             for t in pipe_threads {
                 match t.join() {
-                    Ok(Ok(())) => {},
+                    Ok(Ok(())) => {}
                     Ok(Err(e)) => return Err(format!("Pipe thread error: {}", e)),
                     Err(_) => return Err("Pipe thread panicked".to_string()),
                 }
@@ -290,14 +301,14 @@ async fn execute_xan_pipeline(
 }
 
 fn get_config_file_path() -> std::path::PathBuf {
-    let config_dir = dirs::config_dir()
-        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+    let config_dir =
+        dirs::config_dir().unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
     config_dir.join("xan-gui").join("config.json")
 }
 
 fn load_config() -> AppConfig {
     let config_path = get_config_file_path();
-    
+
     if config_path.exists() {
         match File::open(&config_path) {
             Ok(mut file) => {
@@ -312,29 +323,29 @@ fn load_config() -> AppConfig {
             Err(e) => eprintln!("Failed to open config file: {}", e),
         }
     }
-    
+
     AppConfig::default()
 }
 
 fn save_config(config: &AppConfig) -> Result<(), String> {
     let config_path = get_config_file_path();
-    
+
     if let Some(parent) = config_path.parent() {
         if !parent.exists() {
             std::fs::create_dir_all(parent)
                 .map_err(|e| format!("Failed to create config directory: {}", e))?;
         }
     }
-    
+
     let contents = serde_json::to_string_pretty(config)
         .map_err(|e| format!("Failed to serialize config: {}", e))?;
-    
-    let mut file = File::create(&config_path)
-        .map_err(|e| format!("Failed to create config file: {}", e))?;
-    
+
+    let mut file =
+        File::create(&config_path).map_err(|e| format!("Failed to create config file: {}", e))?;
+
     file.write_all(contents.as_bytes())
         .map_err(|e| format!("Failed to write config file: {}", e))?;
-    
+
     Ok(())
 }
 
@@ -343,13 +354,12 @@ fn find_xan_executable() -> Option<String> {
     let config = load_config();
     if let Some(ref xan_path) = config.xan_path {
         if Path::new(xan_path).exists() {
-            eprintln!("Using configured xan path: {}", xan_path);
             return Some(xan_path.clone());
         } else {
             eprintln!("Configured xan path does not exist: {}", xan_path);
         }
     }
-    
+
     let mut paths = vec![];
 
     // Add current working directory
@@ -411,7 +421,7 @@ fn set_xan_path(path: String) -> Result<(), String> {
     if !Path::new(&path).exists() {
         return Err(format!("File does not exist: {}", path));
     }
-    
+
     let mut config = load_config();
     config.xan_path = Some(path);
     save_config(&config)
@@ -430,6 +440,19 @@ fn set_default_delimiter(delimiter: String) -> Result<(), String> {
     save_config(&config)
 }
 
+#[tauri::command]
+fn get_no_quoting() -> Option<bool> {
+    let config = load_config();
+    config.no_quoting
+}
+
+#[tauri::command]
+fn set_no_quoting(no_quoting: bool) -> Result<(), String> {
+    let mut config = load_config();
+    config.no_quoting = Some(no_quoting);
+    save_config(&config)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -442,7 +465,9 @@ pub fn run() {
             get_xan_path,
             set_xan_path,
             get_default_delimiter,
-            set_default_delimiter
+            set_default_delimiter,
+            get_no_quoting,
+            set_no_quoting
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
