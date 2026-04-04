@@ -45,12 +45,10 @@ async fn execute_xan_pipeline(
     let mut cmd_args_list = Vec::new();
     for (i, cmd) in commands.iter().enumerate() {
         let mut args = vec![cmd.name.clone()];
-        
+
         // Some commands don't support -d (delimiter) parameter
-        let supports_delimiter = !matches!(cmd.name.as_str(), 
-            "from" | "range" | "eval"
-        );
-        
+        let supports_delimiter = !matches!(cmd.name.as_str(), "from" | "range" | "eval");
+
         if supports_delimiter {
             args.push("-d".to_string());
             // First command uses user's delimiter, subsequent commands use comma
@@ -101,35 +99,38 @@ async fn execute_xan_pipeline(
             .spawn()
             .map_err(|e| format!("Failed to start first xan command: {}", e))?;
 
-        // Feed input file content into first command's stdin
-        {
-            let mut stdin = first_child.stdin.take().unwrap();
-            let mut buffer = vec![0; 64 * 1024]; // 64KB buffer
-            loop {
-                match input_file_handle.read(&mut buffer) {
-                    Ok(0) => break, // EOF
-                    Ok(n) => {
-                        if let Err(e) = stdin.write_all(&buffer[..n]) {
-                            // Broken pipe is acceptable if child exits early
-                            if e.kind() != ErrorKind::BrokenPipe {
-                                return Err(format!("Write to stdin failed: {}", e));
-                            }
-                            break;
-                        }
-                    }
-                    Err(e) => return Err(format!("Read input file failed: {}", e)),
-                }
-            }
-            // stdin closed automatically here
-        }
-
         if num_commands == 1 {
-            // Single command: just wait for it
+            // Single command: feed input file and wait for it
+            eprintln!("Single command execution");
+            
+            // Feed input file content into first command's stdin
+            {
+                let mut stdin = first_child.stdin.take().unwrap();
+                let mut buffer = vec![0; 256 * 1024]; // 256KB buffer for better performance
+                loop {
+                    match input_file_handle.read(&mut buffer) {
+                        Ok(0) => break, // EOF
+                        Ok(n) => {
+                            if let Err(e) = stdin.write_all(&buffer[..n]) {
+                                // Broken pipe is acceptable if child exits early
+                                if e.kind() != ErrorKind::BrokenPipe {
+                                    return Err(format!("Write to stdin failed: {}", e));
+                                }
+                                break;
+                            }
+                        }
+                        Err(e) => return Err(format!("Read input file failed: {}", e)),
+                    }
+                }
+                // stdin closed automatically here
+            }
+            
             first_child
                 .wait_with_output()
                 .map_err(|e| format!("Wait for command failed: {}", e))
         } else {
             // Multi-command pipeline with concurrent stderr reading
+            eprintln!("Multi-command pipeline execution with {} commands", num_commands);
             let all_stderr = Arc::new(Mutex::new(Vec::new()));
             let mut children = Vec::new();
             let mut stderr_threads = Vec::new();
@@ -149,7 +150,9 @@ async fn execute_xan_pipeline(
             }));
             children.push(first_child);
 
-            for args in cmd_args_list.into_iter().skip(1) {
+            // Start all remaining commands and connect pipes BEFORE feeding input
+            for (idx, args) in cmd_args_list.into_iter().skip(1).enumerate() {
+                eprintln!("Spawning command {} (index {}): {}", idx + 2, idx, args.join(" "));
                 let mut child = Command::new(&xan_path)
                     .args(args)
                     .stdin(Stdio::piped())
@@ -161,12 +164,30 @@ async fn execute_xan_pipeline(
                 // Connect previous stdout to this child's stdin
                 let prev_child = children.last_mut().unwrap();
                 let prev_stdout = prev_child.stdout.take().unwrap();
-                let mut child_stdin = child.stdin.take().unwrap();
+                let child_stdin = child.stdin.take().unwrap();
 
                 // Spawn thread to pipe data between processes
                 let pipe_thread = thread::spawn(move || {
                     let mut reader = std::io::BufReader::new(prev_stdout);
-                    let _ = std::io::copy(&mut reader, &mut child_stdin);
+                    let mut writer = child_stdin;
+                    let mut buffer = vec![0; 256 * 1024]; // 256KB buffer for better performance
+                    
+                    loop {
+                        match reader.read(&mut buffer) {
+                            Ok(0) => break, // EOF
+                            Ok(n) => {
+                                if let Err(e) = writer.write_all(&buffer[..n]) {
+                                    // Broken pipe is acceptable if child exits early
+                                    if e.kind() != ErrorKind::BrokenPipe {
+                                        return Err(format!("Pipe write failed: {}", e));
+                                    }
+                                    break;
+                                }
+                            }
+                            Err(e) => return Err(format!("Pipe read failed: {}", e)),
+                        }
+                    }
+                    Ok(())
                 });
 
                 // Read this child's stderr in background thread
@@ -186,9 +207,37 @@ async fn execute_xan_pipeline(
                 pipe_threads.push(pipe_thread);
             }
 
-            // Wait for all pipe threads to finish
+            // Now feed input file to the first command
+            // All pipes are connected, so no deadlock will occur
+            eprintln!("Feeding input file to first command...");
+            {
+                let first_child = children.first_mut().unwrap();
+                let mut stdin = first_child.stdin.take().unwrap();
+                let mut buffer = vec![0; 256 * 1024]; // 256KB buffer for better performance
+                loop {
+                    match input_file_handle.read(&mut buffer) {
+                        Ok(0) => break,
+                        Ok(n) => {
+                            if let Err(e) = stdin.write_all(&buffer[..n]) {
+                                if e.kind() != ErrorKind::BrokenPipe {
+                                    return Err(format!("Write to stdin failed: {}", e));
+                                }
+                                break;
+                            }
+                        }
+                        Err(e) => return Err(format!("Read input file failed: {}", e)),
+                    }
+                }
+            }
+            eprintln!("Input file feeding completed");
+
+            // Wait for all pipe threads to finish and check for errors
             for t in pipe_threads {
-                let _ = t.join();
+                match t.join() {
+                    Ok(Ok(())) => {},
+                    Ok(Err(e)) => return Err(format!("Pipe thread error: {}", e)),
+                    Err(_) => return Err("Pipe thread panicked".to_string()),
+                }
             }
 
             // Get output from last child

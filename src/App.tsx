@@ -107,7 +107,6 @@ function App() {
     }
 
     addLog("info", "Starting pipeline execution...");
-    addLog("info", `Delimiter: "${defaultDelimiter}"`);
 
     try {
       const commands = pipeline.map((step) => ({
