@@ -283,10 +283,6 @@ function App() {
     }, 800);
   };
 
-  const getNewTheme = () => {
-    return theme === "dark" ? "light" : "dark";
-  };
-
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20 relative overflow-hidden">
       {themeTransition.active && (
@@ -317,7 +313,7 @@ function App() {
             </div>
             <div>
               <h1 className="text-lg font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                Xan GUI
+                Easy Csv
               </h1>
             </div>
           </div>

@@ -1,4 +1,4 @@
-# Xan GUI
+# Easy Csv
 
 A modern graphical user interface for the [xan](https://github.com/medialab/xan) CSV processing tool, built with Tauri, React, and shadcn-ui.
 
