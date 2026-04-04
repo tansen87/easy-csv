@@ -129,10 +129,10 @@ function App() {
           addLog("info", `${result.output}`);
         }
       } else {
-        addLog("error", `Pipeline execution failed: ${result.error}`);
+        addLog("error", `${result.error}`);
       }
     } catch (error) {
-      addLog("error", `Failed to execute pipeline: ${error}`);
+      addLog("error", `${error}`);
     }
   };
 
@@ -239,7 +239,7 @@ function App() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <aside className="w-80 flex-shrink-0">
+        <aside className="w-[20%] flex-shrink-0">
           <CommandList
             commands={xanCommands}
             onCommandClick={handleCommandClick}
@@ -249,7 +249,7 @@ function App() {
 
         <main className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 flex overflow-hidden">
-            <div className="flex-1">
+            <div className="w-[60%] flex-shrink-0">
               <PipelineBuilder
                 steps={pipeline}
                 onStepsChange={setPipeline}
@@ -261,7 +261,7 @@ function App() {
               />
             </div>
 
-            <aside className="w-96 flex-shrink-0">
+            <aside className="flex-1">
               <ParameterPanel
                 step={selectedStep}
                 onStepUpdate={handleStepUpdate}

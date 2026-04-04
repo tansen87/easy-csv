@@ -70,10 +70,14 @@ function SortableStep({
               <div className="font-medium text-sm truncate">
                 {step.command.name}
               </div>
-              <div className="text-xs text-muted-foreground truncate">
+              <div className="text-xs text-muted-foreground flex flex-wrap gap-1">
                 {Object.entries(step.parameters)
-                  .map(([key, value]) => `${key}=${value}`)
-                  .join(", ")}
+                  .filter(([, value]) => value !== undefined && value !== "" && value !== false)
+                  .map(([key, value]) => (
+                    <span key={key} className="bg-muted px-1.5 py-0.5 rounded">
+                      {key}={String(value)}
+                    </span>
+                  ))}
               </div>
             </div>
             <Button
