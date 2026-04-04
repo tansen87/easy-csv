@@ -795,13 +795,19 @@ export const xanCommands: XanCommand[] = [
       {
         name: "start",
         type: "number",
-        description: "Starting row index",
+        description: "The index of the row to slice from",
+        required: false,
+      },
+      {
+        name: "end",
+        type: "number",
+        description: "The index of the row to slice to",
         required: false,
       },
       {
         name: "len",
         type: "number",
-        description: "Number of rows to keep",
+        description: "The length of the slice (can be used instead of --end)",
         required: false,
       },
       outputParam,

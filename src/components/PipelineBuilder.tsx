@@ -2,7 +2,7 @@ import { PipelineStep } from "@/types/xan";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { GripVertical, X, Play, Trash2 } from "lucide-react";
+import { GripVertical, X, Play, Trash2, Download, Upload } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -107,6 +107,8 @@ interface PipelineBuilderProps {
   onExecute: () => void;
   onClear: () => void;
   isExecuting?: boolean;
+  onExportWorkspace?: () => void;
+  onImportWorkspace?: () => void;
 }
 
 export function PipelineBuilder({
@@ -118,6 +120,8 @@ export function PipelineBuilder({
   onExecute,
   onClear,
   isExecuting,
+  onExportWorkspace,
+  onImportWorkspace,
 }: PipelineBuilderProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -156,6 +160,23 @@ export function PipelineBuilder({
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Clear
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onImportWorkspace}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Import
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onExportWorkspace}
+              disabled={steps.length === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export
             </Button>
             <Button
               size="sm"

@@ -29,3 +29,15 @@ export interface LogEntry {
   type: "info" | "success" | "error" | "warning";
   message: string;
 }
+
+export interface Workspace {
+  version: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+  pipeline: PipelineStep[];
+  inputFile: string;
+  defaultDelimiter: string;
+  noQuoting: boolean;
+}

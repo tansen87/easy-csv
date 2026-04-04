@@ -4,9 +4,10 @@ import { PipelineBuilder } from "@/components/PipelineBuilder";
 import { ParameterPanel } from "@/components/ParameterPanel";
 import { LogPanel } from "@/components/LogPanel";
 import { xanCommands } from "@/data/commands";
-import { PipelineStep, LogEntry, XanCommand } from "@/types/xan";
+import { PipelineStep, LogEntry, XanCommand, Workspace } from "@/types/xan";
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { Button } from "@/components/ui/button";
 
 import { Settings, X } from "lucide-react";
@@ -204,6 +205,65 @@ function App() {
     }
   };
 
+  const handleExportWorkspace = async () => {
+    try {
+      const workspace: Workspace = {
+        version: "1.0.0",
+        name: `xan-workspace_${new Date().toISOString().split('T')[0]}`,
+        description: `Exported on ${new Date().toLocaleString()}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        pipeline: pipeline,
+        inputFile: inputFile,
+        defaultDelimiter: defaultDelimiter,
+        noQuoting: noQuoting,
+      };
+
+      const filePath = await save({
+        filters: [
+          { name: "JSON Files", extensions: ["json"] },
+        ],
+        defaultPath: `${workspace.name}.json`,
+      });
+
+      if (filePath) {
+        await writeTextFile(filePath, JSON.stringify(workspace, null, 2));
+        addLog("success", `Workspace exported to ${filePath.split('\\').pop()}`);
+      }
+    } catch (error) {
+      addLog("error", `Failed to export workspace: ${error}`);
+    }
+  };
+
+  const handleImportWorkspace = async () => {
+    try {
+      const filePath = await open({
+        multiple: false,
+        filters: [
+          { name: "JSON Files", extensions: ["json"] },
+        ],
+      });
+
+      if (filePath) {
+        const content = await readTextFile(filePath);
+        const workspace: Workspace = JSON.parse(content);
+
+        if (workspace.version && workspace.pipeline && workspace.inputFile !== undefined) {
+          setPipeline(workspace.pipeline);
+          setInputFile(workspace.inputFile);
+          setDefaultDelimiter(workspace.defaultDelimiter || ',');
+          setNoQuoting(workspace.noQuoting || false);
+          setSelectedStep(null);
+          addLog("success", `Workspace imported: ${workspace.name}`);
+        } else {
+          addLog("error", "Invalid workspace file format");
+        }
+      }
+    } catch (error) {
+      addLog("error", `Failed to import workspace: ${error}`);
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col bg-background">
       <header className="h-14 border-b flex items-center justify-between px-4 bg-card">
@@ -260,6 +320,8 @@ function App() {
                 onExecute={handleExecute}
                 onClear={handleClearPipeline}
                 isExecuting={isExecuting}
+                onExportWorkspace={handleExportWorkspace}
+                onImportWorkspace={handleImportWorkspace}
               />
             </div>
 
