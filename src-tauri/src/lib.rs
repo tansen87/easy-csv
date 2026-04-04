@@ -7,6 +7,21 @@ use std::{path::Path, process::Stdio, thread};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct AppConfig {
+    pub xan_path: Option<String>,
+    pub default_delimiter: Option<String>,
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            xan_path: None,
+            default_delimiter: None,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PipelineCommand {
     pub name: String,
     pub parameters: Vec<CommandParameter>,
@@ -274,7 +289,67 @@ async fn execute_xan_pipeline(
     })
 }
 
+fn get_config_file_path() -> std::path::PathBuf {
+    let config_dir = dirs::config_dir()
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+    config_dir.join("xan-gui").join("config.json")
+}
+
+fn load_config() -> AppConfig {
+    let config_path = get_config_file_path();
+    
+    if config_path.exists() {
+        match File::open(&config_path) {
+            Ok(mut file) => {
+                let mut contents = String::new();
+                if file.read_to_string(&mut contents).is_ok() {
+                    match serde_json::from_str(&contents) {
+                        Ok(config) => return config,
+                        Err(e) => eprintln!("Failed to parse config file: {}", e),
+                    }
+                }
+            }
+            Err(e) => eprintln!("Failed to open config file: {}", e),
+        }
+    }
+    
+    AppConfig::default()
+}
+
+fn save_config(config: &AppConfig) -> Result<(), String> {
+    let config_path = get_config_file_path();
+    
+    if let Some(parent) = config_path.parent() {
+        if !parent.exists() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to create config directory: {}", e))?;
+        }
+    }
+    
+    let contents = serde_json::to_string_pretty(config)
+        .map_err(|e| format!("Failed to serialize config: {}", e))?;
+    
+    let mut file = File::create(&config_path)
+        .map_err(|e| format!("Failed to create config file: {}", e))?;
+    
+    file.write_all(contents.as_bytes())
+        .map_err(|e| format!("Failed to write config file: {}", e))?;
+    
+    Ok(())
+}
+
 fn find_xan_executable() -> Option<String> {
+    // First, check if user has configured a custom path
+    let config = load_config();
+    if let Some(ref xan_path) = config.xan_path {
+        if Path::new(xan_path).exists() {
+            eprintln!("Using configured xan path: {}", xan_path);
+            return Some(xan_path.clone());
+        } else {
+            eprintln!("Configured xan path does not exist: {}", xan_path);
+        }
+    }
+    
     let mut paths = vec![];
 
     // Add current working directory
@@ -298,18 +373,6 @@ fn find_xan_executable() -> Option<String> {
         if let Some(exe_dir) = exe_path.parent() {
             let xan_in_exe_dir = exe_dir.join("xan.exe");
             paths.push(xan_in_exe_dir.to_string_lossy().to_string());
-        }
-    }
-
-    // Log all paths being checked for debugging
-    eprintln!("Checking for xan.exe in:");
-    for path in &paths {
-        eprintln!("  - {}", path);
-        if Path::new(path).exists() {
-            eprintln!("    ✓ Found!");
-            return Some(path.clone());
-        } else {
-            eprintln!("    ✗ Not found");
         }
     }
 
@@ -337,6 +400,36 @@ fn get_xan_version() -> Result<String, String> {
     }
 }
 
+#[tauri::command]
+fn get_xan_path() -> Option<String> {
+    let config = load_config();
+    config.xan_path
+}
+
+#[tauri::command]
+fn set_xan_path(path: String) -> Result<(), String> {
+    if !Path::new(&path).exists() {
+        return Err(format!("File does not exist: {}", path));
+    }
+    
+    let mut config = load_config();
+    config.xan_path = Some(path);
+    save_config(&config)
+}
+
+#[tauri::command]
+fn get_default_delimiter() -> Option<String> {
+    let config = load_config();
+    config.default_delimiter
+}
+
+#[tauri::command]
+fn set_default_delimiter(delimiter: String) -> Result<(), String> {
+    let mut config = load_config();
+    config.default_delimiter = Some(delimiter);
+    save_config(&config)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -345,7 +438,11 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             execute_xan_pipeline,
             check_xan_installed,
-            get_xan_version
+            get_xan_version,
+            get_xan_path,
+            set_xan_path,
+            get_default_delimiter,
+            set_default_delimiter
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

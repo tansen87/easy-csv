@@ -35,7 +35,7 @@ export function CommandList({
   return (
     <div className="h-full flex flex-col bg-background border-r">
       <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold">Xan Commands</h2>
+        <h2 className="text-lg font-semibold">Commands</h2>
         <p className="text-sm text-muted-foreground">
           Click to add to pipeline
         </p>

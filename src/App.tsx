@@ -9,7 +9,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Button } from "@/components/ui/button";
 
-import { Settings, PlayCircle, X } from "lucide-react";
+import { Settings, X } from "lucide-react";
 
 function App() {
   const [pipeline, setPipeline] = useState<PipelineStep[]>([]);
@@ -20,10 +20,35 @@ function App() {
   const [inputFile, setInputFile] = useState<string>('');
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(',');
+  const [xanPath, setXanPath] = useState<string>('');
 
   useEffect(() => {
     checkXanInstallation();
+    loadXanPath();
+    loadDefaultDelimiter();
   }, []);
+
+  const loadXanPath = async () => {
+    try {
+      const savedPath = await invoke<string | null>("get_xan_path");
+      if (savedPath) {
+        setXanPath(savedPath);
+      }
+    } catch (error) {
+      console.error("Failed to load xan path:", error);
+    }
+  };
+
+  const loadDefaultDelimiter = async () => {
+    try {
+      const savedDelimiter = await invoke<string | null>("get_default_delimiter");
+      if (savedDelimiter) {
+        setDefaultDelimiter(savedDelimiter);
+      }
+    } catch (error) {
+      console.error("Failed to load default delimiter:", error);
+    }
+  };
 
   const checkXanInstallation = async () => {
     try {
@@ -121,10 +146,10 @@ function App() {
       const result = await invoke<any>("execute_xan_pipeline", { commands, inputFile, defaultDelimiter });
 
       if (result.success) {
-        addLog("success", "Pipeline executed successfully");
         if (result.output) {
           addLog("info", `${result.output}`);
         }
+        addLog("success", "Pipeline executed successfully");
       } else {
         addLog("error", `${result.error}`);
       }
@@ -141,36 +166,6 @@ function App() {
     setInputFile(e.target.value);
     if (e.target.value) {
       addLog("info", `Selected input file: ${e.target.value.split('\\').pop()}`);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      addLog("info", `Dropped file: ${file.name}`);
-
-      // In Tauri, the file object should have a path property
-      if ('path' in file) {
-        const filePath = (file as any).path;
-        addLog("info", `File path: ${filePath}`);
-        setInputFile(filePath);
-        addLog("info", `Selected input file: ${file.name}`);
-      } else {
-        // Log all properties of the file object for debugging
-        addLog("error", "File object does not have path property");
-        addLog("error", `File properties: ${Object.keys(file).join(', ')}`);
-
-        // Try to get path from dataTransfer
-        if (e.dataTransfer.getData) {
-          const data = e.dataTransfer.getData('text');
-          addLog("info", `DataTransfer data: ${data}`);
-        }
-      }
     }
   };
 
@@ -214,7 +209,7 @@ function App() {
             </span>
           ) : isXanInstalled ? (
             <span className="text-sm text-green-600">
-              xan installed {xanVersion && `(${xanVersion.trim()})`}
+              xan {xanVersion && `(${xanVersion.trim()})`}
             </span>
           ) : (
             <span className="text-sm text-red-600">
@@ -275,6 +270,36 @@ function App() {
             </div>
             <div className="space-y-4">
               <div>
+                <label className="block text-sm font-medium mb-1">Xan Executable Path</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={xanPath}
+                    onChange={(e) => setXanPath(e.target.value)}
+                    placeholder="Auto-detect if not specified"
+                    className="flex-1 px-3 py-2 border border-input rounded-md bg-background text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const file = await open({
+                        multiple: false,
+                        filters: [{ name: "Executable Files", extensions: ["exe"] }],
+                      });
+                      if (file) {
+                        setXanPath(file);
+                      }
+                    }}
+                  >
+                    Browse
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Specify the path to xan.exe. Leave empty to auto-detect.
+                </p>
+              </div>
+              <div>
                 <label className="block text-sm font-medium mb-1">Default Delimiter</label>
                 <select
                   value={defaultDelimiter}
@@ -295,7 +320,24 @@ function App() {
                 <Button variant="outline" onClick={() => setShowSettings(false)}>
                   Cancel
                 </Button>
-                <Button onClick={() => setShowSettings(false)}>
+                <Button
+                  onClick={async () => {
+                    try {
+                      if (xanPath) {
+                        await invoke("set_xan_path", { path: xanPath });
+                        addLog("success", "Xan path saved successfully");
+                        // Re-check xan installation after saving path
+                        await checkXanInstallation();
+                      }
+                      // Save default delimiter
+                      await invoke("set_default_delimiter", { delimiter: defaultDelimiter });
+                      addLog("success", "Settings saved successfully");
+                      setShowSettings(false);
+                    } catch (error) {
+                      addLog("error", `Failed to save settings: ${error}`);
+                    }
+                  }}
+                >
                   Save
                 </Button>
               </div>
