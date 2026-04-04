@@ -22,6 +22,7 @@ function App() {
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(',');
   const [xanPath, setXanPath] = useState<string>('');
   const [noQuoting, setNoQuoting] = useState<boolean>(false);
+  const [isExecuting, setIsExecuting] = useState<boolean>(false);
 
   useEffect(() => {
     checkXanInstallation();
@@ -144,6 +145,7 @@ function App() {
       return;
     }
 
+    setIsExecuting(true);
     addLog("info", "Starting pipeline execution...");
 
     try {
@@ -168,6 +170,8 @@ function App() {
       }
     } catch (error) {
       addLog("error", `${error}`);
+    } finally {
+      setIsExecuting(false);
     }
   };
 
@@ -255,6 +259,7 @@ function App() {
                 selectedStepId={selectedStep?.id}
                 onExecute={handleExecute}
                 onClear={handleClearPipeline}
+                isExecuting={isExecuting}
               />
             </div>
 

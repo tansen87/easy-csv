@@ -106,6 +106,7 @@ interface PipelineBuilderProps {
   selectedStepId?: string;
   onExecute: () => void;
   onClear: () => void;
+  isExecuting?: boolean;
 }
 
 export function PipelineBuilder({
@@ -116,6 +117,7 @@ export function PipelineBuilder({
   selectedStepId,
   onExecute,
   onClear,
+  isExecuting,
 }: PipelineBuilderProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -158,10 +160,19 @@ export function PipelineBuilder({
             <Button
               size="sm"
               onClick={onExecute}
-              disabled={steps.length === 0}
+              disabled={steps.length === 0 || isExecuting}
             >
-              <Play className="h-4 w-4 mr-2" />
-              Execute
+              {isExecuting ? (
+                <>
+                  <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Executing...
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4 mr-2" />
+                  Execute
+                </>
+              )}
             </Button>
           </div>
         </div>

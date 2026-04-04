@@ -120,32 +120,64 @@ async fn execute_xan_pipeline(
         if num_commands == 1 {
             // Single command: feed input file and wait for it
             eprintln!("Single command execution");
-
-            // Feed input file content into first command's stdin
-            {
-                let mut stdin = first_child.stdin.take().unwrap();
-                let mut buffer = vec![0; 256 * 1024]; // 256KB buffer for better performance
-                loop {
-                    match input_file_handle.read(&mut buffer) {
-                        Ok(0) => break, // EOF
-                        Ok(n) => {
-                            if let Err(e) = stdin.write_all(&buffer[..n]) {
-                                // Broken pipe is acceptable if child exits early
-                                if e.kind() != ErrorKind::BrokenPipe {
-                                    return Err(format!("Write to stdin failed: {}", e));
-                                }
-                                break;
-                            }
-                        }
-                        Err(e) => return Err(format!("Read input file failed: {}", e)),
-                    }
+            
+            // For commands that require actual file paths (like sort), pass the file path as an argument
+            // instead of feeding through stdin
+            let first_cmd_name = &cmd_args_list[0][0];
+            let needs_file_path = matches!(first_cmd_name.as_str(), "sort" | "dedup" | "shuffle");
+            
+            if needs_file_path {
+                // For commands that need file paths, ensure input file is the last argument
+                let mut args = vec![cmd_args_list[0][0].clone()]; // Command name
+                
+                // Add all parameters except the command name
+                // This already includes delimiter and other options
+                for arg in &cmd_args_list[0][1..] {
+                    args.push(arg.clone());
                 }
-                // stdin closed automatically here
+                
+                // Add input file as the last argument
+                args.push(input_file.clone());
+                
+                eprintln!("Executing command with file path: {:?}", args);
+                
+                let child = Command::new(&xan_path)
+                    .args(args)
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .spawn()
+                    .map_err(|e| format!("Failed to start command: {}", e))?;
+                
+                child
+                    .wait_with_output()
+                    .map_err(|e| format!("Wait for command failed: {}", e))
+            } else {
+                // Feed input file content into first command's stdin
+                {
+                    let mut stdin = first_child.stdin.take().unwrap();
+                    let mut buffer = vec![0; 256 * 1024]; // 256KB buffer for better performance
+                    loop {
+                        match input_file_handle.read(&mut buffer) {
+                            Ok(0) => break, // EOF
+                            Ok(n) => {
+                                if let Err(e) = stdin.write_all(&buffer[..n]) {
+                                    // Broken pipe is acceptable if child exits early
+                                    if e.kind() != ErrorKind::BrokenPipe {
+                                        return Err(format!("Write to stdin failed: {}", e));
+                                    }
+                                    break;
+                                }
+                            }
+                            Err(e) => return Err(format!("Read input file failed: {}", e)),
+                        }
+                    }
+                    // stdin closed automatically here
+                }
+                
+                first_child
+                    .wait_with_output()
+                    .map_err(|e| format!("Wait for command failed: {}", e))
             }
-
-            first_child
-                .wait_with_output()
-                .map_err(|e| format!("Wait for command failed: {}", e))
         } else {
             // Multi-command pipeline with concurrent stderr reading
             eprintln!(

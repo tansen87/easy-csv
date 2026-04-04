@@ -167,9 +167,6 @@ export function ParameterPanel({
                         param,
                         step.parameters[param.name]
                       )}
-                      <p className="text-xs text-muted-foreground">
-                        {param.description}
-                      </p>
                     </div>
                   ))
                 )}
