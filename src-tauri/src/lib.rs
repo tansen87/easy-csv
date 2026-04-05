@@ -4,6 +4,9 @@ use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::{path::Path, process::Stdio, thread};
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -109,45 +112,57 @@ async fn execute_xan_pipeline(
         let num_commands = cmd_args_list.len();
 
         // Always use piped I/O so we can capture output
-        let mut first_child = Command::new(&xan_path)
-            .args(&cmd_args_list[0])
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
+        let mut command = Command::new(&xan_path);
+        command.args(&cmd_args_list[0]);
+        command.stdin(Stdio::piped());
+        command.stdout(Stdio::piped());
+        command.stderr(Stdio::piped());
+
+        #[cfg(target_os = "windows")]
+        {
+            command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+
+        let mut first_child = command
             .spawn()
             .map_err(|e| format!("Failed to start first xan command: {}", e))?;
 
         if num_commands == 1 {
             // Single command: feed input file and wait for it
             eprintln!("Single command execution");
-            
+
             // For commands that require actual file paths (like sort), pass the file path as an argument
             // instead of feeding through stdin
             let first_cmd_name = &cmd_args_list[0][0];
             let needs_file_path = matches!(first_cmd_name.as_str(), "sort" | "dedup" | "shuffle");
-            
+
             if needs_file_path {
                 // For commands that need file paths, ensure input file is the last argument
                 let mut args = vec![cmd_args_list[0][0].clone()]; // Command name
-                
+
                 // Add all parameters except the command name
                 // This already includes delimiter and other options
                 for arg in &cmd_args_list[0][1..] {
                     args.push(arg.clone());
                 }
-                
+
                 // Add input file as the last argument
                 args.push(input_file.clone());
-                
-                eprintln!("Executing command with file path: {:?}", args);
-                
-                let child = Command::new(&xan_path)
-                    .args(args)
-                    .stdout(Stdio::piped())
-                    .stderr(Stdio::piped())
+
+                let mut command = Command::new(&xan_path);
+                command.args(args);
+                command.stdout(Stdio::piped());
+                command.stderr(Stdio::piped());
+
+                #[cfg(target_os = "windows")]
+                {
+                    command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+                }
+
+                let child = command
                     .spawn()
                     .map_err(|e| format!("Failed to start command: {}", e))?;
-                
+
                 child
                     .wait_with_output()
                     .map_err(|e| format!("Wait for command failed: {}", e))
@@ -173,7 +188,7 @@ async fn execute_xan_pipeline(
                     }
                     // stdin closed automatically here
                 }
-                
+
                 first_child
                     .wait_with_output()
                     .map_err(|e| format!("Wait for command failed: {}", e))
@@ -211,11 +226,18 @@ async fn execute_xan_pipeline(
                     idx,
                     args.join(" ")
                 );
-                let mut child = Command::new(&xan_path)
-                    .args(args)
-                    .stdin(Stdio::piped())
-                    .stdout(Stdio::piped())
-                    .stderr(Stdio::piped())
+                let mut command = Command::new(&xan_path);
+                command.args(args);
+                command.stdin(Stdio::piped());
+                command.stdout(Stdio::piped());
+                command.stderr(Stdio::piped());
+
+                #[cfg(target_os = "windows")]
+                {
+                    command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+                }
+
+                let mut child = command
                     .spawn()
                     .map_err(|e| format!("Start pipeline command failed: {}", e))?;
 
@@ -437,8 +459,15 @@ fn check_xan_installed() -> bool {
 fn get_xan_version() -> Result<String, String> {
     let xan_path = find_xan_executable().ok_or("xan executable not found")?;
 
-    let output = Command::new(&xan_path)
-        .arg("--version")
+    let mut command = Command::new(&xan_path);
+    command.arg("--version");
+
+    #[cfg(target_os = "windows")]
+    {
+        command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+
+    let output = command
         .output()
         .map_err(|e| format!("Failed to execute xan: {}", e))?;
 
@@ -496,9 +525,16 @@ fn set_no_quoting(no_quoting: bool) -> Result<(), String> {
 fn get_xan_help(command_name: String) -> Result<String, String> {
     let xan_path = find_xan_executable().ok_or("xan executable not found")?;
 
-    let output = Command::new(&xan_path)
-        .arg(&command_name)
-        .arg("--help")
+    let mut command = Command::new(&xan_path);
+    command.arg(&command_name);
+    command.arg("--help");
+
+    #[cfg(target_os = "windows")]
+    {
+        command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+
+    let output = command
         .output()
         .map_err(|e| format!("Failed to execute xan {} --help: {}", command_name, e))?;
 
