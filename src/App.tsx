@@ -550,11 +550,6 @@ function App() {
                 {helpContent}
               </pre>
             </ScrollArea>
-            <div className="flex justify-end mt-4 flex-shrink-0">
-              <Button onClick={() => setShowHelp(false)}>
-                Close
-              </Button>
-            </div>
           </div>
         </div>
       )}

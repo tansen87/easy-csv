@@ -176,13 +176,8 @@ export function ParameterPanel({
       <ScrollArea className="flex-1">
         <div className="p-4">
           <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base font-semibold">
-                Command Parameters
-              </CardTitle>
-            </CardHeader>
             <CardContent>
-              <div className="space-y-5">
+              <div className="space-y-5 pt-6">
                 {step.command.parameters.length === 0 ? (
                   <div className="text-center py-8">
                     <div className="w-12 h-12 mx-auto mb-3 bg-muted/50 rounded-xl flex items-center justify-center">
