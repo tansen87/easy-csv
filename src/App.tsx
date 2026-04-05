@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useTheme } from "@/components/ThemeProvider";
+import { Settings, X, FileText, CheckCircle, XCircle, Loader2, Sun, Moon } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { PipelineBuilder } from "@/components/PipelineBuilder";
 import { ParameterPanel } from "@/components/ParameterPanel";
 import { LogPanel } from "@/components/LogPanel";
 import { xanCommands } from "@/data/commands";
 import { PipelineStep, LogEntry, XanCommand, Workspace } from "@/types/xan";
-import { invoke } from "@tauri-apps/api/core";
-import { open, save } from "@tauri-apps/plugin-dialog";
-import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
-import { Button } from "@/components/ui/button";
-import { useTheme } from "@/components/ThemeProvider";
-
-import { Settings, X, FileText, CheckCircle, XCircle, Loader2, Sun, Moon } from "lucide-react";
 
 function App() {
   const { theme, setTheme } = useTheme();
@@ -27,6 +27,9 @@ function App() {
   const [noQuoting, setNoQuoting] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [themeTransition, setThemeTransition] = useState<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
+  const [showHelp, setShowHelp] = useState<boolean>(false);
+  const [helpContent, setHelpContent] = useState<string>('');
+  const [helpCommandName, setHelpCommandName] = useState<string>('');
 
   useEffect(() => {
     checkXanInstallation();
@@ -108,6 +111,19 @@ function App() {
 
     setPipeline((prev) => [...prev, newStep]);
     setSelectedStep(newStep);
+  };
+
+  const handleHelpClick = async (command: XanCommand) => {
+    try {
+      const helpText = await invoke<string>("get_xan_help", { 
+        commandName: command.name 
+      });
+      setHelpContent(helpText);
+      setHelpCommandName(command.name);
+      setShowHelp(true);
+    } catch (error) {
+      addLog("error", `Failed to get help for ${command.name}: ${error}`);
+    }
   };
 
   const handleStepClick = (step: PipelineStep) => {
@@ -384,6 +400,7 @@ function App() {
           <CommandList
             commands={xanCommands}
             onCommandClick={handleCommandClick}
+            onHelpClick={handleHelpClick}
             selectedCommandId={selectedStep?.command.id}
           />
         </aside>
@@ -421,7 +438,7 @@ function App() {
       {/* Settings Dialog */}
       {showSettings && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-card border rounded-lg shadow-lg p-6 w-full max-w-md">
+          <div className="bg-card border rounded-lg shadow-lg p-6 w-full max-w-xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Settings</h3>
               <Button variant="ghost" size="icon" onClick={() => setShowSettings(false)}>
@@ -513,6 +530,30 @@ function App() {
                   Save
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Help Dialog */}
+      {showHelp && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-card border rounded-lg shadow-lg p-6 w-full max-w-4xl h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between mb-4 flex-shrink-0">
+              <h3 className="text-lg font-semibold">Help: {helpCommandName}</h3>
+              <Button variant="ghost" size="icon" onClick={() => setShowHelp(false)}>
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <ScrollArea className="flex-1 h-0">
+              <pre className="text-sm font-mono whitespace-pre-wrap bg-muted/30 p-4 rounded-lg border">
+                {helpContent}
+              </pre>
+            </ScrollArea>
+            <div className="flex justify-end mt-4 flex-shrink-0">
+              <Button onClick={() => setShowHelp(false)}>
+                Close
+              </Button>
             </div>
           </div>
         </div>

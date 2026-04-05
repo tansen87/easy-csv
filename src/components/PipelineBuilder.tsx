@@ -1,4 +1,3 @@
-import { PipelineStep } from "@/types/xan";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,6 +19,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { PipelineStep } from "@/types/xan";
 
 interface SortableStepProps {
   step: PipelineStep;
@@ -57,11 +57,10 @@ function SortableStep({
   return (
     <div ref={setNodeRef} style={style} className="relative">
       <Card
-        className={`mb-3 cursor-pointer transition-all duration-200 hover:shadow-md ${
-          isSelected 
-            ? "bg-gradient-to-r from-primary/10 to-primary/5 border-primary/50 shadow-sm" 
-            : "bg-card/80 backdrop-blur-sm hover:bg-accent/30 border-border/50"
-        }`}
+        className={`mb-3 cursor-pointer transition-all duration-200 hover:shadow-md ${isSelected
+          ? "bg-gradient-to-r from-primary/10 to-primary/5 border-primary/50 shadow-sm"
+          : "bg-card/80 backdrop-blur-sm hover:bg-accent/30 border-border/50"
+          }`}
       >
         <div className="p-4">
           <div className="flex items-center gap-3">

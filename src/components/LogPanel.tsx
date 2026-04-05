@@ -1,10 +1,10 @@
-import { LogEntry } from "@/types/xan";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import { Trash2, Info, CheckCircle, AlertCircle, XCircle, Terminal } from "lucide-react";
 import { useState } from "react";
+import { LogEntry } from "@/types/xan";
 
 interface LogPanelProps {
   logs: LogEntry[];
@@ -62,10 +62,10 @@ export function LogPanel({ logs, onClear }: LogPanelProps) {
 
   return (
     <div style={{ height: `${height}%` }} className="relative flex flex-col bg-gradient-to-b from-background to-muted/10 border-t border-border/50 min-h-[100px]">
-      <ResizeHandle 
-        direction="vertical" 
-        onResize={handleResize} 
-        className="absolute -top-1 left-0 right-0 z-10" 
+      <ResizeHandle
+        direction="vertical"
+        onResize={handleResize}
+        className="absolute -top-1 left-0 right-0 z-10"
       />
       <div className="p-3 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -107,8 +107,8 @@ export function LogPanel({ logs, onClear }: LogPanelProps) {
           ) : (
             <div className="space-y-2">
               {logs.map((log) => (
-                <Card 
-                  key={log.id} 
+                <Card
+                  key={log.id}
                   className={`p-3 border ${getLogBgColor(log.type)} hover:shadow-sm transition-all duration-200`}
                 >
                   <div className="flex items-start gap-3">

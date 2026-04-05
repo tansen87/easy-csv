@@ -1,19 +1,21 @@
-import { XanCommand } from "@/types/xan";
-import { commandCategories } from "@/data/commands";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronRight, Terminal, Sparkles } from "lucide-react";
+import { ChevronRight, Terminal, Sparkles, HelpCircle } from "lucide-react";
 import { useState } from "react";
+import { XanCommand } from "@/types/xan";
+import { commandCategories } from "@/data/commands";
 
 interface CommandListProps {
   commands: XanCommand[];
   onCommandClick: (command: XanCommand) => void;
+  onHelpClick?: (command: XanCommand) => void;
   selectedCommandId?: string;
 }
 
 export function CommandList({
   commands,
   onCommandClick,
+  onHelpClick,
   selectedCommandId,
 }: CommandListProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,23 +74,38 @@ export function CommandList({
                 {categoryCommands.map((command) => (
                   <Card
                     key={command.id}
-                    className={`mb-2 cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${
-                      selectedCommandId === command.id 
-                        ? "bg-gradient-to-r from-primary/10 to-primary/5 border-primary/50 shadow-sm" 
+                    className={`mb-2 cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${selectedCommandId === command.id
+                        ? "bg-gradient-to-r from-primary/10 to-primary/5 border-primary/50 shadow-sm"
                         : "bg-card/80 backdrop-blur-sm hover:bg-accent/30 border-border/50"
-                    }`}
-                    onClick={() => onCommandClick(command)}
+                      }`}
                   >
                     <div className="p-3.5">
                       <div className="flex items-center justify-between gap-3">
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0" onClick={() => onCommandClick(command)}>
                           <div className="font-semibold text-sm mb-1">{command.name}</div>
                           <div className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2">
                             {command.description}
                           </div>
                         </div>
-                        <div className="flex-shrink-0 w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
-                          <ChevronRight className="h-3.5 w-3.5 text-primary/70" />
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {onHelpClick && (
+                            <div
+                              className="w-6 h-6 bg-blue-500/10 hover:bg-blue-500/20 rounded-full flex items-center justify-center transition-colors cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onHelpClick(command);
+                              }}
+                              title="View help"
+                            >
+                              <HelpCircle className="h-3.5 w-3.5 text-blue-500/70" />
+                            </div>
+                          )}
+                          <div
+                            className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center cursor-pointer"
+                            onClick={() => onCommandClick(command)}
+                          >
+                            <ChevronRight className="h-3.5 w-3.5 text-primary/70" />
+                          </div>
                         </div>
                       </div>
                     </div>

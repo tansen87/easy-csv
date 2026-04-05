@@ -1,9 +1,9 @@
-import { PipelineStep } from "@/types/xan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, Settings2, Info } from "lucide-react";
+import { PipelineStep } from "@/types/xan";
 
 interface ParameterPanelProps {
   step: PipelineStep | null;
@@ -206,11 +206,6 @@ export function ParameterPanel({
                           </span>
                         )}
                       </div>
-                      {param.description && (
-                        <p className="text-xs text-muted-foreground/80 leading-relaxed">
-                          {param.description}
-                        </p>
-                      )}
                       {renderParameterInput(
                         param,
                         step.parameters[param.name]

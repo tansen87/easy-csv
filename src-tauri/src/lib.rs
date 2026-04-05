@@ -418,6 +418,13 @@ fn find_xan_executable() -> Option<String> {
         }
     }
 
+    // Check all paths
+    for path in paths {
+        if Path::new(&path).exists() {
+            return Some(path);
+        }
+    }
+
     None
 }
 
@@ -485,6 +492,29 @@ fn set_no_quoting(no_quoting: bool) -> Result<(), String> {
     save_config(&config)
 }
 
+#[tauri::command]
+fn get_xan_help(command_name: String) -> Result<String, String> {
+    let xan_path = find_xan_executable().ok_or("xan executable not found")?;
+
+    let output = Command::new(&xan_path)
+        .arg(&command_name)
+        .arg("--help")
+        .output()
+        .map_err(|e| format!("Failed to execute xan {} --help: {}", command_name, e))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        // If the command fails, still return stderr as it might contain helpful info
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        if !stderr.is_empty() {
+            Ok(stderr)
+        } else {
+            Err(format!("Failed to get help for command: {}", command_name))
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -500,7 +530,8 @@ pub fn run() {
             get_default_delimiter,
             set_default_delimiter,
             get_no_quoting,
-            set_no_quoting
+            set_no_quoting,
+            get_xan_help
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
