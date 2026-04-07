@@ -74,7 +74,7 @@ export function LogPanel({ logs, onClear }: LogPanelProps) {
           </div>
           <div>
             <h3 className="text-sm font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-              Output Logs
+              Logs
             </h3>
             <p className="text-xs text-muted-foreground">
               {logs.length} {logs.length === 1 ? 'entry' : 'entries'}

@@ -8,6 +8,7 @@ use std::{path::Path, process::Stdio, thread};
 use std::os::windows::process::CommandExt;
 
 use serde::{Deserialize, Serialize};
+use tauri::Manager;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -551,6 +552,40 @@ fn get_xan_help(command_name: String) -> Result<String, String> {
     }
 }
 
+#[tauri::command]
+async fn save_history(app: tauri::AppHandle, history: String) -> Result<(), String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| format!("{e}"))?;
+    let history_path = app_data_dir.join("history.json");
+    eprintln!("{:?}", history_path);
+    
+    // Create directory if it doesn't exist
+    if let Some(parent) = history_path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create directory: {}", e))?;
+    }
+    
+    // Save history to file
+    std::fs::write(&history_path, history)
+        .map_err(|e| format!("Failed to save history: {}", e))?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn load_history(app: tauri::AppHandle) -> Result<String, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| format!("{e}"))?;
+    let history_path = app_data_dir.join("history.json");
+    
+    // Load history from file
+    if history_path.exists() {
+        let content = std::fs::read_to_string(&history_path)
+            .map_err(|e| format!("Failed to read history: {}", e))?;
+        Ok(content)
+    } else {
+        Ok("[]".to_string())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -567,7 +602,9 @@ pub fn run() {
             set_default_delimiter,
             get_no_quoting,
             set_no_quoting,
-            get_xan_help
+            get_xan_help,
+            save_history,
+            load_history
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

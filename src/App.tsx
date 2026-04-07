@@ -1,21 +1,30 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "@/components/ThemeProvider";
-import { Settings, X, FileText, CheckCircle, XCircle, Loader2, Sun, Moon } from "lucide-react";
+import { Settings, X, FileText, CheckCircle, XCircle, Loader2, Sun, Moon, Terminal, History } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { PipelineBuilder } from "@/components/PipelineBuilder";
 import { ParameterPanel } from "@/components/ParameterPanel";
 import { LogPanel } from "@/components/LogPanel";
 import { xanCommands } from "@/data/commands";
-import { PipelineStep, LogEntry, XanCommand, Workspace } from "@/types/xan";
+import { PipelineStep, LogEntry, XanCommand, Workspace, PipelineTab, HistoricalPipeline } from "@/types/xan";
 
 function App() {
   const { theme, setTheme } = useTheme();
-  const [pipeline, setPipeline] = useState<PipelineStep[]>([]);
+  const [tabs, setTabs] = useState<PipelineTab[]>([
+    {
+      id: 'tab-1',
+      name: 'Pipeline 1',
+      pipeline: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ]);
+  const [selectedTabId, setSelectedTabId] = useState<string>('tab-1');
   const [selectedStep, setSelectedStep] = useState<PipelineStep | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isXanInstalled, setIsXanInstalled] = useState<boolean | null>(null);
@@ -30,13 +39,42 @@ function App() {
   const [showHelp, setShowHelp] = useState<boolean>(false);
   const [helpContent, setHelpContent] = useState<string>('');
   const [helpCommandName, setHelpCommandName] = useState<string>('');
+  const [historicalPipelines, setHistoricalPipelines] = useState<HistoricalPipeline[]>([]);
+  const [activeLeftPanel, setActiveLeftPanel] = useState<'commands' | 'history'>('commands');
 
   useEffect(() => {
     checkXanInstallation();
     loadXanPath();
     loadDefaultDelimiter();
     loadNoQuoting();
+    loadHistoricalPipelines();
   }, []);
+
+  // Load historical pipelines from file
+  const loadHistoricalPipelines = async () => {
+    try {
+      const content = await invoke<string>("load_history");
+      const history = JSON.parse(content);
+      setHistoricalPipelines(history);
+    } catch (error) {
+      setHistoricalPipelines([]);
+    }
+  };
+
+  // Save historical pipelines to file
+  const saveHistoricalPipelines = async (history: HistoricalPipeline[]) => {
+    try {
+      await invoke("save_history", { history: JSON.stringify(history, null, 2) });
+    } catch (error) {
+      console.error("Failed to save historical pipelines:", error);
+    }
+  };
+
+  // Update historical pipelines and save to file
+  const updateHistoricalPipelines = (newHistory: HistoricalPipeline[]) => {
+    setHistoricalPipelines(newHistory);
+    saveHistoricalPipelines(newHistory);
+  };
 
   const loadXanPath = async () => {
     try {
@@ -96,6 +134,68 @@ function App() {
     setLogs((prev) => [...prev, newLog]);
   };
 
+  const getCurrentTab = () => {
+    return tabs.find(tab => tab.id === selectedTabId) || tabs[0];
+  };
+
+  const getCurrentPipeline = () => {
+    return getCurrentTab().pipeline;
+  };
+
+  const updateTabPipeline = (newPipeline: PipelineStep[]) => {
+    setTabs(prev => prev.map(tab => 
+      tab.id === selectedTabId 
+        ? { ...tab, pipeline: newPipeline, updatedAt: new Date().toISOString() }
+        : tab
+    ));
+  };
+
+  const addNewTab = () => {
+    const newTabId = `tab-${Date.now()}`;
+    const newTab: PipelineTab = {
+      id: newTabId,
+      name: `Pipeline ${tabs.length + 1}`,
+      pipeline: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    setTabs(prev => [...prev, newTab]);
+    setSelectedTabId(newTabId);
+    setSelectedStep(null);
+  };
+
+  const removeTab = (tabId: string) => {
+    if (tabs.length === 1) return;
+    
+    setTabs(prev => prev.filter(tab => tab.id !== tabId));
+    
+    if (selectedTabId === tabId) {
+      const remainingTab = tabs.find(tab => tab.id !== tabId);
+      if (remainingTab) {
+        setSelectedTabId(remainingTab.id);
+        setSelectedStep(null);
+      }
+    }
+  };
+
+  const removeAllTabsExcept = (keepTabId: string) => {
+    const keepTab = tabs.find(tab => tab.id === keepTabId);
+    if (keepTab) {
+      setTabs([keepTab]);
+      setSelectedTabId(keepTabId);
+      setSelectedStep(null);
+      addLog("info", "Cleared all pipeline tabs except the current one");
+    }
+  };
+
+  const renameTab = (tabId: string, newName: string) => {
+    setTabs(prev => prev.map(tab => 
+      tab.id === tabId 
+        ? { ...tab, name: newName, updatedAt: new Date().toISOString() }
+        : tab
+    ));
+  };
+
   const handleCommandClick = (command: XanCommand) => {
     const newStep: PipelineStep = {
       id: `${command.id}-${Date.now()}`,
@@ -109,7 +209,8 @@ function App() {
       }
     });
 
-    setPipeline((prev) => [...prev, newStep]);
+    const currentPipeline = getCurrentPipeline();
+    updateTabPipeline([...currentPipeline, newStep]);
     setSelectedStep(newStep);
   };
 
@@ -131,31 +232,34 @@ function App() {
   };
 
   const handleStepRemove = (stepId: string) => {
-    setPipeline((prev) => prev.filter((s) => s.id !== stepId));
+    const currentPipeline = getCurrentPipeline();
+    const updatedPipeline = currentPipeline.filter((s) => s.id !== stepId);
+    updateTabPipeline(updatedPipeline);
     if (selectedStep?.id === stepId) {
       setSelectedStep(null);
     }
   };
 
   const handleStepUpdate = (stepId: string, parameters: Record<string, any>) => {
-    setPipeline((prev) =>
-      prev.map((step) =>
-        step.id === stepId ? { ...step, parameters } : step
-      )
+    const currentPipeline = getCurrentPipeline();
+    const updatedPipeline = currentPipeline.map((step) =>
+      step.id === stepId ? { ...step, parameters } : step
     );
+    updateTabPipeline(updatedPipeline);
     if (selectedStep?.id === stepId) {
       setSelectedStep({ ...selectedStep, parameters });
     }
   };
 
   const handleClearPipeline = () => {
-    setPipeline([]);
+    updateTabPipeline([]);
     setSelectedStep(null);
     addLog("info", "Pipeline cleared");
   };
 
   const handleExecute = async () => {
-    if (pipeline.length === 0) {
+    const currentPipeline = getCurrentPipeline();
+    if (currentPipeline.length === 0) {
       addLog("warning", "No steps in pipeline to execute");
       return;
     }
@@ -169,7 +273,7 @@ function App() {
     addLog("info", "Starting pipeline execution...");
 
     try {
-      const commands = pipeline.map((step) => ({
+      const commands = currentPipeline.map((step) => ({
         name: step.command.name,
         parameters: step.command.parameters.map((param) => ({
           name: param.name,
@@ -179,6 +283,36 @@ function App() {
       }));
 
       const result = await invoke<any>("execute_xan_pipeline", { commands, inputFile, defaultDelimiter });
+
+      // Save to history
+      const currentTabName = getCurrentTab().name;
+      const existingHistoryIndex = historicalPipelines.findIndex(h => h.name === currentTabName);
+      
+      const historicalPipeline: HistoricalPipeline = {
+        id: existingHistoryIndex >= 0 ? historicalPipelines[existingHistoryIndex].id : `history-${Date.now()}`,
+        name: currentTabName,
+        pipeline: currentPipeline,
+        inputFile,
+        defaultDelimiter,
+        executedAt: new Date().toISOString(),
+        success: result.success,
+        output: result.output || undefined
+      };
+      
+      let updatedHistory: HistoricalPipeline[];
+      if (existingHistoryIndex >= 0) {
+        // Update existing history for this tab
+        updatedHistory = [...historicalPipelines];
+        updatedHistory[existingHistoryIndex] = historicalPipeline;
+        // Move updated history to the top
+        updatedHistory.splice(existingHistoryIndex, 1);
+        updatedHistory.unshift(historicalPipeline);
+      } else {
+        // Add new history for this tab
+        updatedHistory = [historicalPipeline, ...historicalPipelines].slice(0, 50); // Keep only last 50
+      }
+      
+      updateHistoricalPipelines(updatedHistory);
 
       if (result.success) {
         if (result.output) {
@@ -226,13 +360,14 @@ function App() {
 
   const handleExportWorkspace = async () => {
     try {
+      const currentPipeline = getCurrentPipeline();
       const workspace: Workspace = {
         version: "1.0.0",
         name: `xan-workspace_${new Date().toISOString().split('T')[0]}`,
         description: `Exported on ${new Date().toLocaleString()}`,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        pipeline: pipeline,
+        pipeline: currentPipeline,
         inputFile: inputFile,
         defaultDelimiter: defaultDelimiter,
         noQuoting: noQuoting,
@@ -268,7 +403,7 @@ function App() {
         const workspace: Workspace = JSON.parse(content);
 
         if (workspace.version && workspace.pipeline && workspace.inputFile !== undefined) {
-          setPipeline(workspace.pipeline);
+          updateTabPipeline(workspace.pipeline);
           setInputFile(workspace.inputFile);
           setDefaultDelimiter(workspace.defaultDelimiter || ',');
           setNoQuoting(workspace.noQuoting || false);
@@ -322,7 +457,7 @@ function App() {
         }
       `}</style>
       <header className="h-16 border-b bg-card/80 backdrop-blur-sm shadow-sm flex items-center justify-between px-6">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/60 rounded-lg flex items-center justify-center">
               <FileText className="h-5 w-5 text-primary-foreground" />
@@ -332,6 +467,20 @@ function App() {
                 Easy Csv
               </h1>
             </div>
+          </div>
+          <div className="flex border rounded-lg overflow-hidden">
+            <button 
+              className={`px-4 py-1.5 flex items-center justify-center transition-colors ${activeLeftPanel === 'commands' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+              onClick={() => setActiveLeftPanel('commands')}
+            >
+              <Terminal className="h-4 w-4" />
+            </button>
+            <button 
+              className={`px-4 py-1.5 flex items-center justify-center transition-colors ${activeLeftPanel === 'history' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+              onClick={() => setActiveLeftPanel('history')}
+            >
+              <History className="h-4 w-4" />
+            </button>
           </div>
         </div>
 
@@ -396,21 +545,102 @@ function App() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <aside className="w-[20%] flex-shrink-0">
-          <CommandList
-            commands={xanCommands}
-            onCommandClick={handleCommandClick}
-            onHelpClick={handleHelpClick}
-            selectedCommandId={selectedStep?.command.id}
-          />
+        <aside className="w-[20%] flex-shrink-0 flex flex-col bg-card/50 backdrop-blur-sm border-r">
+          {/* Panel Content */}
+          <div className="flex-1 overflow-hidden">
+            {activeLeftPanel === 'commands' ? (
+              <CommandList
+                commands={xanCommands}
+                onCommandClick={handleCommandClick}
+                onHelpClick={handleHelpClick}
+                selectedCommandId={selectedStep?.command.id}
+              />
+            ) : (
+              <div className="h-full overflow-auto p-4">
+                {historicalPipelines.length === 0 ? (
+                  <div className="text-center py-16 px-4">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
+                      <FileText className="h-8 w-8 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">No historical pipelines</p>
+                    <p className="text-xs text-muted-foreground/70">
+                      Execute pipelines to see them here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {historicalPipelines.map((history) => (
+                      <div key={history.id} className="border rounded-lg p-3 hover:bg-muted/30 transition-colors">
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-semibold text-xs truncate">{history.name}</h4>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${history.success ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
+                            {history.success ? 'Success' : 'Failed'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-1">
+                          {new Date(history.executedAt).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground mb-2 truncate">
+                          {history.inputFile.split('\\').pop()}
+                        </p>
+                        <div className="flex gap-1">
+                          <button 
+                            className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
+                            onClick={() => {
+                              updateTabPipeline(history.pipeline);
+                              setInputFile(history.inputFile);
+                              setDefaultDelimiter(history.defaultDelimiter);
+                              addLog("info", `Loaded historical pipeline: ${history.name}`);
+                            }}
+                          >
+                            Load
+                          </button>
+                          <button 
+                            className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
+                            onClick={() => {
+                              const newTabId = `tab-${Date.now()}`;
+                              const newTab: PipelineTab = {
+                                id: newTabId,
+                                name: `${history.name} (History)`,
+                                pipeline: history.pipeline,
+                                createdAt: new Date().toISOString(),
+                                updatedAt: new Date().toISOString()
+                              };
+                              setTabs(prev => [...prev, newTab]);
+                              setSelectedTabId(newTabId);
+                              setInputFile(history.inputFile);
+                              setDefaultDelimiter(history.defaultDelimiter);
+                              addLog("info", `Created new tab from historical pipeline: ${history.name}`);
+                            }}
+                          >
+                            New Tab
+                          </button>
+                          <button 
+                            className="text-xs px-2 py-1 rounded-xl hover:bg-accent transition-colors text-red-600 hover:bg-red-500/10 ml-auto"
+                            onClick={() => {
+                              const updatedHistory = historicalPipelines.filter(h => h.id !== history.id);
+                              updateHistoricalPipelines(updatedHistory);
+                              addLog("info", `Deleted historical pipeline: ${history.name}`);
+                            }}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </aside>
 
         <main className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 flex overflow-hidden">
             <div className="w-[60%] flex-shrink-0">
               <PipelineBuilder
-                steps={pipeline}
-                onStepsChange={setPipeline}
+                steps={getCurrentPipeline()}
+                onStepsChange={updateTabPipeline}
                 onStepClick={handleStepClick}
                 onStepRemove={handleStepRemove}
                 selectedStepId={selectedStep?.id}
@@ -419,6 +649,13 @@ function App() {
                 isExecuting={isExecuting}
                 onExportWorkspace={handleExportWorkspace}
                 onImportWorkspace={handleImportWorkspace}
+                tabs={tabs}
+                selectedTabId={selectedTabId}
+                onTabChange={setSelectedTabId}
+                onAddTab={addNewTab}
+                onRemoveTab={removeTab}
+                onRemoveAllTabsExcept={removeAllTabsExcept}
+                onRenameTab={renameTab}
               />
             </div>
 
@@ -553,6 +790,8 @@ function App() {
           </div>
         </div>
       )}
+
+
     </div>
   );
 }

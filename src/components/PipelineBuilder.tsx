@@ -1,7 +1,8 @@
+import React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { GripVertical, X, Play, Trash2, Download, Upload, Sparkles } from "lucide-react";
+import { GripVertical, X, Play, Trash2, Download, Upload, Sparkles, Plus, Edit3 } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -19,7 +20,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { PipelineStep } from "@/types/xan";
+import { PipelineStep, PipelineTab } from "@/types/xan";
 
 interface SortableStepProps {
   step: PipelineStep;
@@ -128,6 +129,13 @@ interface PipelineBuilderProps {
   isExecuting?: boolean;
   onExportWorkspace?: () => void;
   onImportWorkspace?: () => void;
+  tabs: PipelineTab[];
+  selectedTabId: string;
+  onTabChange: (tabId: string) => void;
+  onAddTab: () => void;
+  onRemoveTab: (tabId: string) => void;
+  onRemoveAllTabsExcept: (keepTabId: string) => void;
+  onRenameTab: (tabId: string, newName: string) => void;
 }
 
 export function PipelineBuilder({
@@ -141,7 +149,17 @@ export function PipelineBuilder({
   isExecuting,
   onExportWorkspace,
   onImportWorkspace,
+  tabs,
+  selectedTabId,
+  onTabChange,
+  onAddTab,
+  onRemoveTab,
+  onRemoveAllTabsExcept,
+  onRenameTab,
 }: PipelineBuilderProps) {
+  // State for editing tab names
+  const [editingTabId, setEditingTabId] = React.useState<string | null>(null);
+  const [editingTabName, setEditingTabName] = React.useState<string>('');
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -162,69 +180,161 @@ export function PipelineBuilder({
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10">
-      <div className="p-4 border-b bg-card/50 backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center border border-primary/20">
-              <Sparkles className="h-4 w-4 text-primary" />
+      <div className="border-b bg-card/50 backdrop-blur-sm">
+
+        {/* Pipeline Controls */}
+        <div className="p-4 border-t">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center border border-primary/20">
+                <Sparkles className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  Pipeline
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Drag to reorder, click to edit
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                Pipeline
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Drag to reorder, click to edit
-              </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onClear}
+                disabled={steps.length === 0}
+                className="h-8 px-3 text-xs font-medium hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                Clear
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onImportWorkspace}
+                className="h-8 px-3 text-xs font-medium"
+              >
+                <Upload className="h-3.5 w-3.5 mr-1.5" />
+                Import
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onExportWorkspace}
+                disabled={steps.length === 0}
+                className="h-8 px-3 text-xs font-medium"
+              >
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+                Export
+              </Button>
+              <Button
+                size="sm"
+                onClick={onExecute}
+                disabled={steps.length === 0 || isExecuting}
+                className="h-8 px-4 text-xs font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-sm"
+              >
+                {isExecuting ? (
+                  <>
+                    <div className="h-3.5 w-3.5 mr-1.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    Executing...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-3.5 w-3.5 mr-1.5" />
+                    Execute
+                  </>
+                )}
+              </Button>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onClear}
-              disabled={steps.length === 0}
-              className="h-8 px-3 text-xs font-medium hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
+        </div>
+        {/* Tab Management */}
+        <div className="border-t bg-background/50">
+          <div className="p-2 flex flex-wrap items-center gap-2">
+            <button
+              onClick={onAddTab}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm border-dashed hover:bg-accent transition-colors"
             >
-              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-              Clear
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onImportWorkspace}
-              className="h-8 px-3 text-xs font-medium"
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => {
+                if (tabs.length > 1) {
+                  const currentTab = tabs.find(tab => tab.id === selectedTabId);
+                  if (currentTab) {
+                    onRemoveAllTabsExcept(currentTab.id);
+                  }
+
+                }
+              }}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm border-dashed hover:bg-accent transition-colors"
             >
-              <Upload className="h-3.5 w-3.5 mr-1.5" />
-              Import
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onExportWorkspace}
-              disabled={steps.length === 0}
-              className="h-8 px-3 text-xs font-medium"
-            >
-              <Download className="h-3.5 w-3.5 mr-1.5" />
-              Export
-            </Button>
-            <Button
-              size="sm"
-              onClick={onExecute}
-              disabled={steps.length === 0 || isExecuting}
-              className="h-8 px-4 text-xs font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-sm"
-            >
-              {isExecuting ? (
-                <>
-                  <div className="h-3.5 w-3.5 mr-1.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  Executing...
-                </>
-              ) : (
-                <>
-                  <Play className="h-3.5 w-3.5 mr-1.5" />
-                  Execute
-                </>
-              )}
-            </Button>
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+            {tabs.map((tab) => (
+              <div
+                key={tab.id}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${selectedTabId === tab.id
+                  ? 'bg-primary/10 text-primary border border-primary/30'
+                  : 'hover:bg-accent border border-transparent'}`}
+              >
+                {editingTabId === tab.id ? (
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={editingTabName}
+                      onChange={(e) => setEditingTabName(e.target.value)}
+                      onBlur={() => {
+                        if (editingTabName.trim()) {
+                          onRenameTab(tab.id, editingTabName.trim());
+                        }
+                        setEditingTabId(null);
+                      }}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          if (editingTabName.trim()) {
+                            onRenameTab(tab.id, editingTabName.trim());
+                          }
+                          setEditingTabId(null);
+                        } else if (e.key === 'Escape') {
+                          setEditingTabId(null);
+                        }
+                      }}
+                      className="w-full px-2 py-0.5 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary h-6"
+                      style={{ lineHeight: '1.2' }}
+                      autoFocus
+                    />
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => onTabChange(tab.id)}
+                    className="flex-1 text-left truncate"
+                  >
+                    {tab.name}
+                  </button>
+                )}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      setEditingTabId(tab.id);
+                      setEditingTabName(tab.name);
+                    }}
+                    className="p-1 rounded hover:bg-accent transition-colors"
+                  >
+                    <Edit3 className="h-3 w-3" />
+                  </button>
+                  {tabs.length > 1 && (
+                    <button
+                      onClick={() => onRemoveTab(tab.id)}
+                      className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

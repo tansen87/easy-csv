@@ -30,6 +30,25 @@ export interface LogEntry {
   message: string;
 }
 
+export interface PipelineTab {
+  id: string;
+  name: string;
+  pipeline: PipelineStep[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HistoricalPipeline {
+  id: string;
+  name: string;
+  pipeline: PipelineStep[];
+  inputFile: string;
+  defaultDelimiter: string;
+  executedAt: string;
+  success: boolean;
+  output?: string;
+}
+
 export interface Workspace {
   version: string;
   name: string;
