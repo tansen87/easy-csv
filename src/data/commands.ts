@@ -1681,17 +1681,17 @@ export const xanCommands: XanCommand[] = [
     category: "Format, convert & recombobulate",
     parameters: [
       {
-        name: "columns",
-        type: "string",
-        description: "Column mappings (old1:new1,old2:new2,...) or pattern and replacement when using --replace",
-        required: false,
-        isPositional: true,
-      },
-      {
         name: "select",
         type: "string",
         description: "Select the columns to rename",
         required: false,
+      },
+      {
+        name: "columns",
+        type: "string",
+        description: "Column mappings or pattern and replacement when using --replace",
+        required: false,
+        isPositional: true,
       },
       {
         name: "prefix",
