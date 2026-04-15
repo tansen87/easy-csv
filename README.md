@@ -2,6 +2,10 @@
 
 A modern graphical user interface for the [xan](https://github.com/medialab/xan) CSV processing tool, built with Tauri, React, and shadcn-ui.
 
+## Screenshots
+
+![homepage](/docs/img/homepage.png)
+
 ## Features
 
 - **Visual Pipeline Builder**: Drag and drop xan commands to build data processing pipelines
@@ -62,7 +66,7 @@ The built application will be in the `src-tauri/target/release/bundle/` director
 ## Project Structure
 
 ```
-xan-gui/
+easy-csv/
 ├── src/
 │   ├── components/          # React components
 │   │   ├── ui/             # shadcn-ui components
