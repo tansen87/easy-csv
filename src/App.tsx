@@ -41,6 +41,7 @@ function App() {
   const [helpCommandName, setHelpCommandName] = useState<string>('');
   const [historicalPipelines, setHistoricalPipelines] = useState<HistoricalPipeline[]>([]);
   const [activeLeftPanel, setActiveLeftPanel] = useState<'commands' | 'history'>('commands');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   useEffect(() => {
     checkXanInstallation();
@@ -456,18 +457,8 @@ function App() {
           }
         }
       `}</style>
-      <header className="h-16 border-b bg-card/80 backdrop-blur-sm shadow-sm flex items-center justify-between px-6">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/60 rounded-lg flex items-center justify-center">
-              <FileText className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                Easy Csv
-              </h1>
-            </div>
-          </div>
+      <header className="h-16 border-b bg-card/80 backdrop-blur-sm shadow-sm flex items-center justify-between px-4">
+        <div className="flex items-center">
           <div className="flex border rounded-lg overflow-hidden">
             <button 
               className={`px-4 py-1.5 flex items-center justify-center transition-colors ${activeLeftPanel === 'commands' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
@@ -481,6 +472,15 @@ function App() {
             >
               <History className="h-4 w-4" />
             </button>
+          </div>
+          <div className="ml-2 w-48">
+            <input
+              type="text"
+              placeholder={activeLeftPanel === 'commands' ? "Search commands..." : "Search pipelines..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-3 py-1.5 text-sm border border-border/50 rounded-lg bg-background/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
+            />
           </div>
         </div>
 
@@ -554,82 +554,89 @@ function App() {
                 onCommandClick={handleCommandClick}
                 onHelpClick={handleHelpClick}
                 selectedCommandId={selectedStep?.command.id}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
               />
             ) : (
               <div className="h-full overflow-auto p-4">
-                {historicalPipelines.length === 0 ? (
-                  <div className="text-center py-16 px-4">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
-                      <FileText className="h-8 w-8 text-muted-foreground/50" />
-                    </div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">No historical pipelines</p>
-                    <p className="text-xs text-muted-foreground/70">
-                      Execute pipelines to see them here
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {historicalPipelines.map((history) => (
-                      <div key={history.id} className="border rounded-lg p-3 hover:bg-muted/30 transition-colors">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="font-semibold text-xs truncate">{history.name}</h4>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${history.success ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
-                            {history.success ? 'Success' : 'Failed'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          {new Date(history.executedAt).toLocaleString()}
-                        </p>
-                        <p className="text-xs text-muted-foreground mb-2 truncate">
-                          {history.inputFile.split('\\').pop()}
-                        </p>
-                        <div className="flex gap-1">
-                          <button 
-                            className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
-                            onClick={() => {
-                              updateTabPipeline(history.pipeline);
-                              setInputFile(history.inputFile);
-                              setDefaultDelimiter(history.defaultDelimiter);
-                              addLog("info", `Loaded historical pipeline: ${history.name}`);
-                            }}
-                          >
-                            Load
-                          </button>
-                          <button 
-                            className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
-                            onClick={() => {
-                              const newTabId = `tab-${Date.now()}`;
-                              const newTab: PipelineTab = {
-                                id: newTabId,
-                                name: `${history.name} (History)`,
-                                pipeline: history.pipeline,
-                                createdAt: new Date().toISOString(),
-                                updatedAt: new Date().toISOString()
-                              };
-                              setTabs(prev => [...prev, newTab]);
-                              setSelectedTabId(newTabId);
-                              setInputFile(history.inputFile);
-                              setDefaultDelimiter(history.defaultDelimiter);
-                              addLog("info", `Created new tab from historical pipeline: ${history.name}`);
-                            }}
-                          >
-                            New Tab
-                          </button>
-                          <button 
-                            className="text-xs px-2 py-1 rounded-xl hover:bg-accent transition-colors text-red-600 hover:bg-red-500/10 ml-auto"
-                            onClick={() => {
-                              const updatedHistory = historicalPipelines.filter(h => h.id !== history.id);
-                              updateHistoricalPipelines(updatedHistory);
-                              addLog("info", `Deleted historical pipeline: ${history.name}`);
-                            }}
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
+                {(() => {
+                  const filteredHistory = historicalPipelines.filter(history => 
+                    history.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  );
+                  return filteredHistory.length === 0 ? (
+                    <div className="text-center py-16 px-4">
+                      <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
+                        <FileText className="h-8 w-8 text-muted-foreground/50" />
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <p className="text-sm font-medium text-muted-foreground mb-1">No historical pipelines found</p>
+                      <p className="text-xs text-muted-foreground/70">
+                        {searchQuery ? 'Try a different search term' : 'Execute pipelines to see them here'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredHistory.map((history) => (
+                        <div key={history.id} className="border rounded-lg p-3 hover:bg-muted/30 transition-colors">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className="font-semibold text-xs truncate">{history.name}</h4>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${history.success ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
+                              {history.success ? 'Success' : 'Failed'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mb-1">
+                            {new Date(history.executedAt).toLocaleString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground mb-2 truncate">
+                            {history.inputFile.split('\\').pop()}
+                          </p>
+                          <div className="flex gap-1">
+                            <button 
+                              className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
+                              onClick={() => {
+                                updateTabPipeline(history.pipeline);
+                                setInputFile(history.inputFile);
+                                setDefaultDelimiter(history.defaultDelimiter);
+                                addLog("info", `Loaded historical pipeline: ${history.name}`);
+                              }}
+                            >
+                              Load
+                            </button>
+                            <button 
+                              className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
+                              onClick={() => {
+                                const newTabId = `tab-${Date.now()}`;
+                                const newTab: PipelineTab = {
+                                  id: newTabId,
+                                  name: `${history.name} (History)`,
+                                  pipeline: history.pipeline,
+                                  createdAt: new Date().toISOString(),
+                                  updatedAt: new Date().toISOString()
+                                };
+                                setTabs(prev => [...prev, newTab]);
+                                setSelectedTabId(newTabId);
+                                setInputFile(history.inputFile);
+                                setDefaultDelimiter(history.defaultDelimiter);
+                                addLog("info", `Created new tab from historical pipeline: ${history.name}`);
+                              }}
+                            >
+                              New Tab
+                            </button>
+                            <button 
+                              className="text-xs px-2 py-1 rounded-xl hover:bg-accent transition-colors text-red-600 hover:bg-red-500/10 ml-auto"
+                              onClick={() => {
+                                const updatedHistory = historicalPipelines.filter(h => h.id !== history.id);
+                                updateHistoricalPipelines(updatedHistory);
+                                addLog("info", `Deleted historical pipeline: ${history.name}`);
+                              }}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
