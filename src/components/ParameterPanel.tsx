@@ -34,17 +34,19 @@ export function ParameterPanel({
             </div>
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-center text-muted-foreground">
-          <div className="text-center px-4">
-            <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
-              <Settings2 className="h-8 w-8 text-muted-foreground/50" />
+        <ScrollArea className="flex-1">
+          <div className="p-4">
+            <div className="text-center py-16 px-4">
+              <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
+                <Settings2 className="h-8 w-8 text-muted-foreground/50" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">No step selected</p>
+              <p className="text-xs text-muted-foreground/70">
+                Click on a pipeline step to edit its parameters
+              </p>
             </div>
-            <p className="text-sm font-medium text-muted-foreground mb-1">No step selected</p>
-            <p className="text-xs text-muted-foreground/70">
-              Click on a pipeline step to edit its parameters
-            </p>
           </div>
-        </div>
+        </ScrollArea>
       </div>
     );
   }

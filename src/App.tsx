@@ -636,8 +636,8 @@ function App() {
         </aside>
 
         <main className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 flex overflow-hidden">
-            <div className="w-[60%] flex-shrink-0">
+          <div className="flex-1 flex overflow-hidden min-h-0">
+            <div className="w-[60%] flex-shrink-0 flex flex-col">
               <PipelineBuilder
                 steps={getCurrentPipeline()}
                 onStepsChange={updateTabPipeline}
@@ -659,7 +659,7 @@ function App() {
               />
             </div>
 
-            <aside className="flex-1">
+            <aside className="flex-1 flex flex-col">
               <ParameterPanel
                 step={selectedStep}
                 onStepUpdate={handleStepUpdate}
