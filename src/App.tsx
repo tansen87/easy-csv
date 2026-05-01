@@ -1,15 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "@/components/ThemeProvider";
-import { Settings, X, FileText, CheckCircle, XCircle, Loader2, Sun, Moon, Terminal, History } from "lucide-react";
+import { Settings, X, FileText, CheckCircle, XCircle, Loader2, Sun, Moon, Terminal, History, Table, Layers } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { PipelineBuilder } from "@/components/PipelineBuilder";
 import { ParameterPanel } from "@/components/ParameterPanel";
 import { LogPanel } from "@/components/LogPanel";
+import { SpreadsheetView } from "@/components/SpreadsheetView";
 import { xanCommands } from "@/data/commands";
 import { PipelineStep, LogEntry, XanCommand, Workspace, PipelineTab, HistoricalPipeline } from "@/types/xan";
 
@@ -42,16 +43,32 @@ function App() {
   const [historicalPipelines, setHistoricalPipelines] = useState<HistoricalPipeline[]>([]);
   const [activeLeftPanel, setActiveLeftPanel] = useState<'commands' | 'history'>('commands');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'pipeline' | 'spreadsheet'>('pipeline');
+  const [csvData, setCsvData] = useState<{ headers: string[]; rows: string[][] }>({ headers: [], rows: [] });
 
-  useEffect(() => {
-    checkXanInstallation();
-    loadXanPath();
-    loadDefaultDelimiter();
-    loadNoQuoting();
-    loadHistoricalPipelines();
-  }, []);
+  // Load CSV file
+  const loadCsvData = useCallback(async (filePath: string) => {
+    if (!filePath) {
+      setCsvData({ headers: [], rows: [] });
+      return;
+    }
 
-  // Load historical pipelines from file
+    try {
+      const data = await invoke<{ headers: string[]; rows: string[][] }>(
+        "read_csv_file",
+        {
+          filePath,
+          delimiter: defaultDelimiter,
+          limit: 100,
+        }
+      );
+      setCsvData(data);
+    } catch (error) {
+      addLog("error", `Failed to read CSV: ${error}`);
+      setCsvData({ headers: [], rows: [] });
+    }
+  }, [defaultDelimiter]);
+
   const loadHistoricalPipelines = async () => {
     try {
       const content = await invoke<string>("load_history");
@@ -67,7 +84,7 @@ function App() {
     try {
       await invoke("save_history", { history: JSON.stringify(history, null, 2) });
     } catch (error) {
-      console.error("Failed to save historical pipelines:", error);
+      addLog("error", `Failed to save historical pipelines: ${error}`);
     }
   };
 
@@ -135,6 +152,18 @@ function App() {
     setLogs((prev) => [...prev, newLog]);
   };
 
+  useEffect(() => {
+    checkXanInstallation();
+    loadXanPath();
+    loadDefaultDelimiter();
+    loadNoQuoting();
+    loadHistoricalPipelines();
+  }, []);
+
+  useEffect(() => {
+    loadCsvData(inputFile);
+  }, [inputFile, defaultDelimiter, loadCsvData]);
+
   const getCurrentTab = () => {
     return tabs.find(tab => tab.id === selectedTabId) || tabs[0];
   };
@@ -197,7 +226,7 @@ function App() {
     ));
   };
 
-  const handleCommandClick = (command: XanCommand) => {
+  const handleCommandClick = (command: XanCommand, initialParameters?: Record<string, any>) => {
     const newStep: PipelineStep = {
       id: `${command.id}-${Date.now()}`,
       command,
@@ -209,6 +238,10 @@ function App() {
         newStep.parameters[param.name] = param.default;
       }
     });
+
+    if (initialParameters) {
+      newStep.parameters = { ...newStep.parameters, ...initialParameters };
+    }
 
     const currentPipeline = getCurrentPipeline();
     updateTabPipeline([...currentPipeline, newStep]);
@@ -484,7 +517,28 @@ function App() {
           </div>
         </div>
 
-        <div className="flex-1 max-w-2xl mx-8">
+        <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1 border border-border/50">
+          <Button
+            variant={viewMode === "pipeline" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("pipeline")}
+            className="h-8 px-3 text-xs font-medium"
+          >
+            <Layers className="h-3.5 w-3.5 mr-1.5" />
+            Pipeline
+          </Button>
+          <Button
+            variant={viewMode === "spreadsheet" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("spreadsheet")}
+            className="h-8 px-3 text-xs font-medium"
+          >
+            <Table className="h-3.5 w-3.5 mr-1.5" />
+            Spreadsheet
+          </Button>
+        </div>
+
+        <div className="flex-1 max-w-xl mx-8">
           <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1.5 border border-border/50">
             <input
               type="text"
@@ -643,39 +697,62 @@ function App() {
         </aside>
 
         <main className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 flex overflow-hidden min-h-0">
-            <div className="w-[60%] flex-shrink-0 flex flex-col">
-              <PipelineBuilder
-                steps={getCurrentPipeline()}
-                onStepsChange={updateTabPipeline}
-                onStepClick={handleStepClick}
-                onStepRemove={handleStepRemove}
-                selectedStepId={selectedStep?.id}
-                onExecute={handleExecute}
-                onClear={handleClearPipeline}
-                isExecuting={isExecuting}
-                onExportWorkspace={handleExportWorkspace}
-                onImportWorkspace={handleImportWorkspace}
-                tabs={tabs}
-                selectedTabId={selectedTabId}
-                onTabChange={setSelectedTabId}
-                onAddTab={addNewTab}
-                onRemoveTab={removeTab}
-                onRemoveAllTabsExcept={removeAllTabsExcept}
-                onRenameTab={renameTab}
-              />
-            </div>
+          {viewMode === "pipeline" ? (
+            <>
+              <div className="flex-1 flex overflow-hidden min-h-0">
+                <div className="w-[60%] flex-shrink-0 flex flex-col">
+                  <PipelineBuilder
+                    steps={getCurrentPipeline()}
+                    onStepsChange={updateTabPipeline}
+                    onStepClick={handleStepClick}
+                    onStepRemove={handleStepRemove}
+                    selectedStepId={selectedStep?.id}
+                    onExecute={handleExecute}
+                    onClear={handleClearPipeline}
+                    isExecuting={isExecuting}
+                    onExportWorkspace={handleExportWorkspace}
+                    onImportWorkspace={handleImportWorkspace}
+                    tabs={tabs}
+                    selectedTabId={selectedTabId}
+                    onTabChange={setSelectedTabId}
+                    onAddTab={addNewTab}
+                    onRemoveTab={removeTab}
+                    onRemoveAllTabsExcept={removeAllTabsExcept}
+                    onRenameTab={renameTab}
+                  />
+                </div>
 
-            <aside className="flex-1 flex flex-col">
-              <ParameterPanel
-                step={selectedStep}
-                onStepUpdate={handleStepUpdate}
-                onClose={() => setSelectedStep(null)}
-              />
-            </aside>
-          </div>
+                <aside className="flex-1 flex flex-col">
+                  <ParameterPanel
+                    step={selectedStep}
+                    onStepUpdate={handleStepUpdate}
+                    onClose={() => setSelectedStep(null)}
+                  />
+                </aside>
+              </div>
 
-          <LogPanel logs={logs} onClear={handleClearLogs} />
+              <LogPanel logs={logs} onClear={handleClearLogs} />
+            </>
+          ) : (
+            <>
+              <div className="flex-1 overflow-hidden">
+                <SpreadsheetView
+                  data={csvData.rows}
+                  headers={csvData.headers}
+                  onAddCommand={handleCommandClick}
+                  pipeline={getCurrentPipeline()}
+                  onStepClick={handleStepClick}
+                  onStepUpdate={handleStepUpdate}
+                  onStepDelete={handleStepRemove}
+                  onPipelineReorder={updateTabPipeline}
+                  onExecute={handleExecute}
+                  isExecuting={isExecuting}
+                  inputFile={inputFile}
+                />
+              </div>
+              <LogPanel logs={logs} onClear={handleClearLogs} />
+            </>
+          )}
         </main>
       </div>
 

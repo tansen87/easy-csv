@@ -48,6 +48,47 @@ pub struct ExecutionResult {
     pub error: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CsvData {
+    pub headers: Vec<String>,
+    pub rows: Vec<Vec<String>>,
+}
+
+#[tauri::command]
+async fn read_csv_file(
+    file_path: String,
+    delimiter: String,
+    limit: Option<usize>,
+) -> Result<CsvData, String> {
+    use std::fs::File;
+    use std::io::BufReader;
+
+    let file = File::open(&file_path)
+        .map_err(|e| format!("Failed to open file: {}", e))?;
+
+    let mut rdr = csv::ReaderBuilder::new()
+        .delimiter(delimiter.as_bytes()[0])
+        .from_reader(BufReader::new(file));
+
+    let headers = rdr.headers()
+        .map_err(|e| format!("Failed to read headers: {}", e))?
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+
+    let row_limit = limit.unwrap_or(100);
+    let mut rows = Vec::new();
+    for result in rdr.records() {
+        if rows.len() >= row_limit {
+            break;
+        }
+        let record = result.map_err(|e| format!("Failed to read row: {}", e))?;
+        rows.push(record.iter().map(|s| s.to_string()).collect());
+    }
+
+    Ok(CsvData { headers, rows })
+}
+
 #[tauri::command]
 async fn execute_xan_pipeline(
     commands: Vec<PipelineCommand>,
@@ -604,7 +645,8 @@ pub fn run() {
             set_no_quoting,
             get_xan_help,
             save_history,
-            load_history
+            load_history,
+            read_csv_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
