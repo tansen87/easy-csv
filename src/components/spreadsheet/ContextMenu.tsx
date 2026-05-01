@@ -397,6 +397,7 @@ export function ContextMenu({
                 type: 'groupby',
                 params: {
                   columns: '',
+                  expression: '',
                   keep: '',
                   'along-cols': '',
                   'along-matrix': '',

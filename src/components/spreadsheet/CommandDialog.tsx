@@ -85,7 +85,7 @@ export function CommandDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="bg-card border rounded-lg shadow-lg w-full max-w-2xl p-6">
+      <div className="bg-card border rounded-lg shadow-lg w-full max-w-2xl p-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">
             {commandDialog.type === "search" && "Search"}
@@ -423,10 +423,16 @@ export function CommandDialog({
               </div>
             </ScrollArea>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -460,7 +466,7 @@ export function CommandDialog({
                   !commandDialog.params.empty
                 }
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </>
@@ -559,10 +565,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -592,7 +604,7 @@ export function CommandDialog({
                 }}
                 disabled={!commandDialog.params.expression}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -656,10 +668,16 @@ export function CommandDialog({
               </label>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -687,7 +705,7 @@ export function CommandDialog({
                 }}
                 disabled={!commandDialog.params.select}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -734,10 +752,16 @@ export function CommandDialog({
               </label>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -767,7 +791,7 @@ export function CommandDialog({
                 }}
                 disabled={!commandDialog.params.selection}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -795,10 +819,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -825,7 +855,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -870,10 +900,16 @@ export function CommandDialog({
               </label>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -900,7 +936,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -986,10 +1022,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -1016,7 +1058,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -1058,10 +1100,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -1088,7 +1136,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -1130,10 +1178,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -1160,7 +1214,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -1221,10 +1275,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -1253,7 +1313,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -1382,10 +1442,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -1412,7 +1478,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -1474,10 +1540,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -1506,7 +1578,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -1694,10 +1766,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -1726,182 +1804,217 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
         )}
 
         {commandDialog.type === "groupby" && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Columns</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.columns || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        columns: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="Columns to group by"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                  autoFocus
-                />
+          <>
+            <ScrollArea className="h-[24vh]">
+              <div className="space-y-3 pr-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Columns</label>
+                    <input
+                      type="text"
+                      value={commandDialog.params.columns || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            columns: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="Columns to group by"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Expression</label>
+                    <input
+                      type="text"
+                      value={commandDialog.params.expression || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            expression: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="Aggregation expression"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Keep</label>
+                    <input
+                      type="text"
+                      value={commandDialog.params.keep || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            keep: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="Keep these columns"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Total</label>
+                    <input
+                      type="text"
+                      value={commandDialog.params.total || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            total: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="Aggregation over whole file"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Along Columns</label>
+                    <input
+                      type="text"
+                      value={commandDialog.params["along-cols"] || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            "along-cols": e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="Aggregate over columns"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Along Matrix</label>
+                    <input
+                      type="text"
+                      value={commandDialog.params["along-matrix"] || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            "along-matrix": e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="Aggregate all values"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params.sorted}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            sorted: e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-4 w-4"
+                    />
+                    Sorted
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params.parallel}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            parallel: e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-4 w-4"
+                    />
+                    Parallel
+                  </label>
+                  <div className="space-y-2">
+                    <input
+                      type="number"
+                      value={commandDialog.params.threads || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            threads: e.target.value
+                              ? Number(e.target.value)
+                              : undefined,
+                          },
+                        })
+                      }
+                      placeholder="Threads"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Output</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.output || ""}
+                    onChange={(e) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          output: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="Write output to file instead of stdout"
+                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Keep</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.keep || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: { ...commandDialog.params, keep: e.target.value },
-                    })
-                  }
-                  placeholder="Keep these columns"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Along Columns</label>
-                <input
-                  type="text"
-                  value={commandDialog.params["along-cols"] || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "along-cols": e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="Aggregate over columns"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Along Matrix</label>
-                <input
-                  type="text"
-                  value={commandDialog.params["along-matrix"] || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "along-matrix": e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="Aggregate all values"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Total</label>
-              <input
-                type="text"
-                value={commandDialog.params.total || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, total: e.target.value },
-                  })
-                }
-                placeholder="Aggregation over whole file"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-0">
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.sorted}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        sorted: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Sorted
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.parallel}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        parallel: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Parallel
-              </label>
-              <div></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Threads</label>
-                <input
-                  type="number"
-                  value={commandDialog.params.threads || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        threads: e.target.value
-                          ? Number(e.target.value)
-                          : undefined,
-                      },
-                    })
-                  }
-                  placeholder="Number of threads"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
+            </ScrollArea>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -1930,10 +2043,10 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
-          </div>
+          </>
         )}
 
         {commandDialog.type === "stats" && (
@@ -2123,10 +2236,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -2153,7 +2272,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -2295,10 +2414,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -2325,7 +2450,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -2553,10 +2678,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -2583,7 +2714,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -2644,10 +2775,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -2676,7 +2813,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -2772,10 +2909,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -2802,7 +2945,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -2830,10 +2973,16 @@ export function CommandDialog({
               </label>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -2862,7 +3011,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -3040,10 +3189,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -3072,7 +3227,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -3194,10 +3349,16 @@ export function CommandDialog({
               </label>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -3224,7 +3385,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -3267,10 +3428,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -3297,7 +3464,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -3411,10 +3578,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -3441,7 +3614,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -3499,10 +3672,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -3531,7 +3710,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -3627,10 +3806,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -3657,7 +3842,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -3711,10 +3896,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -3741,7 +3932,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -3851,10 +4042,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -3883,7 +4080,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -3978,10 +4175,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -4010,7 +4213,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -4068,10 +4271,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -4100,7 +4309,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -4210,10 +4419,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -4240,7 +4455,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -4350,10 +4565,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -4380,7 +4601,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -4588,10 +4809,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -4618,7 +4845,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -4776,10 +5003,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -4806,7 +5039,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -4849,10 +5082,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -4881,7 +5120,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -5021,10 +5260,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -5053,7 +5298,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -5096,10 +5341,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -5128,7 +5379,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -5189,10 +5440,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -5221,7 +5478,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -5329,10 +5586,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -5361,7 +5624,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -5524,10 +5787,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -5554,7 +5823,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -5703,10 +5972,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -5733,7 +6008,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -5892,10 +6167,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -5922,7 +6203,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -5946,10 +6227,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -5978,7 +6265,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -6002,10 +6289,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -6034,7 +6327,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -6127,10 +6420,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -6157,7 +6456,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -6238,10 +6537,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -6270,7 +6575,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -6392,10 +6697,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -6422,7 +6733,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -6573,10 +6884,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -6605,7 +6922,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -6725,10 +7042,16 @@ export function CommandDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -6755,7 +7078,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>
@@ -6851,10 +7174,16 @@ export function CommandDialog({
               </label>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCommandDialog(null)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (
                     commandDialog.isUpdate &&
@@ -6881,7 +7210,7 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
               >
-                {commandDialog.isUpdate ? "Update Command" : "Add to Pipeline"}
+                {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
             </div>
           </div>

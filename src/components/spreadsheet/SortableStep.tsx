@@ -152,6 +152,7 @@ export function SortableStep({
       } else if (cmdId === 'groupby') {
         initialParams = {
           columns: step.parameters.columns || '',
+          expression: step.parameters.expression || '',
           keep: step.parameters.keep || '',
           'along-cols': step.parameters['along-cols'] || '',
           'along-matrix': step.parameters['along-matrix'] || '',

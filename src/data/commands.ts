@@ -1128,6 +1128,13 @@ export const xanCommands: XanCommand[] = [
         isPositional: true,
       },
       {
+        name: "expression",
+        type: "string",
+        description: "Aggregation expression",
+        required: true,
+        isPositional: true,
+      },
+      {
         name: "keep",
         type: "string",
         description: "Keep this selection of columns, in addition to the ones representing groups, in the output",
