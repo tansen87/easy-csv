@@ -1,73 +1,109 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "@/components/ThemeProvider";
-import { Settings, X, FileText, CheckCircle, XCircle, Loader2, Sun, Moon, Terminal, History, Table, Layers } from "lucide-react";
+import {
+  Settings,
+  X,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Sun,
+  Moon,
+  Terminal,
+  History,
+  Table,
+  Layers,
+} from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { PipelineBuilder } from "@/components/PipelineBuilder";
 import { ParameterPanel } from "@/components/ParameterPanel";
 import { LogPanel } from "@/components/LogPanel";
 import { SpreadsheetView } from "@/components/SpreadsheetView";
 import { xanCommands } from "@/data/commands";
-import { PipelineStep, LogEntry, XanCommand, Workspace, PipelineTab, HistoricalPipeline } from "@/types/xan";
+import {
+  PipelineStep,
+  LogEntry,
+  XanCommand,
+  Workspace,
+  PipelineTab,
+  HistoricalPipeline,
+} from "@/types/xan";
 
 function App() {
   const { theme, setTheme } = useTheme();
   const [tabs, setTabs] = useState<PipelineTab[]>([
     {
-      id: 'tab-1',
-      name: 'Pipeline 1',
+      id: "tab-1",
+      name: "Pipeline 1",
       pipeline: [],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
+      updatedAt: new Date().toISOString(),
+    },
   ]);
-  const [selectedTabId, setSelectedTabId] = useState<string>('tab-1');
+  const [selectedTabId, setSelectedTabId] = useState<string>("tab-1");
   const [selectedStep, setSelectedStep] = useState<PipelineStep | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isXanInstalled, setIsXanInstalled] = useState<boolean | null>(null);
   const [xanVersion, setXanVersion] = useState<string | null>(null);
-  const [inputFile, setInputFile] = useState<string>('');
+  const [inputFile, setInputFile] = useState<string>("");
   const [showSettings, setShowSettings] = useState<boolean>(false);
-  const [defaultDelimiter, setDefaultDelimiter] = useState<string>(',');
-  const [xanPath, setXanPath] = useState<string>('');
+  const [defaultDelimiter, setDefaultDelimiter] = useState<string>(",");
+  const [xanPath, setXanPath] = useState<string>("");
   const [noQuoting, setNoQuoting] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
-  const [themeTransition, setThemeTransition] = useState<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
+  const [themeTransition, setThemeTransition] = useState<{
+    x: number;
+    y: number;
+    active: boolean;
+  }>({ x: 0, y: 0, active: false });
   const [showHelp, setShowHelp] = useState<boolean>(false);
-  const [helpContent, setHelpContent] = useState<string>('');
-  const [helpCommandName, setHelpCommandName] = useState<string>('');
-  const [historicalPipelines, setHistoricalPipelines] = useState<HistoricalPipeline[]>([]);
-  const [activeLeftPanel, setActiveLeftPanel] = useState<'commands' | 'history'>('commands');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'pipeline' | 'spreadsheet'>('pipeline');
-  const [csvData, setCsvData] = useState<{ headers: string[]; rows: string[][] }>({ headers: [], rows: [] });
+  const [helpContent, setHelpContent] = useState<string>("");
+  const [helpCommandName, setHelpCommandName] = useState<string>("");
+  const [historicalPipelines, setHistoricalPipelines] = useState<
+    HistoricalPipeline[]
+  >([]);
+  const [activeLeftPanel, setActiveLeftPanel] = useState<
+    "commands" | "history"
+  >("commands");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"pipeline" | "spreadsheet">(
+    "pipeline",
+  );
+  const [csvData, setCsvData] = useState<{
+    headers: string[];
+    rows: string[][];
+  }>({ headers: [], rows: [] });
 
   // Load CSV file
-  const loadCsvData = useCallback(async (filePath: string) => {
-    if (!filePath) {
-      setCsvData({ headers: [], rows: [] });
-      return;
-    }
+  const loadCsvData = useCallback(
+    async (filePath: string) => {
+      if (!filePath) {
+        setCsvData({ headers: [], rows: [] });
+        return;
+      }
 
-    try {
-      const data = await invoke<{ headers: string[]; rows: string[][] }>(
-        "read_csv_file",
-        {
-          filePath,
-          delimiter: defaultDelimiter,
-          limit: 100,
-        }
-      );
-      setCsvData(data);
-    } catch (error) {
-      addLog("error", `Failed to read CSV: ${error}`);
-      setCsvData({ headers: [], rows: [] });
-    }
-  }, [defaultDelimiter]);
+      try {
+        const data = await invoke<{ headers: string[]; rows: string[][] }>(
+          "read_csv_file",
+          {
+            filePath,
+            delimiter: defaultDelimiter,
+            limit: 100,
+          },
+        );
+        setCsvData(data);
+      } catch (error) {
+        addLog("error", `Failed to read CSV: ${error}`);
+        setCsvData({ headers: [], rows: [] });
+      }
+    },
+    [defaultDelimiter],
+  );
 
   const loadHistoricalPipelines = async () => {
     try {
@@ -82,7 +118,9 @@ function App() {
   // Save historical pipelines to file
   const saveHistoricalPipelines = async (history: HistoricalPipeline[]) => {
     try {
-      await invoke("save_history", { history: JSON.stringify(history, null, 2) });
+      await invoke("save_history", {
+        history: JSON.stringify(history, null, 2),
+      });
     } catch (error) {
       addLog("error", `Failed to save historical pipelines: ${error}`);
     }
@@ -107,7 +145,9 @@ function App() {
 
   const loadDefaultDelimiter = async () => {
     try {
-      const savedDelimiter = await invoke<string | null>("get_default_delimiter");
+      const savedDelimiter = await invoke<string | null>(
+        "get_default_delimiter",
+      );
       if (savedDelimiter) {
         setDefaultDelimiter(savedDelimiter);
       }
@@ -164,8 +204,20 @@ function App() {
     loadCsvData(inputFile);
   }, [inputFile, defaultDelimiter, loadCsvData]);
 
+  useEffect(() => {
+    const updateTitle = async () => {
+      try {
+        const title = inputFile ? `${inputFile} - Easy Csv` : "Easy Csv";
+        await invoke("set_window_title", { title });
+      } catch (error) {
+        addLog("error", `Failed to set window title: ${error}`);
+      }
+    };
+    updateTitle();
+  }, [inputFile]);
+
   const getCurrentTab = () => {
-    return tabs.find(tab => tab.id === selectedTabId) || tabs[0];
+    return tabs.find((tab) => tab.id === selectedTabId) || tabs[0];
   };
 
   const getCurrentPipeline = () => {
@@ -173,11 +225,17 @@ function App() {
   };
 
   const updateTabPipeline = (newPipeline: PipelineStep[]) => {
-    setTabs(prev => prev.map(tab => 
-      tab.id === selectedTabId 
-        ? { ...tab, pipeline: newPipeline, updatedAt: new Date().toISOString() }
-        : tab
-    ));
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === selectedTabId
+          ? {
+              ...tab,
+              pipeline: newPipeline,
+              updatedAt: new Date().toISOString(),
+            }
+          : tab,
+      ),
+    );
   };
 
   const addNewTab = () => {
@@ -187,20 +245,20 @@ function App() {
       name: `Pipeline ${tabs.length + 1}`,
       pipeline: [],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
-    setTabs(prev => [...prev, newTab]);
+    setTabs((prev) => [...prev, newTab]);
     setSelectedTabId(newTabId);
     setSelectedStep(null);
   };
 
   const removeTab = (tabId: string) => {
     if (tabs.length === 1) return;
-    
-    setTabs(prev => prev.filter(tab => tab.id !== tabId));
-    
+
+    setTabs((prev) => prev.filter((tab) => tab.id !== tabId));
+
     if (selectedTabId === tabId) {
-      const remainingTab = tabs.find(tab => tab.id !== tabId);
+      const remainingTab = tabs.find((tab) => tab.id !== tabId);
       if (remainingTab) {
         setSelectedTabId(remainingTab.id);
         setSelectedStep(null);
@@ -209,7 +267,7 @@ function App() {
   };
 
   const removeAllTabsExcept = (keepTabId: string) => {
-    const keepTab = tabs.find(tab => tab.id === keepTabId);
+    const keepTab = tabs.find((tab) => tab.id === keepTabId);
     if (keepTab) {
       setTabs([keepTab]);
       setSelectedTabId(keepTabId);
@@ -219,14 +277,19 @@ function App() {
   };
 
   const renameTab = (tabId: string, newName: string) => {
-    setTabs(prev => prev.map(tab => 
-      tab.id === tabId 
-        ? { ...tab, name: newName, updatedAt: new Date().toISOString() }
-        : tab
-    ));
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === tabId
+          ? { ...tab, name: newName, updatedAt: new Date().toISOString() }
+          : tab,
+      ),
+    );
   };
 
-  const handleCommandClick = (command: XanCommand, initialParameters?: Record<string, any>) => {
+  const handleCommandClick = (
+    command: XanCommand,
+    initialParameters?: Record<string, any>,
+  ) => {
     const newStep: PipelineStep = {
       id: `${command.id}-${Date.now()}`,
       command,
@@ -250,8 +313,8 @@ function App() {
 
   const handleHelpClick = async (command: XanCommand) => {
     try {
-      const helpText = await invoke<string>("get_xan_help", { 
-        commandName: command.name 
+      const helpText = await invoke<string>("get_xan_help", {
+        commandName: command.name,
       });
       setHelpContent(helpText);
       setHelpCommandName(command.name);
@@ -274,10 +337,13 @@ function App() {
     }
   };
 
-  const handleStepUpdate = (stepId: string, parameters: Record<string, any>) => {
+  const handleStepUpdate = (
+    stepId: string,
+    parameters: Record<string, any>,
+  ) => {
     const currentPipeline = getCurrentPipeline();
     const updatedPipeline = currentPipeline.map((step) =>
-      step.id === stepId ? { ...step, parameters } : step
+      step.id === stepId ? { ...step, parameters } : step,
     );
     updateTabPipeline(updatedPipeline);
     if (selectedStep?.id === stepId) {
@@ -304,35 +370,43 @@ function App() {
     }
 
     setIsExecuting(true);
-    addLog("info", "Starting pipeline execution...");
 
     try {
       const commands = currentPipeline.map((step) => ({
         name: step.command.name,
         parameters: step.command.parameters.map((param) => ({
           name: param.name,
-          value: String(step.parameters[param.name] || param.default || ''),
+          value: String(step.parameters[param.name] || param.default || ""),
           isPositional: param.isPositional,
         })),
       }));
 
-      const result = await invoke<any>("execute_xan_pipeline", { commands, inputFile, defaultDelimiter });
+      const result = await invoke<any>("execute_xan_pipeline", {
+        commands,
+        inputFile,
+        defaultDelimiter,
+      });
 
       // Save to history
       const currentTabName = getCurrentTab().name;
-      const existingHistoryIndex = historicalPipelines.findIndex(h => h.name === currentTabName);
-      
+      const existingHistoryIndex = historicalPipelines.findIndex(
+        (h) => h.name === currentTabName,
+      );
+
       const historicalPipeline: HistoricalPipeline = {
-        id: existingHistoryIndex >= 0 ? historicalPipelines[existingHistoryIndex].id : `history-${Date.now()}`,
+        id:
+          existingHistoryIndex >= 0
+            ? historicalPipelines[existingHistoryIndex].id
+            : `history-${Date.now()}`,
         name: currentTabName,
         pipeline: currentPipeline,
         inputFile,
         defaultDelimiter,
         executedAt: new Date().toISOString(),
         success: result.success,
-        output: result.output || undefined
+        output: result.output || undefined,
       };
-      
+
       let updatedHistory: HistoricalPipeline[];
       if (existingHistoryIndex >= 0) {
         // Update existing history for this tab
@@ -343,16 +417,18 @@ function App() {
         updatedHistory.unshift(historicalPipeline);
       } else {
         // Add new history for this tab
-        updatedHistory = [historicalPipeline, ...historicalPipelines].slice(0, 50); // Keep only last 50
+        updatedHistory = [historicalPipeline, ...historicalPipelines].slice(
+          0,
+          50,
+        ); // Keep only last 50
       }
-      
+
       updateHistoricalPipelines(updatedHistory);
 
       if (result.success) {
         if (result.output) {
           addLog("info", `${result.output}`);
         }
-        addLog("success", "Pipeline executed successfully");
       } else {
         addLog("error", `${result.error}`);
       }
@@ -369,9 +445,6 @@ function App() {
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputFile(e.target.value);
-    if (e.target.value) {
-      addLog("info", `Selected input file: ${e.target.value.split('\\').pop()}`);
-    }
   };
 
   const handleOpenFile = async () => {
@@ -382,13 +455,12 @@ function App() {
         { name: "JSON Files", extensions: ["json", "jsonl"] },
         { name: "Excel Files", extensions: ["xlsx"] },
         { name: "Parquet Files", extensions: ["parquet"] },
-        { name: "All Files", extensions: ["*"] }
-      ]
+        { name: "All Files", extensions: ["*"] },
+      ],
     });
 
     if (file) {
       setInputFile(file);
-      addLog("info", `Selected input file: ${file.split('\\').pop()}`);
     }
   };
 
@@ -396,8 +468,8 @@ function App() {
     try {
       const currentPipeline = getCurrentPipeline();
       const workspace: Workspace = {
-        version: "1.0.0",
-        name: `xan-workspace_${new Date().toISOString().split('T')[0]}`,
+        version: "0.1.0",
+        name: `xan-workspace_${new Date().toISOString().split("T")[0]}`,
         description: `Exported on ${new Date().toLocaleString()}`,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -408,15 +480,16 @@ function App() {
       };
 
       const filePath = await save({
-        filters: [
-          { name: "JSON Files", extensions: ["json"] },
-        ],
+        filters: [{ name: "JSON Files", extensions: ["json"] }],
         defaultPath: `${workspace.name}.json`,
       });
 
       if (filePath) {
         await writeTextFile(filePath, JSON.stringify(workspace, null, 2));
-        addLog("success", `Workspace exported to ${filePath.split('\\').pop()}`);
+        addLog(
+          "success",
+          `Workspace exported to ${filePath.split("\\").pop()}`,
+        );
       }
     } catch (error) {
       addLog("error", `Failed to export workspace: ${error}`);
@@ -427,19 +500,21 @@ function App() {
     try {
       const filePath = await open({
         multiple: false,
-        filters: [
-          { name: "JSON Files", extensions: ["json"] },
-        ],
+        filters: [{ name: "JSON Files", extensions: ["json"] }],
       });
 
       if (filePath) {
         const content = await readTextFile(filePath);
         const workspace: Workspace = JSON.parse(content);
 
-        if (workspace.version && workspace.pipeline && workspace.inputFile !== undefined) {
+        if (
+          workspace.version &&
+          workspace.pipeline &&
+          workspace.inputFile !== undefined
+        ) {
           updateTabPipeline(workspace.pipeline);
           setInputFile(workspace.inputFile);
-          setDefaultDelimiter(workspace.defaultDelimiter || ',');
+          setDefaultDelimiter(workspace.defaultDelimiter || ",");
           setNoQuoting(workspace.noQuoting || false);
           setSelectedStep(null);
           addLog("success", `Workspace imported: ${workspace.name}`);
@@ -456,27 +531,28 @@ function App() {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = rect.left + rect.width / 2;
     const y = rect.top + rect.height / 2;
-    
+
     setThemeTransition({ x, y, active: true });
-    
+
     setTimeout(() => {
       setTheme(theme === "dark" ? "light" : "dark");
     }, 400);
-    
+
     setTimeout(() => {
-      setThemeTransition(prev => ({ ...prev, active: false }));
+      setThemeTransition((prev) => ({ ...prev, active: false }));
     }, 800);
   };
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20 relative overflow-hidden">
       {themeTransition.active && (
-        <div 
+        <div
           className="fixed inset-0 pointer-events-none z-50"
           style={{
-            background: theme === "light" ? "hsl(210 40% 98%)" : "hsl(222.2 84% 4.9%)",
+            background:
+              theme === "light" ? "hsl(210 40% 98%)" : "hsl(222.2 84% 4.9%)",
             clipPath: `circle(0% at ${themeTransition.x}px ${themeTransition.y}px)`,
-            animation: "themeExpand 0.8s ease-out forwards"
+            animation: "themeExpand 0.8s ease-out forwards",
           }}
         />
       )}
@@ -493,15 +569,15 @@ function App() {
       <header className="h-16 border-b bg-card/80 backdrop-blur-sm shadow-sm flex items-center justify-between px-4">
         <div className="flex items-center">
           <div className="flex border rounded-lg overflow-hidden">
-            <button 
-              className={`px-4 py-1.5 flex items-center justify-center transition-colors ${activeLeftPanel === 'commands' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
-              onClick={() => setActiveLeftPanel('commands')}
+            <button
+              className={`px-4 py-1.5 flex items-center justify-center transition-colors ${activeLeftPanel === "commands" ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+              onClick={() => setActiveLeftPanel("commands")}
             >
               <Terminal className="h-4 w-4" />
             </button>
-            <button 
-              className={`px-4 py-1.5 flex items-center justify-center transition-colors ${activeLeftPanel === 'history' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
-              onClick={() => setActiveLeftPanel('history')}
+            <button
+              className={`px-4 py-1.5 flex items-center justify-center transition-colors ${activeLeftPanel === "history" ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+              onClick={() => setActiveLeftPanel("history")}
             >
               <History className="h-4 w-4" />
             </button>
@@ -509,7 +585,11 @@ function App() {
           <div className="ml-2 w-48">
             <input
               type="text"
-              placeholder={activeLeftPanel === 'commands' ? "Search commands..." : "Search pipelines..."}
+              placeholder={
+                activeLeftPanel === "commands"
+                  ? "Search commands..."
+                  : "Search pipelines..."
+              }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-3 py-1.5 text-sm border border-border/50 rounded-lg bg-background/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
@@ -539,23 +619,14 @@ function App() {
         </div>
 
         <div className="flex-1 max-w-xl mx-8">
-          <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1.5 border border-border/50">
-            <input
-              type="text"
-              value={inputFile || ''}
-              onChange={handleFileInput}
-              placeholder="Select or enter input file path..."
-              className="flex-1 bg-transparent text-sm px-3 py-1.5 outline-none placeholder:text-muted-foreground/60"
-            />
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleOpenFile}
-              className="h-7 px-3 text-xs font-medium hover:bg-accent"
-            >
-              Browse
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleOpenFile}
+            className="h-7 px-3 text-xs font-medium hover:bg-accent"
+          >
+            Browse
+          </Button>
         </div>
 
         <div className="flex items-center gap-3">
@@ -575,9 +646,9 @@ function App() {
               <span>xan not found</span>
             </div>
           )}
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={handleThemeToggle}
             className="h-9 w-9 rounded-lg hover:bg-accent transition-all hover:scale-110 active:scale-95"
           >
@@ -587,9 +658,9 @@ function App() {
               <Moon className="h-4.5 w-4.5 transition-transform duration-300 rotate-0 hover:-rotate-12" />
             )}
           </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setShowSettings(true)}
             className="h-9 w-9 rounded-lg hover:bg-accent transition-colors"
           >
@@ -602,7 +673,7 @@ function App() {
         <aside className="w-[20%] flex-shrink-0 flex flex-col bg-card/50 backdrop-blur-sm border-r">
           {/* Panel Content */}
           <div className="flex-1 overflow-hidden">
-            {activeLeftPanel === 'commands' ? (
+            {activeLeftPanel === "commands" ? (
               <CommandList
                 commands={xanCommands}
                 onCommandClick={handleCommandClick}
@@ -614,48 +685,65 @@ function App() {
             ) : (
               <div className="h-full overflow-auto p-4">
                 {(() => {
-                  const filteredHistory = historicalPipelines.filter(history => 
-                    history.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  const filteredHistory = historicalPipelines.filter(
+                    (history) =>
+                      history.name
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase()),
                   );
                   return filteredHistory.length === 0 ? (
                     <div className="text-center py-16 px-4">
                       <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
                         <FileText className="h-8 w-8 text-muted-foreground/50" />
                       </div>
-                      <p className="text-sm font-medium text-muted-foreground mb-1">No historical pipelines found</p>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">
+                        No historical pipelines found
+                      </p>
                       <p className="text-xs text-muted-foreground/70">
-                        {searchQuery ? 'Try a different search term' : 'Execute pipelines to see them here'}
+                        {searchQuery
+                          ? "Try a different search term"
+                          : "Execute pipelines to see them here"}
                       </p>
                     </div>
                   ) : (
                     <div className="space-y-3">
                       {filteredHistory.map((history) => (
-                        <div key={history.id} className="border rounded-lg p-3 hover:bg-muted/30 transition-colors">
+                        <div
+                          key={history.id}
+                          className="border rounded-lg p-3 hover:bg-muted/30 transition-colors"
+                        >
                           <div className="flex items-center justify-between mb-1">
-                            <h4 className="font-semibold text-xs truncate">{history.name}</h4>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${history.success ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
-                              {history.success ? 'Success' : 'Failed'}
+                            <h4 className="font-semibold text-xs truncate">
+                              {history.name}
+                            </h4>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full ${history.success ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"}`}
+                            >
+                              {history.success ? "Success" : "Failed"}
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground mb-1">
                             {new Date(history.executedAt).toLocaleString()}
                           </p>
                           <p className="text-xs text-muted-foreground mb-2 truncate">
-                            {history.inputFile.split('\\').pop()}
+                            {history.inputFile.split("\\").pop()}
                           </p>
                           <div className="flex gap-1">
-                            <button 
+                            <button
                               className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
                               onClick={() => {
                                 updateTabPipeline(history.pipeline);
                                 setInputFile(history.inputFile);
                                 setDefaultDelimiter(history.defaultDelimiter);
-                                addLog("info", `Loaded historical pipeline: ${history.name}`);
+                                addLog(
+                                  "info",
+                                  `Loaded historical pipeline: ${history.name}`,
+                                );
                               }}
                             >
                               Load
                             </button>
-                            <button 
+                            <button
                               className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
                               onClick={() => {
                                 const newTabId = `tab-${Date.now()}`;
@@ -664,23 +752,32 @@ function App() {
                                   name: `${history.name} (History)`,
                                   pipeline: history.pipeline,
                                   createdAt: new Date().toISOString(),
-                                  updatedAt: new Date().toISOString()
+                                  updatedAt: new Date().toISOString(),
                                 };
-                                setTabs(prev => [...prev, newTab]);
+                                setTabs((prev) => [...prev, newTab]);
                                 setSelectedTabId(newTabId);
                                 setInputFile(history.inputFile);
                                 setDefaultDelimiter(history.defaultDelimiter);
-                                addLog("info", `Created new tab from historical pipeline: ${history.name}`);
+                                addLog(
+                                  "info",
+                                  `Created new tab from historical pipeline: ${history.name}`,
+                                );
                               }}
                             >
                               New Tab
                             </button>
-                            <button 
+                            <button
                               className="text-xs px-2 py-1 rounded-xl hover:bg-accent transition-colors text-red-600 hover:bg-red-500/10 ml-auto"
                               onClick={() => {
-                                const updatedHistory = historicalPipelines.filter(h => h.id !== history.id);
+                                const updatedHistory =
+                                  historicalPipelines.filter(
+                                    (h) => h.id !== history.id,
+                                  );
                                 updateHistoricalPipelines(updatedHistory);
-                                addLog("info", `Deleted historical pipeline: ${history.name}`);
+                                addLog(
+                                  "info",
+                                  `Deleted historical pipeline: ${history.name}`,
+                                );
                               }}
                             >
                               <X className="h-3.5 w-3.5" />
@@ -762,13 +859,19 @@ function App() {
           <div className="bg-card border rounded-lg shadow-lg p-6 w-full max-w-xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Settings</h3>
-              <Button variant="ghost" size="icon" onClick={() => setShowSettings(false)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowSettings(false)}
+              >
                 <X className="h-5 w-5" />
               </Button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Xan Executable Path</label>
+                <label className="block text-sm font-medium mb-1">
+                  Xan Executable Path
+                </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -783,7 +886,9 @@ function App() {
                     onClick={async () => {
                       const file = await open({
                         multiple: false,
-                        filters: [{ name: "Executable Files", extensions: ["exe"] }],
+                        filters: [
+                          { name: "Executable Files", extensions: ["exe"] },
+                        ],
                       });
                       if (file) {
                         setXanPath(file);
@@ -798,7 +903,9 @@ function App() {
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Default Delimiter</label>
+                <label className="block text-sm font-medium mb-1">
+                  Default Delimiter
+                </label>
                 <select
                   value={defaultDelimiter}
                   onChange={(e) => setDefaultDelimiter(e.target.value)}
@@ -829,7 +936,10 @@ function App() {
                 </p>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowSettings(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSettings(false)}
+                >
                   Cancel
                 </Button>
                 <Button
@@ -839,7 +949,9 @@ function App() {
                         await invoke("set_xan_path", { path: xanPath });
                         await checkXanInstallation();
                       }
-                      await invoke("set_default_delimiter", { delimiter: defaultDelimiter });
+                      await invoke("set_default_delimiter", {
+                        delimiter: defaultDelimiter,
+                      });
                       await invoke("set_no_quoting", { noQuoting });
                       addLog("success", "Settings saved successfully");
                       setShowSettings(false);
@@ -862,7 +974,11 @@ function App() {
           <div className="bg-card border rounded-lg shadow-lg p-6 w-full max-w-4xl h-[80vh] flex flex-col">
             <div className="flex items-center justify-between mb-4 flex-shrink-0">
               <h3 className="text-lg font-semibold">Help: {helpCommandName}</h3>
-              <Button variant="ghost" size="icon" onClick={() => setShowHelp(false)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowHelp(false)}
+              >
                 <X className="h-5 w-5" />
               </Button>
             </div>
@@ -874,8 +990,6 @@ function App() {
           </div>
         </div>
       )}
-
-
     </div>
   );
 }

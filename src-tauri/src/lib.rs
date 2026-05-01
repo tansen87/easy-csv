@@ -594,6 +594,12 @@ fn get_xan_help(command_name: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn set_window_title(window: tauri::Window, title: String) -> Result<(), String> {
+    window.set_title(&title)
+        .map_err(|e| format!("Failed to set window title: {}", e))
+}
+
+#[tauri::command]
 async fn save_history(app: tauri::AppHandle, history: String) -> Result<(), String> {
     let app_data_dir = app.path().app_data_dir().map_err(|e| format!("{e}"))?;
     let history_path = app_data_dir.join("history.json");
@@ -646,7 +652,8 @@ pub fn run() {
             get_xan_help,
             save_history,
             load_history,
-            read_csv_file
+            read_csv_file,
+            set_window_title
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
