@@ -1,8 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
-import { Table, Play, X, Trash2 } from "lucide-react";
+import { Table, X, Trash2 } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -35,8 +34,6 @@ interface SpreadsheetViewProps {
   onStepUpdate?: (stepId: string, parameters: Record<string, any>) => void;
   onStepDelete?: (stepId: string) => void;
   onPipelineReorder?: (newPipeline: PipelineStep[]) => void;
-  onExecute: () => void;
-  isExecuting: boolean;
   inputFile: string;
 }
 
@@ -49,8 +46,6 @@ export function SpreadsheetView({
   onStepUpdate,
   onStepDelete,
   onPipelineReorder,
-  onExecute,
-  isExecuting,
   inputFile,
 }: SpreadsheetViewProps) {
   const [selectedCell, setSelectedCell] = useState<{
@@ -216,26 +211,7 @@ export function SpreadsheetView({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={onExecute}
-              disabled={pipeline.length === 0 || isExecuting}
-              className="h-8 px-4 text-xs font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-sm"
-            >
-              {isExecuting ? (
-                <>
-                  <div className="h-3.5 w-3.5 mr-1.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  Executing...
-                </>
-              ) : (
-                <>
-                  <Play className="h-3.5 w-3.5 mr-1.5" />
-                  Execute {pipeline.length > 0 && `(${pipeline.length})`}
-                </>
-              )}
-            </Button>
-          </div>
+
         </div>
       </div>
 

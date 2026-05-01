@@ -9,8 +9,6 @@ import {
   Settings,
   X,
   FileText,
-  CheckCircle,
-  XCircle,
   Loader2,
   Sun,
   Moon,
@@ -18,6 +16,9 @@ import {
   History,
   Table,
   Layers,
+  Search,
+  FolderOpen,
+  Play,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { PipelineBuilder } from "@/components/PipelineBuilder";
@@ -72,7 +73,7 @@ function App() {
   >("commands");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [viewMode, setViewMode] = useState<"pipeline" | "spreadsheet">(
-    "pipeline",
+    "spreadsheet",
   );
   const [csvData, setCsvData] = useState<{
     headers: string[];
@@ -443,15 +444,11 @@ function App() {
     setLogs([]);
   };
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputFile(e.target.value);
-  };
-
   const handleOpenFile = async () => {
     const file = await open({
       multiple: false,
       filters: [
-        { name: "CSV Files", extensions: ["csv"] },
+        { name: "CSV Files", extensions: ["csv", "txt", "tsv"] },
         { name: "JSON Files", extensions: ["json", "jsonl"] },
         { name: "Excel Files", extensions: ["xlsx"] },
         { name: "Parquet Files", extensions: ["parquet"] },
@@ -566,106 +563,153 @@ function App() {
           }
         }
       `}</style>
-      <header className="h-16 border-b bg-card/80 backdrop-blur-sm shadow-sm flex items-center justify-between px-4">
-        <div className="flex items-center">
-          <div className="flex border rounded-lg overflow-hidden">
+      <header className="h-14 border-b bg-card/80 backdrop-blur-sm shadow-sm flex items-center justify-between px-4 gap-4">
+        {/* Left: Command/History Toggle + Search */}
+        <div className="flex items-center gap-2">
+          <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
             <button
-              className={`px-4 py-1.5 flex items-center justify-center transition-colors ${activeLeftPanel === "commands" ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                activeLeftPanel === "commands"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
               onClick={() => setActiveLeftPanel("commands")}
             >
-              <Terminal className="h-4 w-4" />
+              <Terminal className="h-3.5 w-3.5" />
+              Cmds
             </button>
             <button
-              className={`px-4 py-1.5 flex items-center justify-center transition-colors ${activeLeftPanel === "history" ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                activeLeftPanel === "history"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
               onClick={() => setActiveLeftPanel("history")}
             >
-              <History className="h-4 w-4" />
+              <History className="h-3.5 w-3.5" />
+              History
             </button>
           </div>
-          <div className="ml-2 w-48">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60 z-10 pointer-events-none" />
             <input
               type="text"
               placeholder={
                 activeLeftPanel === "commands"
-                  ? "Search commands..."
-                  : "Search pipelines..."
+                  ? "Search cmd(s)"
+                  : "Search history"
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-1.5 text-sm border border-border/50 rounded-lg bg-background/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
+              className="w-32 pl-8 pr-3 py-1.5 text-xs border border-border/50 rounded-lg bg-background/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
             />
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1 border border-border/50">
-          <Button
-            variant={viewMode === "pipeline" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("pipeline")}
-            className="h-8 px-3 text-xs font-medium"
-          >
-            <Layers className="h-3.5 w-3.5 mr-1.5" />
-            Pipeline
-          </Button>
-          <Button
-            variant={viewMode === "spreadsheet" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("spreadsheet")}
-            className="h-8 px-3 text-xs font-medium"
-          >
-            <Table className="h-3.5 w-3.5 mr-1.5" />
-            Spreadsheet
-          </Button>
+        {/* Center: View Toggle + Action Group */}
+        <div className="flex items-center gap-3 flex-1 justify-center">
+          <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+            <button
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                viewMode === "pipeline"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+              onClick={() => setViewMode("pipeline")}
+            >
+              <Layers className="h-3.5 w-3.5" />
+              Pipeline
+            </button>
+            <button
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                viewMode === "spreadsheet"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+              onClick={() => setViewMode("spreadsheet")}
+            >
+              <Table className="h-3.5 w-3.5" />
+              Spreadsheet
+            </button>
+          </div>
+          <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+            <button
+              onClick={handleOpenFile}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            >
+              <FolderOpen className="h-3.5 w-3.5" />
+              Browse
+            </button>
+            <button
+              onClick={handleExecute}
+              disabled={getCurrentPipeline().length === 0 || isExecuting}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                isExecuting
+                  ? "text-primary opacity-70"
+                  : getCurrentPipeline().length === 0
+                    ? "text-muted-foreground/40 cursor-not-allowed"
+                    : "text-primary hover:text-primary hover:bg-primary/10"
+              }`}
+            >
+              {isExecuting ? (
+                <>
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Executing...
+                </>
+              ) : (
+                <>
+                  <Play className="h-3.5 w-3.5" />
+                  Execute
+                  {getCurrentPipeline().length > 0 && (
+                    <span className="ml-0.5">({getCurrentPipeline().length})</span>
+                  )}
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
-        <div className="flex-1 max-w-xl mx-8">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleOpenFile}
-            className="h-7 px-3 text-xs font-medium hover:bg-accent"
-          >
-            Browse
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-3">
+        {/* Right: Status + Tools */}
+        <div className="flex items-center gap-2">
           {isXanInstalled === null ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Checking...</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <span className="hidden sm:inline">Checking...</span>
             </div>
           ) : isXanInstalled ? (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 text-green-600 rounded-full text-xs font-medium border border-green-500/20">
-              <CheckCircle className="h-3.5 w-3.5" />
-              <span>xan {xanVersion && `v${xanVersion.trim()}`}</span>
+            <div
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 rounded-lg text-xs font-medium border border-green-500/20"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+              </span>
+              <span className="hidden sm:inline">xan{xanVersion ? ` ${xanVersion.trim()}` : ""}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 text-red-600 rounded-full text-xs font-medium border border-red-500/20">
-              <XCircle className="h-3.5 w-3.5" />
-              <span>xan not found</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-600 rounded-lg text-xs font-medium border border-red-500/20">
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+              <span className="hidden sm:inline">xan missing</span>
             </div>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleThemeToggle}
-            className="h-9 w-9 rounded-lg hover:bg-accent transition-all hover:scale-110 active:scale-95"
-          >
-            {theme === "dark" ? (
-              <Sun className="h-4.5 w-4.5 transition-transform duration-300 rotate-0 hover:rotate-45" />
-            ) : (
-              <Moon className="h-4.5 w-4.5 transition-transform duration-300 rotate-0 hover:-rotate-12" />
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowSettings(true)}
-            className="h-9 w-9 rounded-lg hover:bg-accent transition-colors"
-          >
-            <Settings className="h-4.5 w-4.5" />
-          </Button>
+          <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+            <button
+              onClick={handleThemeToggle}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+            </button>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -804,9 +848,7 @@ function App() {
                     onStepClick={handleStepClick}
                     onStepRemove={handleStepRemove}
                     selectedStepId={selectedStep?.id}
-                    onExecute={handleExecute}
                     onClear={handleClearPipeline}
-                    isExecuting={isExecuting}
                     onExportWorkspace={handleExportWorkspace}
                     onImportWorkspace={handleImportWorkspace}
                     tabs={tabs}
@@ -842,8 +884,6 @@ function App() {
                   onStepUpdate={handleStepUpdate}
                   onStepDelete={handleStepRemove}
                   onPipelineReorder={updateTabPipeline}
-                  onExecute={handleExecute}
-                  isExecuting={isExecuting}
                   inputFile={inputFile}
                 />
               </div>
