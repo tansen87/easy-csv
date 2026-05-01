@@ -1,3 +1,4 @@
+import { useState, useRef } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -83,10 +84,51 @@ export function CommandDialog({
 }: CommandDialogProps) {
   if (!commandDialog) return null;
 
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const isDragging = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    isDragging.current = true;
+    dragStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+      offsetX: offset.x,
+      offsetY: offset.y,
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      setOffset({
+        x: dragStart.current.offsetX + (e.clientX - dragStart.current.x),
+        y: dragStart.current.offsetY + (e.clientY - dragStart.current.y),
+      });
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="bg-card border rounded-lg shadow-lg w-full max-w-2xl p-4">
-        <div className="flex items-center justify-between mb-4">
+    <div className="fixed inset-0 z-50">
+      <div
+        className="absolute bg-card border rounded-lg shadow-lg w-full max-w-2xl p-4"
+        style={{
+          left: `calc(50% + ${offset.x}px)`,
+          top: `calc(50% + ${offset.y}px)`,
+          transform: "translate(-50%, -50%)",
+        }}
+      >
+        <div
+          className="flex items-center justify-between mb-2 cursor-move select-none"
+          onMouseDown={handleMouseDown}
+        >
           <h3 className="text-lg font-semibold">
             {commandDialog.type === "search" && "Search"}
             {commandDialog.type === "filter" && "Filter"}
@@ -128,8 +170,8 @@ export function CommandDialog({
             {commandDialog.type === "fixlengths" && "Fix Lengths"}
             {commandDialog.type === "explode" && "Explode"}
             {commandDialog.type === "fmt" && "Format"}
-            {commandDialog.type === "to" && "Convert To"}
-            {commandDialog.type === "from" && "Convert From"}
+            {commandDialog.type === "to" && "To"}
+            {commandDialog.type === "from" && "From"}
             {commandDialog.type === "reverse" && "Reverse"}
             {commandDialog.type === "transpose" && "Transpose"}
             {commandDialog.type === "pivot" && "Pivot"}
@@ -422,7 +464,7 @@ export function CommandDialog({
                 />
               </div>
             </ScrollArea>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -564,7 +606,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -667,7 +709,7 @@ export function CommandDialog({
                 Numeric Sort
               </label>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -751,7 +793,7 @@ export function CommandDialog({
                 Evaluate Expression
               </label>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -818,7 +860,7 @@ export function CommandDialog({
                 autoFocus
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -899,7 +941,7 @@ export function CommandDialog({
                 Approximate
               </label>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -1021,7 +1063,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -1099,7 +1141,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -1177,7 +1219,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -1274,7 +1316,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -1441,7 +1483,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -1539,7 +1581,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -1765,7 +1807,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -2004,7 +2046,7 @@ export function CommandDialog({
                 </div>
               </div>
             </ScrollArea>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -2235,7 +2277,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -2413,7 +2455,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -2677,7 +2719,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -2774,7 +2816,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -2908,7 +2950,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -2972,7 +3014,7 @@ export function CommandDialog({
                 Just Names
               </label>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -3188,7 +3230,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -3348,7 +3390,7 @@ export function CommandDialog({
                 Hide Percent
               </label>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -3427,7 +3469,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -3577,7 +3619,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -3671,7 +3713,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -3805,7 +3847,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -3895,7 +3937,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -4041,7 +4083,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -4174,7 +4216,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -4270,7 +4312,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -4418,7 +4460,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -4564,7 +4606,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -4808,7 +4850,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -5002,7 +5044,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -5081,7 +5123,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -5259,7 +5301,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -5340,7 +5382,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -5439,7 +5481,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -5585,7 +5627,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -5786,7 +5828,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -5971,7 +6013,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -6166,7 +6208,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -6226,7 +6268,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -6288,7 +6330,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -6419,7 +6461,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -6536,7 +6578,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -6696,7 +6738,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -6883,7 +6925,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -7041,7 +7083,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -7173,7 +7215,7 @@ export function CommandDialog({
                 Explain
               </label>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
                 size="sm"

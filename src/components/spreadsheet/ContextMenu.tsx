@@ -585,7 +585,7 @@ export function ContextMenu({
             Explode
           </button>
         )}
-        {(contextMenuSearch === "" || "Format".toLowerCase().includes(contextMenuSearch.toLowerCase())) && (
+        {(contextMenuSearch === "" || "Fmt".toLowerCase().includes(contextMenuSearch.toLowerCase())) && (
           <button
             className="w-full px-3 py-1 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
             onClick={() => {
@@ -607,10 +607,10 @@ export function ContextMenu({
             }}
           >
             <List className="h-4 w-4 text-muted-foreground" />
-            Format
+            Fmt
           </button>
         )}
-        {(contextMenuSearch === "" || "Convert To".toLowerCase().includes(contextMenuSearch.toLowerCase())) && (
+        {(contextMenuSearch === "" || "To".toLowerCase().includes(contextMenuSearch.toLowerCase())) && (
           <button
             className="w-full px-3 py-1 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
             onClick={() => {
@@ -631,10 +631,10 @@ export function ContextMenu({
             }}
           >
             <ArrowRight className="h-4 w-4 text-muted-foreground" />
-            Convert To
+            To
           </button>
         )}
-        {(contextMenuSearch === "" || "Convert From".toLowerCase().includes(contextMenuSearch.toLowerCase())) && (
+        {(contextMenuSearch === "" || "From".toLowerCase().includes(contextMenuSearch.toLowerCase())) && (
           <button
             className="w-full px-3 py-1 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
             onClick={() => {
@@ -655,7 +655,7 @@ export function ContextMenu({
             }}
           >
             <ArrowLeft className="h-4 w-4 text-muted-foreground" />
-            Convert From
+            From
           </button>
         )}
         {(contextMenuSearch === "" || "Reverse".toLowerCase().includes(contextMenuSearch.toLowerCase())) && (
