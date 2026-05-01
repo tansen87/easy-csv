@@ -2,7 +2,7 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { GripVertical, X, Trash2, Download, Upload, Sparkles, Plus, Edit3 } from "lucide-react";
+import { GripVertical, X, Trash2, Download, Upload, Layers, Plus, Edit3 } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -183,7 +183,7 @@ export function PipelineBuilder({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center border border-primary/20">
-                <Sparkles className="h-4 w-4 text-primary" />
+                <Layers className="h-4 w-4 text-primary" />
               </div>
               <div>
                 <h2 className="text-base font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
@@ -315,7 +315,7 @@ export function PipelineBuilder({
           {steps.length === 0 ? (
             <div className="text-center py-16 px-4">
               <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
-                <Sparkles className="h-8 w-8 text-muted-foreground/50" />
+                <Layers className="h-8 w-8 text-muted-foreground/50" />
               </div>
               <p className="text-sm font-medium text-muted-foreground mb-1">No steps in pipeline</p>
               <p className="text-xs text-muted-foreground/70">

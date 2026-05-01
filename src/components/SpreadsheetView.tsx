@@ -168,10 +168,10 @@ export function SpreadsheetView({
             </div>
             <div>
               <h2 className="text-base font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                Spreadsheet View
+                Spreadsheet
               </h2>
               <p className="text-xs text-muted-foreground">
-                Select a CSV file to view
+                Browse a CSV file to view
               </p>
             </div>
           </div>
@@ -204,7 +204,7 @@ export function SpreadsheetView({
             </div>
             <div>
               <h2 className="text-base font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                Spreadsheet View
+                Spreadsheet
               </h2>
               <p className="text-xs text-muted-foreground">
                 {inputFile.split("\\").pop()} - {data.length - 1} rows

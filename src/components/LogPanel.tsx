@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ResizeHandle } from "@/components/ui/resize-handle";
-import { Trash2, Info, CheckCircle, AlertCircle, XCircle, Terminal } from "lucide-react";
+import { Trash2, Info, CheckCircle, AlertCircle, XCircle, TextQuote } from "lucide-react";
 import { useState } from "react";
 import { LogEntry } from "@/types/xan";
 
@@ -70,7 +70,7 @@ export function LogPanel({ logs, onClear }: LogPanelProps) {
       <div className="p-3 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg flex items-center justify-center border border-primary/20">
-            <Terminal className="h-4 w-4 text-primary" />
+            <TextQuote className="h-4 w-4 text-primary" />
           </div>
           <div>
             <h3 className="text-sm font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
@@ -97,7 +97,7 @@ export function LogPanel({ logs, onClear }: LogPanelProps) {
           {logs.length === 0 ? (
             <div className="text-center py-12 px-4">
               <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
-                <Terminal className="h-8 w-8 text-muted-foreground/50" />
+                <TextQuote className="h-8 w-8 text-muted-foreground/50" />
               </div>
               <p className="text-sm font-medium text-muted-foreground mb-1">No logs yet</p>
               <p className="text-xs text-muted-foreground/70">
