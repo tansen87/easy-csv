@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Table, X, Trash2 } from "lucide-react";
 import {
@@ -227,25 +227,28 @@ export function SpreadsheetView({
               items={pipeline.map((step) => step.id)}
               strategy={verticalListSortingStrategy}
             >
-              <div className="flex items-center gap-2 overflow-x-auto">
-                {pipeline.map((step, index) => (
-                  <SortableStep
-                    key={step.id}
-                    step={step}
-                    index={index}
-                    isLast={index === pipeline.length - 1}
-                    headers={headers}
-                    onStepClick={(s) => {
-                      setSelectedStepId(s.id);
-                      if (onStepClick) {
-                        onStepClick(s);
-                      }
-                    }}
-                    onStepDelete={onStepDelete || (() => {})}
-                    setCommandDialog={setCommandDialog}
-                  />
-                ))}
-              </div>
+              <ScrollArea className="w-full">
+                <div className="flex items-start gap-2 pb-1">
+                  {pipeline.map((step, index) => (
+                    <SortableStep
+                      key={step.id}
+                      step={step}
+                      index={index}
+                      isLast={index === pipeline.length - 1}
+                      headers={headers}
+                      onStepClick={(s) => {
+                        setSelectedStepId(s.id);
+                        if (onStepClick) {
+                          onStepClick(s);
+                        }
+                      }}
+                      onStepDelete={onStepDelete || (() => {})}
+                      setCommandDialog={setCommandDialog}
+                    />
+                  ))}
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
             </SortableContext>
           </DndContext>
         </div>

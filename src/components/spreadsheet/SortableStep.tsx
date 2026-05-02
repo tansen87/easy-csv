@@ -37,6 +37,9 @@ export function SortableStep({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const activeParams = Object.entries(step.parameters)
+    .filter(([, value]) => value !== undefined && value !== "" && value !== false);
+
   const handleClick = () => {
     const cmdId = step.command.id;
 
@@ -374,27 +377,44 @@ export function SortableStep({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-1 transition-shadow ${isDragging ? 'z-50 shadow-lg scale-105' : ''}`}
+      className={`flex items-start gap-1 transition-shadow ${isDragging ? 'z-50 shadow-lg scale-105' : ''}`}
     >
       <button
-        className="cursor-grab active:cursor-grabbing text-muted-foreground/70 hover:text-foreground transition-colors p-1 rounded hover:bg-accent"
+        className="cursor-grab active:cursor-grabbing text-muted-foreground/70 hover:text-foreground transition-colors p-1 rounded hover:bg-accent mt-1"
         {...attributes}
         {...listeners}
       >
         <GripVertical className="h-4 w-4" />
       </button>
       <div
-        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border cursor-pointer transition-colors whitespace-nowrap ${isDragging ? 'bg-primary/10 border-primary/30 shadow-md' : 'bg-muted/60 border-border/30 hover:bg-muted'}`}
+        className={`flex flex-col gap-1 px-3 py-1.5 rounded-lg text-xs border cursor-pointer transition-colors min-w-[80px] ${isDragging ? 'bg-primary/10 border-primary/30 shadow-md' : 'bg-muted/60 border-border/30 hover:bg-muted'}`}
         onClick={handleClick}
       >
-        <span className="w-5 h-5 bg-primary/20 rounded text-xs font-bold text-primary/70 flex items-center justify-center mr-1">
-          {index + 1}
-        </span>
-        <span className="font-medium">{step.command.name}</span>
-        {!isLast && <ChevronRight className="h-3 w-3 text-muted-foreground/50" />}
+        <div className="flex items-center gap-1 whitespace-nowrap">
+          <span className="w-5 h-5 bg-primary/20 rounded text-xs font-bold text-primary/70 flex items-center justify-center mr-1 shrink-0">
+            {index + 1}
+          </span>
+          <span className="font-medium">{step.command.name}</span>
+          {!isLast && <ChevronRight className="h-3 w-3 text-muted-foreground/50 shrink-0" />}
+        </div>
+        {activeParams.length > 0 && (
+          <div className="flex flex-wrap gap-1 max-w-[200px]">
+            {activeParams.slice(0, 3).map(([key, value]) => (
+              <span key={key} className="bg-background/70 px-1.5 py-0.5 rounded text-[10px] border border-border/20 truncate">
+                <span className="text-muted-foreground/70">{key}=</span>
+                <span className="font-medium">{String(value)}</span>
+              </span>
+            ))}
+            {activeParams.length > 3 && (
+              <span className="text-[10px] text-muted-foreground/60 px-1">
+                +{activeParams.length - 3}
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <button
-        className="p-1 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 rounded transition-colors"
+        className="p-1 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 rounded transition-colors mt-1"
         onClick={(e) => {
           e.stopPropagation();
           onStepDelete(step.id);
