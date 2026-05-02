@@ -217,6 +217,24 @@ function App() {
     updateTitle();
   }, [inputFile]);
 
+  useEffect(() => {
+    if (csvData.headers.length > 0 && selectedTabId) {
+      setTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === selectedTabId
+            ? {
+                ...tab,
+                data: csvData.rows,
+                headers: csvData.headers,
+                inputFile: inputFile,
+                updatedAt: new Date().toISOString(),
+              }
+            : tab,
+        ),
+      );
+    }
+  }, [csvData, inputFile, selectedTabId]);
+
   const getCurrentTab = () => {
     return tabs.find((tab) => tab.id === selectedTabId) || tabs[0];
   };
@@ -225,18 +243,33 @@ function App() {
     return getCurrentTab().pipeline;
   };
 
-  const updateTabPipeline = (newPipeline: PipelineStep[]) => {
-    setTabs((prev) =>
-      prev.map((tab) =>
-        tab.id === selectedTabId
-          ? {
-              ...tab,
-              pipeline: newPipeline,
-              updatedAt: new Date().toISOString(),
-            }
-          : tab,
-      ),
-    );
+  const updateTabPipeline = (tabIdOrPipeline: string | PipelineStep[], newPipeline?: PipelineStep[]) => {
+    if (typeof tabIdOrPipeline === 'string' && newPipeline) {
+      setTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === tabIdOrPipeline
+            ? {
+                ...tab,
+                pipeline: newPipeline,
+                updatedAt: new Date().toISOString(),
+              }
+            : tab,
+        ),
+      );
+    } else {
+      const pipeline = tabIdOrPipeline as PipelineStep[];
+      setTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === selectedTabId
+            ? {
+                ...tab,
+                pipeline: pipeline,
+                updatedAt: new Date().toISOString(),
+              }
+            : tab,
+        ),
+      );
+    }
   };
 
   const addNewTab = () => {
@@ -876,15 +909,18 @@ function App() {
             <>
               <div className="flex-1 overflow-hidden">
                 <SpreadsheetView
-                  data={csvData.rows}
-                  headers={csvData.headers}
+                  tabs={tabs}
+                  selectedTabId={selectedTabId}
+                  onTabChange={setSelectedTabId}
+                  onAddTab={addNewTab}
+                  onRemoveTab={removeTab}
+                  onRemoveAllTabsExcept={removeAllTabsExcept}
+                  onRenameTab={renameTab}
                   onAddCommand={handleCommandClick}
-                  pipeline={getCurrentPipeline()}
                   onStepClick={handleStepClick}
                   onStepUpdate={handleStepUpdate}
                   onStepDelete={handleStepRemove}
                   onPipelineReorder={updateTabPipeline}
-                  inputFile={inputFile}
                 />
               </div>
               <LogPanel logs={logs} onClear={handleClearLogs} />

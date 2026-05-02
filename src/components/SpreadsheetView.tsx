@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
-import { Table, X, Trash2 } from "lucide-react";
+import { Table, X, Trash2, Plus, Edit3 } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -17,36 +17,42 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { PipelineStep, XanCommand } from "@/types/xan";
+import { PipelineStep, XanCommand, PipelineTab } from "@/types/xan";
 import { SortableStep } from "./spreadsheet/SortableStep";
 import { ContextMenu } from "./spreadsheet/ContextMenu";
 import { CommandDialog, CommandDialogState } from "./spreadsheet/CommandDialog";
 
 interface SpreadsheetViewProps {
-  data: string[][];
-  headers: string[];
+  tabs: PipelineTab[];
+  selectedTabId: string;
+  onTabChange: (tabId: string) => void;
+  onAddTab: () => void;
+  onRemoveTab: (tabId: string) => void;
+  onRemoveAllTabsExcept: (tabId: string) => void;
+  onRenameTab: (tabId: string, name: string) => void;
   onAddCommand: (
     command: XanCommand,
     initialParameters?: Record<string, any>,
   ) => void;
-  pipeline: PipelineStep[];
   onStepClick?: (step: PipelineStep) => void;
   onStepUpdate?: (stepId: string, parameters: Record<string, any>) => void;
   onStepDelete?: (stepId: string) => void;
-  onPipelineReorder?: (newPipeline: PipelineStep[]) => void;
-  inputFile: string;
+  onPipelineReorder?: (tabId: string, newPipeline: PipelineStep[]) => void;
 }
 
 export function SpreadsheetView({
-  data,
-  headers,
+  tabs,
+  selectedTabId,
+  onTabChange,
+  onAddTab,
+  onRemoveTab,
+  onRemoveAllTabsExcept,
+  onRenameTab,
   onAddCommand,
-  pipeline,
   onStepClick,
   onStepUpdate,
   onStepDelete,
   onPipelineReorder,
-  inputFile,
 }: SpreadsheetViewProps) {
   const [selectedCell, setSelectedCell] = useState<{
     row: number;
@@ -69,9 +75,17 @@ export function SpreadsheetView({
   const [commandDialog, setCommandDialog] = useState<CommandDialogState | null>(
     null,
   );
+  const [editingTabId, setEditingTabId] = useState<string | null>(null);
+  const [editingTabName, setEditingTabName] = useState<string>("");
 
   const tableRef = useRef<HTMLTableElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const currentTab = tabs.find((tab) => tab.id === selectedTabId);
+  const data = currentTab?.data || [];
+  const headers = currentTab?.headers || [];
+  const pipeline = currentTab?.pipeline || [];
+  const inputFile = currentTab?.inputFile || "";
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -87,11 +101,11 @@ export function SpreadsheetView({
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (over && active.id !== over.id && onPipelineReorder) {
+    if (over && active.id !== over.id && onPipelineReorder && selectedTabId) {
       const oldIndex = pipeline.findIndex((step) => step.id === active.id);
       const newIndex = pipeline.findIndex((step) => step.id === over.id);
       const newPipeline = arrayMove(pipeline, oldIndex, newIndex);
-      onPipelineReorder(newPipeline);
+      onPipelineReorder(selectedTabId, newPipeline);
     }
   };
 
@@ -161,19 +175,94 @@ export function SpreadsheetView({
   if (!inputFile || data.length === 0) {
     return (
       <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10">
-        <div className="p-4 border-b bg-card/50 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center border border-primary/20">
-              <Table className="h-4 w-4 text-primary" />
+        <div className="border-b bg-card/50 backdrop-blur-sm">
+          <div className="h-[48px] px-4 flex items-center">
+            <div className="flex items-center shrink-0">
+              <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+                <button
+                  onClick={onAddTab}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    if (tabs.length > 1 && selectedTabId) {
+                      onRemoveAllTabsExcept(selectedTabId);
+                    }
+                  }}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                Spreadsheet
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Browse a CSV file to view
-              </p>
-            </div>
+            <ScrollArea className="h-full flex-1 ml-4">
+              <div className="flex items-center gap-2 pr-4">
+                {tabs.map((tab) => (
+                  <div
+                    key={tab.id}
+                    className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-sm transition-colors shrink-0 ${selectedTabId === tab.id
+                      ? 'bg-primary/10 text-primary border border-primary/30'
+                      : 'hover:bg-accent border border-transparent'}`}
+                  >
+                    {editingTabId === tab.id ? (
+                      <input
+                        type="text"
+                        value={editingTabName}
+                        onChange={(e) => setEditingTabName(e.target.value)}
+                        onBlur={() => {
+                          if (editingTabName.trim()) {
+                            onRenameTab(tab.id, editingTabName.trim());
+                          }
+                          setEditingTabId(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            if (editingTabName.trim()) {
+                              onRenameTab(tab.id, editingTabName.trim());
+                            }
+                            setEditingTabId(null);
+                          } else if (e.key === 'Escape') {
+                            setEditingTabId(null);
+                          }
+                        }}
+                        className="w-24 px-2 py-0.5 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary h-6"
+                        style={{ lineHeight: '1.2' }}
+                        autoFocus
+                      />
+                    ) : (
+                      <button
+                        onClick={() => onTabChange(tab.id)}
+                        className="text-left truncate max-w-[120px]"
+                      >
+                        {tab.name}
+                      </button>
+                    )}
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => {
+                          setEditingTabId(tab.id);
+                          setEditingTabName(tab.name);
+                        }}
+                        className="p-1 rounded hover:bg-accent transition-colors"
+                      >
+                        <Edit3 className="h-3 w-3" />
+                      </button>
+                      {tabs.length > 1 && (
+                        <button
+                          onClick={() => onRemoveTab(tab.id)}
+                          className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
           </div>
         </div>
         <div className="flex-1 flex items-center justify-center">
@@ -195,23 +284,95 @@ export function SpreadsheetView({
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10">
-      {/* Toolbar */}
-      <div className="p-4 border-b bg-card/50 backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center border border-primary/20">
-              <Table className="h-4 w-4 text-primary" />
+      {/* Toolbar + Tab Management */}
+      <div className="border-b bg-card/50 backdrop-blur-sm">
+        <div className="h-[48px] px-4 flex items-center">
+          <div className="flex items-center shrink-0">
+              <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+                <button
+                  onClick={onAddTab}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => {
+                    if (tabs.length > 1 && selectedTabId) {
+                      onRemoveAllTabsExcept(selectedTabId);
+                    }
+                  }}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                Spreadsheet
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                {inputFile.split("\\").pop()} - {data.length - 1} rows
-              </p>
+          <ScrollArea className="h-full flex-1 ml-4">
+            <div className="flex items-center gap-2 pr-4">
+              {tabs.map((tab) => (
+                <div
+                  key={tab.id}
+                  className={`flex items-center gap-2 px-3 py-1.5 mt-1 rounded-lg text-sm transition-colors shrink-0 ${selectedTabId === tab.id
+                    ? 'bg-primary/10 text-primary border border-primary/30'
+                    : 'hover:bg-accent border border-transparent'}`}
+                >
+                  {editingTabId === tab.id ? (
+                    <input
+                      type="text"
+                      value={editingTabName}
+                      onChange={(e) => setEditingTabName(e.target.value)}
+                      onBlur={() => {
+                        if (editingTabName.trim()) {
+                          onRenameTab(tab.id, editingTabName.trim());
+                        }
+                        setEditingTabId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          if (editingTabName.trim()) {
+                            onRenameTab(tab.id, editingTabName.trim());
+                          }
+                          setEditingTabId(null);
+                        } else if (e.key === 'Escape') {
+                          setEditingTabId(null);
+                        }
+                      }}
+                      className="w-24 px-2 py-0.5 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary h-6"
+                      style={{ lineHeight: '1.2' }}
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      onClick={() => onTabChange(tab.id)}
+                      className="text-left truncate max-w-[120px]"
+                    >
+                      {tab.name}
+                    </button>
+                  )}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setEditingTabId(tab.id);
+                        setEditingTabName(tab.name);
+                      }}
+                      className="p-1 rounded hover:bg-accent transition-colors"
+                    >
+                      <Edit3 className="h-3 w-3" />
+                    </button>
+                    {tabs.length > 1 && (
+                      <button
+                        onClick={() => onRemoveTab(tab.id)}
+                        className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         </div>
       </div>
 
