@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { open, save } from "@tauri-apps/plugin-dialog";
-import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { open } from "@tauri-apps/plugin-dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "@/components/ThemeProvider";
@@ -14,15 +13,11 @@ import {
   Moon,
   Terminal,
   History,
-  Table,
-  Layers,
   Search,
   FolderOpen,
   Play,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
-import { PipelineBuilder } from "@/components/PipelineBuilder";
-import { ParameterPanel } from "@/components/ParameterPanel";
 import { LogPanel } from "@/components/LogPanel";
 import { SpreadsheetView } from "@/components/SpreadsheetView";
 import { xanCommands } from "@/data/commands";
@@ -30,7 +25,6 @@ import {
   PipelineStep,
   LogEntry,
   XanCommand,
-  Workspace,
   PipelineTab,
   HistoricalPipeline,
 } from "@/types/xan";
@@ -40,7 +34,7 @@ function App() {
   const [tabs, setTabs] = useState<PipelineTab[]>([
     {
       id: "tab-1",
-      name: "Pipeline 1",
+      name: "Tab1",
       pipeline: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -72,9 +66,7 @@ function App() {
     "commands" | "history"
   >("commands");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [viewMode, setViewMode] = useState<"pipeline" | "spreadsheet">(
-    "spreadsheet",
-  );
+
   const [csvData, setCsvData] = useState<{
     headers: string[];
     rows: string[][];
@@ -276,7 +268,7 @@ function App() {
     const newTabId = `tab-${Date.now()}`;
     const newTab: PipelineTab = {
       id: newTabId,
-      name: `Pipeline ${tabs.length + 1}`,
+      name: `Tab${tabs.length + 1}`,
       pipeline: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -385,12 +377,6 @@ function App() {
     }
   };
 
-  const handleClearPipeline = () => {
-    updateTabPipeline([]);
-    setSelectedStep(null);
-    addLog("info", "Pipeline cleared");
-  };
-
   const handleExecute = async () => {
     const currentPipeline = getCurrentPipeline();
     if (currentPipeline.length === 0) {
@@ -494,69 +480,6 @@ function App() {
     }
   };
 
-  const handleExportWorkspace = async () => {
-    try {
-      const currentPipeline = getCurrentPipeline();
-      const workspace: Workspace = {
-        version: "0.1.0",
-        name: `xan-workspace_${new Date().toISOString().split("T")[0]}`,
-        description: `Exported on ${new Date().toLocaleString()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        pipeline: currentPipeline,
-        inputFile: inputFile,
-        defaultDelimiter: defaultDelimiter,
-        noQuoting: noQuoting,
-      };
-
-      const filePath = await save({
-        filters: [{ name: "JSON Files", extensions: ["json"] }],
-        defaultPath: `${workspace.name}.json`,
-      });
-
-      if (filePath) {
-        await writeTextFile(filePath, JSON.stringify(workspace, null, 2));
-        addLog(
-          "success",
-          `Workspace exported to ${filePath.split("\\").pop()}`,
-        );
-      }
-    } catch (error) {
-      addLog("error", `Failed to export workspace: ${error}`);
-    }
-  };
-
-  const handleImportWorkspace = async () => {
-    try {
-      const filePath = await open({
-        multiple: false,
-        filters: [{ name: "JSON Files", extensions: ["json"] }],
-      });
-
-      if (filePath) {
-        const content = await readTextFile(filePath);
-        const workspace: Workspace = JSON.parse(content);
-
-        if (
-          workspace.version &&
-          workspace.pipeline &&
-          workspace.inputFile !== undefined
-        ) {
-          updateTabPipeline(workspace.pipeline);
-          setInputFile(workspace.inputFile);
-          setDefaultDelimiter(workspace.defaultDelimiter || ",");
-          setNoQuoting(workspace.noQuoting || false);
-          setSelectedStep(null);
-          addLog("success", `Workspace imported: ${workspace.name}`);
-        } else {
-          addLog("error", "Invalid workspace file format");
-        }
-      }
-    } catch (error) {
-      addLog("error", `Failed to import workspace: ${error}`);
-    }
-  };
-
   const handleThemeToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = rect.left + rect.width / 2;
@@ -641,30 +564,6 @@ function App() {
 
         {/* Center: View Toggle + Action Group */}
         <div className="flex items-center gap-3 flex-1 justify-center">
-          <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
-            <button
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                viewMode === "pipeline"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
-              }`}
-              onClick={() => setViewMode("pipeline")}
-            >
-              <Layers className="h-3.5 w-3.5" />
-              Pipeline
-            </button>
-            <button
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                viewMode === "spreadsheet"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
-              }`}
-              onClick={() => setViewMode("spreadsheet")}
-            >
-              <Table className="h-3.5 w-3.5" />
-              Spreadsheet
-            </button>
-          </div>
           <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
             <button
               onClick={handleOpenFile}
@@ -871,61 +770,23 @@ function App() {
         </aside>
 
         <main className="flex-1 flex flex-col overflow-hidden">
-          {viewMode === "pipeline" ? (
-            <>
-              <div className="flex-1 flex overflow-hidden min-h-0">
-                <div className="w-[60%] flex-shrink-0 flex flex-col">
-                  <PipelineBuilder
-                    steps={getCurrentPipeline()}
-                    onStepsChange={updateTabPipeline}
-                    onStepClick={handleStepClick}
-                    onStepRemove={handleStepRemove}
-                    selectedStepId={selectedStep?.id}
-                    onClear={handleClearPipeline}
-                    onExportWorkspace={handleExportWorkspace}
-                    onImportWorkspace={handleImportWorkspace}
-                    tabs={tabs}
-                    selectedTabId={selectedTabId}
-                    onTabChange={setSelectedTabId}
-                    onAddTab={addNewTab}
-                    onRemoveTab={removeTab}
-                    onRemoveAllTabsExcept={removeAllTabsExcept}
-                    onRenameTab={renameTab}
-                  />
-                </div>
-
-                <aside className="flex-1 flex flex-col">
-                  <ParameterPanel
-                    step={selectedStep}
-                    onStepUpdate={handleStepUpdate}
-                    onClose={() => setSelectedStep(null)}
-                  />
-                </aside>
-              </div>
-
-              <LogPanel logs={logs} onClear={handleClearLogs} />
-            </>
-          ) : (
-            <>
-              <div className="flex-1 overflow-hidden">
-                <SpreadsheetView
-                  tabs={tabs}
-                  selectedTabId={selectedTabId}
-                  onTabChange={setSelectedTabId}
-                  onAddTab={addNewTab}
-                  onRemoveTab={removeTab}
-                  onRemoveAllTabsExcept={removeAllTabsExcept}
-                  onRenameTab={renameTab}
-                  onAddCommand={handleCommandClick}
-                  onStepClick={handleStepClick}
-                  onStepUpdate={handleStepUpdate}
-                  onStepDelete={handleStepRemove}
-                  onPipelineReorder={updateTabPipeline}
-                />
-              </div>
-              <LogPanel logs={logs} onClear={handleClearLogs} />
-            </>
-          )}
+          <div className="flex-1 overflow-hidden">
+            <SpreadsheetView
+              tabs={tabs}
+              selectedTabId={selectedTabId}
+              onTabChange={setSelectedTabId}
+              onAddTab={addNewTab}
+              onRemoveTab={removeTab}
+              onRemoveAllTabsExcept={removeAllTabsExcept}
+              onRenameTab={renameTab}
+              onAddCommand={handleCommandClick}
+              onStepClick={handleStepClick}
+              onStepUpdate={handleStepUpdate}
+              onStepDelete={handleStepRemove}
+              onPipelineReorder={updateTabPipeline}
+            />
+          </div>
+          <LogPanel logs={logs} onClear={handleClearLogs} />
         </main>
       </div>
 
