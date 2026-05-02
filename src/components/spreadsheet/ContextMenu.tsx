@@ -143,6 +143,17 @@ export function ContextMenu({
                   select: columnName,
                   reverse: false,
                   numeric: false,
+                  check: false,
+                  count: '',
+                  uniq: false,
+                  unstable: false,
+                  parallel: false,
+                  external: false,
+                  'tmp-dir': '',
+                  'memory-limit': 512,
+                  columns: false,
+                  cells: false,
+                  output: '',
                 },
               });
             }}
@@ -311,6 +322,9 @@ export function ContextMenu({
                 params: {
                   'sample-size': 10,
                   seed: undefined,
+                  weight: '',
+                  groupby: '',
+                  cursed: false,
                   output: '',
                 },
               });
@@ -1077,7 +1091,9 @@ export function ContextMenu({
                   column: columnName,
                   limit: 10,
                   reverse: false,
+                  lexicographic: false,
                   groupby: '',
+                  ties: false,
                   rank: '',
                   output: '',
                 },

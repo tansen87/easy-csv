@@ -43,7 +43,7 @@ export function SortableStep({
   const handleClick = () => {
     const cmdId = step.command.id;
 
-    if (['search', 'filter', 'sort', 'select', 'view', 'count', 'slice', 'head', 'tail', 'grep', 'sample', 'dedup', 'shuffle', 'frequency', 'groupby', 'stats', 'agg', 'bins', 'window', 'headers', 'flatten', 'hist', 'drop', 'map', 'enum', 'rename', 'behead', 'fixlengths', 'explode', 'fmt', 'to', 'from', 'reverse', 'transpose', 'pivot', 'unpivot', 'split', 'partition', 'range', 'eval'].includes(cmdId)) {
+    if (['search', 'filter', 'sort', 'select', 'view', 'count', 'slice', 'head', 'tail', 'grep', 'sample', 'dedup', 'shuffle', 'frequency', 'groupby', 'stats', 'agg', 'bins', 'window', 'headers', 'flatten', 'hist', 'drop', 'map', 'enum', 'rename', 'behead', 'fixlengths', 'explode', 'fmt', 'to', 'from', 'top', 'reverse', 'transpose', 'pivot', 'unpivot', 'split', 'partition', 'range', 'eval'].includes(cmdId)) {
       let initialParams: Record<string, any> = {};
 
       if (cmdId === 'search') {
@@ -75,8 +75,20 @@ export function SortableStep({
       } else if (cmdId === 'sort') {
         initialParams = {
           select: step.parameters.select || headers[0] || '',
-          reverse: step.parameters.reverse || false,
-          numeric: step.parameters.numeric || false,
+          reverse: step.parameters.reverse ?? false,
+          numeric: step.parameters.numeric ?? false,
+          check: step.parameters.check ?? false,
+          count: step.parameters.count,
+          uniq: step.parameters.uniq ?? false,
+          unstable: step.parameters.unstable ?? false,
+          parallel: step.parameters.parallel ?? false,
+          threads: step.parameters.threads,
+          external: step.parameters.external ?? false,
+          'tmp-dir': step.parameters['tmp-dir'],
+          'memory-limit': step.parameters['memory-limit'] ?? 512,
+          columns: step.parameters.columns ?? false,
+          cells: step.parameters.cells ?? false,
+          output: step.parameters.output,
         };
       } else if (cmdId === 'select') {
         initialParams = {
@@ -119,9 +131,12 @@ export function SortableStep({
         };
       } else if (cmdId === 'sample') {
         initialParams = {
-          'sample-size': step.parameters['sample-size'] || 10,
-          seed: step.parameters.seed || undefined,
-          output: step.parameters.output || '',
+          'sample-size': step.parameters['sample-size'] ?? 10,
+          seed: step.parameters.seed,
+          weight: step.parameters.weight,
+          groupby: step.parameters.groupby,
+          cursed: step.parameters.cursed,
+          output: step.parameters.output,
         };
       } else if (cmdId === 'dedup') {
         initialParams = {
@@ -207,6 +222,19 @@ export function SortableStep({
           expression: step.parameters.expression || '',
           groupby: step.parameters.groupby || '',
           output: step.parameters.output || '',
+        };
+      } else if (cmdId === 'flatten') {
+        initialParams = {
+          select: step.parameters.select,
+          limit: step.parameters.limit,
+          condense: step.parameters.condense,
+          wrap: step.parameters.wrap,
+          flatter: step.parameters.flatter,
+          csv: step.parameters.csv,
+          rainbow: step.parameters.rainbow,
+          'non-empty': step.parameters['non-empty'],
+          sep: step.parameters.sep,
+          output: step.parameters.output,
         };
       } else if (cmdId === 'drop') {
         initialParams = {
@@ -296,6 +324,17 @@ export function SortableStep({
           'nth-table': step.parameters['nth-table'] || 0,
           output: step.parameters.output || '',
         };
+      } else if (cmdId === 'top') {
+        initialParams = {
+          column: step.parameters.column,
+          limit: step.parameters.limit,
+          reverse: step.parameters.reverse,
+          lexicographic: step.parameters.lexicographic,
+          groupby: step.parameters.groupby,
+          ties: step.parameters.ties,
+          rank: step.parameters.rank,
+          output: step.parameters.output,
+        };
       } else if (cmdId === 'reverse') {
         initialParams = {
           output: step.parameters.output || '',
@@ -356,6 +395,16 @@ export function SortableStep({
           headers: step.parameters.headers || '',
           row: step.parameters.row || '',
         };
+      } else if (cmdId === 'hist') {
+        initialParams = {
+          name: step.parameters.name,
+          field: step.parameters.field,
+          label: step.parameters.label,
+          value: step.parameters.value,
+          rainbow: step.parameters.rainbow,
+          dates: step.parameters.dates,
+          'hide-percent': step.parameters['hide-percent'],
+        };
       } else if (cmdId === 'headers') {
         initialParams = {
           'just-names': step.parameters['just-names'] || false,
@@ -363,7 +412,7 @@ export function SortableStep({
       }
 
       setCommandDialog({
-        type: cmdId as 'search' | 'filter' | 'sort' | 'select' | 'view' | 'count' | 'slice' | 'head' | 'tail' | 'grep' | 'sample' | 'dedup' | 'shuffle' | 'frequency' | 'groupby' | 'stats' | 'agg' | 'bins' | 'window' | 'headers' | 'drop' | 'map' | 'enum' | 'rename' | 'behead' | 'fixlengths' | 'explode' | 'fmt' | 'to' | 'from' | 'reverse' | 'transpose' | 'pivot' | 'unpivot' | 'split' | 'partition' | 'range' | 'eval',
+        type: cmdId as 'search' | 'filter' | 'sort' | 'select' | 'view' | 'count' | 'slice' | 'head' | 'tail' | 'grep' | 'sample' | 'dedup' | 'shuffle' | 'frequency' | 'groupby' | 'stats' | 'agg' | 'bins' | 'window' | 'headers' | 'flatten' | 'hist' | 'drop' | 'map' | 'enum' | 'rename' | 'behead' | 'fixlengths' | 'explode' | 'fmt' | 'to' | 'from' | 'top' | 'reverse' | 'transpose' | 'pivot' | 'unpivot' | 'split' | 'partition' | 'range' | 'eval',
         params: initialParams,
         isUpdate: true,
         stepId: step.id,
