@@ -1061,6 +1061,18 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
+      {
+        name: "choose",
+        type: "string",
+        description: "Evaluate an expression to decide whether to keep a newly seen row. Column names are prefixed with current_ and new_",
+        required: false,
+      },
+      {
+        name: "flag",
+        type: "string",
+        description: "Add a column with given name indicating whether a row is duplicated",
+        required: false,
+      },
       outputParam,
     ],
   },

@@ -43,7 +43,7 @@ export function SortableStep({
   const handleClick = () => {
     const cmdId = step.command.id;
 
-    if (['search', 'filter', 'sort', 'select', 'view', 'count', 'slice', 'head', 'tail', 'grep', 'sample', 'dedup', 'shuffle', 'frequency', 'groupby', 'stats', 'agg', 'bins', 'window', 'headers', 'flatten', 'hist', 'drop', 'map', 'enum', 'rename', 'behead', 'fixlengths', 'explode', 'fmt', 'to', 'from', 'top', 'reverse', 'transpose', 'pivot', 'unpivot', 'split', 'partition', 'range', 'eval'].includes(cmdId)) {
+    if (['search', 'filter', 'sort', 'select', 'view', 'count', 'slice', 'head', 'tail', 'grep', 'sample', 'dedup', 'shuffle', 'frequency', 'groupby', 'stats', 'agg', 'bins', 'window', 'headers', 'flatten', 'hist', 'drop', 'map', 'enum', 'rename', 'behead', 'fixlengths', 'explode', 'fmt', 'to', 'from', 'top', 'reverse', 'transpose', 'pivot', 'unpivot', 'split', 'partition', 'range', 'eval', 'cat', 'join', 'merge', 'fuzzy-join', 'transform', 'fill', 'complete', 'flatmap', 'separate'].includes(cmdId)) {
       let initialParams: Record<string, any> = {};
 
       if (cmdId === 'search') {
@@ -99,6 +99,113 @@ export function SortableStep({
         initialParams = {
           limit: step.parameters.limit || 10,
         };
+      } else if (cmdId === 'cat') {
+        initialParams = {
+          mode: step.parameters.mode || 'rows',
+          pad: step.parameters.pad || false,
+          paths: step.parameters.paths || '',
+          'path-column': step.parameters['path-column'] || '',
+          'source-column': step.parameters['source-column'] || '',
+          output: step.parameters.output || '',
+        };
+      } else if (cmdId === 'join') {
+        initialParams = {
+          columns: step.parameters.columns || '',
+          input1: step.parameters.input1 || '',
+          columns2: step.parameters.columns2 || '',
+          input2: step.parameters.input2 || '',
+          'join-type': step.parameters['join-type'] || 'inner',
+          'ignore-case': step.parameters['ignore-case'] || false,
+          nulls: step.parameters.nulls || false,
+          'drop-key': step.parameters['drop-key'] || 'none',
+          'prefix-left': step.parameters['prefix-left'] || '',
+          'prefix-right': step.parameters['prefix-right'] || '',
+          output: step.parameters.output || '',
+        };
+      } else if (cmdId === 'merge') {
+        initialParams = {
+          inputs: step.parameters.inputs || '',
+          select: step.parameters.select || '',
+          numeric: step.parameters.numeric || false,
+          reverse: step.parameters.reverse || false,
+          uniq: step.parameters.uniq || false,
+          'source-column': step.parameters['source-column'] || '',
+          paths: step.parameters.paths || '',
+          'path-column': step.parameters['path-column'] || '',
+          output: step.parameters.output || '',
+        };
+      } else if (cmdId === 'fuzzy-join') {
+        initialParams = {
+          columns: step.parameters.columns || '',
+          input: step.parameters.input || '',
+          'pattern-column': step.parameters['pattern-column'] || '',
+          patterns: step.parameters.patterns || '',
+          regex: step.parameters.regex || false,
+          'url-prefix': step.parameters['url-prefix'] || false,
+          'ignore-case': step.parameters['ignore-case'] || false,
+          simplified: step.parameters.simplified || false,
+          left: step.parameters.left || false,
+          parallel: step.parameters.parallel || false,
+          threads: step.parameters.threads || undefined,
+          'drop-key': step.parameters['drop-key'] || 'none',
+          'prefix-left': step.parameters['prefix-left'] || '',
+          'prefix-right': step.parameters['prefix-right'] || '',
+          output: step.parameters.output || '',
+        };
+      } else if (cmdId === 'transform') {
+        initialParams = {
+          column: step.parameters.column || '',
+          expression: step.parameters.expression || '',
+          output: step.parameters.output || '',
+        };
+      } else if (cmdId === 'fill') {
+        initialParams = {
+          select: step.parameters.select || '',
+          value: step.parameters.value || '',
+          output: step.parameters.output || '',
+        };
+      } else if (cmdId === 'complete') {
+        initialParams = {
+          column: step.parameters.column || '',
+          check: step.parameters.check || false,
+          min: step.parameters.min || '',
+          max: step.parameters.max || '',
+          dates: step.parameters.dates || false,
+          sorted: step.parameters.sorted || false,
+          reverse: step.parameters.reverse || false,
+          groupby: step.parameters.groupby || '',
+          output: step.parameters.output || '',
+        };
+      } else if (cmdId === 'flatmap') {
+        initialParams = {
+          expression: step.parameters.expression || '',
+          column: step.parameters.column || '',
+          'evaluate-file': step.parameters['evaluate-file'] || '',
+          replace: step.parameters.replace || '',
+          parallel: step.parameters.parallel || false,
+          threads: step.parameters.threads || undefined,
+          output: step.parameters.output || '',
+        };
+      } else if (cmdId === 'separate') {
+        initialParams = {
+          column: step.parameters.column || '',
+          separator: step.parameters.separator || '',
+          regex: step.parameters.regex || false,
+          match: step.parameters.match || false,
+          captures: step.parameters.captures || false,
+          'all-captures': step.parameters['all-captures'] || false,
+          'fixed-width': step.parameters['fixed-width'] || false,
+          widths: step.parameters.widths || '',
+          cuts: step.parameters.cuts || '',
+          offsets: step.parameters.offsets || '',
+          max: step.parameters.max || undefined,
+          'too-many': step.parameters['too-many'] || 'error',
+          into: step.parameters.into || '',
+          prefix: step.parameters.prefix || '',
+          keep: step.parameters.keep || false,
+          trim: step.parameters.trim || false,
+          output: step.parameters.output || '',
+        };
       } else if (cmdId === 'count') {
         initialParams = {
           parallel: step.parameters.parallel || false,
@@ -146,6 +253,8 @@ export function SortableStep({
           'keep-last': step.parameters['keep-last'] || false,
           external: step.parameters.external || false,
           'keep-duplicates': step.parameters['keep-duplicates'] || false,
+          choose: step.parameters.choose || '',
+          flag: step.parameters.flag || '',
           output: step.parameters.output || '',
         };
       } else if (cmdId === 'shuffle') {
