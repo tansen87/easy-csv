@@ -6769,57 +6769,59 @@ export function CommandDialog({
 
         {commandDialog.type === "fmt" && (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output Delimiter</label>
-              <select
-                value={commandDialog.params["out-delimiter"] || ","}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      "out-delimiter": e.target.value,
-                    },
-                  })
-                }
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              >
-                <option value=",">Comma (,)</option>
-                <option value="\t">Tab (\t)</option>
-                <option value=";">Semicolon (;)</option>
-                <option value="|">Pipe (|)</option>
-                <option value="^">Caret (^)</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Quote Character</label>
-              <input
-                type="text"
-                value={commandDialog.params.quote || '"'}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, quote: e.target.value },
-                  })
-                }
-                placeholder="Quote character to use"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Escape Character</label>
-              <input
-                type="text"
-                value={commandDialog.params.escape || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, escape: e.target.value },
-                  })
-                }
-                placeholder="Escape character to use"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Output Delimiter</label>
+                <select
+                  value={commandDialog.params["out-delimiter"] || ","}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        "out-delimiter": e.target.value,
+                      },
+                    })
+                  }
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                >
+                  <option value=",">Comma (,)</option>
+                  <option value="\t">Tab (\t)</option>
+                  <option value=";">Semicolon (;)</option>
+                  <option value="|">Pipe (|)</option>
+                  <option value="^">Caret (^)</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Quote Character</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.quote || '"'}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, quote: e.target.value },
+                    })
+                  }
+                  placeholder="Quote character"
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Escape Character</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.escape || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, escape: e.target.value },
+                    })
+                  }
+                  placeholder="Escape character"
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -6968,94 +6970,98 @@ export function CommandDialog({
 
         {commandDialog.type === "to" && (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Format</label>
-              <select
-                value={commandDialog.params.format || "json"}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, format: e.target.value },
-                  })
-                }
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              >
-                <option value="html">HTML</option>
-                <option value="json">JSON</option>
-                <option value="jsonl">JSONL</option>
-                <option value="md">Markdown</option>
-                <option value="ndjson">NDJSON</option>
-                <option value="npy">NPY</option>
-                <option value="txt">Text</option>
-                <option value="xlsx">XLSX</option>
-              </select>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Format</label>
+                <select
+                  value={commandDialog.params.format || "json"}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, format: e.target.value },
+                    })
+                  }
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                >
+                  <option value="html">HTML</option>
+                  <option value="json">JSON</option>
+                  <option value="jsonl">JSONL</option>
+                  <option value="md">Markdown</option>
+                  <option value="ndjson">NDJSON</option>
+                  <option value="npy">NPY</option>
+                  <option value="txt">Text</option>
+                  <option value="xlsx">XLSX</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sample Size</label>
+                <input
+                  type="number"
+                  value={commandDialog.params["sample-size"] || 512}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        "sample-size": parseInt(e.target.value) || 512,
+                      },
+                    })
+                  }
+                  placeholder="Sample size"
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Number Type (NPY)</label>
+                <select
+                  value={commandDialog.params.dtype || "f64"}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, dtype: e.target.value },
+                    })
+                  }
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                >
+                  <option value="f32">f32</option>
+                  <option value="f64">f64</option>
+                </select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Sample Size</label>
-              <input
-                type="number"
-                value={commandDialog.params["sample-size"] || 512}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      "sample-size": parseInt(e.target.value) || 512,
-                    },
-                  })
-                }
-                placeholder="Number of rows to sample for JSON type inference"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Strings</label>
-              <input
-                type="text"
-                value={commandDialog.params.strings || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      strings: e.target.value,
-                    },
-                  })
-                }
-                placeholder="Force selected columns as raw strings (JSON)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Select (Text)</label>
-              <input
-                type="text"
-                value={commandDialog.params.select || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, select: e.target.value },
-                  })
-                }
-                placeholder="Column to emit as text (txt)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Number Type (NPY)</label>
-              <select
-                value={commandDialog.params.dtype || "f64"}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, dtype: e.target.value },
-                  })
-                }
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              >
-                <option value="f32">f32</option>
-                <option value="f64">f64</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Strings</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.strings || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        strings: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="Force as raw strings (JSON)"
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Select (Text)</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.select || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, select: e.target.value },
+                    })
+                  }
+                  placeholder="Column to emit as text (txt)"
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -7153,121 +7159,127 @@ export function CommandDialog({
 
         {commandDialog.type === "from" && (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Format</label>
-              <select
-                value={commandDialog.params.format || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, format: e.target.value },
-                  })
-                }
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              >
-                <option value="">Auto-detect</option>
-                <option value="ods">ODS</option>
-                <option value="xls">XLS</option>
-                <option value="xlsb">XLSB</option>
-                <option value="xlsx">XLSX</option>
-                <option value="json">JSON</option>
-                <option value="jsonl">JSONL</option>
-                <option value="ndjson">NDJSON</option>
-                <option value="txt">Text</option>
-                <option value="npy">NPY</option>
-                <option value="tar"> TAR</option>
-                <option value="md">Markdown</option>
-                <option value="markdown">Markdown (full)</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Format</label>
+                <select
+                  value={commandDialog.params.format || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, format: e.target.value },
+                    })
+                  }
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                >
+                  <option value="">Auto-detect</option>
+                  <option value="ods">ODS</option>
+                  <option value="xls">XLS</option>
+                  <option value="xlsb">XLSB</option>
+                  <option value="xlsx">XLSX</option>
+                  <option value="json">JSON</option>
+                  <option value="jsonl">JSONL</option>
+                  <option value="ndjson">NDJSON</option>
+                  <option value="txt">Text</option>
+                  <option value="npy">NPY</option>
+                  <option value="tar"> TAR</option>
+                  <option value="md">Markdown</option>
+                  <option value="markdown">Markdown (full)</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sample Size</label>
+                <input
+                  type="number"
+                  value={commandDialog.params["sample-size"] || 64}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        "sample-size": parseInt(e.target.value) || 64,
+                      },
+                    })
+                  }
+                  placeholder="Number of records to sample"
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Sheet Index</label>
-              <input
-                type="number"
-                value={commandDialog.params["sheet-index"] || 0}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      "sheet-index": parseInt(e.target.value) || 0,
-                    },
-                  })
-                }
-                placeholder="0-based index of the sheet to convert"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sheet Index</label>
+                <input
+                  type="number"
+                  value={commandDialog.params["sheet-index"] || 0}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        "sheet-index": parseInt(e.target.value) || 0,
+                      },
+                    })
+                  }
+                  placeholder="0-based index"
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sheet Name</label>
+                <input
+                  type="text"
+                  value={commandDialog.params["sheet-name"] || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        "sheet-name": e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="Name of the sheet"
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Sheet Name</label>
-              <input
-                type="text"
-                value={commandDialog.params["sheet-name"] || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      "sheet-name": e.target.value,
-                    },
-                  })
-                }
-                placeholder="Name of the sheet to convert"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Sample Size</label>
-              <input
-                type="number"
-                value={commandDialog.params["sample-size"] || 64}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      "sample-size": parseInt(e.target.value) || 64,
-                    },
-                  })
-                }
-                placeholder="Number of records to sample (JSON)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Column Name (Text)</label>
-              <input
-                type="text"
-                value={commandDialog.params.column || "value"}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, column: e.target.value },
-                  })
-                }
-                placeholder="Name of the column to create"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Nth Table (Markdown)
-              </label>
-              <input
-                type="number"
-                value={commandDialog.params["nth-table"] || 0}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      "nth-table": parseInt(e.target.value) || 0,
-                    },
-                  })
-                }
-                placeholder="Select nth table in Markdown document"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Column Name (Text)</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.column || "value"}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, column: e.target.value },
+                    })
+                  }
+                  placeholder="Name of the column to create"
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Nth Table (Markdown)
+                </label>
+                <input
+                  type="number"
+                  value={commandDialog.params["nth-table"] || 0}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        "nth-table": parseInt(e.target.value) || 0,
+                      },
+                    })
+                  }
+                  placeholder="Select nth table"
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -7741,45 +7753,47 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Size (records per chunk)
-              </label>
-              <input
-                type="number"
-                value={commandDialog.params.size || 4096}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      size: parseInt(e.target.value) || 4096,
-                    },
-                  })
-                }
-                placeholder="Number of records per chunk"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Chunks (max number)</label>
-              <input
-                type="number"
-                value={commandDialog.params.chunks || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      chunks: e.target.value
-                        ? parseInt(e.target.value)
-                        : undefined,
-                    },
-                  })
-                }
-                placeholder="Divide into at most n chunks"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Size (records per chunk)
+                </label>
+                <input
+                  type="number"
+                  value={commandDialog.params.size || 4096}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        size: parseInt(e.target.value) || 4096,
+                      },
+                    })
+                  }
+                  placeholder="Records per chunk"
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Chunks (max number)</label>
+                <input
+                  type="number"
+                  value={commandDialog.params.chunks || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        chunks: e.target.value
+                          ? parseInt(e.target.value)
+                          : undefined,
+                      },
+                    })
+                  }
+                  placeholder="Max number of chunks"
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Filename Template</label>
@@ -8090,59 +8104,61 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Start</label>
-              <input
-                type="number"
-                value={commandDialog.params.start ?? 0}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      start: e.target.value ? parseInt(e.target.value) : 0,
-                    },
-                  })
-                }
-                placeholder="Start of the range"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Step</label>
-              <input
-                type="number"
-                value={commandDialog.params.step ?? 1}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      step: e.target.value ? parseInt(e.target.value) : 1,
-                    },
-                  })
-                }
-                placeholder="Step of the range"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Column Name</label>
-              <input
-                type="text"
-                value={commandDialog.params["column-name"] || "n"}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      "column-name": e.target.value,
-                    },
-                  })
-                }
-                placeholder="Name of the column containing the range"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Start</label>
+                <input
+                  type="number"
+                  value={commandDialog.params.start ?? 0}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        start: e.target.value ? parseInt(e.target.value) : 0,
+                      },
+                    })
+                  }
+                  placeholder="Start of the range"
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Step</label>
+                <input
+                  type="number"
+                  value={commandDialog.params.step ?? 1}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        step: e.target.value ? parseInt(e.target.value) : 1,
+                      },
+                    })
+                  }
+                  placeholder="Step of the range"
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Column Name</label>
+                <input
+                  type="text"
+                  value={commandDialog.params["column-name"] || "n"}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        "column-name": e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="Name of the column"
+                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
