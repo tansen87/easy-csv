@@ -3,7 +3,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ChevronRight,
   ChevronDown,
-  ChevronUp,
   Terminal,
   Sparkles,
   HelpCircle,
@@ -157,15 +156,6 @@ export function CommandList({
     }, {} as Record<string, boolean>)
   );
 
-  const toggleAllCategories = () => {
-    const allExpanded = Object.values(expandedCategories).every(value => value);
-    const newState = commandCategories.reduce((acc, category) => {
-      acc[category] = !allExpanded;
-      return acc;
-    }, {} as Record<string, boolean>);
-    setExpandedCategories(newState);
-  };
-
   const filteredCommands = commands.filter((command) => {
     const query = searchQuery.toLowerCase();
     return (
@@ -189,33 +179,6 @@ export function CommandList({
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10 border-r border-border/50">
-      <div className="p-4 border-b bg-card/50 backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center border border-primary/20">
-              <Terminal className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                Commands
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Click to add to pipeline
-              </p>
-            </div>
-          </div>
-          <button
-            className="p-1 hover:bg-accent/30 transition-colors rounded-md flex items-center justify-center"
-            onClick={toggleAllCategories}
-          >
-            {Object.values(expandedCategories).every(value => value) ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </button>
-        </div>
-      </div>
       <ScrollArea className="flex-1">
         <div className="p-2">
           {commandCategories.map((category) => {

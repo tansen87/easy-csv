@@ -293,7 +293,7 @@ export function SpreadsheetView({
                   onClick={onAddTab}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
                 >
-                  <Plus className="h-3.5 w-3.5" />
+                  <Plus className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => {
@@ -303,7 +303,7 @@ export function SpreadsheetView({
                   }}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -312,7 +312,7 @@ export function SpreadsheetView({
               {tabs.map((tab) => (
                 <div
                   key={tab.id}
-                  className={`flex items-center gap-2 px-3 py-1.5 mt-1 rounded-lg text-sm transition-colors shrink-0 ${selectedTabId === tab.id
+                  className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-sm transition-colors shrink-0 ${selectedTabId === tab.id
                     ? 'bg-primary/10 text-primary border border-primary/30'
                     : 'hover:bg-accent border border-transparent'}`}
                 >
