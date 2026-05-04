@@ -454,6 +454,251 @@ export function CommandDialog({
                     />
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Levenshtein</label>
+                    <input
+                      type="number"
+                      value={commandDialog.params.levenshtein || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            levenshtein: e.target.value
+                              ? Number(e.target.value)
+                              : undefined,
+                          },
+                        })
+                      }
+                      placeholder="Levenshtein distance"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Damerau-Levenshtein</label>
+                    <input
+                      type="number"
+                      value={commandDialog.params["damerau-levenshtein"] || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            "damerau-levenshtein": e.target.value
+                              ? Number(e.target.value)
+                              : undefined,
+                          },
+                        })
+                      }
+                      placeholder="Damerau-Levenshtein distance"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-2 mt-2">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params.overlapping}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            overlapping: e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-4 w-4"
+                    />
+                    Overlapping
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params.left}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            left: e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-4 w-4"
+                    />
+                    Left
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params.breakdown}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            breakdown: e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-4 w-4"
+                    />
+                    Breakdown
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-1">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Replace</label>
+                    <input
+                      type="text"
+                      value={commandDialog.params.replace || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            replace: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="Replacement string"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Add Pattern</label>
+                    <input
+                      type="text"
+                      value={commandDialog.params["add-pattern"] || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            "add-pattern": e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="Additional pattern"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Unique Matches</label>
+                    <input
+                      type="text"
+                      value={commandDialog.params["unique-matches"] || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            "unique-matches": e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="Column name for unique matches"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Separator</label>
+                    <input
+                      type="text"
+                      value={commandDialog.params.sep || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            sep: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="Separator for unique matches"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Patterns File</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.patterns || ""}
+                    onChange={(e) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          patterns: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="Path to patterns file"
+                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Pattern Column</label>
+                    <input
+                      type="text"
+                      value={commandDialog.params["pattern-column"] || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            "pattern-column": e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="Column with patterns"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Replacement Column</label>
+                    <input
+                      type="text"
+                      value={commandDialog.params["replacement-column"] || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            "replacement-column": e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="Column with replacements"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Name Column</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["name-column"] || ""}
+                    onChange={(e) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "name-column": e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="Column with pattern names"
+                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  />
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Output</label>
                   <input
