@@ -23,6 +23,7 @@ import { SortableStep } from "./spreadsheet/SortableStep";
 import { ContextMenu } from "./spreadsheet/ContextMenu";
 import { CommandDialog, CommandDialogState } from "./spreadsheet/CommandDialog";
 import { FilterDialog } from "./spreadsheet/FilterDialog";
+import { PivotDialog } from "./spreadsheet/PivotDialog";
 
 interface SpreadsheetViewProps {
   tabs: PipelineTab[];
@@ -75,6 +76,8 @@ export function SpreadsheetView({
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingTabName, setEditingTabName] = useState<string>("");
   const [filterDialog, setFilterDialog] = useState<{ col: number; x: number; y: number } | null>(null);
+  const [operationDialog, setOperationDialog] = useState<{ col: number; x: number; y: number; columnName: string } | null>(null);
+  const [pivotDialog, setPivotDialog] = useState<{ x: number; y: number } | null>(null);
   const [renamedColumns, setRenamedColumns] = useState<Record<string, string>>({});
 
   const tableRef = useRef<HTMLTableElement>(null);
@@ -154,6 +157,30 @@ export function SpreadsheetView({
     setFilterDialog(null);
   }, []);
 
+  const handleOperationClick = useCallback(
+    (e: React.MouseEvent, col: number, columnName: string) => {
+      e.stopPropagation();
+      setOperationDialog({ col, x: e.clientX, y: e.clientY, columnName });
+    },
+    [],
+  );
+
+  const closeOperationDialog = useCallback(() => {
+    setOperationDialog(null);
+  }, []);
+
+  const handlePivotClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setPivotDialog({ x: e.clientX, y: e.clientY });
+    },
+    [],
+  );
+
+  const closePivotDialog = useCallback(() => {
+    setPivotDialog(null);
+  }, []);
+
   const handleRenameApply = useCallback(() => {
     const changedColumns = Object.entries(renamedColumns).filter(
       ([oldName, newName]) => oldName !== newName && newName.trim() !== "",
@@ -171,14 +198,50 @@ export function SpreadsheetView({
     setRenamedColumns({});
   }, [renamedColumns, onAddCommand]);
 
+  const handleDedup = useCallback(() => {
+    if (!operationDialog || !onAddCommand) return;
+    const dedupCommand = xanCommands.find((cmd) => cmd.id === "dedup");
+    if (dedupCommand) {
+      onAddCommand(dedupCommand, {
+        select: operationDialog.columnName,
+        output: "",
+      });
+    }
+    closeOperationDialog();
+  }, [operationDialog, onAddCommand, closeOperationDialog]);
+
+  const handleTranspose = useCallback(() => {
+    if (!onAddCommand) return;
+    const transposeCommand = xanCommands.find((cmd) => cmd.id === "transpose");
+    if (transposeCommand) {
+      onAddCommand(transposeCommand, {
+        output: "",
+      });
+    }
+    closeOperationDialog();
+  }, [onAddCommand, closeOperationDialog]);
+
+  const handleReverse = useCallback(() => {
+    if (!onAddCommand) return;
+    const reverseCommand = xanCommands.find((cmd) => cmd.id === "reverse");
+    if (reverseCommand) {
+      onAddCommand(reverseCommand, {
+        output: "",
+      });
+    }
+    closeOperationDialog();
+  }, [onAddCommand, closeOperationDialog]);
+
   useEffect(() => {
     const handleClickOutside = () => {
       closeContextMenu();
       closeFilterDialog();
+      closeOperationDialog();
+      closePivotDialog();
     };
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
-  }, [closeContextMenu, closeFilterDialog]);
+  }, [closeContextMenu, closeFilterDialog, closeOperationDialog, closePivotDialog]);
 
   if (!inputFile || data.length === 0) {
     return (
@@ -296,25 +359,25 @@ export function SpreadsheetView({
       <div className="border-b bg-card/50 backdrop-blur-sm">
         <div className="h-[48px] px-4 flex items-center">
           <div className="flex items-center shrink-0">
-              <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
-                <button
-                  onClick={onAddTab}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => {
-                    if (tabs.length > 1 && selectedTabId) {
-                      onRemoveAllTabsExcept(selectedTabId);
-                    }
-                  }}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+            <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+              <button
+                onClick={onAddTab}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  if (tabs.length > 1 && selectedTabId) {
+                    onRemoveAllTabsExcept(selectedTabId);
+                  }
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
+          </div>
           <ScrollArea className="h-full flex-1 ml-4">
             <div className="flex items-center gap-2 pr-4">
               {tabs.map((tab) => (
@@ -411,7 +474,7 @@ export function SpreadsheetView({
                           onStepClick(s);
                         }
                       }}
-                      onStepDelete={onStepDelete || (() => {})}
+                      onStepDelete={onStepDelete || (() => { })}
                       setCommandDialog={setCommandDialog}
                     />
                   ))}
@@ -540,9 +603,8 @@ export function SpreadsheetView({
                       {headers.map((header, colIndex) => (
                         <th
                           key={colIndex}
-                          className={`border border-border/50 px-2 py-2 text-xs font-semibold text-muted-foreground bg-muted/70 text-left group ${
-                            selectedCell?.col === colIndex ? "bg-primary/10" : ""
-                          }`}
+                          className={`border border-border/50 px-2 py-2 text-xs font-semibold text-muted-foreground bg-muted/70 text-left group ${selectedCell?.col === colIndex ? "bg-primary/10" : ""
+                            }`}
                           style={{
                             width: columnWidths[colIndex] || 120,
                             minWidth: 120,
@@ -582,6 +644,22 @@ export function SpreadsheetView({
                                 </button>
                               )}
                               <button
+                                onClick={(e) => handleOperationClick(e, colIndex, header)}
+                                className="p-0.5 rounded hover:bg-accent transition-colors"
+                              >
+                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={handlePivotClick}
+                                className="p-0.5 rounded hover:bg-accent transition-colors"
+                              >
+                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                </svg>
+                              </button>
+                              <button
                                 onClick={(e) => handleFilterClick(e, colIndex)}
                                 className="p-0.5 rounded hover:bg-accent transition-colors"
                               >
@@ -599,19 +677,17 @@ export function SpreadsheetView({
                     {data.map((row, rowIndex) => (
                       <tr
                         key={rowIndex}
-                        className={`hover:bg-muted/30 transition-colors ${
-                          selectedCell?.row === rowIndex ? "bg-primary/5" : ""
-                        }`}
+                        className={`hover:bg-muted/30 transition-colors ${selectedCell?.row === rowIndex ? "bg-primary/5" : ""
+                          }`}
                       >
                         {headers.map((_, colIndex) => (
                           <td
                             key={colIndex}
-                            className={`border border-border/50 px-3 py-1.5 text-sm cursor-cell ${
-                              selectedCell?.row === rowIndex &&
+                            className={`border border-border/50 px-3 py-1.5 text-sm cursor-cell ${selectedCell?.row === rowIndex &&
                               selectedCell?.col === colIndex
-                                ? "bg-primary/10 outline outline-2 outline-primary/50"
-                                : ""
-                            }`}
+                              ? "bg-primary/10 outline outline-2 outline-primary/50"
+                              : ""
+                              }`}
                             onClick={() => handleCellClick(rowIndex, colIndex)}
                             onContextMenu={(e) =>
                               handleContextMenu(e, rowIndex, colIndex)
@@ -670,6 +746,67 @@ export function SpreadsheetView({
           onAddCommand={onAddCommand}
           onClose={closeFilterDialog}
         />
+      )}
+
+      {/* Pivot Dialog */}
+      {pivotDialog && (
+        <PivotDialog
+          pivotDialog={pivotDialog}
+          headers={headers}
+          onAddCommand={onAddCommand}
+          onClose={closePivotDialog}
+        />
+      )}
+
+      {/* Operation Dialog */}
+      {operationDialog && (
+        <div
+          className="fixed bg-card border rounded-lg shadow-xl z-50 w-[180px]"
+          style={{
+            left: Math.min(operationDialog.x, window.innerWidth - 200),
+            top: Math.min(operationDialog.y, window.innerHeight - 200),
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20">
+            <span className="text-xs font-medium truncate max-w-[120px]">{operationDialog.columnName}</span>
+            <button
+              onClick={closeOperationDialog}
+              className="p-0.5 hover:bg-accent rounded transition-colors shrink-0"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <div className="p-2 space-y-1">
+            <button
+              onClick={handleDedup}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Dedup
+            </button>
+            <button
+              onClick={handleTranspose}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Transpose
+            </button>
+            <button
+              onClick={handleReverse}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+              Reverse
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
