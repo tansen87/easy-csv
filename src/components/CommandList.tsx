@@ -1,9 +1,137 @@
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronRight, ChevronDown, ChevronUp, Terminal, Sparkles, HelpCircle } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronDown,
+  Terminal,
+  Sparkles,
+  HelpCircle,
+  Eye,
+  List,
+  Hash,
+  ArrowDown,
+  BarChart3,
+  Target,
+  Trash2,
+  GitCompare,
+  RefreshCw,
+  ListOrdered,
+  PaintBucket,
+  CheckCircle,
+  Layers,
+  Columns3,
+  Search,
+  Zap,
+  Filter,
+  ArrowUp,
+  Scissors,
+  Trophy,
+  Star,
+  ArrowUpDown,
+  Copy,
+  Shuffle,
+  BarChart2,
+  Users,
+  Activity,
+  Sigma,
+  LayoutGrid,
+  PanelLeft,
+  Files,
+  GitMerge,
+  FolderOpen,
+  GitBranch,
+  Type,
+  Minus,
+  Ruler,
+  Maximize2,
+  FileText,
+  MoveRight,
+  MoveLeft,
+  ArrowLeftRight,
+  FlipHorizontal,
+  RotateCcw,
+  RotateCw,
+  Divide,
+  Grid3x3,
+  Table,
+  Calculator,
+  type LucideIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { XanCommand } from "@/types/xan";
 import { commandCategories } from "@/data/commands";
+
+const commandIconMap: Record<string, LucideIcon> = {
+  // Explore & visualize
+  view: Eye,
+  headers: List,
+  count: Hash,
+  flatten: ArrowDown,
+  hist: BarChart3,
+
+  // Add, transform, drop and move columns
+  select: Target,
+  drop: Trash2,
+  map: GitCompare,
+  transform: RefreshCw,
+  enum: ListOrdered,
+  fill: PaintBucket,
+  complete: CheckCircle,
+  flatmap: Layers,
+  separate: Columns3,
+
+  // Search & filter
+  search: Search,
+  grep: Zap,
+  filter: Filter,
+
+  // Sort & deduplicate
+  head: ArrowUp,
+  tail: ArrowDown,
+  slice: Scissors,
+  top: Trophy,
+  sample: Star,
+  sort: ArrowUpDown,
+  dedup: Copy,
+  shuffle: Shuffle,
+
+  // Aggregate
+  frequency: BarChart2,
+  groupby: Users,
+  stats: Activity,
+  agg: Sigma,
+  bins: LayoutGrid,
+  window: PanelLeft,
+
+  // Combine multiple CSV files
+  cat: Files,
+  join: GitMerge,
+  merge: FolderOpen,
+  "fuzzy-join": GitBranch,
+
+  // Format, convert & recombobulate
+  rename: Type,
+  behead: Minus,
+  fixlengths: Ruler,
+  explode: Maximize2,
+  fmt: FileText,
+  to: MoveRight,
+  from: MoveLeft,
+  reverse: ArrowLeftRight,
+  transpose: FlipHorizontal,
+
+  // Transpose & pivot
+  pivot: RotateCcw,
+  unpivot: RotateCw,
+
+  // Split a CSV file into multiple
+  split: Divide,
+  partition: Grid3x3,
+
+  // Generate CSV files
+  range: Table,
+  eval: Calculator,
+};
 
 interface CommandListProps {
   commands: XanCommand[];
@@ -28,15 +156,6 @@ export function CommandList({
     }, {} as Record<string, boolean>)
   );
 
-  const toggleAllCategories = () => {
-    const allExpanded = Object.values(expandedCategories).every(value => value);
-    const newState = commandCategories.reduce((acc, category) => {
-      acc[category] = !allExpanded;
-      return acc;
-    }, {} as Record<string, boolean>);
-    setExpandedCategories(newState);
-  };
-
   const filteredCommands = commands.filter((command) => {
     const query = searchQuery.toLowerCase();
     return (
@@ -60,33 +179,6 @@ export function CommandList({
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10 border-r border-border/50">
-      <div className="p-4 border-b bg-card/50 backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center border border-primary/20">
-              <Terminal className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                Commands
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Click to add to pipeline
-              </p>
-            </div>
-          </div>
-          <button
-            className="p-1 hover:bg-accent/30 transition-colors rounded-md flex items-center justify-center"
-            onClick={toggleAllCategories}
-          >
-            {Object.values(expandedCategories).every(value => value) ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </button>
-        </div>
-      </div>
       <ScrollArea className="flex-1">
         <div className="p-2">
           {commandCategories.map((category) => {
@@ -113,7 +205,9 @@ export function CommandList({
                 
                 {expandedCategories[category] && (
                   <div className="mt-2 space-y-1.5 px-1">
-                    {categoryCommands.map((command) => (
+                    {categoryCommands.map((command) => {
+                      const CommandIcon = commandIconMap[command.name] || Terminal;
+                      return (
                       <Card
                         key={command.id}
                         className={`cursor-pointer transition-all duration-200 hover:shadow-md ${selectedCommandId === command.id
@@ -124,7 +218,10 @@ export function CommandList({
                         <div className="p-3">
                           <div className="flex items-center justify-between gap-3">
                             <div className="flex-1 min-w-0" onClick={() => onCommandClick(command)}>
-                              <div className="font-semibold text-sm">{command.name}</div>
+                              <div className="flex items-center gap-2">
+                                <CommandIcon className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
+                                <span className="font-semibold text-sm">{command.name}</span>
+                              </div>
                               <div className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2 mt-1">
                                 {command.description}
                               </div>
@@ -141,17 +238,12 @@ export function CommandList({
                                   <HelpCircle className="h-3.5 w-3.5 text-blue-500/70" />
                                 </div>
                               )}
-                              <div
-                                className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center cursor-pointer"
-                                onClick={() => onCommandClick(command)}
-                              >
-                                <ChevronRight className="h-3.5 w-3.5 text-primary/70" />
-                              </div>
                             </div>
                           </div>
                         </div>
                       </Card>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

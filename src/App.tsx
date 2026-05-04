@@ -1,57 +1,111 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "@/components/ThemeProvider";
-import { Settings, X, FileText, CheckCircle, XCircle, Loader2, Sun, Moon, Terminal, History } from "lucide-react";
+import {
+  Settings,
+  X,
+  FileText,
+  Loader2,
+  Sun,
+  Moon,
+  Terminal,
+  History,
+  Search,
+  FolderOpen,
+  Play,
+  Download,
+  Upload,
+} from "lucide-react";
 import { CommandList } from "@/components/CommandList";
-import { PipelineBuilder } from "@/components/PipelineBuilder";
-import { ParameterPanel } from "@/components/ParameterPanel";
 import { LogPanel } from "@/components/LogPanel";
+import { SpreadsheetView } from "@/components/SpreadsheetView";
 import { xanCommands } from "@/data/commands";
-import { PipelineStep, LogEntry, XanCommand, Workspace, PipelineTab, HistoricalPipeline } from "@/types/xan";
+import {
+  PipelineStep,
+  LogEntry,
+  XanCommand,
+  PipelineTab,
+  HistoricalPipeline,
+} from "@/types/xan";
+
+function formatDateTime(date: Date): string {
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
 
 function App() {
   const { theme, setTheme } = useTheme();
   const [tabs, setTabs] = useState<PipelineTab[]>([
     {
-      id: 'tab-1',
-      name: 'Pipeline 1',
+      id: "tab-1",
+      name: "Tab1",
       pipeline: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
+      createdAt: formatDateTime(new Date()),
+      updatedAt: formatDateTime(new Date()),
+    },
   ]);
-  const [selectedTabId, setSelectedTabId] = useState<string>('tab-1');
+  const [selectedTabId, setSelectedTabId] = useState<string>("tab-1");
   const [selectedStep, setSelectedStep] = useState<PipelineStep | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isXanInstalled, setIsXanInstalled] = useState<boolean | null>(null);
   const [xanVersion, setXanVersion] = useState<string | null>(null);
-  const [inputFile, setInputFile] = useState<string>('');
+  const [inputFile, setInputFile] = useState<string>("");
   const [showSettings, setShowSettings] = useState<boolean>(false);
-  const [defaultDelimiter, setDefaultDelimiter] = useState<string>(',');
-  const [xanPath, setXanPath] = useState<string>('');
+  const [defaultDelimiter, setDefaultDelimiter] = useState<string>(",");
+  const [xanPath, setXanPath] = useState<string>("");
   const [noQuoting, setNoQuoting] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
-  const [themeTransition, setThemeTransition] = useState<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
+  const [themeTransition, setThemeTransition] = useState<{
+    x: number;
+    y: number;
+    active: boolean;
+  }>({ x: 0, y: 0, active: false });
   const [showHelp, setShowHelp] = useState<boolean>(false);
-  const [helpContent, setHelpContent] = useState<string>('');
-  const [helpCommandName, setHelpCommandName] = useState<string>('');
-  const [historicalPipelines, setHistoricalPipelines] = useState<HistoricalPipeline[]>([]);
-  const [activeLeftPanel, setActiveLeftPanel] = useState<'commands' | 'history'>('commands');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [helpContent, setHelpContent] = useState<string>("");
+  const [helpCommandName, setHelpCommandName] = useState<string>("");
+  const [historicalPipelines, setHistoricalPipelines] = useState<
+    HistoricalPipeline[]
+  >([]);
+  const [activeLeftPanel, setActiveLeftPanel] = useState<
+    "commands" | "history"
+  >("commands");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
-  useEffect(() => {
-    checkXanInstallation();
-    loadXanPath();
-    loadDefaultDelimiter();
-    loadNoQuoting();
-    loadHistoricalPipelines();
-  }, []);
+  const [csvData, setCsvData] = useState<{
+    headers: string[];
+    rows: string[][];
+  }>({ headers: [], rows: [] });
 
-  // Load historical pipelines from file
+  // Load CSV file
+  const loadCsvData = useCallback(
+    async (filePath: string) => {
+      if (!filePath) {
+        setCsvData({ headers: [], rows: [] });
+        return;
+      }
+
+      try {
+        const data = await invoke<{ headers: string[]; rows: string[][] }>(
+          "read_csv_file",
+          {
+            filePath,
+            delimiter: defaultDelimiter,
+            limit: 100,
+          },
+        );
+        setCsvData(data);
+      } catch (error) {
+        addLog("error", `Failed to read CSV: ${error}`);
+        setCsvData({ headers: [], rows: [] });
+      }
+    },
+    [defaultDelimiter],
+  );
+
   const loadHistoricalPipelines = async () => {
     try {
       const content = await invoke<string>("load_history");
@@ -65,9 +119,11 @@ function App() {
   // Save historical pipelines to file
   const saveHistoricalPipelines = async (history: HistoricalPipeline[]) => {
     try {
-      await invoke("save_history", { history: JSON.stringify(history, null, 2) });
+      await invoke("save_history", {
+        history: JSON.stringify(history, null, 2),
+      });
     } catch (error) {
-      console.error("Failed to save historical pipelines:", error);
+      addLog("error", `Failed to save historical pipelines: ${error}`);
     }
   };
 
@@ -90,7 +146,9 @@ function App() {
 
   const loadDefaultDelimiter = async () => {
     try {
-      const savedDelimiter = await invoke<string | null>("get_default_delimiter");
+      const savedDelimiter = await invoke<string | null>(
+        "get_default_delimiter",
+      );
       if (savedDelimiter) {
         setDefaultDelimiter(savedDelimiter);
       }
@@ -135,43 +193,106 @@ function App() {
     setLogs((prev) => [...prev, newLog]);
   };
 
+  useEffect(() => {
+    checkXanInstallation();
+    loadXanPath();
+    loadDefaultDelimiter();
+    loadNoQuoting();
+    loadHistoricalPipelines();
+  }, []);
+
+  useEffect(() => {
+    loadCsvData(inputFile);
+  }, [inputFile, defaultDelimiter, loadCsvData]);
+
+  useEffect(() => {
+    const updateTitle = async () => {
+      try {
+        const title = inputFile ? `${inputFile} - Easy Csv` : "Easy Csv";
+        await invoke("set_window_title", { title });
+      } catch (error) {
+        addLog("error", `Failed to set window title: ${error}`);
+      }
+    };
+    updateTitle();
+  }, [inputFile]);
+
+  useEffect(() => {
+    if (csvData.headers.length > 0 && selectedTabId) {
+      setTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === selectedTabId
+            ? {
+              ...tab,
+              data: csvData.rows,
+              headers: csvData.headers,
+              inputFile: inputFile,
+              updatedAt: formatDateTime(new Date()),
+            }
+            : tab,
+        ),
+      );
+    }
+  }, [csvData, inputFile, selectedTabId]);
+
   const getCurrentTab = () => {
-    return tabs.find(tab => tab.id === selectedTabId) || tabs[0];
+    return tabs.find((tab) => tab.id === selectedTabId) || tabs[0];
   };
 
   const getCurrentPipeline = () => {
     return getCurrentTab().pipeline;
   };
 
-  const updateTabPipeline = (newPipeline: PipelineStep[]) => {
-    setTabs(prev => prev.map(tab => 
-      tab.id === selectedTabId 
-        ? { ...tab, pipeline: newPipeline, updatedAt: new Date().toISOString() }
-        : tab
-    ));
+  const updateTabPipeline = (tabIdOrPipeline: string | PipelineStep[], newPipeline?: PipelineStep[]) => {
+    if (typeof tabIdOrPipeline === 'string' && newPipeline) {
+      setTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === tabIdOrPipeline
+            ? {
+              ...tab,
+              pipeline: newPipeline,
+              updatedAt: formatDateTime(new Date()),
+            }
+            : tab,
+        ),
+      );
+    } else {
+      const pipeline = tabIdOrPipeline as PipelineStep[];
+      setTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === selectedTabId
+            ? {
+              ...tab,
+              pipeline: pipeline,
+              updatedAt: formatDateTime(new Date()),
+            }
+            : tab,
+        ),
+      );
+    }
   };
 
   const addNewTab = () => {
     const newTabId = `tab-${Date.now()}`;
     const newTab: PipelineTab = {
       id: newTabId,
-      name: `Pipeline ${tabs.length + 1}`,
+      name: `Tab${tabs.length + 1}`,
       pipeline: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: formatDateTime(new Date()),
+      updatedAt: formatDateTime(new Date()),
     };
-    setTabs(prev => [...prev, newTab]);
+    setTabs((prev) => [...prev, newTab]);
     setSelectedTabId(newTabId);
     setSelectedStep(null);
   };
 
   const removeTab = (tabId: string) => {
     if (tabs.length === 1) return;
-    
-    setTabs(prev => prev.filter(tab => tab.id !== tabId));
-    
+
+    setTabs((prev) => prev.filter((tab) => tab.id !== tabId));
+
     if (selectedTabId === tabId) {
-      const remainingTab = tabs.find(tab => tab.id !== tabId);
+      const remainingTab = tabs.find((tab) => tab.id !== tabId);
       if (remainingTab) {
         setSelectedTabId(remainingTab.id);
         setSelectedStep(null);
@@ -180,7 +301,7 @@ function App() {
   };
 
   const removeAllTabsExcept = (keepTabId: string) => {
-    const keepTab = tabs.find(tab => tab.id === keepTabId);
+    const keepTab = tabs.find((tab) => tab.id === keepTabId);
     if (keepTab) {
       setTabs([keepTab]);
       setSelectedTabId(keepTabId);
@@ -190,14 +311,19 @@ function App() {
   };
 
   const renameTab = (tabId: string, newName: string) => {
-    setTabs(prev => prev.map(tab => 
-      tab.id === tabId 
-        ? { ...tab, name: newName, updatedAt: new Date().toISOString() }
-        : tab
-    ));
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === tabId
+          ? { ...tab, name: newName, updatedAt: formatDateTime(new Date()) }
+          : tab,
+      ),
+    );
   };
 
-  const handleCommandClick = (command: XanCommand) => {
+  const handleCommandClick = (
+    command: XanCommand,
+    initialParameters?: Record<string, any>,
+  ) => {
     const newStep: PipelineStep = {
       id: `${command.id}-${Date.now()}`,
       command,
@@ -210,6 +336,10 @@ function App() {
       }
     });
 
+    if (initialParameters) {
+      newStep.parameters = { ...newStep.parameters, ...initialParameters };
+    }
+
     const currentPipeline = getCurrentPipeline();
     updateTabPipeline([...currentPipeline, newStep]);
     setSelectedStep(newStep);
@@ -217,8 +347,8 @@ function App() {
 
   const handleHelpClick = async (command: XanCommand) => {
     try {
-      const helpText = await invoke<string>("get_xan_help", { 
-        commandName: command.name 
+      const helpText = await invoke<string>("get_xan_help", {
+        commandName: command.name,
       });
       setHelpContent(helpText);
       setHelpCommandName(command.name);
@@ -241,21 +371,18 @@ function App() {
     }
   };
 
-  const handleStepUpdate = (stepId: string, parameters: Record<string, any>) => {
+  const handleStepUpdate = (
+    stepId: string,
+    parameters: Record<string, any>,
+  ) => {
     const currentPipeline = getCurrentPipeline();
     const updatedPipeline = currentPipeline.map((step) =>
-      step.id === stepId ? { ...step, parameters } : step
+      step.id === stepId ? { ...step, parameters } : step,
     );
     updateTabPipeline(updatedPipeline);
     if (selectedStep?.id === stepId) {
       setSelectedStep({ ...selectedStep, parameters });
     }
-  };
-
-  const handleClearPipeline = () => {
-    updateTabPipeline([]);
-    setSelectedStep(null);
-    addLog("info", "Pipeline cleared");
   };
 
   const handleExecute = async () => {
@@ -271,35 +398,43 @@ function App() {
     }
 
     setIsExecuting(true);
-    addLog("info", "Starting pipeline execution...");
 
     try {
       const commands = currentPipeline.map((step) => ({
         name: step.command.name,
         parameters: step.command.parameters.map((param) => ({
           name: param.name,
-          value: String(step.parameters[param.name] || param.default || ''),
+          value: String(step.parameters[param.name] || param.default || ""),
           isPositional: param.isPositional,
         })),
       }));
 
-      const result = await invoke<any>("execute_xan_pipeline", { commands, inputFile, defaultDelimiter });
+      const result = await invoke<any>("execute_xan_pipeline", {
+        commands,
+        inputFile,
+        defaultDelimiter,
+      });
 
       // Save to history
       const currentTabName = getCurrentTab().name;
-      const existingHistoryIndex = historicalPipelines.findIndex(h => h.name === currentTabName);
-      
+      const existingHistoryIndex = historicalPipelines.findIndex(
+        (h) => h.name === currentTabName,
+      );
+
       const historicalPipeline: HistoricalPipeline = {
-        id: existingHistoryIndex >= 0 ? historicalPipelines[existingHistoryIndex].id : `history-${Date.now()}`,
+        id:
+          existingHistoryIndex >= 0
+            ? historicalPipelines[existingHistoryIndex].id
+            : `history-${Date.now()}`,
         name: currentTabName,
         pipeline: currentPipeline,
         inputFile,
         defaultDelimiter,
-        executedAt: new Date().toISOString(),
+        executedAt: formatDateTime(new Date()),
         success: result.success,
-        output: result.output || undefined
+        output: result.output || undefined,
       };
-      
+
       let updatedHistory: HistoricalPipeline[];
       if (existingHistoryIndex >= 0) {
         // Update existing history for this tab
@@ -310,16 +445,18 @@ function App() {
         updatedHistory.unshift(historicalPipeline);
       } else {
         // Add new history for this tab
-        updatedHistory = [historicalPipeline, ...historicalPipelines].slice(0, 50); // Keep only last 50
+        updatedHistory = [historicalPipeline, ...historicalPipelines].slice(
+          0,
+          50,
+        ); // Keep only last 50
       }
-      
+
       updateHistoricalPipelines(updatedHistory);
 
       if (result.success) {
         if (result.output) {
           addLog("info", `${result.output}`);
         }
-        addLog("success", "Pipeline executed successfully");
       } else {
         addLog("error", `${result.error}`);
       }
@@ -334,10 +471,90 @@ function App() {
     setLogs([]);
   };
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputFile(e.target.value);
-    if (e.target.value) {
-      addLog("info", `Selected input file: ${e.target.value.split('\\').pop()}`);
+  const handleExportPipeline = async () => {
+    const currentPipeline = getCurrentPipeline();
+    if (currentPipeline.length === 0) {
+      addLog("warning", "No pipeline to export");
+      return;
+    }
+
+    try {
+      const pipelineData = {
+        version: "0.1.0",
+        name: getCurrentTab().name,
+        pipeline: currentPipeline.map((step) => ({
+          commandId: step.command.id,
+          parameters: step.parameters,
+        })),
+        inputFile,
+        defaultDelimiter,
+        createdAt: formatDateTime(new Date()),
+      };
+
+      const jsonContent = JSON.stringify(pipelineData, null, 2);
+      const filePath = await save({
+        filters: [{ name: "Pipeline Files", extensions: ["xan"] }],
+        defaultPath: `${getCurrentTab().name}.xan`,
+      });
+
+      if (filePath) {
+        const encoder = new TextEncoder();
+        await writeFile(filePath, encoder.encode(jsonContent));
+        addLog("success", `Pipeline exported to: ${filePath}`);
+      }
+    } catch (error) {
+      addLog("error", `Failed to export pipeline: ${error}`);
+    }
+  };
+
+  const handleImportPipeline = async () => {
+    const file = await open({
+      multiple: false,
+      filters: [{ name: "Pipeline Files", extensions: ["xan"] }],
+    });
+
+    if (!file) return;
+
+    try {
+
+      const fileContent = await readFile(file);
+      const jsonContent = new TextDecoder().decode(fileContent);
+      const pipelineData = JSON.parse(jsonContent);
+
+      if (!pipelineData.pipeline || !Array.isArray(pipelineData.pipeline)) {
+        addLog("error", "Invalid pipeline file format");
+        return;
+      }
+
+      const importedPipeline: PipelineStep[] = pipelineData.pipeline.map((stepData: { commandId: string; parameters?: Record<string, any> }) => {
+        const command = xanCommands.find((cmd) => cmd.id === stepData.commandId);
+        if (!command) {
+          addLog("warning", `Unknown command: ${stepData.commandId}, skipping`);
+          return null;
+        }
+        return {
+          id: `${command.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          command,
+          parameters: stepData.parameters || {},
+        };
+      }).filter((step: PipelineStep | null): step is PipelineStep => step !== null);
+
+      if (importedPipeline.length === 0) {
+        addLog("error", "No valid commands found in pipeline file");
+        return;
+      }
+
+      updateTabPipeline(importedPipeline);
+      if (pipelineData.inputFile) {
+        setInputFile(pipelineData.inputFile);
+      }
+      if (pipelineData.defaultDelimiter) {
+        setDefaultDelimiter(pipelineData.defaultDelimiter);
+      }
+
+      addLog("success", `Imported pipeline with ${importedPipeline.length} steps`);
+    } catch (error) {
+      addLog("error", `Failed to import pipeline: ${error}`);
     }
   };
 
@@ -345,77 +562,16 @@ function App() {
     const file = await open({
       multiple: false,
       filters: [
-        { name: "CSV Files", extensions: ["csv"] },
+        { name: "CSV Files", extensions: ["csv", "txt", "tsv"] },
         { name: "JSON Files", extensions: ["json", "jsonl"] },
         { name: "Excel Files", extensions: ["xlsx"] },
         { name: "Parquet Files", extensions: ["parquet"] },
-        { name: "All Files", extensions: ["*"] }
-      ]
+        { name: "All Files", extensions: ["*"] },
+      ],
     });
 
     if (file) {
       setInputFile(file);
-      addLog("info", `Selected input file: ${file.split('\\').pop()}`);
-    }
-  };
-
-  const handleExportWorkspace = async () => {
-    try {
-      const currentPipeline = getCurrentPipeline();
-      const workspace: Workspace = {
-        version: "1.0.0",
-        name: `xan-workspace_${new Date().toISOString().split('T')[0]}`,
-        description: `Exported on ${new Date().toLocaleString()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        pipeline: currentPipeline,
-        inputFile: inputFile,
-        defaultDelimiter: defaultDelimiter,
-        noQuoting: noQuoting,
-      };
-
-      const filePath = await save({
-        filters: [
-          { name: "JSON Files", extensions: ["json"] },
-        ],
-        defaultPath: `${workspace.name}.json`,
-      });
-
-      if (filePath) {
-        await writeTextFile(filePath, JSON.stringify(workspace, null, 2));
-        addLog("success", `Workspace exported to ${filePath.split('\\').pop()}`);
-      }
-    } catch (error) {
-      addLog("error", `Failed to export workspace: ${error}`);
-    }
-  };
-
-  const handleImportWorkspace = async () => {
-    try {
-      const filePath = await open({
-        multiple: false,
-        filters: [
-          { name: "JSON Files", extensions: ["json"] },
-        ],
-      });
-
-      if (filePath) {
-        const content = await readTextFile(filePath);
-        const workspace: Workspace = JSON.parse(content);
-
-        if (workspace.version && workspace.pipeline && workspace.inputFile !== undefined) {
-          updateTabPipeline(workspace.pipeline);
-          setInputFile(workspace.inputFile);
-          setDefaultDelimiter(workspace.defaultDelimiter || ',');
-          setNoQuoting(workspace.noQuoting || false);
-          setSelectedStep(null);
-          addLog("success", `Workspace imported: ${workspace.name}`);
-        } else {
-          addLog("error", "Invalid workspace file format");
-        }
-      }
-    } catch (error) {
-      addLog("error", `Failed to import workspace: ${error}`);
     }
   };
 
@@ -423,27 +579,28 @@ function App() {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = rect.left + rect.width / 2;
     const y = rect.top + rect.height / 2;
-    
+
     setThemeTransition({ x, y, active: true });
-    
+
     setTimeout(() => {
       setTheme(theme === "dark" ? "light" : "dark");
     }, 400);
-    
+
     setTimeout(() => {
-      setThemeTransition(prev => ({ ...prev, active: false }));
+      setThemeTransition((prev) => ({ ...prev, active: false }));
     }, 800);
   };
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20 relative overflow-hidden">
       {themeTransition.active && (
-        <div 
+        <div
           className="fixed inset-0 pointer-events-none z-50"
           style={{
-            background: theme === "light" ? "hsl(210 40% 98%)" : "hsl(222.2 84% 4.9%)",
+            background:
+              theme === "light" ? "hsl(210 40% 98%)" : "hsl(222.2 84% 4.9%)",
             clipPath: `circle(0% at ${themeTransition.x}px ${themeTransition.y}px)`,
-            animation: "themeExpand 0.8s ease-out forwards"
+            animation: "themeExpand 0.8s ease-out forwards",
           }}
         />
       )}
@@ -457,98 +614,158 @@ function App() {
           }
         }
       `}</style>
-      <header className="h-16 border-b bg-card/80 backdrop-blur-sm shadow-sm flex items-center justify-between px-4">
-        <div className="flex items-center">
-          <div className="flex border rounded-lg overflow-hidden">
-            <button 
-              className={`px-4 py-1.5 flex items-center justify-center transition-colors ${activeLeftPanel === 'commands' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
-              onClick={() => setActiveLeftPanel('commands')}
+      <header className="h-14 border-b bg-card/80 backdrop-blur-sm shadow-sm flex items-center justify-between px-4 gap-4">
+        {/* Left: Command/History Toggle + Search */}
+        <div className="flex items-center gap-2">
+          <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+            <button
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeLeftPanel === "commands"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                }`}
+              onClick={() => setActiveLeftPanel("commands")}
             >
-              <Terminal className="h-4 w-4" />
+              <Terminal className="h-3.5 w-3.5" />
+              Cmds
             </button>
-            <button 
-              className={`px-4 py-1.5 flex items-center justify-center transition-colors ${activeLeftPanel === 'history' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
-              onClick={() => setActiveLeftPanel('history')}
+            <button
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeLeftPanel === "history"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                }`}
+              onClick={() => setActiveLeftPanel("history")}
             >
-              <History className="h-4 w-4" />
+              <History className="h-3.5 w-3.5" />
+              History
             </button>
           </div>
-          <div className="ml-2 w-48">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60 z-10 pointer-events-none" />
             <input
               type="text"
-              placeholder={activeLeftPanel === 'commands' ? "Search commands..." : "Search pipelines..."}
+              placeholder={
+                activeLeftPanel === "commands"
+                  ? "Search cmd(s)"
+                  : "Search history"
+              }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-1.5 text-sm border border-border/50 rounded-lg bg-background/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
+              className="w-32 pl-8 pr-3 py-1.5 text-xs border border-border/50 rounded-lg bg-background/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
             />
           </div>
         </div>
 
-        <div className="flex-1 max-w-2xl mx-8">
-          <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1.5 border border-border/50">
-            <input
-              type="text"
-              value={inputFile || ''}
-              onChange={handleFileInput}
-              placeholder="Select or enter input file path..."
-              className="flex-1 bg-transparent text-sm px-3 py-1.5 outline-none placeholder:text-muted-foreground/60"
-            />
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleOpenFile}
-              className="h-7 px-3 text-xs font-medium hover:bg-accent"
-            >
-              Browse
-            </Button>
+        {/* Center: View Toggle + Action Group */}
+        <div className="flex items-center gap-3 flex-1 justify-center">
+          <div className="flex items-center gap-2">
+            <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+              <button
+                onClick={handleOpenFile}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                <FolderOpen className="h-3.5 w-3.5" />
+                Browse
+              </button>
+              <button
+                onClick={handleExecute}
+                disabled={getCurrentPipeline().length === 0 || isExecuting}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${isExecuting
+                    ? "text-primary opacity-70"
+                    : getCurrentPipeline().length === 0
+                      ? "text-muted-foreground/40 cursor-not-allowed"
+                      : "text-primary hover:text-primary hover:bg-primary/10"
+                  }`}
+              >
+                {isExecuting ? (
+                  <>
+                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    Executing...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-3.5 w-3.5" />
+                    Execute
+                    {getCurrentPipeline().length > 0 && (
+                      <span className="ml-0.5">({getCurrentPipeline().length})</span>
+                    )}
+                  </>
+                )}
+              </button>
+            </div>
+            <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+              <button
+                onClick={handleImportPipeline}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                title="Import Pipeline"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Import
+              </button>
+              <button
+                onClick={handleExportPipeline}
+                disabled={getCurrentPipeline().length === 0}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${getCurrentPipeline().length === 0
+                    ? "text-muted-foreground/40 cursor-not-allowed"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  }`}
+                title="Export Pipeline"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Right: Status + Tools */}
+        <div className="flex items-center gap-2">
           {isXanInstalled === null ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Checking...</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <span className="hidden sm:inline">Checking...</span>
             </div>
           ) : isXanInstalled ? (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 text-green-600 rounded-full text-xs font-medium border border-green-500/20">
-              <CheckCircle className="h-3.5 w-3.5" />
-              <span>xan {xanVersion && `v${xanVersion.trim()}`}</span>
+            <div
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 rounded-lg text-xs font-medium border border-green-500/20"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+              </span>
+              <span className="hidden sm:inline">xan{xanVersion ? ` ${xanVersion.trim()}` : ""}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 text-red-600 rounded-full text-xs font-medium border border-red-500/20">
-              <XCircle className="h-3.5 w-3.5" />
-              <span>xan not found</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-600 rounded-lg text-xs font-medium border border-red-500/20">
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+              <span className="hidden sm:inline">xan missing</span>
             </div>
           )}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={handleThemeToggle}
-            className="h-9 w-9 rounded-lg hover:bg-accent transition-all hover:scale-110 active:scale-95"
-          >
-            {theme === "dark" ? (
-              <Sun className="h-4.5 w-4.5 transition-transform duration-300 rotate-0 hover:rotate-45" />
-            ) : (
-              <Moon className="h-4.5 w-4.5 transition-transform duration-300 rotate-0 hover:-rotate-12" />
-            )}
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setShowSettings(true)}
-            className="h-9 w-9 rounded-lg hover:bg-accent transition-colors"
-          >
-            <Settings className="h-4.5 w-4.5" />
-          </Button>
+          <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+            <button
+              onClick={handleThemeToggle}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+            </button>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <aside className="w-[20%] flex-shrink-0 flex flex-col bg-card/50 backdrop-blur-sm border-r">
+        <aside className="w-[16%] flex-shrink-0 flex flex-col bg-card/50 backdrop-blur-sm border-r">
           {/* Panel Content */}
           <div className="flex-1 overflow-hidden">
-            {activeLeftPanel === 'commands' ? (
+            {activeLeftPanel === "commands" ? (
               <CommandList
                 commands={xanCommands}
                 onCommandClick={handleCommandClick}
@@ -560,77 +777,105 @@ function App() {
             ) : (
               <div className="h-full overflow-auto p-4">
                 {(() => {
-                  const filteredHistory = historicalPipelines.filter(history => 
-                    history.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  const filteredHistory = historicalPipelines.filter(
+                    (history) =>
+                      history.name
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase()),
                   );
                   return filteredHistory.length === 0 ? (
                     <div className="text-center py-16 px-4">
                       <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
                         <FileText className="h-8 w-8 text-muted-foreground/50" />
                       </div>
-                      <p className="text-sm font-medium text-muted-foreground mb-1">No historical pipelines found</p>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">
+                        No historical pipelines found
+                      </p>
                       <p className="text-xs text-muted-foreground/70">
-                        {searchQuery ? 'Try a different search term' : 'Execute pipelines to see them here'}
+                        {searchQuery
+                          ? "Try a different search term"
+                          : "Execute pipelines to see them here"}
                       </p>
                     </div>
                   ) : (
                     <div className="space-y-3">
                       {filteredHistory.map((history) => (
-                        <div key={history.id} className="border rounded-lg p-3 hover:bg-muted/30 transition-colors">
+                        <div
+                          key={history.id}
+                          className="border rounded-lg p-3 hover:bg-muted/30 transition-colors"
+                        >
                           <div className="flex items-center justify-between mb-1">
-                            <h4 className="font-semibold text-xs truncate">{history.name}</h4>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${history.success ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
-                              {history.success ? 'Success' : 'Failed'}
-                            </span>
+                            <h4 className="font-semibold text-xs truncate">
+                              {history.name}
+                            </h4>
+                            <button
+                              className="text-xs px-2 py-1 rounded-md hover:bg-accent transition-colors text-red-600 hover:bg-red-500/10"
+                              onClick={() => {
+                                const updatedHistory =
+                                  historicalPipelines.filter(
+                                    (h) => h.id !== history.id,
+                                  );
+                                updateHistoricalPipelines(updatedHistory);
+                                addLog(
+                                  "info",
+                                  `Deleted historical pipeline: ${history.name}`,
+                                );
+                              }}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                           <p className="text-xs text-muted-foreground mb-1">
                             {new Date(history.executedAt).toLocaleString()}
                           </p>
                           <p className="text-xs text-muted-foreground mb-2 truncate">
-                            {history.inputFile.split('\\').pop()}
+                            {history.inputFile.split("\\").pop()}
                           </p>
-                          <div className="flex gap-1">
-                            <button 
-                              className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
-                              onClick={() => {
-                                updateTabPipeline(history.pipeline);
-                                setInputFile(history.inputFile);
-                                setDefaultDelimiter(history.defaultDelimiter);
-                                addLog("info", `Loaded historical pipeline: ${history.name}`);
-                              }}
+                          <div className="flex items-center justify-between">
+                            <div className="flex gap-1">
+                              <button
+                                className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
+                                onClick={() => {
+                                  updateTabPipeline(history.pipeline);
+                                  setInputFile(history.inputFile);
+                                  setDefaultDelimiter(history.defaultDelimiter);
+                                  addLog(
+                                    "info",
+                                    `Loaded historical pipeline: ${history.name}`,
+                                  );
+                                }}
+                              >
+                                Load
+                              </button>
+                              <button
+                                className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
+                                onClick={() => {
+                                  const newTabId = `tab-${Date.now()}`;
+                                  const newTab: PipelineTab = {
+                                    id: newTabId,
+                                    name: `${history.name} (History)`,
+                                    pipeline: history.pipeline,
+                                    createdAt: formatDateTime(new Date()),
+                                    updatedAt: formatDateTime(new Date()),
+                                  };
+                                  setTabs((prev) => [...prev, newTab]);
+                                  setSelectedTabId(newTabId);
+                                  setInputFile(history.inputFile);
+                                  setDefaultDelimiter(history.defaultDelimiter);
+                                  addLog(
+                                    "info",
+                                    `Created new tab from historical pipeline: ${history.name}`,
+                                  );
+                                }}
+                              >
+                                New Tab
+                              </button>
+                            </div>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full ${history.success ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"}`}
                             >
-                              Load
-                            </button>
-                            <button 
-                              className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
-                              onClick={() => {
-                                const newTabId = `tab-${Date.now()}`;
-                                const newTab: PipelineTab = {
-                                  id: newTabId,
-                                  name: `${history.name} (History)`,
-                                  pipeline: history.pipeline,
-                                  createdAt: new Date().toISOString(),
-                                  updatedAt: new Date().toISOString()
-                                };
-                                setTabs(prev => [...prev, newTab]);
-                                setSelectedTabId(newTabId);
-                                setInputFile(history.inputFile);
-                                setDefaultDelimiter(history.defaultDelimiter);
-                                addLog("info", `Created new tab from historical pipeline: ${history.name}`);
-                              }}
-                            >
-                              New Tab
-                            </button>
-                            <button 
-                              className="text-xs px-2 py-1 rounded-xl hover:bg-accent transition-colors text-red-600 hover:bg-red-500/10 ml-auto"
-                              onClick={() => {
-                                const updatedHistory = historicalPipelines.filter(h => h.id !== history.id);
-                                updateHistoricalPipelines(updatedHistory);
-                                addLog("info", `Deleted historical pipeline: ${history.name}`);
-                              }}
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
+                              {history.success ? "Success" : "Failed"}
+                            </span>
                           </div>
                         </div>
                       ))}
@@ -643,38 +888,22 @@ function App() {
         </aside>
 
         <main className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 flex overflow-hidden min-h-0">
-            <div className="w-[60%] flex-shrink-0 flex flex-col">
-              <PipelineBuilder
-                steps={getCurrentPipeline()}
-                onStepsChange={updateTabPipeline}
-                onStepClick={handleStepClick}
-                onStepRemove={handleStepRemove}
-                selectedStepId={selectedStep?.id}
-                onExecute={handleExecute}
-                onClear={handleClearPipeline}
-                isExecuting={isExecuting}
-                onExportWorkspace={handleExportWorkspace}
-                onImportWorkspace={handleImportWorkspace}
-                tabs={tabs}
-                selectedTabId={selectedTabId}
-                onTabChange={setSelectedTabId}
-                onAddTab={addNewTab}
-                onRemoveTab={removeTab}
-                onRemoveAllTabsExcept={removeAllTabsExcept}
-                onRenameTab={renameTab}
-              />
-            </div>
-
-            <aside className="flex-1 flex flex-col">
-              <ParameterPanel
-                step={selectedStep}
-                onStepUpdate={handleStepUpdate}
-                onClose={() => setSelectedStep(null)}
-              />
-            </aside>
+          <div className="flex-1 overflow-hidden">
+            <SpreadsheetView
+              tabs={tabs}
+              selectedTabId={selectedTabId}
+              onTabChange={setSelectedTabId}
+              onAddTab={addNewTab}
+              onRemoveTab={removeTab}
+              onRemoveAllTabsExcept={removeAllTabsExcept}
+              onRenameTab={renameTab}
+              onAddCommand={handleCommandClick}
+              onStepClick={handleStepClick}
+              onStepUpdate={handleStepUpdate}
+              onStepDelete={handleStepRemove}
+              onPipelineReorder={updateTabPipeline}
+            />
           </div>
-
           <LogPanel logs={logs} onClear={handleClearLogs} />
         </main>
       </div>
@@ -685,13 +914,19 @@ function App() {
           <div className="bg-card border rounded-lg shadow-lg p-6 w-full max-w-xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Settings</h3>
-              <Button variant="ghost" size="icon" onClick={() => setShowSettings(false)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowSettings(false)}
+              >
                 <X className="h-5 w-5" />
               </Button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Xan Executable Path</label>
+                <label className="block text-sm font-medium mb-1">
+                  Xan Executable Path
+                </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -706,7 +941,9 @@ function App() {
                     onClick={async () => {
                       const file = await open({
                         multiple: false,
-                        filters: [{ name: "Executable Files", extensions: ["exe"] }],
+                        filters: [
+                          { name: "Executable Files", extensions: ["exe"] },
+                        ],
                       });
                       if (file) {
                         setXanPath(file);
@@ -721,7 +958,9 @@ function App() {
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Default Delimiter</label>
+                <label className="block text-sm font-medium mb-1">
+                  Default Delimiter
+                </label>
                 <select
                   value={defaultDelimiter}
                   onChange={(e) => setDefaultDelimiter(e.target.value)}
@@ -752,7 +991,10 @@ function App() {
                 </p>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowSettings(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSettings(false)}
+                >
                   Cancel
                 </Button>
                 <Button
@@ -762,7 +1004,9 @@ function App() {
                         await invoke("set_xan_path", { path: xanPath });
                         await checkXanInstallation();
                       }
-                      await invoke("set_default_delimiter", { delimiter: defaultDelimiter });
+                      await invoke("set_default_delimiter", {
+                        delimiter: defaultDelimiter,
+                      });
                       await invoke("set_no_quoting", { noQuoting });
                       addLog("success", "Settings saved successfully");
                       setShowSettings(false);
@@ -785,7 +1029,11 @@ function App() {
           <div className="bg-card border rounded-lg shadow-lg p-6 w-full max-w-4xl h-[80vh] flex flex-col">
             <div className="flex items-center justify-between mb-4 flex-shrink-0">
               <h3 className="text-lg font-semibold">Help: {helpCommandName}</h3>
-              <Button variant="ghost" size="icon" onClick={() => setShowHelp(false)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowHelp(false)}
+              >
                 <X className="h-5 w-5" />
               </Button>
             </div>
@@ -797,8 +1045,6 @@ function App() {
           </div>
         </div>
       )}
-
-
     </div>
   );
 }

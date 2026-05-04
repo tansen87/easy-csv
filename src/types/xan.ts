@@ -36,6 +36,10 @@ export interface PipelineTab {
   pipeline: PipelineStep[];
   createdAt: string;
   updatedAt: string;
+  data?: string[][];
+  headers?: string[];
+  inputFile?: string;
+  defaultDelimiter?: string;
 }
 
 export interface HistoricalPipeline {

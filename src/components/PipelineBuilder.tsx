@@ -2,7 +2,7 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { GripVertical, X, Play, Trash2, Download, Upload, Sparkles, Plus, Edit3 } from "lucide-react";
+import { GripVertical, X, Trash2, Download, Upload, Layers, Plus, Edit3 } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -124,9 +124,7 @@ interface PipelineBuilderProps {
   onStepClick: (step: PipelineStep) => void;
   onStepRemove: (stepId: string) => void;
   selectedStepId?: string;
-  onExecute: () => void;
   onClear: () => void;
-  isExecuting?: boolean;
   onExportWorkspace?: () => void;
   onImportWorkspace?: () => void;
   tabs: PipelineTab[];
@@ -144,9 +142,7 @@ export function PipelineBuilder({
   onStepClick,
   onStepRemove,
   selectedStepId,
-  onExecute,
   onClear,
-  isExecuting,
   onExportWorkspace,
   onImportWorkspace,
   tabs,
@@ -187,7 +183,7 @@ export function PipelineBuilder({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center border border-primary/20">
-                <Sparkles className="h-4 w-4 text-primary" />
+                <Layers className="h-4 w-4 text-primary" />
               </div>
               <div>
                 <h2 className="text-base font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
@@ -198,54 +194,30 @@ export function PipelineBuilder({
                 </p>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
+            <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+              <button
                 onClick={onClear}
                 disabled={steps.length === 0}
-                className="h-8 px-3 text-xs font-medium hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:text-muted-foreground/30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
               >
-                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                <Trash2 className="h-3.5 w-3.5" />
                 Clear
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
+              </button>
+              <button
                 onClick={onImportWorkspace}
-                className="h-8 px-3 text-xs font-medium"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
-                <Upload className="h-3.5 w-3.5 mr-1.5" />
+                <Upload className="h-3.5 w-3.5" />
                 Import
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
+              </button>
+              <button
                 onClick={onExportWorkspace}
                 disabled={steps.length === 0}
-                className="h-8 px-3 text-xs font-medium"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:text-muted-foreground/30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
               >
-                <Download className="h-3.5 w-3.5 mr-1.5" />
+                <Download className="h-3.5 w-3.5" />
                 Export
-              </Button>
-              <Button
-                size="sm"
-                onClick={onExecute}
-                disabled={steps.length === 0 || isExecuting}
-                className="h-8 px-4 text-xs font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-sm"
-              >
-                {isExecuting ? (
-                  <>
-                    <div className="h-3.5 w-3.5 mr-1.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Executing...
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-3.5 w-3.5 mr-1.5" />
-                    Execute
-                  </>
-                )}
-              </Button>
+              </button>
             </div>
           </div>
         </div>
@@ -343,7 +315,7 @@ export function PipelineBuilder({
           {steps.length === 0 ? (
             <div className="text-center py-16 px-4">
               <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
-                <Sparkles className="h-8 w-8 text-muted-foreground/50" />
+                <Layers className="h-8 w-8 text-muted-foreground/50" />
               </div>
               <p className="text-sm font-medium text-muted-foreground mb-1">No steps in pipeline</p>
               <p className="text-xs text-muted-foreground/70">
