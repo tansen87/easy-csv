@@ -238,12 +238,6 @@ export function CommandList({
                                   <HelpCircle className="h-3.5 w-3.5 text-blue-500/70" />
                                 </div>
                               )}
-                              <div
-                                className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center cursor-pointer"
-                                onClick={() => onCommandClick(command)}
-                              >
-                                <ChevronRight className="h-3.5 w-3.5 text-primary/70" />
-                              </div>
                             </div>
                           </div>
                         </div>
