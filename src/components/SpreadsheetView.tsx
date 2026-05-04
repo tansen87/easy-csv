@@ -59,11 +59,6 @@ export function SpreadsheetView({
     col: number;
   } | null>(null);
   const [columnWidths] = useState<Record<number, number>>({});
-  const [editingCell, setEditingCell] = useState<{
-    row: number;
-    col: number;
-  } | null>(null);
-  const [editingValue, setEditingValue] = useState("");
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -79,7 +74,6 @@ export function SpreadsheetView({
   const [editingTabName, setEditingTabName] = useState<string>("");
 
   const tableRef = useRef<HTMLTableElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const currentTab = tabs.find((tab) => tab.id === selectedTabId);
   const data = currentTab?.data || [];
@@ -113,29 +107,6 @@ export function SpreadsheetView({
     setSelectedCell({ row, col });
   }, []);
 
-  const handleCellDoubleClick = useCallback(
-    (row: number, col: number) => {
-      setEditingCell({ row, col });
-      setEditingValue(data[row]?.[col] || "");
-    },
-    [data],
-  );
-
-  const handleEditBlur = useCallback(() => {
-    setEditingCell(null);
-    setEditingValue("");
-  }, []);
-
-  const handleEditKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      setEditingCell(null);
-      setEditingValue("");
-    } else if (e.key === "Escape") {
-      setEditingCell(null);
-      setEditingValue("");
-    }
-  }, []);
-
   const handleContextMenu = useCallback(
     (e: React.MouseEvent, row: number, col: number) => {
       e.preventDefault();
@@ -156,13 +127,6 @@ export function SpreadsheetView({
     setContextMenu(null);
     setContextMenuSearch("");
   }, []);
-
-  useEffect(() => {
-    if (editingCell && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [editingCell]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -522,88 +486,78 @@ export function SpreadsheetView({
         })()}
 
       {/* Main Table */}
-      <ScrollArea className="flex-1">
-        <div className="p-4">
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50 overflow-hidden">
-            <div className="overflow-auto">
-              <table ref={tableRef} className="w-full border-collapse">
-                <thead className="bg-muted/50 sticky top-0 z-10">
-                  <tr>
-                    {headers.map((header, colIndex) => (
-                      <th
-                        key={colIndex}
-                        className={`border border-border/50 px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/70 text-left min-w-[100px] ${
-                          selectedCell?.col === colIndex ? "bg-primary/10" : ""
-                        }`}
-                        style={{
-                          width: columnWidths[colIndex] || 120,
-                        }}
-                        onContextMenu={(e) =>
-                          handleHeaderContextMenu(e, colIndex)
-                        }
-                      >
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium">{header}</span>
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map((row, rowIndex) => (
-                    <tr
-                      key={rowIndex}
-                      className={`hover:bg-muted/30 transition-colors ${
-                        selectedCell?.row === rowIndex ? "bg-primary/5" : ""
-                      }`}
-                    >
-                      {headers.map((_, colIndex) => (
-                        <td
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <ScrollArea className="flex-1" type="always">
+          <div className="p-4">
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table ref={tableRef} className="w-full border-collapse min-w-max">
+                  <thead className="bg-muted/50 sticky top-0 z-10">
+                    <tr>
+                      {headers.map((header, colIndex) => (
+                        <th
                           key={colIndex}
-                          className={`border border-border/50 px-3 py-1.5 text-sm cursor-cell ${
-                            selectedCell?.row === rowIndex &&
-                            selectedCell?.col === colIndex
-                              ? "bg-primary/10 outline outline-2 outline-primary/50"
-                              : ""
+                          className={`border border-border/50 px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/70 text-left ${
+                            selectedCell?.col === colIndex ? "bg-primary/10" : ""
                           }`}
-                          onClick={() => handleCellClick(rowIndex, colIndex)}
-                          onDoubleClick={() =>
-                            handleCellDoubleClick(rowIndex, colIndex)
-                          }
-                          onContextMenu={(e) =>
-                            handleContextMenu(e, rowIndex, colIndex)
-                          }
                           style={{
                             width: columnWidths[colIndex] || 120,
-                            maxWidth: columnWidths[colIndex] || 120,
+                            minWidth: 120,
                           }}
+                          onContextMenu={(e) =>
+                            handleHeaderContextMenu(e, colIndex)
+                          }
                         >
-                          {editingCell?.row === rowIndex &&
-                          editingCell?.col === colIndex ? (
-                            <input
-                              ref={inputRef}
-                              type="text"
-                              value={editingValue}
-                              onChange={(e) => setEditingValue(e.target.value)}
-                              onBlur={handleEditBlur}
-                              onKeyDown={handleEditKeyDown}
-                              className="w-full h-full bg-transparent border-none outline-none text-sm"
-                            />
-                          ) : (
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">{header}</span>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.map((row, rowIndex) => (
+                      <tr
+                        key={rowIndex}
+                        className={`hover:bg-muted/30 transition-colors ${
+                          selectedCell?.row === rowIndex ? "bg-primary/5" : ""
+                        }`}
+                      >
+                        {headers.map((_, colIndex) => (
+                          <td
+                            key={colIndex}
+                            className={`border border-border/50 px-3 py-1.5 text-sm cursor-cell ${
+                              selectedCell?.row === rowIndex &&
+                              selectedCell?.col === colIndex
+                                ? "bg-primary/10 outline outline-2 outline-primary/50"
+                                : ""
+                            }`}
+                            onClick={() => handleCellClick(rowIndex, colIndex)}
+                            onContextMenu={(e) =>
+                              handleContextMenu(e, rowIndex, colIndex)
+                            }
+                            style={{
+                              width: columnWidths[colIndex] || 120,
+                              minWidth: 120,
+                              maxWidth: 300,
+                            }}
+                          >
                             <div className="truncate">
                               {row[colIndex] || ""}
                             </div>
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </div>
-      </ScrollArea>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+          <ScrollBar orientation="horizontal" className="top-0 bottom-auto" />
+          <ScrollBar orientation="vertical" />
+        </ScrollArea>
+      </div>
 
       {/* Context Menu */}
       {contextMenu && (
