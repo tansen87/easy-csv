@@ -825,28 +825,27 @@ export function CommandDialog({
                 />
                 Parallel
               </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={commandDialog.params.threads || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        threads: e.target.value
+                          ? Number(e.target.value)
+                          : undefined,
+                      },
+                    })
+                  }
+                  placeholder="Threads"
+                  className="w-20 h-8 px-1 text-sm border rounded-md bg-background"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Threads</label>
-              <input
-                type="number"
-                value={commandDialog.params.threads || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      threads: e.target.value
-                        ? Number(e.target.value)
-                        : undefined,
-                    },
-                  })
-                }
-                placeholder="Number of threads"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Min</label>
                 <input
@@ -861,7 +860,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  placeholder="Minimum value of range"
+                  placeholder="Min"
                   className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
@@ -879,63 +878,25 @@ export function CommandDialog({
                       },
                     })
                   }
-                  placeholder="Maximum value of range"
+                  placeholder="Max"
                   className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Group By</label>
-              <input
-                type="text"
-                value={commandDialog.params.groupby || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      groupby: e.target.value,
-                    },
-                  })
-                }
-                placeholder="Columns to group by"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Min</label>
+                <label className="text-sm font-medium">Group By</label>
                 <input
                   type="text"
-                  value={commandDialog.params.min || ""}
+                  value={commandDialog.params.groupby || ""}
                   onChange={(e) =>
                     setCommandDialog({
                       ...commandDialog,
                       params: {
                         ...commandDialog.params,
-                        min: e.target.value,
+                        groupby: e.target.value,
                       },
                     })
                   }
-                  placeholder="Minimum value of range"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Max</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.max || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        max: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="Maximum value of range"
+                  placeholder="Group by"
                   className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
@@ -1056,36 +1017,6 @@ export function CommandDialog({
                   className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tmp Dir</label>
-              <input
-                type="text"
-                value={commandDialog.params["tmp-dir"] ?? ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, "tmp-dir": e.target.value },
-                  })
-                }
-                placeholder="Directory where external sorting chunks will be written"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output ?? ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
             </div>
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -1243,6 +1174,36 @@ export function CommandDialog({
                 />
                 Cells
               </label>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tmp Dir</label>
+              <input
+                type="text"
+                value={commandDialog.params["tmp-dir"] ?? ""}
+                onChange={(e) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: { ...commandDialog.params, "tmp-dir": e.target.value },
+                  })
+                }
+                placeholder="Directory where external sorting chunks will be written"
+                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Output</label>
+              <input
+                type="text"
+                value={commandDialog.params.output ?? ""}
+                onChange={(e) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: { ...commandDialog.params, output: e.target.value },
+                  })
+                }
+                placeholder="Write output to file instead of stdout"
+                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+              />
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
