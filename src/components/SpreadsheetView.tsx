@@ -61,7 +61,10 @@ export function SpreadsheetView({
     row: number;
     col: number;
   } | null>(null);
-  const [columnWidths] = useState<Record<number, number>>({});
+  const [columnWidths, setColumnWidths] = useState<Record<number, number>>({});
+  const [resizingCol, setResizingCol] = useState<number | null>(null);
+  const [resizingStartX, setResizingStartX] = useState(0);
+  const [resizingStartWidth, setResizingStartWidth] = useState(0);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -109,6 +112,34 @@ export function SpreadsheetView({
       onPipelineReorder(selectedTabId, newPipeline);
     }
   };
+
+  const handleResizeStart = useCallback((colIndex: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizingCol(colIndex);
+    setResizingStartX(e.clientX);
+    setResizingStartWidth(columnWidths[colIndex] || 150);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, [columnWidths]);
+
+  const handleResizeMove = useCallback((e: React.MouseEvent) => {
+    if (resizingCol === null) return;
+    const diff = e.clientX - resizingStartX;
+    const newWidth = Math.max(80, resizingStartWidth + diff);
+    setColumnWidths((prev) => ({
+      ...prev,
+      [resizingCol]: newWidth,
+    }));
+  }, [resizingCol, resizingStartX, resizingStartWidth]);
+
+  const handleResizeEnd = useCallback(() => {
+    if (resizingCol !== null) {
+      setResizingCol(null);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    }
+  }, [resizingCol]);
 
   const handleCellClick = useCallback((row: number, col: number) => {
     setSelectedCell({ row, col });
@@ -592,127 +623,142 @@ export function SpreadsheetView({
         })()}
 
       {/* Main Table */}
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        <ScrollArea className="flex-1" type="always">
-          <div className="p-4">
-            <Card className="bg-card/80 backdrop-blur-sm border-border/50 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table ref={tableRef} className="w-full border-collapse min-w-max">
-                  <thead className="bg-muted/50 sticky top-0 z-10">
-                    <tr>
-                      {headers.map((header, colIndex) => (
-                        <th
-                          key={colIndex}
-                          className={`border border-border/50 px-2 py-2 text-xs font-semibold text-muted-foreground bg-muted/70 text-left group ${selectedCell?.col === colIndex ? "bg-primary/10" : ""
-                            }`}
-                          style={{
-                            width: columnWidths[colIndex] || 120,
-                            minWidth: 120,
-                          }}
-                          onContextMenu={(e) =>
-                            handleHeaderContextMenu(e, colIndex)
-                          }
-                          onClick={(e) => handleHeaderClick(e, colIndex)}
-                        >
-                          <div className="flex items-center gap-1">
-                            {renamedColumns[header] !== undefined ? (
-                              <input
-                                type="text"
-                                value={renamedColumns[header]}
-                                onChange={(e) =>
-                                  setRenamedColumns((prev) => ({
-                                    ...prev,
-                                    [header]: e.target.value,
-                                  }))
-                                }
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-full px-1 py-0.5 border rounded text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-                                autoFocus
-                              />
-                            ) : (
-                              <span className="font-medium truncate">{header}</span>
+      <div
+        className="flex-1 flex flex-col overflow-hidden relative"
+        onMouseMove={handleResizeMove}
+        onMouseUp={handleResizeEnd}
+        onMouseLeave={handleResizeEnd}
+      >
+        <div className="p-4 h-full flex flex-col">
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50 flex-1 overflow-hidden flex flex-col">
+            <ScrollArea className="flex-1">
+              <table ref={tableRef} className="w-full border-collapse table-fixed">
+                <colgroup>
+                  {headers.map((_, colIndex) => (
+                    <col key={colIndex} style={{ width: columnWidths[colIndex] || 150, minWidth: 150 }} />
+                  ))}
+                </colgroup>
+                <thead className="bg-muted/50 sticky top-0 z-10">
+                  <tr>
+                    {headers.map((header, colIndex) => (
+                      <th
+                        key={colIndex}
+                        className={`border border-border/50 px-2 py-2 text-sm font-semibold text-foreground bg-muted/70 text-left group relative ${selectedCell?.col === colIndex ? "bg-primary/10" : ""
+                          }`}
+                        style={{
+                          width: columnWidths[colIndex] || 120,
+                          minWidth: 120,
+                        }}
+                        onContextMenu={(e) =>
+                          handleHeaderContextMenu(e, colIndex)
+                        }
+                      >
+                        <div className="flex items-center gap-1">
+                          {renamedColumns[header] !== undefined ? (
+                            <input
+                              type="text"
+                              value={renamedColumns[header]}
+                              onChange={(e) =>
+                                setRenamedColumns((prev) => ({
+                                  ...prev,
+                                  [header]: e.target.value,
+                                }))
+                              }
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-full px-1 py-0.5 border rounded text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                              autoFocus
+                            />
+                          ) : (
+                            <span
+                              className="font-medium truncate cursor-pointer"
+                              onDoubleClick={() => handleHeaderClick(null as any, colIndex)}
+                            >{header}</span>
+                          )}
+                          <div className="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {Object.keys(renamedColumns).length > 0 && (
+                              <button
+                                onClick={handleRenameApply}
+                                className="p-0.5 rounded hover:bg-accent transition-colors text-primary"
+                              >
+                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </button>
                             )}
-                            <div className="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                              {Object.keys(renamedColumns).length > 0 && (
-                                <button
-                                  onClick={handleRenameApply}
-                                  className="p-0.5 rounded hover:bg-accent transition-colors text-primary"
-                                >
-                                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                </button>
-                              )}
-                              <button
-                                onClick={(e) => handleOperationClick(e, colIndex, header)}
-                                className="p-0.5 rounded hover:bg-accent transition-colors"
-                              >
-                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={handlePivotClick}
-                                className="p-0.5 rounded hover:bg-accent transition-colors"
-                              >
-                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={(e) => handleFilterClick(e, colIndex)}
-                                className="p-0.5 rounded hover:bg-accent transition-colors"
-                              >
-                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                                </svg>
-                              </button>
-                            </div>
+                            <button
+                              onClick={(e) => handleOperationClick(e, colIndex, header)}
+                              className="p-0.5 rounded hover:bg-accent transition-colors"
+                            >
+                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={handlePivotClick}
+                              className="p-0.5 rounded hover:bg-accent transition-colors"
+                            >
+                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => handleFilterClick(e, colIndex)}
+                              className="p-0.5 rounded hover:bg-accent transition-colors"
+                            >
+                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                              </svg>
+                            </button>
                           </div>
-                        </th>
+                          {colIndex < headers.length - 1 && (
+                            <div
+                              className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition-colors z-20"
+                              onMouseDown={(e) => handleResizeStart(colIndex, e)}
+                            />
+                          )}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.map((row, rowIndex) => (
+                    <tr
+                      key={rowIndex}
+                      className={`hover:bg-muted/30 transition-colors ${selectedCell?.row === rowIndex ? "bg-primary/5" : ""
+                        }`}
+                    >
+                      {headers.map((_, colIndex) => (
+                        <td
+                          key={colIndex}
+                          className={`border border-border/50 px-2 py-2 text-sm cursor-cell ${selectedCell?.row === rowIndex &&
+                            selectedCell?.col === colIndex
+                            ? "bg-primary/10 outline outline-2 outline-primary/50"
+                            : ""
+                            }`}
+                          onClick={() => handleCellClick(rowIndex, colIndex)}
+                          onContextMenu={(e) =>
+                            handleContextMenu(e, rowIndex, colIndex)
+                          }
+                          style={{
+                            width: columnWidths[colIndex] || 150,
+                            minWidth: 150,
+                          }}
+                        >
+                          <div className="truncate">
+                            {row[colIndex] || ""}
+                          </div>
+                        </td>
                       ))}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {data.map((row, rowIndex) => (
-                      <tr
-                        key={rowIndex}
-                        className={`hover:bg-muted/30 transition-colors ${selectedCell?.row === rowIndex ? "bg-primary/5" : ""
-                          }`}
-                      >
-                        {headers.map((_, colIndex) => (
-                          <td
-                            key={colIndex}
-                            className={`border border-border/50 px-3 py-1.5 text-sm cursor-cell ${selectedCell?.row === rowIndex &&
-                              selectedCell?.col === colIndex
-                              ? "bg-primary/10 outline outline-2 outline-primary/50"
-                              : ""
-                              }`}
-                            onClick={() => handleCellClick(rowIndex, colIndex)}
-                            onContextMenu={(e) =>
-                              handleContextMenu(e, rowIndex, colIndex)
-                            }
-                            style={{
-                              width: columnWidths[colIndex] || 120,
-                              minWidth: 120,
-                              maxWidth: 300,
-                            }}
-                          >
-                            <div className="truncate">
-                              {row[colIndex] || ""}
-                            </div>
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          </div>
-          <ScrollBar orientation="horizontal" className="top-0 bottom-auto" />
-          <ScrollBar orientation="vertical" />
-        </ScrollArea>
+                  ))}
+                </tbody>
+              </table>
+              <ScrollBar orientation="horizontal" />
+              <ScrollBar orientation="vertical" />
+            </ScrollArea>
+          </Card>
+        </div>
       </div>
 
       {/* Context Menu */}

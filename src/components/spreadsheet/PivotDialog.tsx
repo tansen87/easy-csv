@@ -311,7 +311,7 @@ export function PivotDialog({
             Cancel
           </button>
           <button
-            className="flex-1 px-2 py-1.5 rounded text-xs bg-primary bg-muted transition-colors disabled:opacity-50"
+            className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors disabled:opacity-50"
             onClick={handleApply}
             disabled={valueColumns.length === 0}
           >
