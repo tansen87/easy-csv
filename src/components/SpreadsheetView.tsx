@@ -90,7 +90,7 @@ export function SpreadsheetView({
   const [operationDialog, setOperationDialog] = useState<{ col: number; x: number; y: number; columnName: string } | null>(null);
   const [pivotDialog, setPivotDialog] = useState<{ x: number; y: number } | null>(null);
   const [dateTransformDialog, setDateTransformDialog] = useState<{ col: number; x: number; y: number } | null>(null);
-  const [splitDialog, setSplitDialog] = useState<{ col: number; x: number; y: number } | null>(null);
+  const [splitDialog, setSplitDialog] = useState<{ col: number; x: number; y: number; sliceType?: string } | null>(null);
   const [renamedColumns, setRenamedColumns] = useState<Record<string, string>>({});
   const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
 
@@ -991,7 +991,7 @@ export function SpreadsheetView({
           onOpenFilterDialog={(col, x, y) => setFilterDialog({ col, x, y })}
           onOpenPivotDialog={(x, y) => setPivotDialog({ x, y })}
           onOpenDateTransformDialog={(col, x, y) => setDateTransformDialog({ col, x, y })}
-          onOpenSplitDialog={(col, x, y) => setSplitDialog({ col, x, y })}
+          onOpenSliceDialog={(col, x, y, sliceType) => setSplitDialog({ col, x, y, sliceType })}
           onSort={handleQuickSort}
           onDedup={handleContextMenuDedup}
           onTranspose={handleContextMenuTranspose}

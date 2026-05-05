@@ -13,7 +13,10 @@ import {
   Repeat2,
   Settings2,
   Calendar,
-  Scissors
+  Scissors,
+  Slice,
+  ArrowLeftFromLine,
+  ArrowRightFromLine,
 } from "lucide-react";
 
 interface ContextMenuState {
@@ -29,7 +32,7 @@ interface ContextMenuProps {
   onOpenFilterDialog: (col: number, x: number, y: number) => void;
   onOpenPivotDialog: (x: number, y: number) => void;
   onOpenDateTransformDialog: (col: number, x: number, y: number) => void;
-  onOpenSplitDialog: (col: number, x: number, y: number) => void;
+  onOpenSliceDialog: (col: number, x: number, y: number, sliceType?: string) => void;
   onSort: (col: number, order: "asc" | "desc", numeric: boolean) => void;
   onDedup: (col: number) => void;
   onTranspose: (col: number) => void;
@@ -44,7 +47,7 @@ export function ContextMenu({
   onOpenFilterDialog,
   onOpenPivotDialog,
   onOpenDateTransformDialog,
-  onOpenSplitDialog,
+  onOpenSliceDialog,
   onSort,
   onDedup,
   onTranspose,
@@ -125,21 +128,98 @@ export function ContextMenu({
         Date Transform
       </button>
 
-      <button
-        className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-          onOpenSplitDialog(contextMenu.col, contextMenu.x, contextMenu.y);
-        }}
-      >
-        <Scissors className="h-4 w-4 text-muted-foreground" />
-        Split Column
-      </button>
+      <div className="relative group">
+        <button
+          className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center justify-between gap-2"
+          onMouseEnter={(e) => {
+            const dropdown = e.currentTarget.nextElementSibling;
+            if (dropdown) dropdown.classList.remove("hidden");
+          }}
+          onMouseLeave={(e) => {
+            const dropdown = e.currentTarget.nextElementSibling;
+            if (dropdown) dropdown.classList.add("hidden");
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <Slice className="h-4 w-4 text-muted-foreground" />
+            Split
+          </div>
+          <ChevronRight className="h-3 w-3 text-muted-foreground" />
+        </button>
+
+        <div
+          className="absolute left-full top-0 hidden pl-1"
+          onMouseEnter={(e) => {
+            e.currentTarget.classList.remove("hidden");
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.classList.add("hidden");
+          }}
+        >
+          <div className="bg-card border rounded-lg shadow-lg py-1 min-w-[160px]">
+            <button
+              key="left"
+              className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+                onOpenSliceDialog(contextMenu.col, contextMenu.x, contextMenu.y, "left");
+              }}
+            >
+              <ArrowLeftFromLine className="h-4 w-4 text-muted-foreground" />
+              Left
+            </button>
+            <button
+              key="right"
+              className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+                onOpenSliceDialog(contextMenu.col, contextMenu.x, contextMenu.y, "right");
+              }}
+            >
+              <ArrowRightFromLine className="h-4 w-4 text-muted-foreground" />
+              Right
+            </button>
+            <button
+              key="slice"
+              className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+                onOpenSliceDialog(contextMenu.col, contextMenu.x, contextMenu.y, "slice");
+              }}
+            >
+              <Slice className="h-4 w-4 text-muted-foreground" />
+              Slice
+            </button>
+            <button
+              key="split"
+              className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+                onOpenSliceDialog(contextMenu.col, contextMenu.x, contextMenu.y, "split");
+              }}
+            >
+              <Scissors className="h-4 w-4 text-muted-foreground" />
+              Split
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div className="relative group">
         <button
           className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center justify-between gap-2"
+          onMouseEnter={(e) => {
+            const dropdown = e.currentTarget.nextElementSibling;
+            if (dropdown) dropdown.classList.remove("hidden");
+          }}
+          onMouseLeave={(e) => {
+            const dropdown = e.currentTarget.nextElementSibling;
+            if (dropdown) dropdown.classList.add("hidden");
+          }}
         >
           <div className="flex items-center gap-2">
             <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
@@ -148,7 +228,15 @@ export function ContextMenu({
           <ChevronRight className="h-3 w-3 text-muted-foreground" />
         </button>
 
-        <div className="absolute left-full top-0 hidden group-hover:block pl-1">
+        <div
+          className="absolute left-full top-0 hidden pl-1"
+          onMouseEnter={(e) => {
+            e.currentTarget.classList.remove("hidden");
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.classList.add("hidden");
+          }}
+        >
           <div className="bg-card border rounded-lg shadow-lg py-1 min-w-[160px]">
             {sortOptions.map((option) => {
               const Icon = option.icon;
