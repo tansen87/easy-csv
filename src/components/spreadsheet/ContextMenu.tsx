@@ -11,7 +11,8 @@ import {
   Rows3,
   Repeat,
   Repeat2,
-  Settings2
+  Settings2,
+  Calendar
 } from "lucide-react";
 
 interface ContextMenuState {
@@ -26,6 +27,7 @@ interface ContextMenuProps {
   onClose: () => void;
   onOpenFilterDialog: (col: number, x: number, y: number) => void;
   onOpenPivotDialog: (x: number, y: number) => void;
+  onOpenDateTransformDialog: (col: number, x: number, y: number) => void;
   onSort: (col: number, order: "asc" | "desc", numeric: boolean) => void;
   onDedup: (col: number) => void;
   onTranspose: (col: number) => void;
@@ -39,6 +41,7 @@ export function ContextMenu({
   onClose,
   onOpenFilterDialog,
   onOpenPivotDialog,
+  onOpenDateTransformDialog,
   onSort,
   onDedup,
   onTranspose,
@@ -105,6 +108,18 @@ export function ContextMenu({
       >
         <Grid3X3 className="h-4 w-4 text-muted-foreground" />
         Pivot Table
+      </button>
+
+      <button
+        className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+          onOpenDateTransformDialog(contextMenu.col, contextMenu.x, contextMenu.y);
+        }}
+      >
+        <Calendar className="h-4 w-4 text-muted-foreground" />
+        Date Transform
       </button>
 
       <div className="relative group">
