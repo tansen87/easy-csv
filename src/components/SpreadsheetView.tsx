@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Table, X, Trash2, Plus, Edit3, ArrowUpDown, Check, Rows3, Grid3X3, Filter, Repeat2, Repeat, Settings2 } from "lucide-react";
+import { ToastContainer, ToastType } from "@/components/Toast";
 import {
   DndContext,
   closestCenter,
@@ -87,6 +88,7 @@ export function SpreadsheetView({
   const [operationDialog, setOperationDialog] = useState<{ col: number; x: number; y: number; columnName: string } | null>(null);
   const [pivotDialog, setPivotDialog] = useState<{ x: number; y: number } | null>(null);
   const [renamedColumns, setRenamedColumns] = useState<Record<string, string>>({});
+  const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
 
   const tableRef = useRef<HTMLTableElement>(null);
 
@@ -106,6 +108,23 @@ export function SpreadsheetView({
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
+  const showToastRef = useRef<(message: string, type: ToastType) => void>(() => {});
+  const removeToastRef = useRef<(id: string) => void>(() => {});
+
+  const showToast = useCallback((message: string, type: ToastType = "info") => {
+    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    setToasts((prev) => [...prev, { id, message, type }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+
+  useEffect(() => {
+    showToastRef.current = showToast;
+    removeToastRef.current = removeToast;
+  }, [showToast, removeToast]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -344,8 +363,10 @@ export function SpreadsheetView({
       }
     }
 
-    navigator.clipboard.writeText(copyContent.join('\n')).catch(err => {
-      console.error('Failed to copy:', err);
+    navigator.clipboard.writeText(copyContent.join('\n')).then(() => {
+      showToastRef.current(`Copied ${selectedCells.length} cell(s) to clipboard`, 'success');
+    }).catch(err => {
+      showToastRef.current(`Failed to copy: ${err}`, 'error');
     });
   }, [selectedCells, data, headers]);
 
@@ -1049,6 +1070,8 @@ export function SpreadsheetView({
           </div>
         </div>
       )}
+
+      <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
     </div>
   );
 }

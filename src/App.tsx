@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "@/components/ThemeProvider";
+import { ToastContainer, ToastType } from "@/components/Toast";
 import {
   Settings,
   X,
@@ -74,6 +75,23 @@ function App() {
     "commands" | "history"
   >("commands");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
+  const showToastRef = useRef<(message: string, type: ToastType) => void>(() => {});
+  const removeToastRef = useRef<(id: string) => void>(() => {});
+
+  const showToast = useCallback((message: string, type: ToastType = "info") => {
+    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    setToasts((prev) => [...prev, { id, message, type }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+
+  useEffect(() => {
+    showToastRef.current = showToast;
+    removeToastRef.current = removeToast;
+  }, [showToast, removeToast]);
 
   const [csvData, setCsvData] = useState<{
     headers: string[];
@@ -140,7 +158,7 @@ function App() {
         setXanPath(savedPath);
       }
     } catch (error) {
-      console.error("Failed to load xan path:", error);
+      showToastRef.current(`Failed to load xan path: ${error}`, 'error');
     }
   };
 
@@ -153,7 +171,7 @@ function App() {
         setDefaultDelimiter(savedDelimiter);
       }
     } catch (error) {
-      console.error("Failed to load default delimiter:", error);
+      showToastRef.current(`Failed to load default delimiter: ${error}`, 'error');
     }
   };
 
@@ -164,7 +182,7 @@ function App() {
         setNoQuoting(savedNoQuoting);
       }
     } catch (error) {
-      console.error("Failed to load no quoting setting:", error);
+      showToastRef.current(`Failed to load no quoting setting: ${error}`, 'error');
     }
   };
 
@@ -211,7 +229,7 @@ function App() {
         const title = inputFile ? `${inputFile} - Easy Csv` : "Easy Csv";
         await invoke("set_window_title", { title });
       } catch (error) {
-        addLog("error", `Failed to set window title: ${error}`);
+        showToastRef.current(`Failed to set window title: ${error}`, 'error');
       }
     };
     updateTitle();
@@ -306,7 +324,7 @@ function App() {
       setTabs([keepTab]);
       setSelectedTabId(keepTabId);
       setSelectedStep(null);
-      addLog("info", "Cleared all pipeline tabs except the current one");
+      showToastRef.current("Cleared all pipeline tabs except the current one", 'info');
     }
   };
 
@@ -388,12 +406,12 @@ function App() {
   const handleExecute = async () => {
     const currentPipeline = getCurrentPipeline();
     if (currentPipeline.length === 0) {
-      addLog("warning", "No steps in pipeline to execute");
+      showToastRef.current("No steps in pipeline to execute", 'warning');
       return;
     }
 
     if (!inputFile) {
-      addLog("warning", "No input file selected");
+      showToastRef.current("No input file selected", 'warning');
       return;
     }
 
@@ -474,7 +492,7 @@ function App() {
   const handleExportPipeline = async () => {
     const currentPipeline = getCurrentPipeline();
     if (currentPipeline.length === 0) {
-      addLog("warning", "No pipeline to export");
+      showToastRef.current("No pipeline to export", 'warning');
       return;
     }
 
@@ -522,14 +540,14 @@ function App() {
       const pipelineData = JSON.parse(jsonContent);
 
       if (!pipelineData.pipeline || !Array.isArray(pipelineData.pipeline)) {
-        addLog("error", "Invalid pipeline file format");
+        showToastRef.current("Invalid pipeline file format", 'error');
         return;
       }
 
       const importedPipeline: PipelineStep[] = pipelineData.pipeline.map((stepData: { commandId: string; parameters?: Record<string, any> }) => {
         const command = xanCommands.find((cmd) => cmd.id === stepData.commandId);
         if (!command) {
-          addLog("warning", `Unknown command: ${stepData.commandId}, skipping`);
+          showToastRef.current(`Unknown command: ${stepData.commandId}, skipping`, 'warning');
           return null;
         }
         return {
@@ -540,7 +558,7 @@ function App() {
       }).filter((step: PipelineStep | null): step is PipelineStep => step !== null);
 
       if (importedPipeline.length === 0) {
-        addLog("error", "No valid commands found in pipeline file");
+        showToastRef.current("No valid commands found in pipeline file", 'error');
         return;
       }
 
@@ -552,7 +570,7 @@ function App() {
         setDefaultDelimiter(pipelineData.defaultDelimiter);
       }
 
-      addLog("success", `Imported pipeline with ${importedPipeline.length} steps`);
+      showToastRef.current(`Imported pipeline with ${importedPipeline.length} steps`, 'success');
     } catch (error) {
       addLog("error", `Failed to import pipeline: ${error}`);
     }
@@ -816,9 +834,9 @@ function App() {
                                     (h) => h.id !== history.id,
                                   );
                                 updateHistoricalPipelines(updatedHistory);
-                                addLog(
-                                  "info",
+                                showToastRef.current(
                                   `Deleted historical pipeline: ${history.name}`,
+                                  'info',
                                 );
                               }}
                             >
@@ -839,9 +857,9 @@ function App() {
                                   updateTabPipeline(history.pipeline);
                                   setInputFile(history.inputFile);
                                   setDefaultDelimiter(history.defaultDelimiter);
-                                  addLog(
-                                    "info",
+                                  showToastRef.current(
                                     `Loaded historical pipeline: ${history.name}`,
+                                    'info',
                                   );
                                 }}
                               >
@@ -862,9 +880,9 @@ function App() {
                                   setSelectedTabId(newTabId);
                                   setInputFile(history.inputFile);
                                   setDefaultDelimiter(history.defaultDelimiter);
-                                  addLog(
-                                    "info",
+                                  showToastRef.current(
                                     `Created new tab from historical pipeline: ${history.name}`,
+                                    'info',
                                   );
                                 }}
                               >
@@ -1008,7 +1026,7 @@ function App() {
                         delimiter: defaultDelimiter,
                       });
                       await invoke("set_no_quoting", { noQuoting });
-                      addLog("success", "Settings saved successfully");
+                      showToastRef.current("Settings saved successfully", 'success');
                       setShowSettings(false);
                     } catch (error) {
                       addLog("error", `Failed to save settings: ${error}`);
@@ -1045,6 +1063,8 @@ function App() {
           </div>
         </div>
       )}
+
+      <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
     </div>
   );
 }
