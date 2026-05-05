@@ -76,13 +76,13 @@ export function SortDialog({
           className="w-full px-2 py-1.5 rounded text-xs bg-muted hover:bg-accent transition-colors border text-left"
           onClick={() => handleSort("asc", true)}
         >
-          1 → 9
+          0 → 9
         </button>
         <button
           className="w-full px-2 py-1.5 rounded text-xs bg-muted hover:bg-accent transition-colors border text-left"
           onClick={() => handleSort("desc", true)}
         >
-          9 → 1
+          9 → 0
         </button>
       </div>
     </div>

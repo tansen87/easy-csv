@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
-import { Table, X, Trash2, Plus, Edit3 } from "lucide-react";
+import { Table, X, Trash2, Plus, Edit3, ArrowUpDown, Check, Rows3, Grid3X3, Filter, Repeat2, Repeat, Settings2 } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -152,14 +152,14 @@ export function SpreadsheetView({
 
   const handleCellClick = useCallback((e: React.MouseEvent, row: number, col: number) => {
     const newCell = { row, col };
-    
+
     if (e.shiftKey && lastSelectedCell) {
       // Shift + Click: 选择从 lastSelectedCell 到 newCell 的矩形区域
       const minRow = Math.min(lastSelectedCell.row, row);
       const maxRow = Math.max(lastSelectedCell.row, row);
       const minCol = Math.min(lastSelectedCell.col, col);
       const maxCol = Math.max(lastSelectedCell.col, col);
-      
+
       const rangeCells: { row: number; col: number }[] = [];
       for (let r = minRow; r <= maxRow; r++) {
         for (let c = minCol; c <= maxCol; c++) {
@@ -399,6 +399,38 @@ export function SpreadsheetView({
     }
     closeOperationDialog();
   }, [onAddCommand, closeOperationDialog]);
+
+  const handleContextMenuDedup = useCallback((col: number) => {
+    if (!onAddCommand) return;
+    const dedupCommand = xanCommands.find((cmd) => cmd.id === "dedup");
+    if (dedupCommand) {
+      const columnName = headers[col];
+      onAddCommand(dedupCommand, {
+        select: columnName,
+        output: "",
+      });
+    }
+  }, [onAddCommand, headers]);
+
+  const handleContextMenuTranspose = useCallback(() => {
+    if (!onAddCommand) return;
+    const transposeCommand = xanCommands.find((cmd) => cmd.id === "transpose");
+    if (transposeCommand) {
+      onAddCommand(transposeCommand, {
+        output: "",
+      });
+    }
+  }, [onAddCommand]);
+
+  const handleContextMenuReverse = useCallback(() => {
+    if (!onAddCommand) return;
+    const reverseCommand = xanCommands.find((cmd) => cmd.id === "reverse");
+    if (reverseCommand) {
+      onAddCommand(reverseCommand, {
+        output: "",
+      });
+    }
+  }, [onAddCommand]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -832,42 +864,32 @@ export function SpreadsheetView({
                                 onClick={handleRenameApply}
                                 className="p-0.5 rounded hover:bg-accent transition-colors text-primary"
                               >
-                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
-                                </svg>
+                                <Check className="h-3 w-3" />
                               </button>
                             )}
                             <button
                               onClick={(e) => handleOperationClick(e, colIndex, header)}
                               className="p-0.5 rounded hover:bg-accent transition-colors"
                             >
-                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
+                              <Settings2 className="h-3 w-3" />
                             </button>
                             <button
                               onClick={handlePivotClick}
                               className="p-0.5 rounded hover:bg-accent transition-colors"
                             >
-                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                              </svg>
+                              <Grid3X3 className="h-3 w-3" />
                             </button>
                             <button
                               onClick={(e) => handleSortClick(e, colIndex)}
                               className="p-0.5 rounded hover:bg-accent transition-colors"
                             >
-                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-                              </svg>
+                              <ArrowUpDown className="h-3 w-3" />
                             </button>
                             <button
                               onClick={(e) => handleFilterClick(e, colIndex)}
                               className="p-0.5 rounded hover:bg-accent transition-colors"
                             >
-                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                              </svg>
+                              <Filter className="h-3 w-3" />
                             </button>
                           </div>
                           {colIndex < headers.length - 1 && (
@@ -885,36 +907,38 @@ export function SpreadsheetView({
                   {data.map((row, rowIndex) => {
                     const hasSelectedCellInRow = selectedCells.some(cell => cell.row === rowIndex);
                     return (
-                    <tr
-                      key={rowIndex}
-                      className={`hover:bg-muted/30 transition-colors ${hasSelectedCellInRow ? "bg-primary/5" : ""
-                        }`}
-                    >
-                      {headers.map((_, colIndex) => {
-                        const cellIsSelected = isCellSelected(rowIndex, colIndex);
-                        return (
-                        <td
-                          key={colIndex}
-                          className={`border border-border/50 px-2 py-2 text-sm cursor-cell select-none ${cellIsSelected
-                            ? "bg-primary/10 outline outline-2 outline-primary/50"
-                            : ""
-                            }`}
-                          onClick={(e) => handleCellClick(e, rowIndex, colIndex)}
-                          onContextMenu={(e) =>
-                            handleContextMenu(e, rowIndex, colIndex)
-                          }
-                          style={{
-                            width: columnWidths[colIndex] || 150,
-                            minWidth: 150,
-                          }}
-                        >
-                          <div className="truncate">
-                            {row[colIndex] || ""}
-                          </div>
-                        </td>
-                      )})}
-                    </tr>
-                  )})}
+                      <tr
+                        key={rowIndex}
+                        className={`hover:bg-muted/30 transition-colors ${hasSelectedCellInRow ? "bg-primary/5" : ""
+                          }`}
+                      >
+                        {headers.map((_, colIndex) => {
+                          const cellIsSelected = isCellSelected(rowIndex, colIndex);
+                          return (
+                            <td
+                              key={colIndex}
+                              className={`border border-border/50 px-2 py-2 text-sm cursor-cell select-none ${cellIsSelected
+                                ? "bg-primary/10 outline outline-2 outline-primary/50"
+                                : ""
+                                }`}
+                              onClick={(e) => handleCellClick(e, rowIndex, colIndex)}
+                              onContextMenu={(e) =>
+                                handleContextMenu(e, rowIndex, colIndex)
+                              }
+                              style={{
+                                width: columnWidths[colIndex] || 150,
+                                minWidth: 150,
+                              }}
+                            >
+                              <div className="truncate">
+                                {row[colIndex] || ""}
+                              </div>
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
               <ScrollBar orientation="horizontal" />
@@ -930,7 +954,11 @@ export function SpreadsheetView({
           contextMenu={contextMenu}
           onClose={closeContextMenu}
           onOpenFilterDialog={(col, x, y) => setFilterDialog({ col, x, y })}
+          onOpenPivotDialog={(x, y) => setPivotDialog({ x, y })}
           onSort={handleQuickSort}
+          onDedup={handleContextMenuDedup}
+          onTranspose={handleContextMenuTranspose}
+          onReverse={handleContextMenuReverse}
           onCopy={handleCopySelection}
           hasSelection={selectedCells.length > 0}
         />
@@ -1001,27 +1029,21 @@ export function SpreadsheetView({
               onClick={handleDedup}
               className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors"
             >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
+              <Rows3 className="h-3.5 w-3.5" />
               Dedup
             </button>
             <button
               onClick={handleTranspose}
               className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors"
             >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
+              <Repeat2 className="h-3.5 w-3.5" />
               Transpose
             </button>
             <button
               onClick={handleReverse}
               className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors"
             >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-              </svg>
+              <Repeat className="h-3.5 w-3.5" />
               Reverse
             </button>
           </div>
