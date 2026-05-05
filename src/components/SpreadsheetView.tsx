@@ -27,6 +27,7 @@ import { FilterDialog } from "./spreadsheet/FilterDialog";
 import { SortDialog } from "./spreadsheet/SortDialog";
 import { PivotDialog } from "./spreadsheet/PivotDialog";
 import { DateTransformDialog } from "./spreadsheet/DateTransformDialog";
+import { SplitDialog } from "./spreadsheet/SplitDialog";
 
 interface SpreadsheetViewProps {
   tabs: PipelineTab[];
@@ -89,6 +90,7 @@ export function SpreadsheetView({
   const [operationDialog, setOperationDialog] = useState<{ col: number; x: number; y: number; columnName: string } | null>(null);
   const [pivotDialog, setPivotDialog] = useState<{ x: number; y: number } | null>(null);
   const [dateTransformDialog, setDateTransformDialog] = useState<{ col: number; x: number; y: number } | null>(null);
+  const [splitDialog, setSplitDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [renamedColumns, setRenamedColumns] = useState<Record<string, string>>({});
   const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
 
@@ -320,6 +322,10 @@ export function SpreadsheetView({
     setDateTransformDialog(null);
   }, []);
 
+  const closeSplitDialog = useCallback(() => {
+    setSplitDialog(null);
+  }, []);
+
   const handleQuickSort = useCallback((col: number, order: "asc" | "desc", numeric: boolean) => {
     if (!onAddCommand) return;
     const sortCommand = xanCommands.find((cmd) => cmd.id === "sort");
@@ -467,10 +473,11 @@ export function SpreadsheetView({
       closeOperationDialog();
       closePivotDialog();
       closeDateTransformDialog();
+      closeSplitDialog();
     };
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
-  }, [closeContextMenu, closeFilterDialog, closeSortDialog, closeOperationDialog, closePivotDialog, closeDateTransformDialog]);
+  }, [closeContextMenu, closeFilterDialog, closeSortDialog, closeOperationDialog, closePivotDialog, closeDateTransformDialog, closeSplitDialog]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -984,6 +991,7 @@ export function SpreadsheetView({
           onOpenFilterDialog={(col, x, y) => setFilterDialog({ col, x, y })}
           onOpenPivotDialog={(x, y) => setPivotDialog({ x, y })}
           onOpenDateTransformDialog={(col, x, y) => setDateTransformDialog({ col, x, y })}
+          onOpenSplitDialog={(col, x, y) => setSplitDialog({ col, x, y })}
           onSort={handleQuickSort}
           onDedup={handleContextMenuDedup}
           onTranspose={handleContextMenuTranspose}
@@ -1041,6 +1049,16 @@ export function SpreadsheetView({
           headers={headers}
           onAddCommand={onAddCommand}
           onClose={closeDateTransformDialog}
+        />
+      )}
+
+      {/* Split Dialog */}
+      {splitDialog && (
+        <SplitDialog
+          splitDialog={splitDialog}
+          headers={headers}
+          onAddCommand={onAddCommand}
+          onClose={closeSplitDialog}
         />
       )}
 

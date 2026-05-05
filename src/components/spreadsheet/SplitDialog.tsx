@@ -1,67 +1,34 @@
 import { useState, useRef, useEffect } from "react";
-import { X, ChevronDown } from "lucide-react";
+import { X, ChevronDown, Plus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 
-interface DateTransformDialogState {
+interface SplitDialogState {
   col: number;
   x: number;
   y: number;
 }
 
-interface DateTransformDialogProps {
-  dateTransformDialog: DateTransformDialogState;
+interface SplitDialogProps {
+  splitDialog: SplitDialogState;
   headers: string[];
   onAddCommand: (
     command: XanCommand, initialParameters?: Record<string, any>) => void;
   onClose: () => void;
 }
 
-const DATE_FORMATS = [
-  { label: "YYYYMMDD", value: "%Y%m%d" },
-  { label: "YYYYMMDDHHMMSS", value: "%Y%m%d%H%M%S" },
-  { label: "YYYYMMDDHHMM", value: "%Y%m%d%H%M" },
-  { label: "DDMMYYYY", value: "%d%m%Y" },
-  { label: "DDMMYYYYHHMMSS", value: "%d%m%Y%H%M%S" },
-  { label: "MMDDYYYY", value: "%m%d%Y" },
-  { label: "MMDDYYYYHHMMSS", value: "%m%d%Y%H%M%S" },
-
-  // YMD
-  { label: "YYYY-MM-DD", value: "%Y-%m-%d" },
-  { label: "YYYY/MM/DD", value: "%Y/%m/%d" },
-  { label: "YYYY-MM-DD HH:mm:ss", value: "%Y-%m-%d %H:%M:%S" },
-  { label: "YYYY/MM/DD HH:mm:ss", value: "%Y/%m/%d %H:%M:%S" },
-
-  // YDM
-  { label: "YYYY-DD-MM", value: "%Y-%d-%m" },
-  { label: "YYYY/DD/MM", value: "%Y/%d/%m" },
-  { label: "YYYY-DD-MM HH:mm:ss", value: "%Y-%d-%m %H:%M:%S" },
-  { label: "YYYY/DD/MM HH:mm:ss", value: "%Y/%d/%m %H:%M:%S" },
-
-  // MDY
-  { label: "MM-DD-YYYY", value: "%m-%d-%Y" },
-  { label: "MM/DD/YYYY", value: "%m/%d/%Y" },
-  { label: "MM-DD-YYYY HH:mm:ss", value: "%m-%d-%Y %H:%M:%S" },
-  { label: "MM/DD/YYYY HH:mm:ss", value: "%m/%d/%Y %H:%M:%S" },
-
-  // MYD
-  { label: "MM-YYYY-DD", value: "%m-%Y-%d" },
-  { label: "MM/YYYY/DD", value: "%m/%Y/%d" },
-  { label: "MM-YYYY-DD HH:mm:ss", value: "%m-%Y-%d %H:%M:%S" },
-  { label: "MM/YYYY/DD HH:mm:ss", value: "%m/%Y/%d %H:%M:%S" },
-
-  // DMY
-  { label: "DD-MM-YYYY", value: "%d-%m-%Y" },
-  { label: "DD/MM/YYYY", value: "%d/%m/%Y" },
-  { label: "DD-MM-YYYY HH:mm:ss", value: "%d-%m-%Y %H:%M:%S" },
-  { label: "DD/MM/YYYY HH:mm:ss", value: "%d/%m/%Y %H:%M:%S" },
-
-  // DYM
-  { label: "DD-YYYY-MM", value: "%d-%Y-%m" },
-  { label: "DD/YYYY/MM", value: "%d/%Y/%m" },
-  { label: "DD-YYYY-MM HH:mm:ss", value: "%d-%Y-%m %H:%M:%S" },
-  { label: "DD/YYYY/MM HH:mm:ss", value: "%d/%Y/%m %H:%M:%S" },
+const SPLIT_SEPARATORS = [
+  { label: "Custom", value: "custom" },
+  { label: "Space", value: " " },
+  { label: "Tab", value: "\\t" },
+  { label: "Comma (,)", value: "," },
+  { label: "Semicolon (;)", value: ";" },
+  { label: "Pipe (|)", value: "|" },
+  { label: "Hyphen (-)", value: "-" },
+  { label: "Underscore (_)", value: "_" },
+  { label: "Colon (:)", value: ":" },
+  { label: "Slash (/)", value: "/" },
 ];
 
 function SearchableSelect({
@@ -150,7 +117,7 @@ function SearchableSelect({
                 ))
               ) : (
                 <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                  No formats found
+                  No options found
                 </div>
               )}
             </div>
@@ -161,17 +128,19 @@ function SearchableSelect({
   );
 }
 
-export function DateTransformDialog({
-  dateTransformDialog,
+export function SplitDialog({
+  splitDialog,
   headers,
   onAddCommand,
   onClose,
-}: DateTransformDialogProps) {
-  const [inputFormat, setInputFormat] = useState("%Y%m%d");
-  const [outputFormat, setOutputFormat] = useState("%d/%m/%Y");
-  const [outputColumnName, setOutputColumnName] = useState("new_date");
-  const [selectedColumn, setSelectedColumn] = useState(headers[dateTransformDialog.col] || "");
+}: SplitDialogProps) {
+  const [separator, setSeparator] = useState("/");
+  const [customSeparator, setCustomSeparator] = useState("");
+  const [outputColumnName, setOutputColumnName] = useState("new_col");
+  const [selectedColumn, setSelectedColumn] = useState(headers[splitDialog.col] || "");
   const [isColumnOpen, setIsColumnOpen] = useState(false);
+  const [indices, setIndices] = useState<string[]>(["0"]);
+  const [joinWith, setJoinWith] = useState("-");
   const columnRef = useRef<HTMLDivElement>(null);
 
   const filteredHeaders = selectedColumn
@@ -206,10 +175,24 @@ export function DateTransformDialog({
     const mapCommand = xanCommands.find((cmd) => cmd.id === "map");
     if (!mapCommand) return;
 
+    const actualSeparator = separator === "custom" ? customSeparator : separator;
     const outputName = outputColumnName.trim();
     const isOverwrite = outputName === selectedColumn;
 
-    const expression = `strftime(datetime(col("${selectedColumn}"), "${inputFormat}"), "${outputFormat}")`;
+    const validIndices = indices.filter(i => i.trim() !== "");
+
+    let expression = `split(col("${selectedColumn}"), "${actualSeparator}")`;
+
+    if (validIndices.length > 0) {
+      if (validIndices.length === 1) {
+        expression = `${expression}[${validIndices[0]}]`;
+      } else {
+        const joinStr = joinWith || "";
+        const indexParts = validIndices.map(i => `${expression}[${i}]`).join(` ++ "${joinStr}" ++ `);
+        expression = indexParts;
+      }
+    }
+
     const expressionWithAlias = outputName !== ""
       ? `${expression} as "${outputName}"`
       : expression;
@@ -222,17 +205,33 @@ export function DateTransformDialog({
     onClose();
   };
 
+  const addIndexField = () => {
+    setIndices([...indices, ""]);
+  };
+
+  const updateIndex = (index: number, value: string) => {
+    const newIndices = [...indices];
+    newIndices[index] = value;
+    setIndices(newIndices);
+  };
+
+  const removeIndexField = (index: number) => {
+    if (indices.length > 1) {
+      setIndices(indices.filter((_, i) => i !== index));
+    }
+  };
+
   return (
     <div
       className="fixed bg-card border rounded-lg shadow-xl z-50 w-[340px]"
       style={{
-        left: Math.min(dateTransformDialog.x, window.innerWidth - 360),
-        top: Math.min(dateTransformDialog.y, window.innerHeight - 480),
+        left: Math.min(splitDialog.x, window.innerWidth - 360),
+        top: Math.min(splitDialog.y, window.innerHeight - 480),
       }}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
-        <span className="text-xs font-medium">Date Transform</span>
+        <span className="text-xs font-medium">Split Column</span>
         <button
           onClick={onClose} className="p-0.5 hover:bg-accent rounded transition-colors shrink-0">
           <X className="h-3.5 w-3.5" />
@@ -259,41 +258,52 @@ export function DateTransformDialog({
             </button>
           </div>
           {isColumnOpen && (
-            <div className="absolute z-50 w-[308px] max-h-24 overflow-y-auto border rounded bg-background shadow-lg">
-              {filteredHeaders.length > 0 ? (
-                filteredHeaders.map((header) => (
-                  <button
-                    key={header}
-                    onClick={() => handleColumnSelect(header)}
-                    className="w-full px-2 py-1.5 text-xs text-left hover:bg-accent transition-colors truncate"
-                  >
-                    {header}
-                  </button>
-                ))
-              ) : (
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                  No columns found
+            <div className="absolute z-50 w-[308px] border rounded bg-background shadow-lg">
+              <ScrollArea className="h-24">
+                <div className="p-1">
+                  {filteredHeaders.length > 0 ? (
+                    filteredHeaders.map((header) => (
+                      <button
+                        key={header}
+                        onClick={() => handleColumnSelect(header)}
+                        className="w-full px-2 py-1.5 text-xs text-left hover:bg-accent transition-colors truncate"
+                      >
+                        {header}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                      No columns found
+                    </div>
+                  )}
                 </div>
-              )}
+              </ScrollArea>
             </div>
           )}
         </div>
 
         <SearchableSelect
-          label="Input Format"
-          value={inputFormat}
-          onChange={setInputFormat}
-          options={DATE_FORMATS}
-          placeholder="Search input format..."
+          label="Separator"
+          value={separator}
+          onChange={setSeparator}
+          options={SPLIT_SEPARATORS}
+          placeholder="Select separator..."
         />
 
-        <SearchableSelect
-          label="Output Format"
-          value={outputFormat}
-          onChange={setOutputFormat}
-          options={DATE_FORMATS}
-          placeholder="Search output format..."
-        />
+        {separator === "custom" && (
+          <div className="space-y-1">
+            <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+              Custom Separator
+            </label>
+            <input
+              type="text"
+              value={customSeparator}
+              onChange={(e) => setCustomSeparator(e.target.value)}
+              placeholder="Enter custom separator"
+              className="w-full h-8 px-2 text-xs border rounded bg-background"
+            />
+          </div>
+        )}
 
         <div className="space-y-1">
           <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
@@ -308,9 +318,56 @@ export function DateTransformDialog({
           />
         </div>
 
+        <div className="space-y-1">
+          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+            Array Indices (0-based)
+          </label>
+          <div className="space-y-1">
+            {indices.map((index, idx) => (
+              <div key={idx} className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={index}
+                  onChange={(e) => updateIndex(idx, e.target.value)}
+                  placeholder="0"
+                  className="flex-1 h-8 px-2 text-xs border rounded bg-background"
+                />
+                {indices.length > 1 && (
+                  <button
+                    onClick={() => removeIndexField(idx)}
+                    className="p-1 hover:bg-accent rounded transition-colors"
+                  >
+                    <X className="h-3 w-3 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              onClick={addIndexField}
+              className="w-full h-8 px-2 text-xs border border-dashed rounded hover:border-accent transition-colors flex items-center justify-center gap-1"
+            >
+              <Plus className="h-3 w-3 text-muted-foreground" />
+              Add Index
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+            Join With (for multiple indices)
+          </label>
+          <input
+            type="text"
+            value={joinWith}
+            onChange={(e) => setJoinWith(e.target.value)}
+            placeholder="e.g., -, _, /, etc."
+            className="w-full h-8 px-2 text-xs border rounded bg-background"
+          />
+        </div>
+
         <button
           onClick={handleApply}
-          disabled={!selectedColumn}
+          disabled={!selectedColumn || (separator === "custom" && !customSeparator)}
           className="w-full px-3 py-2 rounded text-xs bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           Apply
         </button>

@@ -12,7 +12,8 @@ import {
   Repeat,
   Repeat2,
   Settings2,
-  Calendar
+  Calendar,
+  Scissors
 } from "lucide-react";
 
 interface ContextMenuState {
@@ -28,6 +29,7 @@ interface ContextMenuProps {
   onOpenFilterDialog: (col: number, x: number, y: number) => void;
   onOpenPivotDialog: (x: number, y: number) => void;
   onOpenDateTransformDialog: (col: number, x: number, y: number) => void;
+  onOpenSplitDialog: (col: number, x: number, y: number) => void;
   onSort: (col: number, order: "asc" | "desc", numeric: boolean) => void;
   onDedup: (col: number) => void;
   onTranspose: (col: number) => void;
@@ -42,6 +44,7 @@ export function ContextMenu({
   onOpenFilterDialog,
   onOpenPivotDialog,
   onOpenDateTransformDialog,
+  onOpenSplitDialog,
   onSort,
   onDedup,
   onTranspose,
@@ -120,6 +123,18 @@ export function ContextMenu({
       >
         <Calendar className="h-4 w-4 text-muted-foreground" />
         Date Transform
+      </button>
+
+      <button
+        className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+          onOpenSplitDialog(contextMenu.col, contextMenu.x, contextMenu.y);
+        }}
+      >
+        <Scissors className="h-4 w-4 text-muted-foreground" />
+        Split Column
       </button>
 
       <div className="relative group">
