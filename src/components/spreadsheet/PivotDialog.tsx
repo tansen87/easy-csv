@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X, Plus, Trash2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 
@@ -155,14 +156,14 @@ export function PivotDialog({
 
   return (
     <div
-      className="fixed bg-card border rounded-lg shadow-xl z-50 w-[380px]"
+      className="fixed bg-card border rounded-lg shadow-xl z-50 w-[360px] h-[400px] flex flex-col"
       style={{
-        left: Math.min(pivotDialog.x, window.innerWidth - 400),
-        top: Math.min(pivotDialog.y, window.innerHeight - 500),
+        left: Math.min(pivotDialog.x, window.innerWidth - 420),
+        top: Math.min(pivotDialog.y, window.innerHeight - 520),
       }}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20">
+      <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
         <span className="text-xs font-medium">Pivot Table</span>
         <button
           onClick={onClose}
@@ -172,7 +173,7 @@ export function PivotDialog({
         </button>
       </div>
 
-      <div className="p-3 space-y-3 max-h-[400px] overflow-y-auto">
+      <div className="px-3 py-2 border-b shrink-0">
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -182,12 +183,14 @@ export function PivotDialog({
             className="flex-1 h-7 px-2 text-xs border rounded bg-background"
           />
         </div>
+      </div>
 
+      <ScrollArea className="flex-1 p-3">
         <div>
           <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
-            Columns (Pivot on)
+            Columns (pivot)
           </label>
-          <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto p-1.5 border rounded bg-background">
+          <div className="flex flex-wrap gap-1 p-1.5 border rounded bg-background max-h-20 overflow-y-auto">
             {filteredHeaders.length === 0 ? (
               <span className="text-[10px] text-muted-foreground px-2 py-0.5">No matches</span>
             ) : (
@@ -196,8 +199,8 @@ export function PivotDialog({
                   key={header}
                   onClick={() => toggleColumn(header)}
                   className={`px-2 py-0.5 rounded text-[10px] transition-colors ${selectedColumns.includes(header)
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted hover:bg-accent"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted hover:bg-accent"
                     }`}
                 >
                   {header}
@@ -211,7 +214,7 @@ export function PivotDialog({
           <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
             Row (groupby)
           </label>
-          <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto p-1.5 border rounded bg-background">
+          <div className="flex flex-wrap gap-1 p-1.5 border rounded bg-background max-h-20 overflow-y-auto">
             {filteredHeaders.length === 0 ? (
               <span className="text-[10px] text-muted-foreground px-2 py-0.5">No matches</span>
             ) : (
@@ -220,8 +223,8 @@ export function PivotDialog({
                   key={header}
                   onClick={() => toggleGroupBy(header)}
                   className={`px-2 py-0.5 rounded text-[10px] transition-colors ${selectedGroupBy.includes(header)
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted hover:bg-accent"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted hover:bg-accent"
                     }`}
                 >
                   {header}
@@ -243,7 +246,7 @@ export function PivotDialog({
               <Plus className="h-3 w-3" />
             </button>
           </div>
-          <div className="space-y-1.5 max-h-32 overflow-y-auto">
+          <div className="space-y-1.5">
             {valueColumns.length === 0 ? (
               <div className="p-2 border rounded bg-muted/30 text-[10px] text-muted-foreground text-center">
                 Click + to add value columns
@@ -302,22 +305,22 @@ export function PivotDialog({
             maxLength={5}
           />
         </div>
+      </ScrollArea>
 
-        <div className="flex gap-2 pt-1">
-          <button
-            className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors hover:bg-accent"
-            onClick={onClose}
-          >
-            Cancel
-          </button>
-          <button
-            className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors disabled:opacity-50"
-            onClick={handleApply}
-            disabled={valueColumns.length === 0}
-          >
-            Apply
-          </button>
-        </div>
+      <div className="flex gap-2 p-3 border-t bg-muted/20 shrink-0">
+        <button
+          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors hover:bg-accent"
+          onClick={onClose}
+        >
+          Cancel
+        </button>
+        <button
+          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors disabled:opacity-50"
+          onClick={handleApply}
+          disabled={valueColumns.length === 0}
+        >
+          Apply
+        </button>
       </div>
     </div>
   );
