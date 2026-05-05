@@ -80,18 +80,6 @@ export function FilterDialog({
 
   const columnName = headers[filterDialog.col] || "";
 
-  const handleSort = (order: "asc" | "desc") => {
-    const sortCommand = xanCommands.find((cmd) => cmd.id === "sort");
-    if (sortCommand) {
-      onAddCommand(sortCommand, {
-        reverse: order === "desc",
-        select: columnName,
-        output: "",
-      });
-    }
-    onClose();
-  };
-
   const buildRegexPattern = (
     operator: TextOperator,
     value: string,
@@ -211,24 +199,7 @@ export function FilterDialog({
         </button>
       </div>
 
-      <div className="p-3 space-y-2">
-        <div>
-          <div className="flex gap-1.5">
-            <button
-              className="flex-1 px-2 py-1.5 rounded text-xs bg-muted hover:bg-accent transition-colors border"
-              onClick={() => handleSort("asc")}
-            >
-              ↑ Ascending
-            </button>
-            <button
-              className="flex-1 px-2 py-1.5 rounded text-xs bg-muted hover:bg-accent transition-colors border"
-              onClick={() => handleSort("desc")}
-            >
-              ↓ Descending
-            </button>
-          </div>
-        </div>
-
+      <div className="p-3 space-y-1">
         <div className="flex rounded-lg overflow-hidden border">
           <button
             className={`flex-1 px-2 py-1.5 text-xs font-medium transition-colors ${

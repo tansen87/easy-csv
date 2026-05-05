@@ -23,6 +23,7 @@ import { SortableStep } from "./spreadsheet/SortableStep";
 import { ContextMenu } from "./spreadsheet/ContextMenu";
 import { CommandDialog, CommandDialogState } from "./spreadsheet/CommandDialog";
 import { FilterDialog } from "./spreadsheet/FilterDialog";
+import { SortDialog } from "./spreadsheet/SortDialog";
 import { PivotDialog } from "./spreadsheet/PivotDialog";
 
 interface SpreadsheetViewProps {
@@ -75,7 +76,6 @@ export function SpreadsheetView({
     row: number | null;
     col: number;
   } | null>(null);
-  const [contextMenuSearch, setContextMenuSearch] = useState("");
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [commandDialog, setCommandDialog] = useState<CommandDialogState | null>(
     null,
@@ -83,6 +83,7 @@ export function SpreadsheetView({
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingTabName, setEditingTabName] = useState<string>("");
   const [filterDialog, setFilterDialog] = useState<{ col: number; x: number; y: number } | null>(null);
+  const [sortDialog, setSortDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [operationDialog, setOperationDialog] = useState<{ col: number; x: number; y: number; columnName: string } | null>(null);
   const [pivotDialog, setPivotDialog] = useState<{ x: number; y: number } | null>(null);
   const [renamedColumns, setRenamedColumns] = useState<Record<string, string>>({});
@@ -202,7 +203,6 @@ export function SpreadsheetView({
 
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
-    setContextMenuSearch("");
   }, []);
 
   const handleHeaderClick = useCallback(
@@ -259,6 +259,18 @@ export function SpreadsheetView({
     setFilterDialog(null);
   }, []);
 
+  const handleSortClick = useCallback(
+    (e: React.MouseEvent, col: number) => {
+      e.stopPropagation();
+      setSortDialog({ col, x: e.clientX, y: e.clientY });
+    },
+    [],
+  );
+
+  const closeSortDialog = useCallback(() => {
+    setSortDialog(null);
+  }, []);
+
   const handleOperationClick = useCallback(
     (e: React.MouseEvent, col: number, columnName: string) => {
       e.stopPropagation();
@@ -282,6 +294,20 @@ export function SpreadsheetView({
   const closePivotDialog = useCallback(() => {
     setPivotDialog(null);
   }, []);
+
+  const handleQuickSort = useCallback((col: number, order: "asc" | "desc", numeric: boolean) => {
+    if (!onAddCommand) return;
+    const sortCommand = xanCommands.find((cmd) => cmd.id === "sort");
+    if (sortCommand) {
+      const columnName = headers[col];
+      onAddCommand(sortCommand, {
+        select: columnName,
+        reverse: order === "desc",
+        numeric: numeric,
+        output: "",
+      });
+    }
+  }, [headers, onAddCommand]);
 
   const handleCopySelection = useCallback(() => {
     if (selectedCells.length === 0) return;
@@ -378,12 +404,13 @@ export function SpreadsheetView({
     const handleClickOutside = () => {
       closeContextMenu();
       closeFilterDialog();
+      closeSortDialog();
       closeOperationDialog();
       closePivotDialog();
     };
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
-  }, [closeContextMenu, closeFilterDialog, closeOperationDialog, closePivotDialog]);
+  }, [closeContextMenu, closeFilterDialog, closeSortDialog, closeOperationDialog, closePivotDialog]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -827,6 +854,14 @@ export function SpreadsheetView({
                               </svg>
                             </button>
                             <button
+                              onClick={(e) => handleSortClick(e, colIndex)}
+                              className="p-0.5 rounded hover:bg-accent transition-colors"
+                            >
+                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                              </svg>
+                            </button>
+                            <button
                               onClick={(e) => handleFilterClick(e, colIndex)}
                               className="p-0.5 rounded hover:bg-accent transition-colors"
                             >
@@ -893,11 +928,9 @@ export function SpreadsheetView({
       {contextMenu && (
         <ContextMenu
           contextMenu={contextMenu}
-          contextMenuSearch={contextMenuSearch}
-          headers={headers}
-          onSearchChange={setContextMenuSearch}
           onClose={closeContextMenu}
-          onSetCommandDialog={setCommandDialog}
+          onOpenFilterDialog={(col, x, y) => setFilterDialog({ col, x, y })}
+          onSort={handleQuickSort}
           onCopy={handleCopySelection}
           hasSelection={selectedCells.length > 0}
         />
@@ -921,6 +954,16 @@ export function SpreadsheetView({
           headers={headers}
           onAddCommand={onAddCommand}
           onClose={closeFilterDialog}
+        />
+      )}
+
+      {/* Sort Dialog */}
+      {sortDialog && (
+        <SortDialog
+          sortDialog={sortDialog}
+          headers={headers}
+          onAddCommand={onAddCommand}
+          onClose={closeSortDialog}
         />
       )}
 
