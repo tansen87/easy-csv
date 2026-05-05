@@ -57,7 +57,11 @@ export function SpreadsheetView({
   onStepDelete,
   onPipelineReorder,
 }: SpreadsheetViewProps) {
-  const [selectedCell, setSelectedCell] = useState<{
+  const [selectedCells, setSelectedCells] = useState<{
+    row: number;
+    col: number;
+  }[]>([]);
+  const [lastSelectedCell, setLastSelectedCell] = useState<{
     row: number;
     col: number;
   } | null>(null);
@@ -141,9 +145,44 @@ export function SpreadsheetView({
     }
   }, [resizingCol]);
 
-  const handleCellClick = useCallback((row: number, col: number) => {
-    setSelectedCell({ row, col });
-  }, []);
+  const isCellSelected = useCallback((row: number, col: number) => {
+    return selectedCells.some(cell => cell.row === row && cell.col === col);
+  }, [selectedCells]);
+
+  const handleCellClick = useCallback((e: React.MouseEvent, row: number, col: number) => {
+    const newCell = { row, col };
+    
+    if (e.shiftKey && lastSelectedCell) {
+      // Shift + Click: 选择从 lastSelectedCell 到 newCell 的矩形区域
+      const minRow = Math.min(lastSelectedCell.row, row);
+      const maxRow = Math.max(lastSelectedCell.row, row);
+      const minCol = Math.min(lastSelectedCell.col, col);
+      const maxCol = Math.max(lastSelectedCell.col, col);
+      
+      const rangeCells: { row: number; col: number }[] = [];
+      for (let r = minRow; r <= maxRow; r++) {
+        for (let c = minCol; c <= maxCol; c++) {
+          rangeCells.push({ row: r, col: c });
+        }
+      }
+      setSelectedCells(rangeCells);
+    } else if (e.ctrlKey || e.metaKey) {
+      // Ctrl/Cmd + Click: 切换选中状态
+      setSelectedCells(prev => {
+        const isAlreadySelected = prev.some(cell => cell.row === row && cell.col === col);
+        if (isAlreadySelected) {
+          return prev.filter(cell => !(cell.row === row && cell.col === col));
+        } else {
+          return [...prev, newCell];
+        }
+      });
+      setLastSelectedCell(newCell);
+    } else {
+      // 普通点击: 只选中当前单元格
+      setSelectedCells([newCell]);
+      setLastSelectedCell(newCell);
+    }
+  }, [lastSelectedCell]);
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent, row: number, col: number) => {
@@ -174,6 +213,38 @@ export function SpreadsheetView({
       }
     },
     [headers, renamedColumns],
+  );
+
+  const handleHeaderSelect = useCallback(
+    (e: React.MouseEvent, col: number) => {
+      e.stopPropagation();
+      const headerCell = { row: -1, col };
+
+      if (e.shiftKey && lastSelectedCell) {
+        const minCol = Math.min(lastSelectedCell.col, col);
+        const maxCol = Math.max(lastSelectedCell.col, col);
+        const rangeCells: { row: number; col: number }[] = [];
+        for (let c = minCol; c <= maxCol; c++) {
+          rangeCells.push({ row: -1, col: c });
+        }
+        setSelectedCells(rangeCells);
+        setLastSelectedCell(headerCell);
+      } else if (e.ctrlKey || e.metaKey) {
+        setSelectedCells(prev => {
+          const isAlreadySelected = prev.some(c => c.row === -1 && c.col === col);
+          if (isAlreadySelected) {
+            return prev.filter(c => !(c.row === -1 && c.col === col));
+          } else {
+            return [...prev, headerCell];
+          }
+        });
+        setLastSelectedCell(headerCell);
+      } else {
+        setSelectedCells([headerCell]);
+        setLastSelectedCell(headerCell);
+      }
+    },
+    [lastSelectedCell],
   );
 
   const handleFilterClick = useCallback(
@@ -211,6 +282,46 @@ export function SpreadsheetView({
   const closePivotDialog = useCallback(() => {
     setPivotDialog(null);
   }, []);
+
+  const handleCopySelection = useCallback(() => {
+    if (selectedCells.length === 0) return;
+
+    const selectedRows = selectedCells.map(cell => cell.row);
+    const hasDataSelected = selectedRows.some(row => row !== -1);
+    const hasHeaderSelected = selectedRows.some(row => row === -1);
+
+    const minCol = Math.min(...selectedCells.map(cell => cell.col));
+    const maxCol = Math.max(...selectedCells.map(cell => cell.col));
+
+    const copyContent: string[] = [];
+
+    if (hasHeaderSelected) {
+      const headerRow: string[] = [];
+      for (let c = minCol; c <= maxCol; c++) {
+        headerRow.push(headers[c] || '');
+      }
+      copyContent.push(headerRow.join('\t'));
+    }
+
+    if (hasDataSelected) {
+      const dataRows = selectedRows.filter(row => row !== -1);
+      const minRow = Math.min(...dataRows);
+      const maxRow = Math.max(...dataRows);
+
+      for (let r = minRow; r <= maxRow; r++) {
+        const rowContent: string[] = [];
+        for (let c = minCol; c <= maxCol; c++) {
+          const cellData = data[r]?.[c] || '';
+          rowContent.push(cellData);
+        }
+        copyContent.push(rowContent.join('\t'));
+      }
+    }
+
+    navigator.clipboard.writeText(copyContent.join('\n')).catch(err => {
+      console.error('Failed to copy:', err);
+    });
+  }, [selectedCells, data, headers]);
 
   const handleRenameApply = useCallback(() => {
     const changedColumns = Object.entries(renamedColumns).filter(
@@ -273,6 +384,19 @@ export function SpreadsheetView({
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, [closeContextMenu, closeFilterDialog, closeOperationDialog, closePivotDialog]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        if (selectedCells.length > 0) {
+          e.preventDefault();
+          handleCopySelection();
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [selectedCells, handleCopySelection]);
 
   if (!inputFile || data.length === 0) {
     return (
@@ -643,12 +767,13 @@ export function SpreadsheetView({
                     {headers.map((header, colIndex) => (
                       <th
                         key={colIndex}
-                        className={`border border-border/50 px-2 py-2 text-sm font-semibold text-foreground bg-muted/70 text-left group relative ${selectedCell?.col === colIndex ? "bg-primary/10" : ""
+                        className={`border border-border/50 px-2 py-2 text-sm font-semibold text-foreground bg-muted/70 text-left group relative ${selectedCells.some(cell => cell.col === colIndex) ? "bg-primary/10" : ""
                           }`}
                         style={{
                           width: columnWidths[colIndex] || 120,
                           minWidth: 120,
                         }}
+                        onClick={(e) => handleHeaderSelect(e, colIndex)}
                         onContextMenu={(e) =>
                           handleHeaderContextMenu(e, colIndex)
                         }
@@ -722,21 +847,24 @@ export function SpreadsheetView({
                   </tr>
                 </thead>
                 <tbody>
-                  {data.map((row, rowIndex) => (
+                  {data.map((row, rowIndex) => {
+                    const hasSelectedCellInRow = selectedCells.some(cell => cell.row === rowIndex);
+                    return (
                     <tr
                       key={rowIndex}
-                      className={`hover:bg-muted/30 transition-colors ${selectedCell?.row === rowIndex ? "bg-primary/5" : ""
+                      className={`hover:bg-muted/30 transition-colors ${hasSelectedCellInRow ? "bg-primary/5" : ""
                         }`}
                     >
-                      {headers.map((_, colIndex) => (
+                      {headers.map((_, colIndex) => {
+                        const cellIsSelected = isCellSelected(rowIndex, colIndex);
+                        return (
                         <td
                           key={colIndex}
-                          className={`border border-border/50 px-2 py-2 text-sm cursor-cell ${selectedCell?.row === rowIndex &&
-                            selectedCell?.col === colIndex
+                          className={`border border-border/50 px-2 py-2 text-sm cursor-cell select-none ${cellIsSelected
                             ? "bg-primary/10 outline outline-2 outline-primary/50"
                             : ""
                             }`}
-                          onClick={() => handleCellClick(rowIndex, colIndex)}
+                          onClick={(e) => handleCellClick(e, rowIndex, colIndex)}
                           onContextMenu={(e) =>
                             handleContextMenu(e, rowIndex, colIndex)
                           }
@@ -749,9 +877,9 @@ export function SpreadsheetView({
                             {row[colIndex] || ""}
                           </div>
                         </td>
-                      ))}
+                      )})}
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table>
               <ScrollBar orientation="horizontal" />
@@ -770,6 +898,8 @@ export function SpreadsheetView({
           onSearchChange={setContextMenuSearch}
           onClose={closeContextMenu}
           onSetCommandDialog={setCommandDialog}
+          onCopy={handleCopySelection}
+          hasSelection={selectedCells.length > 0}
         />
       )}
 

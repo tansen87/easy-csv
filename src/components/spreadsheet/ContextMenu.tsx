@@ -54,6 +54,8 @@ interface ContextMenuProps {
   onSearchChange: (value: string) => void;
   onClose: () => void;
   onSetCommandDialog: (dialog: any) => void;
+  onCopy?: () => void;
+  hasSelection?: boolean;
 }
 
 export function ContextMenu({
@@ -63,6 +65,8 @@ export function ContextMenu({
   onSearchChange,
   onClose,
   onSetCommandDialog,
+  onCopy,
+  hasSelection,
 }: ContextMenuProps) {
   return (
     <div
@@ -72,6 +76,18 @@ export function ContextMenu({
       <div className="px-3 py-1 text-xs font-semibold text-muted-foreground border-b mb-1">
         Quick Actions
       </div>
+      {hasSelection && onCopy && (
+        <button
+          className="w-full px-3 py-1 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2 border-b border-border/50"
+          onClick={() => {
+            onClose();
+            onCopy();
+          }}
+        >
+          <Copy className="h-4 w-4 text-muted-foreground" />
+          Copy Selection
+        </button>
+      )}
       <div className="px-3 py-1">
         <input
           type="text"
