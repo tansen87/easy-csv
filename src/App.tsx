@@ -714,7 +714,6 @@ function App() {
               <button
                 onClick={handleImportPipeline}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                title="Import Pipeline"
               >
                 <Upload className="h-3.5 w-3.5" />
                 Import
@@ -726,7 +725,6 @@ function App() {
                     ? "text-muted-foreground/40 cursor-not-allowed"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent"
                   }`}
-                title="Export Pipeline"
               >
                 <Download className="h-3.5 w-3.5" />
                 Export
