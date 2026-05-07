@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "@/components/ThemeProvider";
 import { ToastContainer, ToastType } from "@/components/Toast";
+import { ThemeTransition } from "@/components/ThemeTransition";
 import {
   Settings,
   X,
@@ -56,6 +57,7 @@ function App() {
   const [xanVersion, setXanVersion] = useState<string | null>(null);
   const [inputFile, setInputFile] = useState<string>("");
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [isSavingSettings, setIsSavingSettings] = useState<boolean>(false);
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(",");
   const [xanPath, setXanPath] = useState<string>("");
   const [noQuoting, setNoQuoting] = useState<boolean>(false);
@@ -601,37 +603,28 @@ function App() {
     setThemeTransition({ x, y, active: true });
 
     setTimeout(() => {
-      setTheme(theme === "dark" ? "light" : "dark");
-    }, 400);
+      let currentTheme = theme;
+      if (theme === "system") {
+        currentTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+      }
+      setTheme(currentTheme === "dark" ? "light" : "dark");
+    }, 300);
 
     setTimeout(() => {
       setThemeTransition((prev) => ({ ...prev, active: false }));
-    }, 800);
+    }, 700);
   };
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20 relative overflow-hidden">
-      {themeTransition.active && (
-        <div
-          className="fixed inset-0 pointer-events-none z-50"
-          style={{
-            background:
-              theme === "light" ? "hsl(210 40% 98%)" : "hsl(222.2 84% 4.9%)",
-            clipPath: `circle(0% at ${themeTransition.x}px ${themeTransition.y}px)`,
-            animation: "themeExpand 0.8s ease-out forwards",
-          }}
-        />
-      )}
-      <style>{`
-        @keyframes themeExpand {
-          0% {
-            clip-path: circle(0% at ${themeTransition.x}px ${themeTransition.y}px);
-          }
-          100% {
-            clip-path: circle(150% at ${themeTransition.x}px ${themeTransition.y}px);
-          }
-        }
-      `}</style>
+      <ThemeTransition
+        isActive={themeTransition.active}
+        x={themeTransition.x}
+        y={themeTransition.y}
+        theme={theme}
+      />
       <header className="h-14 border-b bg-card/80 backdrop-blur-sm shadow-sm flex items-center justify-between px-4 gap-4">
         {/* Left: Command/History Toggle + Search */}
         <div className="flex items-center gap-2">
@@ -1014,24 +1007,47 @@ function App() {
                   Cancel
                 </Button>
                 <Button
+                  disabled={isSavingSettings}
                   onClick={async () => {
+                    setIsSavingSettings(true);
                     try {
+                      const savePromises: Promise<void>[] = [];
+                      
                       if (xanPath) {
-                        await invoke("set_xan_path", { path: xanPath });
-                        await checkXanInstallation();
+                        savePromises.push(
+                          invoke("set_xan_path", { path: xanPath })
+                            .then(() => checkXanInstallation())
+                        );
                       }
-                      await invoke("set_default_delimiter", {
-                        delimiter: defaultDelimiter,
-                      });
-                      await invoke("set_no_quoting", { noQuoting });
+                      
+                      savePromises.push(
+                        invoke("set_default_delimiter", { delimiter: defaultDelimiter })
+                      );
+                      savePromises.push(
+                        invoke("set_no_quoting", { noQuoting })
+                      );
+                      
+                      await Promise.all(savePromises);
+                      
                       showToastRef.current("Settings saved successfully", 'success');
-                      setShowSettings(false);
+                      setTimeout(() => {
+                        setShowSettings(false);
+                      }, 300);
                     } catch (error) {
                       addLog("error", `Failed to save settings: ${error}`);
+                    } finally {
+                      setIsSavingSettings(false);
                     }
                   }}
                 >
-                  Save
+                  {isSavingSettings ? (
+                    <>
+                      <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save"
+                  )}
                 </Button>
               </div>
             </div>

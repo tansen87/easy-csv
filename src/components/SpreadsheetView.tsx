@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Table, X, Trash2, Plus, Edit3, ArrowUpDown, Check, Rows3, Grid3X3, Filter, Repeat2, Repeat, Settings2 } from "lucide-react";
@@ -69,6 +69,30 @@ export function SpreadsheetView({
     row: number;
     col: number;
   } | null>(null);
+
+  const selectedCellMap = useMemo(() => {
+    const map = new Map<string, boolean>();
+    selectedCells.forEach(cell => {
+      map.set(`${cell.row}-${cell.col}`, true);
+    });
+    return map;
+  }, [selectedCells]);
+
+  const selectedRows = useMemo(() => {
+    const rows = new Set<number>();
+    selectedCells.forEach(cell => {
+      rows.add(cell.row);
+    });
+    return rows;
+  }, [selectedCells]);
+
+  const selectedCols = useMemo(() => {
+    const cols = new Set<number>();
+    selectedCells.forEach(cell => {
+      cols.add(cell.col);
+    });
+    return cols;
+  }, [selectedCells]);
   const [columnWidths, setColumnWidths] = useState<Record<number, number>>({});
   const [resizingCol, setResizingCol] = useState<number | null>(null);
   const [resizingStartX, setResizingStartX] = useState(0);
@@ -169,9 +193,7 @@ export function SpreadsheetView({
     }
   }, [resizingCol]);
 
-  const isCellSelected = useCallback((row: number, col: number) => {
-    return selectedCells.some(cell => cell.row === row && cell.col === col);
-  }, [selectedCells]);
+  
 
   const handleCellClick = useCallback((e: React.MouseEvent, row: number, col: number) => {
     const newCell = { row, col };
@@ -908,7 +930,7 @@ export function SpreadsheetView({
                     {headers.map((header, colIndex) => (
                       <th
                         key={colIndex}
-                        className={`border border-border/50 px-2 py-2 text-sm font-semibold text-foreground bg-muted/70 text-left group relative ${selectedCells.some(cell => cell.col === colIndex) ? "bg-primary/10" : ""
+                        className={`border border-border/50 px-2 py-2 text-sm font-semibold text-foreground bg-muted/70 text-left group relative ${selectedCols.has(colIndex) ? "bg-primary/10" : ""
                           }`}
                         style={{
                           width: columnWidths[colIndex] || 120,
@@ -987,7 +1009,7 @@ export function SpreadsheetView({
                 </thead>
                 <tbody>
                   {data.map((row, rowIndex) => {
-                    const hasSelectedCellInRow = selectedCells.some(cell => cell.row === rowIndex);
+                    const hasSelectedCellInRow = selectedRows.has(rowIndex);
                     return (
                       <tr
                         key={rowIndex}
@@ -995,7 +1017,7 @@ export function SpreadsheetView({
                           }`}
                       >
                         {headers.map((_, colIndex) => {
-                          const cellIsSelected = isCellSelected(rowIndex, colIndex);
+                          const cellIsSelected = selectedCellMap.has(`${rowIndex}-${colIndex}`);
                           return (
                             <td
                               key={colIndex}

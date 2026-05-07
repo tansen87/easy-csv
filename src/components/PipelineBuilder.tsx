@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -52,8 +52,11 @@ function SortableStep({
     transition,
   };
 
-  const activeParams = Object.entries(step.parameters)
-    .filter(([, value]) => value !== undefined && value !== "" && value !== false);
+  const activeParams = useMemo(() => {
+    return Object.entries(step.parameters).filter(
+      ([, value]) => value !== undefined && value !== "" && value !== false
+    );
+  }, [step.parameters]);
 
   return (
     <div ref={setNodeRef} style={style} className="relative">
