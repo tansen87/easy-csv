@@ -465,6 +465,53 @@ export function SpreadsheetView({
     }
   }, [onAddCommand]);
 
+  const handleTextTransform = useCallback((col: number, transformType: string) => {
+    if (!onAddCommand) return;
+    const mapCommand = xanCommands.find((cmd) => cmd.id === "map");
+    if (mapCommand) {
+      const columnName = headers[col];
+      const expressionMap: Record<string, string> = {
+        lower: `col("${columnName}").lower() as "${columnName}"`,
+        upper: `col("${columnName}").upper() as "${columnName}"`,
+        trim: `col("${columnName}").trim() as "${columnName}"`,
+        ltrim: `col("${columnName}").ltrim() as "${columnName}"`,
+        rtrim: `col("${columnName}").rtrim() as "${columnName}"`,
+      };
+      const expression = expressionMap[transformType];
+      if (expression) {
+        onAddCommand(mapCommand, {
+          expression,
+          overwrite: true,
+          output: "",
+        });
+      }
+    }
+  }, [onAddCommand, headers]);
+
+  const handleNumberTransform = useCallback((col: number, transformType: string) => {
+    if (!onAddCommand) return;
+    const mapCommand = xanCommands.find((cmd) => cmd.id === "map");
+    if (mapCommand) {
+      const columnName = headers[col];
+      const expressionMap: Record<string, string> = {
+        abs: `abs(col("${columnName}")) as "${columnName}"`,
+        floor: `floor(col("${columnName}")) as "${columnName}"`,
+        ceil: `ceil(col("${columnName}")) as "${columnName}"`,
+        numfmt: `numfmt(col("${columnName}")) as "${columnName}"`,
+        int: `trunc(col("${columnName}")) as "${columnName}"`,
+        float: `float(col("${columnName}")) as "${columnName}"`,
+      };
+      const expression = expressionMap[transformType];
+      if (expression) {
+        onAddCommand(mapCommand, {
+          expression,
+          overwrite: true,
+          output: "",
+        });
+      }
+    }
+  }, [onAddCommand, headers]);
+
   useEffect(() => {
     const handleClickOutside = () => {
       closeContextMenu();
@@ -996,6 +1043,8 @@ export function SpreadsheetView({
           onDedup={handleContextMenuDedup}
           onTranspose={handleContextMenuTranspose}
           onReverse={handleContextMenuReverse}
+          onTextTransform={handleTextTransform}
+          onNumberTransform={handleNumberTransform}
           onCopy={handleCopySelection}
           hasSelection={selectedCells.length > 0}
         />

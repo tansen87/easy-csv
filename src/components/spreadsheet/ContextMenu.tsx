@@ -3,6 +3,8 @@ import {
   Filter,
   ArrowUpDown,
   ChevronRight,
+  ArrowDown,
+  ArrowUp,
   ArrowDownAZ,
   ArrowUpAZ,
   ArrowUp01,
@@ -17,6 +19,16 @@ import {
   Slice,
   ArrowLeftFromLine,
   ArrowRightFromLine,
+  Type,
+  CaseLower,
+  CaseUpper,
+  Hash,
+  AlignLeft,
+  AlignRight,
+  AlignCenter,
+  DecimalsArrowLeft,
+  DecimalsArrowRight,
+  Ruler,
 } from "lucide-react";
 
 interface ContextMenuState {
@@ -37,6 +49,8 @@ interface ContextMenuProps {
   onDedup: (col: number) => void;
   onTranspose: (col: number) => void;
   onReverse: (col: number) => void;
+  onTextTransform: (col: number, transformType: string) => void;
+  onNumberTransform: (col: number, transformType: string) => void;
   onCopy?: () => void;
   hasSelection?: boolean;
 }
@@ -52,6 +66,8 @@ export function ContextMenu({
   onDedup,
   onTranspose,
   onReverse,
+  onTextTransform,
+  onNumberTransform,
   onCopy,
   hasSelection,
 }: ContextMenuProps) {
@@ -66,6 +82,27 @@ export function ContextMenu({
     { label: "Dedup", icon: Rows3, action: onDedup },
     { label: "Transpose", icon: Repeat2, action: onTranspose },
     { label: "Reverse", icon: Repeat, action: onReverse },
+  ];
+
+  const textTransformOptions = [
+    { label: "Lowercase", icon: CaseLower, transformType: "lower" },
+    { label: "Uppercase", icon: CaseUpper, transformType: "upper" },
+    { label: "Trim", icon: AlignCenter, transformType: "trim" },
+    { label: "LTrim", icon: AlignLeft, transformType: "ltrim" },
+    { label: "RTrim", icon: AlignRight, transformType: "rtrim" },
+    { label: "Left", icon: ArrowLeftFromLine, transformType: "splitLeft" },
+    { label: "Right", icon: ArrowRightFromLine, transformType: "splitRight" },
+    { label: "Slice", icon: Slice, transformType: "slice" },
+    { label: "Split", icon: Scissors, transformType: "split" },
+  ];
+
+  const numberTransformOptions = [
+    { label: "Abs", icon: Ruler, transformType: "abs" },
+    { label: "Floor", icon: ArrowDown, transformType: "floor" },
+    { label: "Ceil", icon: ArrowUp, transformType: "ceil" },
+    { label: "Format Number", icon: Hash, transformType: "numfmt" },
+    { label: "To Integer", icon: DecimalsArrowLeft, transformType: "int" },
+    { label: "To Float", icon: DecimalsArrowRight, transformType: "float" },
   ];
 
   return (
@@ -125,7 +162,7 @@ export function ContextMenu({
         }}
       >
         <Calendar className="h-4 w-4 text-muted-foreground" />
-        Date Transform
+        Date
       </button>
 
       <div className="relative group">
@@ -141,8 +178,8 @@ export function ContextMenu({
           }}
         >
           <div className="flex items-center gap-2">
-            <Slice className="h-4 w-4 text-muted-foreground" />
-            Split
+            <Type className="h-4 w-4 text-muted-foreground" />
+            Text
           </div>
           <ChevronRight className="h-3 w-3 text-muted-foreground" />
         </button>
@@ -157,54 +194,81 @@ export function ContextMenu({
           }}
         >
           <div className="bg-card border rounded-lg shadow-lg py-1 min-w-[160px]">
-            <button
-              key="left"
-              className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-                onOpenSliceDialog(contextMenu.col, contextMenu.x, contextMenu.y, "left");
-              }}
-            >
-              <ArrowLeftFromLine className="h-4 w-4 text-muted-foreground" />
-              Left
-            </button>
-            <button
-              key="right"
-              className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-                onOpenSliceDialog(contextMenu.col, contextMenu.x, contextMenu.y, "right");
-              }}
-            >
-              <ArrowRightFromLine className="h-4 w-4 text-muted-foreground" />
-              Right
-            </button>
-            <button
-              key="slice"
-              className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-                onOpenSliceDialog(contextMenu.col, contextMenu.x, contextMenu.y, "slice");
-              }}
-            >
-              <Slice className="h-4 w-4 text-muted-foreground" />
-              Slice
-            </button>
-            <button
-              key="split"
-              className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-                onOpenSliceDialog(contextMenu.col, contextMenu.x, contextMenu.y, "split");
-              }}
-            >
-              <Scissors className="h-4 w-4 text-muted-foreground" />
-              Split
-            </button>
+            {textTransformOptions.map((option) => {
+              const Icon = option.icon;
+              return (
+                <button
+                  key={option.transformType}
+                  className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                    if (option.transformType.startsWith("split") || option.transformType === "slice") {
+                      let sliceType = option.transformType;
+                      if (sliceType.startsWith("split")) {
+                        sliceType = sliceType.replace("split", "").toLowerCase();
+                      }
+                      onOpenSliceDialog(contextMenu.col, contextMenu.x, contextMenu.y, sliceType);
+                    } else {
+                      onTextTransform(contextMenu.col, option.transformType);
+                    }
+                  }}
+                >
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="relative group">
+        <button
+          className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center justify-between gap-2"
+          onMouseEnter={(e) => {
+            const dropdown = e.currentTarget.nextElementSibling;
+            if (dropdown) dropdown.classList.remove("hidden");
+          }}
+          onMouseLeave={(e) => {
+            const dropdown = e.currentTarget.nextElementSibling;
+            if (dropdown) dropdown.classList.add("hidden");
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <Hash className="h-4 w-4 text-muted-foreground" />
+            Number
+          </div>
+          <ChevronRight className="h-3 w-3 text-muted-foreground" />
+        </button>
+
+        <div
+          className="absolute left-full top-0 hidden pl-1"
+          onMouseEnter={(e) => {
+            e.currentTarget.classList.remove("hidden");
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.classList.add("hidden");
+          }}
+        >
+          <div className="bg-card border rounded-lg shadow-lg py-1 min-w-[160px]">
+            {numberTransformOptions.map((option) => {
+              const Icon = option.icon;
+              return (
+                <button
+                  key={option.transformType}
+                  className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                    onNumberTransform(contextMenu.col, option.transformType);
+                  }}
+                >
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                  {option.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

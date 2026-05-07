@@ -261,7 +261,7 @@ export function SplitDialog({
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
-        <span className="text-xs font-medium">Text Operations</span>
+        <span className="text-xs font-medium">{selectedColumn}</span>
         <button
           onClick={onClose} className="p-0.5 hover:bg-accent rounded transition-colors shrink-0">
           <X className="h-3.5 w-3.5" />
