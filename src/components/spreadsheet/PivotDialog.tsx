@@ -190,48 +190,52 @@ export function PivotDialog({
           <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
             Columns (pivot)
           </label>
-          <div className="flex flex-wrap gap-1 p-1.5 border rounded bg-background max-h-20 overflow-y-auto">
-            {filteredHeaders.length === 0 ? (
-              <span className="text-[10px] text-muted-foreground px-2 py-0.5">No matches</span>
-            ) : (
-              filteredHeaders.map((header) => (
-                <button
-                  key={header}
-                  onClick={() => toggleColumn(header)}
-                  className={`px-2 py-0.5 rounded text-[10px] transition-colors ${selectedColumns.includes(header)
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted hover:bg-accent"
-                    }`}
-                >
-                  {header}
-                </button>
-              ))
-            )}
-          </div>
+          <ScrollArea>
+            <div className="flex flex-wrap gap-1 p-1.5 border rounded bg-background">
+              {filteredHeaders.length === 0 ? (
+                <span className="text-[10px] text-muted-foreground px-2 py-0.5">No matches</span>
+              ) : (
+                filteredHeaders.map((header) => (
+                  <button
+                    key={header}
+                    onClick={() => toggleColumn(header)}
+                    className={`px-2 py-0.5 rounded text-[10px] transition-colors ${selectedColumns.includes(header)
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted hover:bg-accent"
+                      }`}
+                  >
+                    {header}
+                  </button>
+                ))
+              )}
+            </div>
+          </ScrollArea>
         </div>
 
         <div>
           <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
             Row (groupby)
           </label>
-          <div className="flex flex-wrap gap-1 p-1.5 border rounded bg-background max-h-20 overflow-y-auto">
-            {filteredHeaders.length === 0 ? (
-              <span className="text-[10px] text-muted-foreground px-2 py-0.5">No matches</span>
-            ) : (
-              filteredHeaders.map((header) => (
-                <button
-                  key={header}
-                  onClick={() => toggleGroupBy(header)}
-                  className={`px-2 py-0.5 rounded text-[10px] transition-colors ${selectedGroupBy.includes(header)
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted hover:bg-accent"
-                    }`}
-                >
-                  {header}
-                </button>
-              ))
-            )}
-          </div>
+          <ScrollArea>
+            <div className="flex flex-wrap gap-1 p-1.5 border rounded bg-background">
+              {filteredHeaders.length === 0 ? (
+                <span className="text-[10px] text-muted-foreground px-2 py-0.5">No matches</span>
+              ) : (
+                filteredHeaders.map((header) => (
+                  <button
+                    key={header}
+                    onClick={() => toggleGroupBy(header)}
+                    className={`px-2 py-0.5 rounded text-[10px] transition-colors ${selectedGroupBy.includes(header)
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted hover:bg-accent"
+                      }`}
+                  >
+                    {header}
+                  </button>
+                ))
+              )}
+            </div>
+          </ScrollArea>
         </div>
 
         <div>
