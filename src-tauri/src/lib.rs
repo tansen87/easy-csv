@@ -63,14 +63,14 @@ async fn read_csv_file(
     use std::fs::File;
     use std::io::BufReader;
 
-    let file = File::open(&file_path)
-        .map_err(|e| format!("Failed to open file: {}", e))?;
+    let file = File::open(&file_path).map_err(|e| format!("Failed to open file: {}", e))?;
 
     let mut rdr = csv::ReaderBuilder::new()
         .delimiter(delimiter.as_bytes()[0])
         .from_reader(BufReader::new(file));
 
-    let headers = rdr.headers()
+    let headers = rdr
+        .headers()
         .map_err(|e| format!("Failed to read headers: {}", e))?
         .iter()
         .map(|s| s.to_string())
@@ -245,6 +245,7 @@ async fn execute_xan_pipeline(
             let mut children = Vec::new();
             let mut stderr_threads = Vec::new();
             let mut pipe_threads = Vec::new();
+            let mut output_handles = Vec::new();
 
             // Read first child's stderr in background thread
             let first_stderr = first_child.stderr.take().unwrap();
@@ -258,7 +259,11 @@ async fn execute_xan_pipeline(
                     }
                 }
             }));
+
+            // Store stdout handle for piping
+            let first_stdout = first_child.stdout.take().unwrap();
             children.push(first_child);
+            output_handles.push(first_stdout);
 
             // Start all remaining commands and connect pipes BEFORE feeding input
             for (idx, args) in cmd_args_list.into_iter().skip(1).enumerate() {
@@ -283,23 +288,24 @@ async fn execute_xan_pipeline(
                     .spawn()
                     .map_err(|e| format!("Start pipeline command failed: {}", e))?;
 
-                // Connect previous stdout to this child's stdin
-                let prev_child = children.last_mut().unwrap();
-                let prev_stdout = prev_child.stdout.take().unwrap();
+                // Get stdin handle for next pipe connection
                 let child_stdin = child.stdin.take().unwrap();
 
-                // Spawn thread to pipe data between processes
+                // Get stdout handle for storing
+                let child_stdout = child.stdout.take().unwrap();
+
+                // Connect previous stdout to this child's stdin using thread
+                let prev_stdout = output_handles.pop().unwrap();
                 let pipe_thread = thread::spawn(move || {
                     let mut reader = std::io::BufReader::new(prev_stdout);
                     let mut writer = child_stdin;
-                    let mut buffer = vec![0; 256 * 1024]; // 256KB buffer for better performance
+                    let mut buffer = vec![0; 64 * 1024]; // Use smaller buffer for better responsiveness
 
                     loop {
                         match reader.read(&mut buffer) {
                             Ok(0) => break, // EOF
                             Ok(n) => {
                                 if let Err(e) = writer.write_all(&buffer[..n]) {
-                                    // Broken pipe is acceptable if child exits early
                                     if e.kind() != ErrorKind::BrokenPipe {
                                         return Err(format!("Pipe write failed: {}", e));
                                     }
@@ -311,6 +317,7 @@ async fn execute_xan_pipeline(
                     }
                     Ok(())
                 });
+                pipe_threads.push(pipe_thread);
 
                 // Read this child's stderr in background thread
                 let child_stderr = child.stderr.take().unwrap();
@@ -326,7 +333,7 @@ async fn execute_xan_pipeline(
                 }));
 
                 children.push(child);
-                pipe_threads.push(pipe_thread);
+                output_handles.push(child_stdout);
             }
 
             // Now feed input file to the first command
@@ -335,23 +342,24 @@ async fn execute_xan_pipeline(
             {
                 let first_child = children.first_mut().unwrap();
                 let mut stdin = first_child.stdin.take().unwrap();
-                let mut buffer = vec![0; 256 * 1024]; // 256KB buffer for better performance
-                loop {
-                    match input_file_handle.read(&mut buffer) {
-                        Ok(0) => break,
-                        Ok(n) => {
-                            if let Err(e) = stdin.write_all(&buffer[..n]) {
-                                if e.kind() != ErrorKind::BrokenPipe {
-                                    return Err(format!("Write to stdin failed: {}", e));
-                                }
-                                break;
+
+                // Use a thread to feed input to avoid blocking main thread
+                let mut input_file_clone = File::open(&input_file)
+                    .map_err(|e| format!("Failed to open input file: {}", e))?;
+
+                thread::spawn(move || {
+                    let mut buffer = vec![0; 64 * 1024];
+                    loop {
+                        match input_file_clone.read(&mut buffer) {
+                            Ok(0) => break,
+                            Ok(n) => {
+                                let _ = stdin.write_all(&buffer[..n]);
                             }
+                            Err(_) => break,
                         }
-                        Err(e) => return Err(format!("Read input file failed: {}", e)),
                     }
-                }
+                });
             }
-            eprintln!("Input file feeding completed");
 
             // Wait for all pipe threads to finish and check for errors
             for t in pipe_threads {
@@ -362,14 +370,28 @@ async fn execute_xan_pipeline(
                 }
             }
 
-            // Get output from last child
-            let last_child = children.pop().unwrap();
-            let output = last_child
-                .wait_with_output()
+            // Get output from last child using non-blocking approach
+            let mut last_child = children.pop().unwrap();
+            let last_stdout = output_handles.pop().unwrap();
+
+            // Read stdout in a thread to prevent deadlock
+            let stdout_thread = thread::spawn(move || {
+                let mut reader = std::io::BufReader::new(last_stdout);
+                let mut buf = Vec::new();
+                let _ = reader.read_to_end(&mut buf);
+                buf
+            });
+
+            // Wait for last child to finish
+            let status = last_child
+                .wait()
                 .map_err(|e| format!("Wait for final command failed: {}", e))?;
 
-            // Wait for all other children
-            for mut child in children.into_iter().rev() {
+            // Get stdout from thread
+            let stdout = stdout_thread.join().unwrap_or_default();
+
+            // Wait for all other children without blocking on output
+            for mut child in children {
                 let _ = child.wait();
             }
 
@@ -380,8 +402,8 @@ async fn execute_xan_pipeline(
             let combined_stderr = all_stderr.lock().unwrap().join(&b"\n"[..]);
 
             Ok(std::process::Output {
-                status: output.status,
-                stdout: output.stdout,
+                status,
+                stdout,
                 stderr: combined_stderr,
             })
         }
@@ -595,7 +617,8 @@ fn get_xan_help(command_name: String) -> Result<String, String> {
 
 #[tauri::command]
 fn set_window_title(window: tauri::Window, title: String) -> Result<(), String> {
-    window.set_title(&title)
+    window
+        .set_title(&title)
         .map_err(|e| format!("Failed to set window title: {}", e))
 }
 
@@ -604,17 +627,16 @@ async fn save_history(app: tauri::AppHandle, history: String) -> Result<(), Stri
     let app_data_dir = app.path().app_data_dir().map_err(|e| format!("{e}"))?;
     let history_path = app_data_dir.join("history.json");
     eprintln!("{:?}", history_path);
-    
+
     // Create directory if it doesn't exist
     if let Some(parent) = history_path.parent() {
         std::fs::create_dir_all(parent)
             .map_err(|e| format!("Failed to create directory: {}", e))?;
     }
-    
+
     // Save history to file
-    std::fs::write(&history_path, history)
-        .map_err(|e| format!("Failed to save history: {}", e))?;
-    
+    std::fs::write(&history_path, history).map_err(|e| format!("Failed to save history: {}", e))?;
+
     Ok(())
 }
 
@@ -622,7 +644,7 @@ async fn save_history(app: tauri::AppHandle, history: String) -> Result<(), Stri
 async fn load_history(app: tauri::AppHandle) -> Result<String, String> {
     let app_data_dir = app.path().app_data_dir().map_err(|e| format!("{e}"))?;
     let history_path = app_data_dir.join("history.json");
-    
+
     // Load history from file
     if history_path.exists() {
         let content = std::fs::read_to_string(&history_path)
