@@ -657,26 +657,34 @@ async fn load_history(app: tauri::AppHandle) -> Result<String, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![
-            execute_xan_pipeline,
-            check_xan_installed,
-            get_xan_version,
-            get_xan_path,
-            set_xan_path,
-            get_default_delimiter,
-            set_default_delimiter,
-            get_no_quoting,
-            set_no_quoting,
-            get_xan_help,
-            save_history,
-            load_history,
-            read_csv_file,
-            set_window_title
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .max_blocking_threads(16)
+        .build()
+        .expect("Failed to create tokio runtime");
+
+    runtime.block_on(async {
+        tauri::Builder::default()
+            .plugin(tauri_plugin_opener::init())
+            .plugin(tauri_plugin_dialog::init())
+            .plugin(tauri_plugin_fs::init())
+            .invoke_handler(tauri::generate_handler![
+                execute_xan_pipeline,
+                check_xan_installed,
+                get_xan_version,
+                get_xan_path,
+                set_xan_path,
+                get_default_delimiter,
+                set_default_delimiter,
+                get_no_quoting,
+                set_no_quoting,
+                get_xan_help,
+                save_history,
+                load_history,
+                read_csv_file,
+                set_window_title
+            ])
+            .run(tauri::generate_context!())
+            .expect("error while running tauri application");
+    });
 }
