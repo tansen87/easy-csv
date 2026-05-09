@@ -543,36 +543,38 @@ export function SortableStep({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-start gap-1 transition-shadow ${isDragging ? 'z-50 shadow-lg scale-105' : ''}`}
+      className={`flex items-center gap-1.5 transition-all duration-200 ease-out ${isDragging ? 'z-50 shadow-xl scale-105' : ''}`}
     >
       <button
-        className="cursor-grab active:cursor-grabbing text-muted-foreground/70 hover:text-foreground transition-colors p-1 rounded hover:bg-accent mt-1"
+        className="cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-muted-foreground transition-all duration-200 p-1 rounded-lg hover:bg-accent/50 mt-0.5 hover:scale-110"
         {...attributes}
         {...listeners}
       >
         <GripVertical className="h-4 w-4" />
       </button>
       <div
-        className={`flex flex-col gap-1 px-3 py-1.5 rounded-lg text-xs border cursor-pointer transition-colors min-w-[80px] ${isDragging ? 'bg-primary/10 border-primary/30 shadow-md' : 'bg-muted/60 border-border/30 hover:bg-muted'}`}
+        className={`flex flex-col gap-1.5 px-3.5 py-2 rounded-xl text-xs border cursor-pointer transition-all duration-200 min-w-[90px] ${isDragging 
+          ? 'bg-primary/15 border-primary/40 shadow-lg brightness-105' 
+          : 'bg-gradient-to-br from-muted/70 to-muted/40 border-border/30 hover:from-muted hover:to-muted/60 hover:shadow-md hover:border-border/50 hover:-translate-y-0.5'}`}
         onClick={handleClick}
       >
-        <div className="flex items-center gap-1 whitespace-nowrap">
-          <span className="w-5 h-5 bg-primary/20 rounded text-xs font-bold text-primary/70 flex items-center justify-center mr-1 shrink-0">
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <span className="w-5 h-5 bg-gradient-to-br from-primary/30 to-primary/10 rounded-full text-xs font-semibold text-primary/80 flex items-center justify-center mr-0.5 shrink-0 shadow-sm">
             {index + 1}
           </span>
-          <span className="font-medium">{step.command.name}</span>
-          {!isLast && <ChevronRight className="h-3 w-3 text-muted-foreground/50 shrink-0" />}
+          <span className="font-medium text-foreground/90">{step.command.name}</span>
+          {!isLast && <ChevronRight className="h-3 w-3 text-muted-foreground/40 shrink-0 ml-1" />}
         </div>
         {activeParams.length > 0 && (
-          <div className="flex flex-wrap gap-1 max-w-[200px]">
+          <div className="flex flex-wrap gap-1 max-w-[220px]">
             {activeParams.slice(0, 3).map(([key, value]) => (
-              <span key={key} className="bg-background/70 px-1.5 py-0.5 rounded text-[10px] border border-border/20 truncate">
-                <span className="text-muted-foreground/70">{key}=</span>
-                <span className="font-medium">{String(value)}</span>
+              <span key={key} className="bg-background/60 backdrop-blur-sm px-1.5 py-0.5 rounded-md text-[10px] border border-border/20 truncate shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]">
+                <span className="text-muted-foreground/60">{key}=</span>
+                <span className="font-medium text-foreground/80">{String(value)}</span>
               </span>
             ))}
             {activeParams.length > 3 && (
-              <span className="text-[10px] text-muted-foreground/60 px-1">
+              <span className="text-[10px] text-muted-foreground/50 px-1">
                 +{activeParams.length - 3}
               </span>
             )}
@@ -580,7 +582,7 @@ export function SortableStep({
         )}
       </div>
       <button
-        className="p-1 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 rounded transition-colors mt-1"
+        className="p-1.5 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all duration-200 mt-0.5 hover:scale-110 dark:text-muted-foreground/80"
         onClick={(e) => {
           e.stopPropagation();
           onStepDelete(step.id);

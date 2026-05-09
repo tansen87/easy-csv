@@ -609,7 +609,7 @@ export function SpreadsheetView({
                       {tabs.length > 1 && (
                         <button
                           onClick={() => onRemoveTab(tab.id)}
-                          className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
+                          className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors text-muted-foreground/70 dark:text-muted-foreground/80"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -735,7 +735,7 @@ export function SpreadsheetView({
 
       {/* Pipeline Preview */}
       {pipeline.length > 0 && (
-        <div className="px-4 py-2 border-b bg-background/50">
+        <div className="px-4 py-2.5 border-b bg-gradient-to-r from-background/80 via-background/60 to-background/80 backdrop-blur-sm">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -746,7 +746,7 @@ export function SpreadsheetView({
               strategy={verticalListSortingStrategy}
             >
               <ScrollArea className="w-full">
-                <div className="flex items-start gap-2 pb-1">
+                <div className="flex items-start gap-2 pb-1.5">
                   {pipeline.map((step, index) => (
                     <SortableStep
                       key={step.id}
@@ -798,7 +798,7 @@ export function SpreadsheetView({
                   </button>
                   <button
                     onClick={() => setSelectedStepId(null)}
-                    className="p-1 hover:bg-accent rounded transition-colors"
+                    className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground/70 hover:text-foreground dark:text-muted-foreground/80"
                   >
                     <X className="h-4 w-4" />
                   </button>

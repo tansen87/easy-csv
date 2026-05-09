@@ -234,7 +234,9 @@ export function DateTransformDialog({
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
         <span className="text-xs font-medium">Date Transform</span>
         <button
-          onClick={onClose} className="p-0.5 hover:bg-accent rounded transition-colors shrink-0">
+          onClick={onClose}
+          className="p-0.5 hover:bg-accent rounded transition-colors shrink-0 text-muted-foreground/70 hover:text-foreground dark:text-muted-foreground/80"
+        >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
