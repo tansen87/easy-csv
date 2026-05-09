@@ -844,60 +844,23 @@ export function CommandDialog({
                   className="w-20 h-8 px-1 text-sm border rounded-md bg-background"
                 />
               </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Min</label>
+              <div className="flex items-center gap-2">
                 <input
-                  type="text"
-                  value={commandDialog.params.min || ""}
+                  type="number"
+                  value={commandDialog.params.limit || ""}
                   onChange={(e) =>
                     setCommandDialog({
                       ...commandDialog,
                       params: {
                         ...commandDialog.params,
-                        min: e.target.value,
+                        limit: e.target.value
+                          ? Number(e.target.value)
+                          : undefined,
                       },
                     })
                   }
-                  placeholder="Min"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Max</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.max || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        max: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="Max"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Group By</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.groupby || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        groupby: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="Group by"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  placeholder="Limit"
+                  className="w-20 h-8 px-1 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
