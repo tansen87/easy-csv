@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
-import { Table, X, Trash2, Plus, Edit3, ArrowUpDown, Check, Rows3, Grid3X3, Filter, Repeat2, Repeat, Settings2 } from "lucide-react";
+import { Table, X, Trash2, Plus, Edit3, Check, Rows3, Repeat2, Repeat } from "lucide-react";
 import { ToastContainer, ToastType } from "@/components/Toast";
 import {
   DndContext,
@@ -170,7 +170,7 @@ export function SpreadsheetView({
     e.stopPropagation();
     setResizingCol(colIndex);
     setResizingStartX(e.clientX);
-    setResizingStartWidth(columnWidths[colIndex] || 150);
+    setResizingStartWidth(columnWidths[colIndex] || 80);
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
   }, [columnWidths]);
@@ -292,49 +292,17 @@ export function SpreadsheetView({
     [lastSelectedCell],
   );
 
-  const handleFilterClick = useCallback(
-    (e: React.MouseEvent, col: number) => {
-      e.stopPropagation();
-      setFilterDialog({ col, x: e.clientX, y: e.clientY });
-    },
-    [],
-  );
-
   const closeFilterDialog = useCallback(() => {
     setFilterDialog(null);
   }, []);
-
-  const handleSortClick = useCallback(
-    (e: React.MouseEvent, col: number) => {
-      e.stopPropagation();
-      setSortDialog({ col, x: e.clientX, y: e.clientY });
-    },
-    [],
-  );
 
   const closeSortDialog = useCallback(() => {
     setSortDialog(null);
   }, []);
 
-  const handleOperationClick = useCallback(
-    (e: React.MouseEvent, col: number, columnName: string) => {
-      e.stopPropagation();
-      setOperationDialog({ col, x: e.clientX, y: e.clientY, columnName });
-    },
-    [],
-  );
-
   const closeOperationDialog = useCallback(() => {
     setOperationDialog(null);
   }, []);
-
-  const handlePivotClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      setPivotDialog({ x: e.clientX, y: e.clientY });
-    },
-    [],
-  );
 
   const closePivotDialog = useCallback(() => {
     setPivotDialog(null);
@@ -922,7 +890,7 @@ export function SpreadsheetView({
               <table ref={tableRef} className="w-full border-collapse table-fixed">
                 <colgroup>
                   {headers.map((_, colIndex) => (
-                    <col key={colIndex} style={{ width: columnWidths[colIndex] || 150, minWidth: 150 }} />
+                    <col key={colIndex} style={{ width: columnWidths[colIndex] || 80, minWidth: 80 }} />
                   ))}
                 </colgroup>
                 <thead className="bg-muted/50 sticky top-0 z-10">
@@ -933,8 +901,8 @@ export function SpreadsheetView({
                         className={`border border-border/50 px-2 py-2 text-sm font-semibold text-foreground bg-muted/70 text-left group relative ${selectedCols.has(colIndex) ? "bg-primary/10" : ""
                           }`}
                         style={{
-                          width: columnWidths[colIndex] || 120,
-                          minWidth: 120,
+                          width: columnWidths[colIndex] || 80,
+                          minWidth: 80,
                         }}
                         onClick={(e) => handleHeaderSelect(e, colIndex)}
                         onContextMenu={(e) =>
@@ -971,30 +939,6 @@ export function SpreadsheetView({
                                 <Check className="h-3 w-3" />
                               </button>
                             )}
-                            <button
-                              onClick={(e) => handleOperationClick(e, colIndex, header)}
-                              className="p-0.5 rounded hover:bg-accent transition-colors"
-                            >
-                              <Settings2 className="h-3 w-3" />
-                            </button>
-                            <button
-                              onClick={handlePivotClick}
-                              className="p-0.5 rounded hover:bg-accent transition-colors"
-                            >
-                              <Grid3X3 className="h-3 w-3" />
-                            </button>
-                            <button
-                              onClick={(e) => handleSortClick(e, colIndex)}
-                              className="p-0.5 rounded hover:bg-accent transition-colors"
-                            >
-                              <ArrowUpDown className="h-3 w-3" />
-                            </button>
-                            <button
-                              onClick={(e) => handleFilterClick(e, colIndex)}
-                              className="p-0.5 rounded hover:bg-accent transition-colors"
-                            >
-                              <Filter className="h-3 w-3" />
-                            </button>
                           </div>
                           {colIndex < headers.length - 1 && (
                             <div
@@ -1030,8 +974,8 @@ export function SpreadsheetView({
                                 handleContextMenu(e, rowIndex, colIndex)
                               }
                               style={{
-                                width: columnWidths[colIndex] || 150,
-                                minWidth: 150,
+                                width: columnWidths[colIndex] || 80,
+                                minWidth: 80,
                               }}
                             >
                               <div className="truncate">

@@ -78,8 +78,8 @@ function App() {
   >("commands");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
-  const showToastRef = useRef<(message: string, type: ToastType) => void>(() => {});
-  const removeToastRef = useRef<(id: string) => void>(() => {});
+  const showToastRef = useRef<(message: string, type: ToastType) => void>(() => { });
+  const removeToastRef = useRef<(id: string) => void>(() => { });
 
   const showToast = useCallback((message: string, type: ToastType = "info") => {
     const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -114,7 +114,7 @@ function App() {
           {
             filePath,
             delimiter: defaultDelimiter,
-            limit: 100,
+            limit: 31,
           },
         );
         setCsvData(data);
@@ -631,8 +631,8 @@ function App() {
           <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
             <button
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeLeftPanel === "commands"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
                 }`}
               onClick={() => setActiveLeftPanel("commands")}
             >
@@ -641,8 +641,8 @@ function App() {
             </button>
             <button
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeLeftPanel === "history"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
                 }`}
               onClick={() => setActiveLeftPanel("history")}
             >
@@ -681,10 +681,10 @@ function App() {
                 onClick={handleExecute}
                 disabled={getCurrentPipeline().length === 0 || isExecuting}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${isExecuting
-                    ? "text-primary opacity-70"
-                    : getCurrentPipeline().length === 0
-                      ? "text-muted-foreground/40 cursor-not-allowed"
-                      : "text-primary hover:text-primary hover:bg-primary/10"
+                  ? "text-primary opacity-70"
+                  : getCurrentPipeline().length === 0
+                    ? "text-muted-foreground/40 cursor-not-allowed"
+                    : "text-primary hover:text-primary hover:bg-primary/10"
                   }`}
               >
                 {isExecuting ? (
@@ -715,8 +715,8 @@ function App() {
                 onClick={handleExportPipeline}
                 disabled={getCurrentPipeline().length === 0}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${getCurrentPipeline().length === 0
-                    ? "text-muted-foreground/40 cursor-not-allowed"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  ? "text-muted-foreground/40 cursor-not-allowed"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
                   }`}
               >
                 <Download className="h-3.5 w-3.5" />
@@ -1012,27 +1012,24 @@ function App() {
                     setIsSavingSettings(true);
                     try {
                       const savePromises: Promise<void>[] = [];
-                      
+
                       if (xanPath) {
                         savePromises.push(
                           invoke("set_xan_path", { path: xanPath })
                             .then(() => checkXanInstallation())
                         );
                       }
-                      
+
                       savePromises.push(
                         invoke("set_default_delimiter", { delimiter: defaultDelimiter })
                       );
                       savePromises.push(
                         invoke("set_no_quoting", { noQuoting })
                       );
-                      
+
                       await Promise.all(savePromises);
-                      
+                      setShowSettings(false);
                       showToastRef.current("Settings saved successfully", 'success');
-                      setTimeout(() => {
-                        setShowSettings(false);
-                      }, 300);
                     } catch (error) {
                       addLog("error", `Failed to save settings: ${error}`);
                     } finally {
