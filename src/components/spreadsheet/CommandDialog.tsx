@@ -825,7 +825,7 @@ export function CommandDialog({
                 />
                 Parallel
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex">
                 <input
                   type="number"
                   value={commandDialog.params.threads || ""}
@@ -844,7 +844,7 @@ export function CommandDialog({
                   className="w-20 h-8 px-1 text-sm border rounded-md bg-background"
                 />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex">
                 <input
                   type="number"
                   value={commandDialog.params.limit || ""}
@@ -2402,7 +2402,7 @@ export function CommandDialog({
           <>
             <ScrollArea className="h-[24vh]">
               <div className="space-y-3 pr-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-3">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Columns</label>
                     <input
@@ -2765,7 +2765,7 @@ export function CommandDialog({
                 Nulls
               </label>
             </div>
-            <div className="grid grid-cols-3 gap-0">
+            <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
                 <input
                   type="checkbox"
@@ -2783,12 +2783,7 @@ export function CommandDialog({
                 />
                 Parallel
               </label>
-              <div></div>
-              <div></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Threads</label>
+              <div className="flex-1">
                 <input
                   type="number"
                   value={commandDialog.params.threads || ""}
@@ -2943,7 +2938,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="grid grid-cols-3 gap-0">
+            <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
                 <input
                   type="checkbox"
@@ -2961,12 +2956,7 @@ export function CommandDialog({
                 />
                 Parallel
               </label>
-              <div></div>
-              <div></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Threads</label>
+              <div className="flex-1">
                 <input
                   type="number"
                   value={commandDialog.params.threads || ""}

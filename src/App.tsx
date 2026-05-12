@@ -199,7 +199,7 @@ function App() {
       }
     } catch (error) {
       setIsXanInstalled(false);
-      addLog("error", `Failed to check xan installation: ${error}`);
+      showToastRef.current(`Failed to check xan installation: ${error}`, 'error');
     }
   };
 
@@ -749,7 +749,7 @@ function App() {
                     await checkXanInstallation();
                     showToastRef.current("Xan path updated successfully", 'success');
                   } catch (error) {
-                    addLog("error", `Failed to update xan path: ${error}`);
+                    showToastRef.current(`Failed to update xan path: ${error}`, 'error');
                   }
                 }
               }}
@@ -777,7 +777,7 @@ function App() {
                     await checkXanInstallation();
                     showToastRef.current("Xan path updated successfully", 'success');
                   } catch (error) {
-                    addLog("error", `Failed to update xan path: ${error}`);
+                    showToastRef.current(`Failed to update xan path: ${error}`, 'error');
                   }
                 }
               }}
@@ -1028,7 +1028,7 @@ function App() {
                       setShowSettings(false);
                       showToastRef.current("Settings saved successfully", 'success');
                     } catch (error) {
-                      addLog("error", `Failed to save settings: ${error}`);
+                      showToastRef.current(`Failed to save settings: ${error}`, 'error');
                     } finally {
                       setIsSavingSettings(false);
                     }

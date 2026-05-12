@@ -107,7 +107,7 @@ export function PivotDialog({
 
     const wrapColumn = (col: string) => {
       if (/[\s,"'()`\\]/.test(col)) {
-        return `\`${col}\``;
+        return `"${col}"`;
       }
       return col;
     };
@@ -116,9 +116,9 @@ export function PivotDialog({
       .map((vc) => {
         const wrappedCol = wrapColumn(vc.column);
         if (vc.aggregation === "count") {
-          return `count(${wrappedCol})`;
+          return `count(${wrappedCol}) as ${wrappedCol}`;
         }
-        return `${vc.aggregation}(${wrappedCol})`;
+        return `${vc.aggregation}(${wrappedCol}) as ${wrappedCol}`;
       })
       .join(",");
 
