@@ -515,12 +515,12 @@ fn find_xan_executable() -> Option<String> {
 }
 
 #[tauri::command]
-fn check_xan_installed() -> bool {
+async fn check_xan_installed() -> bool {
     find_xan_executable().is_some()
 }
 
 #[tauri::command]
-fn get_xan_version() -> Result<String, String> {
+async fn get_xan_version() -> Result<String, String> {
     let xan_path = find_xan_executable().ok_or("xan executable not found")?;
 
     let mut command = Command::new(&xan_path);
@@ -543,13 +543,13 @@ fn get_xan_version() -> Result<String, String> {
 }
 
 #[tauri::command]
-fn get_xan_path() -> Option<String> {
+async fn get_xan_path() -> Option<String> {
     let config = load_config();
     config.xan_path
 }
 
 #[tauri::command]
-fn set_xan_path(path: String) -> Result<(), String> {
+async fn set_xan_path(path: String) -> Result<(), String> {
     if !Path::new(&path).exists() {
         return Err(format!("File does not exist: {}", path));
     }
@@ -560,33 +560,33 @@ fn set_xan_path(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn get_default_delimiter() -> Option<String> {
+async fn get_default_delimiter() -> Option<String> {
     let config = load_config();
     config.default_delimiter
 }
 
 #[tauri::command]
-fn set_default_delimiter(delimiter: String) -> Result<(), String> {
+async fn set_default_delimiter(delimiter: String) -> Result<(), String> {
     let mut config = load_config();
     config.default_delimiter = Some(delimiter);
     save_config(&config)
 }
 
 #[tauri::command]
-fn get_no_quoting() -> Option<bool> {
+async fn get_no_quoting() -> Option<bool> {
     let config = load_config();
     config.no_quoting
 }
 
 #[tauri::command]
-fn set_no_quoting(no_quoting: bool) -> Result<(), String> {
+async fn set_no_quoting(no_quoting: bool) -> Result<(), String> {
     let mut config = load_config();
     config.no_quoting = Some(no_quoting);
     save_config(&config)
 }
 
 #[tauri::command]
-fn get_xan_help(command_name: String) -> Result<String, String> {
+async fn get_xan_help(command_name: String) -> Result<String, String> {
     let xan_path = find_xan_executable().ok_or("xan executable not found")?;
 
     let mut command = Command::new(&xan_path);
@@ -616,7 +616,7 @@ fn get_xan_help(command_name: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn set_window_title(window: tauri::Window, title: String) -> Result<(), String> {
+async fn set_window_title(window: tauri::Window, title: String) -> Result<(), String> {
     window
         .set_title(&title)
         .map_err(|e| format!("Failed to set window title: {}", e))

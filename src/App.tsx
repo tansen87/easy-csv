@@ -59,7 +59,7 @@ function App() {
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [isSavingSettings, setIsSavingSettings] = useState<boolean>(false);
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(",");
-  const [xanPath, setXanPath] = useState<string>("");
+  const [_xanPath, setXanPath] = useState<string>("");
   const [noQuoting, setNoQuoting] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [themeTransition, setThemeTransition] = useState<{
@@ -734,20 +734,58 @@ function App() {
               <span className="hidden sm:inline">Checking...</span>
             </div>
           ) : isXanInstalled ? (
-            <div
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 rounded-lg text-xs font-medium border border-green-500/20"
+            <button
+              onClick={async () => {
+                const file = await open({
+                  multiple: false,
+                  filters: [
+                    { name: "Executable Files", extensions: ["exe"] },
+                  ],
+                });
+                if (file) {
+                  setXanPath(file);
+                  try {
+                    await invoke("set_xan_path", { path: file });
+                    await checkXanInstallation();
+                    showToastRef.current("Xan path updated successfully", 'success');
+                  } catch (error) {
+                    addLog("error", `Failed to update xan path: ${error}`);
+                  }
+                }
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 rounded-lg text-xs font-medium border border-green-500/20 hover:bg-green-500/20 transition-colors cursor-pointer"
             >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
               </span>
               <span className="hidden sm:inline">xan{xanVersion ? ` ${xanVersion.trim()}` : ""}</span>
-            </div>
+            </button>
           ) : (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-600 rounded-lg text-xs font-medium border border-red-500/20">
+            <button
+              onClick={async () => {
+                const file = await open({
+                  multiple: false,
+                  filters: [
+                    { name: "Executable Files", extensions: ["exe"] },
+                  ],
+                });
+                if (file) {
+                  setXanPath(file);
+                  try {
+                    await invoke("set_xan_path", { path: file });
+                    await checkXanInstallation();
+                    showToastRef.current("Xan path updated successfully", 'success');
+                  } catch (error) {
+                    addLog("error", `Failed to update xan path: ${error}`);
+                  }
+                }
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-600 rounded-lg text-xs font-medium border border-red-500/20 hover:bg-red-500/20 transition-colors cursor-pointer"
+            >
               <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
               <span className="hidden sm:inline">xan missing</span>
-            </div>
+            </button>
           )}
           <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
             <button
@@ -934,40 +972,6 @@ function App() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Xan Executable Path
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={xanPath}
-                    onChange={(e) => setXanPath(e.target.value)}
-                    placeholder="Auto-detect if not specified"
-                    className="flex-1 px-3 py-2 border border-input rounded-md bg-background text-sm"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      const file = await open({
-                        multiple: false,
-                        filters: [
-                          { name: "Executable Files", extensions: ["exe"] },
-                        ],
-                      });
-                      if (file) {
-                        setXanPath(file);
-                      }
-                    }}
-                  >
-                    Browse
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Specify the path to xan.exe. Leave empty to auto-detect.
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
                   Default Delimiter
                 </label>
                 <select
@@ -1012,13 +1016,6 @@ function App() {
                     setIsSavingSettings(true);
                     try {
                       const savePromises: Promise<void>[] = [];
-
-                      if (xanPath) {
-                        savePromises.push(
-                          invoke("set_xan_path", { path: xanPath })
-                            .then(() => checkXanInstallation())
-                        );
-                      }
 
                       savePromises.push(
                         invoke("set_default_delimiter", { delimiter: defaultDelimiter })
