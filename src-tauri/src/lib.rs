@@ -468,46 +468,13 @@ fn save_config(config: &AppConfig) -> Result<(), String> {
 }
 
 fn find_xan_executable() -> Option<String> {
-    // First, check if user has configured a custom path
+    // Only check user configured path, no automatic searching
     let config = load_config();
     if let Some(ref xan_path) = config.xan_path {
         if Path::new(xan_path).exists() {
             return Some(xan_path.clone());
         } else {
             eprintln!("Configured xan path does not exist: {}", xan_path);
-        }
-    }
-
-    let mut paths = vec![];
-
-    // Add current working directory
-    if let Ok(cwd) = std::env::current_dir() {
-        let xan_in_cwd = cwd.join("xan.exe");
-        paths.push(xan_in_cwd.to_string_lossy().to_string());
-    }
-
-    // Add relative paths
-    paths.push("xan.exe".to_string());
-    paths.push("xan".to_string());
-
-    // Add user's cargo bin directory if available
-    if let Some(home) = dirs::home_dir() {
-        let cargo_bin = home.join(".cargo").join("bin").join("xan.exe");
-        paths.push(cargo_bin.to_string_lossy().to_string());
-    }
-
-    // Add the directory where the current executable is located
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(exe_dir) = exe_path.parent() {
-            let xan_in_exe_dir = exe_dir.join("xan.exe");
-            paths.push(xan_in_exe_dir.to_string_lossy().to_string());
-        }
-    }
-
-    // Check all paths
-    for path in paths {
-        if Path::new(&path).exists() {
-            return Some(path);
         }
     }
 
@@ -523,8 +490,9 @@ async fn check_xan_installed() -> bool {
 async fn get_xan_version() -> Result<String, String> {
     let xan_path = find_xan_executable().ok_or("xan executable not found")?;
 
-    let mut command = Command::new(&xan_path);
+    let mut command = tokio::process::Command::new(&xan_path);
     command.arg("--version");
+    command.kill_on_drop(true);
 
     #[cfg(target_os = "windows")]
     {
@@ -533,12 +501,15 @@ async fn get_xan_version() -> Result<String, String> {
 
     let output = command
         .output()
+        .await
         .map_err(|e| format!("Failed to execute xan: {}", e))?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
-        Err(String::from_utf8_lossy(&output.stderr).to_string())
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let code = output.status.code().unwrap_or(-1);
+        Err(format!("xan --version failed with exit code {}: {}", code, stderr))
     }
 }
 
@@ -617,9 +588,13 @@ async fn get_xan_help(command_name: String) -> Result<String, String> {
 
 #[tauri::command]
 async fn set_window_title(window: tauri::Window, title: String) -> Result<(), String> {
-    window
-        .set_title(&title)
-        .map_err(|e| format!("Failed to set window title: {}", e))
+    match window.set_title(&title) {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            eprintln!("Warning: Failed to set window title (window may not be ready yet): {}", e);
+            Ok(())
+        }
+    }
 }
 
 #[tauri::command]
