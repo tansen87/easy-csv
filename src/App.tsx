@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "@/components/ThemeProvider";
 import { ToastContainer, ToastType } from "@/components/Toast";
-import { ThemeTransition } from "@/components/ThemeTransition";
 import {
   Settings,
   X,
@@ -65,11 +64,6 @@ function App() {
   const [noQuoting, setNoQuoting] = useState<boolean>(false);
   const [noHeaders, setNoHeaders] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
-  const [themeTransition, setThemeTransition] = useState<{
-    x: number;
-    y: number;
-    active: boolean;
-  }>({ x: 0, y: 0, active: false });
   const [showHelp, setShowHelp] = useState<boolean>(false);
   const [helpContent, setHelpContent] = useState<string>("");
   const [helpCommandName, setHelpCommandName] = useState<string>("");
@@ -508,7 +502,6 @@ function App() {
             setResultData(null);
           }
         } else {
-          addLog("success", "Pipeline executed successfully.");
           setResultData(null);
         }
       } else {
@@ -631,36 +624,18 @@ function App() {
     }
   };
 
-  const handleThemeToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = rect.left + rect.width / 2;
-    const y = rect.top + rect.height / 2;
-
-    setThemeTransition({ x, y, active: true });
-
-    setTimeout(() => {
-      let currentTheme = theme;
-      if (theme === "system") {
-        currentTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light";
-      }
-      setTheme(currentTheme === "dark" ? "light" : "dark");
-    }, 300);
-
-    setTimeout(() => {
-      setThemeTransition((prev) => ({ ...prev, active: false }));
-    }, 700);
+  const handleThemeToggle = () => {
+    let currentTheme = theme;
+    if (theme === "system") {
+      currentTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+    }
+    setTheme(currentTheme === "dark" ? "light" : "dark");
   };
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20 relative overflow-hidden">
-      <ThemeTransition
-        isActive={themeTransition.active}
-        x={themeTransition.x}
-        y={themeTransition.y}
-        theme={theme}
-      />
       <header className="h-14 border-b bg-card/80 backdrop-blur-sm shadow-sm flex items-center justify-between px-4 gap-4 relative z-10">
         {/* Left: Command/History Toggle + Search */}
         <div className="flex items-center gap-2">
