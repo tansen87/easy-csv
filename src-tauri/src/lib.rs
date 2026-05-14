@@ -15,6 +15,7 @@ pub struct AppConfig {
     pub xan_path: Option<String>,
     pub default_delimiter: Option<String>,
     pub no_quoting: Option<bool>,
+    pub no_headers: Option<bool>,
 }
 
 impl Default for AppConfig {
@@ -23,6 +24,7 @@ impl Default for AppConfig {
             xan_path: None,
             default_delimiter: None,
             no_quoting: None,
+            no_headers: None,
         }
     }
 }
@@ -103,13 +105,19 @@ async fn execute_xan_pipeline(
 
     let config = load_config();
     let no_quoting_enabled = config.no_quoting.unwrap_or(false);
+    let no_headers_enabled = config.no_headers.unwrap_or(false);
 
     let mut cmd_args_list = Vec::new();
     for (i, cmd) in commands.iter().enumerate() {
         let mut args = vec![cmd.name.clone()];
 
-        if cmd.name == "input" && no_quoting_enabled {
-            args.push("--no-quoting".to_string());
+        if i == 0 {
+            if no_quoting_enabled {
+                args.push("--no-quoting".to_string());
+            }
+            if no_headers_enabled {
+                args.push("--no-headers".to_string());
+            }
         }
 
         let supports_delimiter = !matches!(cmd.name.as_str(), "from" | "range" | "eval");
@@ -557,12 +565,26 @@ async fn set_no_quoting(no_quoting: bool) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn get_no_headers() -> Option<bool> {
+    let config = load_config();
+    config.no_headers
+}
+
+#[tauri::command]
+async fn set_no_headers(no_headers: bool) -> Result<(), String> {
+    let mut config = load_config();
+    config.no_headers = Some(no_headers);
+    save_config(&config)
+}
+
+#[tauri::command]
 async fn get_xan_help(command_name: String) -> Result<String, String> {
     let xan_path = find_xan_executable().ok_or("xan executable not found")?;
 
-    let mut command = Command::new(&xan_path);
+    let mut command = tokio::process::Command::new(&xan_path);
     command.arg(&command_name);
     command.arg("--help");
+    command.kill_on_drop(true);
 
     #[cfg(target_os = "windows")]
     {
@@ -571,12 +593,12 @@ async fn get_xan_help(command_name: String) -> Result<String, String> {
 
     let output = command
         .output()
+        .await
         .map_err(|e| format!("Failed to execute xan {} --help: {}", command_name, e))?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
-        // If the command fails, still return stderr as it might contain helpful info
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
         if !stderr.is_empty() {
             Ok(stderr)
@@ -646,6 +668,8 @@ pub fn run() {
             set_default_delimiter,
             get_no_quoting,
             set_no_quoting,
+            get_no_headers,
+            set_no_headers,
             get_xan_help,
             save_history,
             load_history,

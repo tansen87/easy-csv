@@ -61,6 +61,7 @@ function App() {
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(",");
   const [_xanPath, setXanPath] = useState<string>("");
   const [noQuoting, setNoQuoting] = useState<boolean>(false);
+  const [noHeaders, setNoHeaders] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [themeTransition, setThemeTransition] = useState<{
     x: number;
@@ -188,6 +189,17 @@ function App() {
     }
   };
 
+  const loadNoHeaders = async () => {
+    try {
+      const savedNoHeaders = await invoke<boolean | null>("get_no_headers");
+      if (savedNoHeaders !== null) {
+        setNoHeaders(savedNoHeaders);
+      }
+    } catch (error) {
+      showToastRef.current(`Failed to load no headers setting: ${error}`, 'error');
+    }
+  };
+
   const checkXanInstallation = async () => {
     try {
       const installed = await invoke<boolean>("check_xan_installed");
@@ -218,6 +230,7 @@ function App() {
     loadXanPath();
     loadDefaultDelimiter();
     loadNoQuoting();
+    loadNoHeaders();
     loadHistoricalPipelines();
   }, []);
 
@@ -1003,6 +1016,20 @@ function App() {
                   Disable quoting completely for input command
                 </p>
               </div>
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={noHeaders}
+                    onChange={(e) => setNoHeaders(e.target.checked)}
+                    className="w-4 h-4 rounded border-input"
+                  />
+                  <span className="text-sm font-medium">No Headers</span>
+                </label>
+                <p className="text-xs text-muted-foreground mt-1 ml-6">
+                  Indicate that input file has no headers
+                </p>
+              </div>
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
@@ -1022,6 +1049,9 @@ function App() {
                       );
                       savePromises.push(
                         invoke("set_no_quoting", { noQuoting })
+                      );
+                      savePromises.push(
+                        invoke("set_no_headers", { noHeaders })
                       );
 
                       await Promise.all(savePromises);
