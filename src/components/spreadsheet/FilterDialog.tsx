@@ -150,22 +150,22 @@ export function FilterDialog({
 
         switch (numberOperator) {
           case "equals":
-            expression = `${columnName} == ${numberValue}`;
+            expression = `col("${columnName}") == ${numberValue}`;
             break;
           case "not_equals":
-            expression = `${columnName} != ${numberValue}`;
+            expression = `col("${columnName}") != ${numberValue}`;
             break;
           case "greater_than":
-            expression = `${columnName} > ${numberValue}`;
+            expression = `col("${columnName}") > ${numberValue}`;
             break;
           case "greater_or_equal":
-            expression = `${columnName} >= ${numberValue}`;
+            expression = `col("${columnName}") >= ${numberValue}`;
             break;
           case "less_than":
-            expression = `${columnName} < ${numberValue}`;
+            expression = `col("${columnName}") < ${numberValue}`;
             break;
           case "less_or_equal":
-            expression = `${columnName} <= ${numberValue}`;
+            expression = `col("${columnName}") <= ${numberValue}`;
             break;
         }
 
