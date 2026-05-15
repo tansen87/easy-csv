@@ -309,7 +309,7 @@ export function FilterDialog({
         )}
       </div>
 
-      <div className="px-3 pb-3 flex gap-2">
+      <div className="px-3 pb-2 flex gap-2">
         <button
           className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
           onClick={onClose}

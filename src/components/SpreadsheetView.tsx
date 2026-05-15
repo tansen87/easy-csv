@@ -628,6 +628,7 @@ export function SpreadsheetView({
     if (mapCommand) {
       const columnName = headers[col];
       const expressionMap: Record<string, string> = {
+        len: `col("${columnName}").len() as "${columnName}"`,
         lower: `col("${columnName}").lower() as "${columnName}"`,
         upper: `col("${columnName}").upper() as "${columnName}"`,
         trim: `col("${columnName}").trim() as "${columnName}"`,
@@ -651,12 +652,12 @@ export function SpreadsheetView({
     if (mapCommand) {
       const columnName = headers[col];
       const expressionMap: Record<string, string> = {
-        abs: `abs(col("${columnName}")) as "${columnName}"`,
-        floor: `floor(col("${columnName}")) as "${columnName}"`,
-        ceil: `ceil(col("${columnName}")) as "${columnName}"`,
-        numfmt: `numfmt(col("${columnName}")) as "${columnName}"`,
-        int: `trunc(col("${columnName}")) as "${columnName}"`,
-        float: `float(col("${columnName}")) as "${columnName}"`,
+        abs: `abs(col("${columnName}") || 0) as "${columnName}"`,
+        floor: `floor(col("${columnName}") || 0) as "${columnName}"`,
+        ceil: `ceil(col("${columnName}") || 0) as "${columnName}"`,
+        int: `trunc(col("${columnName}") || 0) as "${columnName}"`,
+        float: `float(col("${columnName}") || 0) as "${columnName}"`,
+        round: `to_fixed(round(col("${columnName}") || 0, 0.01), 2) as "${columnName}"`,
       };
       const expression = expressionMap[transformType];
       if (expression) {

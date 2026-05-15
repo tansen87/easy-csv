@@ -311,7 +311,7 @@ export function PivotDialog({
         </div>
       </ScrollArea>
 
-      <div className="flex gap-2 p-3 border-t bg-muted/20 shrink-0">
+      <div className="flex gap-2 p-2 ml-1 mr-1 bg-muted/20 shrink-0">
         <button
           className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors hover:bg-accent"
           onClick={onClose}

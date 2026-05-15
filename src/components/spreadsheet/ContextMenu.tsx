@@ -29,6 +29,8 @@ import {
   DecimalsArrowLeft,
   DecimalsArrowRight,
   Ruler,
+  RulerDimensionLine,
+  Infinity,
 } from "lucide-react";
 
 interface ContextMenuState {
@@ -85,6 +87,7 @@ export function ContextMenu({
   ];
 
   const textTransformOptions = [
+    { label: "Len", icon: RulerDimensionLine, transformType: "len" },
     { label: "Lowercase", icon: CaseLower, transformType: "lower" },
     { label: "Uppercase", icon: CaseUpper, transformType: "upper" },
     { label: "Trim", icon: AlignCenter, transformType: "trim" },
@@ -100,9 +103,9 @@ export function ContextMenu({
     { label: "Abs", icon: Ruler, transformType: "abs" },
     { label: "Floor", icon: ArrowDown, transformType: "floor" },
     { label: "Ceil", icon: ArrowUp, transformType: "ceil" },
-    { label: "Format Number", icon: Hash, transformType: "numfmt" },
-    { label: "To Integer", icon: DecimalsArrowLeft, transformType: "int" },
-    { label: "To Float", icon: DecimalsArrowRight, transformType: "float" },
+    { label: "Integer", icon: DecimalsArrowLeft, transformType: "int" },
+    { label: "Float", icon: Infinity, transformType: "float" },
+    { label: "Round", icon: DecimalsArrowRight, transformType: "round" },
   ];
 
   return (
