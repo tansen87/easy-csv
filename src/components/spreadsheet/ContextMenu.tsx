@@ -30,6 +30,7 @@ import {
   Ruler,
   RulerDimensionLine,
   Infinity,
+  Replace,
 } from "lucide-react";
 
 interface ContextMenuState {
@@ -46,6 +47,7 @@ interface ContextMenuProps {
   onOpenPivotDialog: (x: number, y: number) => void;
   onOpenDateTransformDialog: (col: number, x: number, y: number) => void;
   onOpenSliceDialog: (col: number, x: number, y: number, sliceType?: string) => void;
+  onOpenReplaceDialog: (col: number, x: number, y: number) => void;
   onSort: (col: number, order: "asc" | "desc", numeric: boolean) => void;
   onDedup: (col: number) => void;
   onTranspose: (col: number) => void;
@@ -61,6 +63,7 @@ export function ContextMenu({
   onOpenPivotDialog,
   onOpenDateTransformDialog,
   onOpenSliceDialog,
+  onOpenReplaceDialog,
   onSort,
   onDedup,
   onTranspose,
@@ -123,6 +126,18 @@ export function ContextMenu({
       >
         <Filter className="h-4 w-4 text-muted-foreground" />
         Filter
+      </button>
+
+      <button
+        className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+          onOpenReplaceDialog(contextMenu.col, contextMenu.x, contextMenu.y);
+        }}
+      >
+        <Replace className="h-4 w-4 text-muted-foreground" />
+        Replace
       </button>
 
       <button

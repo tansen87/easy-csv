@@ -28,6 +28,7 @@ import { SortDialog } from "./spreadsheet/SortDialog";
 import { PivotDialog } from "./spreadsheet/PivotDialog";
 import { DateTransformDialog } from "./spreadsheet/DateTransformDialog";
 import { SplitDialog } from "./spreadsheet/SplitDialog";
+import { ReplaceDialog } from "./spreadsheet/ReplaceDialog";
 
 interface SpreadsheetViewProps {
   tabs: PipelineTab[];
@@ -335,6 +336,7 @@ export function SpreadsheetView({
   const [sortDialog, setSortDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [operationDialog, setOperationDialog] = useState<{ col: number; x: number; y: number; columnName: string } | null>(null);
   const [pivotDialog, setPivotDialog] = useState<{ x: number; y: number } | null>(null);
+  const [replaceDialog, setReplaceDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [dateTransformDialog, setDateTransformDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [splitDialog, setSplitDialog] = useState<{ col: number; x: number; y: number; sliceType?: string } | null>(null);
   const [renamedColumns, setRenamedColumns] = useState<Record<string, string>>({});
@@ -1044,6 +1046,7 @@ export function SpreadsheetView({
           onOpenPivotDialog={(x, y) => setPivotDialog({ x, y })}
           onOpenDateTransformDialog={(col, x, y) => setDateTransformDialog({ col, x, y })}
           onOpenSliceDialog={(col, x, y, sliceType) => setSplitDialog({ col, x, y, sliceType })}
+          onOpenReplaceDialog={(col, x, y) => setReplaceDialog({ col, x, y })}
           onSort={handleQuickSort}
           onDedup={handleContextMenuDedup}
           onTranspose={handleContextMenuTranspose}
@@ -1105,6 +1108,15 @@ export function SpreadsheetView({
           headers={headers}
           onAddCommand={onAddCommand}
           onClose={closeSplitDialog}
+        />
+      )}
+
+      {replaceDialog && (
+        <ReplaceDialog
+          replaceDialog={replaceDialog}
+          headers={headers}
+          onAddCommand={onAddCommand}
+          onClose={() => setReplaceDialog(null)}
         />
       )}
 

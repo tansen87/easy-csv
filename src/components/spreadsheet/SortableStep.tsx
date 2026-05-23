@@ -46,6 +46,19 @@ const getInitialParams = (cmdId: string, step: PipelineStep, headers: string[]):
         limit: step.parameters.limit || undefined,
         threads: step.parameters.threads || undefined,
         output: step.parameters.output || '',
+        replace: step.parameters.replace || '',
+        'add-pattern': step.parameters['add-pattern'] || '',
+        'unique-matches': step.parameters['unique-matches'] || '',
+        sep: step.parameters.sep || '',
+        patterns: step.parameters.patterns || '',
+        'pattern-column': step.parameters['pattern-column'] || '',
+        'replacement-column': step.parameters['replacement-column'] || '',
+        'name-column': step.parameters['name-column'] || '',
+        overlapping: step.parameters.overlapping || false,
+        left: step.parameters.left || false,
+        breakdown: step.parameters.breakdown || false,
+        levenshtein: step.parameters.levenshtein || undefined,
+        'damerau-levenshtein': step.parameters['damerau-levenshtein'] || undefined,
       };
     case 'filter':
       return {

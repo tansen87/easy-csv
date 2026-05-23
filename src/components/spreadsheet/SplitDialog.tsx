@@ -22,7 +22,7 @@ interface SplitDialogProps {
 const SPLIT_SEPARATORS = [
   { label: "Custom", value: "custom" },
   { label: "Space", value: " " },
-  { label: "Tab", value: "\\t" },
+  { label: "Tab (\\t)", value: "\\t" },
   { label: "Comma (,)", value: "," },
   { label: "Semicolon (;)", value: ";" },
   { label: "Pipe (|)", value: "|" },
@@ -110,7 +110,7 @@ function SearchableSelect({
         </button>
       </div>
       {isOpen && (
-        <div className="absolute z-50 w-[308px] border rounded bg-background shadow-lg">
+        <div className="absolute z-50 w-[314px] border rounded bg-background shadow-lg">
           <ScrollArea className="h-36">
             <div className="p-1">
               {filteredOptions.length > 0 ? (
@@ -291,7 +291,7 @@ export function SplitDialog({
               </button>
             </div>
             {isColumnOpen && (
-              <div className="absolute z-50 w-[308px] border rounded bg-background shadow-lg">
+              <div className="absolute z-50 w-[314px] border rounded bg-background shadow-lg">
                 <ScrollArea className="h-24">
                   <div className="p-1">
                     {filteredHeaders.length > 0 ? (
