@@ -105,20 +105,13 @@ export function PivotDialog({
   const handleApply = () => {
     if (valueColumns.length === 0) return;
 
-    const wrapColumn = (col: string) => {
-      if (/[\s,"'()`\\]/.test(col)) {
-        return `"${col}"`;
-      }
-      return col;
-    };
-
     const columnsExpr = valueColumns
       .map((vc) => {
-        const wrappedCol = wrapColumn(vc.column);
+        const col = `"${vc.column}"`;
         if (vc.aggregation === "count") {
-          return `count(${wrappedCol}) as ${wrappedCol}`;
+          return `count(col(${col})) as ${col}`;
         }
-        return `${vc.aggregation}(${wrappedCol}) as ${wrappedCol}`;
+        return `${vc.aggregation}(col(${col})) as ${col}`;
       })
       .join(",");
 
@@ -134,7 +127,7 @@ export function PivotDialog({
       const groupbyCommand = xanCommands.find((cmd) => cmd.id === "groupby");
       if (groupbyCommand) {
         onAddCommand(groupbyCommand, {
-          columns: selectedGroupBy.map(wrapColumn).join(","),
+          columns: selectedGroupBy.map((col) => `"${col}"`).join(","),
           expression: columnsExpr,
           output: "",
         });
@@ -143,9 +136,9 @@ export function PivotDialog({
       const pivotCommand = xanCommands.find((cmd) => cmd.id === "pivot");
       if (pivotCommand) {
         onAddCommand(pivotCommand, {
-          columns: selectedColumns.map(wrapColumn).join(","),
+          columns: selectedColumns.map((col) => `"${col}"`).join(","),
           expr: columnsExpr,
-          groupby: selectedGroupBy.length > 0 ? selectedGroupBy.map(wrapColumn).join(",") : undefined,
+          groupby: selectedGroupBy.length > 0 ? selectedGroupBy.map((col) => `"${col}"`).join(",") : undefined,
           "column-sep": columnSep || "_",
           output: "",
         });
