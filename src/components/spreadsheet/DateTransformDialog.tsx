@@ -135,7 +135,7 @@ function SearchableSelect({
         </button>
       </div>
       {isOpen && (
-        <div className="absolute z-50 w-[308px] border rounded bg-background shadow-lg">
+        <div className="absolute z-50 w-[314px] border rounded bg-background shadow-lg">
           <ScrollArea className="h-36">
             <div className="p-1">
               {filteredOptions.length > 0 ? (
@@ -261,7 +261,7 @@ export function DateTransformDialog({
             </button>
           </div>
           {isColumnOpen && (
-            <div className="absolute z-50 w-[308px] max-h-24 overflow-y-auto border rounded bg-background shadow-lg">
+            <div className="absolute z-50 w-[314px] max-h-24 overflow-y-auto border rounded bg-background shadow-lg">
               {filteredHeaders.length > 0 ? (
                 filteredHeaders.map((header) => (
                   <button

@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { X } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { X, ChevronDown } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 
@@ -64,6 +65,105 @@ const numberOperators: { value: NumberOperator; label: string }[] = [
   { value: "less_than", label: "Less than" },
   { value: "less_or_equal", label: "Less or equal" },
 ];
+
+interface SearchableSelectProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { label: string; value: string }[];
+  placeholder?: string;
+}
+
+function SearchableSelect({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder = "Search or select...",
+}: SearchableSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const filteredOptions = searchValue
+    ? options.filter(opt => opt.label.toLowerCase().includes(searchValue.toLowerCase()))
+    : options;
+
+  const selectedOption = options.find(opt => opt.value === value);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+        setSearchValue("");
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchValue(e.target.value);
+    setIsOpen(true);
+  };
+
+  const handleSelect = (optValue: string) => {
+    onChange(optValue);
+    setIsOpen(false);
+    setSearchValue("");
+  };
+
+  return (
+    <div className="space-y-1" ref={dropdownRef}>
+      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          type="text"
+          value={isOpen ? searchValue : (selectedOption?.label || "")}
+          onChange={handleInputChange}
+          onFocus={() => setIsOpen(true)}
+          placeholder={placeholder}
+          className="w-full h-8 px-2 pr-8 text-xs border rounded bg-background"
+        />
+        <button
+          onClick={() => {
+            setIsOpen(!isOpen);
+            if (!isOpen) setSearchValue("");
+          }}
+          className="absolute right-1 top-1/2 -translate-y-1/2 p-1 hover:bg-accent rounded transition-colors">
+          <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        </button>
+      </div>
+      {isOpen && (
+        <div className="absolute z-50 w-[214px] border rounded bg-background shadow-lg">
+          <ScrollArea className="h-36">
+            <div className="p-1">
+              {filteredOptions.length > 0 ? (
+                filteredOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleSelect(opt.value)}
+                    className="w-full px-2 py-1.5 text-xs text-left hover:bg-accent transition-colors truncate"
+                  >
+                    {opt.label}
+                  </button>
+                ))
+              ) : (
+                <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                  No options found
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function FilterDialog({
   filterDialog,
@@ -225,22 +325,13 @@ export function FilterDialog({
 
         {filterType === "text" && (
           <>
-            <div>
-              <label className="text-[10px] font-medium text-muted-foreground">
-                Operator
-              </label>
-              <select
-                value={textOperator}
-                onChange={(e) => setTextOperator(e.target.value as TextOperator)}
-                className="w-full h-7 px-1.5 text-xs border rounded bg-background"
-              >
-                {textOperators.map((op) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SearchableSelect
+              label="Operator"
+              value={textOperator}
+              onChange={(v) => setTextOperator(v as TextOperator)}
+              options={textOperators}
+              placeholder="Search operator..."
+            />
 
             {textOperator !== "is_null" && textOperator !== "is_not_null" && (
               <>
@@ -276,22 +367,13 @@ export function FilterDialog({
 
         {filterType === "number" && (
           <>
-            <div>
-              <label className="text-[10px] font-medium text-muted-foreground">
-                Operator
-              </label>
-              <select
-                value={numberOperator}
-                onChange={(e) => setNumberOperator(e.target.value as NumberOperator)}
-                className="w-full h-7 px-1.5 text-xs border rounded bg-background"
-              >
-                {numberOperators.map((op) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SearchableSelect
+              label="Operator"
+              value={numberOperator}
+              onChange={(v) => setNumberOperator(v as NumberOperator)}
+              options={numberOperators}
+              placeholder="Search operator..."
+            />
 
             <div>
               <label className="text-[10px] font-medium text-muted-foreground">

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { X, Plus, Trash2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { X, Plus, Trash2, ChevronDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
@@ -30,6 +30,105 @@ const aggregationTypes: { value: AggregationType; label: string }[] = [
   { value: "first", label: "First" },
   { value: "last", label: "Last" },
 ];
+
+interface SearchableSelectProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { label: string; value: string }[];
+  placeholder?: string;
+}
+
+function SearchableSelect({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder = "Search or select...",
+}: SearchableSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const filteredOptions = searchValue
+    ? options.filter(opt => opt.label.toLowerCase().includes(searchValue.toLowerCase()))
+    : options;
+
+  const selectedOption = options.find(opt => opt.value === value);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+        setSearchValue("");
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchValue(e.target.value);
+    setIsOpen(true);
+  };
+
+  const handleSelect = (optValue: string) => {
+    onChange(optValue);
+    setIsOpen(false);
+    setSearchValue("");
+  };
+
+  return (
+    <div className="space-y-1" ref={dropdownRef}>
+      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          type="text"
+          value={isOpen ? searchValue : (selectedOption?.label || "")}
+          onChange={handleInputChange}
+          onFocus={() => setIsOpen(true)}
+          placeholder={placeholder}
+          className="w-full h-8 px-2 pr-8 text-xs border rounded bg-background"
+        />
+        <button
+          onClick={() => {
+            setIsOpen(!isOpen);
+            if (!isOpen) setSearchValue("");
+          }}
+          className="absolute right-1 top-1/2 -translate-y-1/2 p-1 hover:bg-accent rounded transition-colors">
+          <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        </button>
+      </div>
+      {isOpen && (
+        <div className="absolute z-50 w-full border rounded bg-background shadow-lg">
+          <ScrollArea className="h-36">
+            <div className="p-1">
+              {filteredOptions.length > 0 ? (
+                filteredOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleSelect(opt.value)}
+                    className="w-full px-2 py-1.5 text-xs text-left hover:bg-accent transition-colors truncate"
+                  >
+                    {opt.label}
+                  </button>
+                ))
+              ) : (
+                <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                  No options found
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface ValueColumn {
   column: string;
@@ -251,32 +350,24 @@ export function PivotDialog({
             ) : (
               valueColumns.map((vc, index) => (
                 <div key={index} className="flex items-center gap-1">
-                  <select
-                    value={vc.column}
-                    onChange={(e) =>
-                      updateValueColumn(index, "column", e.target.value)
-                    }
-                    className="flex-1 h-7 px-1.5 text-[10px] border rounded bg-background"
-                  >
-                    {availableForValues.map((h) => (
-                      <option key={h} value={h}>
-                        {h}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={vc.aggregation}
-                    onChange={(e) =>
-                      updateValueColumn(index, "aggregation", e.target.value)
-                    }
-                    className="w-24 h-7 px-1.5 text-[10px] border rounded bg-background"
-                  >
-                    {aggregationTypes.map((agg) => (
-                      <option key={agg.value} value={agg.value}>
-                        {agg.label}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative flex-1">
+                    <SearchableSelect
+                      value={vc.column}
+                      onChange={(v) => updateValueColumn(index, "column", v)}
+                      options={availableForValues.map((h) => ({ label: h, value: h }))}
+                      placeholder="Select column..."
+                      label={""}
+                    />
+                  </div>
+                  <div className="relative w-24">
+                    <SearchableSelect
+                      value={vc.aggregation}
+                      onChange={(v) => updateValueColumn(index, "aggregation", v)}
+                      options={aggregationTypes}
+                      placeholder="Agg..."
+                      label={""}
+                    />
+                  </div>
                   <button
                     onClick={() => removeValueColumn(index)}
                     className="p-0.5 hover:bg-accent rounded transition-colors shrink-0"
