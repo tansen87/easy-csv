@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { X, ChevronDown, Plus } from "lucide-react";
+import { X, Plus, ChevronDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 interface SplitDialogState {
   col: number;
@@ -38,103 +39,6 @@ const SLICE_TYPES = [
   { label: "Slice", value: "slice" },
   { label: "Split", value: "split" },
 ];
-
-function SearchableSelect({
-  label,
-  value,
-  onChange,
-  options,
-  placeholder = "Search or select...",
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: { label: string; value: string }[];
-  placeholder?: string;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const filteredOptions = searchValue
-    ? options.filter(opt => opt.label.toLowerCase().includes(searchValue.toLowerCase()))
-    : options;
-
-  const selectedOption = options.find(opt => opt.value === value);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-        setSearchValue("");
-      }
-    };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [isOpen]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchValue(e.target.value);
-    setIsOpen(true);
-  };
-
-  const handleSelect = (optValue: string) => {
-    onChange(optValue);
-    setIsOpen(false);
-    setSearchValue("");
-  };
-
-  return (
-    <div className="relative space-y-1" ref={dropdownRef}>
-      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
-        {label}
-      </label>
-      <div className="relative">
-        <input
-          type="text"
-          value={isOpen ? searchValue : (selectedOption?.label || "")}
-          onChange={handleInputChange}
-          onFocus={() => setIsOpen(true)}
-          placeholder={placeholder}
-          className="w-full h-8 px-2 pr-8 text-xs border rounded bg-background"
-        />
-        <button
-          onClick={() => {
-            setIsOpen(!isOpen);
-            if (!isOpen) setSearchValue("");
-          }}
-          className="absolute right-1 top-1/2 -translate-y-1/2 p-1 hover:bg-accent rounded transition-colors">
-          <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
-        </button>
-      </div>
-      {isOpen && (
-        <div className="absolute z-50 w-[314px] border rounded bg-background shadow-lg">
-          <ScrollArea className="h-36">
-            <div className="p-1">
-              {filteredOptions.length > 0 ? (
-                filteredOptions.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => handleSelect(opt.value)}
-                    className="w-full px-2 py-1.5 text-xs text-left hover:bg-accent transition-colors truncate"
-                  >
-                    {opt.label}
-                  </button>
-                ))
-              ) : (
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                  No options found
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function SplitDialog({
   splitDialog,
@@ -315,13 +219,17 @@ export function SplitDialog({
             )}
           </div>
 
-          <SearchableSelect
-            label="Operation Type"
-            value={sliceType}
-            onChange={setSliceType}
-            options={SLICE_TYPES}
-            placeholder="Select operation..."
-          />
+          <div className="space-y-1">
+            <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+              Operation Type
+            </label>
+            <SearchableSelect
+              value={sliceType}
+              onChange={setSliceType}
+              options={SLICE_TYPES}
+              placeholder="Select operation..."
+            />
+          </div>
 
           {sliceType === "left" && (
             <div className="space-y-1">
@@ -384,13 +292,17 @@ export function SplitDialog({
 
           {sliceType === "split" && (
             <>
-              <SearchableSelect
-                label="Separator"
-                value={separator}
-                onChange={setSeparator}
-                options={SPLIT_SEPARATORS}
-                placeholder="Select separator..."
-              />
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+                  Separator
+                </label>
+                <SearchableSelect
+                  value={separator}
+                  onChange={setSeparator}
+                  options={SPLIT_SEPARATORS}
+                  placeholder="Select separator..."
+                />
+              </div>
 
               {separator === "custom" && (
                 <div className="space-y-1">

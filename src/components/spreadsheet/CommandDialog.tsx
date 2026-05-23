@@ -1,100 +1,10 @@
-import { useState, useRef, useEffect } from "react";
-import { X, ChevronDown } from "lucide-react";
+import { useState, useRef } from "react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
-
-function SearchableSelect({
-  value,
-  onChange,
-  options,
-  placeholder = "Search or select...",
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  options: { label: string; value: string }[];
-  placeholder?: string;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const filteredOptions = searchValue
-    ? options.filter(opt => opt.label.toLowerCase().includes(searchValue.toLowerCase()))
-    : options;
-
-  const selectedOption = options.find(opt => opt.value === value);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-        setSearchValue("");
-      }
-    };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [isOpen]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchValue(e.target.value);
-    setIsOpen(true);
-  };
-
-  const handleSelect = (optValue: string) => {
-    onChange(optValue);
-    setIsOpen(false);
-    setSearchValue("");
-  };
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <input
-        type="text"
-        value={isOpen ? searchValue : (selectedOption?.label || "")}
-        onChange={handleInputChange}
-        onFocus={() => setIsOpen(true)}
-        placeholder={placeholder}
-        className="w-full h-10 px-3 text-sm border rounded-md bg-background pr-8"
-      />
-      <button
-        onClick={() => {
-          setIsOpen(!isOpen);
-          if (!isOpen) setSearchValue("");
-        }}
-        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-accent rounded transition-colors"
-      >
-        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
-      </button>
-      {isOpen && (
-        <div className="absolute z-50 w-full border rounded bg-background shadow-lg mt-1">
-          <ScrollArea className="h-36">
-            <div className="p-1">
-              {filteredOptions.length > 0 ? (
-                filteredOptions.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => handleSelect(opt.value)}
-                    className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent transition-colors truncate"
-                  >
-                    {opt.label}
-                  </button>
-                ))
-              ) : (
-                <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                  No options found
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-      )}
-    </div>
-  );
-}
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 export type CommandDialogType =
   | "search"
@@ -299,6 +209,7 @@ export function CommandDialog({
                       })}
                       options={headers.map((header) => ({ label: header, value: header }))}
                       placeholder="Search or select column..."
+                      size="md"
                     />
                   </div>
                   <div className="space-y-2">
