@@ -67,6 +67,7 @@ function App() {
   const [showHelp, setShowHelp] = useState<boolean>(false);
   const [helpContent, setHelpContent] = useState<string>("");
   const [helpCommandName, setHelpCommandName] = useState<string>("");
+  const [isHelpLoading, setIsHelpLoading] = useState<boolean>(false);
   const [showExecuteDropdown, setShowExecuteDropdown] = useState<boolean>(false);
   const [executeTarget, setExecuteTarget] = useState<"logs" | "result">("result");
   const [historicalPipelines, setHistoricalPipelines] = useState<
@@ -377,15 +378,18 @@ function App() {
   };
 
   const handleHelpClick = async (command: XanCommand) => {
+    setShowHelp(true);
+    setIsHelpLoading(true);
     try {
       const helpText = await invoke<string>("get_xan_help", {
         commandName: command.name,
       });
       setHelpContent(helpText);
       setHelpCommandName(command.name);
-      setShowHelp(true);
     } catch (error) {
       addLog("error", `Failed to get help for ${command.name}: ${error}`);
+    } finally {
+      setIsHelpLoading(false);
     }
   };
 
@@ -1140,11 +1144,17 @@ function App() {
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <ScrollArea className="flex-1 h-0">
-              <pre className="text-sm font-mono whitespace-pre-wrap bg-muted/30 p-4 rounded-lg border">
-                {helpContent}
-              </pre>
-            </ScrollArea>
+            {isHelpLoading ? (
+              <div className="flex-1 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <ScrollArea className="flex-1 h-0">
+                <pre className="text-sm font-mono whitespace-pre-wrap bg-muted/30 p-4 rounded-lg border">
+                  {helpContent}
+                </pre>
+              </ScrollArea>
+            )}
           </div>
         </div>
       )}
