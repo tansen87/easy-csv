@@ -343,7 +343,6 @@ export function SpreadsheetView({
   const tableRef = useRef<HTMLTableElement>(null);
 
   const {
-    selectedCells,
     selectedCellMap,
     selectedRows,
     selectedCols,
@@ -424,9 +423,9 @@ export function SpreadsheetView({
   const handleResizeEnd = useCallback(() => {
     if (resizingCol !== null) {
       setResizingCol(null);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
     }
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
   }, [resizingCol]);
 
   const handleContextMenu = useCallback(
@@ -496,48 +495,6 @@ export function SpreadsheetView({
       });
     }
   }, [headers, onAddCommand]);
-
-  const handleCopySelection = useCallback(() => {
-    if (selectedCells.length === 0) return;
-
-    const selectedRowIndices = selectedCells.map(cell => cell.row);
-    const hasDataSelected = selectedRowIndices.some(row => row !== -1);
-    const hasHeaderSelected = selectedRowIndices.some(row => row === -1);
-
-    const minCol = Math.min(...selectedCells.map(cell => cell.col));
-    const maxCol = Math.max(...selectedCells.map(cell => cell.col));
-
-    const copyContent: string[] = [];
-
-    if (hasHeaderSelected) {
-      const headerRow: string[] = [];
-      for (let c = minCol; c <= maxCol; c++) {
-        headerRow.push(headers[c] || '');
-      }
-      copyContent.push(headerRow.join('\t'));
-    }
-
-    if (hasDataSelected) {
-      const dataRows = selectedRowIndices.filter(row => row !== -1);
-      const minRow = Math.min(...dataRows);
-      const maxRow = Math.max(...dataRows);
-
-      for (let r = minRow; r <= maxRow; r++) {
-        const rowContent: string[] = [];
-        for (let c = minCol; c <= maxCol; c++) {
-          const cellData = data[r]?.[c] || '';
-          rowContent.push(cellData);
-        }
-        copyContent.push(rowContent.join('\t'));
-      }
-    }
-
-    navigator.clipboard.writeText(copyContent.join('\n')).then(() => {
-      showToastRef.current(`Copied ${selectedCells.length} cell(s) to clipboard`, 'success');
-    }).catch(err => {
-      showToastRef.current(`Failed to copy: ${err}`, 'error');
-    });
-  }, [selectedCells, data, headers]);
 
   const handleRenameApply = useCallback(() => {
     const changedColumns = Object.entries(renamedColumns).filter(
@@ -699,19 +656,6 @@ export function SpreadsheetView({
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-        if (selectedCells.length > 0) {
-          e.preventDefault();
-          handleCopySelection();
-        }
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [selectedCells, handleCopySelection]);
 
   if (!inputFile || data.length === 0) {
     return (
@@ -960,30 +904,6 @@ export function SpreadsheetView({
 
         return (
           <div className="px-4 py-3 border-b bg-card/30">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-semibold">
-                {selectedStep.command.name} Parameters
-              </h4>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => {
-                    if (onStepDelete) {
-                      onStepDelete(selectedStep.id);
-                    }
-                    setSelectedStepId(null);
-                  }}
-                  className="p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-colors"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setSelectedStepId(null)}
-                  className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground/70 hover:text-foreground dark:text-muted-foreground/80"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
             <div className="grid grid-cols-2 gap-3">
               {selectedStep.command.parameters.map((param) => (
                 <div key={param.name} className="space-y-1">
@@ -1130,8 +1050,6 @@ export function SpreadsheetView({
           onReverse={handleContextMenuReverse}
           onTextTransform={handleTextTransform}
           onNumberTransform={handleNumberTransform}
-          onCopy={handleCopySelection}
-          hasSelection={selectedCells.length > 0}
         />
       )}
 

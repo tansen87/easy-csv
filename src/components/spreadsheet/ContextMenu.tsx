@@ -1,5 +1,4 @@
 import {
-  Copy,
   Filter,
   ArrowUpDown,
   ChevronRight,
@@ -53,8 +52,6 @@ interface ContextMenuProps {
   onReverse: (col: number) => void;
   onTextTransform: (col: number, transformType: string) => void;
   onNumberTransform: (col: number, transformType: string) => void;
-  onCopy?: () => void;
-  hasSelection?: boolean;
 }
 
 export function ContextMenu({
@@ -70,8 +67,6 @@ export function ContextMenu({
   onReverse,
   onTextTransform,
   onNumberTransform,
-  onCopy,
-  hasSelection,
 }: ContextMenuProps) {
   const sortOptions = [
     { label: "A → Z", icon: ArrowDownAZ, order: "asc" as const, numeric: false },
@@ -117,20 +112,6 @@ export function ContextMenu({
       <div className="px-3 py-1 text-xs font-semibold text-muted-foreground border-b mb-1">
         Quick Actions
       </div>
-
-      {hasSelection && onCopy && (
-        <button
-          className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-            onCopy();
-          }}
-        >
-          <Copy className="h-4 w-4 text-muted-foreground" />
-          Copy
-        </button>
-      )}
 
       <button
         className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
