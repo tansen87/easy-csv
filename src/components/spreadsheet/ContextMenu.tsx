@@ -1,5 +1,4 @@
 import {
-  Copy,
   Filter,
   ArrowUpDown,
   ChevronRight,
@@ -29,6 +28,9 @@ import {
   DecimalsArrowLeft,
   DecimalsArrowRight,
   Ruler,
+  RulerDimensionLine,
+  Infinity,
+  Replace,
 } from "lucide-react";
 
 interface ContextMenuState {
@@ -45,14 +47,13 @@ interface ContextMenuProps {
   onOpenPivotDialog: (x: number, y: number) => void;
   onOpenDateTransformDialog: (col: number, x: number, y: number) => void;
   onOpenSliceDialog: (col: number, x: number, y: number, sliceType?: string) => void;
+  onOpenReplaceDialog: (col: number, x: number, y: number) => void;
   onSort: (col: number, order: "asc" | "desc", numeric: boolean) => void;
   onDedup: (col: number) => void;
   onTranspose: (col: number) => void;
   onReverse: (col: number) => void;
   onTextTransform: (col: number, transformType: string) => void;
   onNumberTransform: (col: number, transformType: string) => void;
-  onCopy?: () => void;
-  hasSelection?: boolean;
 }
 
 export function ContextMenu({
@@ -62,14 +63,13 @@ export function ContextMenu({
   onOpenPivotDialog,
   onOpenDateTransformDialog,
   onOpenSliceDialog,
+  onOpenReplaceDialog,
   onSort,
   onDedup,
   onTranspose,
   onReverse,
   onTextTransform,
   onNumberTransform,
-  onCopy,
-  hasSelection,
 }: ContextMenuProps) {
   const sortOptions = [
     { label: "A → Z", icon: ArrowDownAZ, order: "asc" as const, numeric: false },
@@ -85,6 +85,7 @@ export function ContextMenu({
   ];
 
   const textTransformOptions = [
+    { label: "Len", icon: RulerDimensionLine, transformType: "len" },
     { label: "Lowercase", icon: CaseLower, transformType: "lower" },
     { label: "Uppercase", icon: CaseUpper, transformType: "upper" },
     { label: "Trim", icon: AlignCenter, transformType: "trim" },
@@ -100,9 +101,9 @@ export function ContextMenu({
     { label: "Abs", icon: Ruler, transformType: "abs" },
     { label: "Floor", icon: ArrowDown, transformType: "floor" },
     { label: "Ceil", icon: ArrowUp, transformType: "ceil" },
-    { label: "Format Number", icon: Hash, transformType: "numfmt" },
-    { label: "To Integer", icon: DecimalsArrowLeft, transformType: "int" },
-    { label: "To Float", icon: DecimalsArrowRight, transformType: "float" },
+    { label: "Integer", icon: DecimalsArrowLeft, transformType: "int" },
+    { label: "Float", icon: Infinity, transformType: "float" },
+    { label: "Round", icon: DecimalsArrowRight, transformType: "round" },
   ];
 
   return (
@@ -115,20 +116,6 @@ export function ContextMenu({
         Quick Actions
       </div>
 
-      {hasSelection && onCopy && (
-        <button
-          className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-            onCopy();
-          }}
-        >
-          <Copy className="h-4 w-4 text-muted-foreground" />
-          Copy
-        </button>
-      )}
-
       <button
         className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
         onClick={(e) => {
@@ -139,6 +126,18 @@ export function ContextMenu({
       >
         <Filter className="h-4 w-4 text-muted-foreground" />
         Filter
+      </button>
+
+      <button
+        className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+          onOpenReplaceDialog(contextMenu.col, contextMenu.x, contextMenu.y);
+        }}
+      >
+        <Replace className="h-4 w-4 text-muted-foreground" />
+        Replace
       </button>
 
       <button

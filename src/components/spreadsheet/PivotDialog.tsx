@@ -3,6 +3,7 @@ import { X, Plus, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 interface PivotDialogState {
   x: number;
@@ -105,20 +106,13 @@ export function PivotDialog({
   const handleApply = () => {
     if (valueColumns.length === 0) return;
 
-    const wrapColumn = (col: string) => {
-      if (/[\s,"'()`\\]/.test(col)) {
-        return `\`${col}\``;
-      }
-      return col;
-    };
-
     const columnsExpr = valueColumns
       .map((vc) => {
-        const wrappedCol = wrapColumn(vc.column);
+        const col = `"${vc.column}"`;
         if (vc.aggregation === "count") {
-          return `count(${wrappedCol})`;
+          return `count(col(${col})) as ${col}`;
         }
-        return `${vc.aggregation}(${wrappedCol})`;
+        return `${vc.aggregation}(col(${col})) as ${col}`;
       })
       .join(",");
 
@@ -134,7 +128,7 @@ export function PivotDialog({
       const groupbyCommand = xanCommands.find((cmd) => cmd.id === "groupby");
       if (groupbyCommand) {
         onAddCommand(groupbyCommand, {
-          columns: selectedGroupBy.map(wrapColumn).join(","),
+          columns: selectedGroupBy.map((col) => `"${col}"`).join(","),
           expression: columnsExpr,
           output: "",
         });
@@ -143,9 +137,9 @@ export function PivotDialog({
       const pivotCommand = xanCommands.find((cmd) => cmd.id === "pivot");
       if (pivotCommand) {
         onAddCommand(pivotCommand, {
-          columns: selectedColumns.map(wrapColumn).join(","),
+          columns: selectedColumns.map((col) => `"${col}"`).join(","),
           expr: columnsExpr,
-          groupby: selectedGroupBy.length > 0 ? selectedGroupBy.map(wrapColumn).join(",") : undefined,
+          groupby: selectedGroupBy.length > 0 ? selectedGroupBy.map((col) => `"${col}"`).join(",") : undefined,
           "column-sep": columnSep || "_",
           output: "",
         });
@@ -167,7 +161,7 @@ export function PivotDialog({
         <span className="text-xs font-medium">Pivot Table</span>
         <button
           onClick={onClose}
-          className="p-0.5 hover:bg-accent rounded transition-colors shrink-0"
+          className="p-0.5 hover:bg-accent rounded transition-colors shrink-0 text-muted-foreground/70 hover:text-foreground dark:text-muted-foreground/80"
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -258,32 +252,22 @@ export function PivotDialog({
             ) : (
               valueColumns.map((vc, index) => (
                 <div key={index} className="flex items-center gap-1">
-                  <select
-                    value={vc.column}
-                    onChange={(e) =>
-                      updateValueColumn(index, "column", e.target.value)
-                    }
-                    className="flex-1 h-7 px-1.5 text-[10px] border rounded bg-background"
-                  >
-                    {availableForValues.map((h) => (
-                      <option key={h} value={h}>
-                        {h}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={vc.aggregation}
-                    onChange={(e) =>
-                      updateValueColumn(index, "aggregation", e.target.value)
-                    }
-                    className="w-24 h-7 px-1.5 text-[10px] border rounded bg-background"
-                  >
-                    {aggregationTypes.map((agg) => (
-                      <option key={agg.value} value={agg.value}>
-                        {agg.label}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative flex-1">
+                    <SearchableSelect
+                      value={vc.column}
+                      onChange={(v) => updateValueColumn(index, "column", v)}
+                      options={availableForValues.map((h) => ({ label: h, value: h }))}
+                      placeholder="Select column..."
+                    />
+                  </div>
+                  <div className="relative w-24">
+                    <SearchableSelect
+                      value={vc.aggregation}
+                      onChange={(v) => updateValueColumn(index, "aggregation", v)}
+                      options={aggregationTypes}
+                      placeholder="Agg..."
+                    />
+                  </div>
                   <button
                     onClick={() => removeValueColumn(index)}
                     className="p-0.5 hover:bg-accent rounded transition-colors shrink-0"
@@ -311,7 +295,7 @@ export function PivotDialog({
         </div>
       </ScrollArea>
 
-      <div className="flex gap-2 p-3 border-t bg-muted/20 shrink-0">
+      <div className="flex gap-2 p-2 ml-1 mr-1 bg-muted/20 shrink-0">
         <button
           className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors hover:bg-accent"
           onClick={onClose}

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 export type CommandDialogType =
   | "search"
@@ -192,30 +193,24 @@ export function CommandDialog({
 
         {commandDialog.type === "search" && (
           <>
-            <ScrollArea className="h-[24vh]">
+            <ScrollArea className="h-[28vh]">
               <div className="space-y-2 pr-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Column</label>
-                    <select
+                    <SearchableSelect
                       value={commandDialog.params.select}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            select: e.target.value,
-                          },
-                        })
-                      }
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                    >
-                      {headers.map((header) => (
-                        <option key={header} value={header}>
-                          {header}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          select: value,
+                        },
+                      })}
+                      options={headers.map((header) => ({ label: header, value: header }))}
+                      placeholder="Search or select column..."
+                      size="md"
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Pattern</label>
@@ -626,7 +621,7 @@ export function CommandDialog({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Patterns File</label>
+                  <label className="text-sm font-medium">Patterns</label>
                   <input
                     type="text"
                     value={commandDialog.params.patterns || ""}
@@ -639,7 +634,7 @@ export function CommandDialog({
                         },
                       })
                     }
-                    placeholder="Path to patterns file"
+                    placeholder="Path to a text file"
                     className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
@@ -825,7 +820,7 @@ export function CommandDialog({
                 />
                 Parallel
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex">
                 <input
                   type="number"
                   value={commandDialog.params.threads || ""}
@@ -844,60 +839,23 @@ export function CommandDialog({
                   className="w-20 h-8 px-1 text-sm border rounded-md bg-background"
                 />
               </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Min</label>
+              <div className="flex">
                 <input
-                  type="text"
-                  value={commandDialog.params.min || ""}
+                  type="number"
+                  value={commandDialog.params.limit || ""}
                   onChange={(e) =>
                     setCommandDialog({
                       ...commandDialog,
                       params: {
                         ...commandDialog.params,
-                        min: e.target.value,
+                        limit: e.target.value
+                          ? Number(e.target.value)
+                          : undefined,
                       },
                     })
                   }
-                  placeholder="Min"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Max</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.max || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        max: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="Max"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Group By</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.groupby || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        groupby: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="Group by"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  placeholder="Limit"
+                  className="w-20 h-8 px-1 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -2439,7 +2397,7 @@ export function CommandDialog({
           <>
             <ScrollArea className="h-[24vh]">
               <div className="space-y-3 pr-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-3">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Columns</label>
                     <input
@@ -2802,7 +2760,7 @@ export function CommandDialog({
                 Nulls
               </label>
             </div>
-            <div className="grid grid-cols-3 gap-0">
+            <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
                 <input
                   type="checkbox"
@@ -2820,12 +2778,7 @@ export function CommandDialog({
                 />
                 Parallel
               </label>
-              <div></div>
-              <div></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Threads</label>
+              <div className="flex-1">
                 <input
                   type="number"
                   value={commandDialog.params.threads || ""}
@@ -2980,7 +2933,7 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="grid grid-cols-3 gap-0">
+            <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
                 <input
                   type="checkbox"
@@ -2998,12 +2951,7 @@ export function CommandDialog({
                 />
                 Parallel
               </label>
-              <div></div>
-              <div></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Threads</label>
+              <div className="flex-1">
                 <input
                   type="number"
                   value={commandDialog.params.threads || ""}

@@ -1,7 +1,7 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
-import { Table, X, Trash2, Plus, Edit3, ArrowUpDown, Check, Rows3, Grid3X3, Filter, Repeat2, Repeat, Settings2 } from "lucide-react";
+import { Table, X, Trash2, Plus, Edit3, Check, Rows3, Repeat2, Repeat } from "lucide-react";
 import { ToastContainer, ToastType } from "@/components/Toast";
 import {
   DndContext,
@@ -28,6 +28,7 @@ import { SortDialog } from "./spreadsheet/SortDialog";
 import { PivotDialog } from "./spreadsheet/PivotDialog";
 import { DateTransformDialog } from "./spreadsheet/DateTransformDialog";
 import { SplitDialog } from "./spreadsheet/SplitDialog";
+import { ReplaceDialog } from "./spreadsheet/ReplaceDialog";
 
 interface SpreadsheetViewProps {
   tabs: PipelineTab[];
@@ -47,6 +48,262 @@ interface SpreadsheetViewProps {
   onPipelineReorder?: (tabId: string, newPipeline: PipelineStep[]) => void;
 }
 
+interface TableCellProps {
+  value: string;
+  rowIndex: number;
+  colIndex: number;
+  width: number;
+  isSelected: boolean;
+  onCellClick: (e: React.MouseEvent, row: number, col: number) => void;
+  onContextMenu: (e: React.MouseEvent, row: number, col: number) => void;
+}
+
+const TableCell = React.memo(function TableCell({
+  value,
+  rowIndex,
+  colIndex,
+  width,
+  isSelected,
+  onCellClick,
+  onContextMenu,
+}: TableCellProps) {
+  return (
+    <td
+      className={`border border-border/50 px-2 py-2 text-sm cursor-cell select-none ${isSelected
+        ? "bg-primary/10 outline outline-2 outline-primary/50"
+        : ""
+        }`}
+      style={{
+        width,
+        minWidth: 80,
+      }}
+      onClick={(e) => onCellClick(e, rowIndex, colIndex)}
+      onContextMenu={(e) => onContextMenu(e, rowIndex, colIndex)}
+    >
+      <div className="truncate">
+        {value || ""}
+      </div>
+    </td>
+  );
+});
+
+interface TableRowProps {
+  rowData: string[];
+  rowIndex: number;
+  columnWidths: Record<number, number>;
+  hasSelectedCell: boolean;
+  selectedCellMap: Map<string, boolean>;
+  onCellClick: (e: React.MouseEvent, row: number, col: number) => void;
+  onContextMenu: (e: React.MouseEvent, row: number, col: number) => void;
+  headersLength: number;
+}
+
+const TableRow = React.memo(function TableRow({
+  rowData,
+  rowIndex,
+  columnWidths,
+  hasSelectedCell,
+  selectedCellMap,
+  onCellClick,
+  onContextMenu,
+  headersLength,
+}: TableRowProps) {
+  return (
+    <tr
+      className={`hover:bg-muted/30 transition-colors ${hasSelectedCell ? "bg-primary/5" : ""
+        }`}
+    >
+      {Array.from({ length: headersLength }, (_, colIndex) => (
+        <TableCell
+          key={colIndex}
+          value={rowData[colIndex] || ""}
+          rowIndex={rowIndex}
+          colIndex={colIndex}
+          width={columnWidths[colIndex] || 80}
+          isSelected={selectedCellMap.has(`${rowIndex}-${colIndex}`)}
+          onCellClick={onCellClick}
+          onContextMenu={onContextMenu}
+        />
+      ))}
+    </tr>
+  );
+});
+
+interface HeaderCellProps {
+  header: string;
+  colIndex: number;
+  width: number;
+  isSelected: boolean;
+  renamedColumns: Record<string, string>;
+  onHeaderSelect: (e: React.MouseEvent, col: number) => void;
+  onHeaderContextMenu: (e: React.MouseEvent, col: number) => void;
+  onHeaderClick: (_e: React.MouseEvent | null, col: number) => void;
+  onRenameApply: () => void;
+  onResizeStart: (colIndex: number, e: React.MouseEvent) => void;
+  hasRenamedColumns: boolean;
+  isLastColumn: boolean;
+}
+
+const HeaderCell = React.memo(function HeaderCell({
+  header,
+  colIndex,
+  width,
+  isSelected,
+  renamedColumns,
+  onHeaderSelect,
+  onHeaderContextMenu,
+  onHeaderClick,
+  onRenameApply,
+  onResizeStart,
+  hasRenamedColumns,
+  isLastColumn,
+}: HeaderCellProps) {
+  const isRenaming = renamedColumns[header] !== undefined;
+
+  return (
+    <th
+      className={`border border-border/50 px-2 py-2 text-sm font-semibold text-foreground bg-muted/70 text-left group relative ${isSelected ? "bg-primary/10" : ""
+        }`}
+      style={{ width, minWidth: 80 }}
+      onClick={(e) => onHeaderSelect(e, colIndex)}
+      onContextMenu={(e) => onHeaderContextMenu(e, colIndex)}
+    >
+      <div className="flex items-center gap-1">
+        {isRenaming ? (
+          <input
+            type="text"
+            value={renamedColumns[header]}
+            onChange={() => { }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full px-1 py-0.5 border rounded text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+            autoFocus
+          />
+        ) : (
+          <span
+            className="font-medium truncate cursor-pointer"
+            onDoubleClick={() => onHeaderClick(null as any, colIndex)}
+          >{header}</span>
+        )}
+        <div className="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          {hasRenamedColumns && (
+            <button
+              onClick={onRenameApply}
+              className="p-0.5 rounded hover:bg-accent transition-colors text-primary"
+            >
+              <Check className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+        {!isLastColumn && (
+          <div
+            className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition-colors z-20"
+            onMouseDown={(e) => onResizeStart(colIndex, e)}
+          />
+        )}
+      </div>
+    </th>
+  );
+});
+
+function useSelectedCellsState() {
+  const [selectedCells, setSelectedCells] = useState<{ row: number; col: number }[]>([]);
+  const [lastSelectedCell, setLastSelectedCell] = useState<{ row: number; col: number } | null>(null);
+
+  const selectedCellMap = useMemo(() => {
+    const map = new Map<string, boolean>();
+    selectedCells.forEach(cell => {
+      map.set(`${cell.row}-${cell.col}`, true);
+    });
+    return map;
+  }, [selectedCells]);
+
+  const selectedRows = useMemo(() => {
+    const rows = new Set<number>();
+    selectedCells.forEach(cell => {
+      rows.add(cell.row);
+    });
+    return rows;
+  }, [selectedCells]);
+
+  const selectedCols = useMemo(() => {
+    const cols = new Set<number>();
+    selectedCells.forEach(cell => {
+      cols.add(cell.col);
+    });
+    return cols;
+  }, [selectedCells]);
+
+  const handleCellClick = useCallback((e: React.MouseEvent, row: number, col: number) => {
+    const newCell = { row, col };
+
+    if (e.shiftKey && lastSelectedCell) {
+      const minRow = Math.min(lastSelectedCell.row, row);
+      const maxRow = Math.max(lastSelectedCell.row, row);
+      const minCol = Math.min(lastSelectedCell.col, col);
+      const maxCol = Math.max(lastSelectedCell.col, col);
+
+      const rangeCells: { row: number; col: number }[] = [];
+      for (let r = minRow; r <= maxRow; r++) {
+        for (let c = minCol; c <= maxCol; c++) {
+          rangeCells.push({ row: r, col: c });
+        }
+      }
+      setSelectedCells(rangeCells);
+    } else if (e.ctrlKey || e.metaKey) {
+      setSelectedCells(prev => {
+        const exists = prev.some(cell => cell.row === row && cell.col === col);
+        if (exists) {
+          return prev.filter(cell => !(cell.row === row && cell.col === col));
+        } else {
+          return [...prev, newCell];
+        }
+      });
+      setLastSelectedCell(newCell);
+    } else {
+      setSelectedCells([newCell]);
+      setLastSelectedCell(newCell);
+    }
+  }, [lastSelectedCell]);
+
+  const handleHeaderSelect = useCallback((e: React.MouseEvent, col: number) => {
+    e.stopPropagation();
+    const headerCell = { row: -1, col };
+
+    if (e.shiftKey && lastSelectedCell) {
+      const minCol = Math.min(lastSelectedCell.col, col);
+      const maxCol = Math.max(lastSelectedCell.col, col);
+      const rangeCells: { row: number; col: number }[] = [];
+      for (let c = minCol; c <= maxCol; c++) {
+        rangeCells.push({ row: -1, col: c });
+      }
+      setSelectedCells(rangeCells);
+      setLastSelectedCell(headerCell);
+    } else if (e.ctrlKey || e.metaKey) {
+      setSelectedCells(prev => {
+        const isAlreadySelected = prev.some(c => c.row === -1 && c.col === col);
+        if (isAlreadySelected) {
+          return prev.filter(c => !(c.row === -1 && c.col === col));
+        } else {
+          return [...prev, headerCell];
+        }
+      });
+      setLastSelectedCell(headerCell);
+    } else {
+      setSelectedCells([headerCell]);
+      setLastSelectedCell(headerCell);
+    }
+  }, [lastSelectedCell]);
+
+  return {
+    selectedCells,
+    selectedCellMap,
+    selectedRows,
+    selectedCols,
+    handleCellClick,
+    handleHeaderSelect,
+  };
+}
+
 export function SpreadsheetView({
   tabs,
   selectedTabId,
@@ -61,14 +318,6 @@ export function SpreadsheetView({
   onStepDelete,
   onPipelineReorder,
 }: SpreadsheetViewProps) {
-  const [selectedCells, setSelectedCells] = useState<{
-    row: number;
-    col: number;
-  }[]>([]);
-  const [lastSelectedCell, setLastSelectedCell] = useState<{
-    row: number;
-    col: number;
-  } | null>(null);
   const [columnWidths, setColumnWidths] = useState<Record<number, number>>({});
   const [resizingCol, setResizingCol] = useState<number | null>(null);
   const [resizingStartX, setResizingStartX] = useState(0);
@@ -80,15 +329,14 @@ export function SpreadsheetView({
     col: number;
   } | null>(null);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
-  const [commandDialog, setCommandDialog] = useState<CommandDialogState | null>(
-    null,
-  );
+  const [commandDialog, setCommandDialog] = useState<CommandDialogState | null>(null);
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingTabName, setEditingTabName] = useState<string>("");
   const [filterDialog, setFilterDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [sortDialog, setSortDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [operationDialog, setOperationDialog] = useState<{ col: number; x: number; y: number; columnName: string } | null>(null);
   const [pivotDialog, setPivotDialog] = useState<{ x: number; y: number } | null>(null);
+  const [replaceDialog, setReplaceDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [dateTransformDialog, setDateTransformDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [splitDialog, setSplitDialog] = useState<{ col: number; x: number; y: number; sliceType?: string } | null>(null);
   const [renamedColumns, setRenamedColumns] = useState<Record<string, string>>({});
@@ -96,11 +344,21 @@ export function SpreadsheetView({
 
   const tableRef = useRef<HTMLTableElement>(null);
 
+  const {
+    selectedCellMap,
+    selectedRows,
+    selectedCols,
+    handleCellClick,
+    handleHeaderSelect,
+  } = useSelectedCellsState();
+
   const currentTab = tabs.find((tab) => tab.id === selectedTabId);
   const data = currentTab?.data || [];
   const headers = currentTab?.headers || [];
   const pipeline = currentTab?.pipeline || [];
   const inputFile = currentTab?.inputFile || "";
+
+  const hasRenamedColumns = Object.keys(renamedColumns).length > 0;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -113,12 +371,15 @@ export function SpreadsheetView({
     }),
   );
 
-  const showToastRef = useRef<(message: string, type: ToastType) => void>(() => {});
-  const removeToastRef = useRef<(id: string) => void>(() => {});
+  const showToastRef = useRef<(message: string, type: ToastType) => void>(() => { });
+  const removeToastRef = useRef<(id: string) => void>(() => { });
 
   const showToast = useCallback((message: string, type: ToastType = "info") => {
     const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      removeToastRef.current(id);
+    }, 3000);
   }, []);
 
   const removeToast = useCallback((id: string) => {
@@ -130,7 +391,7 @@ export function SpreadsheetView({
     removeToastRef.current = removeToast;
   }, [showToast, removeToast]);
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id && onPipelineReorder && selectedTabId) {
@@ -139,14 +400,14 @@ export function SpreadsheetView({
       const newPipeline = arrayMove(pipeline, oldIndex, newIndex);
       onPipelineReorder(selectedTabId, newPipeline);
     }
-  };
+  }, [pipeline, onPipelineReorder, selectedTabId]);
 
   const handleResizeStart = useCallback((colIndex: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setResizingCol(colIndex);
     setResizingStartX(e.clientX);
-    setResizingStartWidth(columnWidths[colIndex] || 150);
+    setResizingStartWidth(columnWidths[colIndex] || 80);
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
   }, [columnWidths]);
@@ -164,49 +425,10 @@ export function SpreadsheetView({
   const handleResizeEnd = useCallback(() => {
     if (resizingCol !== null) {
       setResizingCol(null);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
     }
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
   }, [resizingCol]);
-
-  const isCellSelected = useCallback((row: number, col: number) => {
-    return selectedCells.some(cell => cell.row === row && cell.col === col);
-  }, [selectedCells]);
-
-  const handleCellClick = useCallback((e: React.MouseEvent, row: number, col: number) => {
-    const newCell = { row, col };
-
-    if (e.shiftKey && lastSelectedCell) {
-      // Shift + Click: 选择从 lastSelectedCell 到 newCell 的矩形区域
-      const minRow = Math.min(lastSelectedCell.row, row);
-      const maxRow = Math.max(lastSelectedCell.row, row);
-      const minCol = Math.min(lastSelectedCell.col, col);
-      const maxCol = Math.max(lastSelectedCell.col, col);
-
-      const rangeCells: { row: number; col: number }[] = [];
-      for (let r = minRow; r <= maxRow; r++) {
-        for (let c = minCol; c <= maxCol; c++) {
-          rangeCells.push({ row: r, col: c });
-        }
-      }
-      setSelectedCells(rangeCells);
-    } else if (e.ctrlKey || e.metaKey) {
-      // Ctrl/Cmd + Click: 切换选中状态
-      setSelectedCells(prev => {
-        const isAlreadySelected = prev.some(cell => cell.row === row && cell.col === col);
-        if (isAlreadySelected) {
-          return prev.filter(cell => !(cell.row === row && cell.col === col));
-        } else {
-          return [...prev, newCell];
-        }
-      });
-      setLastSelectedCell(newCell);
-    } else {
-      // 普通点击: 只选中当前单元格
-      setSelectedCells([newCell]);
-      setLastSelectedCell(newCell);
-    }
-  }, [lastSelectedCell]);
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent, row: number, col: number) => {
@@ -229,7 +451,7 @@ export function SpreadsheetView({
   }, []);
 
   const handleHeaderClick = useCallback(
-    (_e: React.MouseEvent, col: number) => {
+    (_e: React.MouseEvent | null, col: number) => {
       const columnName = headers[col];
       if (!renamedColumns[columnName]) {
         setRenamedColumns((prev) => ({ ...prev, [columnName]: columnName }));
@@ -238,81 +460,17 @@ export function SpreadsheetView({
     [headers, renamedColumns],
   );
 
-  const handleHeaderSelect = useCallback(
-    (e: React.MouseEvent, col: number) => {
-      e.stopPropagation();
-      const headerCell = { row: -1, col };
-
-      if (e.shiftKey && lastSelectedCell) {
-        const minCol = Math.min(lastSelectedCell.col, col);
-        const maxCol = Math.max(lastSelectedCell.col, col);
-        const rangeCells: { row: number; col: number }[] = [];
-        for (let c = minCol; c <= maxCol; c++) {
-          rangeCells.push({ row: -1, col: c });
-        }
-        setSelectedCells(rangeCells);
-        setLastSelectedCell(headerCell);
-      } else if (e.ctrlKey || e.metaKey) {
-        setSelectedCells(prev => {
-          const isAlreadySelected = prev.some(c => c.row === -1 && c.col === col);
-          if (isAlreadySelected) {
-            return prev.filter(c => !(c.row === -1 && c.col === col));
-          } else {
-            return [...prev, headerCell];
-          }
-        });
-        setLastSelectedCell(headerCell);
-      } else {
-        setSelectedCells([headerCell]);
-        setLastSelectedCell(headerCell);
-      }
-    },
-    [lastSelectedCell],
-  );
-
-  const handleFilterClick = useCallback(
-    (e: React.MouseEvent, col: number) => {
-      e.stopPropagation();
-      setFilterDialog({ col, x: e.clientX, y: e.clientY });
-    },
-    [],
-  );
-
   const closeFilterDialog = useCallback(() => {
     setFilterDialog(null);
   }, []);
-
-  const handleSortClick = useCallback(
-    (e: React.MouseEvent, col: number) => {
-      e.stopPropagation();
-      setSortDialog({ col, x: e.clientX, y: e.clientY });
-    },
-    [],
-  );
 
   const closeSortDialog = useCallback(() => {
     setSortDialog(null);
   }, []);
 
-  const handleOperationClick = useCallback(
-    (e: React.MouseEvent, col: number, columnName: string) => {
-      e.stopPropagation();
-      setOperationDialog({ col, x: e.clientX, y: e.clientY, columnName });
-    },
-    [],
-  );
-
   const closeOperationDialog = useCallback(() => {
     setOperationDialog(null);
   }, []);
-
-  const handlePivotClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      setPivotDialog({ x: e.clientX, y: e.clientY });
-    },
-    [],
-  );
 
   const closePivotDialog = useCallback(() => {
     setPivotDialog(null);
@@ -339,48 +497,6 @@ export function SpreadsheetView({
       });
     }
   }, [headers, onAddCommand]);
-
-  const handleCopySelection = useCallback(() => {
-    if (selectedCells.length === 0) return;
-
-    const selectedRows = selectedCells.map(cell => cell.row);
-    const hasDataSelected = selectedRows.some(row => row !== -1);
-    const hasHeaderSelected = selectedRows.some(row => row === -1);
-
-    const minCol = Math.min(...selectedCells.map(cell => cell.col));
-    const maxCol = Math.max(...selectedCells.map(cell => cell.col));
-
-    const copyContent: string[] = [];
-
-    if (hasHeaderSelected) {
-      const headerRow: string[] = [];
-      for (let c = minCol; c <= maxCol; c++) {
-        headerRow.push(headers[c] || '');
-      }
-      copyContent.push(headerRow.join('\t'));
-    }
-
-    if (hasDataSelected) {
-      const dataRows = selectedRows.filter(row => row !== -1);
-      const minRow = Math.min(...dataRows);
-      const maxRow = Math.max(...dataRows);
-
-      for (let r = minRow; r <= maxRow; r++) {
-        const rowContent: string[] = [];
-        for (let c = minCol; c <= maxCol; c++) {
-          const cellData = data[r]?.[c] || '';
-          rowContent.push(cellData);
-        }
-        copyContent.push(rowContent.join('\t'));
-      }
-    }
-
-    navigator.clipboard.writeText(copyContent.join('\n')).then(() => {
-      showToastRef.current(`Copied ${selectedCells.length} cell(s) to clipboard`, 'success');
-    }).catch(err => {
-      showToastRef.current(`Failed to copy: ${err}`, 'error');
-    });
-  }, [selectedCells, data, headers]);
 
   const handleRenameApply = useCallback(() => {
     const changedColumns = Object.entries(renamedColumns).filter(
@@ -471,6 +587,7 @@ export function SpreadsheetView({
     if (mapCommand) {
       const columnName = headers[col];
       const expressionMap: Record<string, string> = {
+        len: `col("${columnName}").len() as "${columnName}"`,
         lower: `col("${columnName}").lower() as "${columnName}"`,
         upper: `col("${columnName}").upper() as "${columnName}"`,
         trim: `col("${columnName}").trim() as "${columnName}"`,
@@ -494,12 +611,12 @@ export function SpreadsheetView({
     if (mapCommand) {
       const columnName = headers[col];
       const expressionMap: Record<string, string> = {
-        abs: `abs(col("${columnName}")) as "${columnName}"`,
-        floor: `floor(col("${columnName}")) as "${columnName}"`,
-        ceil: `ceil(col("${columnName}")) as "${columnName}"`,
-        numfmt: `numfmt(col("${columnName}")) as "${columnName}"`,
-        int: `trunc(col("${columnName}")) as "${columnName}"`,
-        float: `float(col("${columnName}")) as "${columnName}"`,
+        abs: `abs(col("${columnName}") || 0) as "${columnName}"`,
+        floor: `floor(col("${columnName}") || 0) as "${columnName}"`,
+        ceil: `ceil(col("${columnName}") || 0) as "${columnName}"`,
+        int: `trunc(col("${columnName}") || 0) as "${columnName}"`,
+        float: `float(col("${columnName}") || 0) as "${columnName}"`,
+        round: `to_fixed(round(col("${columnName}") || 0, 0.01), 2) as "${columnName}"`,
       };
       const expression = expressionMap[transformType];
       if (expression) {
@@ -512,8 +629,18 @@ export function SpreadsheetView({
     }
   }, [onAddCommand, headers]);
 
+  const closeAllDialogsRef = useRef(() => {
+    closeContextMenu();
+    closeFilterDialog();
+    closeSortDialog();
+    closeOperationDialog();
+    closePivotDialog();
+    closeDateTransformDialog();
+    closeSplitDialog();
+  });
+
   useEffect(() => {
-    const handleClickOutside = () => {
+    closeAllDialogsRef.current = () => {
       closeContextMenu();
       closeFilterDialog();
       closeSortDialog();
@@ -522,22 +649,15 @@ export function SpreadsheetView({
       closeDateTransformDialog();
       closeSplitDialog();
     };
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
   }, [closeContextMenu, closeFilterDialog, closeSortDialog, closeOperationDialog, closePivotDialog, closeDateTransformDialog, closeSplitDialog]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-        if (selectedCells.length > 0) {
-          e.preventDefault();
-          handleCopySelection();
-        }
-      }
+    const handleClickOutside = () => {
+      closeAllDialogsRef.current();
     };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [selectedCells, handleCopySelection]);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
 
   if (!inputFile || data.length === 0) {
     return (
@@ -619,7 +739,7 @@ export function SpreadsheetView({
                       {tabs.length > 1 && (
                         <button
                           onClick={() => onRemoveTab(tab.id)}
-                          className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
+                          className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors text-muted-foreground/70 dark:text-muted-foreground/80"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -651,7 +771,6 @@ export function SpreadsheetView({
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10">
-      {/* Toolbar + Tab Management */}
       <div className="border-b bg-card/50 backdrop-blur-sm">
         <div className="h-[48px] px-4 flex items-center">
           <div className="flex items-center shrink-0">
@@ -743,9 +862,8 @@ export function SpreadsheetView({
         </div>
       </div>
 
-      {/* Pipeline Preview */}
       {pipeline.length > 0 && (
-        <div className="px-4 py-2 border-b bg-background/50">
+        <div className="px-4 py-2.5 border-b bg-gradient-to-r from-background/80 via-background/60 to-background/80 backdrop-blur-sm">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -756,7 +874,7 @@ export function SpreadsheetView({
               strategy={verticalListSortingStrategy}
             >
               <ScrollArea className="w-full">
-                <div className="flex items-start gap-2 pb-1">
+                <div className="flex items-start gap-2 pb-1.5">
                   {pipeline.map((step, index) => (
                     <SortableStep
                       key={step.id}
@@ -782,112 +900,85 @@ export function SpreadsheetView({
         </div>
       )}
 
-      {/* Parameter Panel for selected step */}
-      {selectedStepId &&
-        (() => {
-          const selectedStep = pipeline.find((s) => s.id === selectedStepId);
-          if (!selectedStep) return null;
+      {selectedStepId && (() => {
+        const selectedStep = pipeline.find((s) => s.id === selectedStepId);
+        if (!selectedStep) return null;
 
-          return (
-            <div className="px-4 py-3 border-b bg-card/30">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-semibold">
-                  {selectedStep.command.name} Parameters
-                </h4>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => {
-                      if (onStepDelete) {
-                        onStepDelete(selectedStep.id);
+        return (
+          <div className="px-4 py-3 border-b bg-card/30">
+            <div className="grid grid-cols-2 gap-3">
+              {selectedStep.command.parameters.map((param) => (
+                <div key={param.name} className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {param.name}
+                  </label>
+                  {param.type === "flag" || param.type === "boolean" ? (
+                    <input
+                      type="checkbox"
+                      checked={selectedStep.parameters[param.name] || false}
+                      onChange={(e) => {
+                        if (onStepUpdate) {
+                          onStepUpdate(selectedStep.id, {
+                            ...selectedStep.parameters,
+                            [param.name]: e.target.checked,
+                          });
+                        }
+                      }}
+                      className="h-4 w-4"
+                    />
+                  ) : param.type === "select" ? (
+                    <select
+                      value={
+                        selectedStep.parameters[param.name] ||
+                        param.default ||
+                        ""
                       }
-                      setSelectedStepId(null);
-                    }}
-                    className="p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => setSelectedStepId(null)}
-                    className="p-1 hover:bg-accent rounded transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                      onChange={(e) => {
+                        if (onStepUpdate) {
+                          onStepUpdate(selectedStep.id, {
+                            ...selectedStep.parameters,
+                            [param.name]: e.target.value,
+                          });
+                        }
+                      }}
+                      className="w-full h-8 px-2 text-xs border rounded bg-background"
+                    >
+                      {param.options?.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type={param.type === "number" ? "number" : "text"}
+                      value={
+                        selectedStep.parameters[param.name] ||
+                        param.default ||
+                        ""
+                      }
+                      onChange={(e) => {
+                        if (onStepUpdate) {
+                          onStepUpdate(selectedStep.id, {
+                            ...selectedStep.parameters,
+                            [param.name]:
+                              param.type === "number"
+                                ? Number(e.target.value)
+                                : e.target.value,
+                          });
+                        }
+                      }}
+                      placeholder={param.description}
+                      className="w-full h-8 px-2 text-xs border rounded bg-background"
+                    />
+                  )}
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {selectedStep.command.parameters.map((param) => (
-                  <div key={param.name} className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      {param.name}
-                    </label>
-                    {param.type === "flag" || param.type === "boolean" ? (
-                      <input
-                        type="checkbox"
-                        checked={selectedStep.parameters[param.name] || false}
-                        onChange={(e) => {
-                          if (onStepUpdate) {
-                            onStepUpdate(selectedStep.id, {
-                              ...selectedStep.parameters,
-                              [param.name]: e.target.checked,
-                            });
-                          }
-                        }}
-                        className="h-4 w-4"
-                      />
-                    ) : param.type === "select" ? (
-                      <select
-                        value={
-                          selectedStep.parameters[param.name] ||
-                          param.default ||
-                          ""
-                        }
-                        onChange={(e) => {
-                          if (onStepUpdate) {
-                            onStepUpdate(selectedStep.id, {
-                              ...selectedStep.parameters,
-                              [param.name]: e.target.value,
-                            });
-                          }
-                        }}
-                        className="w-full h-8 px-2 text-xs border rounded bg-background"
-                      >
-                        {param.options?.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type={param.type === "number" ? "number" : "text"}
-                        value={
-                          selectedStep.parameters[param.name] ||
-                          param.default ||
-                          ""
-                        }
-                        onChange={(e) => {
-                          if (onStepUpdate) {
-                            onStepUpdate(selectedStep.id, {
-                              ...selectedStep.parameters,
-                              [param.name]:
-                                param.type === "number"
-                                  ? Number(e.target.value)
-                                  : e.target.value,
-                            });
-                          }
-                        }}
-                        placeholder={param.description}
-                        className="w-full h-8 px-2 text-xs border rounded bg-background"
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
-          );
-        })()}
+          </div>
+        );
+      })()}
 
-      {/* Main Table */}
       <div
         className="flex-1 flex flex-col overflow-hidden relative"
         onMouseMove={handleResizeMove}
@@ -900,127 +991,44 @@ export function SpreadsheetView({
               <table ref={tableRef} className="w-full border-collapse table-fixed">
                 <colgroup>
                   {headers.map((_, colIndex) => (
-                    <col key={colIndex} style={{ width: columnWidths[colIndex] || 150, minWidth: 150 }} />
+                    <col key={colIndex} style={{ width: columnWidths[colIndex] || 80, minWidth: 80 }} />
                   ))}
                 </colgroup>
                 <thead className="bg-muted/50 sticky top-0 z-10">
                   <tr>
                     {headers.map((header, colIndex) => (
-                      <th
+                      <HeaderCell
                         key={colIndex}
-                        className={`border border-border/50 px-2 py-2 text-sm font-semibold text-foreground bg-muted/70 text-left group relative ${selectedCells.some(cell => cell.col === colIndex) ? "bg-primary/10" : ""
-                          }`}
-                        style={{
-                          width: columnWidths[colIndex] || 120,
-                          minWidth: 120,
-                        }}
-                        onClick={(e) => handleHeaderSelect(e, colIndex)}
-                        onContextMenu={(e) =>
-                          handleHeaderContextMenu(e, colIndex)
-                        }
-                      >
-                        <div className="flex items-center gap-1">
-                          {renamedColumns[header] !== undefined ? (
-                            <input
-                              type="text"
-                              value={renamedColumns[header]}
-                              onChange={(e) =>
-                                setRenamedColumns((prev) => ({
-                                  ...prev,
-                                  [header]: e.target.value,
-                                }))
-                              }
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-full px-1 py-0.5 border rounded text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-                              autoFocus
-                            />
-                          ) : (
-                            <span
-                              className="font-medium truncate cursor-pointer"
-                              onDoubleClick={() => handleHeaderClick(null as any, colIndex)}
-                            >{header}</span>
-                          )}
-                          <div className="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {Object.keys(renamedColumns).length > 0 && (
-                              <button
-                                onClick={handleRenameApply}
-                                className="p-0.5 rounded hover:bg-accent transition-colors text-primary"
-                              >
-                                <Check className="h-3 w-3" />
-                              </button>
-                            )}
-                            <button
-                              onClick={(e) => handleOperationClick(e, colIndex, header)}
-                              className="p-0.5 rounded hover:bg-accent transition-colors"
-                            >
-                              <Settings2 className="h-3 w-3" />
-                            </button>
-                            <button
-                              onClick={handlePivotClick}
-                              className="p-0.5 rounded hover:bg-accent transition-colors"
-                            >
-                              <Grid3X3 className="h-3 w-3" />
-                            </button>
-                            <button
-                              onClick={(e) => handleSortClick(e, colIndex)}
-                              className="p-0.5 rounded hover:bg-accent transition-colors"
-                            >
-                              <ArrowUpDown className="h-3 w-3" />
-                            </button>
-                            <button
-                              onClick={(e) => handleFilterClick(e, colIndex)}
-                              className="p-0.5 rounded hover:bg-accent transition-colors"
-                            >
-                              <Filter className="h-3 w-3" />
-                            </button>
-                          </div>
-                          {colIndex < headers.length - 1 && (
-                            <div
-                              className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition-colors z-20"
-                              onMouseDown={(e) => handleResizeStart(colIndex, e)}
-                            />
-                          )}
-                        </div>
-                      </th>
+                        header={header}
+                        colIndex={colIndex}
+                        width={columnWidths[colIndex] || 80}
+                        isSelected={selectedCols.has(colIndex)}
+                        renamedColumns={renamedColumns}
+                        onHeaderSelect={handleHeaderSelect}
+                        onHeaderContextMenu={handleHeaderContextMenu}
+                        onHeaderClick={handleHeaderClick}
+                        onRenameApply={handleRenameApply}
+                        onResizeStart={handleResizeStart}
+                        hasRenamedColumns={hasRenamedColumns}
+                        isLastColumn={colIndex === headers.length - 1}
+                      />
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {data.map((row, rowIndex) => {
-                    const hasSelectedCellInRow = selectedCells.some(cell => cell.row === rowIndex);
-                    return (
-                      <tr
-                        key={rowIndex}
-                        className={`hover:bg-muted/30 transition-colors ${hasSelectedCellInRow ? "bg-primary/5" : ""
-                          }`}
-                      >
-                        {headers.map((_, colIndex) => {
-                          const cellIsSelected = isCellSelected(rowIndex, colIndex);
-                          return (
-                            <td
-                              key={colIndex}
-                              className={`border border-border/50 px-2 py-2 text-sm cursor-cell select-none ${cellIsSelected
-                                ? "bg-primary/10 outline outline-2 outline-primary/50"
-                                : ""
-                                }`}
-                              onClick={(e) => handleCellClick(e, rowIndex, colIndex)}
-                              onContextMenu={(e) =>
-                                handleContextMenu(e, rowIndex, colIndex)
-                              }
-                              style={{
-                                width: columnWidths[colIndex] || 150,
-                                minWidth: 150,
-                              }}
-                            >
-                              <div className="truncate">
-                                {row[colIndex] || ""}
-                              </div>
-                            </td>
-                          )
-                        })}
-                      </tr>
-                    )
-                  })}
+                  {data.map((row, rowIndex) => (
+                    <TableRow
+                      key={rowIndex}
+                      rowData={row}
+                      rowIndex={rowIndex}
+                      columnWidths={columnWidths}
+                      hasSelectedCell={selectedRows.has(rowIndex)}
+                      selectedCellMap={selectedCellMap}
+                      onCellClick={handleCellClick}
+                      onContextMenu={handleContextMenu}
+                      headersLength={headers.length}
+                    />
+                  ))}
                 </tbody>
               </table>
               <ScrollBar orientation="horizontal" />
@@ -1030,7 +1038,6 @@ export function SpreadsheetView({
         </div>
       </div>
 
-      {/* Context Menu */}
       {contextMenu && (
         <ContextMenu
           contextMenu={contextMenu}
@@ -1039,18 +1046,16 @@ export function SpreadsheetView({
           onOpenPivotDialog={(x, y) => setPivotDialog({ x, y })}
           onOpenDateTransformDialog={(col, x, y) => setDateTransformDialog({ col, x, y })}
           onOpenSliceDialog={(col, x, y, sliceType) => setSplitDialog({ col, x, y, sliceType })}
+          onOpenReplaceDialog={(col, x, y) => setReplaceDialog({ col, x, y })}
           onSort={handleQuickSort}
           onDedup={handleContextMenuDedup}
           onTranspose={handleContextMenuTranspose}
           onReverse={handleContextMenuReverse}
           onTextTransform={handleTextTransform}
           onNumberTransform={handleNumberTransform}
-          onCopy={handleCopySelection}
-          hasSelection={selectedCells.length > 0}
         />
       )}
 
-      {/* Command Dialog */}
       {commandDialog && (
         <CommandDialog
           commandDialog={commandDialog}
@@ -1061,7 +1066,6 @@ export function SpreadsheetView({
         />
       )}
 
-      {/* Filter Dialog */}
       {filterDialog && (
         <FilterDialog
           filterDialog={filterDialog}
@@ -1071,7 +1075,6 @@ export function SpreadsheetView({
         />
       )}
 
-      {/* Sort Dialog */}
       {sortDialog && (
         <SortDialog
           sortDialog={sortDialog}
@@ -1081,7 +1084,6 @@ export function SpreadsheetView({
         />
       )}
 
-      {/* Pivot Dialog */}
       {pivotDialog && (
         <PivotDialog
           pivotDialog={pivotDialog}
@@ -1091,7 +1093,6 @@ export function SpreadsheetView({
         />
       )}
 
-      {/* Date Transform Dialog */}
       {dateTransformDialog && (
         <DateTransformDialog
           dateTransformDialog={dateTransformDialog}
@@ -1101,7 +1102,6 @@ export function SpreadsheetView({
         />
       )}
 
-      {/* Split Dialog */}
       {splitDialog && (
         <SplitDialog
           splitDialog={splitDialog}
@@ -1111,7 +1111,15 @@ export function SpreadsheetView({
         />
       )}
 
-      {/* Operation Dialog */}
+      {replaceDialog && (
+        <ReplaceDialog
+          replaceDialog={replaceDialog}
+          headers={headers}
+          onAddCommand={onAddCommand}
+          onClose={() => setReplaceDialog(null)}
+        />
+      )}
+
       {operationDialog && (
         <div
           className="fixed bg-card border rounded-lg shadow-xl z-50 w-[180px]"

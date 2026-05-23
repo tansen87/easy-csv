@@ -52,7 +52,7 @@ export function SortDialog({
         <span className="text-xs font-medium">Sort</span>
         <button
           onClick={onClose}
-          className="p-0.5 hover:bg-accent rounded transition-colors shrink-0"
+          className="p-0.5 hover:bg-accent rounded transition-colors shrink-0 text-muted-foreground/70 hover:text-foreground dark:text-muted-foreground/80"
         >
           <X className="h-3.5 w-3.5" />
         </button>

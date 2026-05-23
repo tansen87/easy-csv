@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 interface FilterDialogState {
   col: number;
@@ -150,22 +151,22 @@ export function FilterDialog({
 
         switch (numberOperator) {
           case "equals":
-            expression = `${columnName} == ${numberValue}`;
+            expression = `col("${columnName}") == ${numberValue}`;
             break;
           case "not_equals":
-            expression = `${columnName} != ${numberValue}`;
+            expression = `col("${columnName}") != ${numberValue}`;
             break;
           case "greater_than":
-            expression = `${columnName} > ${numberValue}`;
+            expression = `col("${columnName}") > ${numberValue}`;
             break;
           case "greater_or_equal":
-            expression = `${columnName} >= ${numberValue}`;
+            expression = `col("${columnName}") >= ${numberValue}`;
             break;
           case "less_than":
-            expression = `${columnName} < ${numberValue}`;
+            expression = `col("${columnName}") < ${numberValue}`;
             break;
           case "less_or_equal":
-            expression = `${columnName} <= ${numberValue}`;
+            expression = `col("${columnName}") <= ${numberValue}`;
             break;
         }
 
@@ -193,7 +194,7 @@ export function FilterDialog({
         <span className="text-xs font-medium truncate max-w-[160px]">{columnName}</span>
         <button
           onClick={onClose}
-          className="p-0.5 hover:bg-accent rounded transition-colors shrink-0"
+          className="p-0.5 hover:bg-accent rounded transition-colors shrink-0 text-muted-foreground/70 hover:text-foreground dark:text-muted-foreground/80"
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -225,21 +226,16 @@ export function FilterDialog({
 
         {filterType === "text" && (
           <>
-            <div>
-              <label className="text-[10px] font-medium text-muted-foreground">
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
                 Operator
               </label>
-              <select
+              <SearchableSelect
                 value={textOperator}
-                onChange={(e) => setTextOperator(e.target.value as TextOperator)}
-                className="w-full h-7 px-1.5 text-xs border rounded bg-background"
-              >
-                {textOperators.map((op) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setTextOperator(v as TextOperator)}
+                options={textOperators}
+                placeholder="Search operator..."
+              />
             </div>
 
             {textOperator !== "is_null" && textOperator !== "is_not_null" && (
@@ -276,21 +272,16 @@ export function FilterDialog({
 
         {filterType === "number" && (
           <>
-            <div>
-              <label className="text-[10px] font-medium text-muted-foreground">
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
                 Operator
               </label>
-              <select
+              <SearchableSelect
                 value={numberOperator}
-                onChange={(e) => setNumberOperator(e.target.value as NumberOperator)}
-                className="w-full h-7 px-1.5 text-xs border rounded bg-background"
-              >
-                {numberOperators.map((op) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setNumberOperator(v as NumberOperator)}
+                options={numberOperators}
+                placeholder="Search operator..."
+              />
             </div>
 
             <div>
@@ -309,7 +300,7 @@ export function FilterDialog({
         )}
       </div>
 
-      <div className="px-3 pb-3 flex gap-2">
+      <div className="px-3 pb-2 flex gap-2">
         <button
           className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
           onClick={onClose}

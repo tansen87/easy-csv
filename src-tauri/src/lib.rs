@@ -15,6 +15,7 @@ pub struct AppConfig {
     pub xan_path: Option<String>,
     pub default_delimiter: Option<String>,
     pub no_quoting: Option<bool>,
+    pub no_headers: Option<bool>,
 }
 
 impl Default for AppConfig {
@@ -23,6 +24,7 @@ impl Default for AppConfig {
             xan_path: None,
             default_delimiter: None,
             no_quoting: None,
+            no_headers: None,
         }
     }
 }
@@ -103,13 +105,19 @@ async fn execute_xan_pipeline(
 
     let config = load_config();
     let no_quoting_enabled = config.no_quoting.unwrap_or(false);
+    let no_headers_enabled = config.no_headers.unwrap_or(false);
 
     let mut cmd_args_list = Vec::new();
     for (i, cmd) in commands.iter().enumerate() {
         let mut args = vec![cmd.name.clone()];
 
-        if cmd.name == "input" && no_quoting_enabled {
-            args.push("--no-quoting".to_string());
+        if i == 0 {
+            if no_quoting_enabled {
+                args.push("--no-quoting".to_string());
+            }
+            if no_headers_enabled {
+                args.push("--no-headers".to_string());
+            }
         }
 
         let supports_delimiter = !matches!(cmd.name.as_str(), "from" | "range" | "eval");
@@ -468,7 +476,7 @@ fn save_config(config: &AppConfig) -> Result<(), String> {
 }
 
 fn find_xan_executable() -> Option<String> {
-    // First, check if user has configured a custom path
+    // Only check user configured path, no automatic searching
     let config = load_config();
     if let Some(ref xan_path) = config.xan_path {
         if Path::new(xan_path).exists() {
@@ -478,53 +486,21 @@ fn find_xan_executable() -> Option<String> {
         }
     }
 
-    let mut paths = vec![];
-
-    // Add current working directory
-    if let Ok(cwd) = std::env::current_dir() {
-        let xan_in_cwd = cwd.join("xan.exe");
-        paths.push(xan_in_cwd.to_string_lossy().to_string());
-    }
-
-    // Add relative paths
-    paths.push("xan.exe".to_string());
-    paths.push("xan".to_string());
-
-    // Add user's cargo bin directory if available
-    if let Some(home) = dirs::home_dir() {
-        let cargo_bin = home.join(".cargo").join("bin").join("xan.exe");
-        paths.push(cargo_bin.to_string_lossy().to_string());
-    }
-
-    // Add the directory where the current executable is located
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(exe_dir) = exe_path.parent() {
-            let xan_in_exe_dir = exe_dir.join("xan.exe");
-            paths.push(xan_in_exe_dir.to_string_lossy().to_string());
-        }
-    }
-
-    // Check all paths
-    for path in paths {
-        if Path::new(&path).exists() {
-            return Some(path);
-        }
-    }
-
     None
 }
 
 #[tauri::command]
-fn check_xan_installed() -> bool {
+async fn check_xan_installed() -> bool {
     find_xan_executable().is_some()
 }
 
 #[tauri::command]
-fn get_xan_version() -> Result<String, String> {
+async fn get_xan_version() -> Result<String, String> {
     let xan_path = find_xan_executable().ok_or("xan executable not found")?;
 
-    let mut command = Command::new(&xan_path);
+    let mut command = tokio::process::Command::new(&xan_path);
     command.arg("--version");
+    command.kill_on_drop(true);
 
     #[cfg(target_os = "windows")]
     {
@@ -533,23 +509,26 @@ fn get_xan_version() -> Result<String, String> {
 
     let output = command
         .output()
+        .await
         .map_err(|e| format!("Failed to execute xan: {}", e))?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
-        Err(String::from_utf8_lossy(&output.stderr).to_string())
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let code = output.status.code().unwrap_or(-1);
+        Err(format!("xan --version failed with exit code {}: {}", code, stderr))
     }
 }
 
 #[tauri::command]
-fn get_xan_path() -> Option<String> {
+async fn get_xan_path() -> Option<String> {
     let config = load_config();
     config.xan_path
 }
 
 #[tauri::command]
-fn set_xan_path(path: String) -> Result<(), String> {
+async fn set_xan_path(path: String) -> Result<(), String> {
     if !Path::new(&path).exists() {
         return Err(format!("File does not exist: {}", path));
     }
@@ -560,38 +539,52 @@ fn set_xan_path(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn get_default_delimiter() -> Option<String> {
+async fn get_default_delimiter() -> Option<String> {
     let config = load_config();
     config.default_delimiter
 }
 
 #[tauri::command]
-fn set_default_delimiter(delimiter: String) -> Result<(), String> {
+async fn set_default_delimiter(delimiter: String) -> Result<(), String> {
     let mut config = load_config();
     config.default_delimiter = Some(delimiter);
     save_config(&config)
 }
 
 #[tauri::command]
-fn get_no_quoting() -> Option<bool> {
+async fn get_no_quoting() -> Option<bool> {
     let config = load_config();
     config.no_quoting
 }
 
 #[tauri::command]
-fn set_no_quoting(no_quoting: bool) -> Result<(), String> {
+async fn set_no_quoting(no_quoting: bool) -> Result<(), String> {
     let mut config = load_config();
     config.no_quoting = Some(no_quoting);
     save_config(&config)
 }
 
 #[tauri::command]
-fn get_xan_help(command_name: String) -> Result<String, String> {
+async fn get_no_headers() -> Option<bool> {
+    let config = load_config();
+    config.no_headers
+}
+
+#[tauri::command]
+async fn set_no_headers(no_headers: bool) -> Result<(), String> {
+    let mut config = load_config();
+    config.no_headers = Some(no_headers);
+    save_config(&config)
+}
+
+#[tauri::command]
+async fn get_xan_help(command_name: String) -> Result<String, String> {
     let xan_path = find_xan_executable().ok_or("xan executable not found")?;
 
-    let mut command = Command::new(&xan_path);
+    let mut command = tokio::process::Command::new(&xan_path);
     command.arg(&command_name);
     command.arg("--help");
+    command.kill_on_drop(true);
 
     #[cfg(target_os = "windows")]
     {
@@ -600,12 +593,12 @@ fn get_xan_help(command_name: String) -> Result<String, String> {
 
     let output = command
         .output()
+        .await
         .map_err(|e| format!("Failed to execute xan {} --help: {}", command_name, e))?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
-        // If the command fails, still return stderr as it might contain helpful info
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
         if !stderr.is_empty() {
             Ok(stderr)
@@ -616,10 +609,14 @@ fn get_xan_help(command_name: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn set_window_title(window: tauri::Window, title: String) -> Result<(), String> {
-    window
-        .set_title(&title)
-        .map_err(|e| format!("Failed to set window title: {}", e))
+async fn set_window_title(window: tauri::Window, title: String) -> Result<(), String> {
+    match window.set_title(&title) {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            eprintln!("Warning: Failed to set window title (window may not be ready yet): {}", e);
+            Ok(())
+        }
+    }
 }
 
 #[tauri::command]
@@ -671,6 +668,8 @@ pub fn run() {
             set_default_delimiter,
             get_no_quoting,
             set_no_quoting,
+            get_no_headers,
+            set_no_headers,
             get_xan_help,
             save_history,
             load_history,
