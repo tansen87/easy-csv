@@ -3296,6 +3296,24 @@ export function CommandDialog({
         {commandDialog.type === "window" && (
           <div className="space-y-4">
             <div className="space-y-2">
+              <label className="text-sm font-medium">GroupBy (optional)</label>
+              <input
+                type="text"
+                value={commandDialog.params.groupby || ""}
+                onChange={(e) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      groupby: e.target.value,
+                    },
+                  })
+                }
+                placeholder="Reset aggregation on column(s)"
+                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+              />
+            </div>
+            <div className="space-y-2">
               <label className="text-sm font-medium">Expression</label>
               <input
                 type="text"
@@ -3312,24 +3330,6 @@ export function CommandDialog({
                 placeholder="Window expression (e.g., lag:col1)"
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 autoFocus
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Group By</label>
-              <input
-                type="text"
-                value={commandDialog.params.groupby || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      groupby: e.target.value,
-                    },
-                  })
-                }
-                placeholder="Reset aggregation on column(s)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">

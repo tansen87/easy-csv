@@ -31,6 +31,7 @@ import {
   RulerDimensionLine,
   Infinity,
   Replace,
+  LayoutGrid,
 } from "lucide-react";
 
 interface ContextMenuState {
@@ -48,6 +49,7 @@ interface ContextMenuProps {
   onOpenDateTransformDialog: (col: number, x: number, y: number) => void;
   onOpenSliceDialog: (col: number, x: number, y: number, sliceType?: string) => void;
   onOpenReplaceDialog: (col: number, x: number, y: number) => void;
+  onOpenWindowDialog: (col: number, x: number, y: number) => void;
   onSort: (col: number, order: "asc" | "desc", numeric: boolean) => void;
   onDedup: (col: number) => void;
   onTranspose: (col: number) => void;
@@ -64,6 +66,7 @@ export function ContextMenu({
   onOpenDateTransformDialog,
   onOpenSliceDialog,
   onOpenReplaceDialog,
+  onOpenWindowDialog,
   onSort,
   onDedup,
   onTranspose,
@@ -162,6 +165,18 @@ export function ContextMenu({
       >
         <Calendar className="h-4 w-4 text-muted-foreground" />
         Date
+      </button>
+
+      <button
+        className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+          onOpenWindowDialog(contextMenu.col, contextMenu.x, contextMenu.y);
+        }}
+      >
+        <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+        Window
       </button>
 
       <div className="relative group">

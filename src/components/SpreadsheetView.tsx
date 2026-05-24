@@ -29,6 +29,7 @@ import { PivotDialog } from "./spreadsheet/PivotDialog";
 import { DateTransformDialog } from "./spreadsheet/DateTransformDialog";
 import { SplitDialog } from "./spreadsheet/SplitDialog";
 import { ReplaceDialog } from "./spreadsheet/ReplaceDialog";
+import { WindowDialog } from "./spreadsheet/WindowDialog";
 
 interface SpreadsheetViewProps {
   tabs: PipelineTab[];
@@ -339,6 +340,7 @@ export function SpreadsheetView({
   const [replaceDialog, setReplaceDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [dateTransformDialog, setDateTransformDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [splitDialog, setSplitDialog] = useState<{ col: number; x: number; y: number; sliceType?: string } | null>(null);
+  const [windowDialog, setWindowDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [renamedColumns, setRenamedColumns] = useState<Record<string, string>>({});
   const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
 
@@ -484,6 +486,10 @@ export function SpreadsheetView({
     setSplitDialog(null);
   }, []);
 
+  const closeWindowDialog = useCallback(() => {
+    setWindowDialog(null);
+  }, []);
+
   const handleQuickSort = useCallback((col: number, order: "asc" | "desc", numeric: boolean) => {
     if (!onAddCommand) return;
     const sortCommand = xanCommands.find((cmd) => cmd.id === "sort");
@@ -611,12 +617,12 @@ export function SpreadsheetView({
     if (mapCommand) {
       const columnName = headers[col];
       const expressionMap: Record<string, string> = {
-        abs: `abs(col("${columnName}") || 0) as "${columnName}"`,
-        floor: `floor(col("${columnName}") || 0) as "${columnName}"`,
-        ceil: `ceil(col("${columnName}") || 0) as "${columnName}"`,
-        int: `trunc(col("${columnName}") || 0) as "${columnName}"`,
-        float: `float(col("${columnName}") || 0) as "${columnName}"`,
-        round: `to_fixed(round(col("${columnName}") || 0, 0.01), 2) as "${columnName}"`,
+        abs: `abs(col("${columnName}")) as "${columnName}"`,
+        floor: `floor(col("${columnName}")) as "${columnName}"`,
+        ceil: `ceil(col("${columnName}")) as "${columnName}"`,
+        int: `trunc(col("${columnName}")) as "${columnName}"`,
+        float: `float(col("${columnName}")) as "${columnName}"`,
+        round: `to_fixed(round(col("${columnName}"), 0.01), 2) as "${columnName}"`,
       };
       const expression = expressionMap[transformType];
       if (expression) {
@@ -1047,6 +1053,7 @@ export function SpreadsheetView({
           onOpenDateTransformDialog={(col, x, y) => setDateTransformDialog({ col, x, y })}
           onOpenSliceDialog={(col, x, y, sliceType) => setSplitDialog({ col, x, y, sliceType })}
           onOpenReplaceDialog={(col, x, y) => setReplaceDialog({ col, x, y })}
+          onOpenWindowDialog={(col, x, y) => setWindowDialog({ col, x, y })}
           onSort={handleQuickSort}
           onDedup={handleContextMenuDedup}
           onTranspose={handleContextMenuTranspose}
@@ -1117,6 +1124,15 @@ export function SpreadsheetView({
           headers={headers}
           onAddCommand={onAddCommand}
           onClose={() => setReplaceDialog(null)}
+        />
+      )}
+
+      {windowDialog && (
+        <WindowDialog
+          windowDialog={windowDialog}
+          headers={headers}
+          onAddCommand={onAddCommand}
+          onClose={closeWindowDialog}
         />
       )}
 
