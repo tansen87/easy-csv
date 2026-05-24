@@ -35,14 +35,23 @@ export function ReplaceDialog({
   const handleApply = () => {
     if (!pattern.trim() || !selectedColumn) return;
 
-    const searchCommand = xanCommands.find((cmd) => cmd.id === "search");
-    if (searchCommand) {
-      onAddCommand(searchCommand, {
-        select: selectedColumn,
-        pattern: pattern,
-        replace: replace,
-        "ignore-case": ignoreCase,
-        regex: regex,
+    const mapCommand = xanCommands.find((cmd) => cmd.id === "map");
+    if (mapCommand) {
+      let patternExpr: string;
+      if (regex) {
+        // Regex mode: wrap pattern in slashes with optional case-insensitive flag
+        const flags = ignoreCase ? "i" : "";
+        patternExpr = `/${pattern}/${flags}`;
+      } else {
+        // Substring mode: wrap pattern in quotes
+        patternExpr = `"${pattern}"`;
+      }
+
+      const expression = `replace(col("${selectedColumn}"), ${patternExpr}, "${replace}") as "${selectedColumn}"`;
+
+      onAddCommand(mapCommand, {
+        expression,
+        overwrite: true,
         output: "",
       });
     }

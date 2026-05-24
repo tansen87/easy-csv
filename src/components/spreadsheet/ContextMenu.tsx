@@ -32,6 +32,7 @@ import {
   Infinity,
   Replace,
   LayoutGrid,
+  Eraser,
 } from "lucide-react";
 
 interface ContextMenuState {
@@ -94,6 +95,7 @@ export function ContextMenu({
     { label: "Trim", icon: AlignCenter, transformType: "trim" },
     { label: "LTrim", icon: AlignLeft, transformType: "ltrim" },
     { label: "RTrim", icon: AlignRight, transformType: "rtrim" },
+    { label: "Strip", icon: Eraser, transformType: "strip" },
     { label: "Left", icon: ArrowLeftFromLine, transformType: "splitLeft" },
     { label: "Right", icon: ArrowRightFromLine, transformType: "splitRight" },
     { label: "Slice", icon: Slice, transformType: "slice" },

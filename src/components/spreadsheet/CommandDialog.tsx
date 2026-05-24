@@ -4116,9 +4116,6 @@ export function CommandDialog({
                 />
                 Parallel
               </label>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Threads</label>
               <input
                 type="number"
                 value={commandDialog.params.threads || ""}
@@ -4131,7 +4128,7 @@ export function CommandDialog({
                     },
                   })
                 }
-                placeholder="Number of threads to use"
+                placeholder="Number of threads"
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>

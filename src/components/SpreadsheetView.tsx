@@ -599,6 +599,7 @@ export function SpreadsheetView({
         trim: `col("${columnName}").trim() as "${columnName}"`,
         ltrim: `col("${columnName}").ltrim() as "${columnName}"`,
         rtrim: `col("${columnName}").rtrim() as "${columnName}"`,
+        strip: `replace(col("${columnName}"), /[\r\t\n]/, "") as "${columnName}"`,
       };
       const expression = expressionMap[transformType];
       if (expression) {
