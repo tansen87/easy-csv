@@ -34,6 +34,7 @@ import {
   LayoutGrid,
   Eraser,
 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ContextMenuState {
   x: number;
@@ -51,6 +52,7 @@ interface ContextMenuProps {
   onOpenSliceDialog: (col: number, x: number, y: number, sliceType?: string) => void;
   onOpenReplaceDialog: (col: number, x: number, y: number) => void;
   onOpenWindowDialog: (col: number, x: number, y: number) => void;
+  onOpenPadDialog: (col: number, x: number, y: number, padType: string) => void;
   onSort: (col: number, order: "asc" | "desc", numeric: boolean) => void;
   onDedup: (col: number) => void;
   onTranspose: (col: number) => void;
@@ -68,6 +70,7 @@ export function ContextMenu({
   onOpenSliceDialog,
   onOpenReplaceDialog,
   onOpenWindowDialog,
+  onOpenPadDialog,
   onSort,
   onDedup,
   onTranspose,
@@ -100,6 +103,7 @@ export function ContextMenu({
     { label: "Right", icon: ArrowRightFromLine, transformType: "splitRight" },
     { label: "Slice", icon: Slice, transformType: "slice" },
     { label: "Split", icon: Scissors, transformType: "split" },
+    { label: "Pad", icon: AlignCenter, transformType: "pad" },
   ];
 
   const numberTransformOptions = [
@@ -210,31 +214,35 @@ export function ContextMenu({
           }}
         >
           <div className="bg-card border rounded-lg shadow-lg py-1 min-w-[160px]">
-            {textTransformOptions.map((option) => {
-              const Icon = option.icon;
-              return (
-                <button
-                  key={option.transformType}
-                  className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onClose();
-                    if (option.transformType.startsWith("split") || option.transformType === "slice") {
-                      let sliceType = option.transformType;
-                      if (sliceType.startsWith("split")) {
-                        sliceType = sliceType.replace("split", "").toLowerCase();
+            <ScrollArea className="h-[240px]">
+              {textTransformOptions.map((option) => {
+                const Icon = option.icon;
+                return (
+                  <button
+                    key={option.transformType}
+                    className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClose();
+                      if (option.transformType.startsWith("split") || option.transformType === "slice") {
+                        let sliceType = option.transformType;
+                        if (sliceType.startsWith("split")) {
+                          sliceType = sliceType.replace("split", "").toLowerCase();
+                        }
+                        onOpenSliceDialog(contextMenu.col, contextMenu.x, contextMenu.y, sliceType);
+                      } else if (option.transformType === "pad") {
+                        onOpenPadDialog(contextMenu.col, contextMenu.x, contextMenu.y, "pad");
+                      } else {
+                        onTextTransform(contextMenu.col, option.transformType);
                       }
-                      onOpenSliceDialog(contextMenu.col, contextMenu.x, contextMenu.y, sliceType);
-                    } else {
-                      onTextTransform(contextMenu.col, option.transformType);
-                    }
-                  }}
-                >
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                  {option.label}
-                </button>
-              );
-            })}
+                    }}
+                  >
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                    {option.label}
+                  </button>
+                );
+              })}
+            </ScrollArea>
           </div>
         </div>
       </div>

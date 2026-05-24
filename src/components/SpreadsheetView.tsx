@@ -28,6 +28,7 @@ import { SortDialog } from "./spreadsheet/SortDialog";
 import { PivotDialog } from "./spreadsheet/PivotDialog";
 import { DateTransformDialog } from "./spreadsheet/DateTransformDialog";
 import { SplitDialog } from "./spreadsheet/SplitDialog";
+import { PadDialog } from "./spreadsheet/PadDialog";
 import { ReplaceDialog } from "./spreadsheet/ReplaceDialog";
 import { WindowDialog } from "./spreadsheet/WindowDialog";
 
@@ -340,6 +341,7 @@ export function SpreadsheetView({
   const [replaceDialog, setReplaceDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [dateTransformDialog, setDateTransformDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [splitDialog, setSplitDialog] = useState<{ col: number; x: number; y: number; sliceType?: string } | null>(null);
+  const [padDialog, setPadDialog] = useState<{ col: number; x: number; y: number; padType: string } | null>(null);
   const [windowDialog, setWindowDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [renamedColumns, setRenamedColumns] = useState<Record<string, string>>({});
   const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
@@ -484,6 +486,10 @@ export function SpreadsheetView({
 
   const closeSplitDialog = useCallback(() => {
     setSplitDialog(null);
+  }, []);
+
+  const closePadDialog = useCallback(() => {
+    setPadDialog(null);
   }, []);
 
   const closeWindowDialog = useCallback(() => {
@@ -1055,6 +1061,7 @@ export function SpreadsheetView({
           onOpenSliceDialog={(col, x, y, sliceType) => setSplitDialog({ col, x, y, sliceType })}
           onOpenReplaceDialog={(col, x, y) => setReplaceDialog({ col, x, y })}
           onOpenWindowDialog={(col, x, y) => setWindowDialog({ col, x, y })}
+          onOpenPadDialog={(col, x, y, padType) => setPadDialog({ col, x, y, padType })}
           onSort={handleQuickSort}
           onDedup={handleContextMenuDedup}
           onTranspose={handleContextMenuTranspose}
@@ -1116,6 +1123,15 @@ export function SpreadsheetView({
           headers={headers}
           onAddCommand={onAddCommand}
           onClose={closeSplitDialog}
+        />
+      )}
+
+      {padDialog && (
+        <PadDialog
+          padDialog={padDialog}
+          headers={headers}
+          onAddCommand={onAddCommand}
+          onClose={closePadDialog}
         />
       )}
 
