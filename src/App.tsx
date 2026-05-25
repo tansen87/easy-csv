@@ -19,8 +19,6 @@ import {
   FolderOpen,
   Download,
   Upload,
-  ChevronDown,
-  Table,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/LogPanel";
@@ -53,7 +51,6 @@ function App() {
   const [selectedTabId, setSelectedTabId] = useState<string>("tab-1");
   const [selectedStep, setSelectedStep] = useState<PipelineStep | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [resultData, setResultData] = useState<string | null>(null);
   const [isXanInstalled, setIsXanInstalled] = useState<boolean | null>(null);
   const [xanVersion, setXanVersion] = useState<string | null>(null);
   const [inputFile, setInputFile] = useState<string>("");
@@ -68,8 +65,6 @@ function App() {
   const [helpContent, setHelpContent] = useState<string>("");
   const [helpCommandName, setHelpCommandName] = useState<string>("");
   const [isHelpLoading, setIsHelpLoading] = useState<boolean>(false);
-  const [showExecuteDropdown, setShowExecuteDropdown] = useState<boolean>(false);
-  const [executeTarget, setExecuteTarget] = useState<"logs" | "result">("result");
   const [historicalPipelines, setHistoricalPipelines] = useState<
     HistoricalPipeline[]
   >([]);
@@ -490,27 +485,11 @@ function App() {
 
       if (result.success) {
         if (result.output) {
-          const output = result.output as string;
-          if (executeTarget === "result") {
-            const maxRows = 100;
-            const lines = output.split('\n');
-            if (lines.length > maxRows) {
-              const truncatedOutput = lines.slice(0, maxRows).join('\n');
-              setResultData(truncatedOutput);
-              addLog("warning", `Result truncated to ${maxRows} rows. Original: ${lines.length} rows.`);
-            } else {
-              setResultData(output);
-            }
-          } else {
-            addLog("info", `${output}`);
-            setResultData(null);
-          }
-        } else {
-          setResultData(null);
+          const output = (result.output as string).trimStart().trimEnd();
+          addLog("info", output);
         }
       } else {
         addLog("error", `${result.error}`);
-        setResultData(null);
       }
     } catch (error) {
       addLog("error", `${error}`);
@@ -521,7 +500,6 @@ function App() {
 
   const handleClearLogs = () => {
     setLogs([]);
-    setResultData(null);
   };
 
   const handleExportPipeline = async () => {
@@ -687,19 +665,17 @@ function App() {
             <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
               <button
                 onClick={handleOpenFile}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-l-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors border-r border-border/50"
               >
                 <FolderOpen className="h-3.5 w-3.5" />
                 Browse
               </button>
-            </div>
-            <div className="relative flex">
               <button
                 onClick={() => {
                   handleExecute();
                 }}
                 disabled={getCurrentPipeline().length === 0 || isExecuting}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-l-md text-xs font-medium transition-colors ${isExecuting
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-r-md text-xs font-medium transition-colors ${isExecuting
                   ? "text-primary opacity-70"
                   : getCurrentPipeline().length === 0
                     ? "text-muted-foreground/40 cursor-not-allowed"
@@ -713,11 +689,7 @@ function App() {
                   </>
                 ) : (
                   <>
-                    {executeTarget === "result" ? (
-                      <Table className="h-3 w-3 mr-1.5" />
-                    ) : (
-                      <FileText className="h-3 w-3 mr-1.5" />
-                    )}
+                    <FileText className="h-3 w-3 mr-1.5" />
                     Execute
                     {getCurrentPipeline().length > 0 && (
                       <span className="ml-0.5">({getCurrentPipeline().length})</span>
@@ -725,47 +697,6 @@ function App() {
                   </>
                 )}
               </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowExecuteDropdown(!showExecuteDropdown);
-                }}
-                disabled={getCurrentPipeline().length === 0 || isExecuting}
-                className={`flex items-center px-2 py-1.5 rounded-r-md text-xs font-medium transition-colors border-l border-transparent ${isExecuting
-                  ? "text-primary opacity-70"
-                  : getCurrentPipeline().length === 0
-                    ? "text-muted-foreground/40 cursor-not-allowed"
-                    : "text-primary hover:text-primary hover:bg-primary/10"
-                  }`}
-              >
-                <ChevronDown className="h-3 w-3" />
-              </button>
-              {showExecuteDropdown && (
-                <div className="absolute left-full top-0 ml-1 w-24 bg-card border border-border/50 rounded-lg shadow-lg z-50">
-                  <button
-                    onClick={() => {
-                      setExecuteTarget("result");
-                      setShowExecuteDropdown(false);
-                    }}
-                    disabled={getCurrentPipeline().length === 0 || isExecuting}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-accent transition-colors ${executeTarget === "result" ? "bg-primary/10 text-primary" : "text-foreground"} ${getCurrentPipeline().length === 0 || isExecuting ? "opacity-50 cursor-not-allowed" : ""}`}
-                  >
-                    <Table className="h-3.5 w-3.5" />
-                    Result
-                  </button>
-                  <button
-                    onClick={() => {
-                      setExecuteTarget("logs");
-                      setShowExecuteDropdown(false);
-                    }}
-                    disabled={getCurrentPipeline().length === 0 || isExecuting}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-accent transition-colors ${executeTarget === "logs" ? "bg-primary/10 text-primary" : "text-foreground"} ${getCurrentPipeline().length === 0 || isExecuting ? "opacity-50 cursor-not-allowed" : ""}`}
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    Logs
-                  </button>
-                </div>
-              )}
             </div>
             <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
               <button
@@ -1015,7 +946,7 @@ function App() {
               onPipelineReorder={updateTabPipeline}
             />
           </div>
-          <LogPanel logs={logs} resultData={resultData} onClear={handleClearLogs} executeTarget={executeTarget} />
+          <LogPanel logs={logs} onClear={handleClearLogs} />
         </main>
       </div>
 
