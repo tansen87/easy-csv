@@ -31,6 +31,7 @@ import { SplitDialog } from "./spreadsheet/SplitDialog";
 import { PadDialog } from "./spreadsheet/PadDialog";
 import { ReplaceDialog } from "./spreadsheet/ReplaceDialog";
 import { WindowDialog } from "./spreadsheet/WindowDialog";
+import { HeaderSearch } from "./spreadsheet/HeaderSearch";
 
 interface SpreadsheetViewProps {
   tabs: PipelineTab[];
@@ -139,8 +140,9 @@ interface HeaderCellProps {
   renamedColumns: Record<string, string>;
   onHeaderSelect: (e: React.MouseEvent, col: number) => void;
   onHeaderContextMenu: (e: React.MouseEvent, col: number) => void;
-  onHeaderClick: (_e: React.MouseEvent | null, col: number) => void;
   onRenameApply: () => void;
+  onRenameCancel: (header: string) => void;
+  onRenameChange: (header: string, value: string) => void;
   onResizeStart: (colIndex: number, e: React.MouseEvent) => void;
   hasRenamedColumns: boolean;
   isLastColumn: boolean;
@@ -154,13 +156,22 @@ const HeaderCell = React.memo(function HeaderCell({
   renamedColumns,
   onHeaderSelect,
   onHeaderContextMenu,
-  onHeaderClick,
   onRenameApply,
+  onRenameCancel,
+  onRenameChange,
   onResizeStart,
   hasRenamedColumns,
   isLastColumn,
 }: HeaderCellProps) {
   const isRenaming = renamedColumns[header] !== undefined;
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      onRenameApply();
+    } else if (e.key === "Escape") {
+      onRenameCancel(header);
+    }
+  };
 
   return (
     <th
@@ -175,26 +186,39 @@ const HeaderCell = React.memo(function HeaderCell({
           <input
             type="text"
             value={renamedColumns[header]}
-            onChange={() => { }}
+            onChange={(e) => onRenameChange(header, e.target.value)}
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={handleKeyDown}
             className="w-full px-1 py-0.5 border rounded text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
             autoFocus
           />
         ) : (
-          <span
-            className="font-medium truncate cursor-pointer"
-            onDoubleClick={() => onHeaderClick(null as any, colIndex)}
-          >{header}</span>
+          <span className="font-medium truncate">{header}</span>
         )}
         <div className="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          {hasRenamedColumns && (
+          {isRenaming ? (
+            <>
+              <button
+                onClick={() => onRenameCancel(header)}
+                className="p-0.5 rounded hover:bg-accent transition-colors text-muted-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
+              <button
+                onClick={onRenameApply}
+                className="p-0.5 rounded hover:bg-accent transition-colors text-primary"
+              >
+                <Check className="h-3 w-3" />
+              </button>
+            </>
+          ) : hasRenamedColumns ? (
             <button
               onClick={onRenameApply}
               className="p-0.5 rounded hover:bg-accent transition-colors text-primary"
             >
               <Check className="h-3 w-3" />
             </button>
-          )}
+          ) : null}
         </div>
         {!isLastColumn && (
           <div
@@ -303,6 +327,8 @@ function useSelectedCellsState() {
     selectedCols,
     handleCellClick,
     handleHeaderSelect,
+    setSelectedCells,
+    setLastSelectedCell,
   };
 }
 
@@ -354,6 +380,8 @@ export function SpreadsheetView({
     selectedCols,
     handleCellClick,
     handleHeaderSelect,
+    setSelectedCells,
+    setLastSelectedCell,
   } = useSelectedCellsState();
 
   const currentTab = tabs.find((tab) => tab.id === selectedTabId);
@@ -454,16 +482,6 @@ export function SpreadsheetView({
     setContextMenu(null);
   }, []);
 
-  const handleHeaderClick = useCallback(
-    (_e: React.MouseEvent | null, col: number) => {
-      const columnName = headers[col];
-      if (!renamedColumns[columnName]) {
-        setRenamedColumns((prev) => ({ ...prev, [columnName]: columnName }));
-      }
-    },
-    [headers, renamedColumns],
-  );
-
   const closeFilterDialog = useCallback(() => {
     setFilterDialog(null);
   }, []);
@@ -526,6 +544,30 @@ export function SpreadsheetView({
     }
     setRenamedColumns({});
   }, [renamedColumns, onAddCommand]);
+
+  const handleRenameCancel = useCallback((header: string) => {
+    setRenamedColumns((prev) => {
+      const newRenamed = { ...prev };
+      delete newRenamed[header];
+      return newRenamed;
+    });
+  }, []);
+
+  const handleRenameChange = useCallback((header: string, value: string) => {
+    setRenamedColumns((prev) => ({ ...prev, [header]: value }));
+  }, []);
+
+  const handleRename = useCallback((col: number) => {
+    const columnName = headers[col];
+    if (!renamedColumns[columnName]) {
+      setRenamedColumns((prev) => ({ ...prev, [columnName]: columnName }));
+    }
+  }, [headers, renamedColumns]);
+
+  const handleHeaderSearchSelect = useCallback((colIndex: number) => {
+    setSelectedCells([{ row: -1, col: colIndex }]);
+    setLastSelectedCell({ row: -1, col: colIndex });
+  }, []);
 
   const handleDedup = useCallback(() => {
     if (!operationDialog || !onAddCommand) return;
@@ -1000,6 +1042,9 @@ export function SpreadsheetView({
       >
         <div className="p-4 h-full flex flex-col">
           <Card className="bg-card/80 backdrop-blur-sm border-border/50 flex-1 overflow-hidden flex flex-col">
+            <div className="px-4 py-2 border-b border-border/50 flex justify-end items-center gap-2">
+              <HeaderSearch headers={headers} onSelectHeader={handleHeaderSearchSelect} />
+            </div>
             <ScrollArea className="flex-1">
               <table ref={tableRef} className="w-full border-collapse table-fixed">
                 <colgroup>
@@ -1019,8 +1064,9 @@ export function SpreadsheetView({
                         renamedColumns={renamedColumns}
                         onHeaderSelect={handleHeaderSelect}
                         onHeaderContextMenu={handleHeaderContextMenu}
-                        onHeaderClick={handleHeaderClick}
                         onRenameApply={handleRenameApply}
+                        onRenameCancel={handleRenameCancel}
+                        onRenameChange={handleRenameChange}
                         onResizeStart={handleResizeStart}
                         hasRenamedColumns={hasRenamedColumns}
                         isLastColumn={colIndex === headers.length - 1}
@@ -1068,6 +1114,7 @@ export function SpreadsheetView({
           onReverse={handleContextMenuReverse}
           onTextTransform={handleTextTransform}
           onNumberTransform={handleNumberTransform}
+          onRename={handleRename}
         />
       )}
 
