@@ -415,6 +415,17 @@ function App() {
     }
   };
 
+  const handleStepAliasUpdate = (stepId: string, alias: string) => {
+    const currentPipeline = getCurrentPipeline();
+    const updatedPipeline = currentPipeline.map((step) =>
+      step.id === stepId ? { ...step, alias } : step,
+    );
+    updateTabPipeline(updatedPipeline);
+    if (selectedStep?.id === stepId) {
+      setSelectedStep({ ...selectedStep, alias });
+    }
+  };
+
   const handleExecute = async () => {
     const currentPipeline = getCurrentPipeline();
     if (currentPipeline.length === 0) {
@@ -942,6 +953,7 @@ function App() {
               onAddCommand={handleCommandClick}
               onStepClick={handleStepClick}
               onStepUpdate={handleStepUpdate}
+              onStepAliasUpdate={handleStepAliasUpdate}
               onStepDelete={handleStepRemove}
               onPipelineReorder={updateTabPipeline}
             />

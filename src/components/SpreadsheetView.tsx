@@ -47,6 +47,7 @@ interface SpreadsheetViewProps {
   ) => void;
   onStepClick?: (step: PipelineStep) => void;
   onStepUpdate?: (stepId: string, parameters: Record<string, any>) => void;
+  onStepAliasUpdate?: (stepId: string, alias: string) => void;
   onStepDelete?: (stepId: string) => void;
   onPipelineReorder?: (tabId: string, newPipeline: PipelineStep[]) => void;
 }
@@ -343,6 +344,7 @@ export function SpreadsheetView({
   onAddCommand,
   onStepClick,
   onStepUpdate,
+  onStepAliasUpdate,
   onStepDelete,
   onPipelineReorder,
 }: SpreadsheetViewProps) {
@@ -356,7 +358,7 @@ export function SpreadsheetView({
     row: number | null;
     col: number;
   } | null>(null);
-  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
+  
   const [commandDialog, setCommandDialog] = useState<CommandDialogState | null>(null);
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingTabName, setEditingTabName] = useState<string>("");
@@ -938,11 +940,11 @@ export function SpreadsheetView({
                       isLast={index === pipeline.length - 1}
                       headers={headers}
                       onStepClick={(s) => {
-                        setSelectedStepId(s.id);
                         if (onStepClick) {
                           onStepClick(s);
                         }
                       }}
+                      onStepAliasUpdate={onStepAliasUpdate || (() => { })}
                       onStepDelete={onStepDelete || (() => { })}
                       setCommandDialog={setCommandDialog}
                     />
@@ -954,85 +956,6 @@ export function SpreadsheetView({
           </DndContext>
         </div>
       )}
-
-      {selectedStepId && (() => {
-        const selectedStep = pipeline.find((s) => s.id === selectedStepId);
-        if (!selectedStep) return null;
-
-        return (
-          <div className="px-4 py-3 border-b bg-card/30">
-            <div className="grid grid-cols-2 gap-3">
-              {selectedStep.command.parameters.map((param) => (
-                <div key={param.name} className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    {param.name}
-                  </label>
-                  {param.type === "flag" || param.type === "boolean" ? (
-                    <input
-                      type="checkbox"
-                      checked={selectedStep.parameters[param.name] || false}
-                      onChange={(e) => {
-                        if (onStepUpdate) {
-                          onStepUpdate(selectedStep.id, {
-                            ...selectedStep.parameters,
-                            [param.name]: e.target.checked,
-                          });
-                        }
-                      }}
-                      className="h-4 w-4"
-                    />
-                  ) : param.type === "select" ? (
-                    <select
-                      value={
-                        selectedStep.parameters[param.name] ||
-                        param.default ||
-                        ""
-                      }
-                      onChange={(e) => {
-                        if (onStepUpdate) {
-                          onStepUpdate(selectedStep.id, {
-                            ...selectedStep.parameters,
-                            [param.name]: e.target.value,
-                          });
-                        }
-                      }}
-                      className="w-full h-8 px-2 text-xs border rounded bg-background"
-                    >
-                      {param.options?.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type={param.type === "number" ? "number" : "text"}
-                      value={
-                        selectedStep.parameters[param.name] ||
-                        param.default ||
-                        ""
-                      }
-                      onChange={(e) => {
-                        if (onStepUpdate) {
-                          onStepUpdate(selectedStep.id, {
-                            ...selectedStep.parameters,
-                            [param.name]:
-                              param.type === "number"
-                                ? Number(e.target.value)
-                                : e.target.value,
-                          });
-                        }
-                      }}
-                      placeholder={param.description}
-                      className="w-full h-8 px-2 text-xs border rounded bg-background"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
 
       <div
         className="flex-1 flex flex-col overflow-hidden relative"

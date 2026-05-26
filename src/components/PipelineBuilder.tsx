@@ -1,8 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { GripVertical, X, Trash2, Download, Upload, Layers, Plus, Edit3 } from "lucide-react";
+import { GripVertical, X, Trash2, Download, Upload, Layers, Plus, Edit3, Check } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -25,6 +25,7 @@ import { PipelineStep, PipelineTab } from "@/types/xan";
 interface SortableStepProps {
   step: PipelineStep;
   onStepClick: (step: PipelineStep) => void;
+  onStepAliasUpdate: (stepId: string, alias: string) => void;
   onStepRemove: (stepId: string) => void;
   isSelected: boolean;
   index: number;
@@ -34,11 +35,14 @@ interface SortableStepProps {
 function SortableStep({
   step,
   onStepClick,
+  onStepAliasUpdate,
   onStepRemove,
   isSelected,
   index,
   isLast,
 }: SortableStepProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(step.alias || "");
   const {
     attributes,
     listeners,
@@ -84,11 +88,52 @@ function SortableStep({
               className="flex-1 min-w-0"
               onClick={() => onStepClick(step)}
             >
-              <div className="font-semibold text-sm truncate mb-1.5">
-                {step.command.name}
+              <div className="flex items-center gap-2">
+                {isEditing ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="h-6 px-2 text-sm border rounded bg-background w-24"
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          onStepAliasUpdate(step.id, editValue.trim());
+                          setIsEditing(false);
+                        } else if (e.key === "Escape") {
+                          setIsEditing(false);
+                          setEditValue(step.alias || "");
+                        }
+                      }}
+                    />
+                    <button
+                      className="w-5 h-5 bg-green-500/10 hover:bg-green-500/20 rounded flex items-center justify-center transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStepAliasUpdate(step.id, editValue.trim());
+                        setIsEditing(false);
+                      }}
+                    >
+                      <Check className="h-3 w-3 text-green-500" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="font-semibold text-sm truncate">
+                      {step.alias || step.command.name}
+                    </div>
+                    {step.alias && (
+                      <span className="text-xs text-muted-foreground/60 bg-muted/40 px-1.5 py-0.5 rounded border border-border/30">
+                        {step.command.name}
+                      </span>
+                    )}
+                  </>
+                )}
               </div>
               {activeParams.length > 0 && (
-                <div className="text-xs text-muted-foreground flex flex-wrap gap-1.5">
+                <div className="text-xs text-muted-foreground flex flex-wrap gap-1.5 mt-1.5">
                   {activeParams.map(([key, value]) => (
                     <span key={key} className="bg-muted/60 px-2 py-0.5 rounded-md border border-border/30">
                       <span className="text-muted-foreground/70">{key}=</span>
@@ -98,17 +143,32 @@ function SortableStep({
                 </div>
               )}
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                onStepRemove(step.id);
-              }}
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
+            <div className="flex items-center gap-1">
+              {!isEditing && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground/70 hover:text-primary hover:bg-primary/10 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsEditing(true);
+                  }}
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStepRemove(step.id);
+                }}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         </div>
       </Card>
@@ -125,6 +185,7 @@ interface PipelineBuilderProps {
   steps: PipelineStep[];
   onStepsChange: (steps: PipelineStep[]) => void;
   onStepClick: (step: PipelineStep) => void;
+  onStepAliasUpdate: (stepId: string, alias: string) => void;
   onStepRemove: (stepId: string) => void;
   selectedStepId?: string;
   onClear: () => void;
@@ -143,6 +204,7 @@ export function PipelineBuilder({
   steps,
   onStepsChange,
   onStepClick,
+  onStepAliasUpdate,
   onStepRemove,
   selectedStepId,
   onClear,
@@ -340,6 +402,7 @@ export function PipelineBuilder({
                     key={step.id}
                     step={step}
                     onStepClick={onStepClick}
+                    onStepAliasUpdate={onStepAliasUpdate}
                     onStepRemove={onStepRemove}
                     isSelected={selectedStepId === step.id}
                     index={index}

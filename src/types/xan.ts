@@ -21,6 +21,7 @@ export interface PipelineStep {
   id: string;
   command: XanCommand;
   parameters: Record<string, any>;
+  alias?: string;
 }
 
 export interface LogEntry {

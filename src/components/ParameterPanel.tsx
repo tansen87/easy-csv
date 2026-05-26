@@ -2,18 +2,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Settings2, Info } from "lucide-react";
+import { X, Settings2, Info, Tag } from "lucide-react";
 import { PipelineStep } from "@/types/xan";
 
 interface ParameterPanelProps {
   step: PipelineStep | null;
   onStepUpdate: (stepId: string, parameters: Record<string, any>) => void;
+  onStepAliasUpdate: (stepId: string, alias: string) => void;
   onClose: () => void;
 }
 
 export function ParameterPanel({
   step,
   onStepUpdate,
+  onStepAliasUpdate,
   onClose,
 }: ParameterPanelProps) {
   if (!step) {
@@ -180,6 +182,20 @@ export function ParameterPanel({
           <Card className="bg-card/80 backdrop-blur-sm border-border/50">
             <CardContent>
               <div className="space-y-5 pt-6">
+                <div className="pb-4 border-b border-border/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Tag className="h-4 w-4 text-muted-foreground/70" />
+                    <label className="text-sm font-semibold">Alias</label>
+                    <span className="text-xs text-muted-foreground/60">(optional)</span>
+                  </div>
+                  <Input
+                    type="text"
+                    value={step.alias || ""}
+                    onChange={(e) => onStepAliasUpdate(step.id, e.target.value)}
+                    placeholder="Add a custom name to identify this step..."
+                    className="bg-background/50"
+                  />
+                </div>
                 {step.command.parameters.length === 0 ? (
                   <div className="text-center py-8">
                     <div className="w-12 h-12 mx-auto mb-3 bg-muted/50 rounded-xl flex items-center justify-center">

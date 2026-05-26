@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { GripVertical, X, ChevronRight } from "lucide-react";
+import { useMemo, useState } from "react";
+import { GripVertical, X, Check, Edit3 } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PipelineStep } from "@/types/xan";
@@ -7,6 +7,7 @@ import { PipelineStep } from "@/types/xan";
 interface SortableStepProps {
   step: PipelineStep;
   onStepClick: (step: PipelineStep) => void;
+  onStepAliasUpdate: (stepId: string, alias: string) => void;
   onStepDelete: (stepId: string) => void;
   index: number;
   isLast: boolean;
@@ -17,17 +18,17 @@ interface SortableStepProps {
 type CommandType = 'search' | 'filter' | 'sort' | 'select' | 'view' | 'count' | 'slice' | 'head' | 'tail' | 'grep' | 'sample' | 'dedup' | 'shuffle' | 'frequency' | 'groupby' | 'stats' | 'agg' | 'bins' | 'window' | 'headers' | 'flatten' | 'hist' | 'drop' | 'map' | 'enum' | 'rename' | 'behead' | 'fixlengths' | 'explode' | 'fmt' | 'to' | 'from' | 'top' | 'reverse' | 'transpose' | 'pivot' | 'unpivot' | 'split' | 'partition' | 'range' | 'eval' | 'cat' | 'join' | 'merge' | 'fuzzy-join' | 'transform' | 'fill' | 'complete' | 'flatmap' | 'separate';
 
 const commandIds: CommandType[] = [
-  'search', 'filter', 'sort', 'select', 'view', 'count', 'slice', 'head', 'tail', 'grep', 
-  'sample', 'dedup', 'shuffle', 'frequency', 'groupby', 'stats', 'agg', 'bins', 'window', 
-  'headers', 'flatten', 'hist', 'drop', 'map', 'enum', 'rename', 'behead', 'fixlengths', 
-  'explode', 'fmt', 'to', 'from', 'top', 'reverse', 'transpose', 'pivot', 'unpivot', 
-  'split', 'partition', 'range', 'eval', 'cat', 'join', 'merge', 'fuzzy-join', 'transform', 
+  'search', 'filter', 'sort', 'select', 'view', 'count', 'slice', 'head', 'tail', 'grep',
+  'sample', 'dedup', 'shuffle', 'frequency', 'groupby', 'stats', 'agg', 'bins', 'window',
+  'headers', 'flatten', 'hist', 'drop', 'map', 'enum', 'rename', 'behead', 'fixlengths',
+  'explode', 'fmt', 'to', 'from', 'top', 'reverse', 'transpose', 'pivot', 'unpivot',
+  'split', 'partition', 'range', 'eval', 'cat', 'join', 'merge', 'fuzzy-join', 'transform',
   'fill', 'complete', 'flatmap', 'separate'
 ];
 
 const getInitialParams = (cmdId: string, step: PipelineStep, headers: string[]): Record<string, any> => {
   const params: Record<string, any> = {};
-  
+
   switch (cmdId) {
     case 'search':
       return {
@@ -509,12 +510,15 @@ const getInitialParams = (cmdId: string, step: PipelineStep, headers: string[]):
 export function SortableStep({
   step,
   onStepClick,
+  onStepAliasUpdate,
   onStepDelete,
   index,
-  isLast,
   headers,
   setCommandDialog,
 }: SortableStepProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(step.alias || "");
+
   const {
     attributes,
     listeners,
@@ -538,7 +542,7 @@ export function SortableStep({
 
   const handleClick = () => {
     const cmdId = step.command.id;
-    
+
     if (commandIds.includes(cmdId as CommandType)) {
       const initialParams = getInitialParams(cmdId, step, headers);
       setCommandDialog({
@@ -550,6 +554,16 @@ export function SortableStep({
     } else {
       onStepClick(step);
     }
+  };
+
+  const handleSaveAlias = () => {
+    onStepAliasUpdate(step.id, editValue.trim());
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditValue(step.alias || "");
   };
 
   return (
@@ -566,8 +580,8 @@ export function SortableStep({
         <GripVertical className="h-4 w-4" />
       </button>
       <div
-        className={`flex flex-col gap-1.5 px-3.5 py-2 rounded-xl text-xs border cursor-pointer transition-all duration-200 min-w-[90px] ${isDragging 
-          ? 'bg-primary/15 border-primary/40 shadow-lg brightness-105' 
+        className={`flex flex-col gap-1.5 px-3.5 py-2 rounded-xl text-xs border cursor-pointer transition-all duration-200 min-w-[90px] ${isDragging
+          ? 'bg-primary/15 border-primary/40 shadow-lg brightness-105'
           : 'bg-gradient-to-br from-muted/70 to-muted/40 border-border/30 hover:from-muted hover:to-muted/60 hover:shadow-md hover:border-border/50 hover:-translate-y-0.5'}`}
         onClick={handleClick}
       >
@@ -575,8 +589,43 @@ export function SortableStep({
           <span className="w-5 h-5 bg-gradient-to-br from-primary/30 to-primary/10 rounded-full text-xs font-semibold text-primary/80 flex items-center justify-center mr-0.5 shrink-0 shadow-sm">
             {index + 1}
           </span>
-          <span className="font-medium text-foreground/90">{step.command.name}</span>
-          {!isLast && <ChevronRight className="h-3 w-3 text-muted-foreground/40 shrink-0 ml-1" />}
+          {isEditing ? (
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                className="h-5 px-1.5 text-xs border rounded bg-background w-16"
+                autoFocus
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSaveAlias();
+                  } else if (e.key === "Escape") {
+                    handleCancelEdit();
+                  }
+                }}
+              />
+              <button
+                className="w-4 h-4 bg-green-500/20 hover:bg-green-500/30 rounded flex items-center justify-center transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSaveAlias();
+                }}
+              >
+                <Check className="h-2.5 w-2.5 text-green-600" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <span className="font-medium text-foreground/90">{step.alias || step.command.name}</span>
+              {step.alias && (
+                <span className="text-[10px] text-muted-foreground/50 bg-muted/50 px-1 rounded">
+                  {step.command.name}
+                </span>
+              )}
+            </>
+          )}
         </div>
         {activeParams.length > 0 && (
           <div className="flex flex-wrap gap-1 max-w-[220px]">
@@ -594,15 +643,28 @@ export function SortableStep({
           </div>
         )}
       </div>
-      <button
-        className="p-1.5 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all duration-200 mt-0.5 hover:scale-110 dark:text-muted-foreground/80"
-        onClick={(e) => {
-          e.stopPropagation();
-          onStepDelete(step.id);
-        }}
-      >
-        <X className="h-3.5 w-3.5" />
-      </button>
+      <div className="flex items-center gap-1">
+        {!isEditing && (
+          <button
+            className="p-1.5 text-muted-foreground/70 hover:text-primary hover:bg-primary/10 rounded-lg transition-all duration-200 mt-0.5 hover:scale-110 dark:text-muted-foreground/80"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+          >
+            <Edit3 className="h-3.5 w-3.5" />
+          </button>
+        )}
+        <button
+          className="p-1.5 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all duration-200 mt-0.5 hover:scale-110 dark:text-muted-foreground/80"
+          onClick={(e) => {
+            e.stopPropagation();
+            onStepDelete(step.id);
+          }}
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
     </div>
   );
 }
