@@ -358,7 +358,7 @@ export function SpreadsheetView({
     row: number | null;
     col: number;
   } | null>(null);
-  
+
   const [commandDialog, setCommandDialog] = useState<CommandDialogState | null>(null);
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingTabName, setEditingTabName] = useState<string>("");
@@ -688,25 +688,13 @@ export function SpreadsheetView({
 
   const closeAllDialogsRef = useRef(() => {
     closeContextMenu();
-    closeFilterDialog();
-    closeSortDialog();
-    closeOperationDialog();
-    closePivotDialog();
-    closeDateTransformDialog();
-    closeSplitDialog();
   });
 
   useEffect(() => {
     closeAllDialogsRef.current = () => {
       closeContextMenu();
-      closeFilterDialog();
-      closeSortDialog();
-      closeOperationDialog();
-      closePivotDialog();
-      closeDateTransformDialog();
-      closeSplitDialog();
     };
-  }, [closeContextMenu, closeFilterDialog, closeSortDialog, closeOperationDialog, closePivotDialog, closeDateTransformDialog, closeSplitDialog]);
+  }, [closeContextMenu]);
 
   useEffect(() => {
     const handleClickOutside = () => {

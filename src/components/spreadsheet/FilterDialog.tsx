@@ -78,8 +78,9 @@ export function FilterDialog({
   const [textValue, setTextValue] = useState("");
   const [numberValue, setNumberValue] = useState("");
   const [caseInsensitive, setCaseInsensitive] = useState(false);
+  const [selectedColumn, setSelectedColumn] = useState<string>(headers[filterDialog.col] || "");
 
-  const columnName = headers[filterDialog.col] || "";
+  const columnName = selectedColumn;
 
   const buildRegexPattern = (
     operator: TextOperator,
@@ -191,7 +192,7 @@ export function FilterDialog({
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20">
-        <span className="text-xs font-medium truncate max-w-[160px]">{columnName}</span>
+        <span className="text-xs font-medium">Filter</span>
         <button
           onClick={onClose}
           className="p-0.5 hover:bg-accent rounded transition-colors shrink-0 text-muted-foreground/70 hover:text-foreground dark:text-muted-foreground/80"
@@ -222,6 +223,18 @@ export function FilterDialog({
           >
             Number
           </button>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+            Column
+          </label>
+          <SearchableSelect
+            value={selectedColumn}
+            onChange={(v) => setSelectedColumn(v as string)}
+            options={headers.map((header) => ({ value: header, label: header }))}
+            placeholder="Select column..."
+          />
         </div>
 
         {filterType === "text" && (
