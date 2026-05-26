@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { X } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { X, GripVertical } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
@@ -79,8 +79,50 @@ export function FilterDialog({
   const [numberValue, setNumberValue] = useState("");
   const [caseInsensitive, setCaseInsensitive] = useState(false);
   const [selectedColumn, setSelectedColumn] = useState<string>(headers[filterDialog.col] || "");
+  const [position, setPosition] = useState({ x: filterDialog.x, y: filterDialog.y });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
 
   const columnName = selectedColumn;
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest(".no-drag")) return;
+    
+    setIsDragging(true);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startPosX: position.x,
+      startPosY: position.y,
+    };
+  }, [position.x, position.y]);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging) return;
+
+    const deltaX = e.clientX - dragRef.current.startX;
+    const deltaY = e.clientY - dragRef.current.startY;
+
+    setPosition({
+      x: Math.max(0, Math.min(dragRef.current.startPosX + deltaX, window.innerWidth - 260)),
+      y: Math.max(0, Math.min(dragRef.current.startPosY + deltaY, window.innerHeight - 400)),
+    });
+  }, [isDragging]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      return () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp]);
 
   const buildRegexPattern = (
     operator: TextOperator,
@@ -184,18 +226,22 @@ export function FilterDialog({
 
   return (
     <div
-      className="fixed bg-card border rounded-lg shadow-xl z-50 w-[240px]"
+      className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[240px] select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
-        left: Math.min(filterDialog.x, window.innerWidth - 260),
-        top: Math.min(filterDialog.y, window.innerHeight - 350),
+        left: position.x,
+        top: position.y,
       }}
       onClick={(e) => e.stopPropagation()}
+      onMouseDown={handleMouseDown}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20">
-        <span className="text-xs font-medium">Filter</span>
+        <div className="flex items-center gap-2">
+          <GripVertical className="h-3 w-3 text-muted-foreground/50" />
+          <span className="text-xs font-medium">Filter</span>
+        </div>
         <button
           onClick={onClose}
-          className="p-0.5 hover:bg-accent rounded transition-colors shrink-0 text-muted-foreground/70 hover:text-foreground dark:text-muted-foreground/80"
+          className="no-drag p-0.5 hover:bg-accent rounded transition-colors shrink-0 text-muted-foreground/70 hover:text-foreground dark:text-muted-foreground/80"
         >
           <X className="h-3.5 w-3.5" />
         </button>

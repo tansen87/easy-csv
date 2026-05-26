@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { X } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { X, GripVertical } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
@@ -37,6 +37,48 @@ export function PadDialog({
   const [padType, setPadType] = useState(padDialog.padType || "pad");
   const [width, setWidth] = useState("10");
   const [char, setChar] = useState("");
+  const [position, setPosition] = useState({ x: padDialog.x, y: padDialog.y });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest(".no-drag")) return;
+
+    setIsDragging(true);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startPosX: position.x,
+      startPosY: position.y,
+    };
+  }, [position.x, position.y]);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging) return;
+
+    const deltaX = e.clientX - dragRef.current.startX;
+    const deltaY = e.clientY - dragRef.current.startY;
+
+    setPosition({
+      x: Math.max(0, Math.min(dragRef.current.startPosX + deltaX, window.innerWidth - 300)),
+      y: Math.max(0, Math.min(dragRef.current.startPosY + deltaY, window.innerHeight - 360)),
+    });
+  }, [isDragging]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      return () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp]);
 
   const handleApply = () => {
     if (!selectedColumn || !width) return;
@@ -64,23 +106,27 @@ export function PadDialog({
 
   return (
     <div
-      className="fixed bg-card border rounded-lg shadow-xl z-50 w-[280px]"
+      className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[240px] select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
-        left: Math.min(padDialog.x, window.innerWidth - 360),
-        top: Math.min(padDialog.y, window.innerHeight - 320),
+        left: position.x,
+        top: position.y,
       }}
       onClick={(e) => e.stopPropagation()}
+      onMouseDown={handleMouseDown}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
-        <span className="text-xs font-medium">Pad</span>
+        <div className="flex items-center gap-2">
+          <GripVertical className="h-3 w-3 text-muted-foreground/50" />
+          <span className="text-xs font-medium">Pad</span>
+        </div>
         <button
           onClick={onClose}
-          className="p-0.5 hover:bg-accent rounded transition-colors shrink-0 text-muted-foreground/70 hover:text-foreground"
+          className="no-drag p-0.5 hover:bg-accent rounded transition-colors shrink-0 text-muted-foreground/70 hover:text-foreground"
         >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
-      <div className="p-3 space-y-3">
+      <div className="p-3 space-y-1">
         <div className="space-y-1">
           <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
             Column

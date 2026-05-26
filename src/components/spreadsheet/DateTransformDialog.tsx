@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { X, ChevronDown } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { X, ChevronDown, GripVertical } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
@@ -75,11 +75,53 @@ export function DateTransformDialog({
   const [outputColumnName, setOutputColumnName] = useState("new_date");
   const [selectedColumn, setSelectedColumn] = useState(headers[dateTransformDialog.col] || "");
   const [isColumnOpen, setIsColumnOpen] = useState(false);
+  const [position, setPosition] = useState({ x: dateTransformDialog.x, y: dateTransformDialog.y });
+  const [isDragging, setIsDragging] = useState(false);
   const columnRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
 
   const filteredHeaders = selectedColumn
     ? headers.filter(header => header.toLowerCase().includes(selectedColumn.toLowerCase()))
     : headers;
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest(".no-drag")) return;
+
+    setIsDragging(true);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startPosX: position.x,
+      startPosY: position.y,
+    };
+  }, [position.x, position.y]);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging) return;
+
+    const deltaX = e.clientX - dragRef.current.startX;
+    const deltaY = e.clientY - dragRef.current.startY;
+
+    setPosition({
+      x: Math.max(0, Math.min(dragRef.current.startPosX + deltaX, window.innerWidth - 360)),
+      y: Math.max(0, Math.min(dragRef.current.startPosY + deltaY, window.innerHeight - 500)),
+    });
+  }, [isDragging]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      return () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -127,23 +169,27 @@ export function DateTransformDialog({
 
   return (
     <div
-      className="fixed bg-card border rounded-lg shadow-xl z-50 w-[340px]"
+      className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[240px] select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
-        left: Math.min(dateTransformDialog.x, window.innerWidth - 360),
-        top: Math.min(dateTransformDialog.y, window.innerHeight - 480),
+        left: position.x,
+        top: position.y,
       }}
       onClick={(e) => e.stopPropagation()}
+      onMouseDown={handleMouseDown}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
-        <span className="text-xs font-medium">Date Transform</span>
+        <div className="flex items-center gap-2">
+          <GripVertical className="h-3 w-3 text-muted-foreground/50" />
+          <span className="text-xs font-medium">Date Transform</span>
+        </div>
         <button
           onClick={onClose}
-          className="p-0.5 hover:bg-accent rounded transition-colors shrink-0 text-muted-foreground/70 hover:text-foreground dark:text-muted-foreground/80"
+          className="no-drag p-0.5 hover:bg-accent rounded transition-colors shrink-0 text-muted-foreground/70 hover:text-foreground dark:text-muted-foreground/80"
         >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
-      <div className="p-3 space-y-3">
+      <div className="p-3 space-y-1">
         <div className="space-y-1" ref={columnRef}>
           <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
             Column
@@ -220,11 +266,18 @@ export function DateTransformDialog({
             className="w-full h-8 px-2 text-xs border rounded bg-background"
           />
         </div>
-
+      </div>
+      <div className="px-3 pb-2 flex gap-2">
         <button
+          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+          onClick={onClose}
+        >
+          Cancel
+        </button>
+        <button
+          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
           onClick={handleApply}
-          disabled={!selectedColumn}
-          className="w-full px-3 py-2 rounded text-xs bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        >
           Apply
         </button>
       </div>
