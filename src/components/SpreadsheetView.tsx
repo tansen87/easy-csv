@@ -375,6 +375,7 @@ export function SpreadsheetView({
   const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
 
   const tableRef = useRef<HTMLTableElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const {
     selectedCellMap,
@@ -569,7 +570,19 @@ export function SpreadsheetView({
   const handleHeaderSearchSelect = useCallback((colIndex: number) => {
     setSelectedCells([{ row: -1, col: colIndex }]);
     setLastSelectedCell({ row: -1, col: colIndex });
-  }, []);
+
+    const scrollAreaEl = scrollAreaRef.current;
+    if (scrollAreaEl) {
+      const viewport = scrollAreaEl.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+      if (viewport) {
+        let scrollPosition = 0;
+        for (let i = 0; i < colIndex; i++) {
+          scrollPosition += columnWidths[i] || 80;
+        }
+        viewport.scrollTo({ left: scrollPosition, behavior: 'smooth' });
+      }
+    }
+  }, [columnWidths]);
 
   const handleDedup = useCallback(() => {
     if (!operationDialog || !onAddCommand) return;
@@ -956,7 +969,7 @@ export function SpreadsheetView({
             <div className="px-4 py-2 border-b border-border/50 flex justify-end items-center gap-2">
               <HeaderSearch headers={headers} onSelectHeader={handleHeaderSearchSelect} />
             </div>
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1" ref={scrollAreaRef}>
               <table ref={tableRef} className="w-full border-collapse table-fixed">
                 <colgroup>
                   {headers.map((_, colIndex) => (
