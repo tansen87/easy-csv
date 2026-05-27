@@ -20,14 +20,14 @@ export function ParameterPanel({
 }: ParameterPanelProps) {
   if (!step) {
     return (
-      <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10 border-l border-border/50">
-        <div className="p-4 border-b bg-card/50 backdrop-blur-sm">
+      <div className="h-full flex flex-col bg-background border-l border-border/50">
+        <div className="p-4 border-b bg-card/80">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center border border-primary/20">
+            <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
               <Settings2 className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <h2 className="text-base font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              <h2 className="text-base font-bold">
                 Parameters
               </h2>
               <p className="text-xs text-muted-foreground">
@@ -143,15 +143,15 @@ export function ParameterPanel({
   };
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10 border-l border-border/50">
-      <div className="p-4 border-b bg-card/50 backdrop-blur-sm">
+    <div className="h-full flex flex-col bg-background border-l border-border/50">
+      <div className="p-4 border-b bg-card/80">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center border border-primary/20">
+            <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
               <Settings2 className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <h2 className="text-base font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              <h2 className="text-base font-bold">
                 Parameters
               </h2>
               <p className="text-xs text-muted-foreground">
@@ -179,7 +179,7 @@ export function ParameterPanel({
       </div>
       <ScrollArea className="flex-1">
         <div className="p-4">
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+          <Card className="bg-card border-border/50">
             <CardContent>
               <div className="space-y-5 pt-6">
                 <div className="pb-4 border-b border-border/50">

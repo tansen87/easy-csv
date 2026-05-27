@@ -636,7 +636,7 @@ export function SortableStep({
         {activeParams.length > 0 && (
           <div className="flex flex-wrap gap-1 max-w-[220px]">
             {activeParams.slice(0, 3).map(([key, value]) => (
-              <span key={key} className="bg-background/60 backdrop-blur-sm px-1.5 py-0.5 rounded-md text-[10px] border border-border/20 truncate shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]">
+              <span key={key} className="bg-background/80 px-1.5 py-0.5 rounded-md text-[10px] border border-border/20 truncate">
                 <span className="text-muted-foreground/60">{key}=</span>
                 <span className="font-medium text-foreground/80">{String(value)}</span>
               </span>

@@ -67,7 +67,7 @@ function SortableStep({
       <Card
         className={`mb-3 cursor-pointer transition-all duration-200 hover:shadow-md ${isSelected
           ? "bg-gradient-to-r from-primary/10 to-primary/5 border-primary/50 shadow-sm"
-          : "bg-card/80 backdrop-blur-sm hover:bg-accent/30 border-border/50"
+          : "bg-card/80 hover:bg-accent/30 border-border/50"
           }`}
       >
         <div className="p-4">
@@ -240,8 +240,8 @@ export function PipelineBuilder({
   }
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10">
-      <div className="border-b bg-card/50 backdrop-blur-sm">
+    <div className="h-full flex flex-col bg-background">
+      <div className="border-b bg-card/80">
 
         {/* Pipeline Controls */}
         <div className="p-4 border-t">

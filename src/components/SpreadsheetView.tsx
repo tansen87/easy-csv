@@ -719,8 +719,8 @@ export function SpreadsheetView({
 
   if (!inputFile) {
     return (
-      <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10">
-        <div className="border-b bg-card/50 backdrop-blur-sm">
+      <div className="h-full flex flex-col bg-background">
+        <div className="border-b bg-card/80">
           <div className="h-[48px] px-4 flex items-center">
             <div className="flex items-center shrink-0">
               <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
@@ -828,8 +828,8 @@ export function SpreadsheetView({
   }
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10">
-      <div className="border-b bg-card/50 backdrop-blur-sm">
+    <div className="h-full flex flex-col bg-background">
+      <div className="border-b bg-card/80">
         <div className="h-[48px] px-4 flex items-center">
           <div className="flex items-center shrink-0">
             <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
@@ -921,7 +921,7 @@ export function SpreadsheetView({
       </div>
 
       {pipeline.length > 0 && (
-        <div className="px-4 py-2.5 border-b bg-gradient-to-r from-background/80 via-background/60 to-background/80 backdrop-blur-sm">
+        <div className="px-4 py-2.5 border-b bg-card/80">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -965,7 +965,7 @@ export function SpreadsheetView({
         onMouseLeave={handleResizeEnd}
       >
         <div className="p-4 h-full flex flex-col">
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50 flex-1 overflow-hidden flex flex-col">
+          <Card className="bg-card border-border/50 flex-1 overflow-hidden flex flex-col">
             <div className="px-4 py-2 border-b border-border/50 flex justify-end items-center gap-2">
               <HeaderSearch headers={headers} onSelectHeader={handleHeaderSearchSelect} />
             </div>

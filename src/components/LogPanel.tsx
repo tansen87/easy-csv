@@ -63,13 +63,13 @@ export function LogPanel({ logs, onClear, showToastRef }: LogPanelProps) {
   };
 
   return (
-    <div style={{ height: `${height}%` }} className="relative flex flex-col bg-gradient-to-b from-background to-muted/10 border-t border-border/50 min-h-[100px]">
+    <div style={{ height: `${height}%` }} className="relative flex flex-col bg-background border-t border-border/50 min-h-[100px]">
       <ResizeHandle
         direction="vertical"
         onResize={handleResize}
         className="absolute -top-1 left-0 right-0 z-10"
       />
-      <div className="p-1 border-b bg-card/50 backdrop-blur-sm">
+      <div className="p-1 border-b bg-card/80">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground shadow-sm">

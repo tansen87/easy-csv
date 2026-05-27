@@ -182,7 +182,7 @@ export function CommandList({
   };
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10 border-r border-border/50">
+    <div className="h-full flex flex-col bg-background border-r border-border/50">
       <ScrollArea className="flex-1">
         <div className="p-2">
           {commandCategories.map((category) => {
@@ -216,7 +216,7 @@ export function CommandList({
                           key={command.id}
                           className={`cursor-pointer transition-all duration-200 hover:shadow-md ${selectedCommandId === command.id
                             ? "bg-gradient-to-r from-primary/10 to-primary/5 border-primary/50 shadow-sm"
-                            : "bg-card/80 backdrop-blur-sm hover:bg-accent/30 border-border/50"
+                            : "bg-card/80 hover:bg-accent/30 border-border/50"
                             }`}
                         >
                           <div className="p-3">

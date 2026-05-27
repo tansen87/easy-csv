@@ -659,8 +659,8 @@ function App() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20 relative overflow-hidden">
-      <header className="h-14 border-b bg-card/80 backdrop-blur-sm shadow-sm flex items-center justify-between px-4 gap-4 relative z-10">
+    <div className="h-screen flex flex-col bg-background relative overflow-hidden">
+      <header className="h-14 border-b bg-card shadow-sm flex items-center justify-between px-4 gap-4 relative z-10">
         {/* Left: Command/History Toggle + Search */}
         <div className="flex items-center gap-2">
           <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
@@ -696,7 +696,7 @@ function App() {
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-32 pl-8 pr-3 py-1.5 text-xs border border-border/50 rounded-lg bg-background/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
+              className="w-32 pl-8 pr-3 py-1.5 text-xs border border-border/50 rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
             />
           </div>
         </div>
@@ -792,10 +792,7 @@ function App() {
               }}
               className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 rounded-lg text-xs font-medium border border-green-500/20 hover:bg-green-500/20 transition-colors cursor-pointer"
             >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-              </span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
               <span className="hidden sm:inline">xan{xanVersion ? ` ${xanVersion.trim()}` : ""}</span>
             </button>
           ) : (
@@ -846,7 +843,7 @@ function App() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <aside className="w-[16%] flex-shrink-0 flex flex-col bg-card/50 backdrop-blur-sm border-r">
+        <aside className="w-[16%] flex-shrink-0 flex flex-col bg-card/80 border-r">
           {/* Panel Content */}
           <div className="flex-1 overflow-hidden">
             {activeLeftPanel === "commands" ? (
