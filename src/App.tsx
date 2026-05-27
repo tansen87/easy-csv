@@ -95,11 +95,22 @@ function App() {
     rows: string[][];
   }>({ headers: [], rows: [] });
 
+  const isCsvFile = (filePath: string): boolean => {
+    const ext = filePath.split('.').pop()?.toLowerCase();
+    return ext ? ['csv', 'txt', 'tsv'].includes(ext) : false;
+  };
+
   // Load CSV file
   const loadCsvData = useCallback(
     async (filePath: string) => {
       if (!filePath) {
         setCsvData({ headers: [], rows: [] });
+        return;
+      }
+
+      if (!isCsvFile(filePath)) {
+        setCsvData({ headers: [], rows: [] });
+        addLog("info", `Non-CSV file selected. Use "from" command to convert ${filePath.split('.').pop()?.toUpperCase()} to CSV.`);
         return;
       }
 
@@ -245,14 +256,14 @@ function App() {
   }, [inputFile]);
 
   useEffect(() => {
-    if (csvData.headers.length > 0 && selectedTabId) {
+    if (selectedTabId) {
       setTabs((prev) =>
         prev.map((tab) =>
           tab.id === selectedTabId
             ? {
               ...tab,
-              data: csvData.rows,
-              headers: csvData.headers,
+              data: csvData.headers.length > 0 ? csvData.rows : tab.data,
+              headers: csvData.headers.length > 0 ? csvData.headers : tab.headers,
               inputFile: inputFile,
               updatedAt: formatDateTime(new Date()),
             }

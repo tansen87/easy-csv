@@ -416,12 +416,16 @@ const getInitialParams = (cmdId: string, step: PipelineStep, headers: string[]):
     case 'from':
       return {
         format: step.parameters.format || '',
-        'sheet-index': step.parameters['sheet-index'] || 0,
+        'sheet-index': step.parameters['sheet-index'],
         'sheet-name': step.parameters['sheet-name'] || '',
-        'sample-size': step.parameters['sample-size'] || 64,
+        'list-sheets': step.parameters['list-sheets'] || false,
+        'sample-size': step.parameters['sample-size'],
         'sort-keys': step.parameters['sort-keys'] || false,
-        column: step.parameters.column || 'value',
-        'nth-table': step.parameters['nth-table'] || 0,
+        'key-column': step.parameters['key-column'] || '',
+        'value-column': step.parameters['value-column'] || '',
+        'single-object': step.parameters['single-object'] || false,
+        column: step.parameters.column || '',
+        'nth-table': step.parameters['nth-table'],
         output: step.parameters.output || '',
       };
     case 'top':

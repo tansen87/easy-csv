@@ -704,7 +704,7 @@ export function SpreadsheetView({
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  if (!inputFile || data.length === 0) {
+  if (!inputFile) {
     return (
       <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10">
         <div className="border-b bg-card/50 backdrop-blur-sm">
