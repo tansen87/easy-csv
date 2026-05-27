@@ -1250,6 +1250,46 @@ export function CommandDialog({
         {commandDialog.type === "view" && (
           <div className="space-y-4">
             <div className="space-y-2">
+              <label className="text-sm font-medium">Select Columns</label>
+              <input
+                type="text"
+                value={commandDialog.params.select || ""}
+                onChange={(e) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      select: e.target.value || undefined,
+                    },
+                  })
+                }
+                placeholder="Leave empty to show all columns"
+                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                autoFocus
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="view-all"
+                checked={commandDialog.params.all || false}
+                onChange={(e) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      all: e.target.checked,
+                      limit: e.target.checked ? 0 : commandDialog.params.limit || 10,
+                    },
+                  })
+                }
+                className="h-4 w-4"
+              />
+              <label htmlFor="view-all" className="text-sm cursor-pointer">
+                Show All Rows
+              </label>
+            </div>
+            <div className="space-y-2">
               <label className="text-sm font-medium">Limit</label>
               <input
                 type="number"
@@ -1265,7 +1305,7 @@ export function CommandDialog({
                 }
                 placeholder="Number of rows to display"
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                autoFocus
+                disabled={commandDialog.params.all}
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">

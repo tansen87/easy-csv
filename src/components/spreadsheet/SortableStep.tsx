@@ -93,7 +93,11 @@ const getInitialParams = (cmdId: string, step: PipelineStep, headers: string[]):
         evaluate: step.parameters.evaluate || false,
       };
     case 'view':
-      return { limit: step.parameters.limit || 10 };
+      return {
+        select: step.parameters.select || '',
+        all: step.parameters.all || false,
+        limit: step.parameters.limit,
+      };
     case 'cat':
       return {
         mode: step.parameters.mode || 'rows',

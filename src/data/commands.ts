@@ -23,6 +23,19 @@ export const xanCommands: XanCommand[] = [
     category: "Explore & visualize",
     parameters: [
       {
+        name: "select",
+        type: "string",
+        description: "Select the columns to visualize",
+        required: false,
+      },
+      {
+        name: "all",
+        type: "flag",
+        description: "Remove the row limit and display everything",
+        required: false,
+        default: false,
+      },
+      {
         name: "limit",
         type: "number",
         description: "Number of rows to display",
