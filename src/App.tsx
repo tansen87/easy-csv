@@ -989,7 +989,7 @@ function App() {
               onPipelineReorder={updateTabPipeline}
             />
           </div>
-          <LogPanel logs={logs} onClear={handleClearLogs} />
+          <LogPanel logs={logs} onClear={handleClearLogs} showToastRef={showToastRef} />
         </main>
       </div>
 

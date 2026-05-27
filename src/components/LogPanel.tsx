@@ -2,16 +2,18 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ResizeHandle } from "@/components/ui/resize-handle";
-import { Trash2, Info, CheckCircle, AlertCircle, XCircle, TextQuote, FileText } from "lucide-react";
+import { Trash2, Info, CheckCircle, AlertCircle, XCircle, TextQuote, FileText, Copy } from "lucide-react";
 import { useState } from "react";
 import { LogEntry } from "@/types/xan";
+import { ToastType } from "@/components/Toast";
 
 interface LogPanelProps {
   logs: LogEntry[];
   onClear: () => void;
+  showToastRef?: React.RefObject<(message: string, type: ToastType) => void>;
 }
 
-export function LogPanel({ logs, onClear }: LogPanelProps) {
+export function LogPanel({ logs, onClear, showToastRef }: LogPanelProps) {
   const [height, setHeight] = useState<number>(50);
 
   const getLogIcon = (type: LogEntry["type"]) => {
@@ -104,7 +106,7 @@ export function LogPanel({ logs, onClear }: LogPanelProps) {
               {logs.map((log) => (
                 <Card
                   key={log.id}
-                  className={`p-3 border ${getLogBgColor(log.type)} hover:shadow-sm transition-all duration-200`}
+                  className={`p-3 border group ${getLogBgColor(log.type)} hover:shadow-sm transition-all duration-200`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5 flex-shrink-0">{getLogIcon(log.type)}</div>
@@ -116,6 +118,17 @@ export function LogPanel({ logs, onClear }: LogPanelProps) {
                         <span className="text-xs text-muted-foreground/70">
                           {log.timestamp.toLocaleTimeString()}
                         </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(log.message);
+                            showToastRef?.current?.("Copied!", "success");
+                          }}
+                          className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 hover:bg-primary/10"
+                        >
+                          <Copy className="h-3 w-3 text-muted-foreground/70" />
+                        </Button>
                       </div>
                       <p className="text-sm leading-relaxed break-words font-mono whitespace-pre-wrap text-foreground/90">
                         {log.message}
