@@ -1,13 +1,21 @@
-import { XanCommand, XanParameter } from "@/types/xan";
-
-const outputParam: XanParameter = {
-  name: "output",
-  type: "string",
-  description: "Write output to file instead of stdout",
-  required: false,
-};
+import { XanCommand } from "@/types/xan";
 
 export const xanCommands: XanCommand[] = [
+  {
+    id: "output",
+    name: "output",
+    description: "Write output to file instead of stdout",
+    category: "Output",
+    parameters: [
+      {
+        name: "path",
+        type: "string",
+        description: "Output file path",
+        required: true,
+        isPositional: true,
+      },
+    ],
+  },
   {
     id: "view",
     name: "view",
@@ -165,7 +173,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -275,7 +283,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: "lin",
       },
-      outputParam,
+
     ],
   },
   {
@@ -304,7 +312,7 @@ export const xanCommands: XanCommand[] = [
         description: "Read evaluation expression from a file instead",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -320,7 +328,7 @@ export const xanCommands: XanCommand[] = [
         required: true,
         isPositional: true,
       },
-      outputParam,
+
     ],
   },
   {
@@ -369,7 +377,7 @@ export const xanCommands: XanCommand[] = [
         description: "Parellize computations using this many threads",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -392,7 +400,7 @@ export const xanCommands: XanCommand[] = [
         required: true,
         isPositional: true,
       },
-      outputParam,
+
     ],
   },
   {
@@ -428,7 +436,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -449,7 +457,7 @@ export const xanCommands: XanCommand[] = [
         description: "Fill empty cells using provided value instead of using last non-empty value",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -511,7 +519,7 @@ export const xanCommands: XanCommand[] = [
         description: "Select columns to group by",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -559,7 +567,7 @@ export const xanCommands: XanCommand[] = [
         description: "Parellize computations using this many threads",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -582,7 +590,7 @@ export const xanCommands: XanCommand[] = [
         required: true,
         isPositional: true,
       },
-      outputParam,
+
     ],
   },
   {
@@ -765,7 +773,7 @@ export const xanCommands: XanCommand[] = [
         description: "Column containing pattern name for breakdown",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -802,7 +810,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -832,7 +840,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -848,7 +856,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: 10,
       },
-      outputParam,
+
     ],
   },
   {
@@ -864,7 +872,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: 10,
       },
-      outputParam,
+
     ],
   },
   {
@@ -891,7 +899,7 @@ export const xanCommands: XanCommand[] = [
         description: "The length of the slice (can be used instead of --end)",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -947,7 +955,7 @@ export const xanCommands: XanCommand[] = [
         description: "Name of a rank column to prepend",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -988,7 +996,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1092,7 +1100,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1154,7 +1162,7 @@ export const xanCommands: XanCommand[] = [
         description: "Add a column with given name indicating whether a row is duplicated",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1176,7 +1184,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1244,7 +1252,7 @@ export const xanCommands: XanCommand[] = [
         description: "Parellize computations using this many threads",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1311,7 +1319,7 @@ export const xanCommands: XanCommand[] = [
         description: "Parellize computations using this many threads",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1380,7 +1388,7 @@ export const xanCommands: XanCommand[] = [
         description: "Parellize computations using this many threads",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1427,7 +1435,7 @@ export const xanCommands: XanCommand[] = [
         description: "Parellize computations using this many threads",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1503,7 +1511,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1525,7 +1533,7 @@ export const xanCommands: XanCommand[] = [
         description: "If given, resets the computed aggregations each time the given selection yields a new identity",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1567,7 +1575,7 @@ export const xanCommands: XanCommand[] = [
         description: "Name of a column to prepend in the output of 'cat rows' indicating the path to source file",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1645,7 +1653,7 @@ export const xanCommands: XanCommand[] = [
         description: "Add a prefix to the names of the columns in the second dataset",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1706,7 +1714,7 @@ export const xanCommands: XanCommand[] = [
         description: "When given a column name, --paths will be considered as CSV, and paths to CSV files to merge will be extracted from the selected column",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1811,7 +1819,7 @@ export const xanCommands: XanCommand[] = [
         description: "Add a prefix to the names of the columns in the patterns file",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1866,7 +1874,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1882,7 +1890,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1904,7 +1912,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1947,7 +1955,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -2011,7 +2019,7 @@ export const xanCommands: XanCommand[] = [
         description: "The escape character to use",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -2068,7 +2076,7 @@ export const xanCommands: XanCommand[] = [
         description: "Column to emit as text (txt)",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -2147,7 +2155,7 @@ export const xanCommands: XanCommand[] = [
         description: "Select nth table in Markdown document",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -2155,14 +2163,14 @@ export const xanCommands: XanCommand[] = [
     name: "reverse",
     description: "Reverse rows of CSV data",
     category: "Format, convert & recombobulate",
-    parameters: [outputParam],
+    parameters: [],
   },
   {
     id: "transpose",
     name: "transpose",
     description: "Transpose CSV file",
     category: "Transpose & pivot",
-    parameters: [outputParam],
+    parameters: [],
   },
   {
     id: "pivot",
@@ -2197,7 +2205,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: "_",
       },
-      outputParam,
+
     ],
   },
   {
@@ -2227,7 +2235,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: "value",
       },
-      outputParam,
+
     ],
   },
   {
@@ -2269,7 +2277,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: "{}.csv",
       },
-      outputParam,
+
     ],
   },
   {
@@ -2325,7 +2333,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -2369,7 +2377,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -2416,6 +2424,7 @@ export const xanCommands: XanCommand[] = [
 ];
 
 export const commandCategories = [
+  "Output",
   "Explore & visualize",
   "Search & filter",
   "Sort & deduplicate",

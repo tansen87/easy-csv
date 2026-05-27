@@ -452,14 +452,34 @@ function App() {
     setIsExecuting(true);
 
     try {
-      const commands = currentPipeline.map((step) => ({
-        name: step.command.name,
-        parameters: step.command.parameters.map((param) => ({
+      // Check if there's an output command in the pipeline
+      const outputStep = currentPipeline.find(step => step.command.id === "output");
+      const outputPath = outputStep?.parameters.path || "";
+
+      // Filter out output command from execution
+      const executableSteps = currentPipeline.filter(step => step.command.id !== "output");
+
+      const commands = executableSteps.map((step, index) => {
+        const params = step.command.parameters.map((param) => ({
           name: param.name,
           value: String(step.parameters[param.name] || param.default || ""),
           isPositional: param.isPositional,
-        })),
-      }));
+        }));
+
+        // Add output parameter to the last command if output path is specified
+        if (index === executableSteps.length - 1 && outputPath) {
+          params.push({
+            name: "output",
+            value: outputPath,
+            isPositional: false,
+          });
+        }
+
+        return {
+          name: step.command.name,
+          parameters: params,
+        };
+      });
 
       const result = await invoke<any>("execute_xan_pipeline", {
         commands,

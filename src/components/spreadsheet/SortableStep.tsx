@@ -15,7 +15,7 @@ interface SortableStepProps {
   setCommandDialog: (dialog: any) => void;
 }
 
-type CommandType = 'search' | 'filter' | 'sort' | 'select' | 'view' | 'count' | 'slice' | 'head' | 'tail' | 'grep' | 'sample' | 'dedup' | 'shuffle' | 'frequency' | 'groupby' | 'stats' | 'agg' | 'bins' | 'window' | 'headers' | 'flatten' | 'hist' | 'drop' | 'map' | 'enum' | 'rename' | 'behead' | 'fixlengths' | 'explode' | 'fmt' | 'to' | 'from' | 'top' | 'reverse' | 'transpose' | 'pivot' | 'unpivot' | 'split' | 'partition' | 'range' | 'eval' | 'cat' | 'join' | 'merge' | 'fuzzy-join' | 'transform' | 'fill' | 'complete' | 'flatmap' | 'separate';
+type CommandType = 'search' | 'filter' | 'sort' | 'select' | 'view' | 'count' | 'slice' | 'head' | 'tail' | 'grep' | 'sample' | 'dedup' | 'shuffle' | 'frequency' | 'groupby' | 'stats' | 'agg' | 'bins' | 'window' | 'headers' | 'flatten' | 'hist' | 'drop' | 'map' | 'enum' | 'rename' | 'behead' | 'fixlengths' | 'explode' | 'fmt' | 'to' | 'from' | 'top' | 'reverse' | 'transpose' | 'pivot' | 'unpivot' | 'split' | 'partition' | 'range' | 'eval' | 'cat' | 'join' | 'merge' | 'fuzzy-join' | 'transform' | 'fill' | 'complete' | 'flatmap' | 'separate' | 'output';
 
 const commandIds: CommandType[] = [
   'search', 'filter', 'sort', 'select', 'view', 'count', 'slice', 'head', 'tail', 'grep',
@@ -23,7 +23,7 @@ const commandIds: CommandType[] = [
   'headers', 'flatten', 'hist', 'drop', 'map', 'enum', 'rename', 'behead', 'fixlengths',
   'explode', 'fmt', 'to', 'from', 'top', 'reverse', 'transpose', 'pivot', 'unpivot',
   'split', 'partition', 'range', 'eval', 'cat', 'join', 'merge', 'fuzzy-join', 'transform',
-  'fill', 'complete', 'flatmap', 'separate'
+  'fill', 'complete', 'flatmap', 'separate', 'output'
 ];
 
 const getInitialParams = (cmdId: string, step: PipelineStep, headers: string[]): Record<string, any> => {
@@ -506,6 +506,8 @@ const getInitialParams = (cmdId: string, step: PipelineStep, headers: string[]):
       };
     case 'headers':
       return { 'just-names': step.parameters['just-names'] || false };
+    case 'output':
+      return { path: step.parameters.path || '' };
     default:
       return params;
   }
