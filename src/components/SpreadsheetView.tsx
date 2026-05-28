@@ -78,9 +78,9 @@ const TableCell = React.memo(function TableCell({
         : ""
         }`}
       style={{
-        width,
-        minWidth: 80,
-      }}
+          width,
+          minWidth: 150,
+        }}
       onClick={(e) => onCellClick(e, rowIndex, colIndex)}
       onContextMenu={(e) => onContextMenu(e, rowIndex, colIndex)}
     >
@@ -123,7 +123,7 @@ const TableRow = React.memo(function TableRow({
           value={rowData[colIndex] || ""}
           rowIndex={rowIndex}
           colIndex={colIndex}
-          width={columnWidths[colIndex] || 80}
+          width={columnWidths[colIndex] || 150}
           isSelected={selectedCellMap.has(`${rowIndex}-${colIndex}`)}
           onCellClick={onCellClick}
           onContextMenu={onContextMenu}
@@ -138,12 +138,12 @@ interface HeaderCellProps {
   colIndex: number;
   width: number;
   isSelected: boolean;
-  renamedColumns: Record<string, string>;
+  renamedColumns: Record<number, string>;
   onHeaderSelect: (e: React.MouseEvent, col: number) => void;
   onHeaderContextMenu: (e: React.MouseEvent, col: number) => void;
   onRenameApply: () => void;
-  onRenameCancel: (header: string) => void;
-  onRenameChange: (header: string, value: string) => void;
+  onRenameCancel: (colIndex: number) => void;
+  onRenameChange: (colIndex: number, value: string) => void;
   onResizeStart: (colIndex: number, e: React.MouseEvent) => void;
   hasRenamedColumns: boolean;
   isLastColumn: boolean;
@@ -164,13 +164,13 @@ const HeaderCell = React.memo(function HeaderCell({
   hasRenamedColumns,
   isLastColumn,
 }: HeaderCellProps) {
-  const isRenaming = renamedColumns[header] !== undefined;
+  const isRenaming = renamedColumns[colIndex] !== undefined;
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       onRenameApply();
     } else if (e.key === "Escape") {
-      onRenameCancel(header);
+      onRenameCancel(colIndex);
     }
   };
 
@@ -178,7 +178,7 @@ const HeaderCell = React.memo(function HeaderCell({
     <th
       className={`border border-border/50 px-2 py-2 text-sm font-semibold text-foreground bg-muted/70 text-left group relative ${isSelected ? "bg-primary/10" : ""
         }`}
-      style={{ width, minWidth: 80 }}
+      style={{ width, minWidth: 150 }}
       onClick={(e) => onHeaderSelect(e, colIndex)}
       onContextMenu={(e) => onHeaderContextMenu(e, colIndex)}
     >
@@ -186,8 +186,8 @@ const HeaderCell = React.memo(function HeaderCell({
         {isRenaming ? (
           <input
             type="text"
-            value={renamedColumns[header]}
-            onChange={(e) => onRenameChange(header, e.target.value)}
+            value={renamedColumns[colIndex]}
+            onChange={(e) => onRenameChange(colIndex, e.target.value)}
             onClick={(e) => e.stopPropagation()}
             onKeyDown={handleKeyDown}
             className="w-full px-1 py-0.5 border rounded text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
@@ -196,11 +196,11 @@ const HeaderCell = React.memo(function HeaderCell({
         ) : (
           <span className="font-medium truncate">{header}</span>
         )}
-        <div className="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="ml-auto flex flex-col items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           {isRenaming ? (
             <>
               <button
-                onClick={() => onRenameCancel(header)}
+                onClick={() => onRenameCancel(colIndex)}
                 className="p-0.5 rounded hover:bg-accent transition-colors text-muted-foreground"
               >
                 <X className="h-3 w-3" />
@@ -371,7 +371,7 @@ export function SpreadsheetView({
   const [splitDialog, setSplitDialog] = useState<{ col: number; x: number; y: number; sliceType?: string } | null>(null);
   const [padDialog, setPadDialog] = useState<{ col: number; x: number; y: number; padType: string } | null>(null);
   const [windowDialog, setWindowDialog] = useState<{ col: number; x: number; y: number } | null>(null);
-  const [renamedColumns, setRenamedColumns] = useState<Record<string, string>>({});
+  const [renamedColumns, setRenamedColumns] = useState<Record<number, string>>({});
   const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
 
   const tableRef = useRef<HTMLTableElement>(null);
@@ -442,7 +442,7 @@ export function SpreadsheetView({
     e.stopPropagation();
     setResizingCol(colIndex);
     setResizingStartX(e.clientX);
-    setResizingStartWidth(columnWidths[colIndex] || 80);
+    setResizingStartWidth(columnWidths[colIndex] || 150);
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
   }, [columnWidths]);
@@ -450,7 +450,7 @@ export function SpreadsheetView({
   const handleResizeMove = useCallback((e: React.MouseEvent) => {
     if (resizingCol === null) return;
     const diff = e.clientX - resizingStartX;
-    const newWidth = Math.max(80, resizingStartWidth + diff);
+    const newWidth = Math.max(150, resizingStartWidth + diff);
     setColumnWidths((prev) => ({
       ...prev,
       [resizingCol]: newWidth,
@@ -533,37 +533,45 @@ export function SpreadsheetView({
 
   const handleRenameApply = useCallback(() => {
     const changedColumns = Object.entries(renamedColumns).filter(
-      ([oldName, newName]) => oldName !== newName && newName.trim() !== "",
+      ([colIndexStr, newName]) => {
+        const colIndex = parseInt(colIndexStr, 10);
+        const oldName = headers[colIndex];
+        return oldName !== newName && newName.trim() !== "";
+      },
     );
     if (changedColumns.length === 0 || !onAddCommand) return;
 
     const renameCommand = xanCommands.find((cmd) => cmd.id === "rename");
     if (renameCommand) {
+      const allColumns = headers.map((header, colIndex) => {
+        const newName = renamedColumns[colIndex];
+        return newName && newName.trim() !== "" ? newName.trim() : header;
+      });
       onAddCommand(renameCommand, {
-        select: changedColumns.map(([oldName]) => oldName).join(","),
-        columns: changedColumns.map(([, newName]) => newName.trim()).join(","),
+        select: "",
+        columns: allColumns.join(","),
         output: "",
       });
     }
     setRenamedColumns({});
-  }, [renamedColumns, onAddCommand]);
+  }, [renamedColumns, headers, onAddCommand]);
 
-  const handleRenameCancel = useCallback((header: string) => {
+  const handleRenameCancel = useCallback((colIndex: number) => {
     setRenamedColumns((prev) => {
       const newRenamed = { ...prev };
-      delete newRenamed[header];
+      delete newRenamed[colIndex];
       return newRenamed;
     });
   }, []);
 
-  const handleRenameChange = useCallback((header: string, value: string) => {
-    setRenamedColumns((prev) => ({ ...prev, [header]: value }));
+  const handleRenameChange = useCallback((colIndex: number, value: string) => {
+    setRenamedColumns((prev) => ({ ...prev, [colIndex]: value }));
   }, []);
 
   const handleRename = useCallback((col: number) => {
     const columnName = headers[col];
-    if (!renamedColumns[columnName]) {
-      setRenamedColumns((prev) => ({ ...prev, [columnName]: columnName }));
+    if (!renamedColumns[col]) {
+      setRenamedColumns((prev) => ({ ...prev, [col]: columnName }));
     }
   }, [headers, renamedColumns]);
 
@@ -577,7 +585,7 @@ export function SpreadsheetView({
       if (viewport) {
         let scrollPosition = 0;
         for (let i = 0; i < colIndex; i++) {
-          scrollPosition += columnWidths[i] || 80;
+          scrollPosition += columnWidths[i] || 150;
         }
         viewport.scrollTo({ left: scrollPosition, behavior: 'smooth' });
       }
@@ -973,7 +981,7 @@ export function SpreadsheetView({
               <table ref={tableRef} className="w-full border-collapse table-fixed">
                 <colgroup>
                   {headers.map((_, colIndex) => (
-                    <col key={colIndex} style={{ width: columnWidths[colIndex] || 80, minWidth: 80 }} />
+                    <col key={colIndex} style={{ width: columnWidths[colIndex] || 150, minWidth: 150 }} />
                   ))}
                 </colgroup>
                 <thead className="bg-muted/50 sticky top-0 z-10">
@@ -983,7 +991,7 @@ export function SpreadsheetView({
                         key={colIndex}
                         header={header}
                         colIndex={colIndex}
-                        width={columnWidths[colIndex] || 80}
+                        width={columnWidths[colIndex] || 150}
                         isSelected={selectedCols.has(colIndex)}
                         renamedColumns={renamedColumns}
                         onHeaderSelect={handleHeaderSelect}
