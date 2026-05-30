@@ -147,6 +147,7 @@ interface HeaderCellProps {
   onResizeStart: (colIndex: number, e: React.MouseEvent) => void;
   hasRenamedColumns: boolean;
   isLastColumn: boolean;
+  isDuplicate: boolean;
 }
 
 const HeaderCell = React.memo(function HeaderCell({
@@ -163,6 +164,7 @@ const HeaderCell = React.memo(function HeaderCell({
   onResizeStart,
   hasRenamedColumns,
   isLastColumn,
+  isDuplicate,
 }: HeaderCellProps) {
   const isRenaming = renamedColumns[colIndex] !== undefined;
 
@@ -176,8 +178,7 @@ const HeaderCell = React.memo(function HeaderCell({
 
   return (
     <th
-      className={`border border-border/50 px-2 py-2 text-sm font-semibold text-foreground bg-muted/70 text-left group relative ${isSelected ? "bg-primary/10" : ""
-        }`}
+      className={`border border-border/50 px-2 py-2 text-sm font-semibold text-foreground bg-muted/70 text-left group relative ${isSelected ? "bg-primary/10" : ""} ${isDuplicate ? "bg-amber-100 dark:bg-amber-900/30" : ""}`}
       style={{ width, minWidth: 150 }}
       onClick={(e) => onHeaderSelect(e, colIndex)}
       onContextMenu={(e) => onHeaderContextMenu(e, colIndex)}
@@ -194,7 +195,9 @@ const HeaderCell = React.memo(function HeaderCell({
             autoFocus
           />
         ) : (
-          <span className="font-medium truncate">{header}</span>
+          <span className={`font-medium truncate ${isDuplicate ? "text-amber-700 dark:text-amber-300" : ""}`}>
+            {header}
+          </span>
         )}
         <div className="ml-auto flex flex-col items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           {isRenaming ? (
@@ -394,6 +397,38 @@ export function SpreadsheetView({
   const inputFile = currentTab?.inputFile || "";
 
   const hasRenamedColumns = Object.keys(renamedColumns).length > 0;
+
+  const duplicateHeadersInfo = useMemo(() => {
+    const headerCounts = new Map<string, number>();
+    const headerFirstIndex = new Map<string, number>();
+
+    headers.forEach((header, index) => {
+      if (header) {
+        const lowerHeader = header.toLowerCase();
+        headerCounts.set(lowerHeader, (headerCounts.get(lowerHeader) || 0) + 1);
+        if (!headerFirstIndex.has(lowerHeader)) {
+          headerFirstIndex.set(lowerHeader, index);
+        }
+      }
+    });
+
+    const duplicateHeaders = new Map<number, { count: number; isFirst: boolean }>();
+
+    headers.forEach((header, index) => {
+      if (header) {
+        const lowerHeader = header.toLowerCase();
+        const count = headerCounts.get(lowerHeader) || 0;
+        if (count > 1) {
+          duplicateHeaders.set(index, {
+            count,
+            isFirst: headerFirstIndex.get(lowerHeader) === index,
+          });
+        }
+      }
+    });
+
+    return duplicateHeaders;
+  }, [headers]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -977,6 +1012,20 @@ export function SpreadsheetView({
             <div className="px-4 py-2 border-b border-border/50 flex justify-end items-center gap-2">
               <HeaderSearch headers={headers} onSelectHeader={handleHeaderSearchSelect} />
             </div>
+            {duplicateHeadersInfo.size > 0 && (
+              <div className="px-2 py-1 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 text-sm">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                  <span className="font-medium">{duplicateHeadersInfo.size} columns are duplicated:</span>
+                  <span>
+                    {Array.from(duplicateHeadersInfo.entries())
+                      .filter(([, info]) => info.isFirst)
+                      .map(([colIndex]) => headers[colIndex])
+                      .filter(Boolean)
+                      .join(", ")}
+                  </span>
+                </div>
+              </div>
+            )}
             <ScrollArea className="flex-1" ref={scrollAreaRef}>
               <table ref={tableRef} className="w-full border-collapse table-fixed">
                 <colgroup>
@@ -1002,6 +1051,7 @@ export function SpreadsheetView({
                         onResizeStart={handleResizeStart}
                         hasRenamedColumns={hasRenamedColumns}
                         isLastColumn={colIndex === headers.length - 1}
+                        isDuplicate={duplicateHeadersInfo.has(colIndex)}
                       />
                     ))}
                   </tr>
