@@ -208,26 +208,26 @@ export function DateTransformDialog({
               className="absolute right-1 top-1/2 -translate-y-1/2 p-1 hover:bg-accent rounded transition-colors">
               <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${isColumnOpen ? "rotate-180" : ""}`} />
             </button>
+            {isColumnOpen && (
+              <div className="absolute z-50 w-full overflow-y-auto border rounded bg-background shadow-lg mt-1">
+                {filteredHeaders.length > 0 ? (
+                  filteredHeaders.map((header) => (
+                    <button
+                      key={header}
+                      onClick={() => handleColumnSelect(header)}
+                      className="w-full px-2 py-1.5 text-xs text-left hover:bg-accent transition-colors truncate"
+                    >
+                      {header}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                    No columns found
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          {isColumnOpen && (
-            <div className="absolute z-50 w-[314px] max-h-24 overflow-y-auto border rounded bg-background shadow-lg">
-              {filteredHeaders.length > 0 ? (
-                filteredHeaders.map((header) => (
-                  <button
-                    key={header}
-                    onClick={() => handleColumnSelect(header)}
-                    className="w-full px-2 py-1.5 text-xs text-left hover:bg-accent transition-colors truncate"
-                  >
-                    {header}
-                  </button>
-                ))
-              ) : (
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                  No columns found
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         <div className="space-y-1">

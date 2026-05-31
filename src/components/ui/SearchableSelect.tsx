@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SearchableSelectProps {
@@ -52,8 +52,8 @@ export function SearchableSelect({
   };
 
   const inputClassName = size === "md"
-    ? "w-full h-10 px-3 text-sm border rounded-md bg-background pr-8"
-    : "w-full h-8 px-2 pr-8 text-xs border rounded bg-background";
+    ? "w-full h-10 pl-8 pr-8 text-sm border rounded-md bg-background"
+    : "w-full h-8 pl-7 pr-8 text-xs border rounded bg-background";
 
   const iconSize = size === "md" ? "h-4 w-4" : "h-3 w-3";
 
@@ -67,6 +67,9 @@ export function SearchableSelect({
         placeholder={placeholder}
         className={inputClassName}
       />
+      <span className="absolute left-1.5 top-1/2 -translate-y-1/2">
+        <Search className={`${iconSize} text-muted-foreground`} />
+      </span>
       <button
         onClick={() => {
           setIsOpen(!isOpen);

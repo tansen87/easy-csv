@@ -1,0 +1,418 @@
+import React, { useCallback, useMemo, useState, useRef, useEffect } from "react";
+import ReactFlow, {
+  Node,
+  Edge,
+  useNodesState,
+  useEdgesState,
+  NodeChange,
+  applyNodeChanges,
+  BackgroundVariant,
+  Background,
+  ConnectionMode,
+  MarkerType,
+} from "reactflow";
+import dagre from "dagre";
+import "reactflow/dist/style.css";
+import { Card } from "@/components/ui/card";
+import { X, Edit3, Check } from "lucide-react";
+import { PipelineStep } from "@/types/xan";
+import { FlowContextMenu } from "./FlowContextMenu";
+
+interface PipelineStepNodeData {
+  step: PipelineStep;
+  onStepClick: (step: PipelineStep) => void;
+  onStepRemove: (stepId: string) => void;
+  onStepAliasUpdate: (stepId: string, alias: string) => void;
+  onContextMenu: (stepId: string, x: number, y: number) => void;
+  isSelected: boolean;
+  index: number;
+}
+
+function PipelineStepNode({
+  data,
+  selected,
+}: {
+  data: PipelineStepNodeData;
+  selected: boolean;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(data.step.alias || "");
+
+  const activeParams = useMemo(() => {
+    return Object.entries(data.step.parameters).filter(
+      ([, value]) => value !== undefined && value !== "" && value !== false
+    );
+  }, [data.step.parameters]);
+
+  const handleAliasSave = () => {
+    data.onStepAliasUpdate(data.step.id, editValue.trim());
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleAliasSave();
+    } else if (e.key === "Escape") {
+      setIsEditing(false);
+      setEditValue(data.step.alias || "");
+    }
+  };
+
+  return (
+    <Card
+      className={`w-[220px] cursor-pointer transition-all duration-200 hover:shadow-lg group relative ${
+        selected
+          ? "bg-gradient-to-r from-primary/15 to-primary/5 border-primary/50 shadow-md ring-2 ring-primary/20"
+          : "bg-card/95 hover:bg-accent/30 border-border/60 hover:border-primary/30"
+      }`}
+      onClick={() => data.onStepClick(data.step)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        data.onContextMenu(data.step.id, e.clientX, e.clientY);
+      }}
+    >
+      <div className="p-3">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-gradient-to-br from-primary/25 to-primary/10 rounded-md flex items-center justify-center text-[10px] font-bold text-primary/80 border border-primary/20">
+            {data.index + 1}
+          </div>
+          <div className="flex-1 min-w-0">
+            {isEditing ? (
+              <div className="flex items-center gap-1 flex-1">
+                <input
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="h-6 px-1.5 text-xs border rounded bg-background w-20 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  autoFocus
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={handleKeyDown}
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAliasSave();
+                  }}
+                  className="w-5 h-5 bg-green-500/10 hover:bg-green-500/20 rounded flex items-center justify-center transition-colors"
+                >
+                  <Check className="h-3 w-3 text-green-600" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="font-semibold text-xs truncate">
+                  {data.step.alias || data.step.command.name}
+                </div>
+                {data.step.alias && (
+                  <span className="text-[9px] text-muted-foreground/70 bg-muted/60 px-1 py-0.5 rounded border border-border/40">
+                    {data.step.command.name}
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+        {activeParams.length > 0 && (
+          <div className="text-[10px] text-muted-foreground flex flex-wrap gap-0.5 mt-1.5">
+            {activeParams.slice(0, 2).map(([key, value]) => (
+              <span
+                key={key}
+                className="bg-muted/70 px-1 py-0.5 rounded border border-border/40"
+              >
+                <span className="text-muted-foreground/80">{key}=</span>
+                <span className="font-medium">{String(value).slice(0, 8)}</span>
+              </span>
+            ))}
+            {activeParams.length > 2 && (
+              <span className="text-muted-foreground/60">+{activeParams.length - 2}</span>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="absolute -top-2 -right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        {!isEditing && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+            className="w-5 h-5 bg-background border shadow-sm rounded flex items-center justify-center hover:bg-accent transition-colors"
+          >
+            <Edit3 className="h-2.5 w-2.5" />
+          </button>
+        )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            data.onStepRemove(data.step.id);
+          }}
+          className="w-5 h-5 bg-background border shadow-sm rounded flex items-center justify-center hover:bg-destructive/10 hover:text-destructive transition-colors"
+        >
+          <X className="h-2.5 w-2.5" />
+        </button>
+      </div>
+    </Card>
+  );
+}
+
+const nodeTypes = {
+  pipelineStep: PipelineStepNode,
+};
+
+interface PipelineFlowPanelProps {
+  steps: PipelineStep[];
+  onStepsChange: (steps: PipelineStep[]) => void;
+  onStepClick: (step: PipelineStep) => void;
+  onStepAliasUpdate: (stepId: string, alias: string) => void;
+  onStepRemove: (stepId: string) => void;
+  selectedStepId?: string;
+}
+
+function getLayoutedElements(
+  steps: PipelineStep[],
+  onStepClick: (step: PipelineStep) => void,
+  onStepRemove: (stepId: string) => void,
+  onStepAliasUpdate: (stepId: string, alias: string) => void,
+  onContextMenu: (stepId: string, x: number, y: number) => void,
+  selectedStepId?: string
+): { nodes: Node[]; edges: Edge[] } {
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+  dagreGraph.setGraph({ rankdir: "TB", nodesep: 50, ranksep: 70 });
+
+  const nodes: Node[] = steps.map((step, index) => {
+    dagreGraph.setNode(step.id, { width: 240, height: 90 });
+    return {
+      id: step.id,
+      type: "pipelineStep",
+      position: { x: 0, y: 0 },
+      data: {
+        step,
+        onStepClick,
+        onStepRemove,
+        onStepAliasUpdate,
+        onContextMenu,
+        isSelected: selectedStepId === step.id,
+        index,
+      },
+      selected: selectedStepId === step.id,
+    };
+  });
+
+  const edges: Edge[] = [];
+  for (let i = 0; i < steps.length - 1; i++) {
+    edges.push({
+      id: `e-${steps[i].id}-${steps[i + 1].id}`,
+      source: steps[i].id,
+      target: steps[i + 1].id,
+      type: "smoothstep",
+      animated: false,
+      style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: "hsl(var(--primary))",
+      },
+    });
+    dagreGraph.setEdge(steps[i].id, steps[i + 1].id);
+  }
+
+  dagre.layout(dagreGraph);
+
+  nodes.forEach((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    node.position = {
+      x: nodeWithPosition.x - 120,
+      y: nodeWithPosition.y - 45,
+    };
+  });
+
+  return { nodes, edges };
+}
+
+export function PipelineFlowPanel({
+  steps,
+  onStepsChange,
+  onStepClick,
+  onStepAliasUpdate,
+  onStepRemove,
+  selectedStepId,
+}: PipelineFlowPanelProps) {
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    stepId: string;
+  } | null>(null);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const handleContextMenu = useCallback((stepId: string, x: number, y: number) => {
+    setContextMenu({ x, y, stepId });
+  }, []);
+
+  const handleEdit = useCallback((stepId?: string) => {
+    if (!stepId) return;
+    const step = steps.find((s) => s.id === stepId);
+    if (step) {
+      onStepClick(step);
+    }
+  }, [steps, onStepClick]);
+
+  const handleDelete = useCallback((stepId?: string) => {
+    if (!stepId) return;
+    onStepRemove(stepId);
+  }, [onStepRemove]);
+
+  const handleDuplicate = useCallback((stepId?: string) => {
+    if (!stepId) return;
+    const stepIndex = steps.findIndex((s) => s.id === stepId);
+    if (stepIndex === -1) return;
+    const step = steps[stepIndex];
+    const newStep: PipelineStep = {
+      ...step,
+      id: `${step.command.name}-${Date.now()}`,
+      parameters: { ...step.parameters },
+    };
+    const newSteps = [...steps];
+    newSteps.splice(stepIndex + 1, 0, newStep);
+    onStepsChange(newSteps);
+  }, [steps, onStepsChange]);
+
+  const handleMoveUp = useCallback((stepId?: string) => {
+    if (!stepId) return;
+    const stepIndex = steps.findIndex((s) => s.id === stepId);
+    if (stepIndex <= 0) return;
+    const newSteps = [...steps];
+    [newSteps[stepIndex - 1], newSteps[stepIndex]] = [newSteps[stepIndex], newSteps[stepIndex - 1]];
+    onStepsChange(newSteps);
+  }, [steps, onStepsChange]);
+
+  const handleMoveDown = useCallback((stepId?: string) => {
+    if (!stepId) return;
+    const stepIndex = steps.findIndex((s) => s.id === stepId);
+    if (stepIndex === -1 || stepIndex === steps.length - 1) return;
+    const newSteps = [...steps];
+    [newSteps[stepIndex], newSteps[stepIndex + 1]] = [newSteps[stepIndex + 1], newSteps[stepIndex]];
+    onStepsChange(newSteps);
+  }, [steps, onStepsChange]);
+
+  const { nodes: initialNodes, edges: initialEdges } = useMemo(
+    () =>
+      getLayoutedElements(
+        steps,
+        onStepClick,
+        onStepRemove,
+        onStepAliasUpdate,
+        handleContextMenu,
+        selectedStepId
+      ),
+    [steps, selectedStepId, handleContextMenu]
+  );
+
+  const [nodes, setNodes] = useNodesState(initialNodes);
+  const [edges, setEdges] = useEdgesState(initialEdges);
+
+  useEffect(() => {
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+      steps,
+      onStepClick,
+      onStepRemove,
+      onStepAliasUpdate,
+      handleContextMenu,
+      selectedStepId
+    );
+    setNodes(layoutedNodes);
+    setEdges(layoutedEdges);
+  }, [steps, selectedStepId, onStepClick, onStepRemove, onStepAliasUpdate, handleContextMenu, setNodes, setEdges]);
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      closeContextMenu();
+    };
+    if (contextMenu) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [contextMenu, closeContextMenu]);
+
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      setNodes((nds) => applyNodeChanges(changes, nds));
+
+      const positionChanges = changes.filter(
+        (c) => c.type === "position" && c.dragging === false
+      );
+
+      if (positionChanges.length > 0) {
+        const positionMap = new Map<string, { x: number; y: number }>();
+        changes.forEach((change) => {
+          if (change.type === "position" && change.position) {
+            positionMap.set(change.id, change.position);
+          }
+        });
+
+        if (positionMap.size > 0) {
+          const newSteps = [...steps];
+          const updatedSteps = newSteps.map((step) => {
+            const newPos = positionMap.get(step.id);
+            if (newPos) {
+              return { ...step, position: newPos };
+            }
+            return step;
+          });
+
+          const sortedByY = updatedSteps.sort((a, b) => {
+            const posA = positionMap.get(a.id) || { x: 0, y: 0 };
+            const posB = positionMap.get(b.id) || { x: 0, y: 0 };
+            if (Math.abs(posA.y - posB.y) < 50) {
+              return posA.x - posB.x;
+            }
+            return posA.y - posB.y;
+          });
+
+          onStepsChange(sortedByY);
+        }
+      }
+    },
+    [steps, setNodes, onStepsChange]
+  );
+
+  return (
+    <div ref={reactFlowWrapper} className="w-full h-full relative">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        nodeTypes={nodeTypes}
+        connectionMode={ConnectionMode.Loose}
+        fitView
+        fitViewOptions={{ padding: 0.3 }}
+        minZoom={0.5}
+        maxZoom={1.5}
+        defaultEdgeOptions={{
+          type: "smoothstep",
+          style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
+        }}
+        proOptions={{ hideAttribution: true }}
+      >
+        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+      </ReactFlow>
+
+      {contextMenu && (
+        <FlowContextMenu
+          contextMenu={contextMenu}
+          onClose={closeContextMenu}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onDuplicate={handleDuplicate}
+          onMoveUp={handleMoveUp}
+          onMoveDown={handleMoveDown}
+        />
+      )}
+    </div>
+  );
+}

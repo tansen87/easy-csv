@@ -33,7 +33,6 @@ import {
   Replace,
   LayoutGrid,
   Eraser,
-  Pencil,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -60,7 +59,6 @@ interface ContextMenuProps {
   onReverse: (col: number) => void;
   onTextTransform: (col: number, transformType: string) => void;
   onNumberTransform: (col: number, transformType: string) => void;
-  onRename: (col: number) => void;
 }
 
 export function ContextMenu({
@@ -79,7 +77,6 @@ export function ContextMenu({
   onReverse,
   onTextTransform,
   onNumberTransform,
-  onRename,
 }: ContextMenuProps) {
   const sortOptions = [
     { label: "A → Z", icon: ArrowDownAZ, order: "asc" as const, numeric: false },
@@ -138,18 +135,6 @@ export function ContextMenu({
       >
         <Filter className="h-4 w-4 text-muted-foreground" />
         Filter
-      </button>
-
-      <button
-        className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-          onRename(contextMenu.col);
-        }}
-      >
-        <Pencil className="h-4 w-4 text-muted-foreground" />
-        Rename
       </button>
 
       <button
