@@ -558,6 +558,8 @@ function App() {
         pipeline: currentPipeline.map((step) => ({
           commandId: step.command.id,
           parameters: step.parameters,
+          alias: step.alias,
+          position: step.position,
         })),
         inputFile,
         defaultDelimiter,
@@ -599,7 +601,7 @@ function App() {
         return;
       }
 
-      const importedPipeline: PipelineStep[] = pipelineData.pipeline.map((stepData: { commandId: string; parameters?: Record<string, any> }) => {
+      const importedPipeline: PipelineStep[] = pipelineData.pipeline.map((stepData: { commandId: string; parameters?: Record<string, any>; alias?: string; position?: { x: number; y: number } }) => {
         const command = xanCommands.find((cmd) => cmd.id === stepData.commandId);
         if (!command) {
           showToastRef.current(`Unknown command: ${stepData.commandId}, skipping`, 'warning');
@@ -609,6 +611,8 @@ function App() {
           id: `${command.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           command,
           parameters: stepData.parameters || {},
+          alias: stepData.alias,
+          position: stepData.position,
         };
       }).filter((step: PipelineStep | null): step is PipelineStep => step !== null);
 

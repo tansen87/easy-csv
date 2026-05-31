@@ -22,6 +22,7 @@ export interface PipelineStep {
   command: XanCommand;
   parameters: Record<string, any>;
   alias?: string;
+  position?: { x: number; y: number };
 }
 
 export interface LogEntry {

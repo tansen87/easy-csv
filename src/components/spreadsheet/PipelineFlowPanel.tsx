@@ -5,18 +5,20 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   NodeChange,
+  EdgeChange,
   applyNodeChanges,
+  applyEdgeChanges,
   BackgroundVariant,
   Background,
   ConnectionMode,
   MarkerType,
+  Connection,
 } from "reactflow";
 import dagre from "dagre";
 import "reactflow/dist/style.css";
 import { Card } from "@/components/ui/card";
 import { X, Edit3, Check } from "lucide-react";
 import { PipelineStep } from "@/types/xan";
-import { FlowContextMenu } from "./FlowContextMenu";
 
 interface PipelineStepNodeData {
   step: PipelineStep;
@@ -220,11 +222,16 @@ function getLayoutedElements(
   dagre.layout(dagreGraph);
 
   nodes.forEach((node) => {
-    const nodeWithPosition = dagreGraph.node(node.id);
-    node.position = {
-      x: nodeWithPosition.x - 120,
-      y: nodeWithPosition.y - 45,
-    };
+    const step = steps.find((s) => s.id === node.id);
+    if (step?.position) {
+      node.position = step.position;
+    } else {
+      const nodeWithPosition = dagreGraph.node(node.id);
+      node.position = {
+        x: nodeWithPosition.x - 120,
+        y: nodeWithPosition.y - 45,
+      };
+    }
   });
 
   return { nodes, edges };
@@ -253,24 +260,6 @@ export function PipelineFlowPanel({
   const handleContextMenu = useCallback((stepId: string, x: number, y: number) => {
     setContextMenu({ x, y, stepId });
   }, []);
-
-  const handleMoveUp = useCallback((stepId?: string) => {
-    if (!stepId) return;
-    const stepIndex = steps.findIndex((s) => s.id === stepId);
-    if (stepIndex <= 0) return;
-    const newSteps = [...steps];
-    [newSteps[stepIndex - 1], newSteps[stepIndex]] = [newSteps[stepIndex], newSteps[stepIndex - 1]];
-    onStepsChange(newSteps);
-  }, [steps, onStepsChange]);
-
-  const handleMoveDown = useCallback((stepId?: string) => {
-    if (!stepId) return;
-    const stepIndex = steps.findIndex((s) => s.id === stepId);
-    if (stepIndex === -1 || stepIndex === steps.length - 1) return;
-    const newSteps = [...steps];
-    [newSteps[stepIndex], newSteps[stepIndex + 1]] = [newSteps[stepIndex + 1], newSteps[stepIndex]];
-    onStepsChange(newSteps);
-  }, [steps, onStepsChange]);
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
     () =>
@@ -314,43 +303,63 @@ export function PipelineFlowPanel({
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       setNodes((nds) => applyNodeChanges(changes, nds));
-
-      const positionChanges = changes.filter(
-        (c) => c.type === "position" && c.dragging === false
-      );
-
-      if (positionChanges.length > 0) {
-        const positionMap = new Map<string, { x: number; y: number }>();
-        changes.forEach((change) => {
-          if (change.type === "position" && change.position) {
-            positionMap.set(change.id, change.position);
-          }
-        });
-
-        if (positionMap.size > 0) {
-          const newSteps = [...steps];
-          const updatedSteps = newSteps.map((step) => {
-            const newPos = positionMap.get(step.id);
-            if (newPos) {
-              return { ...step, position: newPos };
-            }
-            return step;
-          });
-
-          const sortedByY = updatedSteps.sort((a, b) => {
-            const posA = positionMap.get(a.id) || { x: 0, y: 0 };
-            const posB = positionMap.get(b.id) || { x: 0, y: 0 };
-            if (Math.abs(posA.y - posB.y) < 50) {
-              return posA.x - posB.x;
-            }
-            return posA.y - posB.y;
-          });
-
-          onStepsChange(sortedByY);
-        }
-      }
     },
-    [steps, setNodes, onStepsChange]
+    [setNodes]
+  );
+
+  const onNodeDragStop = useCallback(
+    (_event: React.MouseEvent, _node: Node, nodes: Node[]) => {
+      const positionMap = new Map<string, { x: number; y: number }>();
+      nodes.forEach((node) => {
+        positionMap.set(node.id, node.position);
+      });
+
+      const updatedSteps = steps.map((step) => {
+        const newPos = positionMap.get(step.id);
+        if (newPos) {
+          return { ...step, position: newPos };
+        }
+        return step;
+      });
+
+      const sortedByY = [...updatedSteps].sort((a, b) => {
+        const posA = a.position || { x: 0, y: 0 };
+        const posB = b.position || { x: 0, y: 0 };
+        if (Math.abs(posA.y - posB.y) < 50) {
+          return posA.x - posB.x;
+        }
+        return posA.y - posB.y;
+      });
+
+      onStepsChange(sortedByY);
+    },
+    [steps, onStepsChange]
+  );
+
+  const onEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      setEdges((eds) => applyEdgeChanges(changes, eds));
+    },
+    [setEdges]
+  );
+
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      const newEdge: Edge = {
+        id: `e-${connection.source}-${connection.target}`,
+        source: connection.source || "",
+        target: connection.target || "",
+        type: "smoothstep",
+        animated: false,
+        style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: "hsl(var(--primary))",
+        },
+      };
+      setEdges((eds) => [...eds, newEdge]);
+    },
+    [setEdges]
   );
 
   return (
@@ -359,6 +368,9 @@ export function PipelineFlowPanel({
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
         connectionMode={ConnectionMode.Loose}
         fitView
@@ -373,15 +385,6 @@ export function PipelineFlowPanel({
       >
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
       </ReactFlow>
-
-      {contextMenu && (
-        <FlowContextMenu
-          contextMenu={contextMenu}
-          onClose={closeContextMenu}
-          onMoveUp={handleMoveUp}
-          onMoveDown={handleMoveDown}
-        />
-      )}
     </div>
   );
 }
