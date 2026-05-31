@@ -107,7 +107,7 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
           />
         </div>
         <span className="text-xs text-muted-foreground ml-auto">
-          {rows.length} rows x {headers.length} cols
+          {headers.length} cols
         </span>
         {showSaveButton && (
           <button
@@ -179,11 +179,6 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
               ))}
             </tbody>
           </table>
-          {rows.length > 5 && (
-            <div className="px-3 py-1.5 text-xs text-muted-foreground text-center bg-muted/20 border-t border-border/30">
-              ... and {rows.length - 5} more rows
-            </div>
-          )}
         </div>
       </div>
     </Card>
@@ -521,34 +516,6 @@ export function IntegratedFlowPanel({
     setContextMenu({ x, y, stepId });
   }, []);
 
-  const handleEdit = useCallback((stepId?: string) => {
-    if (!stepId) return;
-    const step = steps.find((s) => s.id === stepId);
-    if (step) {
-      onStepClick(step);
-    }
-  }, [steps, onStepClick]);
-
-  const handleDelete = useCallback((stepId?: string) => {
-    if (!stepId) return;
-    onStepRemove(stepId);
-  }, [onStepRemove]);
-
-  const handleDuplicate = useCallback((stepId?: string) => {
-    if (!stepId) return;
-    const stepIndex = steps.findIndex((s) => s.id === stepId);
-    if (stepIndex === -1) return;
-    const step = steps[stepIndex];
-    const newStep: PipelineStep = {
-      ...step,
-      id: `${step.command.name}-${Date.now()}`,
-      parameters: { ...step.parameters },
-    };
-    const newSteps = [...steps];
-    newSteps.splice(stepIndex + 1, 0, newStep);
-    onStepsChange(newSteps);
-  }, [steps, onStepsChange]);
-
   const handleMoveUp = useCallback((stepId?: string) => {
     if (!stepId) return;
     const stepIndex = steps.findIndex((s) => s.id === stepId);
@@ -736,9 +703,6 @@ export function IntegratedFlowPanel({
         <FlowContextMenu
           contextMenu={contextMenu}
           onClose={closeContextMenu}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onDuplicate={handleDuplicate}
           onMoveUp={handleMoveUp}
           onMoveDown={handleMoveDown}
         />

@@ -254,34 +254,6 @@ export function PipelineFlowPanel({
     setContextMenu({ x, y, stepId });
   }, []);
 
-  const handleEdit = useCallback((stepId?: string) => {
-    if (!stepId) return;
-    const step = steps.find((s) => s.id === stepId);
-    if (step) {
-      onStepClick(step);
-    }
-  }, [steps, onStepClick]);
-
-  const handleDelete = useCallback((stepId?: string) => {
-    if (!stepId) return;
-    onStepRemove(stepId);
-  }, [onStepRemove]);
-
-  const handleDuplicate = useCallback((stepId?: string) => {
-    if (!stepId) return;
-    const stepIndex = steps.findIndex((s) => s.id === stepId);
-    if (stepIndex === -1) return;
-    const step = steps[stepIndex];
-    const newStep: PipelineStep = {
-      ...step,
-      id: `${step.command.name}-${Date.now()}`,
-      parameters: { ...step.parameters },
-    };
-    const newSteps = [...steps];
-    newSteps.splice(stepIndex + 1, 0, newStep);
-    onStepsChange(newSteps);
-  }, [steps, onStepsChange]);
-
   const handleMoveUp = useCallback((stepId?: string) => {
     if (!stepId) return;
     const stepIndex = steps.findIndex((s) => s.id === stepId);
@@ -406,9 +378,6 @@ export function PipelineFlowPanel({
         <FlowContextMenu
           contextMenu={contextMenu}
           onClose={closeContextMenu}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onDuplicate={handleDuplicate}
           onMoveUp={handleMoveUp}
           onMoveDown={handleMoveDown}
         />
