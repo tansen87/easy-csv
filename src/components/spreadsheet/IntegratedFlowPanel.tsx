@@ -628,16 +628,7 @@ export function IntegratedFlowPanel({
         return step;
       });
 
-      const sortedSteps = [...updatedSteps].sort((a, b) => {
-        const posA = a.position || { x: 0, y: 0 };
-        const posB = b.position || { x: 0, y: 0 };
-        if (Math.abs(posA.y - posB.y) < 50) {
-          return posA.x - posB.x;
-        }
-        return posA.y - posB.y;
-      });
-
-      onStepsChange(sortedSteps);
+      onStepsChange(updatedSteps);
     },
     [steps, onStepsChange]
   );
