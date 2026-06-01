@@ -14,7 +14,7 @@ interface LogPanelProps {
 }
 
 export function LogPanel({ logs, onClear, showToastRef }: LogPanelProps) {
-  const [height, setHeight] = useState<number>(50);
+  const [height, setHeight] = useState<number>(5);
 
   const getLogIcon = (type: LogEntry["type"]) => {
     switch (type) {
@@ -58,12 +58,12 @@ export function LogPanel({ logs, onClear, showToastRef }: LogPanelProps) {
   const handleResize = (delta: number) => {
     const containerHeight = window.innerHeight;
     const percentDelta = (delta / containerHeight) * 100;
-    const newHeight = Math.max(10, Math.min(90, height - percentDelta));
+    const newHeight = Math.max(5, Math.min(95, height - percentDelta));
     setHeight(newHeight);
   };
 
   return (
-    <div style={{ height: `${height}%` }} className="relative flex flex-col bg-background border-t border-border/50 min-h-[100px]">
+    <div style={{ height: `${height}%` }} className="relative flex flex-col bg-background border-t border-border/50">
       <ResizeHandle
         direction="vertical"
         onResize={handleResize}

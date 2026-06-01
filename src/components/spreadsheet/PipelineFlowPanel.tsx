@@ -76,9 +76,6 @@ function PipelineStepNode({
     >
       <div className="p-3">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-gradient-to-br from-primary/25 to-primary/10 rounded-md flex items-center justify-center text-[10px] font-bold text-primary/80 border border-primary/20">
-            {data.index + 1}
-          </div>
           <div className="flex-1 min-w-0">
             {isEditing ? (
               <div className="flex items-center gap-1 flex-1">
@@ -183,7 +180,7 @@ function getLayoutedElements(
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   dagreGraph.setGraph({ rankdir: "TB", nodesep: 50, ranksep: 70 });
 
-  const nodes: Node[] = steps.map((step, index) => {
+  const nodes: Node[] = steps.map((step) => {
     dagreGraph.setNode(step.id, { width: 240, height: 90 });
     return {
       id: step.id,
@@ -196,28 +193,10 @@ function getLayoutedElements(
         onStepAliasUpdate,
         onContextMenu,
         isSelected: selectedStepId === step.id,
-        index,
       },
       selected: selectedStepId === step.id,
     };
   });
-
-  const edges: Edge[] = [];
-  for (let i = 0; i < steps.length - 1; i++) {
-    edges.push({
-      id: `e-${steps[i].id}-${steps[i + 1].id}`,
-      source: steps[i].id,
-      target: steps[i + 1].id,
-      type: "smoothstep",
-      animated: false,
-      style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: "hsl(var(--primary))",
-      },
-    });
-    dagreGraph.setEdge(steps[i].id, steps[i + 1].id);
-  }
 
   dagre.layout(dagreGraph);
 
@@ -234,7 +213,7 @@ function getLayoutedElements(
     }
   });
 
-  return { nodes, edges };
+  return { nodes, edges: [] };
 }
 
 export function PipelineFlowPanel({
@@ -278,7 +257,7 @@ export function PipelineFlowPanel({
   const [edges, setEdges] = useEdgesState(initialEdges);
 
   useEffect(() => {
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+    const { nodes: layoutedNodes } = getLayoutedElements(
       steps,
       onStepClick,
       onStepRemove,
@@ -287,8 +266,7 @@ export function PipelineFlowPanel({
       selectedStepId
     );
     setNodes(layoutedNodes);
-    setEdges(layoutedEdges);
-  }, [steps, selectedStepId, onStepClick, onStepRemove, onStepAliasUpdate, handleContextMenu, setNodes, setEdges]);
+  }, [steps, selectedStepId, onStepClick, onStepRemove, onStepAliasUpdate, handleContextMenu, setNodes]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -348,9 +326,47 @@ export function PipelineFlowPanel({
           color: "hsl(var(--primary))",
         },
       };
-      setEdges((eds) => [...eds, newEdge]);
+      setEdges((eds) => {
+        const newEdges = [...eds, newEdge];
+        const graph = new Map<string, string[]>();
+        const stepIds = steps.map((s) => s.id);
+
+        stepIds.forEach((id) => graph.set(id, []));
+        newEdges.forEach((edge) => {
+          const targets = graph.get(edge.source) || [];
+          targets.push(edge.target);
+          graph.set(edge.source, targets);
+        });
+
+        const visited = new Set<string>();
+        const result: string[] = [];
+
+        const visit = (nodeId: string) => {
+          if (visited.has(nodeId)) return;
+          visited.add(nodeId);
+          const neighbors = graph.get(nodeId) || [];
+          neighbors.forEach((neighbor) => visit(neighbor));
+          result.unshift(nodeId);
+        };
+
+        stepIds.forEach((id) => visit(id));
+
+        const stepMap = new Map(steps.map((s) => [s.id, s]));
+        const reorderedSteps = result
+          .map((id) => stepMap.get(id))
+          .filter((s): s is PipelineStep => s !== undefined);
+
+        if (reorderedSteps.length === steps.length) {
+          const orderChanged = reorderedSteps.some((s, i) => s.id !== steps[i].id);
+          if (orderChanged) {
+            onStepsChange(reorderedSteps);
+          }
+        }
+
+        return newEdges;
+      });
     },
-    [setEdges]
+    [steps, onStepsChange, setEdges]
   );
 
   return (

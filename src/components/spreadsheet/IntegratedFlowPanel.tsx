@@ -21,7 +21,7 @@ import "reactflow/dist/style.css";
 import { Card } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { Table, X, Edit3, Check, Rows3, Settings } from "lucide-react";
-import { PipelineStep } from "@/types/xan";
+import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "./ContextMenu";
 
 interface TableNodeData {
@@ -243,9 +243,6 @@ function PipelineStepNode({
       <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background" />
       <div className="p-3">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-gradient-to-br from-primary/25 to-primary/10 rounded-md flex items-center justify-center text-[10px] font-bold text-primary/80 border border-primary/20">
-            {data.index + 1}
-          </div>
           <div className="flex-1 min-w-0">
             {isEditing ? (
               <div className="flex items-center gap-1 flex-1">
@@ -365,6 +362,10 @@ interface IntegratedFlowPanelProps {
   onTableRename: (col: number, newName: string) => void;
   onSave: () => void;
   selectedStepId?: string;
+  onEdgesChange?: (edges: PipelineEdge[]) => void;
+  onInputPositionChange?: (position: { x: number; y: number }) => void;
+  savedEdges?: PipelineEdge[];
+  savedInputPosition?: { x: number; y: number };
 }
 
 function getLayoutedElements(
@@ -380,7 +381,9 @@ function getLayoutedElements(
   onTableContextMenu: (col: number, x: number, y: number) => void,
   onTableRename: (col: number, newName: string) => void,
   onSave: () => void,
-  selectedStepId?: string
+  selectedStepId?: string,
+  savedEdges?: PipelineEdge[],
+  savedInputPosition?: { x: number; y: number }
 ): { nodes: Node[]; edges: Edge[] } {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -393,7 +396,7 @@ function getLayoutedElements(
     nodes.push({
       id: "table-node",
       type: "tableNode",
-      position: { x: 0, y: 0 },
+      position: savedInputPosition || { x: 0, y: 0 },
       data: {
         headers,
         rows,
@@ -406,7 +409,7 @@ function getLayoutedElements(
     });
   }
 
-  steps.forEach((step, index) => {
+  steps.forEach((step) => {
     dagreGraph.setNode(step.id, { width: 240, height: 90 });
     nodes.push({
       id: step.id,
@@ -419,7 +422,6 @@ function getLayoutedElements(
         onStepAliasUpdate,
         onContextMenu,
         isSelected: selectedStepId === step.id,
-        index,
       },
       selected: selectedStepId === step.id,
     });
@@ -427,7 +429,25 @@ function getLayoutedElements(
 
   const edges: Edge[] = [];
 
-  if (hasTable && steps.length > 0) {
+  if (savedEdges && savedEdges.length > 0) {
+    savedEdges.forEach((edge) => {
+      edges.push({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        type: "smoothstep",
+        animated: edge.source === "table-node",
+        style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: "hsl(var(--primary))",
+        },
+      });
+      if (edge.source !== "table-node" && edge.target !== "table-node") {
+        dagreGraph.setEdge(edge.source, edge.target);
+      }
+    });
+  } else if (hasTable && steps.length > 0) {
     edges.push({
       id: "table-to-first",
       source: "table-node",
@@ -443,36 +463,36 @@ function getLayoutedElements(
     dagreGraph.setEdge("table-node", steps[0].id);
   }
 
-  for (let i = 0; i < steps.length - 1; i++) {
-    edges.push({
-      id: `e-${steps[i].id}-${steps[i + 1].id}`,
-      source: steps[i].id,
-      target: steps[i + 1].id,
-      type: "smoothstep",
-      animated: false,
-      style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: "hsl(var(--primary))",
-      },
-    });
-    dagreGraph.setEdge(steps[i].id, steps[i + 1].id);
-  }
-
   dagre.layout(dagreGraph);
+
+  const MAX_STEPS_PER_COLUMN = 4;
+  const COLUMN_WIDTH = 280;
+  const ROW_HEIGHT = 120;
 
   nodes.forEach((node) => {
     const step = steps.find((s) => s.id === node.id);
     if (step?.position) {
       node.position = step.position;
+    } else if (node.id === "table-node" && savedInputPosition) {
+      node.position = savedInputPosition;
     } else {
-      const nodeWithPosition = dagreGraph.node(node.id);
-      if (nodeWithPosition) {
-        const width = nodeWithPosition.width || 200;
-        const height = nodeWithPosition.height || 100;
+      const stepIndex = steps.findIndex((s) => s.id === node.id);
+      if (stepIndex === -1) {
+        const nodeWithPosition = dagreGraph.node(node.id);
+        if (nodeWithPosition) {
+          const width = nodeWithPosition.width || 200;
+          const height = nodeWithPosition.height || 100;
+          node.position = {
+            x: nodeWithPosition.x - width / 2,
+            y: nodeWithPosition.y - height / 2,
+          };
+        }
+      } else {
+        const column = Math.floor(stepIndex / MAX_STEPS_PER_COLUMN);
+        const rowInColumn = stepIndex % MAX_STEPS_PER_COLUMN;
         node.position = {
-          x: nodeWithPosition.x - width / 2,
-          y: nodeWithPosition.y - height / 2,
+          x: column * COLUMN_WIDTH,
+          y: rowInColumn * ROW_HEIGHT,
         };
       }
     }
@@ -506,6 +526,10 @@ export function IntegratedFlowPanel({
   onTableRename,
   onSave,
   selectedStepId,
+  onEdgesChange,
+  onInputPositionChange,
+  savedEdges,
+  savedInputPosition,
 }: IntegratedFlowPanelProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
@@ -558,16 +582,18 @@ export function IntegratedFlowPanel({
         handleTableContextMenu,
         handleTableRename,
         onSave,
-        selectedStepId
+        selectedStepId,
+        savedEdges,
+        savedInputPosition
       ),
-    [hasTable, steps, headers, rows, columnWidths, selectedStepId, handleContextMenu, handleTableContextMenu, handleTableRename, onSave]
+    [hasTable, steps, headers, rows, columnWidths, selectedStepId, handleContextMenu, handleTableContextMenu, handleTableRename, onSave, savedEdges, savedInputPosition]
   );
 
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
 
   useEffect(() => {
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+    const { nodes: layoutedNodes } = getLayoutedElements(
       hasTable,
       steps,
       headers,
@@ -580,7 +606,9 @@ export function IntegratedFlowPanel({
       handleTableContextMenu,
       handleTableRename,
       onSave,
-      selectedStepId
+      selectedStepId,
+      savedEdges,
+      savedInputPosition
     );
 
     const updatedNodes = layoutedNodes.map((newNode) => {
@@ -592,8 +620,7 @@ export function IntegratedFlowPanel({
     });
 
     setNodes(updatedNodes);
-    setEdges(layoutedEdges);
-  }, [hasTable, steps, headers, rows, columnWidths, selectedStepId, onStepClick, onStepRemove, onStepAliasUpdate, handleContextMenu, handleTableContextMenu, handleTableRename, onSave, setNodes, setEdges]);
+  }, [hasTable, steps, headers, rows, columnWidths, selectedStepId, onStepClick, onStepRemove, onStepAliasUpdate, handleContextMenu, handleTableContextMenu, handleTableRename, onSave, setNodes, savedEdges, savedInputPosition]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -629,19 +656,34 @@ export function IntegratedFlowPanel({
       });
 
       onStepsChange(updatedSteps);
+
+      const inputPos = positionMap.get("table-node");
+      if (inputPos && onInputPositionChange) {
+        onInputPositionChange(inputPos);
+      }
     },
-    [steps, onStepsChange]
+    [steps, onStepsChange, onInputPositionChange]
   );
 
-  const onEdgesChange = useCallback(
+  const handleEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
-      setEdges((eds) => applyEdgeChanges(changes, eds));
+      setEdges((eds) => {
+        const updatedEdges = applyEdgeChanges(changes, eds);
+        if (onEdgesChange) {
+          const pipelineEdges: PipelineEdge[] = updatedEdges
+            .filter((e) => e.source && e.target)
+            .map((e) => ({ id: e.id, source: e.source, target: e.target }));
+          onEdgesChange(pipelineEdges);
+        }
+        return updatedEdges;
+      });
     },
-    [setEdges]
+    [setEdges, onEdgesChange]
   );
 
   const onConnect = useCallback(
     (connection: Connection) => {
+      console.log("[Pipeline] New connection:", `${connection.source} -> ${connection.target}`);
       const newEdge: Edge = {
         id: `e-${connection.source}-${connection.target}`,
         source: connection.source || "",
@@ -654,9 +696,56 @@ export function IntegratedFlowPanel({
           color: "hsl(var(--primary))",
         },
       };
-      setEdges((eds) => [...eds, newEdge]);
+      setEdges((eds) => {
+        const newEdges = [...eds, newEdge];
+        const graph = new Map<string, string[]>();
+        const stepIds = steps.map((s) => s.id);
+
+        stepIds.forEach((id) => graph.set(id, []));
+        newEdges.forEach((edge) => {
+          if (stepIds.includes(edge.source) && stepIds.includes(edge.target)) {
+            const targets = graph.get(edge.source) || [];
+            targets.push(edge.target);
+            graph.set(edge.source, targets);
+          }
+        });
+
+        const visited = new Set<string>();
+        const result: string[] = [];
+
+        const visit = (nodeId: string) => {
+          if (visited.has(nodeId)) return;
+          visited.add(nodeId);
+          const neighbors = graph.get(nodeId) || [];
+          neighbors.forEach((neighbor) => visit(neighbor));
+          result.unshift(nodeId);
+        };
+
+        stepIds.forEach((id) => visit(id));
+
+        const stepMap = new Map(steps.map((s) => [s.id, s]));
+        const reorderedSteps = result
+          .map((id) => stepMap.get(id))
+          .filter((s): s is PipelineStep => s !== undefined);
+
+        if (reorderedSteps.length === steps.length) {
+          const orderChanged = reorderedSteps.some((s, i) => s.id !== steps[i].id);
+          if (orderChanged) {
+            onStepsChange(reorderedSteps);
+          }
+        }
+
+        if (onEdgesChange) {
+          const pipelineEdges: PipelineEdge[] = newEdges
+            .filter((e) => e.source && e.target)
+            .map((e) => ({ id: e.id, source: e.source, target: e.target }));
+          onEdgesChange(pipelineEdges);
+        }
+
+        return newEdges;
+      });
     },
-    [setEdges]
+    [steps, onStepsChange, setEdges, onEdgesChange]
   );
 
   if (!hasTable && steps.length === 0) {
@@ -683,7 +772,7 @@ export function IntegratedFlowPanel({
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
         onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}

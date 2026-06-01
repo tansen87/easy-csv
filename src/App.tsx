@@ -30,6 +30,7 @@ import {
   XanCommand,
   PipelineTab,
   HistoricalPipeline,
+  PipelineEdge,
 } from "@/types/xan";
 
 function formatDateTime(date: Date): string {
@@ -281,7 +282,7 @@ function App() {
     return getCurrentTab().pipeline;
   };
 
-  const updateTabPipeline = (tabIdOrPipeline: string | PipelineStep[], newPipeline?: PipelineStep[]) => {
+  const updateTabPipeline = (tabIdOrPipeline: string | PipelineStep[], newPipeline?: PipelineStep[], edges?: PipelineEdge[], inputPosition?: { x: number; y: number }) => {
     if (typeof tabIdOrPipeline === 'string' && newPipeline) {
       setTabs((prev) =>
         prev.map((tab) =>
@@ -289,6 +290,8 @@ function App() {
             ? {
               ...tab,
               pipeline: newPipeline,
+              edges: edges !== undefined ? edges : tab.edges,
+              inputPosition: inputPosition !== undefined ? inputPosition : tab.inputPosition,
               updatedAt: formatDateTime(new Date()),
             }
             : tab,
@@ -302,6 +305,8 @@ function App() {
             ? {
               ...tab,
               pipeline: pipeline,
+              edges: edges !== undefined ? edges : tab.edges,
+              inputPosition: inputPosition !== undefined ? inputPosition : tab.inputPosition,
               updatedAt: formatDateTime(new Date()),
             }
             : tab,
@@ -546,6 +551,7 @@ function App() {
 
   const handleExportPipeline = async () => {
     const currentPipeline = getCurrentPipeline();
+    const currentTab = getCurrentTab();
     if (currentPipeline.length === 0) {
       showToastRef.current("No pipeline to export", 'warning');
       return;
@@ -554,8 +560,9 @@ function App() {
     try {
       const pipelineData = {
         version: "0.1.0",
-        name: getCurrentTab().name,
+        name: currentTab.name,
         pipeline: currentPipeline.map((step) => ({
+          id: step.id,
           commandId: step.command.id,
           parameters: step.parameters,
           alias: step.alias,
@@ -563,6 +570,8 @@ function App() {
         })),
         inputFile,
         defaultDelimiter,
+        edges: currentTab.edges || [],
+        inputPosition: currentTab.inputPosition,
         createdAt: formatDateTime(new Date()),
       };
 
@@ -575,10 +584,10 @@ function App() {
       if (filePath) {
         const encoder = new TextEncoder();
         await writeFile(filePath, encoder.encode(jsonContent));
-        addLog("success", `Pipeline exported to: ${filePath}`);
+        showToastRef.current(`Pipeline exported to: ${filePath}`, 'success');
       }
     } catch (error) {
-      addLog("error", `Failed to export pipeline: ${error}`);
+      showToastRef.current(`Failed to export pipeline: ${error}`, 'error');
     }
   };
 
@@ -601,14 +610,14 @@ function App() {
         return;
       }
 
-      const importedPipeline: PipelineStep[] = pipelineData.pipeline.map((stepData: { commandId: string; parameters?: Record<string, any>; alias?: string; position?: { x: number; y: number } }) => {
+      const importedPipeline: PipelineStep[] = pipelineData.pipeline.map((stepData: { id?: string; commandId: string; parameters?: Record<string, any>; alias?: string; position?: { x: number; y: number } }) => {
         const command = xanCommands.find((cmd) => cmd.id === stepData.commandId);
         if (!command) {
           showToastRef.current(`Unknown command: ${stepData.commandId}, skipping`, 'warning');
           return null;
         }
         return {
-          id: `${command.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: stepData.id || `${command.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           command,
           parameters: stepData.parameters || {},
           alias: stepData.alias,
@@ -621,7 +630,7 @@ function App() {
         return;
       }
 
-      updateTabPipeline(importedPipeline);
+      updateTabPipeline(importedPipeline, undefined, pipelineData.edges, pipelineData.inputPosition);
       if (pipelineData.inputFile) {
         setInputFile(pipelineData.inputFile);
       }
@@ -631,7 +640,7 @@ function App() {
 
       showToastRef.current(`Imported pipeline with ${importedPipeline.length} steps`, 'success');
     } catch (error) {
-      addLog("error", `Failed to import pipeline: ${error}`);
+      showToastRef.current(`Failed to import pipeline: ${error}`, 'error');
     }
   };
 
@@ -988,6 +997,24 @@ function App() {
               onStepAliasUpdate={handleStepAliasUpdate}
               onStepDelete={handleStepRemove}
               onPipelineReorder={updateTabPipeline}
+              onEdgesChange={(tabId, edges) => {
+                setTabs((prev) =>
+                  prev.map((tab) =>
+                    tab.id === tabId
+                      ? { ...tab, edges, updatedAt: formatDateTime(new Date()) }
+                      : tab,
+                  ),
+                );
+              }}
+              onInputPositionChange={(tabId, position) => {
+                setTabs((prev) =>
+                  prev.map((tab) =>
+                    tab.id === tabId
+                      ? { ...tab, inputPosition: position, updatedAt: formatDateTime(new Date()) }
+                      : tab,
+                  ),
+                );
+              }}
             />
           </div>
           <LogPanel logs={logs} onClear={handleClearLogs} showToastRef={showToastRef} />

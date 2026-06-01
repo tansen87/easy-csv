@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Table, X, Trash2, Plus, Edit3, Rows3, Repeat2, Repeat } from "lucide-react";
 import { ToastContainer, ToastType } from "@/components/Toast";
-import { PipelineStep, XanCommand, PipelineTab } from "@/types/xan";
+import { PipelineStep, PipelineEdge, XanCommand, PipelineTab } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 import { ContextMenu } from "./spreadsheet/ContextMenu";
 import { CommandDialog, CommandDialogState } from "./spreadsheet/CommandDialog";
@@ -34,6 +34,8 @@ interface SpreadsheetViewProps {
   onStepDelete?: (stepId: string) => void;
   onPipelineReorder?: (tabId: string, newPipeline: PipelineStep[]) => void;
   selectedStepId?: string;
+  onEdgesChange?: (tabId: string, edges: PipelineEdge[]) => void;
+  onInputPositionChange?: (tabId: string, position: { x: number; y: number }) => void;
 }
 
 export function SpreadsheetView({
@@ -51,6 +53,8 @@ export function SpreadsheetView({
   onStepDelete,
   onPipelineReorder,
   selectedStepId,
+  onEdgesChange,
+  onInputPositionChange,
 }: SpreadsheetViewProps) {
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
   const [contextMenu, setContextMenu] = useState<{
@@ -83,6 +87,8 @@ export function SpreadsheetView({
   );
   const pipeline = currentTab?.pipeline || [];
   const inputFile = currentTab?.inputFile || "";
+  const edges = currentTab?.edges || [];
+  const inputPosition = currentTab?.inputPosition;
 
   const showToastRef = useRef<(message: string, type: ToastType) => void>(() => { });
   const removeToastRef = useRef<(id: string) => void>(() => { });
@@ -549,7 +555,19 @@ export function SpreadsheetView({
           onNumberTransform={handleNumberTransform}
           onTableRename={handleTableRename}
           onSave={handleSaveRenames}
-          selectedStepId={selectedStepId} 
+          selectedStepId={selectedStepId}
+          savedEdges={edges}
+          savedInputPosition={inputPosition}
+          onEdgesChange={(edges) => {
+            if (onEdgesChange && selectedTabId) {
+              onEdgesChange(selectedTabId, edges);
+            }
+          }}
+          onInputPositionChange={(position) => {
+            if (onInputPositionChange && selectedTabId) {
+              onInputPositionChange(selectedTabId, position);
+            }
+          }}
         />
       </div>
 

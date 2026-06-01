@@ -69,9 +69,6 @@ function PipelineStepNode({
     >
       <div className="p-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-primary/25 to-primary/10 rounded-lg flex items-center justify-center text-xs font-bold text-primary/80 border border-primary/20">
-            {data.index + 1}
-          </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               {isEditing ? (
@@ -191,7 +188,7 @@ function getLayoutedElements(
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   dagreGraph.setGraph({ rankdir: "TB", nodesep: 60, ranksep: 80 });
 
-  const nodes: Node[] = steps.map((step, index) => {
+  const nodes: Node[] = steps.map((step) => {
     dagreGraph.setNode(step.id, { width: 300, height: 100 });
     return {
       id: step.id,
@@ -203,7 +200,6 @@ function getLayoutedElements(
         onStepRemove,
         onStepAliasUpdate,
         isSelected: selectedStepId === step.id,
-        index,
       },
       selected: selectedStepId === step.id,
     };

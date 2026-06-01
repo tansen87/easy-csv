@@ -25,6 +25,12 @@ export interface PipelineStep {
   position?: { x: number; y: number };
 }
 
+export interface PipelineEdge {
+  id: string;
+  source: string;
+  target: string;
+}
+
 export interface LogEntry {
   id: string;
   timestamp: Date;
@@ -42,6 +48,8 @@ export interface PipelineTab {
   headers?: string[];
   inputFile?: string;
   defaultDelimiter?: string;
+  edges?: PipelineEdge[];
+  inputPosition?: { x: number; y: number };
 }
 
 export interface HistoricalPipeline {
