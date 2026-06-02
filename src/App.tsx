@@ -19,6 +19,7 @@ import {
   Upload,
   ChevronUp,
   ChevronRight,
+  File,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/LogPanel";
@@ -76,8 +77,11 @@ function App() {
   >("commands");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
+  const [activeMenu, setActiveMenu] = useState<"file" | "settings" | null>(null);
+  const [isMenuActivated, setIsMenuActivated] = useState<boolean>(false);
   const showToastRef = useRef<(message: string, type: ToastType) => void>(() => { });
   const removeToastRef = useRef<(id: string) => void>(() => { });
+  const headerRef = useRef<HTMLDivElement>(null);
 
   const showToast = useCallback((message: string, type: ToastType = "info") => {
     const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -276,6 +280,16 @@ function App() {
     }
   }, [csvData, inputFile, selectedTabId]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (activeMenu && headerRef.current && !headerRef.current.contains(event.target as Node)) {
+        setActiveMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [activeMenu]);
+
   const getCurrentTab = () => {
     return tabs.find((tab) => tab.id === selectedTabId) || tabs[0];
   };
@@ -460,6 +474,7 @@ function App() {
     }
 
     setIsExecuting(true);
+    setShowLogPanel(true);
 
     try {
       // Check if there's an output command in the pipeline
@@ -762,70 +777,152 @@ function App() {
 
   return (
     <div className="h-screen flex flex-col bg-background relative overflow-hidden">
-      <header className="h-14 border-b bg-card shadow-sm flex items-center justify-between px-4 gap-4 relative z-10">
-        {/* Left: Empty - moved to floating panel */}
-        <div className="flex items-center gap-2"></div>
-
-        {/* Center: View Toggle + Action Group */}
-        <div className="flex items-center gap-3 flex-1 justify-center">
-          <div className="flex items-center gap-2">
-            <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
-              <button
-                onClick={handleOpenFile}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-l-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors border-r border-border/50"
-              >
-                <FolderOpen className="h-3.5 w-3.5" />
-                Browse
-              </button>
+      <header ref={headerRef} className="h-14 border-b bg-card shadow-sm flex items-center justify-between px-4 gap-4 relative z-10">
+        {/* Left: Button Group - File + Settings + Execute */}
+        <div className="relative">
+          <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+            <div className="relative">
               <button
                 onClick={() => {
-                  handleExecute();
+                  if (!isMenuActivated) {
+                    setIsMenuActivated(true);
+                    setActiveMenu("file");
+                  } else {
+                    if (activeMenu === "file") {
+                      setActiveMenu(null);
+                    } else {
+                      setActiveMenu("file");
+                    }
+                  }
                 }}
-                disabled={getCurrentPipeline().length === 0 || isExecuting}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-r-md text-xs font-medium transition-colors ${isExecuting
-                  ? "text-primary opacity-70"
-                  : getCurrentPipeline().length === 0
-                    ? "text-muted-foreground/40 cursor-not-allowed"
-                    : "text-primary hover:text-primary hover:bg-primary/10"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activeMenu === "file"
+                  ? "bg-accent text-foreground"
+                  : "text-primary hover:text-primary hover:bg-primary/10"
                   }`}
               >
-                {isExecuting ? (
-                  <>
-                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Executing...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="h-3 w-3 mr-1.5" />
-                    Execute
-                    {getCurrentPipeline().length > 0 && (
-                      <span className="ml-0.5">({getCurrentPipeline().length})</span>
-                    )}
-                  </>
-                )}
+                <File className="h-3.5 w-3.5" />
+                File
               </button>
+              {activeMenu === "file" && (
+                <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[160px]">
+                    <button
+                      onClick={() => {
+                        handleOpenFile();
+                        setActiveMenu(null);
+                      }}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    >
+                      <FolderOpen className="h-3.5 w-3.5" />
+                      Browse
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleImportPipeline();
+                        setActiveMenu(null);
+                      }}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                      Import
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleExportPipeline();
+                        setActiveMenu(null);
+                      }}
+                      disabled={getCurrentPipeline().length === 0}
+                      className={`flex items-center gap-2 w-full px-3 py-2 text-xs font-medium transition-colors ${getCurrentPipeline().length === 0
+                        ? "text-muted-foreground/40 cursor-not-allowed"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                        }`}
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Export
+                    </button>
+                  </div>
+              )}
             </div>
-            <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+            <div className="relative">
               <button
-                onClick={handleImportPipeline}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                onClick={() => {
+                  if (!isMenuActivated) {
+                    setIsMenuActivated(true);
+                    setActiveMenu("settings");
+                  } else {
+                    if (activeMenu === "settings") {
+                      setActiveMenu(null);
+                    } else {
+                      setActiveMenu("settings");
+                    }
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activeMenu === "settings"
+                  ? "bg-accent text-foreground"
+                  : "text-primary hover:text-primary hover:bg-primary/10"
+                  }`}
               >
-                <Upload className="h-3.5 w-3.5" />
-                Import
+                <Settings className="h-3.5 w-3.5" />
+                Settings
               </button>
-              <button
-                onClick={handleExportPipeline}
-                disabled={getCurrentPipeline().length === 0}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${getCurrentPipeline().length === 0
+              {activeMenu === "settings" && (
+                <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[160px]">
+                    <button
+                      onClick={() => {
+                        handleThemeToggle();
+                        setActiveMenu(null);
+                      }}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    >
+                      {theme === "dark" ? (
+                        <Sun className="h-3.5 w-3.5" />
+                      ) : (
+                        <Moon className="h-3.5 w-3.5" />
+                      )}
+                      {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowSettings(true);
+                        setActiveMenu(null);
+                      }}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    >
+                      <Settings className="h-3.5 w-3.5" />
+                      Preferences
+                    </button>
+                  </div>
+              )}
+            </div>
+            <button
+              onClick={() => handleExecute()}
+              disabled={getCurrentPipeline().length === 0 || isExecuting}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${isExecuting
+                ? "text-primary opacity-70"
+                : getCurrentPipeline().length === 0
                   ? "text-muted-foreground/40 cursor-not-allowed"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                  }`}
-              >
-                <Download className="h-3.5 w-3.5" />
-                Export
-              </button>
-            </div>
+                  : "text-primary hover:text-primary hover:bg-primary/10"
+                }`}
+            >
+              {isExecuting ? (
+                <>
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Executing...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-3 w-3 mr-1.5" />
+                  Execute
+                  {getCurrentPipeline().length > 0 && (
+                    <span className="ml-0.5">({getCurrentPipeline().length})</span>
+                  )}
+                </>
+              )}
+            </button>
           </div>
+        </div>
+
+        {/* Center: Empty */}
+        <div className="flex items-center gap-3 flex-1 justify-center">
         </div>
 
         {/* Right: Status + Tools */}
@@ -886,24 +983,6 @@ function App() {
               <span className="hidden sm:inline">xan missing</span>
             </button>
           )}
-          <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
-            <button
-              onClick={handleThemeToggle}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
-            >
-              {theme === "dark" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-            </button>
-            <button
-              onClick={() => setShowSettings(true)}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
-            >
-              <Settings className="h-4 w-4" />
-            </button>
-          </div>
         </div>
       </header>
 
