@@ -19,6 +19,7 @@ import {
   FolderOpen,
   Download,
   Upload,
+  ChevronUp,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/LogPanel";
@@ -66,6 +67,7 @@ function App() {
   const [helpContent, setHelpContent] = useState<string>("");
   const [helpCommandName, setHelpCommandName] = useState<string>("");
   const [isHelpLoading, setIsHelpLoading] = useState<boolean>(false);
+  const [showLogPanel, setShowLogPanel] = useState<boolean>(false);
   const [historicalPipelines, setHistoricalPipelines] = useState<
     HistoricalPipeline[]
   >([]);
@@ -1104,9 +1106,31 @@ function App() {
               }}
             />
           </div>
-          <LogPanel logs={logs} onClear={handleClearLogs} showToastRef={showToastRef} />
         </main>
       </div>
+
+      {/* Log Panel Toggle Button */}
+      <Button
+        onClick={() => setShowLogPanel(!showLogPanel)}
+        className="fixed bottom-4 right-4 z-30 h-10 w-10 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all flex items-center justify-center"
+        variant="default"
+        size="icon"
+      >
+        {showLogPanel ? (
+          <ChevronUp className="h-4 w-4" />
+        ) : (
+          <FileText className="h-4 w-4" />
+        )}
+      </Button>
+
+      {/* Floating Log Panel */}
+      <LogPanel
+        logs={logs}
+        onClear={handleClearLogs}
+        showToastRef={showToastRef}
+        isVisible={showLogPanel}
+        onClose={() => setShowLogPanel(false)}
+      />
 
       {/* Settings Dialog */}
       {showSettings && (

@@ -2,8 +2,8 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ResizeHandle } from "@/components/ui/resize-handle";
-import { Trash2, Info, CheckCircle, AlertCircle, XCircle, TextQuote, FileText, Copy } from "lucide-react";
-import { useState } from "react";
+import { Trash2, Info, CheckCircle, AlertCircle, XCircle, TextQuote, FileText, Copy, X, GripVertical } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { LogEntry } from "@/types/xan";
 import { ToastType } from "@/components/Toast";
 
@@ -11,10 +11,16 @@ interface LogPanelProps {
   logs: LogEntry[];
   onClear: () => void;
   showToastRef?: React.RefObject<(message: string, type: ToastType) => void>;
+  isVisible: boolean;
+  onClose: () => void;
 }
 
-export function LogPanel({ logs, onClear, showToastRef }: LogPanelProps) {
-  const [height, setHeight] = useState<number>(5);
+export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose }: LogPanelProps) {
+  const [height, setHeight] = useState<number>(300);
+  const [position, setPosition] = useState({ x: window.innerWidth - 450, y: 60 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const getLogIcon = (type: LogEntry["type"]) => {
     switch (type) {
@@ -56,36 +62,98 @@ export function LogPanel({ logs, onClear, showToastRef }: LogPanelProps) {
   };
 
   const handleResize = (delta: number) => {
-    const containerHeight = window.innerHeight;
-    const percentDelta = (delta / containerHeight) * 100;
-    const newHeight = Math.max(5, Math.min(95, height - percentDelta));
+    const newHeight = Math.max(150, Math.min(600, height + delta));
     setHeight(newHeight);
   };
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      
+      const toolbarHeight = 56;
+      const maxX = window.innerWidth - (panelRef.current?.offsetWidth || 400);
+      const maxY = window.innerHeight - height;
+      
+      const newX = Math.max(0, Math.min(maxX, e.clientX - dragStart.x));
+      const newY = Math.max(toolbarHeight, Math.min(maxY, e.clientY - dragStart.y));
+      
+      setPosition({ x: newX, y: newY });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "move";
+      document.body.style.userSelect = "none";
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isDragging, dragStart, position, height]);
+
+  useEffect(() => {
+    if (isVisible) {
+      setPosition({ 
+        x: Math.min(position.x, window.innerWidth - 450), 
+        y: Math.max(position.y, 60) 
+      });
+    }
+  }, [isVisible]);
+
+  if (!isVisible) return null;
+
   return (
-    <div style={{ height: `${height}%` }} className="relative flex flex-col bg-background border-t border-border/50">
-      <ResizeHandle
-        direction="vertical"
-        onResize={handleResize}
-        className="absolute -top-1 left-0 right-0 z-10"
-      />
-      <div className="p-1 border-b bg-card/80">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground shadow-sm">
-              <FileText className="h-3.5 w-3.5" />
-              Logs ({logs.length})
-            </div>
+    <div
+      ref={panelRef}
+      style={{ 
+        left: position.x, 
+        top: position.y, 
+        height: height 
+      }}
+      className={`fixed w-[600px] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 transition-shadow ${isDragging ? "shadow-2xl" : ""}`}
+    >
+      <div 
+        className="p-2 border-b bg-card/80 cursor-move flex items-center justify-between"
+        onMouseDown={handleMouseDown}
+      >
+        <div className="flex items-center gap-2">
+          <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50" />
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-primary text-primary-foreground shadow-sm">
+            <FileText className="h-3.5 w-3.5" />
+            Logs ({logs.length})
           </div>
+        </div>
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={onClear}
             disabled={logs.length === 0}
-            className="h-7 px-3 text-xs font-medium hover:bg-destructive/10 hover:text-destructive"
+            className="h-6 px-2 text-xs font-medium hover:bg-destructive/10 hover:text-destructive"
           >
-            <Trash2 className="h-3 w-3 mr-1.5" />
-            Clear
+            <Trash2 className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="h-6 px-2 text-xs font-medium hover:bg-accent hover:text-foreground"
+          >
+            <X className="h-3 w-3" />
           </Button>
         </div>
       </div>
@@ -121,7 +189,8 @@ export function LogPanel({ logs, onClear, showToastRef }: LogPanelProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             navigator.clipboard.writeText(log.message);
                             showToastRef?.current?.("Copied!", "success");
                           }}
@@ -141,6 +210,11 @@ export function LogPanel({ logs, onClear, showToastRef }: LogPanelProps) {
           )}
         </div>
       </ScrollArea>
+      <ResizeHandle
+        direction="vertical"
+        onResize={handleResize}
+        className="absolute -bottom-1 left-0 right-0 z-10"
+      />
     </div>
   );
 }
