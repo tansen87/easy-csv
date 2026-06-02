@@ -20,6 +20,7 @@ import dagre from "dagre";
 import "reactflow/dist/style.css";
 import { Card } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, X, Edit3, Check, Rows3, Settings } from "lucide-react";
 import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "./ContextMenu";
@@ -39,6 +40,23 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
   const [editValue, setEditValue] = useState("");
   const [showSaveButton, setShowSaveButton] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  const handleTableMouseDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+  }, []);
+
+  const handleTableMouseMove = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  const handleTableMouseUp = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
 
   const handleStartEdit = (col: number, currentValue: string) => {
     setEditingCol(col);
@@ -89,7 +107,7 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
           : "border-border/60 hover:border-primary/30"
       }`}
     >
-      <div className="px-3 py-2 bg-muted/50 border-b border-border/50 flex items-center gap-2">
+      <div className="table-node-header px-3 py-2 bg-muted/50 border-b border-border/50 flex items-center gap-2">
         <div className="w-6 h-6 bg-gradient-to-br from-green-500/25 to-green-500/10 rounded flex items-center justify-center">
           <Table className="h-3 w-3 text-green-600" />
         </div>
@@ -123,8 +141,14 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
           </button>
         )}
       </div>
-      <div className="h-[200px] overflow-auto" ref={scrollContainerRef}>
-        <div style={{ minWidth: "max-content" }}>
+      <ScrollArea 
+        className="h-[180px]" 
+        onWheel={handleWheel}
+        onMouseDown={handleTableMouseDown}
+        onMouseMove={handleTableMouseMove}
+        onMouseUp={handleTableMouseUp}
+      >
+        <div className="min-w-max" ref={scrollContainerRef}>
           <table className="border-collapse">
             <colgroup>
               {headers.map((_, colIndex) => (
@@ -182,7 +206,7 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
             </tbody>
           </table>
         </div>
-      </div>
+      </ScrollArea>
     </Card>
   );
 }
@@ -406,6 +430,7 @@ function getLayoutedElements(
         onSave,
       },
       selected: false,
+      dragHandle: ".table-node-header",
     });
   }
 

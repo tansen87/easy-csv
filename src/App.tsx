@@ -962,6 +962,20 @@ function App() {
         )}
       </Button>
 
+      {/* Log Panel Toggle Button */}
+      <Button
+        onClick={() => setShowLogPanel(!showLogPanel)}
+        className="fixed bottom-4 left-16 z-30 h-10 w-10 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all flex items-center justify-center"
+        variant="default"
+        size="icon"
+      >
+        {showLogPanel ? (
+          <ChevronUp className="h-4 w-4" />
+        ) : (
+          <FileText className="h-4 w-4" />
+        )}
+      </Button>
+
       {/* Floating Command Panel */}
       <CommandList
         commands={xanCommands}
@@ -1000,20 +1014,6 @@ function App() {
         onInputFileChange={setInputFile}
         onDefaultDelimiterChange={setDefaultDelimiter}
       />
-
-      {/* Log Panel Toggle Button */}
-      <Button
-        onClick={() => setShowLogPanel(!showLogPanel)}
-        className="fixed bottom-4 right-4 z-30 h-10 w-10 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all flex items-center justify-center"
-        variant="default"
-        size="icon"
-      >
-        {showLogPanel ? (
-          <ChevronUp className="h-4 w-4" />
-        ) : (
-          <FileText className="h-4 w-4" />
-        )}
-      </Button>
 
       {/* Floating Log Panel */}
       <LogPanel

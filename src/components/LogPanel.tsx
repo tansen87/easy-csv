@@ -73,7 +73,7 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose }: Lo
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsDragging(true);
-    
+
     const rect = panelRef.current?.getBoundingClientRect();
     if (rect) {
       dragStateRef.current = {
@@ -88,19 +88,19 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose }: Lo
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging || !panelRef.current) return;
-      
+
       const deltaX = e.clientX - dragStateRef.current.startX;
       const deltaY = e.clientY - dragStateRef.current.startY;
-      
+
       const toolbarHeight = 56;
-      const panelWidth = panelRef.current.offsetWidth;
-      
+      const panelWidth = 600;
+
       let newX = dragStateRef.current.offsetX + deltaX;
       let newY = dragStateRef.current.offsetY + deltaY;
-      
+
       newX = Math.max(0, Math.min(window.innerWidth - panelWidth, newX));
       newY = Math.max(toolbarHeight, Math.min(window.innerHeight - height, newY));
-      
+
       panelRef.current.style.left = `${newX}px`;
       panelRef.current.style.top = `${newY}px`;
     };
@@ -126,11 +126,10 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose }: Lo
 
   useEffect(() => {
     if (isVisible && panelRef.current) {
-      const rect = panelRef.current.getBoundingClientRect();
-      const newX = Math.min(rect.left, window.innerWidth - 450);
-      const newY = Math.max(rect.top, 60);
+      const panelWidth = 600;
+      const newX = window.innerWidth - panelWidth;
       panelRef.current.style.left = `${newX}px`;
-      panelRef.current.style.top = `${newY}px`;
+      panelRef.current.style.top = `60px`;
     }
   }, [isVisible]);
 
@@ -139,14 +138,14 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose }: Lo
   return (
     <div
       ref={panelRef}
-      style={{ 
-        left: window.innerWidth - 450, 
-        top: 60, 
-        height: height 
+      style={{
+        left: window.innerWidth - 600,
+        top: 60,
+        height: height
       }}
       className={`fixed w-[600px] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isDragging ? "shadow-2xl" : ""}`}
     >
-      <div 
+      <div
         className="p-2 border-b bg-card/80 cursor-move flex items-center justify-between"
         onMouseDown={handleMouseDown}
       >
