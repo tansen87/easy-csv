@@ -10,7 +10,6 @@ import ReactFlow, {
   applyNodeChanges,
   BackgroundVariant,
   ConnectionMode,
-  MarkerType,
 } from "reactflow";
 import dagre from "dagre";
 import "reactflow/dist/style.css";
@@ -206,21 +205,6 @@ function getLayoutedElements(
   });
 
   const edges: Edge[] = [];
-  for (let i = 0; i < steps.length - 1; i++) {
-    edges.push({
-      id: `e-${steps[i].id}-${steps[i + 1].id}`,
-      source: steps[i].id,
-      target: steps[i + 1].id,
-      type: "smoothstep",
-      animated: false,
-      style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: "hsl(var(--primary))",
-      },
-    });
-    dagreGraph.setEdge(steps[i].id, steps[i + 1].id);
-  }
 
   dagre.layout(dagreGraph);
 

@@ -398,7 +398,7 @@ function App() {
       setHelpContent(helpText);
       setHelpCommandName(command.name);
     } catch (error) {
-      addLog("error", `Failed to get help for ${command.name}: ${error}`);
+      showToastRef.current(`Failed to get help for ${command.name}: ${error}`, 'error');
     } finally {
       setIsHelpLoading(false);
     }
@@ -444,6 +444,9 @@ function App() {
 
   const handleExecute = async () => {
     const currentPipeline = getCurrentPipeline();
+    const currentTab = getCurrentTab();
+    const edges = currentTab.edges || [];
+
     if (currentPipeline.length === 0) {
       showToastRef.current("No steps in pipeline to execute", 'warning');
       return;
@@ -464,36 +467,66 @@ function App() {
       // Filter out output command from execution
       const executableSteps = currentPipeline.filter(step => step.command.id !== "output");
 
-      const commands = executableSteps.map((step, index) => {
-        const params = step.command.parameters.map((param) => ({
-          name: param.name,
-          value: String(step.parameters[param.name] || param.default || ""),
-          isPositional: param.isPositional,
-        }));
+      // Build execution branches based on edges
+      const branches = buildExecutionBranches(executableSteps, edges);
 
-        // Add output parameter to the last command if output path is specified
-        if (index === executableSteps.length - 1 && outputPath) {
-          params.push({
-            name: "output",
-            value: outputPath,
-            isPositional: false,
-          });
+      const allResults: { success: boolean; output?: string; error?: string; branchSteps: string[] }[] = [];
+
+      // Execute each branch sequentially
+      for (let i = 0; i < branches.length; i++) {
+        const branchSteps = branches[i];
+        if (branchSteps.length === 0) continue;
+
+        const branchStepNames = branchSteps.map(s => s.alias || s.command.name);
+        addLog("info", `Executing branch ${i + 1}: ${branchStepNames.join(" -> ")}`);
+
+        const commands = branchSteps.map((step, index) => {
+          const params = step.command.parameters.map((param) => ({
+            name: param.name,
+            value: String(step.parameters[param.name] || param.default || ""),
+            isPositional: param.isPositional,
+          }));
+
+          // Add output parameter to the last command if output path is specified
+          if (index === branchSteps.length - 1 && outputPath) {
+            params.push({
+              name: "output",
+              value: outputPath,
+              isPositional: false,
+            });
+          }
+
+          return {
+            name: step.command.name,
+            parameters: params,
+          };
+        });
+
+        const result = await invoke<any>("execute_xan_pipeline", {
+          commands,
+          inputFile,
+          defaultDelimiter,
+        });
+
+        allResults.push({
+          success: result.success,
+          output: result.output,
+          error: result.error,
+          branchSteps: branchStepNames,
+        });
+
+        if (result.success) {
+          if (result.output) {
+            const output = (result.output as string).trimStart().trimEnd();
+            addLog("success", `${output}`);
+          }
+        } else {
+          addLog("error", `${result.error}`);
         }
-
-        return {
-          name: step.command.name,
-          parameters: params,
-        };
-      });
-
-      const result = await invoke<any>("execute_xan_pipeline", {
-        commands,
-        inputFile,
-        defaultDelimiter,
-      });
+      }
 
       // Save to history
-      const currentTabName = getCurrentTab().name;
+      const currentTabName = currentTab.name;
       const existingHistoryIndex = historicalPipelines.findIndex(
         (h) => h.name === currentTabName,
       );
@@ -508,8 +541,8 @@ function App() {
         inputFile,
         defaultDelimiter,
         executedAt: formatDateTime(new Date()),
-        success: result.success,
-        output: result.output || undefined,
+        success: allResults.every(r => r.success),
+        output: allResults.map(r => r.output).filter(Boolean).join("\n---\n"),
       };
 
       let updatedHistory: HistoricalPipeline[];
@@ -530,19 +563,73 @@ function App() {
 
       updateHistoricalPipelines(updatedHistory);
 
-      if (result.success) {
-        if (result.output) {
-          const output = (result.output as string).trimStart().trimEnd();
-          addLog("info", output);
-        }
+      // Summary
+      const successCount = allResults.filter(r => r.success).length;
+      if (successCount === branches.length) {
+        showToastRef.current(`All ${branches.length} branch(es) executed successfully`, 'success');
       } else {
-        addLog("error", `${result.error}`);
+        showToastRef.current(`${successCount}/${branches.length} branch(es) succeeded`, 'warning');
       }
     } catch (error) {
-      addLog("error", `${error}`);
+      showToastRef.current(`${error}`, 'error');
     } finally {
       setIsExecuting(false);
     }
+  };
+
+  // Build execution branches from edges
+  const buildExecutionBranches = (steps: PipelineStep[], edges: PipelineEdge[]): PipelineStep[][] => {
+    // If no edges, each step is its own independent branch
+    if (edges.length === 0) {
+      return steps.map(step => [step]);
+    }
+
+    // Create a map from step id to step
+    const stepMap = new Map<string, PipelineStep>();
+    steps.forEach(step => stepMap.set(step.id, step));
+
+    // Build adjacency list from edges
+    const adjacency = new Map<string, string[]>();
+    edges.forEach(edge => {
+      if (!adjacency.has(edge.source)) {
+        adjacency.set(edge.source, []);
+      }
+      adjacency.get(edge.source)!.push(edge.target);
+    });
+
+    // Find starting nodes (nodes that are not targets of any edge)
+    const targetIds = new Set(edges.map(e => e.target));
+    const startNodes = steps.filter(step => !targetIds.has(step.id)).map(step => step.id);
+
+    if (startNodes.length === 0) {
+      return steps.map(step => [step]);
+    }
+
+    // Build all paths using DFS
+    const branches: PipelineStep[][] = [];
+
+    const dfs = (currentId: string, path: PipelineStep[]) => {
+      const currentStep = stepMap.get(currentId);
+      if (!currentStep) return;
+
+      const newPath = [...path, currentStep];
+      const nextNodes = adjacency.get(currentId) || [];
+
+      if (nextNodes.length === 0) {
+        branches.push(newPath);
+        return;
+      }
+
+      nextNodes.forEach(nextId => {
+        dfs(nextId, newPath);
+      });
+    };
+
+    startNodes.forEach(startId => {
+      dfs(startId, []);
+    });
+
+    return branches;
   };
 
   const handleClearLogs = () => {
