@@ -14,12 +14,11 @@ import {
   Sun,
   Moon,
   Terminal,
-  History,
-  Search,
   FolderOpen,
   Download,
   Upload,
   ChevronUp,
+  ChevronRight,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/LogPanel";
@@ -68,6 +67,7 @@ function App() {
   const [helpCommandName, setHelpCommandName] = useState<string>("");
   const [isHelpLoading, setIsHelpLoading] = useState<boolean>(false);
   const [showLogPanel, setShowLogPanel] = useState<boolean>(false);
+  const [showCommandPanel, setShowCommandPanel] = useState<boolean>(false);
   const [historicalPipelines, setHistoricalPipelines] = useState<
     HistoricalPipeline[]
   >([]);
@@ -763,45 +763,8 @@ function App() {
   return (
     <div className="h-screen flex flex-col bg-background relative overflow-hidden">
       <header className="h-14 border-b bg-card shadow-sm flex items-center justify-between px-4 gap-4 relative z-10">
-        {/* Left: Command/History Toggle + Search */}
-        <div className="flex items-center gap-2">
-          <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
-            <button
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeLeftPanel === "commands"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
-              onClick={() => setActiveLeftPanel("commands")}
-            >
-              <Terminal className="h-3.5 w-3.5" />
-              Cmds
-            </button>
-            <button
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeLeftPanel === "history"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
-              onClick={() => setActiveLeftPanel("history")}
-            >
-              <History className="h-3.5 w-3.5" />
-              History
-            </button>
-          </div>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60 z-10 pointer-events-none" />
-            <input
-              type="text"
-              placeholder={
-                activeLeftPanel === "commands"
-                  ? "Search cmd(s)"
-                  : "Search history"
-              }
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-32 pl-8 pr-3 py-1.5 text-xs border border-border/50 rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
-            />
-          </div>
-        </div>
+        {/* Left: Empty - moved to floating panel */}
+        <div className="flex items-center gap-2"></div>
 
         {/* Center: View Toggle + Action Group */}
         <div className="flex items-center gap-3 flex-1 justify-center">
@@ -945,130 +908,6 @@ function App() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <aside className="w-[16%] flex-shrink-0 flex flex-col bg-card/80 border-r">
-          {/* Panel Content */}
-          <div className="flex-1 overflow-hidden">
-            {activeLeftPanel === "commands" ? (
-              <CommandList
-                commands={xanCommands}
-                onCommandClick={handleCommandClick}
-                onHelpClick={handleHelpClick}
-                selectedCommandId={selectedStep?.command.id}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-              />
-            ) : (
-              <div className="h-full overflow-auto p-4">
-                {(() => {
-                  const filteredHistory = historicalPipelines.filter(
-                    (history) =>
-                      history.name
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase()),
-                  );
-                  return filteredHistory.length === 0 ? (
-                    <div className="text-center py-16 px-4">
-                      <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
-                        <FileText className="h-8 w-8 text-muted-foreground/50" />
-                      </div>
-                      <p className="text-sm font-medium text-muted-foreground mb-1">
-                        No historical pipelines found
-                      </p>
-                      <p className="text-xs text-muted-foreground/70">
-                        {searchQuery
-                          ? "Try a different search term"
-                          : "Execute pipelines to see them here"}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {filteredHistory.map((history) => (
-                        <div
-                          key={history.id}
-                          className="border rounded-lg p-3 hover:bg-muted/30 transition-colors"
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <h4 className="font-semibold text-xs truncate">
-                              {history.name}
-                            </h4>
-                            <button
-                              className="text-xs px-2 py-1 rounded-md hover:bg-accent transition-colors text-red-600 hover:bg-red-500/10"
-                              onClick={() => {
-                                const updatedHistory =
-                                  historicalPipelines.filter(
-                                    (h) => h.id !== history.id,
-                                  );
-                                updateHistoricalPipelines(updatedHistory);
-                                showToastRef.current(
-                                  `Deleted historical pipeline: ${history.name}`,
-                                  'info',
-                                );
-                              }}
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            {new Date(history.executedAt).toLocaleString()}
-                          </p>
-                          <p className="text-xs text-muted-foreground mb-2 truncate">
-                            {history.inputFile.split("\\").pop()}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <div className="flex gap-1">
-                              <button
-                                className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
-                                onClick={() => {
-                                  updateTabPipeline(history.pipeline);
-                                  setInputFile(history.inputFile);
-                                  setDefaultDelimiter(history.defaultDelimiter);
-                                  showToastRef.current(
-                                    `Loaded historical pipeline: ${history.name}`,
-                                    'info',
-                                  );
-                                }}
-                              >
-                                Load
-                              </button>
-                              <button
-                                className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
-                                onClick={() => {
-                                  const newTabId = `tab-${Date.now()}`;
-                                  const newTab: PipelineTab = {
-                                    id: newTabId,
-                                    name: `${history.name} (History)`,
-                                    pipeline: history.pipeline,
-                                    createdAt: formatDateTime(new Date()),
-                                    updatedAt: formatDateTime(new Date()),
-                                  };
-                                  setTabs((prev) => [...prev, newTab]);
-                                  setSelectedTabId(newTabId);
-                                  setInputFile(history.inputFile);
-                                  setDefaultDelimiter(history.defaultDelimiter);
-                                  showToastRef.current(
-                                    `Created new tab from historical pipeline: ${history.name}`,
-                                    'info',
-                                  );
-                                }}
-                              >
-                                New Tab
-                              </button>
-                            </div>
-                            <span
-                              className={`text-xs px-2 py-0.5 rounded-full ${history.success ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"}`}
-                            >
-                              {history.success ? "Success" : "Failed"}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-          </div>
-        </aside>
 
         <main className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-hidden">
@@ -1108,6 +947,59 @@ function App() {
           </div>
         </main>
       </div>
+
+      {/* Command Panel Toggle Button */}
+      <Button
+        onClick={() => setShowCommandPanel(!showCommandPanel)}
+        className="fixed bottom-4 left-4 z-30 h-10 w-10 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all flex items-center justify-center"
+        variant="default"
+        size="icon"
+      >
+        {showCommandPanel ? (
+          <ChevronRight className="h-4 w-4" />
+        ) : (
+          <Terminal className="h-4 w-4" />
+        )}
+      </Button>
+
+      {/* Floating Command Panel */}
+      <CommandList
+        commands={xanCommands}
+        onCommandClick={handleCommandClick}
+        onHelpClick={handleHelpClick}
+        selectedCommandId={selectedStep?.command.id}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        isVisible={showCommandPanel}
+        onClose={() => setShowCommandPanel(false)}
+        activePanel={activeLeftPanel}
+        onActivePanelChange={setActiveLeftPanel}
+        historicalPipelines={historicalPipelines}
+        onLoadHistory={(history) => {
+          updateTabPipeline(history.pipeline);
+          showToastRef.current(`Loaded historical pipeline: ${history.name}`, 'info');
+        }}
+        onNewTabFromHistory={(history) => {
+          const newTabId = `tab-${Date.now()}`;
+          const newTab: PipelineTab = {
+            id: newTabId,
+            name: `${history.name} (History)`,
+            pipeline: history.pipeline,
+            createdAt: formatDateTime(new Date()),
+            updatedAt: formatDateTime(new Date()),
+          };
+          setTabs((prev) => [...prev, newTab]);
+          setSelectedTabId(newTabId);
+          showToastRef.current(`Created new tab from historical pipeline: ${history.name}`, 'info');
+        }}
+        onDeleteHistory={(history) => {
+          const updatedHistory = historicalPipelines.filter((h) => h.id !== history.id);
+          updateHistoricalPipelines(updatedHistory);
+          showToastRef.current(`Deleted historical pipeline: ${history.name}`, 'info');
+        }}
+        onInputFileChange={setInputFile}
+        onDefaultDelimiterChange={setDefaultDelimiter}
+      />
 
       {/* Log Panel Toggle Button */}
       <Button

@@ -17,9 +17,13 @@ interface LogPanelProps {
 
 export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose }: LogPanelProps) {
   const [height, setHeight] = useState<number>(300);
-  const [position, setPosition] = useState({ x: window.innerWidth - 450, y: 60 });
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const dragStateRef = useRef({
+    startX: 0,
+    startY: 0,
+    offsetX: 0,
+    offsetY: 0,
+  });
   const panelRef = useRef<HTMLDivElement>(null);
 
   const getLogIcon = (type: LogEntry["type"]) => {
@@ -69,21 +73,36 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose }: Lo
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsDragging(true);
-    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+    
+    const rect = panelRef.current?.getBoundingClientRect();
+    if (rect) {
+      dragStateRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        offsetX: rect.left,
+        offsetY: rect.top,
+      };
+    }
   };
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
+      if (!isDragging || !panelRef.current) return;
+      
+      const deltaX = e.clientX - dragStateRef.current.startX;
+      const deltaY = e.clientY - dragStateRef.current.startY;
       
       const toolbarHeight = 56;
-      const maxX = window.innerWidth - (panelRef.current?.offsetWidth || 400);
-      const maxY = window.innerHeight - height;
+      const panelWidth = panelRef.current.offsetWidth;
       
-      const newX = Math.max(0, Math.min(maxX, e.clientX - dragStart.x));
-      const newY = Math.max(toolbarHeight, Math.min(maxY, e.clientY - dragStart.y));
+      let newX = dragStateRef.current.offsetX + deltaX;
+      let newY = dragStateRef.current.offsetY + deltaY;
       
-      setPosition({ x: newX, y: newY });
+      newX = Math.max(0, Math.min(window.innerWidth - panelWidth, newX));
+      newY = Math.max(toolbarHeight, Math.min(window.innerHeight - height, newY));
+      
+      panelRef.current.style.left = `${newX}px`;
+      panelRef.current.style.top = `${newY}px`;
     };
 
     const handleMouseUp = () => {
@@ -103,14 +122,15 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose }: Lo
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
-  }, [isDragging, dragStart, position, height]);
+  }, [isDragging, height]);
 
   useEffect(() => {
-    if (isVisible) {
-      setPosition({ 
-        x: Math.min(position.x, window.innerWidth - 450), 
-        y: Math.max(position.y, 60) 
-      });
+    if (isVisible && panelRef.current) {
+      const rect = panelRef.current.getBoundingClientRect();
+      const newX = Math.min(rect.left, window.innerWidth - 450);
+      const newY = Math.max(rect.top, 60);
+      panelRef.current.style.left = `${newX}px`;
+      panelRef.current.style.top = `${newY}px`;
     }
   }, [isVisible]);
 
@@ -120,11 +140,11 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose }: Lo
     <div
       ref={panelRef}
       style={{ 
-        left: position.x, 
-        top: position.y, 
+        left: window.innerWidth - 450, 
+        top: 60, 
         height: height 
       }}
-      className={`fixed w-[600px] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 transition-shadow ${isDragging ? "shadow-2xl" : ""}`}
+      className={`fixed w-[600px] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isDragging ? "shadow-2xl" : ""}`}
     >
       <div 
         className="p-2 border-b bg-card/80 cursor-move flex items-center justify-between"
