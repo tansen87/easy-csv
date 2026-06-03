@@ -273,7 +273,7 @@ export function CommandList({
     if (isVisible && panelRef.current) {
       const rect = panelRef.current.getBoundingClientRect();
       const newX = Math.min(rect.left, window.innerWidth - 280);
-      const newY = Math.max(rect.top, 60);
+      const newY = Math.max(rect.top, 100);
       panelRef.current.style.left = `${newX}px`;
       panelRef.current.style.top = `${newY}px`;
     }
@@ -293,7 +293,7 @@ export function CommandList({
       ref={panelRef}
       style={{ 
         left: 0, 
-        top: 60 
+        top: 100 
       }}
       className={`fixed w-[280px] h-[500px] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isDragging ? "shadow-2xl" : ""}`}
     >
@@ -342,7 +342,7 @@ export function CommandList({
             type="text"
             placeholder={
               activePanel === "commands"
-                ? "Search cmd(s)"
+                ? "Search command"
                 : "Search history"
             }
             value={searchQuery}

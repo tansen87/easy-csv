@@ -616,6 +616,8 @@ function App() {
         executedAt: formatDateTime(new Date()),
         success: allResults.every(r => r.success),
         output: allResults.map(r => r.output).filter(Boolean).join("\n---\n"),
+        edges: currentTab.edges,
+        inputPosition: currentTab.inputPosition,
       };
 
       let updatedHistory: HistoricalPipeline[];
@@ -1152,7 +1154,7 @@ function App() {
         onActivePanelChange={setActiveLeftPanel}
         historicalPipelines={historicalPipelines}
         onLoadHistory={(history) => {
-          updateTabPipeline(history.pipeline);
+          updateTabPipeline(history.pipeline, undefined, history.edges, history.inputPosition);
           showToastRef.current(`Loaded historical pipeline: ${history.name}`, 'info');
         }}
         onNewTabFromHistory={(history) => {
@@ -1161,6 +1163,8 @@ function App() {
             id: newTabId,
             name: `${history.name} (History)`,
             pipeline: history.pipeline,
+            edges: history.edges,
+            inputPosition: history.inputPosition,
             createdAt: formatDateTime(new Date()),
             updatedAt: formatDateTime(new Date()),
           };

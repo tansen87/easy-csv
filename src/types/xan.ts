@@ -61,6 +61,8 @@ export interface HistoricalPipeline {
   executedAt: string;
   success: boolean;
   output?: string;
+  edges?: PipelineEdge[];
+  inputPosition?: { x: number; y: number };
 }
 
 export interface Workspace {

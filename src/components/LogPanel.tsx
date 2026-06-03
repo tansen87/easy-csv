@@ -129,7 +129,7 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose }: Lo
       const panelWidth = 600;
       const newX = window.innerWidth - panelWidth;
       panelRef.current.style.left = `${newX}px`;
-      panelRef.current.style.top = `60px`;
+      panelRef.current.style.top = `100px`;
     }
   }, [isVisible]);
 
@@ -140,7 +140,7 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose }: Lo
       ref={panelRef}
       style={{
         left: window.innerWidth - 600,
-        top: 60,
+        top: 100,
         height: height
       }}
       className={`fixed w-[600px] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isDragging ? "shadow-2xl" : ""}`}
