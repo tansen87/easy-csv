@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "@/components/ThemeProvider";
 import { ToastContainer, ToastType } from "@/components/Toast";
+import { NotificationPanel, NotificationType } from "@/components/PersistentNotification";
 import {
   Settings,
   X,
@@ -77,10 +78,13 @@ function App() {
   >("commands");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
+  const [notifications, setNotifications] = useState<{ id: string; message: string; type: NotificationType }[]>([]);
   const [activeMenu, setActiveMenu] = useState<"file" | "settings" | null>(null);
   const [isMenuActivated, setIsMenuActivated] = useState<boolean>(false);
   const showToastRef = useRef<(message: string, type: ToastType) => void>(() => { });
   const removeToastRef = useRef<(id: string) => void>(() => { });
+  const addNotificationRef = useRef<(message: string, type: NotificationType) => void>(() => { });
+  const removeNotificationRef = useRef<(id: string) => void>(() => { });
   const headerRef = useRef<HTMLDivElement>(null);
 
   const showToast = useCallback((message: string, type: ToastType = "info") => {
@@ -92,10 +96,31 @@ function App() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
+  const addNotification = useCallback((message: string, type: NotificationType = "info") => {
+    setNotifications((prev) => {
+      // Check if notification with same message already exists
+      if (prev.some(n => n.message === message)) {
+        return prev;
+      }
+      const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      return [...prev, { id, message, type }];
+    });
+  }, []);
+
+  const removeNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  const dismissAllNotifications = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
   useEffect(() => {
     showToastRef.current = showToast;
     removeToastRef.current = removeToast;
-  }, [showToast, removeToast]);
+    addNotificationRef.current = addNotification;
+    removeNotificationRef.current = removeNotification;
+  }, [showToast, removeToast, addNotification, removeNotification]);
 
   const [csvData, setCsvData] = useState<{
     headers: string[];
@@ -379,6 +404,15 @@ function App() {
     );
   };
 
+  // Validate output step placement
+  const validateOutputStepOnAdd = (currentPipeline: PipelineStep[]) => {
+    // Build execution branches to check output placement
+    const executableSteps = currentPipeline.filter(step => step.command.id !== "output");
+    if (executableSteps.length === 0) {
+      addNotificationRef.current("Output requires at least one other step before it", 'warning');
+    }
+  };
+
   const handleCommandClick = (
     command: XanCommand,
     initialParameters?: Record<string, any>,
@@ -400,6 +434,12 @@ function App() {
     }
 
     const currentPipeline = getCurrentPipeline();
+
+    // Validate output step placement
+    if (command.id === "output") {
+      validateOutputStepOnAdd(currentPipeline);
+    }
+
     updateTabPipeline([...currentPipeline, newStep]);
     setSelectedStep(newStep);
   };
@@ -426,6 +466,15 @@ function App() {
 
   const handleStepRemove = (stepId: string) => {
     const currentPipeline = getCurrentPipeline();
+    const removedStep = currentPipeline.find(s => s.id === stepId);
+
+    // If removing an output step, clear all output-related notifications
+    if (removedStep?.command.id === "output") {
+      setNotifications((prev) =>
+        prev.filter(n => !n.message.startsWith("Output"))
+      );
+    }
+
     const updatedPipeline = currentPipeline.filter((s) => s.id !== stepId);
     updateTabPipeline(updatedPipeline);
     if (selectedStep?.id === stepId) {
@@ -483,6 +532,13 @@ function App() {
 
       // Filter out output command from execution
       const executableSteps = currentPipeline.filter(step => step.command.id !== "output");
+
+      // Check if there are any executable steps
+      if (executableSteps.length === 0) {
+        showToastRef.current("No executable steps found in pipeline - add other commands before output", 'warning');
+        setIsExecuting(false);
+        return;
+      }
 
       // Build execution branches based on edges
       const branches = buildExecutionBranches(executableSteps, edges);
@@ -583,7 +639,7 @@ function App() {
       // Summary
       const successCount = allResults.filter(r => r.success).length;
       if (successCount === branches.length) {
-        showToastRef.current(`All ${branches.length} branch(es) executed successfully`, 'success');
+        addLog("success", `All ${branches.length} branch(es) executed successfully`);
       } else {
         showToastRef.current(`${successCount}/${branches.length} branch(es) succeeded`, 'warning');
       }
@@ -605,13 +661,17 @@ function App() {
     const stepMap = new Map<string, PipelineStep>();
     steps.forEach(step => stepMap.set(step.id, step));
 
-    // Build adjacency list from edges
+    // Build adjacency list from edges, filtering out edges to non-executable steps
+    const executableStepIds = new Set(steps.map(step => step.id));
     const adjacency = new Map<string, string[]>();
     edges.forEach(edge => {
-      if (!adjacency.has(edge.source)) {
-        adjacency.set(edge.source, []);
+      // Only include edges where target is an executable step
+      if (executableStepIds.has(edge.target)) {
+        if (!adjacency.has(edge.source)) {
+          adjacency.set(edge.source, []);
+        }
+        adjacency.get(edge.source)!.push(edge.target);
       }
-      adjacency.get(edge.source)!.push(edge.target);
     });
 
     // Find starting nodes (nodes that are not targets of any edge)
@@ -805,41 +865,41 @@ function App() {
               </button>
               {activeMenu === "file" && (
                 <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[160px]">
-                    <button
-                      onClick={() => {
-                        handleOpenFile();
-                        setActiveMenu(null);
-                      }}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                    >
-                      <FolderOpen className="h-3.5 w-3.5" />
-                      Browse
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleImportPipeline();
-                        setActiveMenu(null);
-                      }}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                    >
-                      <Upload className="h-3.5 w-3.5" />
-                      Import
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleExportPipeline();
-                        setActiveMenu(null);
-                      }}
-                      disabled={getCurrentPipeline().length === 0}
-                      className={`flex items-center gap-2 w-full px-3 py-2 text-xs font-medium transition-colors ${getCurrentPipeline().length === 0
-                        ? "text-muted-foreground/40 cursor-not-allowed"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                        }`}
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      Export
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      handleOpenFile();
+                      setActiveMenu(null);
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    <FolderOpen className="h-3.5 w-3.5" />
+                    Browse
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleImportPipeline();
+                      setActiveMenu(null);
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    Import
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleExportPipeline();
+                      setActiveMenu(null);
+                    }}
+                    disabled={getCurrentPipeline().length === 0}
+                    className={`flex items-center gap-2 w-full px-3 py-2 text-xs font-medium transition-colors ${getCurrentPipeline().length === 0
+                      ? "text-muted-foreground/40 cursor-not-allowed"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                      }`}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Export
+                  </button>
+                </div>
               )}
             </div>
             <div className="relative">
@@ -866,31 +926,31 @@ function App() {
               </button>
               {activeMenu === "settings" && (
                 <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[160px]">
-                    <button
-                      onClick={() => {
-                        handleThemeToggle();
-                        setActiveMenu(null);
-                      }}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                    >
-                      {theme === "dark" ? (
-                        <Sun className="h-3.5 w-3.5" />
-                      ) : (
-                        <Moon className="h-3.5 w-3.5" />
-                      )}
-                      {theme === "dark" ? "Light Mode" : "Dark Mode"}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowSettings(true);
-                        setActiveMenu(null);
-                      }}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                    >
-                      <Settings className="h-3.5 w-3.5" />
-                      Preferences
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      handleThemeToggle();
+                      setActiveMenu(null);
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    {theme === "dark" ? (
+                      <Sun className="h-3.5 w-3.5" />
+                    ) : (
+                      <Moon className="h-3.5 w-3.5" />
+                    )}
+                    {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowSettings(true);
+                      setActiveMenu(null);
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    <Settings className="h-3.5 w-3.5" />
+                    Preferences
+                  </button>
+                </div>
               )}
             </div>
             <button
@@ -1005,6 +1065,29 @@ function App() {
               onStepDelete={handleStepRemove}
               onPipelineReorder={updateTabPipeline}
               onEdgesChange={(tabId, edges) => {
+                // Validate output connections when edges change
+                const tab = tabs.find(t => t.id === tabId);
+                if (tab) {
+                  // Remove all output-related notifications first
+                  setNotifications((prev) =>
+                    prev.filter(n => !n.message.startsWith("Output"))
+                  );
+
+                  const outputSteps = tab.pipeline.filter(s => s.command.id === "output");
+                  outputSteps.forEach(outputStep => {
+                    // Check if output is connected as source (wrong direction)
+                    const outputAsSource = edges.filter(e => e.source === outputStep.id);
+                    if (outputAsSource.length > 0) {
+                      addNotificationRef.current("Output should be at the end of a branch", 'error');
+                    }
+                    // Check if output has no incoming connections and no outgoing connections
+                    const outputAsTarget = edges.filter(e => e.target === outputStep.id);
+                    if (outputAsTarget.length === 0 && outputAsSource.length === 0) {
+                      addNotificationRef.current("Output is not connected", 'warning');
+                    }
+                  });
+                }
+
                 setTabs((prev) =>
                   prev.map((tab) =>
                     tab.id === tabId
@@ -1244,6 +1327,7 @@ function App() {
       )}
 
       <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
+      <NotificationPanel notifications={notifications} onDismiss={removeNotificationRef.current} onDismissAll={dismissAllNotifications} />
     </div>
   );
 }
