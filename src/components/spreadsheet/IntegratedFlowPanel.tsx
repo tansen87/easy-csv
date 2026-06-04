@@ -12,9 +12,9 @@ import ReactFlow, {
   Background,
   ConnectionMode,
   MarkerType,
+  Connection,
   Handle,
   Position,
-  Connection,
 } from "reactflow";
 import dagre from "dagre";
 import "reactflow/dist/style.css";
@@ -101,12 +101,14 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
 
   return (
     <Card
-      className={`w-[500px] overflow-hidden transition-all duration-200 ${
-        selected
-          ? "border-primary/50 shadow-lg ring-2 ring-primary/20"
-          : "border-border/60 hover:border-primary/30"
-      }`}
+      className={`w-[500px] overflow-hidden transition-all duration-200 ${selected
+        ? "border-primary/50 shadow-lg ring-2 ring-primary/20"
+        : "border-border/60 hover:border-primary/30"
+        }`}
     >
+      {/* TableNode 的隐藏 Handle - 左侧（源）和右侧（目标） */}
+      <Handle type="source" position={Position.Right} id="table-source" className="opacity-0" style={{ opacity: 0, pointerEvents: 'none' }} />
+      <Handle type="target" position={Position.Left} id="table-target" className="opacity-0" style={{ opacity: 0, pointerEvents: 'none' }} />
       <div className="table-node-header px-3 py-2 bg-muted/50 border-b border-border/50 flex items-center gap-2">
         <div className="w-6 h-6 bg-gradient-to-br from-green-500/25 to-green-500/10 rounded flex items-center justify-center">
           <Table className="h-3 w-3 text-green-600" />
@@ -141,8 +143,8 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
           </button>
         )}
       </div>
-      <ScrollArea 
-        className="h-[180px]" 
+      <ScrollArea
+        className="h-[180px]"
         onWheel={handleWheel}
         onMouseDown={handleTableMouseDown}
         onMouseMove={handleTableMouseMove}
@@ -219,6 +221,8 @@ interface PipelineStepNodeData {
   onContextMenu: (stepId: string, x: number, y: number) => void;
   isSelected: boolean;
   index: number;
+  isCutting?: boolean;
+  isPendingDelete?: boolean;
 }
 
 function PipelineStepNode({
@@ -252,107 +256,179 @@ function PipelineStepNode({
   };
 
   return (
-    <Card
-      className={`w-[220px] transition-all duration-200 hover:shadow-lg group relative ${
-        selected
-          ? "bg-gradient-to-r from-primary/15 to-primary/5 border-primary/50 shadow-md ring-2 ring-primary/20"
-          : "bg-card/95 hover:bg-accent/30 border-border/60 hover:border-primary/30"
-      }`}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        data.onContextMenu(data.step.id, e.clientX, e.clientY);
-      }}
-    >
-      <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background" />
-      <div className="p-3">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0">
-            {isEditing ? (
-              <div className="flex items-center gap-1 flex-1">
-                <input
-                  type="text"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  className="h-6 px-1.5 text-xs border rounded bg-background w-20 focus:outline-none focus:ring-1 focus:ring-primary/50"
-                  autoFocus
-                  onClick={(e) => e.stopPropagation()}
-                  onKeyDown={handleKeyDown}
-                />
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAliasSave();
-                  }}
-                  className="w-5 h-5 bg-green-500/10 hover:bg-green-500/20 rounded flex items-center justify-center transition-colors"
-                >
-                  <Check className="h-3 w-3 text-green-600" />
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="font-semibold text-xs truncate">
-                  {data.step.alias || data.step.command.name}
-                </div>
-                {data.step.alias && (
-                  <span className="text-[9px] text-muted-foreground/70 bg-muted/60 px-1 py-0.5 rounded border border-border/40">
-                    {data.step.command.name}
-                  </span>
-                )}
-              </>
-            )}
+    <div className={`relative ${data.isCutting ? "cutting-animation" : ""}`}>
+      {/* 切水果分割效果 - 左半部分被切开飞散 */}
+      {data.isCutting && (
+        <div className="absolute inset-0 left-0 w-1/2 cut-fruit-left-half">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-100/50 to-orange-200/30 rounded-l-lg">
+            {/* 水果内部果肉效果 */}
+            <div className="absolute inset-0 bg-gradient-to-r from-red-200/40 via-orange-200/30 to-transparent"></div>
+            {/* 切割面 */}
+            <div className="absolute right-0 top-0 bottom-0 w-2 bg-gradient-to-b from-orange-300 via-red-400 to-orange-300 rounded-r-sm shadow-lg">
+              <div className="absolute inset-0 bg-white/30"></div>
+            </div>
           </div>
         </div>
-        {activeParams.length > 0 && (
-          <div className="text-[10px] text-muted-foreground flex flex-wrap gap-0.5 mt-1.5">
-            {activeParams.slice(0, 2).map(([key, value]) => (
-              <span
-                key={key}
-                className="bg-muted/70 px-1 py-0.5 rounded border border-border/40"
-              >
-                <span className="text-muted-foreground/80">{key}=</span>
-                <span className="font-medium">{String(value).slice(0, 8)}</span>
-              </span>
-            ))}
-            {activeParams.length > 2 && (
-              <span className="text-muted-foreground/60">+{activeParams.length - 2}</span>
-            )}
+      )}
+
+      <Card
+        className={`w-[220px] transition-all duration-200 hover:shadow-lg group relative ${selected
+          ? "bg-gradient-to-r from-primary/15 to-primary/5 border-primary/50 shadow-md ring-2 ring-primary/20"
+          : "bg-card/95 hover:bg-accent/30 border-border/60 hover:border-primary/30"
+          } ${data.isCutting ? "cut-fruit-main" : ""} ${data.isPendingDelete ? "border-orange-500" : ""}`}
+        style={{
+          boxShadow: data.isPendingDelete ? '0 0 12px rgba(249, 115, 22, 0.6)' : undefined,
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          data.onContextMenu(data.step.id, e.clientX, e.clientY);
+        }}
+      >
+        {/* 隐藏的 Handle - 左侧（目标） */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="left-target"
+          className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
+          style={{ opacity: 0, pointerEvents: 'none' }}
+        />
+        <div className="p-3">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              {isEditing ? (
+                <div className="flex items-center gap-1 flex-1">
+                  <input
+                    type="text"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    className="h-6 px-1.5 text-xs border rounded bg-background w-20 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={handleKeyDown}
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAliasSave();
+                    }}
+                    className="w-5 h-5 bg-green-500/10 hover:bg-green-500/20 rounded flex items-center justify-center transition-colors"
+                  >
+                    <Check className="h-3 w-3 text-green-600" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="font-semibold text-xs truncate">
+                    {data.step.alias || data.step.command.name}
+                  </div>
+                  {data.step.alias && (
+                    <span className="text-[9px] text-muted-foreground/70 bg-muted/60 px-1 py-0.5 rounded border border-border/40">
+                      {data.step.command.name}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
           </div>
-        )}
-      </div>
-      <div className="absolute -top-2 -right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            data.onStepClick(data.step);
-          }}
-          className="w-5 h-5 bg-background border shadow-sm rounded flex items-center justify-center hover:bg-accent transition-colors"
-        >
-          <Settings className="h-2.5 w-2.5" />
-        </button>
-        {!isEditing && (
+          {activeParams.length > 0 && (
+            <div className="text-[10px] text-muted-foreground flex flex-wrap gap-0.5 mt-1.5">
+              {activeParams.slice(0, 2).map(([key, value]) => (
+                <span
+                  key={key}
+                  className="bg-muted/70 px-1 py-0.5 rounded border border-border/40"
+                >
+                  <span className="text-muted-foreground/80">{key}=</span>
+                  <span className="font-medium">{String(value).slice(0, 8)}</span>
+                </span>
+              ))}
+              {activeParams.length > 2 && (
+                <span className="text-muted-foreground/60">+{activeParams.length - 2}</span>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="absolute -top-2 -right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setIsEditing(true);
+              data.onStepClick(data.step);
             }}
             className="w-5 h-5 bg-background border shadow-sm rounded flex items-center justify-center hover:bg-accent transition-colors"
           >
-            <Edit3 className="h-2.5 w-2.5" />
+            <Settings className="h-2.5 w-2.5" />
           </button>
-        )}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            data.onStepRemove(data.step.id);
-          }}
-          className="w-5 h-5 bg-background border shadow-sm rounded flex items-center justify-center hover:bg-destructive/10 hover:text-destructive transition-colors"
-        >
-          <X className="h-2.5 w-2.5" />
-        </button>
-      </div>
-      <Handle type="source" position={Position.Right} className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background" />
-    </Card>
+          {!isEditing && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(true);
+              }}
+              className="w-5 h-5 bg-background border shadow-sm rounded flex items-center justify-center hover:bg-accent transition-colors"
+            >
+              <Edit3 className="h-2.5 w-2.5" />
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              data.onStepRemove(data.step.id);
+            }}
+            className="w-5 h-5 bg-background border shadow-sm rounded flex items-center justify-center hover:bg-destructive/10 hover:text-destructive transition-colors"
+          >
+            <X className="h-2.5 w-2.5" />
+          </button>
+        </div>
+        {/* 隐藏的 Handle - 右侧（源） */}
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="right-source"
+          className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
+          style={{ opacity: 0, pointerEvents: 'none' }}
+        />
+      </Card>
+
+      {/* 切水果分割效果 - 右半部分被切开飞散 */}
+      {data.isCutting && (
+        <div className="absolute inset-0 right-0 w-1/2 cut-fruit-right-half">
+          <div className="absolute inset-0 bg-gradient-to-bl from-red-100/50 to-orange-200/30 rounded-r-lg">
+            {/* 水果内部果肉效果 */}
+            <div className="absolute inset-0 bg-gradient-to-l from-red-200/40 via-orange-200/30 to-transparent"></div>
+            {/* 切割面 */}
+            <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-b from-red-300 via-orange-400 to-red-300 rounded-l-sm shadow-lg">
+              <div className="absolute inset-0 bg-white/30"></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 果汁飞溅效果 */}
+      {data.isCutting && (
+        <>
+          {/* 大滴果汁 */}
+          <div className="absolute -top-4 -left-3 w-4 h-4 bg-gradient-to-br from-red-400 via-orange-400 to-red-500 rounded-full animate-splash-1 shadow-lg">
+            <div className="absolute top-0.5 left-0.5 w-1.5 h-1.5 bg-white/40 rounded-full"></div>
+          </div>
+          <div className="absolute -top-2 -right-5 w-3 h-3 bg-gradient-to-br from-orange-400 via-yellow-400 to-orange-500 rounded-full animate-splash-2 shadow-md">
+            <div className="absolute top-0.5 left-0.5 w-1 h-1 bg-white/40 rounded-full"></div>
+          </div>
+          <div className="absolute -bottom-3 -right-4 w-4 h-4 bg-gradient-to-br from-red-500 via-red-400 to-orange-400 rounded-full animate-splash-3 shadow-lg">
+            <div className="absolute top-0.5 left-0.5 w-1.5 h-1.5 bg-white/40 rounded-full"></div>
+          </div>
+          {/* 小滴果汁 */}
+          <div className="absolute top-4 -right-2 w-2 h-2 bg-gradient-to-br from-red-400 to-red-600 rounded-full animate-splash-4"></div>
+          <div className="absolute -bottom-1 left-6 w-2 h-2 bg-gradient-to-br from-orange-300 to-orange-500 rounded-full animate-splash-5"></div>
+          <div className="absolute top-6 left-2 w-1.5 h-1.5 bg-gradient-to-br from-red-300 to-red-500 rounded-full animate-splash-6"></div>
+          <div className="absolute bottom-4 -right-1 w-1.5 h-1.5 bg-gradient-to-br from-yellow-300 to-orange-400 rounded-full animate-splash-7"></div>
+          {/* 更小的飞溅颗粒 */}
+          <div className="absolute top-1 -left-5 w-1 h-1 bg-red-400 rounded-full animate-splash-8"></div>
+          <div className="absolute -bottom-2 left-10 w-1 h-1 bg-orange-400 rounded-full animate-splash-9"></div>
+        </>
+      )}
+
+
+    </div>
   );
 }
 
@@ -558,6 +634,22 @@ export function IntegratedFlowPanel({
 }: IntegratedFlowPanelProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
+  // 切水果功能状态
+  const [cutPath, setCutPath] = useState<{ x: number; y: number }[]>([]);
+  const [isCutting, setIsCutting] = useState(false);
+  // 被切元素的动画状态
+  const [cutNodes, setCutNodes] = useState<Set<string>>(new Set());
+  const [cutEdges, setCutEdges] = useState<Set<string>>(new Set());
+  // 实时高亮状态 - 用于显示即将被删除的元素
+  const [pendingDeleteNodes, setPendingDeleteNodes] = useState<Set<string>>(new Set());
+  const [pendingDeleteEdges, setPendingDeleteEdges] = useState<Set<string>>(new Set());
+
+  // 右键连接功能状态
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectSourceNode, setConnectSourceNode] = useState<string | null>(null);
+  const [connectPath, setConnectPath] = useState<{ x: number; y: number }[]>([]);
+  const [connectTargetNode, setConnectTargetNode] = useState<string | null>(null);
+
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -617,6 +709,487 @@ export function IntegratedFlowPanel({
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
 
+  // 当 savedEdges 变化时（如从 history 导入），更新本地 edges 状态
+  useEffect(() => {
+    if (savedEdges && savedEdges.length > 0) {
+      const newEdges: Edge[] = [];
+      savedEdges.forEach((edge) => {
+        newEdges.push({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          type: "smoothstep",
+          animated: edge.source === "table-node",
+          style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: "hsl(var(--primary))",
+          },
+        });
+      });
+      setEdges(newEdges);
+    }
+  }, [savedEdges]);
+
+  // 线段与矩形相交检测
+  const lineIntersectsRect = (
+    p1: { x: number; y: number },
+    p2: { x: number; y: number },
+    rect: DOMRect
+  ): boolean => {
+    const rectLines = [
+      { x1: rect.left, y1: rect.top, x2: rect.right, y2: rect.top },
+      { x1: rect.right, y1: rect.top, x2: rect.right, y2: rect.bottom },
+      { x1: rect.right, y1: rect.bottom, x2: rect.left, y2: rect.bottom },
+      { x1: rect.left, y1: rect.bottom, x2: rect.left, y2: rect.top },
+    ];
+
+    for (const rectLine of rectLines) {
+      if (linesIntersect(
+        p1.x, p1.y, p2.x, p2.y,
+        rectLine.x1, rectLine.y1, rectLine.x2, rectLine.y2
+      )) {
+        return true;
+      }
+    }
+
+    return (
+      (p1.x >= rect.left && p1.x <= rect.right && p1.y >= rect.top && p1.y <= rect.bottom) ||
+      (p2.x >= rect.left && p2.x <= rect.right && p2.y >= rect.top && p2.y <= rect.bottom)
+    );
+  };
+
+  // 两条线段相交检测
+  const linesIntersect = (
+    x1: number, y1: number, x2: number, y2: number,
+    x3: number, y3: number, x4: number, y4: number
+  ): boolean => {
+    const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+    if (denom === 0) return false;
+
+    const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+    const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+
+    return ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1;
+  };
+
+  // ReactFlow 实例引用
+  const reactFlowInstance = useRef<any>(null);
+
+  // 碰撞检测函数
+  const detectAndDeleteElements = useCallback((path: { x: number; y: number }[]) => {
+    if (path.length < 2 || !reactFlowWrapper.current) return;
+
+    // 将切水果路径转换为 ReactFlow 画布坐标（路径已是以容器为基准，直接使用）
+    const flowPath = path.map(p => {
+      return reactFlowInstance.current?.project(p) || { x: 0, y: 0 };
+    });
+
+    // 构建节点位置映射
+    const nodePositions = new Map<string, { x: number; y: number; width: number; height: number }>();
+    nodes.forEach(node => {
+      const nodeData = node as any;
+      nodePositions.set(node.id, {
+        x: node.position.x,
+        y: node.position.y,
+        width: nodeData.measured?.width || 200,
+        height: nodeData.measured?.height || 80,
+      });
+    });
+
+    // 检测连线碰撞
+    const edgesToDelete: string[] = [];
+    const edgeTargets = new Set<string>();
+
+    edges.forEach(edge => {
+      const sourcePos = nodePositions.get(edge.source);
+      const targetPos = nodePositions.get(edge.target);
+
+      if (!sourcePos || !targetPos) return;
+
+      // 连线的起点和终点（使用节点的中点）
+      const edgeStart = {
+        x: sourcePos.x + sourcePos.width,
+        y: sourcePos.y + sourcePos.height / 2,
+      };
+      const edgeEnd = {
+        x: targetPos.x,
+        y: targetPos.y + targetPos.height / 2,
+      };
+
+      // 检测切水果路径是否与连线相交
+      for (let i = 0; i < flowPath.length - 1; i++) {
+        const p1 = flowPath[i];
+        const p2 = flowPath[i + 1];
+
+        // 检测线段相交
+        if (linesIntersect(
+          p1.x, p1.y, p2.x, p2.y,
+          edgeStart.x, edgeStart.y, edgeEnd.x, edgeEnd.y
+        )) {
+          edgesToDelete.push(edge.id);
+          edgeTargets.add(edge.target);
+          break;
+        }
+
+        // 也检测距离连线的最小距离是否小于阈值
+        const dist1 = pointToLineDistance(p1, edgeStart, edgeEnd);
+        const dist2 = pointToLineDistance(p2, edgeStart, edgeEnd);
+        if (dist1 < 20 || dist2 < 20) {
+          if (!edgesToDelete.includes(edge.id)) {
+            edgesToDelete.push(edge.id);
+            edgeTargets.add(edge.target);
+          }
+        }
+      }
+    });
+
+    // 检测节点碰撞 - 简化算法，更容易切割
+    const nodesToDelete: string[] = [];
+
+    nodes.forEach(node => {
+      if (node.id === 'table-node') return;
+      if (edgeTargets.has(node.id)) return;
+
+      const nodePos = nodePositions.get(node.id);
+      if (!nodePos) return;
+
+      const nodeRect = {
+        left: nodePos.x,
+        right: nodePos.x + nodePos.width,
+        top: nodePos.y,
+        bottom: nodePos.y + nodePos.height,
+      };
+
+      // 简单检测：只要有任何线段穿过节点，就触发切割
+      for (let i = 0; i < flowPath.length - 1; i++) {
+        const p1 = flowPath[i];
+        const p2 = flowPath[i + 1];
+
+        if (lineIntersectsRect(p1, p2, nodeRect as DOMRect)) {
+          nodesToDelete.push(node.id);
+          break;
+        }
+      }
+    });
+
+    // 添加切水果动画效果
+    if (edgesToDelete.length > 0 || nodesToDelete.length > 0) {
+      // 设置被切元素的动画状态
+      const newCutEdges = new Set(cutEdges);
+      edgesToDelete.forEach(id => newCutEdges.add(id));
+      setCutEdges(newCutEdges);
+
+      const newCutNodes = new Set(cutNodes);
+      nodesToDelete.forEach(id => newCutNodes.add(id));
+      setCutNodes(newCutNodes);
+
+      // 动画完成后删除元素
+      setTimeout(() => {
+        if (edgesToDelete.length > 0) {
+          const updatedEdges = edges.filter(edge => !edgesToDelete.includes(edge.id));
+          setEdges(updatedEdges);
+          // 同步更新父组件
+          if (onEdgesChange) {
+            const pipelineEdges = updatedEdges
+              .filter((e) => e.source && e.target)
+              .map((e) => ({ id: e.id, source: e.source, target: e.target }));
+            onEdgesChange(pipelineEdges);
+          }
+        }
+
+        nodesToDelete.forEach(nodeId => {
+          onStepRemove(nodeId);
+        });
+
+        // 清除动画状态
+        setCutEdges(new Set());
+        setCutNodes(new Set());
+      }, 300); // 动画持续时间
+    }
+  }, [edges, nodes, setEdges, onStepRemove, onEdgesChange, cutEdges, cutNodes]);
+
+  // 点到线段的距离
+  const pointToLineDistance = (
+    point: { x: number; y: number },
+    lineStart: { x: number; y: number },
+    lineEnd: { x: number; y: number }
+  ): number => {
+    const A = point.x - lineStart.x;
+    const B = point.y - lineStart.y;
+    const C = lineEnd.x - lineStart.x;
+    const D = lineEnd.y - lineStart.y;
+
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    let param = -1;
+
+    if (lenSq !== 0) {
+      param = dot / lenSq;
+    }
+
+    let xx, yy;
+
+    if (param < 0) {
+      xx = lineStart.x;
+      yy = lineStart.y;
+    } else if (param > 1) {
+      xx = lineEnd.x;
+      yy = lineEnd.y;
+    } else {
+      xx = lineStart.x + param * C;
+      yy = lineStart.y + param * D;
+    }
+
+    const dx = point.x - xx;
+    const dy = point.y - yy;
+
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  // 判断点击位置是否在节点上
+  const getNodeAtPosition = useCallback((clientX: number, clientY: number): string | null => {
+    if (!reactFlowWrapper.current || !reactFlowInstance.current) return null;
+
+    // 将屏幕坐标转换为容器相对坐标（以画布为基准）
+    const rect = reactFlowWrapper.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    // 将容器坐标转换为流程图坐标
+    const flowPos = reactFlowInstance.current.project({ x, y });
+
+    for (const node of nodes) {
+      const nodeData = node as any;
+      const width = nodeData.measured?.width || 200;
+      const height = nodeData.measured?.height || 80;
+
+      if (
+        flowPos.x >= node.position.x &&
+        flowPos.x <= node.position.x + width &&
+        flowPos.y >= node.position.y &&
+        flowPos.y <= node.position.y + height
+      ) {
+        return node.id;
+      }
+    }
+    return null;
+  }, [nodes]);
+
+  // 右键按下 - 开始连接或切水果
+  const handleCutStart = useCallback((e: React.MouseEvent) => {
+    if (e.button === 2) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const clickedNode = getNodeAtPosition(e.clientX, e.clientY);
+
+      if (clickedNode && clickedNode !== 'table-node') {
+        // 右键点击节点 - 开始连接
+        setIsConnecting(true);
+        setConnectSourceNode(clickedNode);
+        if (reactFlowWrapper.current) {
+          const rect = reactFlowWrapper.current.getBoundingClientRect();
+          setConnectPath([{ x: e.clientX - rect.left, y: e.clientY - rect.top }]);
+        }
+      } else {
+        // 右键点击空白区域 - 切水果模式
+        setIsCutting(true);
+        if (reactFlowWrapper.current) {
+          const rect = reactFlowWrapper.current.getBoundingClientRect();
+          setCutPath([{ x: e.clientX - rect.left, y: e.clientY - rect.top }]);
+        }
+      }
+    }
+  }, [getNodeAtPosition]);
+
+  // 右键移动 - 连接模式或切水果模式
+  const handleCutMove = useCallback((e: React.MouseEvent) => {
+    if (isConnecting && reactFlowWrapper.current) {
+      // 连接模式 - 跟踪鼠标轨迹
+      const rect = reactFlowWrapper.current.getBoundingClientRect();
+      setConnectPath(prev => [...prev.slice(-20), { x: e.clientX - rect.left, y: e.clientY - rect.top }]);
+
+      // 检测鼠标是否悬停在目标节点上（允许 table-node 作为目标）
+      const hoveredNode = getNodeAtPosition(e.clientX, e.clientY);
+      if (hoveredNode && hoveredNode !== connectSourceNode) {
+        setConnectTargetNode(hoveredNode);
+      } else {
+        setConnectTargetNode(null);
+      }
+    } else if (isCutting && reactFlowWrapper.current) {
+      // 切水果模式
+      const rect = reactFlowWrapper.current.getBoundingClientRect();
+      const newPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      const newPath = [...cutPath, newPoint];
+      setCutPath(newPath);
+
+      // 实时碰撞检测 - 更新待删除元素高亮
+      if (newPath.length >= 2 && reactFlowInstance.current) {
+        const flowPath = newPath.map(p => reactFlowInstance.current!.project(p));
+
+        const nodePositions = new Map<string, { x: number; y: number; width: number; height: number }>();
+        nodes.forEach(node => {
+          const nodeData = node as any;
+          nodePositions.set(node.id, {
+            x: node.position.x,
+            y: node.position.y,
+            width: nodeData.measured?.width || 200,
+            height: nodeData.measured?.height || 80,
+          });
+        });
+
+        // 检测连线碰撞
+        const pendingEdges = new Set<string>();
+        const edgeTargets = new Set<string>();
+
+        edges.forEach(edge => {
+          const sourcePos = nodePositions.get(edge.source);
+          const targetPos = nodePositions.get(edge.target);
+          if (!sourcePos || !targetPos) return;
+
+          const edgeStart = { x: sourcePos.x + sourcePos.width, y: sourcePos.y + sourcePos.height / 2 };
+          const edgeEnd = { x: targetPos.x, y: targetPos.y + targetPos.height / 2 };
+
+          for (let i = 0; i < flowPath.length - 1; i++) {
+            const p1 = flowPath[i];
+            const p2 = flowPath[i + 1];
+
+            if (linesIntersect(p1.x, p1.y, p2.x, p2.y, edgeStart.x, edgeStart.y, edgeEnd.x, edgeEnd.y)) {
+              pendingEdges.add(edge.id);
+              edgeTargets.add(edge.target);
+              break;
+            }
+
+            const dist1 = pointToLineDistance(p1, edgeStart, edgeEnd);
+            const dist2 = pointToLineDistance(p2, edgeStart, edgeEnd);
+            if (dist1 < 20 || dist2 < 20) {
+              pendingEdges.add(edge.id);
+              edgeTargets.add(edge.target);
+              break;
+            }
+          }
+        });
+
+        // 检测节点碰撞
+        const pendingNodes = new Set<string>();
+        nodes.forEach(node => {
+          if (node.id === 'table-node' || edgeTargets.has(node.id)) return;
+
+          const nodePos = nodePositions.get(node.id);
+          if (!nodePos) return;
+
+          const nodeRect = {
+            left: nodePos.x,
+            right: nodePos.x + nodePos.width,
+            top: nodePos.y,
+            bottom: nodePos.y + nodePos.height,
+          };
+
+          for (let i = 0; i < flowPath.length - 1; i++) {
+            if (lineIntersectsRect(flowPath[i], flowPath[i + 1], nodeRect as DOMRect)) {
+              pendingNodes.add(node.id);
+              break;
+            }
+          }
+        });
+
+        setPendingDeleteEdges(pendingEdges);
+        setPendingDeleteNodes(pendingNodes);
+      }
+    }
+  }, [isCutting, isConnecting, getNodeAtPosition, connectSourceNode, cutPath, nodes, edges, pointToLineDistance, linesIntersect, lineIntersectsRect]);
+
+  // 判断连线方向（水平或垂直）
+  const determineEdgeDirection = useCallback((_sourceNodeId: string, _targetNodeId: string, path: { x: number; y: number }[]): 'horizontal' | 'vertical' => {
+    if (path.length < 2) return 'horizontal';
+
+    // 计算轨迹的主要方向
+    let totalDx = 0;
+    let totalDy = 0;
+
+    for (let i = 1; i < path.length; i++) {
+      totalDx += Math.abs(path[i].x - path[i - 1].x);
+      totalDy += Math.abs(path[i].y - path[i - 1].y);
+    }
+
+    // 如果水平移动更多，返回水平方向，否则返回垂直方向
+    return totalDx > totalDy ? 'horizontal' : 'vertical';
+  }, []);
+
+  // 创建连线
+  const createEdge = useCallback((sourceId: string, targetId: string, direction: 'horizontal' | 'vertical') => {
+    const newEdge: Edge = {
+      id: `e-${sourceId}-${targetId}`,
+      source: sourceId,
+      target: targetId,
+      type: direction === 'horizontal' ? 'smoothstep' : 'straight',
+      animated: false,
+      style: {
+        stroke: 'hsl(var(--primary))',
+        strokeWidth: 2,
+      },
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: 'hsl(var(--primary))',
+      },
+    };
+
+    setEdges((eds) => {
+      // 检查是否已存在相同的连线
+      const existingEdge = eds.find(e => e.source === sourceId && e.target === targetId);
+      if (existingEdge) return eds;
+
+      const newEdges = [...eds, newEdge];
+
+      if (onEdgesChange) {
+        const pipelineEdges: PipelineEdge[] = newEdges
+          .filter((e) => e.source && e.target)
+          .map((e) => ({ id: e.id, source: e.source, target: e.target }));
+        onEdgesChange(pipelineEdges);
+      }
+
+      return newEdges;
+    });
+  }, [setEdges, onEdgesChange]);
+
+  // 右键松开 - 完成连接或切水果
+  const handleCutEnd = useCallback((e: React.MouseEvent) => {
+    if (isConnecting) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (connectSourceNode && connectTargetNode && connectPath.length > 1) {
+        // 判断连线方向
+        const direction = determineEdgeDirection(connectSourceNode, connectTargetNode, connectPath);
+        createEdge(connectSourceNode, connectTargetNode, direction);
+      }
+
+      setIsConnecting(false);
+      setConnectSourceNode(null);
+      setConnectTargetNode(null);
+      setConnectPath([]);
+    } else if (isCutting) {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsCutting(false);
+
+      if (cutPath.length > 1) {
+        const currentPath = [...cutPath];
+        detectAndDeleteElements(currentPath);
+      }
+
+      setCutPath([]);
+      // 清除实时高亮状态
+      setPendingDeleteNodes(new Set());
+      setPendingDeleteEdges(new Set());
+    }
+  }, [isCutting, isConnecting, cutPath, detectAndDeleteElements, connectSourceNode, connectTargetNode, connectPath, determineEdgeDirection, createEdge]);
+
+  // 屏蔽默认右键菜单
+  const handlePanelContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+  }, []);
+
   useEffect(() => {
     const { nodes: layoutedNodes } = getLayoutedElements(
       hasTable,
@@ -646,6 +1219,36 @@ export function IntegratedFlowPanel({
 
     setNodes(updatedNodes);
   }, [hasTable, steps, headers, rows, columnWidths, selectedStepId, onStepClick, onStepRemove, onStepAliasUpdate, handleContextMenu, handleTableContextMenu, handleTableRename, onSave, setNodes, savedEdges, savedInputPosition]);
+
+  // 更新节点的 isCutting 属性和待删除高亮效果
+  useEffect(() => {
+    setNodes(prevNodes => prevNodes.map(node => ({
+      ...node,
+      data: {
+        ...node.data,
+        isCutting: cutNodes.has(node.id),
+        isPendingDelete: pendingDeleteNodes.has(node.id),
+      },
+    })));
+  }, [cutNodes, pendingDeleteNodes]);
+
+  // 更新连线的切断效果和待删除高亮效果
+  useEffect(() => {
+    setEdges(prevEdges => prevEdges.map(edge => {
+      const isCut = cutEdges.has(edge.id);
+      const isPending = pendingDeleteEdges.has(edge.id);
+      return {
+        ...edge,
+        style: {
+          ...edge.style,
+          strokeDasharray: isCut ? '10' : undefined,
+          animation: isCut ? 'cut-edge-animation 0.2s ease-out forwards' : undefined,
+          stroke: isPending && !isCut ? '#f97316' : edge.style?.stroke,
+          filter: isPending && !isCut ? 'drop-shadow(0 0 6px rgba(249, 115, 22, 0.7))' : undefined,
+        },
+      };
+    }));
+  }, [cutEdges, pendingDeleteEdges]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -792,7 +1395,14 @@ export function IntegratedFlowPanel({
   }
 
   return (
-    <div ref={reactFlowWrapper} className="w-full h-full relative">
+    <div
+      ref={reactFlowWrapper}
+      className="w-full h-full relative"
+      onMouseDown={handleCutStart}
+      onMouseMove={handleCutMove}
+      onMouseUp={handleCutEnd}
+      onContextMenu={handlePanelContextMenu}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -811,9 +1421,102 @@ export function IntegratedFlowPanel({
           style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
         }}
         proOptions={{ hideAttribution: true }}
+        onInit={(instance) => { reactFlowInstance.current = instance; }}
       >
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
       </ReactFlow>
+
+      {/* 切水果轨迹线 */}
+      {isCutting && cutPath.length > 1 && (
+        <svg
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+            zIndex: 1000,
+          }}
+        >
+          {/* 外层发光效果 */}
+          <defs>
+            <linearGradient id="cutGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="rgba(239, 68, 68, 0)" />
+              <stop offset="50%" stopColor="rgba(239, 68, 68, 0.8)" />
+              <stop offset="100%" stopColor="rgba(255, 165, 0, 0)" />
+            </linearGradient>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <filter id="strongGlow">
+              <feGaussianBlur stdDeviation="8" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          {/* 最外层光晕 */}
+          <path
+            d={`M ${cutPath[0].x} ${cutPath[0].y} ${cutPath
+              .slice(1)
+              .map(p => `L ${p.x} ${p.y}`)
+              .join(' ')}`}
+            stroke="rgba(239, 68, 68, 0.3)"
+            strokeWidth="8"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {/* 中层发光 */}
+          <path
+            d={`M ${cutPath[0].x} ${cutPath[0].y} ${cutPath
+              .slice(1)
+              .map(p => `L ${p.x} ${p.y}`)
+              .join(' ')}`}
+            stroke="rgba(255, 100, 100, 0.5)"
+            strokeWidth="4"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            filter="url(#glow)"
+          />
+
+          {/* 主线条 - 使用渐变色 */}
+          <path
+            d={`M ${cutPath[0].x} ${cutPath[0].y} ${cutPath
+              .slice(1)
+              .map(p => `L ${p.x} ${p.y}`)
+              .join(' ')}`}
+            stroke="url(#cutGradient)"
+            strokeWidth="2"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            filter="url(#strongGlow)"
+          />
+
+          {/* 拖尾效果 - 逐渐消失的点 */}
+          {cutPath.slice(-10).map((point, index) => (
+            <circle
+              key={index}
+              cx={point.x}
+              cy={point.y}
+              r={4 - index * 0.3}
+              fill="rgba(255, 200, 100, 0.6)"
+              opacity={1 - index * 0.08}
+            />
+          ))}
+        </svg>
+      )}
 
       {tableContextMenu && (
         <ContextMenu
@@ -834,6 +1537,67 @@ export function IntegratedFlowPanel({
           onNumberTransform={onNumberTransform}
         />
       )}
+
+      {/* 连接线可视化 */}
+      {isConnecting && connectPath.length > 0 && (
+        <svg
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+            zIndex: 1000,
+          }}
+        >
+          <defs>
+            <linearGradient id="connectGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="hsl(var(--primary))" />
+              <stop offset="100%" stopColor="hsl(var(--primary) / 0.5)" />
+            </linearGradient>
+          </defs>
+
+          {/* 连接线 */}
+          {connectPath.length > 1 && (
+            <path
+              d={`M ${connectPath[0].x} ${connectPath[0].y} ${connectPath
+                .slice(1)
+                .map(p => `L ${p.x} ${p.y}`)
+                .join(' ')}`}
+              stroke="url(#connectGradient)"
+              strokeWidth="3"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeDasharray="8 4"
+            />
+          )}
+
+          {/* 起点标记 */}
+          <circle
+            cx={connectPath[0]?.x || 0}
+            cy={connectPath[0]?.y || 0}
+            r="8"
+            fill="hsl(var(--primary))"
+            opacity="0.8"
+          />
+
+          {/* 目标节点高亮 */}
+          {connectTargetNode && (
+            <text
+              x={connectPath[connectPath.length - 1]?.x || 0}
+              y={(connectPath[connectPath.length - 1]?.y || 0) - 20}
+              fill="hsl(var(--primary))"
+              fontSize="12"
+              textAnchor="middle"
+            >
+              松开右键连接
+            </text>
+          )}
+        </svg>
+      )}
+
     </div>
   );
 }
