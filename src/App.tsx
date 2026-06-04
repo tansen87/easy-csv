@@ -1155,7 +1155,6 @@ function App() {
         historicalPipelines={historicalPipelines}
         onLoadHistory={(history) => {
           updateTabPipeline(history.pipeline, undefined, history.edges, history.inputPosition);
-          showToastRef.current(`Loaded historical pipeline: ${history.name}`, 'info');
         }}
         onNewTabFromHistory={(history) => {
           const newTabId = `tab-${Date.now()}`;
@@ -1170,12 +1169,10 @@ function App() {
           };
           setTabs((prev) => [...prev, newTab]);
           setSelectedTabId(newTabId);
-          showToastRef.current(`Created new tab from historical pipeline: ${history.name}`, 'info');
         }}
         onDeleteHistory={(history) => {
           const updatedHistory = historicalPipelines.filter((h) => h.id !== history.id);
           updateHistoricalPipelines(updatedHistory);
-          showToastRef.current(`Deleted historical pipeline: ${history.name}`, 'info');
         }}
         onInputFileChange={setInputFile}
         onDefaultDelimiterChange={setDefaultDelimiter}

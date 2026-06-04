@@ -483,7 +483,8 @@ function getLayoutedElements(
         id: edge.id,
         source: edge.source,
         target: edge.target,
-        type: "smoothstep",
+        type: "default",
+        data: { curvature: 0.5 },
         animated: edge.source === "table-node",
         style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
         markerEnd: {
@@ -500,7 +501,8 @@ function getLayoutedElements(
       id: "table-to-first",
       source: "table-node",
       target: steps[0].id,
-      type: "smoothstep",
+      type: "default",
+      data: { curvature: 0.5 },
       animated: true,
       style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
       markerEnd: {
@@ -667,7 +669,8 @@ export function IntegratedFlowPanel({
           id: edge.id,
           source: edge.source,
           target: edge.target,
-          type: "smoothstep",
+          type: "default",
+          data: { curvature: 0.5 },
           animated: edge.source === "table-node",
           style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
           markerEnd: {
@@ -1053,31 +1056,17 @@ export function IntegratedFlowPanel({
     }
   }, [isCutting, isConnecting, getNodeAtPosition, connectSourceNode, cutPath, nodes, edges, pointToLineDistance, linesIntersect, lineIntersectsRect]);
 
-  // 判断连线方向（水平或垂直）
-  const determineEdgeDirection = useCallback((_sourceNodeId: string, _targetNodeId: string, path: { x: number; y: number }[]): 'horizontal' | 'vertical' => {
-    if (path.length < 2) return 'horizontal';
-
-    // 计算轨迹的主要方向
-    let totalDx = 0;
-    let totalDy = 0;
-
-    for (let i = 1; i < path.length; i++) {
-      totalDx += Math.abs(path[i].x - path[i - 1].x);
-      totalDy += Math.abs(path[i].y - path[i - 1].y);
-    }
-
-    // 如果水平移动更多，返回水平方向，否则返回垂直方向
-    return totalDx > totalDy ? 'horizontal' : 'vertical';
-  }, []);
-
   // 创建连线
-  const createEdge = useCallback((sourceId: string, targetId: string, direction: 'horizontal' | 'vertical') => {
+  const createEdge = useCallback((sourceId: string, targetId: string) => {
     const newEdge: Edge = {
       id: `e-${sourceId}-${targetId}`,
       source: sourceId,
       target: targetId,
-      type: direction === 'horizontal' ? 'smoothstep' : 'straight',
+      type: 'default',
       animated: false,
+      data: {
+        curvature: 0.5,
+      },
       style: {
         stroke: 'hsl(var(--primary))',
         strokeWidth: 2,
@@ -1113,9 +1102,7 @@ export function IntegratedFlowPanel({
       e.stopPropagation();
 
       if (connectSourceNode && connectTargetNode && connectPath.length > 1) {
-        // 判断连线方向
-        const direction = determineEdgeDirection(connectSourceNode, connectTargetNode, connectPath);
-        createEdge(connectSourceNode, connectTargetNode, direction);
+        createEdge(connectSourceNode, connectTargetNode);
       }
 
       setIsConnecting(false);
@@ -1145,7 +1132,7 @@ export function IntegratedFlowPanel({
         setPendingDeleteEdges(new Set());
       }, 150);
     }
-  }, [isCutting, isConnecting, cutPath, detectAndDeleteElements, connectSourceNode, connectTargetNode, connectPath, determineEdgeDirection, createEdge]);
+  }, [isCutting, isConnecting, cutPath, detectAndDeleteElements, connectSourceNode, connectTargetNode, connectPath, createEdge]);
 
   // 屏蔽默认右键菜单
   const handlePanelContextMenu = useCallback((e: React.MouseEvent) => {
@@ -1278,7 +1265,7 @@ export function IntegratedFlowPanel({
         id: `e-${connection.source}-${connection.target}`,
         source: connection.source || "",
         target: connection.target || "",
-        type: "smoothstep",
+        type: "default",
         animated: false,
         style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
         markerEnd: {
