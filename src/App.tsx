@@ -839,7 +839,7 @@ function App() {
 
   return (
     <div className="h-screen flex flex-col bg-background relative overflow-hidden">
-      <header ref={headerRef} className="h-14 border-b bg-card shadow-sm flex items-center justify-between px-4 gap-4 relative z-10">
+      <header ref={headerRef} className="h-14 border-b bg-card shadow-sm flex items-center justify-between px-4 gap-4 relative z-10" onContextMenu={(e) => e.preventDefault()}>
         {/* Left: Button Group - File + Settings + Execute */}
         <div className="relative">
           <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
@@ -1115,7 +1115,8 @@ function App() {
       {/* Command Panel Toggle Button */}
       <Button
         onClick={() => setShowCommandPanel(!showCommandPanel)}
-        className="fixed bottom-4 left-4 z-30 h-10 w-10 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all flex items-center justify-center"
+        onContextMenu={(e) => e.preventDefault()}
+        className="fixed bottom-4 left-4 z-30 h-10 w-10 rounded-full shadow-md bg-gray-600/50 text-gray-200 hover:bg-gray-600/70 dark:bg-gray-700/60 dark:text-gray-300 dark:hover:bg-gray-600/70 transition-all flex items-center justify-center backdrop-blur-sm"
         variant="default"
         size="icon"
       >
@@ -1129,7 +1130,8 @@ function App() {
       {/* Log Panel Toggle Button */}
       <Button
         onClick={() => setShowLogPanel(!showLogPanel)}
-        className="fixed bottom-4 left-16 z-30 h-10 w-10 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all flex items-center justify-center"
+        onContextMenu={(e) => e.preventDefault()}
+        className="fixed bottom-4 left-16 z-30 h-10 w-10 rounded-full shadow-md bg-gray-600/50 text-gray-200 hover:bg-gray-600/70 dark:bg-gray-700/60 dark:text-gray-300 dark:hover:bg-gray-600/70 transition-all flex items-center justify-center backdrop-blur-sm"
         variant="default"
         size="icon"
       >

@@ -296,6 +296,7 @@ export function CommandList({
         top: 100 
       }}
       className={`fixed w-[280px] h-[500px] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isDragging ? "shadow-2xl" : ""}`}
+      onContextMenu={(e) => e.preventDefault()}
     >
       <div 
         className="p-2 border-b bg-card/80 cursor-move flex items-center justify-between"

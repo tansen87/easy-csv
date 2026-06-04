@@ -144,6 +144,7 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose }: Lo
         height: height
       }}
       className={`fixed w-[600px] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isDragging ? "shadow-2xl" : ""}`}
+      onContextMenu={(e) => e.preventDefault()}
     >
       <div
         className="p-2 border-b bg-card/80 cursor-move flex items-center justify-between"

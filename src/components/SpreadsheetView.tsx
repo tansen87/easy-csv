@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Table, X, Trash2, Plus, Edit3, Rows3, Repeat2, Repeat } from "lucide-react";
+import { Table, X, Trash2, Plus, Rows3, Repeat2, Repeat } from "lucide-react";
 import { ToastContainer, ToastType } from "@/components/Toast";
 import { PipelineStep, PipelineEdge, XanCommand, PipelineTab } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
@@ -316,13 +316,13 @@ export function SpreadsheetView({
   if (!inputFile) {
     return (
       <div className="h-full flex flex-col bg-background">
-        <div className="border-b bg-card/80">
+        <div className="bg-transparent" onContextMenu={(e) => e.preventDefault()}>
           <div className="h-[48px] px-4 flex items-center">
             <div className="flex items-center shrink-0">
-              <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+              <div className="flex bg-muted/30 rounded-lg p-0.5 border border-transparent">
                 <button
                   onClick={onAddTab}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
                 >
                   <Plus className="h-4 w-4" />
                 </button>
@@ -332,7 +332,7 @@ export function SpreadsheetView({
                       onRemoveAllTabsExcept(selectedTabId);
                     }
                   }}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -344,8 +344,14 @@ export function SpreadsheetView({
                   <div
                     key={tab.id}
                     className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-sm transition-colors shrink-0 ${selectedTabId === tab.id
-                      ? 'bg-primary/10 text-primary border border-primary/30'
-                      : 'hover:bg-accent border border-transparent'}`}
+                      ? 'bg-primary/10 text-primary border border-primary/20'
+                      : 'hover:bg-accent/50 border border-transparent'}`}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setEditingTabId(tab.id);
+                      setEditingTabName(tab.name);
+                    }}
                   >
                     {editingTabId === tab.id ? (
                       <input
@@ -381,15 +387,6 @@ export function SpreadsheetView({
                       </button>
                     )}
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => {
-                          setEditingTabId(tab.id);
-                          setEditingTabName(tab.name);
-                        }}
-                        className="p-1 rounded hover:bg-accent transition-colors"
-                      >
-                        <Edit3 className="h-3 w-3" />
-                      </button>
                       {tabs.length > 1 && (
                         <button
                           onClick={() => onRemoveTab(tab.id)}
@@ -406,7 +403,7 @@ export function SpreadsheetView({
             </ScrollArea>
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center" onContextMenu={(e) => e.preventDefault()}>
           <div className="text-center py-16 px-4">
             <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
               <Table className="h-8 w-8 text-muted-foreground/50" />
@@ -425,10 +422,10 @@ export function SpreadsheetView({
 
   return (
     <div className="h-full flex flex-col bg-background">
-      <div className="border-b bg-card/80">
+      <div className="bg-transparent" onContextMenu={(e) => e.preventDefault()}>
         <div className="h-[48px] px-4 flex items-center">
           <div className="flex items-center shrink-0">
-            <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+            <div className="flex bg-muted/30 rounded-lg p-0.5 border border-transparent">
               <button
                 onClick={onAddTab}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
@@ -453,8 +450,14 @@ export function SpreadsheetView({
                 <div
                   key={tab.id}
                   className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-sm transition-colors shrink-0 ${selectedTabId === tab.id
-                    ? 'bg-primary/10 text-primary border border-primary/30'
-                    : 'hover:bg-accent border border-transparent'}`}
+                    ? 'bg-primary/10 text-primary border border-primary/20'
+                    : 'hover:bg-accent/50 border border-transparent'}`}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setEditingTabId(tab.id);
+                    setEditingTabName(tab.name);
+                  }}
                 >
                   {editingTabId === tab.id ? (
                     <input
@@ -490,15 +493,6 @@ export function SpreadsheetView({
                     </button>
                   )}
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => {
-                        setEditingTabId(tab.id);
-                        setEditingTabName(tab.name);
-                      }}
-                      className="p-1 rounded hover:bg-accent transition-colors"
-                    >
-                      <Edit3 className="h-3 w-3" />
-                    </button>
                     {tabs.length > 1 && (
                       <button
                         onClick={() => onRemoveTab(tab.id)}
