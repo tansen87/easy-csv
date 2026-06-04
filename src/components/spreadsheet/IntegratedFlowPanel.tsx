@@ -257,25 +257,12 @@ function PipelineStepNode({
 
   return (
     <div className={`relative ${data.isCutting ? "cutting-animation" : ""}`}>
-      {/* 切水果分割效果 - 左半部分被切开飞散 */}
-      {data.isCutting && (
-        <div className="absolute inset-0 left-0 w-1/2 cut-fruit-left-half">
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-100/50 to-orange-200/30 rounded-l-lg">
-            {/* 水果内部果肉效果 */}
-            <div className="absolute inset-0 bg-gradient-to-r from-red-200/40 via-orange-200/30 to-transparent"></div>
-            {/* 切割面 */}
-            <div className="absolute right-0 top-0 bottom-0 w-2 bg-gradient-to-b from-orange-300 via-red-400 to-orange-300 rounded-r-sm shadow-lg">
-              <div className="absolute inset-0 bg-white/30"></div>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* 被切掉的节点 - 虚线边框效果 */}
       <Card
         className={`w-[220px] transition-all duration-200 hover:shadow-lg group relative ${selected
           ? "bg-gradient-to-r from-primary/15 to-primary/5 border-primary/50 shadow-md ring-2 ring-primary/20"
           : "bg-card/95 hover:bg-accent/30 border-border/60 hover:border-primary/30"
-          } ${data.isCutting ? "cut-fruit-main" : ""} ${data.isPendingDelete ? "border-orange-500" : ""}`}
+          } ${data.isCutting ? "cut-node" : ""} ${data.isPendingDelete ? "border-orange-500" : ""}`}
         style={{
           boxShadow: data.isPendingDelete ? '0 0 12px rgba(249, 115, 22, 0.6)' : undefined,
         }}
@@ -388,46 +375,6 @@ function PipelineStepNode({
           style={{ opacity: 0, pointerEvents: 'none' }}
         />
       </Card>
-
-      {/* 切水果分割效果 - 右半部分被切开飞散 */}
-      {data.isCutting && (
-        <div className="absolute inset-0 right-0 w-1/2 cut-fruit-right-half">
-          <div className="absolute inset-0 bg-gradient-to-bl from-red-100/50 to-orange-200/30 rounded-r-lg">
-            {/* 水果内部果肉效果 */}
-            <div className="absolute inset-0 bg-gradient-to-l from-red-200/40 via-orange-200/30 to-transparent"></div>
-            {/* 切割面 */}
-            <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-b from-red-300 via-orange-400 to-red-300 rounded-l-sm shadow-lg">
-              <div className="absolute inset-0 bg-white/30"></div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 果汁飞溅效果 */}
-      {data.isCutting && (
-        <>
-          {/* 大滴果汁 */}
-          <div className="absolute -top-4 -left-3 w-4 h-4 bg-gradient-to-br from-red-400 via-orange-400 to-red-500 rounded-full animate-splash-1 shadow-lg">
-            <div className="absolute top-0.5 left-0.5 w-1.5 h-1.5 bg-white/40 rounded-full"></div>
-          </div>
-          <div className="absolute -top-2 -right-5 w-3 h-3 bg-gradient-to-br from-orange-400 via-yellow-400 to-orange-500 rounded-full animate-splash-2 shadow-md">
-            <div className="absolute top-0.5 left-0.5 w-1 h-1 bg-white/40 rounded-full"></div>
-          </div>
-          <div className="absolute -bottom-3 -right-4 w-4 h-4 bg-gradient-to-br from-red-500 via-red-400 to-orange-400 rounded-full animate-splash-3 shadow-lg">
-            <div className="absolute top-0.5 left-0.5 w-1.5 h-1.5 bg-white/40 rounded-full"></div>
-          </div>
-          {/* 小滴果汁 */}
-          <div className="absolute top-4 -right-2 w-2 h-2 bg-gradient-to-br from-red-400 to-red-600 rounded-full animate-splash-4"></div>
-          <div className="absolute -bottom-1 left-6 w-2 h-2 bg-gradient-to-br from-orange-300 to-orange-500 rounded-full animate-splash-5"></div>
-          <div className="absolute top-6 left-2 w-1.5 h-1.5 bg-gradient-to-br from-red-300 to-red-500 rounded-full animate-splash-6"></div>
-          <div className="absolute bottom-4 -right-1 w-1.5 h-1.5 bg-gradient-to-br from-yellow-300 to-orange-400 rounded-full animate-splash-7"></div>
-          {/* 更小的飞溅颗粒 */}
-          <div className="absolute top-1 -left-5 w-1 h-1 bg-red-400 rounded-full animate-splash-8"></div>
-          <div className="absolute -bottom-2 left-10 w-1 h-1 bg-orange-400 rounded-full animate-splash-9"></div>
-        </>
-      )}
-
-
     </div>
   );
 }
@@ -637,6 +584,8 @@ export function IntegratedFlowPanel({
   // 切水果功能状态
   const [cutPath, setCutPath] = useState<{ x: number; y: number }[]>([]);
   const [isCutting, setIsCutting] = useState(false);
+  const [isClosingCut, setIsClosingCut] = useState(false);
+  const [cutStartPoint, setCutStartPoint] = useState<{ x: number; y: number } | null>(null);
   // 被切元素的动画状态
   const [cutNodes, setCutNodes] = useState<Set<string>>(new Set());
   const [cutEdges, setCutEdges] = useState<Set<string>>(new Set());
@@ -905,7 +854,7 @@ export function IntegratedFlowPanel({
         // 清除动画状态
         setCutEdges(new Set());
         setCutNodes(new Set());
-      }, 300); // 动画持续时间
+      }, 400); // 动画持续时间
     }
   }, [edges, nodes, setEdges, onStepRemove, onEdgesChange, cutEdges, cutNodes]);
 
@@ -994,9 +943,12 @@ export function IntegratedFlowPanel({
       } else {
         // 右键点击空白区域 - 切水果模式
         setIsCutting(true);
+        setIsClosingCut(false);
         if (reactFlowWrapper.current) {
           const rect = reactFlowWrapper.current.getBoundingClientRect();
-          setCutPath([{ x: e.clientX - rect.left, y: e.clientY - rect.top }]);
+          const startPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+          setCutStartPoint(startPoint);
+          setCutPath([startPoint]);
         }
       }
     }
@@ -1016,16 +968,18 @@ export function IntegratedFlowPanel({
       } else {
         setConnectTargetNode(null);
       }
-    } else if (isCutting && reactFlowWrapper.current) {
-      // 切水果模式
+    } else if (isCutting && !isClosingCut && reactFlowWrapper.current) {
+      // 切水果模式 - 显示为直线（起点到当前点）
       const rect = reactFlowWrapper.current.getBoundingClientRect();
       const newPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      const newPath = [...cutPath, newPoint];
-      setCutPath(newPath);
+      // 显示用的路径只保留起点和当前点（直线）
+      if (cutStartPoint) {
+        setCutPath([cutStartPoint, newPoint]);
+      }
 
       // 实时碰撞检测 - 更新待删除元素高亮
-      if (newPath.length >= 2 && reactFlowInstance.current) {
-        const flowPath = newPath.map(p => reactFlowInstance.current!.project(p));
+      if (cutPath.length >= 2 && reactFlowInstance.current) {
+        const flowPath = cutPath.map(p => reactFlowInstance.current!.project(p));
 
         const nodePositions = new Map<string, { x: number; y: number; width: number; height: number }>();
         nodes.forEach(node => {
@@ -1171,17 +1125,25 @@ export function IntegratedFlowPanel({
     } else if (isCutting) {
       e.preventDefault();
       e.stopPropagation();
-      setIsCutting(false);
 
       if (cutPath.length > 1) {
         const currentPath = [...cutPath];
         detectAndDeleteElements(currentPath);
       }
 
-      setCutPath([]);
-      // 清除实时高亮状态
-      setPendingDeleteNodes(new Set());
-      setPendingDeleteEdges(new Set());
+      // 启动收刀动画 - A点向B点快速移动
+      setIsClosingCut(true);
+      setIsCutting(false);
+
+      // 动画完成后清除状态
+      setTimeout(() => {
+        setIsClosingCut(false);
+        setCutPath([]);
+        setCutStartPoint(null);
+        // 清除实时高亮状态
+        setPendingDeleteNodes(new Set());
+        setPendingDeleteEdges(new Set());
+      }, 150);
     }
   }, [isCutting, isConnecting, cutPath, detectAndDeleteElements, connectSourceNode, connectTargetNode, connectPath, determineEdgeDirection, createEdge]);
 
@@ -1427,7 +1389,7 @@ export function IntegratedFlowPanel({
       </ReactFlow>
 
       {/* 切水果轨迹线 */}
-      {isCutting && cutPath.length > 1 && (
+      {(isCutting || isClosingCut) && cutPath.length > 1 && (
         <svg
           style={{
             position: 'absolute',
@@ -1439,82 +1401,130 @@ export function IntegratedFlowPanel({
             zIndex: 1000,
           }}
         >
-          {/* 外层发光效果 */}
           <defs>
+            {/* 渐变从透明到红色再到透明 */}
             <linearGradient id="cutGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="rgba(239, 68, 68, 0)" />
-              <stop offset="50%" stopColor="rgba(239, 68, 68, 0.8)" />
-              <stop offset="100%" stopColor="rgba(255, 165, 0, 0)" />
+              <stop offset="0%" stopColor="rgba(255, 255, 255, 0)" />
+              <stop offset="30%" stopColor="rgba(255, 200, 200, 0.3)" />
+              <stop offset="70%" stopColor="rgba(239, 68, 68, 0.8)" />
+              <stop offset="100%" stopColor="rgba(255, 150, 100, 0)" />
             </linearGradient>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+
+            {/* 主色渐变 */}
+            <linearGradient id="cutMainGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="rgba(200, 200, 200, 0)" />
+              <stop offset="50%" stopColor="rgba(255, 100, 100, 0.9)" />
+              <stop offset="100%" stopColor="rgba(255, 180, 120, 0)" />
+            </linearGradient>
+
+            <filter id="cutGlow">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
               <feMerge>
                 <feMergeNode in="coloredBlur" />
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
-            <filter id="strongGlow">
-              <feGaussianBlur stdDeviation="8" result="coloredBlur" />
-              <feMerge>
-                <feMergeNode in="coloredBlur" />
-                <feMergeNode in="coloredBlur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
+
+            {/* 箭头标记 */}
+            <marker id="cutArrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+              <polygon
+                points="0,0 12,6 0,12"
+                fill="rgba(239, 68, 68, 0.8)"
+                filter="url(#cutGlow)"
+              />
+            </marker>
           </defs>
 
-          {/* 最外层光晕 */}
-          <path
-            d={`M ${cutPath[0].x} ${cutPath[0].y} ${cutPath
-              .slice(1)
-              .map(p => `L ${p.x} ${p.y}`)
-              .join(' ')}`}
-            stroke="rgba(239, 68, 68, 0.3)"
-            strokeWidth="8"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+          {/* 计算方向用于菱形 */}
+          {(() => {
+            const start = cutPath[0];
+            const end = cutPath[cutPath.length - 1];
+            const arrowSize = 12;
 
-          {/* 中层发光 */}
-          <path
-            d={`M ${cutPath[0].x} ${cutPath[0].y} ${cutPath
-              .slice(1)
-              .map(p => `L ${p.x} ${p.y}`)
-              .join(' ')}`}
-            stroke="rgba(255, 100, 100, 0.5)"
-            strokeWidth="4"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            filter="url(#glow)"
-          />
+            // 菱形顶点计算
+            const dx = end.x - start.x;
+            const dy = end.y - start.y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const nx = dx / length;
+            const ny = dy / length;
 
-          {/* 主线条 - 使用渐变色 */}
-          <path
-            d={`M ${cutPath[0].x} ${cutPath[0].y} ${cutPath
-              .slice(1)
-              .map(p => `L ${p.x} ${p.y}`)
-              .join(' ')}`}
-            stroke="url(#cutGradient)"
-            strokeWidth="2"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            filter="url(#strongGlow)"
-          />
+            // 垂直于线段的方向
+            const perpX = -ny;
+            const perpY = nx;
 
-          {/* 拖尾效果 - 逐渐消失的点 */}
-          {cutPath.slice(-10).map((point, index) => (
-            <circle
-              key={index}
-              cx={point.x}
-              cy={point.y}
-              r={4 - index * 0.3}
-              fill="rgba(255, 200, 100, 0.6)"
-              opacity={1 - index * 0.08}
-            />
-          ))}
+            // 菱形四个顶点
+            const p1x = end.x + nx * arrowSize;
+            const p1y = end.y + ny * arrowSize;
+            const p2x = end.x + perpX * arrowSize * 0.5;
+            const p2y = end.y + perpY * arrowSize * 0.5;
+            const p3x = end.x - nx * arrowSize * 1.5;
+            const p3y = end.y - ny * arrowSize * 1.5;
+            const p4x = end.x - perpX * arrowSize * 0.5;
+            const p4y = end.y - perpY * arrowSize * 0.5;
+
+            return (
+              <>
+                {/* 外层光晕 */}
+                <path
+                  d={`M ${start.x} ${start.y} L ${end.x} ${end.y}`}
+                  stroke="rgba(255, 150, 150, 0.3)"
+                  strokeWidth="6"
+                  fill="none"
+                  strokeLinecap="butt"
+                  style={{
+                    transition: isClosingCut ? 'all 0.15s ease-out' : 'none',
+                    opacity: isClosingCut ? 0 : 1,
+                  }}
+                />
+
+                {/* 主线条 */}
+                <path
+                  d={`M ${start.x} ${start.y} L ${end.x - nx * arrowSize * 0.8} ${end.y - ny * arrowSize * 0.8}`}
+                  stroke="url(#cutMainGradient)"
+                  strokeWidth="2"
+                  fill="none"
+                  strokeLinecap="butt"
+                  filter="url(#cutGlow)"
+                  style={{
+                    transition: isClosingCut ? 'all 0.15s ease-out' : 'none',
+                    opacity: isClosingCut ? 0 : 1,
+                  }}
+                />
+
+                {/* 终点菱形 */}
+                <polygon
+                  points={`${p1x},${p1y} ${p2x},${p2y} ${p3x},${p3y} ${p4x},${p4y}`}
+                  fill="rgba(239, 68, 68, 0.7)"
+                  stroke="rgba(255, 100, 100, 0.9)"
+                  strokeWidth="1"
+                  filter="url(#cutGlow)"
+                />
+
+                {/* 菱形高光 */}
+                <polygon
+                  points={`${p1x},${p1y} ${p2x},${p2y} ${end.x},${end.y} ${p4x},${p4y}`}
+                  fill="rgba(255, 255, 255, 0.4)"
+                />
+
+                {/* 起点发光点 - 收刀时平滑移动到终点 */}
+                <circle
+                  cx={start.x}
+                  cy={start.y}
+                  r="3"
+                  fill="rgba(255, 255, 255, 0.8)"
+                  filter="url(#cutGlow)"
+                  style={{
+                    transition: isClosingCut ? 'cx 0.15s ease-out, cy 0.15s ease-out, r 0.15s ease-out' : 'none',
+                    ...(isClosingCut ? {
+                      cx: end.x,
+                      cy: end.y,
+                      r: 0,
+                    } : {}),
+                  }}
+                />
+              </>
+            );
+          })()}
         </svg>
       )}
 

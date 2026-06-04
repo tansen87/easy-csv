@@ -59,138 +59,25 @@
   }
 }
 
-/* 切水果动画效果 */
+/* 切割动画效果 */
 
-/* 左半部分飞散 */
-.cut-fruit-left-half {
-  animation: cut-fruit-left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+/* 节点被切效果 - 优化性能 */
+.cut-node {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  perspective: 1000px;
+  animation: cut-node 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-@keyframes cut-fruit-left {
-  0% {
-    transform: translateX(0) rotate(0deg);
-    opacity: 1;
-  }
-  50% {
-    transform: translateX(-30px) rotate(-8deg);
-    opacity: 0.8;
-  }
-  100% {
-    transform: translateX(-50px) rotate(-12deg) translateY(10px);
-    opacity: 0;
-  }
-}
-
-/* 右半部分飞散 */
-.cut-fruit-right-half {
-  animation: cut-fruit-right 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-}
-
-@keyframes cut-fruit-right {
-  0% {
-    transform: translateX(0) rotate(0deg);
-    opacity: 1;
-  }
-  50% {
-    transform: translateX(30px) rotate(8deg);
-    opacity: 0.8;
-  }
-  100% {
-    transform: translateX(50px) rotate(12deg) translateY(10px);
-    opacity: 0;
-  }
-}
-
-/* 主体消失动画 */
-.cut-fruit-main {
-  animation: cut-fruit-disappear 0.3s ease-out forwards;
-}
-
-@keyframes cut-fruit-disappear {
+@keyframes cut-node {
   0% {
     transform: scale(1);
     opacity: 1;
   }
-  50% {
-    transform: scale(0.95);
-    opacity: 0.5;
-  }
   100% {
-    transform: scale(0.8);
+    transform: scale(0.85);
     opacity: 0;
   }
-}
-
-/* 果汁飞溅动画 */
-@keyframes splash {
-  0% {
-    transform: translate(0, 0) scale(1);
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.8;
-  }
-  100% {
-    transform: translate(var(--splash-x), var(--splash-y)) scale(0);
-    opacity: 0;
-  }
-}
-
-/* 飞溅动画 - 大滴 */
-.animate-splash-1 {
-  --splash-x: -35px;
-  --splash-y: -45px;
-  animation: splash 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-}
-
-.animate-splash-2 {
-  --splash-x: 40px;
-  --splash-y: -35px;
-  animation: splash 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.05s forwards;
-}
-
-.animate-splash-3 {
-  --splash-x: 35px;
-  --splash-y: 40px;
-  animation: splash 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.08s forwards;
-}
-
-/* 飞溅动画 - 小滴 */
-.animate-splash-4 {
-  --splash-x: 25px;
-  --splash-y: -15px;
-  animation: splash 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.1s forwards;
-}
-
-.animate-splash-5 {
-  --splash-x: -15px;
-  --splash-y: 30px;
-  animation: splash 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.12s forwards;
-}
-
-.animate-splash-6 {
-  --splash-x: -20px;
-  --splash-y: -20px;
-  animation: splash 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.15s forwards;
-}
-
-.animate-splash-7 {
-  --splash-x: 15px;
-  --splash-y: 25px;
-  animation: splash 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.18s forwards;
-}
-
-/* 飞溅动画 - 小颗粒 */
-.animate-splash-8 {
-  --splash-x: -40px;
-  --splash-y: -25px;
-  animation: splash 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s forwards;
-}
-
-.animate-splash-9 {
-  --splash-x: 20px;
-  --splash-y: 35px;
-  animation: splash 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.22s forwards;
 }
 
 /* 切割线发光效果 */
@@ -216,25 +103,22 @@
   }
 }
 
-/* 连线切断效果 */
+/* 连线切断效果 - 优化性能 */
 .cut-edge {
-  animation: cut-edge-animation 0.25s ease-out forwards;
+  will-change: stroke-dashoffset, opacity;
+  animation: cut-edge-animation 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 @keyframes cut-edge-animation {
   0% {
-    stroke-dasharray: 10;
+    stroke-dasharray: 6;
     stroke-dashoffset: 0;
     opacity: 1;
     stroke: hsl(var(--primary));
   }
-  50% {
-    stroke: #ff6b6b;
-    opacity: 0.8;
-  }
   100% {
-    stroke-dasharray: 10;
-    stroke-dashoffset: 100;
+    stroke-dasharray: 6;
+    stroke-dashoffset: 60;
     opacity: 0;
     stroke: #ff4757;
   }
