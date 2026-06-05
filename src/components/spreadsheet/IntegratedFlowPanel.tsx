@@ -106,9 +106,11 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
         : "border-border/60 hover:border-primary/30"
         }`}
     >
-      {/* TableNode 的隐藏 Handle - 左侧（源）和右侧（目标） */}
-      <Handle type="source" position={Position.Right} id="table-source" className="opacity-0" style={{ opacity: 0, pointerEvents: 'none' }} />
-      <Handle type="target" position={Position.Left} id="table-target" className="opacity-0" style={{ opacity: 0, pointerEvents: 'none' }} />
+      {/* TableNode 的双向 Handle */}
+      <Handle type="source" position={Position.Right} id="table-right-source" className="opacity-0" style={{ opacity: 0, pointerEvents: 'none' }} />
+      <Handle type="target" position={Position.Left} id="table-left-target" className="opacity-0" style={{ opacity: 0, pointerEvents: 'none' }} />
+      <Handle type="source" position={Position.Left} id="table-left-source" className="opacity-0" style={{ opacity: 0, pointerEvents: 'none' }} />
+      <Handle type="target" position={Position.Right} id="table-right-target" className="opacity-0" style={{ opacity: 0, pointerEvents: 'none' }} />
       <div className="table-node-header px-3 py-2 bg-muted/50 border-b border-border/50 flex items-center gap-2">
         <div className="w-6 h-6 bg-gradient-to-br from-green-500/25 to-green-500/10 rounded flex items-center justify-center">
           <Table className="h-3 w-3 text-green-600" />
@@ -272,11 +274,18 @@ function PipelineStepNode({
           data.onContextMenu(data.step.id, e.clientX, e.clientY);
         }}
       >
-        {/* 隐藏的 Handle - 左侧（目标） */}
+        {/* 双向 Handle - 左侧既是 target 也是 source */}
         <Handle
           type="target"
           position={Position.Left}
           id="left-target"
+          className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
+          style={{ opacity: 0, pointerEvents: 'none' }}
+        />
+        <Handle
+          type="source"
+          position={Position.Left}
+          id="left-source"
           className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
           style={{ opacity: 0, pointerEvents: 'none' }}
         />
@@ -366,11 +375,18 @@ function PipelineStepNode({
             <X className="h-2.5 w-2.5" />
           </button>
         </div>
-        {/* 隐藏的 Handle - 右侧（源） */}
+        {/* 双向 Handle - 右侧既是 source 也是 target */}
         <Handle
           type="source"
           position={Position.Right}
           id="right-source"
+          className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
+          style={{ opacity: 0, pointerEvents: 'none' }}
+        />
+        <Handle
+          type="target"
+          position={Position.Right}
+          id="right-target"
           className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
           style={{ opacity: 0, pointerEvents: 'none' }}
         />
@@ -462,7 +478,7 @@ function getLayoutedElements(
     nodes.push({
       id: step.id,
       type: "pipelineStep",
-      position: { x: 0, y: 0 },
+      position: step.position || { x: 0, y: 0 },
       data: {
         step,
         onStepClick,
@@ -477,39 +493,79 @@ function getLayoutedElements(
 
   const edges: Edge[] = [];
 
-  if (savedEdges && savedEdges.length > 0) {
-    savedEdges.forEach((edge) => {
-      edges.push({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        type: "default",
-        data: { curvature: 0.5 },
-        animated: edge.source === "table-node",
-        style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: "hsl(var(--primary))",
-        },
-      });
-      if (edge.source !== "table-node" && edge.target !== "table-node") {
-        dagreGraph.setEdge(edge.source, edge.target);
+  // 辅助函数: 创建连线
+  const createEdge = (sourceId: string, targetId: string) => {
+    const sourceNode = nodes.find(n => n.id === sourceId);
+    const targetNode = nodes.find(n => n.id === targetId);
+
+    let sourceHandle: string;
+    let targetHandle: string;
+
+    if (sourceNode && targetNode) {
+      const sourceX = sourceNode.position.x;
+      const targetX = targetNode.position.x;
+
+      if (sourceX <= targetX) {
+        // 源在左,目标在右
+        if (sourceId === 'table-node') {
+          sourceHandle = 'table-right-source';
+        } else {
+          sourceHandle = 'right-source';
+        }
+
+        if (targetId === 'table-node') {
+          targetHandle = 'table-left-target';
+        } else {
+          targetHandle = 'left-target';
+        }
+      } else {
+        // 源在右,目标在左
+        if (sourceId === 'table-node') {
+          sourceHandle = 'table-left-source';
+        } else {
+          sourceHandle = 'left-source';
+        }
+
+        if (targetId === 'table-node') {
+          targetHandle = 'table-right-target';
+        } else {
+          targetHandle = 'right-target';
+        }
       }
-    });
-  } else if (hasTable && steps.length > 0) {
-    edges.push({
-      id: "table-to-first",
-      source: "table-node",
-      target: steps[0].id,
+    } else {
+      // 默认值
+      sourceHandle = sourceId === 'table-node' ? 'table-right-source' : 'right-source';
+      targetHandle = targetId === 'table-node' ? 'table-left-target' : 'left-target';
+    }
+
+    const edgeConfig: any = {
+      id: `e-${sourceId}-${targetId}`,
+      source: sourceId,
+      target: targetId,
+      sourceHandle,
+      targetHandle,
       type: "default",
       data: { curvature: 0.5 },
-      animated: true,
+      animated: sourceId === "table-node",
       style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
       markerEnd: {
         type: MarkerType.ArrowClosed,
         color: "hsl(var(--primary))",
       },
+    };
+
+    return edgeConfig as Edge;
+  };
+
+  if (savedEdges && savedEdges.length > 0) {
+    savedEdges.forEach((edge) => {
+      edges.push(createEdge(edge.source, edge.target));
+      if (edge.source !== "table-node" && edge.target !== "table-node") {
+        dagreGraph.setEdge(edge.source, edge.target);
+      }
     });
+  } else if (hasTable && steps.length > 0) {
+    edges.push(createEdge("table-node", steps[0].id));
     dagreGraph.setEdge("table-node", steps[0].id);
   }
 
@@ -660,15 +716,59 @@ export function IntegratedFlowPanel({
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
 
-  // 当 savedEdges 变化时（如从 history 导入），更新本地 edges 状态
+  // 当 savedEdges 变化时（如从 history 导入）,更新本地 edges 状态
   useEffect(() => {
     if (savedEdges && savedEdges.length > 0) {
-      const newEdges: Edge[] = [];
-      savedEdges.forEach((edge) => {
-        newEdges.push({
+      const newEdges: Edge[] = savedEdges.map((edge) => {
+        const sourceNode = nodes.find(n => n.id === edge.source);
+        const targetNode = nodes.find(n => n.id === edge.target);
+
+        let sourceHandle: string;
+        let targetHandle: string;
+
+        if (sourceNode && targetNode) {
+          const sourceX = sourceNode.position.x;
+          const targetX = targetNode.position.x;
+
+          if (sourceX <= targetX) {
+            // 源在左,目标在右
+            if (edge.source === 'table-node') {
+              sourceHandle = 'table-right-source';
+            } else {
+              sourceHandle = 'right-source';
+            }
+
+            if (edge.target === 'table-node') {
+              targetHandle = 'table-left-target';
+            } else {
+              targetHandle = 'left-target';
+            }
+          } else {
+            // 源在右,目标在左
+            if (edge.source === 'table-node') {
+              sourceHandle = 'table-left-source';
+            } else {
+              sourceHandle = 'left-source';
+            }
+
+            if (edge.target === 'table-node') {
+              targetHandle = 'table-right-target';
+            } else {
+              targetHandle = 'right-target';
+            }
+          }
+        } else {
+          // 默认值
+          sourceHandle = edge.source === 'table-node' ? 'table-right-source' : 'right-source';
+          targetHandle = edge.target === 'table-node' ? 'table-left-target' : 'left-target';
+        }
+
+        const edgeConfig: any = {
           id: edge.id,
           source: edge.source,
           target: edge.target,
+          sourceHandle,
+          targetHandle,
           type: "default",
           data: { curvature: 0.5 },
           animated: edge.source === "table-node",
@@ -677,11 +777,13 @@ export function IntegratedFlowPanel({
             type: MarkerType.ArrowClosed,
             color: "hsl(var(--primary))",
           },
-        });
+        };
+
+        return edgeConfig as Edge;
       });
       setEdges(newEdges);
     }
-  }, [savedEdges]);
+  }, [savedEdges, nodes]);
 
   // 线段与矩形相交检测
   const lineIntersectsRect = (
@@ -732,7 +834,7 @@ export function IntegratedFlowPanel({
   const detectAndDeleteElements = useCallback((path: { x: number; y: number }[]) => {
     if (path.length < 2 || !reactFlowWrapper.current) return;
 
-    // 将切水果路径转换为 ReactFlow 画布坐标（路径已是以容器为基准，直接使用）
+    // 将切水果路径转换为 ReactFlow 画布坐标（路径已是以容器为基准,直接使用）
     const flowPath = path.map(p => {
       return reactFlowInstance.current?.project(p) || { x: 0, y: 0 };
     });
@@ -796,7 +898,7 @@ export function IntegratedFlowPanel({
       }
     });
 
-    // 检测节点碰撞 - 简化算法，更容易切割
+    // 检测节点碰撞 - 简化算法,更容易切割
     const nodesToDelete: string[] = [];
 
     nodes.forEach(node => {
@@ -813,7 +915,7 @@ export function IntegratedFlowPanel({
         bottom: nodePos.y + nodePos.height,
       };
 
-      // 简单检测：只要有任何线段穿过节点，就触发切割
+      // 简单检测: 只要有任何线段穿过节点,就触发切割
       for (let i = 0; i < flowPath.length - 1; i++) {
         const p1 = flowPath[i];
         const p2 = flowPath[i + 1];
@@ -1058,10 +1160,55 @@ export function IntegratedFlowPanel({
 
   // 创建连线
   const createEdge = useCallback((sourceId: string, targetId: string) => {
-    const newEdge: Edge = {
+    const sourceNode = nodes.find(n => n.id === sourceId);
+    const targetNode = nodes.find(n => n.id === targetId);
+
+    let sourceHandle: string;
+    let targetHandle: string;
+
+    if (sourceNode && targetNode) {
+      const sourceX = sourceNode.position.x;
+      const targetX = targetNode.position.x;
+
+      if (sourceX <= targetX) {
+        // 源在左,目标在右
+        if (sourceId === 'table-node') {
+          sourceHandle = 'table-right-source';
+        } else {
+          sourceHandle = 'right-source';
+        }
+
+        if (targetId === 'table-node') {
+          targetHandle = 'table-left-target';
+        } else {
+          targetHandle = 'left-target';
+        }
+      } else {
+        // 源在右,目标在左
+        if (sourceId === 'table-node') {
+          sourceHandle = 'table-left-source';
+        } else {
+          sourceHandle = 'left-source';
+        }
+
+        if (targetId === 'table-node') {
+          targetHandle = 'table-right-target';
+        } else {
+          targetHandle = 'right-target';
+        }
+      }
+    } else {
+      // 默认值
+      sourceHandle = sourceId === 'table-node' ? 'table-right-source' : 'right-source';
+      targetHandle = targetId === 'table-node' ? 'table-left-target' : 'left-target';
+    }
+
+    const edgeConfig: any = {
       id: `e-${sourceId}-${targetId}`,
       source: sourceId,
       target: targetId,
+      sourceHandle,
+      targetHandle,
       type: 'default',
       animated: false,
       data: {
@@ -1076,6 +1223,8 @@ export function IntegratedFlowPanel({
         color: 'hsl(var(--primary))',
       },
     };
+
+    const newEdge: Edge = edgeConfig;
 
     setEdges((eds) => {
       // 检查是否已存在相同的连线
@@ -1093,7 +1242,7 @@ export function IntegratedFlowPanel({
 
       return newEdges;
     });
-  }, [setEdges, onEdgesChange]);
+  }, [setEdges, onEdgesChange, nodes]);
 
   // 右键松开 - 完成连接或切水果
   const handleCutEnd = useCallback((e: React.MouseEvent) => {
@@ -1261,10 +1410,58 @@ export function IntegratedFlowPanel({
   const onConnect = useCallback(
     (connection: Connection) => {
       console.log("[Pipeline] New connection:", `${connection.source} -> ${connection.target}`);
-      const newEdge: Edge = {
+
+      if (!connection.source || !connection.target) return;
+
+      const sourceNode = nodes.find(n => n.id === connection.source);
+      const targetNode = nodes.find(n => n.id === connection.target);
+
+      let sourceHandle: string;
+      let targetHandle: string;
+
+      if (sourceNode && targetNode) {
+        const sourceX = sourceNode.position.x;
+        const targetX = targetNode.position.x;
+
+        if (sourceX <= targetX) {
+          // 源在左,目标在右
+          if (connection.source === 'table-node') {
+            sourceHandle = 'table-right-source';
+          } else {
+            sourceHandle = 'right-source';
+          }
+
+          if (connection.target === 'table-node') {
+            targetHandle = 'table-left-target';
+          } else {
+            targetHandle = 'left-target';
+          }
+        } else {
+          // 源在右,目标在左
+          if (connection.source === 'table-node') {
+            sourceHandle = 'table-left-source';
+          } else {
+            sourceHandle = 'left-source';
+          }
+
+          if (connection.target === 'table-node') {
+            targetHandle = 'table-right-target';
+          } else {
+            targetHandle = 'right-target';
+          }
+        }
+      } else {
+        // 默认值
+        sourceHandle = connection.source === 'table-node' ? 'table-right-source' : 'right-source';
+        targetHandle = connection.target === 'table-node' ? 'table-left-target' : 'left-target';
+      }
+
+      const edgeConfig: any = {
         id: `e-${connection.source}-${connection.target}`,
-        source: connection.source || "",
-        target: connection.target || "",
+        source: connection.source,
+        target: connection.target,
+        sourceHandle,
+        targetHandle,
         type: "default",
         animated: false,
         style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
@@ -1273,6 +1470,9 @@ export function IntegratedFlowPanel({
           color: "hsl(var(--primary))",
         },
       };
+
+      const newEdge: Edge = edgeConfig;
+
       setEdges((eds) => {
         const newEdges = [...eds, newEdge];
         const graph = new Map<string, string[]>();
@@ -1322,7 +1522,7 @@ export function IntegratedFlowPanel({
         return newEdges;
       });
     },
-    [steps, onStepsChange, setEdges, onEdgesChange]
+    [steps, onStepsChange, setEdges, onEdgesChange, nodes]
   );
 
   if (!hasTable && steps.length === 0) {
