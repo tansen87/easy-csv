@@ -21,7 +21,7 @@ import "reactflow/dist/style.css";
 import { Card } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Table, Edit3, Check, Rows3, Settings } from "lucide-react";
+import { Table, Edit3, Check, Settings } from "lucide-react";
 import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "./ContextMenu";
 
@@ -1523,24 +1523,6 @@ export function FlowPanel({
     },
     [steps, onStepsChange, setEdges, onEdgesChange, nodes]
   );
-
-  if (!hasTable && steps.length === 0) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-muted/20">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
-            <Rows3 className="h-8 w-8 text-muted-foreground/50" />
-          </div>
-          <p className="text-sm font-medium text-muted-foreground mb-1">
-            No data to display
-          </p>
-          <p className="text-xs text-muted-foreground/70">
-            Select a CSV file and add pipeline steps
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div

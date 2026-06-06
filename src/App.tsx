@@ -5,6 +5,7 @@ import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { useTheme } from "@/components/ThemeProvider";
 import { ToastContainer, ToastType } from "@/components/Toast";
 import { NotificationPanel, NotificationType } from "@/components/PersistentNotification";
@@ -142,7 +143,17 @@ function App() {
       }
 
       if (!isCsvFile(filePath)) {
-        addLog("info", `Non-CSV file selected. Use "from" command to convert ${filePath.split('.').pop()?.toUpperCase()} to CSV.`);
+        const ext = filePath.split('.').pop();
+        addLog("info", `Non-CSV file selected. Use "from" command in Flow panel to convert ${ext} to CSV.`);
+        setShowLogPanel(true);
+        // Set the inputFile even for non-CSV files so the UI doesn't show empty state
+        setTabs((prev) =>
+          prev.map((tab) =>
+            tab.id === tabId
+              ? { ...tab, inputFile: filePath, updatedAt: formatDateTime(new Date()) }
+              : tab,
+          ),
+        );
         return;
       }
 
@@ -1193,21 +1204,23 @@ function App() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Default Delimiter
+                  CSV Delimiter
                 </label>
-                <select
+                <SearchableSelect
                   value={defaultDelimiter}
-                  onChange={(e) => setDefaultDelimiter(e.target.value)}
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background"
-                >
-                  <option value=",">Comma (,)</option>
-                  <option value=";">Semicolon (;)</option>
-                  <option value={"\t"}>Tab (\t)</option>
-                  <option value="|">Pipe (|)</option>
-                  <option value="^">Caret (^)</option>
-                </select>
+                  onChange={setDefaultDelimiter}
+                  options={[
+                    { label: "Comma (,)", value: "," },
+                    { label: "Semicolon (;)", value: ";" },
+                    { label: "Tab (\\t)", value: "\t" },
+                    { label: "Pipe (|)", value: "|" },
+                    { label: "Caret (^)", value: "^" },
+                  ]}
+                  placeholder="Select delimiter"
+                  size="sm"
+                />
                 <p className="text-xs text-muted-foreground mt-1">
-                  This delimiter will be used for all commands that require it
+                  Read the delimiter of CSV file
                 </p>
               </div>
               <div>
