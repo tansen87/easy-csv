@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { X, Trash2, Plus, Rows3, Repeat2, Repeat, FolderOpen, FileUp, Star } from "lucide-react";
+import { X, Plus, Rows3, Repeat2, Repeat, FolderOpen, FileUp, Star } from "lucide-react";
 import { ToastContainer, ToastType } from "@/components/Toast";
 import { PipelineStep, PipelineEdge, XanCommand, PipelineTab } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
@@ -22,7 +22,6 @@ interface SpreadsheetViewProps {
   onTabChange: (tabId: string) => void;
   onAddTab: () => void;
   onRemoveTab: (tabId: string) => void;
-  onRemoveAllTabsExcept: (tabId: string) => void;
   onRenameTab: (tabId: string, name: string) => void;
   onAddCommand: (
     command: XanCommand,
@@ -47,7 +46,6 @@ export function SpreadsheetView({
   onTabChange,
   onAddTab,
   onRemoveTab,
-  onRemoveAllTabsExcept,
   onRenameTab,
   onAddCommand,
   onStepClick,

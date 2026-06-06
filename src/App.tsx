@@ -57,7 +57,6 @@ function App() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isXanInstalled, setIsXanInstalled] = useState<boolean | null>(null);
   const [xanVersion, setXanVersion] = useState<string | null>(null);
-  const [inputFile, setInputFile] = useState<string>("");
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [isSavingSettings, setIsSavingSettings] = useState<boolean>(false);
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(",");
@@ -123,26 +122,26 @@ function App() {
     removeNotificationRef.current = removeNotification;
   }, [showToast, removeToast, addNotification, removeNotification]);
 
-  const [csvData, setCsvData] = useState<{
-    headers: string[];
-    rows: string[][];
-  }>({ headers: [], rows: [] });
-
   const isCsvFile = (filePath: string): boolean => {
     const ext = filePath.split('.').pop()?.toLowerCase();
     return ext ? ['csv', 'txt', 'tsv'].includes(ext) : false;
   };
 
-  // Load CSV file
+  // Load CSV file for a specific tab
   const loadCsvData = useCallback(
-    async (filePath: string) => {
+    async (tabId: string, filePath: string) => {
       if (!filePath) {
-        setCsvData({ headers: [], rows: [] });
+        setTabs((prev) =>
+          prev.map((tab) =>
+            tab.id === tabId
+              ? { ...tab, data: [], headers: [], inputFile: "", updatedAt: formatDateTime(new Date()) }
+              : tab,
+          ),
+        );
         return;
       }
 
       if (!isCsvFile(filePath)) {
-        setCsvData({ headers: [], rows: [] });
         addLog("info", `Non-CSV file selected. Use "from" command to convert ${filePath.split('.').pop()?.toUpperCase()} to CSV.`);
         return;
       }
@@ -156,10 +155,15 @@ function App() {
             limit: 31,
           },
         );
-        setCsvData(data);
+        setTabs((prev) =>
+          prev.map((tab) =>
+            tab.id === tabId
+              ? { ...tab, data: data.rows, headers: data.headers, inputFile: filePath, updatedAt: formatDateTime(new Date()) }
+              : tab,
+          ),
+        );
       } catch (error) {
         addLog("error", `Failed to read CSV: ${error}`);
-        setCsvData({ headers: [], rows: [] });
       }
     },
     [defaultDelimiter],
@@ -273,11 +277,9 @@ function App() {
   }, []);
 
   useEffect(() => {
-    loadCsvData(inputFile);
-  }, [inputFile, defaultDelimiter, loadCsvData]);
-
-  useEffect(() => {
     const updateTitle = async () => {
+      const currentTab = tabs.find((tab) => tab.id === selectedTabId);
+      const inputFile = currentTab?.inputFile || "";
       try {
         const title = inputFile ? `${inputFile} - Easy Csv` : "Easy Csv";
         await invoke("set_window_title", { title });
@@ -286,25 +288,7 @@ function App() {
       }
     };
     updateTitle();
-  }, [inputFile]);
-
-  useEffect(() => {
-    if (selectedTabId) {
-      setTabs((prev) =>
-        prev.map((tab) =>
-          tab.id === selectedTabId
-            ? {
-              ...tab,
-              data: csvData.headers.length > 0 ? csvData.rows : tab.data,
-              headers: csvData.headers.length > 0 ? csvData.headers : tab.headers,
-              inputFile: inputFile,
-              updatedAt: formatDateTime(new Date()),
-            }
-            : tab,
-        ),
-      );
-    }
-  }, [csvData, inputFile, selectedTabId]);
+  }, [selectedTabId, tabs]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -382,16 +366,6 @@ function App() {
         setSelectedTabId(remainingTab.id);
         setSelectedStep(null);
       }
-    }
-  };
-
-  const removeAllTabsExcept = (keepTabId: string) => {
-    const keepTab = tabs.find((tab) => tab.id === keepTabId);
-    if (keepTab) {
-      setTabs([keepTab]);
-      setSelectedTabId(keepTabId);
-      setSelectedStep(null);
-      showToastRef.current("Cleared all pipeline tabs except the current one", 'info');
     }
   };
 
@@ -512,6 +486,7 @@ function App() {
     const currentPipeline = getCurrentPipeline();
     const currentTab = getCurrentTab();
     const edges = currentTab.edges || [];
+    const inputFile = currentTab.inputFile || "";
 
     if (currentPipeline.length === 0) {
       showToastRef.current("No steps in pipeline to execute", 'warning');
@@ -735,7 +710,7 @@ function App() {
           alias: step.alias,
           position: step.position,
         })),
-        inputFile,
+        inputFile: currentTab.inputFile || "",
         defaultDelimiter,
         edges: currentTab.edges || [],
         inputPosition: currentTab.inputPosition,
@@ -799,7 +774,7 @@ function App() {
 
       updateTabPipeline(importedPipeline, undefined, pipelineData.edges, pipelineData.inputPosition);
       if (pipelineData.inputFile) {
-        setInputFile(pipelineData.inputFile);
+        loadCsvData(selectedTabId, pipelineData.inputFile);
       }
       if (pipelineData.defaultDelimiter) {
         setDefaultDelimiter(pipelineData.defaultDelimiter);
@@ -824,7 +799,7 @@ function App() {
     });
 
     if (file) {
-      setInputFile(file);
+      loadCsvData(selectedTabId, file);
     }
   };
 
@@ -1067,7 +1042,6 @@ function App() {
               onTabChange={setSelectedTabId}
               onAddTab={addNewTab}
               onRemoveTab={removeTab}
-              onRemoveAllTabsExcept={removeAllTabsExcept}
               onRenameTab={renameTab}
               onAddCommand={handleCommandClick}
               onStepClick={handleStepClick}
@@ -1188,8 +1162,9 @@ function App() {
           const updatedHistory = historicalPipelines.filter((h) => h.id !== history.id);
           updateHistoricalPipelines(updatedHistory);
         }}
-        onInputFileChange={setInputFile}
+        onLoadCsvData={loadCsvData}
         onDefaultDelimiterChange={setDefaultDelimiter}
+        selectedTabId={selectedTabId}
       />
 
       {/* Floating Log Panel */}

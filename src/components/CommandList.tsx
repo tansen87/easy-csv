@@ -156,8 +156,9 @@ interface CommandListProps {
   onLoadHistory: (history: any) => void;
   onNewTabFromHistory: (history: any) => void;
   onDeleteHistory: (history: any) => void;
-  onInputFileChange: (file: string) => void;
+  onLoadCsvData: (tabId: string, filePath: string) => void;
   onDefaultDelimiterChange: (delimiter: string) => void;
+  selectedTabId: string;
 }
 
 export function CommandList({
@@ -175,8 +176,9 @@ export function CommandList({
   onLoadHistory,
   onNewTabFromHistory,
   onDeleteHistory,
-  onInputFileChange,
+  onLoadCsvData,
   onDefaultDelimiterChange,
+  selectedTabId,
 }: CommandListProps) {
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>(
     commandCategories.reduce((acc, category) => {
@@ -467,7 +469,7 @@ export function CommandList({
                             className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
                             onClick={() => {
                               onLoadHistory(history);
-                              onInputFileChange(history.inputFile);
+                              onLoadCsvData(selectedTabId, history.inputFile);
                               onDefaultDelimiterChange(history.defaultDelimiter);
                             }}
                           >
@@ -477,8 +479,6 @@ export function CommandList({
                             className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
                             onClick={() => {
                               onNewTabFromHistory(history);
-                              onInputFileChange(history.inputFile);
-                              onDefaultDelimiterChange(history.defaultDelimiter);
                             }}
                           >
                             New Tab
