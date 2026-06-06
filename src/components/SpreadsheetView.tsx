@@ -4,17 +4,17 @@ import { Table, X, Trash2, Plus, Rows3, Repeat2, Repeat } from "lucide-react";
 import { ToastContainer, ToastType } from "@/components/Toast";
 import { PipelineStep, PipelineEdge, XanCommand, PipelineTab } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
-import { ContextMenu } from "./spreadsheet/ContextMenu";
-import { CommandDialog, CommandDialogState } from "./spreadsheet/CommandDialog";
-import { FilterDialog } from "./spreadsheet/FilterDialog";
-import { SortDialog } from "./spreadsheet/SortDialog";
-import { PivotDialog } from "./spreadsheet/PivotDialog";
-import { DateTransformDialog } from "./spreadsheet/DateTransformDialog";
-import { SplitDialog } from "./spreadsheet/SplitDialog";
-import { PadDialog } from "./spreadsheet/PadDialog";
-import { ReplaceDialog } from "./spreadsheet/ReplaceDialog";
-import { WindowDialog } from "./spreadsheet/WindowDialog";
-import { IntegratedFlowPanel } from "./spreadsheet/IntegratedFlowPanel";
+import { ContextMenu } from "@/components/spreadsheet/ContextMenu";
+import { CommandDialog, CommandDialogState } from "@/components/spreadsheet/CommandDialog";
+import { FilterDialog } from "@/components/spreadsheet/FilterDialog";
+import { SortDialog } from "@/components/spreadsheet/SortDialog";
+import { PivotDialog } from "@/components/spreadsheet/PivotDialog";
+import { DateTransformDialog } from "@/components/spreadsheet/DateTransformDialog";
+import { SplitDialog } from "@/components/spreadsheet/SplitDialog";
+import { PadDialog } from "@/components/spreadsheet/PadDialog";
+import { ReplaceDialog } from "@/components/spreadsheet/ReplaceDialog";
+import { WindowDialog } from "@/components/spreadsheet/WindowDialog";
+import { FlowPanel } from "@/components/spreadsheet/FlowPanel";
 
 interface SpreadsheetViewProps {
   tabs: PipelineTab[];
@@ -511,7 +511,7 @@ export function SpreadsheetView({
       </div>
 
       <div className="flex-1 relative overflow-hidden">
-        <IntegratedFlowPanel
+        <FlowPanel
           steps={pipeline}
           headers={displayHeaders}
           rows={data}

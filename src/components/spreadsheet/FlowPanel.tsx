@@ -400,7 +400,7 @@ const nodeTypes = {
   pipelineStep: PipelineStepNode,
 };
 
-interface IntegratedFlowPanelProps {
+interface FlowPanelProps {
   steps: PipelineStep[];
   headers: string[];
   rows: string[][];
@@ -607,7 +607,7 @@ function getLayoutedElements(
   return { nodes, edges };
 }
 
-export function IntegratedFlowPanel({
+export function FlowPanel({
   steps,
   headers,
   rows,
@@ -636,7 +636,7 @@ export function IntegratedFlowPanel({
   onInputPositionChange,
   savedEdges,
   savedInputPosition,
-}: IntegratedFlowPanelProps) {
+}: FlowPanelProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   // 切水果功能状态
