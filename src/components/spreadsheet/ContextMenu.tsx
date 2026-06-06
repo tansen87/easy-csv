@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from "react";
 import {
   Filter,
   ArrowUpDown,
@@ -78,6 +79,71 @@ export function ContextMenu({
   onTextTransform,
   onNumberTransform,
 }: ContextMenuProps) {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ x: contextMenu.x, y: contextMenu.y });
+
+  useEffect(() => {
+    const updatePosition = () => {
+      if (menuRef.current) {
+        const menuRect = menuRef.current.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        let x = contextMenu.x;
+        let y = contextMenu.y;
+
+        // Adjust horizontal position if menu overflows right
+        if (x + menuRect.width > viewportWidth) {
+          x = viewportWidth - menuRect.width - 8;
+        }
+
+        // Adjust vertical position if menu overflows bottom
+        if (y + menuRect.height > viewportHeight) {
+          y = Math.max(8, y - menuRect.height);
+        }
+
+        // Ensure menu doesn't overflow left or top
+        x = Math.max(8, x);
+        y = Math.max(8, y);
+
+        setPosition({ x, y });
+      }
+    };
+
+    // Use requestAnimationFrame to ensure DOM is fully rendered before calculating
+    const rafId = requestAnimationFrame(updatePosition);
+    return () => cancelAnimationFrame(rafId);
+  }, [contextMenu.x, contextMenu.y]);
+
+  const handleSubmenuOpen = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const dropdown = e.currentTarget.nextElementSibling as HTMLElement;
+    if (!dropdown) return;
+
+    dropdown.classList.remove("hidden");
+
+    const buttonRect = e.currentTarget.getBoundingClientRect();
+    const dropdownRect = dropdown.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Check if dropdown overflows to the right
+    if (buttonRect.right + dropdownRect.width > viewportWidth) {
+      dropdown.style.left = "-100%";
+      dropdown.style.right = "auto";
+    } else {
+      dropdown.style.left = "100%";
+      dropdown.style.right = "auto";
+    }
+
+    // Check if dropdown overflows to the bottom
+    if (buttonRect.bottom + dropdownRect.height > viewportHeight) {
+      const overflow = buttonRect.bottom + dropdownRect.height - viewportHeight;
+      dropdown.style.top = `${-overflow}px`;
+    } else {
+      dropdown.style.top = "0";
+    }
+  };
+
   const sortOptions = [
     { label: "A → Z", icon: ArrowDownAZ, order: "asc" as const, numeric: false },
     { label: "Z → A", icon: ArrowUpAZ, order: "desc" as const, numeric: false },
@@ -117,8 +183,9 @@ export function ContextMenu({
 
   return (
     <div
+      ref={menuRef}
       className="fixed bg-card border rounded-lg shadow-lg z-50 py-1 min-w-[160px]"
-      style={{ left: contextMenu.x, top: contextMenu.y }}
+      style={{ left: position.x, top: position.y }}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="px-3 py-1 text-xs font-semibold text-muted-foreground border-b mb-1">
@@ -188,10 +255,7 @@ export function ContextMenu({
       <div className="relative group">
         <button
           className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center justify-between gap-2"
-          onMouseEnter={(e) => {
-            const dropdown = e.currentTarget.nextElementSibling;
-            if (dropdown) dropdown.classList.remove("hidden");
-          }}
+          onMouseEnter={handleSubmenuOpen}
           onMouseLeave={(e) => {
             const dropdown = e.currentTarget.nextElementSibling;
             if (dropdown) dropdown.classList.add("hidden");
@@ -205,7 +269,7 @@ export function ContextMenu({
         </button>
 
         <div
-          className="absolute left-full top-0 hidden pl-1"
+          className="absolute top-0 hidden pl-1"
           onMouseEnter={(e) => {
             e.currentTarget.classList.remove("hidden");
           }}
@@ -250,10 +314,7 @@ export function ContextMenu({
       <div className="relative group">
         <button
           className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center justify-between gap-2"
-          onMouseEnter={(e) => {
-            const dropdown = e.currentTarget.nextElementSibling;
-            if (dropdown) dropdown.classList.remove("hidden");
-          }}
+          onMouseEnter={handleSubmenuOpen}
           onMouseLeave={(e) => {
             const dropdown = e.currentTarget.nextElementSibling;
             if (dropdown) dropdown.classList.add("hidden");
@@ -267,7 +328,7 @@ export function ContextMenu({
         </button>
 
         <div
-          className="absolute left-full top-0 hidden pl-1"
+          className="absolute top-0 hidden pl-1"
           onMouseEnter={(e) => {
             e.currentTarget.classList.remove("hidden");
           }}
@@ -300,10 +361,7 @@ export function ContextMenu({
       <div className="relative group">
         <button
           className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center justify-between gap-2"
-          onMouseEnter={(e) => {
-            const dropdown = e.currentTarget.nextElementSibling;
-            if (dropdown) dropdown.classList.remove("hidden");
-          }}
+          onMouseEnter={handleSubmenuOpen}
           onMouseLeave={(e) => {
             const dropdown = e.currentTarget.nextElementSibling;
             if (dropdown) dropdown.classList.add("hidden");
@@ -317,7 +375,7 @@ export function ContextMenu({
         </button>
 
         <div
-          className="absolute left-full top-0 hidden pl-1"
+          className="absolute top-0 hidden pl-1"
           onMouseEnter={(e) => {
             e.currentTarget.classList.remove("hidden");
           }}
@@ -350,6 +408,11 @@ export function ContextMenu({
       <div className="relative group">
         <button
           className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center justify-between gap-2"
+          onMouseEnter={handleSubmenuOpen}
+          onMouseLeave={(e) => {
+            const dropdown = e.currentTarget.nextElementSibling;
+            if (dropdown) dropdown.classList.add("hidden");
+          }}
         >
           <div className="flex items-center gap-2">
             <Settings2 className="h-4 w-4 text-muted-foreground" />
@@ -358,7 +421,14 @@ export function ContextMenu({
           <ChevronRight className="h-3 w-3 text-muted-foreground" />
         </button>
 
-        <div className="absolute left-full top-0 hidden group-hover:block pl-1">
+        <div className="absolute top-0 hidden pl-1"
+          onMouseEnter={(e) => {
+            e.currentTarget.classList.remove("hidden");
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.classList.add("hidden");
+          }}
+        >
           <div className="bg-card border rounded-lg shadow-lg py-1 min-w-[160px]">
             {operationOptions.map((option) => {
               const Icon = option.icon;
