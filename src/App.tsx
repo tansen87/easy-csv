@@ -23,6 +23,7 @@ import {
   ChevronUp,
   ChevronRight,
   File,
+  Play,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/LogPanel";
@@ -967,7 +968,7 @@ function App() {
                 </>
               ) : (
                 <>
-                  <FileText className="h-3 w-3 mr-1.5" />
+                  <Play className="h-3 w-3 mr-1.5" />
                   Execute
                   {getCurrentPipeline().length > 0 && (
                     <span className="ml-0.5">({getCurrentPipeline().length})</span>
@@ -1185,6 +1186,7 @@ function App() {
         showToastRef={showToastRef}
         isVisible={showLogPanel}
         onClose={() => setShowLogPanel(false)}
+        isExecuting={isExecuting}
       />
 
       {/* Settings Dialog */}
