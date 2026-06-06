@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Table, X, Trash2, Plus, Rows3, Repeat2, Repeat } from "lucide-react";
+import { X, Trash2, Plus, Rows3, Repeat2, Repeat, FolderOpen, FileUp, Star } from "lucide-react";
 import { ToastContainer, ToastType } from "@/components/Toast";
 import { PipelineStep, PipelineEdge, XanCommand, PipelineTab } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
@@ -36,6 +36,9 @@ interface SpreadsheetViewProps {
   selectedStepId?: string;
   onEdgesChange?: (tabId: string, edges: PipelineEdge[]) => void;
   onInputPositionChange?: (tabId: string, position: { x: number; y: number }) => void;
+  onOpenFile?: () => void;
+  onImportPipeline?: () => void;
+  onOpenUrl?: (url: string) => void;
 }
 
 export function SpreadsheetView({
@@ -55,6 +58,9 @@ export function SpreadsheetView({
   selectedStepId,
   onEdgesChange,
   onInputPositionChange,
+  onOpenFile,
+  onImportPipeline,
+  onOpenUrl,
 }: SpreadsheetViewProps) {
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
   const [contextMenu, setContextMenu] = useState<{
@@ -404,16 +410,52 @@ export function SpreadsheetView({
           </div>
         </div>
         <div className="flex-1 flex items-center justify-center" onContextMenu={(e) => e.preventDefault()}>
-          <div className="text-center py-16 px-4">
-            <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
-              <Table className="h-8 w-8 text-muted-foreground/50" />
+          <div className="max-w-md w-full px-8">
+            <div className="text-center mb-8">
+              <h2 className="text-xl font-semibold text-foreground mb-2">
+                Welcome to Easy CSV
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Open a file or import a pipeline to get started
+              </p>
             </div>
-            <p className="text-sm font-medium text-muted-foreground mb-1">
-              No file selected
-            </p>
-            <p className="text-xs text-muted-foreground/70">
-              Select a CSV file from the top bar to view it
-            </p>
+            <div className="grid grid-cols-3 gap-32 justify-items-center">
+              <button
+                onClick={onOpenFile}
+                className="flex flex-col items-center gap-3 p-4 rounded-xl border border-border bg-card hover:bg-accent hover:border-primary/50 transition-all group w-36 aspect-square"
+              >
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <FolderOpen className="h-6 w-6 text-primary" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground">Open File</p>
+                  <p className="text-xs text-muted-foreground mt-1">CSV, Excel, JSON</p>
+                </div>
+              </button>
+              <button
+                onClick={onImportPipeline}
+                className="flex flex-col items-center gap-3 p-4 rounded-xl border border-border bg-card hover:bg-accent hover:border-primary/50 transition-all group w-36 aspect-square"
+              >
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <FileUp className="h-6 w-6 text-primary" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground">Import Pipeline</p>
+                  <p className="text-xs text-muted-foreground mt-1">.xan files</p>
+                </div>
+              </button>
+              <button
+                onClick={() => onOpenUrl?.("https://github.com/tansen87/easy-csv")}
+                className="flex flex-col items-center gap-3 p-4 rounded-xl border border-border bg-card hover:bg-accent hover:border-primary/50 transition-all group w-36 aspect-square"
+              >
+                <div className="w-12 h-12 rounded-lg bg-yellow-500/10 flex items-center justify-center group-hover:bg-yellow-500/20 transition-colors">
+                  <Star className="h-6 w-6 text-yellow-500" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground">Star on GitHub</p>
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readFile, writeFile } from "@tauri-apps/plugin-fs";
+import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "@/components/ThemeProvider";
@@ -837,6 +838,14 @@ function App() {
     setTheme(currentTheme === "dark" ? "light" : "dark");
   };
 
+  const handleOpenUrl = async (url: string) => {
+    try {
+      await openUrl(url);
+    } catch (error) {
+      showToastRef.current(`Failed to open URL: ${error}`, 'error');
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col bg-background relative overflow-hidden">
       <header ref={headerRef} className="h-14 border-b bg-card shadow-sm flex items-center justify-between px-4 gap-4 relative z-10" onContextMenu={(e) => e.preventDefault()}>
@@ -875,7 +884,7 @@ function App() {
                     className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   >
                     <FolderOpen className="h-3.5 w-3.5" />
-                    Browse
+                    Open
                   </button>
                   <button
                     onClick={() => {
@@ -1107,6 +1116,9 @@ function App() {
                   ),
                 );
               }}
+              onOpenFile={handleOpenFile}
+              onImportPipeline={handleImportPipeline}
+              onOpenUrl={handleOpenUrl}
             />
           </div>
         </main>
