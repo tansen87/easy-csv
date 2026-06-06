@@ -6645,132 +6645,188 @@ export function CommandDialog({
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Format</label>
-                <select
-                  value={commandDialog.params.format || "json"}
-                  onChange={(e) =>
+                <SearchableSelect
+                  value={commandDialog.params.format || "xlsx"}
+                  onChange={(value) =>
                     setCommandDialog({
                       ...commandDialog,
-                      params: { ...commandDialog.params, format: e.target.value },
+                      params: { ...commandDialog.params, format: value },
                     })
                   }
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                >
-                  <option value="html">HTML</option>
-                  <option value="json">JSON</option>
-                  <option value="jsonl">JSONL</option>
-                  <option value="md">Markdown</option>
-                  <option value="ndjson">NDJSON</option>
-                  <option value="npy">NPY</option>
-                  <option value="txt">Text</option>
-                  <option value="xlsx">XLSX</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Sample Size</label>
-                <input
-                  type="number"
-                  value={commandDialog.params["sample-size"] || 512}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "sample-size": parseInt(e.target.value) || 512,
-                      },
-                    })
-                  }
-                  placeholder="Sample size"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Number Type (NPY)</label>
-                <select
-                  value={commandDialog.params.dtype || "f64"}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: { ...commandDialog.params, dtype: e.target.value },
-                    })
-                  }
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                >
-                  <option value="f32">f32</option>
-                  <option value="f64">f64</option>
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Strings</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.strings || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        strings: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="Force as raw strings (JSON)"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Select (Text)</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.select || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: { ...commandDialog.params, select: e.target.value },
-                    })
-                  }
-                  placeholder="Column to emit as text (txt)"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  options={[
+                    { label: "XLSX", value: "xlsx" },
+                    { label: "HTML", value: "html" },
+                    { label: "JSON", value: "json" },
+                    { label: "JSONL", value: "jsonl" },
+                    { label: "Markdown", value: "md" },
+                    { label: "NDJSON", value: "ndjson" },
+                    { label: "NPY", value: "npy" },
+                    { label: "Text", value: "txt" },
+
+                  ]}
+                  placeholder="Search or select format..."
+                  size="md"
                 />
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.nulls}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        nulls: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Nulls
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.omit}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        omit: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Omit Empty
-              </label>
-            </div>
+            {(commandDialog.params.format === "json" ||
+              commandDialog.params.format === "jsonl" ||
+              commandDialog.params.format === "ndjson") && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Sample Size</label>
+                      <input
+                        type="number"
+                        value={commandDialog.params["sample-size"] || 512}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              "sample-size": parseInt(e.target.value) || 512,
+                            },
+                          })
+                        }
+                        placeholder="Number of rows to sample"
+                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Strings</label>
+                      <input
+                        type="text"
+                        value={commandDialog.params.strings || ""}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              strings: e.target.value,
+                            },
+                          })
+                        }
+                        placeholder="Force as raw strings"
+                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={commandDialog.params.nulls}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              nulls: e.target.checked,
+                            },
+                          })
+                        }
+                        className="h-4 w-4"
+                      />
+                      Nulls
+                    </label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={commandDialog.params.omit}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              omit: e.target.checked,
+                            },
+                          })
+                        }
+                        className="h-4 w-4"
+                      />
+                      Omit Empty
+                    </label>
+                  </div>
+                </div>
+              )}
+            {commandDialog.params.format === "npy" && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Number Type</label>
+                    <select
+                      value={commandDialog.params.dtype || "f64"}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: { ...commandDialog.params, dtype: e.target.value },
+                        })
+                      }
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    >
+                      <option value="f32">f32</option>
+                      <option value="f64">f64</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Select</label>
+                    <input
+                      type="text"
+                      value={commandDialog.params.select || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: { ...commandDialog.params, select: e.target.value },
+                        })
+                      }
+                      placeholder="Numerical columns to emit"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            {commandDialog.params.format === "txt" && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Select</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.select || ""}
+                    onChange={(e) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: { ...commandDialog.params, select: e.target.value },
+                      })
+                    }
+                    placeholder="Column to emit as text"
+                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  />
+                </div>
+              </div>
+            )}
+            {commandDialog.params.format === "md" && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Limit</label>
+                  <input
+                    type="number"
+                    value={commandDialog.params.limit || ""}
+                    onChange={(e) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          limit: e.target.value ? parseInt(e.target.value) : undefined,
+                        },
+                      })
+                    }
+                    placeholder="Maximum number of rows"
+                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  />
+                </div>
+              </div>
+            )}
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"

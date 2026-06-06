@@ -332,16 +332,6 @@ export function SpreadsheetView({
                 >
                   <Plus className="h-4 w-4" />
                 </button>
-                <button
-                  onClick={() => {
-                    if (tabs.length > 1 && selectedTabId) {
-                      onRemoveAllTabsExcept(selectedTabId);
-                    }
-                  }}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
               </div>
             </div>
             <ScrollArea className="h-full flex-1 ml-4">
@@ -465,7 +455,7 @@ export function SpreadsheetView({
   return (
     <div className="h-full flex flex-col bg-background">
       <div className="bg-transparent" onContextMenu={(e) => e.preventDefault()}>
-        <div className="h-[48px] px-4 flex items-center">
+        <div className="h-[48px] px-2 flex items-center">
           <div className="flex items-center shrink-0">
             <div className="flex bg-muted/30 rounded-lg p-0.5 border border-transparent">
               <button
@@ -473,16 +463,6 @@ export function SpreadsheetView({
                 className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
               >
                 <Plus className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => {
-                  if (tabs.length > 1 && selectedTabId) {
-                    onRemoveAllTabsExcept(selectedTabId);
-                  }
-                }}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
-              >
-                <Trash2 className="h-4 w-4" />
               </button>
             </div>
           </div>

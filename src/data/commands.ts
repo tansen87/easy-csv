@@ -2048,6 +2048,7 @@ export const xanCommands: XanCommand[] = [
         required: true,
         isPositional: true,
         options: ["html", "json", "jsonl", "md", "ndjson", "npy", "txt", "xlsx"],
+        default: "xlsx",
       },
       {
         name: "sample-size",
@@ -2086,10 +2087,15 @@ export const xanCommands: XanCommand[] = [
       {
         name: "select",
         type: "string",
-        description: "Column to emit as text (txt)",
+        description: "Column to emit as text (txt) or numerical columns for NPY",
         required: false,
       },
-
+      {
+        name: "limit",
+        type: "number",
+        description: "Maximum number of rows to emit (Markdown)",
+        required: false,
+      },
     ],
   },
   {
@@ -2104,6 +2110,7 @@ export const xanCommands: XanCommand[] = [
         description: "Input format (will be inferred from file extension if not given)",
         required: false,
         options: ["ods", "xls", "xlsb", "xlsx", "json", "jsonl", "ndjson", "txt", "npy", "tar", "md", "markdown"],
+        default: "xlsx",
       },
       {
         name: "sheet-index",
