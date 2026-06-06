@@ -181,6 +181,7 @@ export function WindowDialog({
       }}
       onClick={(e) => e.stopPropagation()}
       onMouseDown={handleMouseDown}
+      onContextMenu={(e) => e.preventDefault()}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
         <div className="flex items-center gap-2">

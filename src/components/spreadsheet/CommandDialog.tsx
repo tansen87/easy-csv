@@ -126,6 +126,7 @@ export function CommandDialog({
           top: `calc(50% + ${offset.y}px)`,
           transform: "translate(-50%, -50%)",
         }}
+        onContextMenu={(e) => e.preventDefault()}
       >
         <div
           className="flex items-center justify-between mb-2 cursor-move select-none"
