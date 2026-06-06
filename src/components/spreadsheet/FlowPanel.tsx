@@ -834,9 +834,14 @@ export function FlowPanel({
   const detectAndDeleteElements = useCallback((path: { x: number; y: number }[]) => {
     if (path.length < 2 || !reactFlowWrapper.current) return;
 
-    // 将切水果路径转换为 ReactFlow 画布坐标（路径已是以容器为基准,直接使用）
+    // 将切水果路径转换为 ReactFlow 画布坐标
+    // path 是容器相对坐标,需要转换为屏幕坐标后再调用 screenToFlowPosition
+    const rect = reactFlowWrapper.current.getBoundingClientRect();
     const flowPath = path.map(p => {
-      return reactFlowInstance.current?.project(p) || { x: 0, y: 0 };
+      return reactFlowInstance.current?.screenToFlowPosition({
+        x: p.x + rect.left,
+        y: p.y + rect.top
+      }) || { x: 0, y: 0 };
     });
 
     // 构建节点位置映射
@@ -1005,12 +1010,8 @@ export function FlowPanel({
   const getNodeAtPosition = useCallback((clientX: number, clientY: number): string | null => {
     if (!reactFlowWrapper.current || !reactFlowInstance.current) return null;
 
-    // 将屏幕坐标转换为容器相对坐标（以画布为基准）
-    const rect = reactFlowWrapper.current.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-    // 将容器坐标转换为流程图坐标
-    const flowPos = reactFlowInstance.current.project({ x, y });
+    // 将屏幕坐标转换为流程图坐标
+    const flowPos = reactFlowInstance.current.screenToFlowPosition({ x: clientX, y: clientY });
 
     for (const node of nodes) {
       const nodeData = node as any;
@@ -1084,7 +1085,11 @@ export function FlowPanel({
 
       // 实时碰撞检测 - 更新待删除元素高亮
       if (cutPath.length >= 2 && reactFlowInstance.current) {
-        const flowPath = cutPath.map(p => reactFlowInstance.current!.project(p));
+        // cutPath 是容器相对坐标,需要转换为屏幕坐标
+        const flowPath = cutPath.map(p => reactFlowInstance.current!.screenToFlowPosition({
+          x: p.x + rect.left,
+          y: p.y + rect.top
+        }));
 
         const nodePositions = new Map<string, { x: number; y: number; width: number; height: number }>();
         nodes.forEach(node => {
