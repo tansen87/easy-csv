@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { X, ChevronDown, GripVertical } from "lucide-react";
+import { X, ChevronDown } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
@@ -180,7 +180,6 @@ export function DateTransformDialog({
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
         <div className="flex items-center gap-2">
-          <GripVertical className="h-3 w-3 text-muted-foreground/50" />
           <span className="text-xs font-medium">Date Transform</span>
         </div>
         <button

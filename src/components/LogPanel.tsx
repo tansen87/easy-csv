@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ResizeHandle } from "@/components/ui/resize-handle";
-import { Trash2, Info, CheckCircle, AlertCircle, XCircle, TextQuote, FileText, Copy, X, GripVertical, LoaderPinwheel } from "lucide-react";
+import { Trash2, Info, CheckCircle, AlertCircle, XCircle, TextQuote, FileText, Copy, X, LoaderPinwheel } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { LogEntry } from "@/types/xan";
 import { ToastType } from "@/components/Toast";
@@ -152,7 +152,6 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose, isEx
         onMouseDown={handleMouseDown}
       >
         <div className="flex items-center gap-2">
-          <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50" />
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-primary text-primary-foreground shadow-sm">
             <FileText className="h-3.5 w-3.5" />
             Logs ({logs.length})

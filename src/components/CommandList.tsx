@@ -58,7 +58,6 @@ import {
   Calculator,
   Download,
   X,
-  GripVertical,
   History,
   type LucideIcon,
 } from "lucide-react";
@@ -305,7 +304,6 @@ export function CommandList({
         onMouseDown={handleMouseDown}
       >
         <div className="flex items-center gap-2">
-          <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50" />
           <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
             <button
               className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all ${activePanel === "commands"

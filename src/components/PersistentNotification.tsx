@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { AlertCircle, Info, X, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
+import { AlertCircle, Info, X, ChevronDown, ChevronUp } from "lucide-react";
 
 export type NotificationType = "warning" | "info" | "error" | "success";
 
@@ -114,7 +114,6 @@ export function NotificationPanel({ notifications, onDismiss, onDismissAll }: No
       <div className="bg-background/95 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg overflow-hidden">
         {/* Header */}
         <div className="notification-panel-header flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border/30 cursor-grab select-none">
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
           <div className="flex items-center gap-2 flex-1">
             {warningCount > 0 && (
               <span className="flex items-center gap-1 text-xs text-yellow-600">

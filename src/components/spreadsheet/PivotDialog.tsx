@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { X, Plus, Trash2, GripVertical } from "lucide-react";
+import { X, Plus, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
@@ -203,7 +203,6 @@ export function PivotDialog({
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
         <div className="flex items-center gap-2">
-          <GripVertical className="h-3 w-3 text-muted-foreground/50" />
           <span className="text-xs font-medium">Pivot Table</span>
         </div>
         <button
