@@ -21,7 +21,7 @@ import "reactflow/dist/style.css";
 import { Card } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Table, X, Edit3, Check, Rows3, Settings } from "lucide-react";
+import { Table, Edit3, Check, Rows3, Settings } from "lucide-react";
 import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "./ContextMenu";
 
@@ -365,15 +365,6 @@ function PipelineStepNode({
               <Edit3 className="h-2.5 w-2.5" />
             </button>
           )}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              data.onStepRemove(data.step.id);
-            }}
-            className="w-5 h-5 bg-background border shadow-sm rounded flex items-center justify-center hover:bg-destructive/10 hover:text-destructive transition-colors"
-          >
-            <X className="h-2.5 w-2.5" />
-          </button>
         </div>
         {/* 双向 Handle - 右侧既是 source 也是 target */}
         <Handle
@@ -1337,20 +1328,23 @@ export function FlowPanel({
 
   // 更新连线的切断效果和待删除高亮效果
   useEffect(() => {
-    setEdges(prevEdges => prevEdges.map(edge => {
-      const isCut = cutEdges.has(edge.id);
-      const isPending = pendingDeleteEdges.has(edge.id);
-      return {
-        ...edge,
-        style: {
-          ...edge.style,
-          strokeDasharray: isCut ? '10' : undefined,
-          animation: isCut ? 'cut-edge-animation 0.2s ease-out forwards' : undefined,
-          stroke: isPending && !isCut ? '#f97316' : edge.style?.stroke,
-          filter: isPending && !isCut ? 'drop-shadow(0 0 6px rgba(249, 115, 22, 0.7))' : undefined,
-        },
-      };
-    }));
+    const rafId = requestAnimationFrame(() => {
+      setEdges(prevEdges => prevEdges.map(edge => {
+        const isCut = cutEdges.has(edge.id);
+        const isPending = pendingDeleteEdges.has(edge.id);
+        return {
+          ...edge,
+          style: {
+            ...edge.style,
+            strokeDasharray: isCut ? '10' : undefined,
+            animation: isCut ? 'cut-edge-animation 0.2s ease-out forwards' : undefined,
+            stroke: isPending && !isCut ? '#f97316' : edge.style?.stroke,
+            filter: isPending && !isCut ? 'drop-shadow(0 0 6px rgba(249, 115, 22, 0.7))' : undefined,
+          },
+        };
+      }));
+    });
+    return () => cancelAnimationFrame(rafId);
   }, [cutEdges, pendingDeleteEdges]);
 
   useEffect(() => {
@@ -1571,7 +1565,7 @@ export function FlowPanel({
         minZoom={0.3}
         maxZoom={1.5}
         defaultEdgeOptions={{
-          type: "straight",
+          type: "default",
           style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
         }}
         proOptions={{ hideAttribution: true }}
