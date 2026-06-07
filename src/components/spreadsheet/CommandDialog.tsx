@@ -56,7 +56,8 @@ export type CommandDialogType =
   | "split"
   | "partition"
   | "range"
-  | "eval";
+  | "eval"
+  | "output";
 
 export interface CommandDialogState {
   type: CommandDialogType;
@@ -125,6 +126,7 @@ export function CommandDialog({
           top: `calc(50% + ${offset.y}px)`,
           transform: "translate(-50%, -50%)",
         }}
+        onContextMenu={(e) => e.preventDefault()}
       >
         <div
           className="flex items-center justify-between mb-2 cursor-move select-none"
@@ -181,6 +183,7 @@ export function CommandDialog({
             {commandDialog.type === "partition" && "Partition"}
             {commandDialog.type === "range" && "Range"}
             {commandDialog.type === "eval" && "Eval"}
+            {commandDialog.type === "output" && "Output"}
           </h3>
           <Button
             variant="ghost"
@@ -226,7 +229,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      placeholder="Enter search pattern"
+                      placeholder="Search condition"
                       className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                       autoFocus
                     />
@@ -694,24 +697,6 @@ export function CommandDialog({
                     className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Output</label>
-                  <input
-                    type="text"
-                    value={commandDialog.params.output || ""}
-                    onChange={(e) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          output: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder="Write output to file instead of stdout"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                  />
-                </div>
               </div>
             </ScrollArea>
             <div className="flex justify-end gap-2 mt-2">
@@ -858,21 +843,6 @@ export function CommandDialog({
                   className="w-20 h-8 px-1 text-sm border rounded-md bg-background"
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -1148,21 +1118,6 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output ?? ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -1296,6 +1251,46 @@ export function CommandDialog({
         {commandDialog.type === "view" && (
           <div className="space-y-4">
             <div className="space-y-2">
+              <label className="text-sm font-medium">Select Columns</label>
+              <input
+                type="text"
+                value={commandDialog.params.select || ""}
+                onChange={(e) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      select: e.target.value || undefined,
+                    },
+                  })
+                }
+                placeholder="Leave empty to show all columns"
+                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                autoFocus
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="view-all"
+                checked={commandDialog.params.all || false}
+                onChange={(e) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      all: e.target.checked,
+                      limit: e.target.checked ? 0 : commandDialog.params.limit || 10,
+                    },
+                  })
+                }
+                className="h-4 w-4"
+              />
+              <label htmlFor="view-all" className="text-sm cursor-pointer">
+                Show All Rows
+              </label>
+            </div>
+            <div className="space-y-2">
               <label className="text-sm font-medium">Limit</label>
               <input
                 type="number"
@@ -1311,7 +1306,7 @@ export function CommandDialog({
                 }
                 placeholder="Number of rows to display"
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                autoFocus
+                disabled={commandDialog.params.all}
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -1377,6 +1372,23 @@ export function CommandDialog({
                 />
                 Parallel
               </label>
+              <input
+                type="number"
+                value={commandDialog.params.threads}
+                onChange={(e) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      threads: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
+                    },
+                  })
+                }
+                placeholder="Number of threads"
+                className="h-10 px-3 text-sm border rounded-md bg-background"
+              />
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
@@ -1502,21 +1514,6 @@ export function CommandDialog({
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -1580,21 +1577,6 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -1655,21 +1637,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Number of rows to return"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
@@ -1807,21 +1774,6 @@ export function CommandDialog({
                 />
                 Cursed
               </label>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output ?? ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -2011,21 +1963,6 @@ export function CommandDialog({
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -2108,21 +2045,6 @@ export function CommandDialog({
                 />
                 External
               </label>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -2332,21 +2254,6 @@ export function CommandDialog({
                   className="w-32 h-8 px-2 text-sm border rounded-md bg-background"
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -2567,24 +2474,6 @@ export function CommandDialog({
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Output</label>
-                  <input
-                    type="text"
-                    value={commandDialog.params.output || ""}
-                    onChange={(e) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          output: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder="Write output to file instead of stdout"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                  />
-                </div>
               </div>
             </ScrollArea>
             <div className="flex justify-end gap-2 mt-2">
@@ -2798,21 +2687,6 @@ export function CommandDialog({
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -2970,21 +2844,6 @@ export function CommandDialog({
                   className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -3235,21 +3094,6 @@ export function CommandDialog({
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -3296,26 +3140,7 @@ export function CommandDialog({
         {commandDialog.type === "window" && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Expression</label>
-              <input
-                type="text"
-                value={commandDialog.params.expression || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      expression: e.target.value,
-                    },
-                  })
-                }
-                placeholder="Window expression (e.g., lag:col1)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                autoFocus
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Group By</label>
+              <label className="text-sm font-medium">GroupBy (optional)</label>
               <input
                 type="text"
                 value={commandDialog.params.groupby || ""}
@@ -3333,18 +3158,22 @@ export function CommandDialog({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
+              <label className="text-sm font-medium">Expression</label>
               <input
                 type="text"
-                value={commandDialog.params.output || ""}
+                value={commandDialog.params.expression || ""}
                 onChange={(e) =>
                   setCommandDialog({
                     ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
+                    params: {
+                      ...commandDialog.params,
+                      expression: e.target.value,
+                    },
                   })
                 }
-                placeholder="Write output to file instead of stdout"
+                placeholder="Window expression (e.g., lag:col1)"
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                autoFocus
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -3465,21 +3294,6 @@ export function CommandDialog({
                 />
                 Count
               </label>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -3746,21 +3560,6 @@ export function CommandDialog({
                 Non Empty
               </label>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output ?? ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -3985,21 +3784,6 @@ export function CommandDialog({
                 autoFocus
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -4116,9 +3900,6 @@ export function CommandDialog({
                 />
                 Parallel
               </label>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Threads</label>
               <input
                 type="number"
                 value={commandDialog.params.threads || ""}
@@ -4131,22 +3912,7 @@ export function CommandDialog({
                     },
                   })
                 }
-                placeholder="Number of threads to use"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
+                placeholder="Number of threads"
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
@@ -4304,21 +4070,6 @@ export function CommandDialog({
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Output</label>
-                  <input
-                    type="text"
-                    value={commandDialog.params.output || ""}
-                    onChange={(e) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: { ...commandDialog.params, output: e.target.value },
-                      })
-                    }
-                    placeholder="Write output to file instead of stdout"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                  />
-                </div>
               </div>
             </ScrollArea>
             <div className="flex justify-end gap-2 mt-2">
@@ -4442,21 +4193,6 @@ export function CommandDialog({
                 Accumulate
               </label>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -4529,21 +4265,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Fill empty cells using provided value"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
@@ -4736,21 +4457,6 @@ export function CommandDialog({
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -4907,21 +4613,6 @@ export function CommandDialog({
                   className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -5261,21 +4952,6 @@ export function CommandDialog({
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -5447,21 +5123,6 @@ export function CommandDialog({
                 Ties
               </label>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output ?? ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -5592,21 +5253,6 @@ export function CommandDialog({
                 />
                 Pad
               </label>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -5847,21 +5493,6 @@ export function CommandDialog({
                     Nulls
                   </label>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Output</label>
-                  <input
-                    type="text"
-                    value={commandDialog.params.output || ""}
-                    onChange={(e) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: { ...commandDialog.params, output: e.target.value },
-                      })
-                    }
-                    placeholder="Write output to file instead of stdout"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                  />
-                </div>
               </div>
             </ScrollArea>
             <div className="flex justify-end gap-2 mt-2">
@@ -6044,21 +5675,6 @@ export function CommandDialog({
                     />
                     Uniq
                   </label>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Output</label>
-                  <input
-                    type="text"
-                    value={commandDialog.params.output || ""}
-                    onChange={(e) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: { ...commandDialog.params, output: e.target.value },
-                      })
-                    }
-                    placeholder="Write output to file instead of stdout"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                  />
                 </div>
               </div>
             </ScrollArea>
@@ -6363,21 +5979,6 @@ export function CommandDialog({
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Output</label>
-                  <input
-                    type="text"
-                    value={commandDialog.params.output || ""}
-                    onChange={(e) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: { ...commandDialog.params, output: e.target.value },
-                      })
-                    }
-                    placeholder="Write output to file instead of stdout"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                  />
-                </div>
               </div>
             </ScrollArea>
             <div className="flex justify-end gap-2 mt-2">
@@ -6545,21 +6146,6 @@ export function CommandDialog({
                 Force
               </label>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -6625,21 +6211,6 @@ export function CommandDialog({
                 />
                 Append
               </label>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -6724,21 +6295,6 @@ export function CommandDialog({
                 />
                 Trust Header
               </label>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -6871,21 +6427,6 @@ export function CommandDialog({
                 Drop Empty
               </label>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -6936,25 +6477,24 @@ export function CommandDialog({
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Output Delimiter</label>
-                <select
+                <SearchableSelect
                   value={commandDialog.params["out-delimiter"] || ","}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     setCommandDialog({
                       ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "out-delimiter": e.target.value,
-                      },
+                      params: { ...commandDialog.params, "out-delimiter": value },
                     })
                   }
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                >
-                  <option value=",">Comma (,)</option>
-                  <option value="\t">Tab (\t)</option>
-                  <option value=";">Semicolon (;)</option>
-                  <option value="|">Pipe (|)</option>
-                  <option value="^">Caret (^)</option>
-                </select>
+                  options={[
+                    { label: "Comma (,)", value: "," },
+                    { label: "Tab (\\t)", value: "\t" },
+                    { label: "Semicolon (;)", value: ";" },
+                    { label: "Pipe (|)", value: "|" },
+                    { label: "Caret (^)", value: "^" },
+                  ]}
+                  placeholder="Search or select..."
+                  size="md"
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Quote Character</label>
@@ -6988,6 +6528,23 @@ export function CommandDialog({
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params["in-place"]}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        "in-place": e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-4 w-4"
+                />
+                In Place
+              </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
@@ -7074,21 +6631,6 @@ export function CommandDialog({
                 Quote Never
               </label>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -7137,147 +6679,188 @@ export function CommandDialog({
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Format</label>
-                <select
-                  value={commandDialog.params.format || "json"}
-                  onChange={(e) =>
+                <SearchableSelect
+                  value={commandDialog.params.format || "xlsx"}
+                  onChange={(value) =>
                     setCommandDialog({
                       ...commandDialog,
-                      params: { ...commandDialog.params, format: e.target.value },
+                      params: { ...commandDialog.params, format: value },
                     })
                   }
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                >
-                  <option value="html">HTML</option>
-                  <option value="json">JSON</option>
-                  <option value="jsonl">JSONL</option>
-                  <option value="md">Markdown</option>
-                  <option value="ndjson">NDJSON</option>
-                  <option value="npy">NPY</option>
-                  <option value="txt">Text</option>
-                  <option value="xlsx">XLSX</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Sample Size</label>
-                <input
-                  type="number"
-                  value={commandDialog.params["sample-size"] || 512}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "sample-size": parseInt(e.target.value) || 512,
-                      },
-                    })
-                  }
-                  placeholder="Sample size"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Number Type (NPY)</label>
-                <select
-                  value={commandDialog.params.dtype || "f64"}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: { ...commandDialog.params, dtype: e.target.value },
-                    })
-                  }
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                >
-                  <option value="f32">f32</option>
-                  <option value="f64">f64</option>
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Strings</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.strings || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        strings: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="Force as raw strings (JSON)"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Select (Text)</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.select || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: { ...commandDialog.params, select: e.target.value },
-                    })
-                  }
-                  placeholder="Column to emit as text (txt)"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  options={[
+                    { label: "XLSX", value: "xlsx" },
+                    { label: "HTML", value: "html" },
+                    { label: "JSON", value: "json" },
+                    { label: "JSONL", value: "jsonl" },
+                    { label: "Markdown", value: "md" },
+                    { label: "NDJSON", value: "ndjson" },
+                    { label: "NPY", value: "npy" },
+                    { label: "Text", value: "txt" },
+
+                  ]}
+                  placeholder="Search or select format..."
+                  size="md"
                 />
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.nulls}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        nulls: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Nulls
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.omit}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        omit: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Omit Empty
-              </label>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
+            {(commandDialog.params.format === "json" ||
+              commandDialog.params.format === "jsonl" ||
+              commandDialog.params.format === "ndjson") && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Sample Size</label>
+                      <input
+                        type="number"
+                        value={commandDialog.params["sample-size"] || 512}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              "sample-size": parseInt(e.target.value) || 512,
+                            },
+                          })
+                        }
+                        placeholder="Number of rows to sample"
+                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Strings</label>
+                      <input
+                        type="text"
+                        value={commandDialog.params.strings || ""}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              strings: e.target.value,
+                            },
+                          })
+                        }
+                        placeholder="Force as raw strings"
+                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={commandDialog.params.nulls}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              nulls: e.target.checked,
+                            },
+                          })
+                        }
+                        className="h-4 w-4"
+                      />
+                      Nulls
+                    </label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={commandDialog.params.omit}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              omit: e.target.checked,
+                            },
+                          })
+                        }
+                        className="h-4 w-4"
+                      />
+                      Omit Empty
+                    </label>
+                  </div>
+                </div>
+              )}
+            {commandDialog.params.format === "npy" && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Number Type</label>
+                    <select
+                      value={commandDialog.params.dtype || "f64"}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: { ...commandDialog.params, dtype: e.target.value },
+                        })
+                      }
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    >
+                      <option value="f32">f32</option>
+                      <option value="f64">f64</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Select</label>
+                    <input
+                      type="text"
+                      value={commandDialog.params.select || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: { ...commandDialog.params, select: e.target.value },
+                        })
+                      }
+                      placeholder="Numerical columns to emit"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            {commandDialog.params.format === "txt" && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Select</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.select || ""}
+                    onChange={(e) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: { ...commandDialog.params, select: e.target.value },
+                      })
+                    }
+                    placeholder="Column to emit as text"
+                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  />
+                </div>
+              </div>
+            )}
+            {commandDialog.params.format === "md" && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Limit</label>
+                  <input
+                    type="number"
+                    value={commandDialog.params.limit || ""}
+                    onChange={(e) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          limit: e.target.value ? parseInt(e.target.value) : undefined,
+                        },
+                      })
+                    }
+                    placeholder="Maximum number of rows"
+                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  />
+                </div>
+              </div>
+            )}
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -7326,159 +6909,248 @@ export function CommandDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Format</label>
-                <select
+                <SearchableSelect
                   value={commandDialog.params.format || ""}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     setCommandDialog({
                       ...commandDialog,
-                      params: { ...commandDialog.params, format: e.target.value },
+                      params: { ...commandDialog.params, format: value },
                     })
                   }
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                >
-                  <option value="">Auto-detect</option>
-                  <option value="ods">ODS</option>
-                  <option value="xls">XLS</option>
-                  <option value="xlsb">XLSB</option>
-                  <option value="xlsx">XLSX</option>
-                  <option value="json">JSON</option>
-                  <option value="jsonl">JSONL</option>
-                  <option value="ndjson">NDJSON</option>
-                  <option value="txt">Text</option>
-                  <option value="npy">NPY</option>
-                  <option value="tar"> TAR</option>
-                  <option value="md">Markdown</option>
-                  <option value="markdown">Markdown (full)</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Sample Size</label>
-                <input
-                  type="number"
-                  value={commandDialog.params["sample-size"] || 64}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "sample-size": parseInt(e.target.value) || 64,
-                      },
-                    })
-                  }
-                  placeholder="Number of records to sample"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  options={[
+                    { label: "ODS", value: "ods" },
+                    { label: "XLS", value: "xls" },
+                    { label: "XLSB", value: "xlsb" },
+                    { label: "XLSX", value: "xlsx" },
+                    { label: "JSON", value: "json" },
+                    { label: "JSONL", value: "jsonl" },
+                    { label: "NDJSON", value: "ndjson" },
+                    { label: "Text", value: "txt" },
+                    { label: "NPY", value: "npy" },
+                    { label: "TAR", value: "tar" },
+                    { label: "Markdown (.md)", value: "md" },
+                    { label: "Markdown (.markdown)", value: "markdown" },
+                  ]}
+                  placeholder="Search or select format..."
+                  size="md"
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Sheet Index</label>
-                <input
-                  type="number"
-                  value={commandDialog.params["sheet-index"] || 0}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "sheet-index": parseInt(e.target.value) || 0,
-                      },
-                    })
-                  }
-                  placeholder="0-based index"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
+
+            {(commandDialog.params.format === "ods" ||
+              commandDialog.params.format === "xls" ||
+              commandDialog.params.format === "xlsb" ||
+              commandDialog.params.format === "xlsx") && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Sheet Index</label>
+                      <input
+                        type="number"
+                        value={commandDialog.params["sheet-index"]}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              "sheet-index": parseInt(e.target.value),
+                            },
+                          })
+                        }
+                        placeholder="0-based index"
+                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Sheet Name</label>
+                      <input
+                        type="text"
+                        value={commandDialog.params["sheet-name"] || ""}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              "sheet-name": e.target.value,
+                            },
+                          })
+                        }
+                        placeholder="Name of the sheet"
+                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={commandDialog.params["list-sheets"]}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              "list-sheets": e.target.checked,
+                            },
+                          })
+                        }
+                        className="h-4 w-4"
+                      />
+                      List Sheets
+                    </label>
+                  </div>
+                </div>
+              )}
+
+            {(commandDialog.params.format === "json" ||
+              commandDialog.params.format === "jsonl" ||
+              commandDialog.params.format === "ndjson") && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Sample Size</label>
+                      <input
+                        type="number"
+                        value={commandDialog.params["sample-size"] || 64}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              "sample-size": parseInt(e.target.value) || 64,
+                            },
+                          })
+                        }
+                        placeholder="Number of records to sample (default: 64)"
+                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Key Column</label>
+                      <input
+                        type="text"
+                        value={commandDialog.params["key-column"]}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              "key-column": e.target.value,
+                            },
+                          })
+                        }
+                        placeholder="Name for the key column"
+                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Value Column</label>
+                      <input
+                        type="text"
+                        value={commandDialog.params["value-column"]}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              "value-column": e.target.value,
+                            },
+                          })
+                        }
+                        placeholder="Name for the value column"
+                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={commandDialog.params["sort-keys"]}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              "sort-keys": e.target.checked,
+                            },
+                          })
+                        }
+                        className="h-4 w-4"
+                      />
+                      Sort Keys
+                    </label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={commandDialog.params["single-object"]}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              "single-object": e.target.checked,
+                            },
+                          })
+                        }
+                        className="h-4 w-4"
+                      />
+                      Single Object
+                    </label>
+                  </div>
+                </div>
+              )}
+
+            {commandDialog.params.format === "txt" && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Column Name</label>
+                    <input
+                      type="text"
+                      value={commandDialog.params.column || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: { ...commandDialog.params, column: e.target.value },
+                        })
+                      }
+                      placeholder="Name of the column to create"
+                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Sheet Name</label>
-                <input
-                  type="text"
-                  value={commandDialog.params["sheet-name"] || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "sheet-name": e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="Name of the sheet"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Column Name (Text)</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.column || "value"}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: { ...commandDialog.params, column: e.target.value },
-                    })
-                  }
-                  placeholder="Name of the column to create"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Nth Table (Markdown)
-                </label>
-                <input
-                  type="number"
-                  value={commandDialog.params["nth-table"] || 0}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "nth-table": parseInt(e.target.value) || 0,
-                      },
-                    })
-                  }
-                  placeholder="Select nth table"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["sort-keys"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "sort-keys": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Sort Keys
-              </label>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
+            )}
+
+            {(commandDialog.params.format === "md" ||
+              commandDialog.params.format === "markdown") && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Nth Table</label>
+                      <input
+                        type="number"
+                        value={commandDialog.params["nth-table"] || 0}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: {
+                              ...commandDialog.params,
+                              "nth-table": parseInt(e.target.value) || 0,
+                            },
+                          })
+                        }
+                        placeholder="Select nth table (default: 0)"
+                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -7524,21 +7196,6 @@ export function CommandDialog({
 
         {commandDialog.type === "reverse" && (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -7586,21 +7243,6 @@ export function CommandDialog({
 
         {commandDialog.type === "transpose" && (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -7717,21 +7359,6 @@ export function CommandDialog({
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -7831,21 +7458,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name for the column containing unpivoted column values"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
                 className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
@@ -7995,21 +7607,6 @@ export function CommandDialog({
                 />
                 Segments
               </label>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -8183,21 +7780,6 @@ export function CommandDialog({
                 Case Sensitive
               </label>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -8342,21 +7924,6 @@ export function CommandDialog({
                 />
                 Inclusive
               </label>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Output</label>
-              <input
-                type="text"
-                value={commandDialog.params.output || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, output: e.target.value },
-                  })
-                }
-                placeholder="Write output to file instead of stdout"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-              />
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -8526,6 +8093,68 @@ export function CommandDialog({
                   }
                   setCommandDialog(null);
                 }}
+              >
+                {commandDialog.isUpdate ? "Update" : "Add"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {commandDialog.type === "output" && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Output Path</label>
+              <input
+                type="text"
+                value={commandDialog.params.path || ""}
+                onChange={(e) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: { ...commandDialog.params, path: e.target.value },
+                  })
+                }
+                placeholder="Enter output file path"
+                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end gap-2 mt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (
+                    commandDialog.isUpdate &&
+                    commandDialog.stepId &&
+                    onStepUpdate
+                  ) {
+                    onStepUpdate(commandDialog.stepId, commandDialog.params);
+                  } else {
+                    const outputCmd = xanCommands.find((c) => c.id === "output");
+                    if (outputCmd) {
+                      const params = {
+                        ...outputCmd.parameters.reduce(
+                          (acc, param) => {
+                            acc[param.name] = param.default;
+                            return acc;
+                          },
+                          {} as Record<string, any>,
+                        ),
+                        ...commandDialog.params,
+                      };
+                      onAddCommand(outputCmd, params);
+                    }
+                  }
+                  setCommandDialog(null);
+                }}
+                disabled={!commandDialog.params.path}
               >
                 {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>

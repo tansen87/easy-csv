@@ -21,6 +21,14 @@ export interface PipelineStep {
   id: string;
   command: XanCommand;
   parameters: Record<string, any>;
+  alias?: string;
+  position?: { x: number; y: number };
+}
+
+export interface PipelineEdge {
+  id: string;
+  source: string;
+  target: string;
 }
 
 export interface LogEntry {
@@ -40,6 +48,8 @@ export interface PipelineTab {
   headers?: string[];
   inputFile?: string;
   defaultDelimiter?: string;
+  edges?: PipelineEdge[];
+  inputPosition?: { x: number; y: number };
 }
 
 export interface HistoricalPipeline {
@@ -51,6 +61,8 @@ export interface HistoricalPipeline {
   executedAt: string;
   success: boolean;
   output?: string;
+  edges?: PipelineEdge[];
+  inputPosition?: { x: number; y: number };
 }
 
 export interface Workspace {

@@ -4,14 +4,15 @@ import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
-interface ReplaceDialogState {
+interface PadDialogState {
   col: number;
   x: number;
   y: number;
+  padType: string;
 }
 
-interface ReplaceDialogProps {
-  replaceDialog: ReplaceDialogState;
+interface PadDialogProps {
+  padDialog: PadDialogState;
   headers: string[];
   onAddCommand: (
     command: XanCommand,
@@ -20,24 +21,29 @@ interface ReplaceDialogProps {
   onClose: () => void;
 }
 
-export function ReplaceDialog({
-  replaceDialog,
+const PAD_TYPES = [
+  { label: "Pad", value: "pad" },
+  { label: "Left Pad", value: "lpad" },
+  { label: "Right Pad", value: "rpad" },
+];
+
+export function PadDialog({
+  padDialog,
   headers,
   onAddCommand,
   onClose,
-}: ReplaceDialogProps) {
-  const [selectedColumn, setSelectedColumn] = useState(headers[replaceDialog.col] || "");
-  const [pattern, setPattern] = useState("");
-  const [replace, setReplace] = useState("");
-  const [ignoreCase, setIgnoreCase] = useState(false);
-  const [regex, setRegex] = useState(false);
-  const [position, setPosition] = useState({ x: replaceDialog.x, y: replaceDialog.y });
+}: PadDialogProps) {
+  const [selectedColumn, setSelectedColumn] = useState(headers[padDialog.col] || "");
+  const [padType, setPadType] = useState(padDialog.padType || "pad");
+  const [width, setWidth] = useState("10");
+  const [char, setChar] = useState("");
+  const [position, setPosition] = useState({ x: padDialog.x, y: padDialog.y });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest(".no-drag")) return;
-    
+
     setIsDragging(true);
     dragRef.current = {
       startX: e.clientX,
@@ -75,21 +81,19 @@ export function ReplaceDialog({
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   const handleApply = () => {
-    if (!pattern.trim() || !selectedColumn) return;
+    if (!selectedColumn || !width) return;
 
     const mapCommand = xanCommands.find((cmd) => cmd.id === "map");
     if (mapCommand) {
-      let patternExpr: string;
-      if (regex) {
-        // Regex mode: wrap pattern in slashes with optional case-insensitive flag
-        const flags = ignoreCase ? "i" : "";
-        patternExpr = `/${pattern}/${flags}`;
-      } else {
-        // Substring mode: wrap pattern in quotes
-        patternExpr = `"${pattern}"`;
-      }
+      const columnName = selectedColumn;
+      let expression: string;
 
-      const expression = `replace(col("${selectedColumn}"), ${patternExpr}, "${replace}") as "${selectedColumn}"`;
+      const widthNum = parseInt(width, 10);
+      if (char.trim()) {
+        expression = `${padType}(col("${columnName}"), ${widthNum}, "${char}") as "${columnName}"`;
+      } else {
+        expression = `${padType}(col("${columnName}"), ${widthNum}) as "${columnName}"`;
+      }
 
       onAddCommand(mapCommand, {
         expression,
@@ -109,11 +113,10 @@ export function ReplaceDialog({
       }}
       onClick={(e) => e.stopPropagation()}
       onMouseDown={handleMouseDown}
-      onContextMenu={(e) => e.preventDefault()}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium">Replace</span>
+          <span className="text-xs font-medium">Pad</span>
         </div>
         <button
           onClick={onClose}
@@ -130,54 +133,46 @@ export function ReplaceDialog({
           <SearchableSelect
             value={selectedColumn}
             onChange={setSelectedColumn}
-            options={headers.map((header) => ({ label: header, value: header }))}
+            options={headers.map((header) => ({ value: header, label: header }))}
             placeholder="Search or select column..."
           />
         </div>
         <div className="space-y-1">
           <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
-            Pattern
+            Pad Type
           </label>
-          <input
-            type="text"
-            value={pattern}
-            onChange={(e) => setPattern(e.target.value)}
-            placeholder="Pattern to search"
-            className="w-full h-8 px-2 text-xs border rounded bg-background"
-            autoFocus
+          <SearchableSelect
+            value={padType}
+            onChange={setPadType}
+            options={PAD_TYPES}
+            placeholder="Select pad type..."
           />
         </div>
         <div className="space-y-1">
           <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
-            Replace With
+            Width
+          </label>
+          <input
+            type="number"
+            value={width}
+            onChange={(e) => setWidth(e.target.value)}
+            placeholder="Target width"
+            className="w-full h-8 px-2 text-xs border rounded bg-background"
+            min="1"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+            Character (optional)
           </label>
           <input
             type="text"
-            value={replace}
-            onChange={(e) => setReplace(e.target.value)}
-            placeholder="Replacement string"
+            value={char}
+            onChange={(e) => setChar(e.target.value)}
+            placeholder="Space if blank"
             className="w-full h-8 px-2 text-xs border rounded bg-background"
+            maxLength={1}
           />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="flex items-center gap-2 text-xs cursor-pointer">
-            <input
-              type="checkbox"
-              checked={ignoreCase}
-              onChange={(e) => setIgnoreCase(e.target.checked)}
-              className="h-4 w-4"
-            />
-            Ignore Case
-          </label>
-          <label className="flex items-center gap-2 text-xs cursor-pointer">
-            <input
-              type="checkbox"
-              checked={regex}
-              onChange={(e) => setRegex(e.target.checked)}
-              className="h-4 w-4"
-            />
-            Regex
-          </label>
         </div>
       </div>
 

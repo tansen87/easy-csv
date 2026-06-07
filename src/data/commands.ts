@@ -1,19 +1,40 @@
-import { XanCommand, XanParameter } from "@/types/xan";
-
-const outputParam: XanParameter = {
-  name: "output",
-  type: "string",
-  description: "Write output to file instead of stdout",
-  required: false,
-};
+import { XanCommand } from "@/types/xan";
 
 export const xanCommands: XanCommand[] = [
+  {
+    id: "output",
+    name: "output",
+    description: "Write output to file instead of stdout",
+    category: "Output",
+    parameters: [
+      {
+        name: "path",
+        type: "string",
+        description: "Output file path",
+        required: true,
+        isPositional: true,
+      },
+    ],
+  },
   {
     id: "view",
     name: "view",
     description: "Preview a CSV file in a human-friendly way",
     category: "Explore & visualize",
     parameters: [
+      {
+        name: "select",
+        type: "string",
+        description: "Select the columns to visualize",
+        required: false,
+      },
+      {
+        name: "all",
+        type: "flag",
+        description: "Remove the row limit and display everything",
+        required: false,
+        default: false,
+      },
       {
         name: "limit",
         type: "number",
@@ -50,6 +71,12 @@ export const xanCommands: XanCommand[] = [
         description: "Use parallelization to speed up counting",
         required: false,
         default: false,
+      },
+      {
+        name: "threads",
+        type: "number",
+        description: "Parellize computations using this many threads",
+        required: false,
       },
       {
         name: "approx",
@@ -165,7 +192,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -275,7 +302,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: "lin",
       },
-      outputParam,
+
     ],
   },
   {
@@ -304,7 +331,7 @@ export const xanCommands: XanCommand[] = [
         description: "Read evaluation expression from a file instead",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -320,7 +347,7 @@ export const xanCommands: XanCommand[] = [
         required: true,
         isPositional: true,
       },
-      outputParam,
+
     ],
   },
   {
@@ -369,7 +396,7 @@ export const xanCommands: XanCommand[] = [
         description: "Parellize computations using this many threads",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -392,7 +419,7 @@ export const xanCommands: XanCommand[] = [
         required: true,
         isPositional: true,
       },
-      outputParam,
+
     ],
   },
   {
@@ -428,7 +455,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -449,7 +476,7 @@ export const xanCommands: XanCommand[] = [
         description: "Fill empty cells using provided value instead of using last non-empty value",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -511,7 +538,7 @@ export const xanCommands: XanCommand[] = [
         description: "Select columns to group by",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -559,7 +586,7 @@ export const xanCommands: XanCommand[] = [
         description: "Parellize computations using this many threads",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -582,7 +609,7 @@ export const xanCommands: XanCommand[] = [
         required: true,
         isPositional: true,
       },
-      outputParam,
+
     ],
   },
   {
@@ -765,7 +792,7 @@ export const xanCommands: XanCommand[] = [
         description: "Column containing pattern name for breakdown",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -802,7 +829,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -832,7 +859,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -848,7 +875,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: 10,
       },
-      outputParam,
+
     ],
   },
   {
@@ -864,7 +891,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: 10,
       },
-      outputParam,
+
     ],
   },
   {
@@ -891,7 +918,7 @@ export const xanCommands: XanCommand[] = [
         description: "The length of the slice (can be used instead of --end)",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -947,7 +974,7 @@ export const xanCommands: XanCommand[] = [
         description: "Name of a rank column to prepend",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -988,7 +1015,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1092,7 +1119,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1154,7 +1181,7 @@ export const xanCommands: XanCommand[] = [
         description: "Add a column with given name indicating whether a row is duplicated",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1176,7 +1203,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1244,7 +1271,7 @@ export const xanCommands: XanCommand[] = [
         description: "Parellize computations using this many threads",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1311,7 +1338,7 @@ export const xanCommands: XanCommand[] = [
         description: "Parellize computations using this many threads",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1380,7 +1407,7 @@ export const xanCommands: XanCommand[] = [
         description: "Parellize computations using this many threads",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1427,7 +1454,7 @@ export const xanCommands: XanCommand[] = [
         description: "Parellize computations using this many threads",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1503,7 +1530,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1525,7 +1552,7 @@ export const xanCommands: XanCommand[] = [
         description: "If given, resets the computed aggregations each time the given selection yields a new identity",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1567,7 +1594,7 @@ export const xanCommands: XanCommand[] = [
         description: "Name of a column to prepend in the output of 'cat rows' indicating the path to source file",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1645,7 +1672,7 @@ export const xanCommands: XanCommand[] = [
         description: "Add a prefix to the names of the columns in the second dataset",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1706,7 +1733,7 @@ export const xanCommands: XanCommand[] = [
         description: "When given a column name, --paths will be considered as CSV, and paths to CSV files to merge will be extracted from the selected column",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1811,7 +1838,7 @@ export const xanCommands: XanCommand[] = [
         description: "Add a prefix to the names of the columns in the patterns file",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1866,7 +1893,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1882,7 +1909,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1904,7 +1931,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1947,7 +1974,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -1957,11 +1984,19 @@ export const xanCommands: XanCommand[] = [
     category: "Format, convert & recombobulate",
     parameters: [
       {
+        name: "in-place",
+        type: "flag",
+        description: "Write the result in a temporary file and replace input file with it when finished",
+        required: false,
+        default: false,
+      },
+      {
         name: "out-delimiter",
         type: "select",
         description: "The field delimiter for writing CSV data",
         required: false,
         options: [",", "\\t", ";", "|", "^"],
+        default: ",",
       },
       {
         name: "tabs",
@@ -2011,7 +2046,7 @@ export const xanCommands: XanCommand[] = [
         description: "The escape character to use",
         required: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -2027,6 +2062,7 @@ export const xanCommands: XanCommand[] = [
         required: true,
         isPositional: true,
         options: ["html", "json", "jsonl", "md", "ndjson", "npy", "txt", "xlsx"],
+        default: "xlsx",
       },
       {
         name: "sample-size",
@@ -2065,10 +2101,15 @@ export const xanCommands: XanCommand[] = [
       {
         name: "select",
         type: "string",
-        description: "Column to emit as text (txt)",
+        description: "Column to emit as text (txt) or numerical columns for NPY",
         required: false,
       },
-      outputParam,
+      {
+        name: "limit",
+        type: "number",
+        description: "Maximum number of rows to emit (Markdown)",
+        required: false,
+      },
     ],
   },
   {
@@ -2083,13 +2124,13 @@ export const xanCommands: XanCommand[] = [
         description: "Input format (will be inferred from file extension if not given)",
         required: false,
         options: ["ods", "xls", "xlsb", "xlsx", "json", "jsonl", "ndjson", "txt", "npy", "tar", "md", "markdown"],
+        default: "xlsx",
       },
       {
         name: "sheet-index",
         type: "number",
         description: "0-based index of the sheet to convert (Excel/OpenOffice)",
         required: false,
-        default: 0,
       },
       {
         name: "sheet-name",
@@ -2098,11 +2139,17 @@ export const xanCommands: XanCommand[] = [
         required: false,
       },
       {
+        name: "list-sheets",
+        type: "flag",
+        description: "Print sheet names instead of converting file (Excel/OpenOffice)",
+        required: false,
+        default: false,
+      },
+      {
         name: "sample-size",
         type: "number",
         description: "Number of records to sample before emitting headers (JSON)",
         required: false,
-        default: 64,
       },
       {
         name: "sort-keys",
@@ -2112,20 +2159,37 @@ export const xanCommands: XanCommand[] = [
         default: false,
       },
       {
+        name: "key-column",
+        type: "string",
+        description: "Name for the key column when parsing a JSON map",
+        required: false,
+      },
+      {
+        name: "value-column",
+        type: "string",
+        description: "Name for the value column when parsing a JSON map",
+        required: false,
+      },
+      {
+        name: "single-object",
+        type: "flag",
+        description: "Use if JSON only represents a single object that you want to map to a single CSV row",
+        required: false,
+        default: false,
+      },
+      {
         name: "column",
         type: "string",
         description: "Name of the column to create (text lines)",
         required: false,
-        default: "value",
       },
       {
         name: "nth-table",
         type: "number",
         description: "Select nth table in Markdown document",
         required: false,
-        default: 0,
       },
-      outputParam,
+
     ],
   },
   {
@@ -2133,14 +2197,14 @@ export const xanCommands: XanCommand[] = [
     name: "reverse",
     description: "Reverse rows of CSV data",
     category: "Format, convert & recombobulate",
-    parameters: [outputParam],
+    parameters: [],
   },
   {
     id: "transpose",
     name: "transpose",
     description: "Transpose CSV file",
     category: "Transpose & pivot",
-    parameters: [outputParam],
+    parameters: [],
   },
   {
     id: "pivot",
@@ -2175,7 +2239,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: "_",
       },
-      outputParam,
+
     ],
   },
   {
@@ -2205,7 +2269,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: "value",
       },
-      outputParam,
+
     ],
   },
   {
@@ -2247,7 +2311,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: "{}.csv",
       },
-      outputParam,
+
     ],
   },
   {
@@ -2303,7 +2367,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -2347,7 +2411,7 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-      outputParam,
+
     ],
   },
   {
@@ -2394,6 +2458,7 @@ export const xanCommands: XanCommand[] = [
 ];
 
 export const commandCategories = [
+  "Output",
   "Explore & visualize",
   "Search & filter",
   "Sort & deduplicate",

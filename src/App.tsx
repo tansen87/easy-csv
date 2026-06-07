@@ -2,10 +2,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readFile, writeFile } from "@tauri-apps/plugin-fs";
+import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { useTheme } from "@/components/ThemeProvider";
 import { ToastContainer, ToastType } from "@/components/Toast";
+import { NotificationPanel, NotificationType } from "@/components/PersistentNotification";
 import {
   Settings,
   X,
@@ -14,13 +17,17 @@ import {
   Sun,
   Moon,
   Terminal,
-  History,
-  Search,
   FolderOpen,
   Download,
   Upload,
+  ChevronUp,
+  ChevronRight,
+  File,
+  Play,
+  Undo2,
+  Redo2,
+  Map as MapIcon,
   ChevronDown,
-  Table,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/LogPanel";
@@ -32,6 +39,7 @@ import {
   XanCommand,
   PipelineTab,
   HistoricalPipeline,
+  PipelineEdge,
 } from "@/types/xan";
 
 function formatDateTime(date: Date): string {
@@ -53,10 +61,8 @@ function App() {
   const [selectedTabId, setSelectedTabId] = useState<string>("tab-1");
   const [selectedStep, setSelectedStep] = useState<PipelineStep | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [resultData, setResultData] = useState<string | null>(null);
   const [isXanInstalled, setIsXanInstalled] = useState<boolean | null>(null);
   const [xanVersion, setXanVersion] = useState<string | null>(null);
-  const [inputFile, setInputFile] = useState<string>("");
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [isSavingSettings, setIsSavingSettings] = useState<boolean>(false);
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(",");
@@ -68,8 +74,9 @@ function App() {
   const [helpContent, setHelpContent] = useState<string>("");
   const [helpCommandName, setHelpCommandName] = useState<string>("");
   const [isHelpLoading, setIsHelpLoading] = useState<boolean>(false);
-  const [showExecuteDropdown, setShowExecuteDropdown] = useState<boolean>(false);
-  const [executeTarget, setExecuteTarget] = useState<"logs" | "result">("result");
+  const [showLogPanel, setShowLogPanel] = useState<boolean>(false);
+  const [showCommandPanel, setShowCommandPanel] = useState<boolean>(false);
+  const [showMinimap, setShowMinimap] = useState<boolean>(false);
   const [historicalPipelines, setHistoricalPipelines] = useState<
     HistoricalPipeline[]
   >([]);
@@ -78,8 +85,19 @@ function App() {
   >("commands");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
+  const [notifications, setNotifications] = useState<{ id: string; message: string; type: NotificationType }[]>([]);
+  const [activeMenu, setActiveMenu] = useState<"file" | "settings" | null>(null);
+  const [isMenuActivated, setIsMenuActivated] = useState<boolean>(false);
+
+  // Undo/Redo history state
+  const [undoStack, setUndoStack] = useState<Array<{ pipeline: PipelineStep[]; edges: PipelineEdge[]; inputPosition?: { x: number; y: number } }>>([]);
+  const [redoStack, setRedoStack] = useState<Array<{ pipeline: PipelineStep[]; edges: PipelineEdge[]; inputPosition?: { x: number; y: number } }>>([]);
+
   const showToastRef = useRef<(message: string, type: ToastType) => void>(() => { });
   const removeToastRef = useRef<(id: string) => void>(() => { });
+  const addNotificationRef = useRef<(message: string, type: NotificationType) => void>(() => { });
+  const removeNotificationRef = useRef<(id: string) => void>(() => { });
+  const headerRef = useRef<HTMLDivElement>(null);
 
   const showToast = useCallback((message: string, type: ToastType = "info") => {
     const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -90,21 +108,63 @@ function App() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
+  const addNotification = useCallback((message: string, type: NotificationType = "info") => {
+    setNotifications((prev) => {
+      // Check if notification with same message already exists
+      if (prev.some(n => n.message === message)) {
+        return prev;
+      }
+      const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      return [...prev, { id, message, type }];
+    });
+  }, []);
+
+  const removeNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  const dismissAllNotifications = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
   useEffect(() => {
     showToastRef.current = showToast;
     removeToastRef.current = removeToast;
-  }, [showToast, removeToast]);
+    addNotificationRef.current = addNotification;
+    removeNotificationRef.current = removeNotification;
+  }, [showToast, removeToast, addNotification, removeNotification]);
 
-  const [csvData, setCsvData] = useState<{
-    headers: string[];
-    rows: string[][];
-  }>({ headers: [], rows: [] });
+  const isCsvFile = (filePath: string): boolean => {
+    const ext = filePath.split('.').pop()?.toLowerCase();
+    return ext ? ['csv', 'txt', 'tsv'].includes(ext) : false;
+  };
 
-  // Load CSV file
+  // Load CSV file for a specific tab
   const loadCsvData = useCallback(
-    async (filePath: string) => {
+    async (tabId: string, filePath: string) => {
       if (!filePath) {
-        setCsvData({ headers: [], rows: [] });
+        setTabs((prev) =>
+          prev.map((tab) =>
+            tab.id === tabId
+              ? { ...tab, data: [], headers: [], inputFile: "", updatedAt: formatDateTime(new Date()) }
+              : tab,
+          ),
+        );
+        return;
+      }
+
+      if (!isCsvFile(filePath)) {
+        const ext = filePath.split('.').pop();
+        addLog("info", `Non-CSV file selected. Use "from" command in Flow panel to convert ${ext} to CSV.`);
+        setShowLogPanel(true);
+        // Set the inputFile even for non-CSV files so the UI doesn't show empty state
+        setTabs((prev) =>
+          prev.map((tab) =>
+            tab.id === tabId
+              ? { ...tab, inputFile: filePath, updatedAt: formatDateTime(new Date()) }
+              : tab,
+          ),
+        );
         return;
       }
 
@@ -117,10 +177,15 @@ function App() {
             limit: 31,
           },
         );
-        setCsvData(data);
+        setTabs((prev) =>
+          prev.map((tab) =>
+            tab.id === tabId
+              ? { ...tab, data: data.rows, headers: data.headers, inputFile: filePath, updatedAt: formatDateTime(new Date()) }
+              : tab,
+          ),
+        );
       } catch (error) {
         addLog("error", `Failed to read CSV: ${error}`);
-        setCsvData({ headers: [], rows: [] });
       }
     },
     [defaultDelimiter],
@@ -234,11 +299,9 @@ function App() {
   }, []);
 
   useEffect(() => {
-    loadCsvData(inputFile);
-  }, [inputFile, defaultDelimiter, loadCsvData]);
-
-  useEffect(() => {
     const updateTitle = async () => {
+      const currentTab = tabs.find((tab) => tab.id === selectedTabId);
+      const inputFile = currentTab?.inputFile || "";
       try {
         const title = inputFile ? `${inputFile} - Easy Csv` : "Easy Csv";
         await invoke("set_window_title", { title });
@@ -247,25 +310,17 @@ function App() {
       }
     };
     updateTitle();
-  }, [inputFile]);
+  }, [selectedTabId, tabs]);
 
   useEffect(() => {
-    if (csvData.headers.length > 0 && selectedTabId) {
-      setTabs((prev) =>
-        prev.map((tab) =>
-          tab.id === selectedTabId
-            ? {
-              ...tab,
-              data: csvData.rows,
-              headers: csvData.headers,
-              inputFile: inputFile,
-              updatedAt: formatDateTime(new Date()),
-            }
-            : tab,
-        ),
-      );
-    }
-  }, [csvData, inputFile, selectedTabId]);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (activeMenu && headerRef.current && !headerRef.current.contains(event.target as Node)) {
+        setActiveMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [activeMenu]);
 
   const getCurrentTab = () => {
     return tabs.find((tab) => tab.id === selectedTabId) || tabs[0];
@@ -275,7 +330,27 @@ function App() {
     return getCurrentTab().pipeline;
   };
 
-  const updateTabPipeline = (tabIdOrPipeline: string | PipelineStep[], newPipeline?: PipelineStep[]) => {
+  const updateTabPipeline = (tabIdOrPipeline: string | PipelineStep[], newPipeline?: PipelineStep[], edges?: PipelineEdge[], inputPosition?: { x: number; y: number }) => {
+    // Capture current state for undo (only if not already capturing for redo)
+    const currentTab = typeof tabIdOrPipeline === 'string'
+      ? tabs.find(t => t.id === tabIdOrPipeline)
+      : tabs.find(t => t.id === selectedTabId);
+
+    const newPipelineToSet = typeof tabIdOrPipeline === 'string' ? newPipeline! : tabIdOrPipeline as PipelineStep[];
+    const isStateChanged = currentTab &&
+      (JSON.stringify(currentTab.pipeline) !== JSON.stringify(newPipelineToSet) ||
+        JSON.stringify(currentTab.edges) !== JSON.stringify(edges ?? currentTab.edges) ||
+        JSON.stringify(currentTab.inputPosition) !== JSON.stringify(inputPosition ?? currentTab.inputPosition));
+
+    if (currentTab && isStateChanged) {
+      setUndoStack(prev => [...prev, {
+        pipeline: currentTab.pipeline,
+        edges: currentTab.edges || [],
+        inputPosition: currentTab.inputPosition
+      }]);
+      setRedoStack([]);
+    }
+
     if (typeof tabIdOrPipeline === 'string' && newPipeline) {
       setTabs((prev) =>
         prev.map((tab) =>
@@ -283,6 +358,8 @@ function App() {
             ? {
               ...tab,
               pipeline: newPipeline,
+              edges: edges !== undefined ? edges : tab.edges,
+              inputPosition: inputPosition !== undefined ? inputPosition : tab.inputPosition,
               updatedAt: formatDateTime(new Date()),
             }
             : tab,
@@ -296,6 +373,8 @@ function App() {
             ? {
               ...tab,
               pipeline: pipeline,
+              edges: edges !== undefined ? edges : tab.edges,
+              inputPosition: inputPosition !== undefined ? inputPosition : tab.inputPosition,
               updatedAt: formatDateTime(new Date()),
             }
             : tab,
@@ -303,6 +382,76 @@ function App() {
       );
     }
   };
+
+  // Undo - restore previous pipeline state
+  const undo = useCallback(() => {
+    if (undoStack.length === 0) return;
+
+    const currentTab = tabs.find(t => t.id === selectedTabId);
+    if (!currentTab) return;
+
+    // Push current state to redo stack
+    setRedoStack(prev => [...prev, {
+      pipeline: currentTab.pipeline,
+      edges: currentTab.edges || [],
+      inputPosition: currentTab.inputPosition
+    }]);
+
+    // Pop from undo stack and apply
+    const previousState = undoStack[undoStack.length - 1];
+    setUndoStack(prev => prev.slice(0, -1));
+
+    setTabs(prev =>
+      prev.map((tab) =>
+        tab.id === selectedTabId
+          ? {
+            ...tab,
+            pipeline: previousState.pipeline,
+            edges: previousState.edges,
+            inputPosition: previousState.inputPosition,
+            updatedAt: formatDateTime(new Date()),
+          }
+          : tab,
+      ),
+    );
+
+    setSelectedStep(null);
+  }, [undoStack, redoStack, selectedTabId, tabs]);
+
+  // Redo - restore next pipeline state
+  const redo = useCallback(() => {
+    if (redoStack.length === 0) return;
+
+    const currentTab = tabs.find(t => t.id === selectedTabId);
+    if (!currentTab) return;
+
+    // Push current state to undo stack
+    setUndoStack(prev => [...prev, {
+      pipeline: currentTab.pipeline,
+      edges: currentTab.edges || [],
+      inputPosition: currentTab.inputPosition
+    }]);
+
+    // Pop from redo stack and apply
+    const nextState = redoStack[redoStack.length - 1];
+    setRedoStack(prev => prev.slice(0, -1));
+
+    setTabs(prev =>
+      prev.map((tab) =>
+        tab.id === selectedTabId
+          ? {
+            ...tab,
+            pipeline: nextState.pipeline,
+            edges: nextState.edges,
+            inputPosition: nextState.inputPosition,
+            updatedAt: formatDateTime(new Date()),
+          }
+          : tab,
+      ),
+    );
+
+    setSelectedStep(null);
+  }, [undoStack, redoStack, selectedTabId, tabs]);
 
   const addNewTab = () => {
     const newTabId = `tab-${Date.now()}`;
@@ -332,16 +481,6 @@ function App() {
     }
   };
 
-  const removeAllTabsExcept = (keepTabId: string) => {
-    const keepTab = tabs.find((tab) => tab.id === keepTabId);
-    if (keepTab) {
-      setTabs([keepTab]);
-      setSelectedTabId(keepTabId);
-      setSelectedStep(null);
-      showToastRef.current("Cleared all pipeline tabs except the current one", 'info');
-    }
-  };
-
   const renameTab = (tabId: string, newName: string) => {
     setTabs((prev) =>
       prev.map((tab) =>
@@ -350,6 +489,15 @@ function App() {
           : tab,
       ),
     );
+  };
+
+  // Validate output step placement
+  const validateOutputStepOnAdd = (currentPipeline: PipelineStep[]) => {
+    // Build execution branches to check output placement
+    const executableSteps = currentPipeline.filter(step => step.command.id !== "output");
+    if (executableSteps.length === 0) {
+      addNotificationRef.current("Output requires at least one other step before it", 'warning');
+    }
   };
 
   const handleCommandClick = (
@@ -373,6 +521,12 @@ function App() {
     }
 
     const currentPipeline = getCurrentPipeline();
+
+    // Validate output step placement
+    if (command.id === "output") {
+      validateOutputStepOnAdd(currentPipeline);
+    }
+
     updateTabPipeline([...currentPipeline, newStep]);
     setSelectedStep(newStep);
   };
@@ -387,7 +541,7 @@ function App() {
       setHelpContent(helpText);
       setHelpCommandName(command.name);
     } catch (error) {
-      addLog("error", `Failed to get help for ${command.name}: ${error}`);
+      showToastRef.current(`Failed to get help for ${command.name}: ${error}`, 'error');
     } finally {
       setIsHelpLoading(false);
     }
@@ -399,6 +553,15 @@ function App() {
 
   const handleStepRemove = (stepId: string) => {
     const currentPipeline = getCurrentPipeline();
+    const removedStep = currentPipeline.find(s => s.id === stepId);
+
+    // If removing an output step, clear all output-related notifications
+    if (removedStep?.command.id === "output") {
+      setNotifications((prev) =>
+        prev.filter(n => !n.message.startsWith("Output"))
+      );
+    }
+
     const updatedPipeline = currentPipeline.filter((s) => s.id !== stepId);
     updateTabPipeline(updatedPipeline);
     if (selectedStep?.id === stepId) {
@@ -420,8 +583,23 @@ function App() {
     }
   };
 
+  const handleStepAliasUpdate = (stepId: string, alias: string) => {
+    const currentPipeline = getCurrentPipeline();
+    const updatedPipeline = currentPipeline.map((step) =>
+      step.id === stepId ? { ...step, alias } : step,
+    );
+    updateTabPipeline(updatedPipeline);
+    if (selectedStep?.id === stepId) {
+      setSelectedStep({ ...selectedStep, alias });
+    }
+  };
+
   const handleExecute = async () => {
     const currentPipeline = getCurrentPipeline();
+    const currentTab = getCurrentTab();
+    const edges = currentTab.edges || [];
+    const inputFile = currentTab.inputFile || "";
+
     if (currentPipeline.length === 0) {
       showToastRef.current("No steps in pipeline to execute", 'warning');
       return;
@@ -433,25 +611,83 @@ function App() {
     }
 
     setIsExecuting(true);
+    setShowLogPanel(true);
 
     try {
-      const commands = currentPipeline.map((step) => ({
-        name: step.command.name,
-        parameters: step.command.parameters.map((param) => ({
-          name: param.name,
-          value: String(step.parameters[param.name] || param.default || ""),
-          isPositional: param.isPositional,
-        })),
-      }));
+      // Check if there's an output command in the pipeline
+      const outputStep = currentPipeline.find(step => step.command.id === "output");
+      const outputPath = outputStep?.parameters.path || "";
 
-      const result = await invoke<any>("execute_xan_pipeline", {
-        commands,
-        inputFile,
-        defaultDelimiter,
-      });
+      // Filter out output command from execution
+      const executableSteps = currentPipeline.filter(step => step.command.id !== "output");
+
+      // Check if there are any executable steps
+      if (executableSteps.length === 0) {
+        showToastRef.current("No executable steps found in pipeline - add other commands before output", 'warning');
+        setIsExecuting(false);
+        return;
+      }
+
+      // Build execution branches based on edges
+      const branches = buildExecutionBranches(executableSteps, edges);
+
+      const allResults: { success: boolean; output?: string; error?: string; branchSteps: string[] }[] = [];
+
+      // Execute each branch sequentially
+      for (let i = 0; i < branches.length; i++) {
+        const branchSteps = branches[i];
+        if (branchSteps.length === 0) continue;
+
+        const branchStepNames = branchSteps.map(s => s.alias || s.command.name);
+        addLog("info", `Executing branch ${i + 1}: ${branchStepNames.join(" -> ")}`);
+
+        const commands = branchSteps.map((step, index) => {
+          const params = step.command.parameters.map((param) => ({
+            name: param.name,
+            value: String(step.parameters[param.name] || param.default || ""),
+            isPositional: param.isPositional,
+          }));
+
+          // Add output parameter to the last command if output path is specified
+          if (index === branchSteps.length - 1 && outputPath) {
+            params.push({
+              name: "output",
+              value: outputPath,
+              isPositional: false,
+            });
+          }
+
+          return {
+            name: step.command.name,
+            parameters: params,
+          };
+        });
+
+        const result = await invoke<any>("execute_xan_pipeline", {
+          commands,
+          inputFile,
+          defaultDelimiter,
+        });
+
+        allResults.push({
+          success: result.success,
+          output: result.output,
+          error: result.error,
+          branchSteps: branchStepNames,
+        });
+
+        if (result.success) {
+          if (result.output) {
+            const output = (result.output as string).trimStart().trimEnd();
+            addLog("success", `${output}`);
+          }
+        } else {
+          addLog("error", `${result.error}`);
+        }
+      }
 
       // Save to history
-      const currentTabName = getCurrentTab().name;
+      const currentTabName = currentTab.name;
       const existingHistoryIndex = historicalPipelines.findIndex(
         (h) => h.name === currentTabName,
       );
@@ -466,8 +702,10 @@ function App() {
         inputFile,
         defaultDelimiter,
         executedAt: formatDateTime(new Date()),
-        success: result.success,
-        output: result.output || undefined,
+        success: allResults.every(r => r.success),
+        output: allResults.map(r => r.output).filter(Boolean).join("\n---\n"),
+        edges: currentTab.edges,
+        inputPosition: currentTab.inputPosition,
       };
 
       let updatedHistory: HistoricalPipeline[];
@@ -488,44 +726,86 @@ function App() {
 
       updateHistoricalPipelines(updatedHistory);
 
-      if (result.success) {
-        if (result.output) {
-          const output = result.output as string;
-          if (executeTarget === "result") {
-            const maxRows = 100;
-            const lines = output.split('\n');
-            if (lines.length > maxRows) {
-              const truncatedOutput = lines.slice(0, maxRows).join('\n');
-              setResultData(truncatedOutput);
-              addLog("warning", `Result truncated to ${maxRows} rows. Original: ${lines.length} rows.`);
-            } else {
-              setResultData(output);
-            }
-          } else {
-            addLog("info", `${output}`);
-            setResultData(null);
-          }
-        } else {
-          setResultData(null);
-        }
+      // Summary
+      const successCount = allResults.filter(r => r.success).length;
+      if (successCount === branches.length) {
+        addLog("success", `All ${branches.length} branch(es) executed successfully`);
       } else {
-        addLog("error", `${result.error}`);
-        setResultData(null);
+        showToastRef.current(`${successCount}/${branches.length} branch(es) succeeded`, 'warning');
       }
     } catch (error) {
-      addLog("error", `${error}`);
+      showToastRef.current(`${error}`, 'error');
     } finally {
       setIsExecuting(false);
     }
   };
 
+  // Build execution branches from edges
+  const buildExecutionBranches = (steps: PipelineStep[], edges: PipelineEdge[]): PipelineStep[][] => {
+    // If no edges, each step is its own independent branch
+    if (edges.length === 0) {
+      return steps.map(step => [step]);
+    }
+
+    // Create a map from step id to step
+    const stepMap = new Map<string, PipelineStep>();
+    steps.forEach(step => stepMap.set(step.id, step));
+
+    // Build adjacency list from edges, filtering out edges to non-executable steps
+    const executableStepIds = new Set(steps.map(step => step.id));
+    const adjacency = new Map<string, string[]>();
+    edges.forEach(edge => {
+      // Only include edges where target is an executable step
+      if (executableStepIds.has(edge.target)) {
+        if (!adjacency.has(edge.source)) {
+          adjacency.set(edge.source, []);
+        }
+        adjacency.get(edge.source)!.push(edge.target);
+      }
+    });
+
+    // Find starting nodes (nodes that are not targets of any edge)
+    const targetIds = new Set(edges.map(e => e.target));
+    const startNodes = steps.filter(step => !targetIds.has(step.id)).map(step => step.id);
+
+    if (startNodes.length === 0) {
+      return steps.map(step => [step]);
+    }
+
+    // Build all paths using DFS
+    const branches: PipelineStep[][] = [];
+
+    const dfs = (currentId: string, path: PipelineStep[]) => {
+      const currentStep = stepMap.get(currentId);
+      if (!currentStep) return;
+
+      const newPath = [...path, currentStep];
+      const nextNodes = adjacency.get(currentId) || [];
+
+      if (nextNodes.length === 0) {
+        branches.push(newPath);
+        return;
+      }
+
+      nextNodes.forEach((nextId: string) => {
+        dfs(nextId, newPath);
+      });
+    };
+
+    startNodes.forEach(startId => {
+      dfs(startId, []);
+    });
+
+    return branches;
+  };
+
   const handleClearLogs = () => {
     setLogs([]);
-    setResultData(null);
   };
 
   const handleExportPipeline = async () => {
     const currentPipeline = getCurrentPipeline();
+    const currentTab = getCurrentTab();
     if (currentPipeline.length === 0) {
       showToastRef.current("No pipeline to export", 'warning');
       return;
@@ -534,13 +814,18 @@ function App() {
     try {
       const pipelineData = {
         version: "0.1.0",
-        name: getCurrentTab().name,
+        name: currentTab.name,
         pipeline: currentPipeline.map((step) => ({
+          id: step.id,
           commandId: step.command.id,
           parameters: step.parameters,
+          alias: step.alias,
+          position: step.position,
         })),
-        inputFile,
+        inputFile: currentTab.inputFile || "",
         defaultDelimiter,
+        edges: currentTab.edges || [],
+        inputPosition: currentTab.inputPosition,
         createdAt: formatDateTime(new Date()),
       };
 
@@ -553,10 +838,10 @@ function App() {
       if (filePath) {
         const encoder = new TextEncoder();
         await writeFile(filePath, encoder.encode(jsonContent));
-        addLog("success", `Pipeline exported to: ${filePath}`);
+        showToastRef.current(`Pipeline exported to: ${filePath}`, 'success');
       }
     } catch (error) {
-      addLog("error", `Failed to export pipeline: ${error}`);
+      showToastRef.current(`Failed to export pipeline: ${error}`, 'error');
     }
   };
 
@@ -579,16 +864,18 @@ function App() {
         return;
       }
 
-      const importedPipeline: PipelineStep[] = pipelineData.pipeline.map((stepData: { commandId: string; parameters?: Record<string, any> }) => {
+      const importedPipeline: PipelineStep[] = pipelineData.pipeline.map((stepData: { id?: string; commandId: string; parameters?: Record<string, any>; alias?: string; position?: { x: number; y: number } }) => {
         const command = xanCommands.find((cmd) => cmd.id === stepData.commandId);
         if (!command) {
           showToastRef.current(`Unknown command: ${stepData.commandId}, skipping`, 'warning');
           return null;
         }
         return {
-          id: `${command.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: stepData.id || `${command.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           command,
           parameters: stepData.parameters || {},
+          alias: stepData.alias,
+          position: stepData.position,
         };
       }).filter((step: PipelineStep | null): step is PipelineStep => step !== null);
 
@@ -597,9 +884,9 @@ function App() {
         return;
       }
 
-      updateTabPipeline(importedPipeline);
+      updateTabPipeline(importedPipeline, undefined, pipelineData.edges, pipelineData.inputPosition);
       if (pipelineData.inputFile) {
-        setInputFile(pipelineData.inputFile);
+        loadCsvData(selectedTabId, pipelineData.inputFile);
       }
       if (pipelineData.defaultDelimiter) {
         setDefaultDelimiter(pipelineData.defaultDelimiter);
@@ -607,7 +894,7 @@ function App() {
 
       showToastRef.current(`Imported pipeline with ${importedPipeline.length} steps`, 'success');
     } catch (error) {
-      addLog("error", `Failed to import pipeline: ${error}`);
+      showToastRef.current(`Failed to import pipeline: ${error}`, 'error');
     }
   };
 
@@ -624,7 +911,7 @@ function App() {
     });
 
     if (file) {
-      setInputFile(file);
+      loadCsvData(selectedTabId, file);
     }
   };
 
@@ -638,156 +925,189 @@ function App() {
     setTheme(currentTheme === "dark" ? "light" : "dark");
   };
 
-  return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20 relative overflow-hidden">
-      <header className="h-14 border-b bg-card/80 backdrop-blur-sm shadow-sm flex items-center justify-between px-4 gap-4 relative z-10">
-        {/* Left: Command/History Toggle + Search */}
-        <div className="flex items-center gap-2">
-          <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
-            <button
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeLeftPanel === "commands"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
-              onClick={() => setActiveLeftPanel("commands")}
-            >
-              <Terminal className="h-3.5 w-3.5" />
-              Cmds
-            </button>
-            <button
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeLeftPanel === "history"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
-              onClick={() => setActiveLeftPanel("history")}
-            >
-              <History className="h-3.5 w-3.5" />
-              History
-            </button>
-          </div>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60 z-10 pointer-events-none" />
-            <input
-              type="text"
-              placeholder={
-                activeLeftPanel === "commands"
-                  ? "Search cmd(s)"
-                  : "Search history"
-              }
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-32 pl-8 pr-3 py-1.5 text-xs border border-border/50 rounded-lg bg-background/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
-            />
-          </div>
-        </div>
+  const handleOpenUrl = async (url: string) => {
+    try {
+      await openUrl(url);
+    } catch (error) {
+      showToastRef.current(`Failed to open URL: ${error}`, 'error');
+    }
+  };
 
-        {/* Center: View Toggle + Action Group */}
-        <div className="flex items-center gap-3 flex-1 justify-center">
-          <div className="flex items-center gap-2">
-            <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
-              <button
-                onClick={handleOpenFile}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              >
-                <FolderOpen className="h-3.5 w-3.5" />
-                Browse
-              </button>
-            </div>
-            <div className="relative flex">
+  return (
+    <div className="h-screen flex flex-col bg-background relative overflow-hidden">
+      <header ref={headerRef} className="h-14 border-b bg-card shadow-sm flex items-center justify-between px-4 gap-4 relative z-10" onContextMenu={(e) => e.preventDefault()}>
+        {/* Left: Button Group - File + Settings + Execute */}
+        <div className="relative">
+          <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+            <div className="relative">
               <button
                 onClick={() => {
-                  handleExecute();
+                  if (!isMenuActivated) {
+                    setIsMenuActivated(true);
+                    setActiveMenu("file");
+                  } else {
+                    if (activeMenu === "file") {
+                      setActiveMenu(null);
+                    } else {
+                      setActiveMenu("file");
+                    }
+                  }
                 }}
-                disabled={getCurrentPipeline().length === 0 || isExecuting}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-l-md text-xs font-medium transition-colors ${isExecuting
-                  ? "text-primary opacity-70"
-                  : getCurrentPipeline().length === 0
-                    ? "text-muted-foreground/40 cursor-not-allowed"
-                    : "text-primary hover:text-primary hover:bg-primary/10"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activeMenu === "file"
+                  ? "bg-accent text-foreground"
+                  : "text-primary hover:text-primary hover:bg-primary/10"
                   }`}
               >
-                {isExecuting ? (
-                  <>
-                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Executing...
-                  </>
-                ) : (
-                  <>
-                    {executeTarget === "result" ? (
-                      <Table className="h-3 w-3 mr-1.5" />
-                    ) : (
-                      <FileText className="h-3 w-3 mr-1.5" />
-                    )}
-                    Execute
-                    {getCurrentPipeline().length > 0 && (
-                      <span className="ml-0.5">({getCurrentPipeline().length})</span>
-                    )}
-                  </>
-                )}
+                <File className="h-3.5 w-3.5" />
+                File
               </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowExecuteDropdown(!showExecuteDropdown);
-                }}
-                disabled={getCurrentPipeline().length === 0 || isExecuting}
-                className={`flex items-center px-2 py-1.5 rounded-r-md text-xs font-medium transition-colors border-l border-transparent ${isExecuting
-                  ? "text-primary opacity-70"
-                  : getCurrentPipeline().length === 0
-                    ? "text-muted-foreground/40 cursor-not-allowed"
-                    : "text-primary hover:text-primary hover:bg-primary/10"
-                  }`}
-              >
-                <ChevronDown className="h-3 w-3" />
-              </button>
-              {showExecuteDropdown && (
-                <div className="absolute left-full top-0 ml-1 w-24 bg-card border border-border/50 rounded-lg shadow-lg z-50">
+              {activeMenu === "file" && (
+                <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[160px]">
                   <button
                     onClick={() => {
-                      setExecuteTarget("result");
-                      setShowExecuteDropdown(false);
+                      handleOpenFile();
+                      setActiveMenu(null);
                     }}
-                    disabled={getCurrentPipeline().length === 0 || isExecuting}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-accent transition-colors ${executeTarget === "result" ? "bg-primary/10 text-primary" : "text-foreground"} ${getCurrentPipeline().length === 0 || isExecuting ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   >
-                    <Table className="h-3.5 w-3.5" />
-                    Result
+                    <FolderOpen className="h-3.5 w-3.5" />
+                    Open
                   </button>
                   <button
                     onClick={() => {
-                      setExecuteTarget("logs");
-                      setShowExecuteDropdown(false);
+                      handleImportPipeline();
+                      setActiveMenu(null);
                     }}
-                    disabled={getCurrentPipeline().length === 0 || isExecuting}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-accent transition-colors ${executeTarget === "logs" ? "bg-primary/10 text-primary" : "text-foreground"} ${getCurrentPipeline().length === 0 || isExecuting ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   >
-                    <FileText className="h-3.5 w-3.5" />
-                    Logs
+                    <Upload className="h-3.5 w-3.5" />
+                    Import
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleExportPipeline();
+                      setActiveMenu(null);
+                    }}
+                    disabled={getCurrentPipeline().length === 0}
+                    className={`flex items-center gap-2 w-full px-3 py-2 text-xs font-medium transition-colors ${getCurrentPipeline().length === 0
+                      ? "text-muted-foreground/40 cursor-not-allowed"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                      }`}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Export
                   </button>
                 </div>
               )}
             </div>
-            <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+            <div className="relative">
               <button
-                onClick={handleImportPipeline}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              >
-                <Upload className="h-3.5 w-3.5" />
-                Import
-              </button>
-              <button
-                onClick={handleExportPipeline}
-                disabled={getCurrentPipeline().length === 0}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${getCurrentPipeline().length === 0
-                  ? "text-muted-foreground/40 cursor-not-allowed"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                onClick={() => {
+                  if (!isMenuActivated) {
+                    setIsMenuActivated(true);
+                    setActiveMenu("settings");
+                  } else {
+                    if (activeMenu === "settings") {
+                      setActiveMenu(null);
+                    } else {
+                      setActiveMenu("settings");
+                    }
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activeMenu === "settings"
+                  ? "bg-accent text-foreground"
+                  : "text-primary hover:text-primary hover:bg-primary/10"
                   }`}
               >
-                <Download className="h-3.5 w-3.5" />
-                Export
+                <Settings className="h-3.5 w-3.5" />
+                Settings
+              </button>
+              {activeMenu === "settings" && (
+                <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[160px]">
+                  <button
+                    onClick={() => {
+                      handleThemeToggle();
+                      setActiveMenu(null);
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    {theme === "dark" ? (
+                      <Sun className="h-3.5 w-3.5" />
+                    ) : (
+                      <Moon className="h-3.5 w-3.5" />
+                    )}
+                    {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowSettings(true);
+                      setActiveMenu(null);
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    <Settings className="h-3.5 w-3.5" />
+                    Preferences
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Undo/Redo buttons */}
+            <div className="flex items-center">
+              <button
+                onClick={undo}
+                disabled={undoStack.length === 0}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${undoStack.length === 0
+                  ? "text-muted-foreground/40 cursor-not-allowed"
+                  : "text-primary hover:bg-primary/10"
+                  }`}
+              >
+                <Undo2 className="h-3.5 w-3.5" />
+                Undo
+              </button>
+              <button
+                onClick={redo}
+                disabled={redoStack.length === 0}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${redoStack.length === 0
+                  ? "text-muted-foreground/40 cursor-not-allowed"
+                  : "text-primary hover:bg-primary/10"
+                  }`}
+              >
+                <Redo2 className="h-3.5 w-3.5" />
+                Redo
               </button>
             </div>
+
+            <button
+              onClick={() => handleExecute()}
+              disabled={getCurrentPipeline().length === 0 || isExecuting}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${isExecuting
+                ? "text-primary opacity-70"
+                : getCurrentPipeline().length === 0
+                  ? "text-muted-foreground/40 cursor-not-allowed"
+                  : "text-primary hover:text-primary hover:bg-primary/10"
+                }`}
+            >
+              {isExecuting ? (
+                <>
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Executing...
+                </>
+              ) : (
+                <>
+                  <Play className="h-3 w-3 mr-1.5" />
+                  Execute
+                  {getCurrentPipeline().length > 0 && (
+                    <span className="ml-0.5">({getCurrentPipeline().length})</span>
+                  )}
+                </>
+              )}
+            </button>
           </div>
+        </div>
+
+        {/* Center: Empty */}
+        <div className="flex items-center gap-3 flex-1 justify-center">
         </div>
 
         {/* Right: Status + Tools */}
@@ -819,10 +1139,7 @@ function App() {
               }}
               className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 rounded-lg text-xs font-medium border border-green-500/20 hover:bg-green-500/20 transition-colors cursor-pointer"
             >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-              </span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
               <span className="hidden sm:inline">xan{xanVersion ? ` ${xanVersion.trim()}` : ""}</span>
             </button>
           ) : (
@@ -851,152 +1168,10 @@ function App() {
               <span className="hidden sm:inline">xan missing</span>
             </button>
           )}
-          <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
-            <button
-              onClick={handleThemeToggle}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
-            >
-              {theme === "dark" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-            </button>
-            <button
-              onClick={() => setShowSettings(true)}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
-            >
-              <Settings className="h-4 w-4" />
-            </button>
-          </div>
         </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <aside className="w-[16%] flex-shrink-0 flex flex-col bg-card/50 backdrop-blur-sm border-r">
-          {/* Panel Content */}
-          <div className="flex-1 overflow-hidden">
-            {activeLeftPanel === "commands" ? (
-              <CommandList
-                commands={xanCommands}
-                onCommandClick={handleCommandClick}
-                onHelpClick={handleHelpClick}
-                selectedCommandId={selectedStep?.command.id}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-              />
-            ) : (
-              <div className="h-full overflow-auto p-4">
-                {(() => {
-                  const filteredHistory = historicalPipelines.filter(
-                    (history) =>
-                      history.name
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase()),
-                  );
-                  return filteredHistory.length === 0 ? (
-                    <div className="text-center py-16 px-4">
-                      <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
-                        <FileText className="h-8 w-8 text-muted-foreground/50" />
-                      </div>
-                      <p className="text-sm font-medium text-muted-foreground mb-1">
-                        No historical pipelines found
-                      </p>
-                      <p className="text-xs text-muted-foreground/70">
-                        {searchQuery
-                          ? "Try a different search term"
-                          : "Execute pipelines to see them here"}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {filteredHistory.map((history) => (
-                        <div
-                          key={history.id}
-                          className="border rounded-lg p-3 hover:bg-muted/30 transition-colors"
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <h4 className="font-semibold text-xs truncate">
-                              {history.name}
-                            </h4>
-                            <button
-                              className="text-xs px-2 py-1 rounded-md hover:bg-accent transition-colors text-red-600 hover:bg-red-500/10"
-                              onClick={() => {
-                                const updatedHistory =
-                                  historicalPipelines.filter(
-                                    (h) => h.id !== history.id,
-                                  );
-                                updateHistoricalPipelines(updatedHistory);
-                                showToastRef.current(
-                                  `Deleted historical pipeline: ${history.name}`,
-                                  'info',
-                                );
-                              }}
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            {new Date(history.executedAt).toLocaleString()}
-                          </p>
-                          <p className="text-xs text-muted-foreground mb-2 truncate">
-                            {history.inputFile.split("\\").pop()}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <div className="flex gap-1">
-                              <button
-                                className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
-                                onClick={() => {
-                                  updateTabPipeline(history.pipeline);
-                                  setInputFile(history.inputFile);
-                                  setDefaultDelimiter(history.defaultDelimiter);
-                                  showToastRef.current(
-                                    `Loaded historical pipeline: ${history.name}`,
-                                    'info',
-                                  );
-                                }}
-                              >
-                                Load
-                              </button>
-                              <button
-                                className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
-                                onClick={() => {
-                                  const newTabId = `tab-${Date.now()}`;
-                                  const newTab: PipelineTab = {
-                                    id: newTabId,
-                                    name: `${history.name} (History)`,
-                                    pipeline: history.pipeline,
-                                    createdAt: formatDateTime(new Date()),
-                                    updatedAt: formatDateTime(new Date()),
-                                  };
-                                  setTabs((prev) => [...prev, newTab]);
-                                  setSelectedTabId(newTabId);
-                                  setInputFile(history.inputFile);
-                                  setDefaultDelimiter(history.defaultDelimiter);
-                                  showToastRef.current(
-                                    `Created new tab from historical pipeline: ${history.name}`,
-                                    'info',
-                                  );
-                                }}
-                              >
-                                New Tab
-                              </button>
-                            </div>
-                            <span
-                              className={`text-xs px-2 py-0.5 rounded-full ${history.success ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"}`}
-                            >
-                              {history.success ? "Success" : "Failed"}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-          </div>
-        </aside>
 
         <main className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-hidden">
@@ -1006,18 +1181,156 @@ function App() {
               onTabChange={setSelectedTabId}
               onAddTab={addNewTab}
               onRemoveTab={removeTab}
-              onRemoveAllTabsExcept={removeAllTabsExcept}
               onRenameTab={renameTab}
               onAddCommand={handleCommandClick}
               onStepClick={handleStepClick}
               onStepUpdate={handleStepUpdate}
+              onStepAliasUpdate={handleStepAliasUpdate}
               onStepDelete={handleStepRemove}
               onPipelineReorder={updateTabPipeline}
-            />
+              onEdgesChange={(tabId, edges) => {
+                // Validate output connections when edges change
+                const tab = tabs.find(t => t.id === tabId);
+                if (tab) {
+                  // Remove all output-related notifications first
+                  setNotifications((prev) =>
+                    prev.filter(n => !n.message.startsWith("Output"))
+                  );
+
+                  const outputSteps = tab.pipeline.filter(s => s.command.id === "output");
+                  outputSteps.forEach(outputStep => {
+                    // Check if output is connected as source (wrong direction)
+                    const outputAsSource = edges.filter(e => e.source === outputStep.id);
+                    if (outputAsSource.length > 0) {
+                      addNotificationRef.current("Output should be at the end of a branch", 'error');
+                    }
+                    // Check if output has no incoming connections and no outgoing connections
+                    const outputAsTarget = edges.filter(e => e.target === outputStep.id);
+                    if (outputAsTarget.length === 0 && outputAsSource.length === 0) {
+                      addNotificationRef.current("Output is not connected", 'warning');
+                    }
+                  });
+                }
+
+                setTabs((prev) =>
+                  prev.map((tab) =>
+                    tab.id === tabId
+                      ? { ...tab, edges, updatedAt: formatDateTime(new Date()) }
+                      : tab,
+                  ),
+                );
+              }}
+              onInputPositionChange={(tabId, position) => {
+                setTabs((prev) =>
+                  prev.map((tab) =>
+                    tab.id === tabId
+                      ? { ...tab, inputPosition: position, updatedAt: formatDateTime(new Date()) }
+                      : tab,
+                  ),
+                );
+              }}
+              onOpenFile={handleOpenFile}
+          onImportPipeline={handleImportPipeline}
+          onOpenUrl={handleOpenUrl}
+          showMinimap={showMinimap}
+        />
           </div>
-          <LogPanel logs={logs} resultData={resultData} onClear={handleClearLogs} executeTarget={executeTarget} />
         </main>
       </div>
+
+      {/* Command Panel Toggle Button */}
+      <Button
+        onClick={() => setShowCommandPanel(!showCommandPanel)}
+        onContextMenu={(e) => e.preventDefault()}
+        className="fixed bottom-4 left-4 z-30 h-10 w-10 rounded-full shadow-md bg-gray-600/50 text-gray-200 hover:bg-gray-600/70 dark:bg-gray-700/60 dark:text-gray-300 dark:hover:bg-gray-600/70 transition-all flex items-center justify-center backdrop-blur-sm"
+        variant="default"
+        size="icon"
+      >
+        {showCommandPanel ? (
+          <ChevronRight className="h-4 w-4" />
+        ) : (
+          <Terminal className="h-4 w-4" />
+        )}
+      </Button>
+
+      {/* Log Panel Toggle Button */}
+      <Button
+        onClick={() => setShowLogPanel(!showLogPanel)}
+        onContextMenu={(e) => e.preventDefault()}
+        className="fixed bottom-4 left-16 z-30 h-10 w-10 rounded-full shadow-md bg-gray-600/50 text-gray-200 hover:bg-gray-600/70 dark:bg-gray-700/60 dark:text-gray-300 dark:hover:bg-gray-600/70 transition-all flex items-center justify-center backdrop-blur-sm"
+        variant="default"
+        size="icon"
+      >
+        {showLogPanel ? (
+          <ChevronUp className="h-4 w-4" />
+        ) : (
+          <FileText className="h-4 w-4" />
+        )}
+      </Button>
+
+      {/* Minimap Toggle Button */}
+      <Button
+        onClick={() => setShowMinimap(!showMinimap)}
+        onContextMenu={(e) => e.preventDefault()}
+        className="fixed bottom-4 left-28 z-30 h-10 w-10 rounded-full shadow-md bg-gray-600/50 text-gray-200 hover:bg-gray-600/70 dark:bg-gray-700/60 dark:text-gray-300 dark:hover:bg-gray-600/70 transition-all flex items-center justify-center backdrop-blur-sm"
+        variant="default"
+        size="icon"
+      >
+        {showMinimap ? (
+          <ChevronDown className="h-4 w-4" />
+        ) : (
+          <MapIcon className="h-4 w-4" />
+        )}
+      </Button>
+
+      {/* Floating Command Panel */}
+      <CommandList
+        commands={xanCommands}
+        onCommandClick={handleCommandClick}
+        onHelpClick={handleHelpClick}
+        selectedCommandId={selectedStep?.command.id}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        isVisible={showCommandPanel}
+        onClose={() => setShowCommandPanel(false)}
+        activePanel={activeLeftPanel}
+        onActivePanelChange={setActiveLeftPanel}
+        historicalPipelines={historicalPipelines}
+        onLoadHistory={(history) => {
+          updateTabPipeline(history.pipeline, undefined, history.edges, history.inputPosition);
+        }}
+        onNewTabFromHistory={(history) => {
+          const newTabId = `tab-${Date.now()}`;
+          const newTab: PipelineTab = {
+            id: newTabId,
+            name: `${history.name} (History)`,
+            pipeline: history.pipeline,
+            edges: history.edges,
+            inputPosition: history.inputPosition,
+            createdAt: formatDateTime(new Date()),
+            updatedAt: formatDateTime(new Date()),
+          };
+          setTabs((prev) => [...prev, newTab]);
+          setSelectedTabId(newTabId);
+        }}
+        onDeleteHistory={(history) => {
+          const updatedHistory = historicalPipelines.filter((h) => h.id !== history.id);
+          updateHistoricalPipelines(updatedHistory);
+        }}
+        onLoadCsvData={loadCsvData}
+        onDefaultDelimiterChange={setDefaultDelimiter}
+        selectedTabId={selectedTabId}
+      />
+
+      {/* Floating Log Panel */}
+      <LogPanel
+        logs={logs}
+        onClear={handleClearLogs}
+        showToastRef={showToastRef}
+        isVisible={showLogPanel}
+        onClose={() => setShowLogPanel(false)}
+        isExecuting={isExecuting}
+      />
 
       {/* Settings Dialog */}
       {showSettings && (
@@ -1036,21 +1349,23 @@ function App() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Default Delimiter
+                  CSV Delimiter
                 </label>
-                <select
+                <SearchableSelect
                   value={defaultDelimiter}
-                  onChange={(e) => setDefaultDelimiter(e.target.value)}
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background"
-                >
-                  <option value=",">Comma (,)</option>
-                  <option value=";">Semicolon (;)</option>
-                  <option value={"\t"}>Tab (\t)</option>
-                  <option value="|">Pipe (|)</option>
-                  <option value="^">Caret (^)</option>
-                </select>
+                  onChange={setDefaultDelimiter}
+                  options={[
+                    { label: "Comma (,)", value: "," },
+                    { label: "Semicolon (;)", value: ";" },
+                    { label: "Tab (\\t)", value: "\t" },
+                    { label: "Pipe (|)", value: "|" },
+                    { label: "Caret (^)", value: "^" },
+                  ]}
+                  placeholder="Select delimiter"
+                  size="sm"
+                />
                 <p className="text-xs text-muted-foreground mt-1">
-                  This delimiter will be used for all commands that require it
+                  Read the delimiter of CSV file
                 </p>
               </div>
               <div>
@@ -1160,6 +1475,7 @@ function App() {
       )}
 
       <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
+      <NotificationPanel notifications={notifications} onDismiss={removeNotificationRef.current} onDismissAll={dismissAllNotifications} />
     </div>
   );
 }

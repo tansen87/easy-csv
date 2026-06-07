@@ -1,34 +1,20 @@
-import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Card } from "@/components/ui/card";
-import { Table, X, Trash2, Plus, Edit3, Check, Rows3, Repeat2, Repeat } from "lucide-react";
+import { X, Plus, Rows3, Repeat2, Repeat, FolderOpen, FileUp, Star } from "lucide-react";
 import { ToastContainer, ToastType } from "@/components/Toast";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { PipelineStep, XanCommand, PipelineTab } from "@/types/xan";
+import { PipelineStep, PipelineEdge, XanCommand, PipelineTab } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
-import { SortableStep } from "./spreadsheet/SortableStep";
-import { ContextMenu } from "./spreadsheet/ContextMenu";
-import { CommandDialog, CommandDialogState } from "./spreadsheet/CommandDialog";
-import { FilterDialog } from "./spreadsheet/FilterDialog";
-import { SortDialog } from "./spreadsheet/SortDialog";
-import { PivotDialog } from "./spreadsheet/PivotDialog";
-import { DateTransformDialog } from "./spreadsheet/DateTransformDialog";
-import { SplitDialog } from "./spreadsheet/SplitDialog";
-import { ReplaceDialog } from "./spreadsheet/ReplaceDialog";
+import { ContextMenu } from "@/components/spreadsheet/ContextMenu";
+import { CommandDialog, CommandDialogState } from "@/components/spreadsheet/CommandDialog";
+import { FilterDialog } from "@/components/spreadsheet/FilterDialog";
+import { SortDialog } from "@/components/spreadsheet/SortDialog";
+import { PivotDialog } from "@/components/spreadsheet/PivotDialog";
+import { DateTransformDialog } from "@/components/spreadsheet/DateTransformDialog";
+import { SplitDialog } from "@/components/spreadsheet/SplitDialog";
+import { PadDialog } from "@/components/spreadsheet/PadDialog";
+import { ReplaceDialog } from "@/components/spreadsheet/ReplaceDialog";
+import { WindowDialog } from "@/components/spreadsheet/WindowDialog";
+import { FlowPanel } from "@/components/spreadsheet/FlowPanel";
 
 interface SpreadsheetViewProps {
   tabs: PipelineTab[];
@@ -36,7 +22,6 @@ interface SpreadsheetViewProps {
   onTabChange: (tabId: string) => void;
   onAddTab: () => void;
   onRemoveTab: (tabId: string) => void;
-  onRemoveAllTabsExcept: (tabId: string) => void;
   onRenameTab: (tabId: string, name: string) => void;
   onAddCommand: (
     command: XanCommand,
@@ -44,264 +29,16 @@ interface SpreadsheetViewProps {
   ) => void;
   onStepClick?: (step: PipelineStep) => void;
   onStepUpdate?: (stepId: string, parameters: Record<string, any>) => void;
+  onStepAliasUpdate?: (stepId: string, alias: string) => void;
   onStepDelete?: (stepId: string) => void;
   onPipelineReorder?: (tabId: string, newPipeline: PipelineStep[]) => void;
-}
-
-interface TableCellProps {
-  value: string;
-  rowIndex: number;
-  colIndex: number;
-  width: number;
-  isSelected: boolean;
-  onCellClick: (e: React.MouseEvent, row: number, col: number) => void;
-  onContextMenu: (e: React.MouseEvent, row: number, col: number) => void;
-}
-
-const TableCell = React.memo(function TableCell({
-  value,
-  rowIndex,
-  colIndex,
-  width,
-  isSelected,
-  onCellClick,
-  onContextMenu,
-}: TableCellProps) {
-  return (
-    <td
-      className={`border border-border/50 px-2 py-2 text-sm cursor-cell select-none ${isSelected
-        ? "bg-primary/10 outline outline-2 outline-primary/50"
-        : ""
-        }`}
-      style={{
-        width,
-        minWidth: 80,
-      }}
-      onClick={(e) => onCellClick(e, rowIndex, colIndex)}
-      onContextMenu={(e) => onContextMenu(e, rowIndex, colIndex)}
-    >
-      <div className="truncate">
-        {value || ""}
-      </div>
-    </td>
-  );
-});
-
-interface TableRowProps {
-  rowData: string[];
-  rowIndex: number;
-  columnWidths: Record<number, number>;
-  hasSelectedCell: boolean;
-  selectedCellMap: Map<string, boolean>;
-  onCellClick: (e: React.MouseEvent, row: number, col: number) => void;
-  onContextMenu: (e: React.MouseEvent, row: number, col: number) => void;
-  headersLength: number;
-}
-
-const TableRow = React.memo(function TableRow({
-  rowData,
-  rowIndex,
-  columnWidths,
-  hasSelectedCell,
-  selectedCellMap,
-  onCellClick,
-  onContextMenu,
-  headersLength,
-}: TableRowProps) {
-  return (
-    <tr
-      className={`hover:bg-muted/30 transition-colors ${hasSelectedCell ? "bg-primary/5" : ""
-        }`}
-    >
-      {Array.from({ length: headersLength }, (_, colIndex) => (
-        <TableCell
-          key={colIndex}
-          value={rowData[colIndex] || ""}
-          rowIndex={rowIndex}
-          colIndex={colIndex}
-          width={columnWidths[colIndex] || 80}
-          isSelected={selectedCellMap.has(`${rowIndex}-${colIndex}`)}
-          onCellClick={onCellClick}
-          onContextMenu={onContextMenu}
-        />
-      ))}
-    </tr>
-  );
-});
-
-interface HeaderCellProps {
-  header: string;
-  colIndex: number;
-  width: number;
-  isSelected: boolean;
-  renamedColumns: Record<string, string>;
-  onHeaderSelect: (e: React.MouseEvent, col: number) => void;
-  onHeaderContextMenu: (e: React.MouseEvent, col: number) => void;
-  onHeaderClick: (_e: React.MouseEvent | null, col: number) => void;
-  onRenameApply: () => void;
-  onResizeStart: (colIndex: number, e: React.MouseEvent) => void;
-  hasRenamedColumns: boolean;
-  isLastColumn: boolean;
-}
-
-const HeaderCell = React.memo(function HeaderCell({
-  header,
-  colIndex,
-  width,
-  isSelected,
-  renamedColumns,
-  onHeaderSelect,
-  onHeaderContextMenu,
-  onHeaderClick,
-  onRenameApply,
-  onResizeStart,
-  hasRenamedColumns,
-  isLastColumn,
-}: HeaderCellProps) {
-  const isRenaming = renamedColumns[header] !== undefined;
-
-  return (
-    <th
-      className={`border border-border/50 px-2 py-2 text-sm font-semibold text-foreground bg-muted/70 text-left group relative ${isSelected ? "bg-primary/10" : ""
-        }`}
-      style={{ width, minWidth: 80 }}
-      onClick={(e) => onHeaderSelect(e, colIndex)}
-      onContextMenu={(e) => onHeaderContextMenu(e, colIndex)}
-    >
-      <div className="flex items-center gap-1">
-        {isRenaming ? (
-          <input
-            type="text"
-            value={renamedColumns[header]}
-            onChange={() => { }}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full px-1 py-0.5 border rounded text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-            autoFocus
-          />
-        ) : (
-          <span
-            className="font-medium truncate cursor-pointer"
-            onDoubleClick={() => onHeaderClick(null as any, colIndex)}
-          >{header}</span>
-        )}
-        <div className="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          {hasRenamedColumns && (
-            <button
-              onClick={onRenameApply}
-              className="p-0.5 rounded hover:bg-accent transition-colors text-primary"
-            >
-              <Check className="h-3 w-3" />
-            </button>
-          )}
-        </div>
-        {!isLastColumn && (
-          <div
-            className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition-colors z-20"
-            onMouseDown={(e) => onResizeStart(colIndex, e)}
-          />
-        )}
-      </div>
-    </th>
-  );
-});
-
-function useSelectedCellsState() {
-  const [selectedCells, setSelectedCells] = useState<{ row: number; col: number }[]>([]);
-  const [lastSelectedCell, setLastSelectedCell] = useState<{ row: number; col: number } | null>(null);
-
-  const selectedCellMap = useMemo(() => {
-    const map = new Map<string, boolean>();
-    selectedCells.forEach(cell => {
-      map.set(`${cell.row}-${cell.col}`, true);
-    });
-    return map;
-  }, [selectedCells]);
-
-  const selectedRows = useMemo(() => {
-    const rows = new Set<number>();
-    selectedCells.forEach(cell => {
-      rows.add(cell.row);
-    });
-    return rows;
-  }, [selectedCells]);
-
-  const selectedCols = useMemo(() => {
-    const cols = new Set<number>();
-    selectedCells.forEach(cell => {
-      cols.add(cell.col);
-    });
-    return cols;
-  }, [selectedCells]);
-
-  const handleCellClick = useCallback((e: React.MouseEvent, row: number, col: number) => {
-    const newCell = { row, col };
-
-    if (e.shiftKey && lastSelectedCell) {
-      const minRow = Math.min(lastSelectedCell.row, row);
-      const maxRow = Math.max(lastSelectedCell.row, row);
-      const minCol = Math.min(lastSelectedCell.col, col);
-      const maxCol = Math.max(lastSelectedCell.col, col);
-
-      const rangeCells: { row: number; col: number }[] = [];
-      for (let r = minRow; r <= maxRow; r++) {
-        for (let c = minCol; c <= maxCol; c++) {
-          rangeCells.push({ row: r, col: c });
-        }
-      }
-      setSelectedCells(rangeCells);
-    } else if (e.ctrlKey || e.metaKey) {
-      setSelectedCells(prev => {
-        const exists = prev.some(cell => cell.row === row && cell.col === col);
-        if (exists) {
-          return prev.filter(cell => !(cell.row === row && cell.col === col));
-        } else {
-          return [...prev, newCell];
-        }
-      });
-      setLastSelectedCell(newCell);
-    } else {
-      setSelectedCells([newCell]);
-      setLastSelectedCell(newCell);
-    }
-  }, [lastSelectedCell]);
-
-  const handleHeaderSelect = useCallback((e: React.MouseEvent, col: number) => {
-    e.stopPropagation();
-    const headerCell = { row: -1, col };
-
-    if (e.shiftKey && lastSelectedCell) {
-      const minCol = Math.min(lastSelectedCell.col, col);
-      const maxCol = Math.max(lastSelectedCell.col, col);
-      const rangeCells: { row: number; col: number }[] = [];
-      for (let c = minCol; c <= maxCol; c++) {
-        rangeCells.push({ row: -1, col: c });
-      }
-      setSelectedCells(rangeCells);
-      setLastSelectedCell(headerCell);
-    } else if (e.ctrlKey || e.metaKey) {
-      setSelectedCells(prev => {
-        const isAlreadySelected = prev.some(c => c.row === -1 && c.col === col);
-        if (isAlreadySelected) {
-          return prev.filter(c => !(c.row === -1 && c.col === col));
-        } else {
-          return [...prev, headerCell];
-        }
-      });
-      setLastSelectedCell(headerCell);
-    } else {
-      setSelectedCells([headerCell]);
-      setLastSelectedCell(headerCell);
-    }
-  }, [lastSelectedCell]);
-
-  return {
-    selectedCells,
-    selectedCellMap,
-    selectedRows,
-    selectedCols,
-    handleCellClick,
-    handleHeaderSelect,
-  };
+  selectedStepId?: string;
+  onEdgesChange?: (tabId: string, edges: PipelineEdge[]) => void;
+  onInputPositionChange?: (tabId: string, position: { x: number; y: number }) => void;
+  onOpenFile?: () => void;
+  onImportPipeline?: () => void;
+  onOpenUrl?: (url: string) => void;
+  showMinimap?: boolean;
 }
 
 export function SpreadsheetView({
@@ -310,25 +47,29 @@ export function SpreadsheetView({
   onTabChange,
   onAddTab,
   onRemoveTab,
-  onRemoveAllTabsExcept,
   onRenameTab,
   onAddCommand,
   onStepClick,
   onStepUpdate,
+  onStepAliasUpdate,
   onStepDelete,
   onPipelineReorder,
+  selectedStepId,
+  onEdgesChange,
+  onInputPositionChange,
+  onOpenFile,
+  onImportPipeline,
+  onOpenUrl,
+  showMinimap,
 }: SpreadsheetViewProps) {
-  const [columnWidths, setColumnWidths] = useState<Record<number, number>>({});
-  const [resizingCol, setResizingCol] = useState<number | null>(null);
-  const [resizingStartX, setResizingStartX] = useState(0);
-  const [resizingStartWidth, setResizingStartWidth] = useState(0);
+  const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
     row: number | null;
     col: number;
   } | null>(null);
-  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
+
   const [commandDialog, setCommandDialog] = useState<CommandDialogState | null>(null);
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingTabName, setEditingTabName] = useState<string>("");
@@ -339,37 +80,21 @@ export function SpreadsheetView({
   const [replaceDialog, setReplaceDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [dateTransformDialog, setDateTransformDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [splitDialog, setSplitDialog] = useState<{ col: number; x: number; y: number; sliceType?: string } | null>(null);
-  const [renamedColumns, setRenamedColumns] = useState<Record<string, string>>({});
+  const [padDialog, setPadDialog] = useState<{ col: number; x: number; y: number; padType: string } | null>(null);
+  const [windowDialog, setWindowDialog] = useState<{ col: number; x: number; y: number } | null>(null);
+  const [renamedColumns, setRenamedColumns] = useState<Record<number, string>>({});
   const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
-
-  const tableRef = useRef<HTMLTableElement>(null);
-
-  const {
-    selectedCellMap,
-    selectedRows,
-    selectedCols,
-    handleCellClick,
-    handleHeaderSelect,
-  } = useSelectedCellsState();
 
   const currentTab = tabs.find((tab) => tab.id === selectedTabId);
   const data = currentTab?.data || [];
   const headers = currentTab?.headers || [];
+  const displayHeaders = headers.map((header, index) =>
+    renamedColumns[index] !== undefined ? renamedColumns[index] : header
+  );
   const pipeline = currentTab?.pipeline || [];
   const inputFile = currentTab?.inputFile || "";
-
-  const hasRenamedColumns = Object.keys(renamedColumns).length > 0;
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
+  const edges = currentTab?.edges || [];
+  const inputPosition = currentTab?.inputPosition;
 
   const showToastRef = useRef<(message: string, type: ToastType) => void>(() => { });
   const removeToastRef = useRef<(id: string) => void>(() => { });
@@ -391,74 +116,9 @@ export function SpreadsheetView({
     removeToastRef.current = removeToast;
   }, [showToast, removeToast]);
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id && onPipelineReorder && selectedTabId) {
-      const oldIndex = pipeline.findIndex((step) => step.id === active.id);
-      const newIndex = pipeline.findIndex((step) => step.id === over.id);
-      const newPipeline = arrayMove(pipeline, oldIndex, newIndex);
-      onPipelineReorder(selectedTabId, newPipeline);
-    }
-  }, [pipeline, onPipelineReorder, selectedTabId]);
-
-  const handleResizeStart = useCallback((colIndex: number, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setResizingCol(colIndex);
-    setResizingStartX(e.clientX);
-    setResizingStartWidth(columnWidths[colIndex] || 80);
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  }, [columnWidths]);
-
-  const handleResizeMove = useCallback((e: React.MouseEvent) => {
-    if (resizingCol === null) return;
-    const diff = e.clientX - resizingStartX;
-    const newWidth = Math.max(80, resizingStartWidth + diff);
-    setColumnWidths((prev) => ({
-      ...prev,
-      [resizingCol]: newWidth,
-    }));
-  }, [resizingCol, resizingStartX, resizingStartWidth]);
-
-  const handleResizeEnd = useCallback(() => {
-    if (resizingCol !== null) {
-      setResizingCol(null);
-    }
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-  }, [resizingCol]);
-
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent, row: number, col: number) => {
-      e.preventDefault();
-      setContextMenu({ x: e.clientX, y: e.clientY, row, col });
-    },
-    [],
-  );
-
-  const handleHeaderContextMenu = useCallback(
-    (e: React.MouseEvent, col: number) => {
-      e.preventDefault();
-      setContextMenu({ x: e.clientX, y: e.clientY, row: null, col });
-    },
-    [],
-  );
-
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
   }, []);
-
-  const handleHeaderClick = useCallback(
-    (_e: React.MouseEvent | null, col: number) => {
-      const columnName = headers[col];
-      if (!renamedColumns[columnName]) {
-        setRenamedColumns((prev) => ({ ...prev, [columnName]: columnName }));
-      }
-    },
-    [headers, renamedColumns],
-  );
 
   const closeFilterDialog = useCallback(() => {
     setFilterDialog(null);
@@ -484,6 +144,14 @@ export function SpreadsheetView({
     setSplitDialog(null);
   }, []);
 
+  const closePadDialog = useCallback(() => {
+    setPadDialog(null);
+  }, []);
+
+  const closeWindowDialog = useCallback(() => {
+    setWindowDialog(null);
+  }, []);
+
   const handleQuickSort = useCallback((col: number, order: "asc" | "desc", numeric: boolean) => {
     if (!onAddCommand) return;
     const sortCommand = xanCommands.find((cmd) => cmd.id === "sort");
@@ -498,22 +166,25 @@ export function SpreadsheetView({
     }
   }, [headers, onAddCommand]);
 
-  const handleRenameApply = useCallback(() => {
-    const changedColumns = Object.entries(renamedColumns).filter(
-      ([oldName, newName]) => oldName !== newName && newName.trim() !== "",
-    );
-    if (changedColumns.length === 0 || !onAddCommand) return;
+  const handleTableRename = useCallback((col: number, newName: string) => {
+    setRenamedColumns((prev) => ({ ...prev, [col]: newName }));
+  }, []);
 
-    const renameCommand = xanCommands.find((cmd) => cmd.id === "rename");
-    if (renameCommand) {
-      onAddCommand(renameCommand, {
-        select: changedColumns.map(([oldName]) => oldName).join(","),
-        columns: changedColumns.map(([, newName]) => newName.trim()).join(","),
-        output: "",
-      });
+  const handleSaveRenames = useCallback(() => {
+    if (onAddCommand) {
+      const renameCommand = xanCommands.find((cmd) => cmd.id === "rename");
+      if (renameCommand) {
+        const columns = headers.map((header, index) =>
+          renamedColumns[index] !== undefined ? renamedColumns[index] : header
+        ).join(",");
+        onAddCommand(renameCommand, { columns });
+        setRenamedColumns({});
+        showToast("Column renames applied to pipeline", "success");
+      }
     }
-    setRenamedColumns({});
-  }, [renamedColumns, onAddCommand]);
+  }, [renamedColumns, headers, onAddCommand, showToast]);
+
+
 
   const handleDedup = useCallback(() => {
     if (!operationDialog || !onAddCommand) return;
@@ -593,6 +264,7 @@ export function SpreadsheetView({
         trim: `col("${columnName}").trim() as "${columnName}"`,
         ltrim: `col("${columnName}").ltrim() as "${columnName}"`,
         rtrim: `col("${columnName}").rtrim() as "${columnName}"`,
+        strip: `replace(col("${columnName}"), /[\r\t\n]/, "") as "${columnName}"`,
       };
       const expression = expressionMap[transformType];
       if (expression) {
@@ -611,12 +283,12 @@ export function SpreadsheetView({
     if (mapCommand) {
       const columnName = headers[col];
       const expressionMap: Record<string, string> = {
-        abs: `abs(col("${columnName}") || 0) as "${columnName}"`,
-        floor: `floor(col("${columnName}") || 0) as "${columnName}"`,
-        ceil: `ceil(col("${columnName}") || 0) as "${columnName}"`,
-        int: `trunc(col("${columnName}") || 0) as "${columnName}"`,
-        float: `float(col("${columnName}") || 0) as "${columnName}"`,
-        round: `to_fixed(round(col("${columnName}") || 0, 0.01), 2) as "${columnName}"`,
+        abs: `abs(col("${columnName}")) as "${columnName}"`,
+        floor: `floor(col("${columnName}")) as "${columnName}"`,
+        ceil: `ceil(col("${columnName}")) as "${columnName}"`,
+        int: `trunc(col("${columnName}")) as "${columnName}"`,
+        float: `float(col("${columnName}")) as "${columnName}"`,
+        round: `to_fixed(round(col("${columnName}"), 0.01), 2) as "${columnName}"`,
       };
       const expression = expressionMap[transformType];
       if (expression) {
@@ -631,25 +303,13 @@ export function SpreadsheetView({
 
   const closeAllDialogsRef = useRef(() => {
     closeContextMenu();
-    closeFilterDialog();
-    closeSortDialog();
-    closeOperationDialog();
-    closePivotDialog();
-    closeDateTransformDialog();
-    closeSplitDialog();
   });
 
   useEffect(() => {
     closeAllDialogsRef.current = () => {
       closeContextMenu();
-      closeFilterDialog();
-      closeSortDialog();
-      closeOperationDialog();
-      closePivotDialog();
-      closeDateTransformDialog();
-      closeSplitDialog();
     };
-  }, [closeContextMenu, closeFilterDialog, closeSortDialog, closeOperationDialog, closePivotDialog, closeDateTransformDialog, closeSplitDialog]);
+  }, [closeContextMenu]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -659,28 +319,18 @@ export function SpreadsheetView({
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  if (!inputFile || data.length === 0) {
+  if (!inputFile) {
     return (
-      <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10">
-        <div className="border-b bg-card/50 backdrop-blur-sm">
+      <div className="h-full flex flex-col bg-background">
+        <div className="bg-transparent" onContextMenu={(e) => e.preventDefault()}>
           <div className="h-[48px] px-4 flex items-center">
             <div className="flex items-center shrink-0">
-              <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+              <div className="flex bg-muted/30 rounded-lg p-0.5 border border-transparent">
                 <button
                   onClick={onAddTab}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
                 >
                   <Plus className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => {
-                    if (tabs.length > 1 && selectedTabId) {
-                      onRemoveAllTabsExcept(selectedTabId);
-                    }
-                  }}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent transition-colors"
-                >
-                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -690,8 +340,14 @@ export function SpreadsheetView({
                   <div
                     key={tab.id}
                     className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-sm transition-colors shrink-0 ${selectedTabId === tab.id
-                      ? 'bg-primary/10 text-primary border border-primary/30'
-                      : 'hover:bg-accent border border-transparent'}`}
+                      ? 'bg-primary/10 text-primary border border-primary/20'
+                      : 'hover:bg-accent/50 border border-transparent'}`}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setEditingTabId(tab.id);
+                      setEditingTabName(tab.name);
+                    }}
                   >
                     {editingTabId === tab.id ? (
                       <input
@@ -727,15 +383,6 @@ export function SpreadsheetView({
                       </button>
                     )}
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => {
-                          setEditingTabId(tab.id);
-                          setEditingTabName(tab.name);
-                        }}
-                        className="p-1 rounded hover:bg-accent transition-colors"
-                      >
-                        <Edit3 className="h-3 w-3" />
-                      </button>
                       {tabs.length > 1 && (
                         <button
                           onClick={() => onRemoveTab(tab.id)}
@@ -752,17 +399,53 @@ export function SpreadsheetView({
             </ScrollArea>
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center py-16 px-4">
-            <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
-              <Table className="h-8 w-8 text-muted-foreground/50" />
+        <div className="flex-1 flex items-center justify-center" onContextMenu={(e) => e.preventDefault()}>
+          <div className="max-w-md w-full px-8">
+            <div className="text-center mb-8">
+              <h2 className="text-xl font-semibold text-foreground mb-2">
+                Welcome to Easy CSV
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Open a file or import a pipeline to get started
+              </p>
             </div>
-            <p className="text-sm font-medium text-muted-foreground mb-1">
-              No file selected
-            </p>
-            <p className="text-xs text-muted-foreground/70">
-              Select a CSV file from the top bar to view it
-            </p>
+            <div className="grid grid-cols-3 gap-32 justify-items-center">
+              <button
+                onClick={onOpenFile}
+                className="flex flex-col items-center gap-3 p-4 rounded-xl border border-border bg-card hover:bg-accent hover:border-primary/50 transition-all group w-36 aspect-square"
+              >
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <FolderOpen className="h-6 w-6 text-primary" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground">Open File</p>
+                  <p className="text-xs text-muted-foreground mt-1">CSV, Excel, JSON</p>
+                </div>
+              </button>
+              <button
+                onClick={onImportPipeline}
+                className="flex flex-col items-center gap-3 p-4 rounded-xl border border-border bg-card hover:bg-accent hover:border-primary/50 transition-all group w-36 aspect-square"
+              >
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <FileUp className="h-6 w-6 text-primary" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground">Import Pipeline</p>
+                  <p className="text-xs text-muted-foreground mt-1">.xan files</p>
+                </div>
+              </button>
+              <button
+                onClick={() => onOpenUrl?.("https://github.com/tansen87/easy-csv")}
+                className="flex flex-col items-center gap-3 p-4 rounded-xl border border-border bg-card hover:bg-accent hover:border-primary/50 transition-all group w-36 aspect-square"
+              >
+                <div className="w-12 h-12 rounded-lg bg-yellow-500/10 flex items-center justify-center group-hover:bg-yellow-500/20 transition-colors">
+                  <Star className="h-6 w-6 text-yellow-500" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground">Star on GitHub</p>
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -770,26 +453,16 @@ export function SpreadsheetView({
   }
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/10">
-      <div className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="h-[48px] px-4 flex items-center">
+    <div className="h-full flex flex-col bg-background">
+      <div className="bg-transparent" onContextMenu={(e) => e.preventDefault()}>
+        <div className="h-[48px] px-2 flex items-center">
           <div className="flex items-center shrink-0">
-            <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+            <div className="flex bg-muted/30 rounded-lg p-0.5 border border-transparent">
               <button
                 onClick={onAddTab}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
               >
                 <Plus className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => {
-                  if (tabs.length > 1 && selectedTabId) {
-                    onRemoveAllTabsExcept(selectedTabId);
-                  }
-                }}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
-              >
-                <Trash2 className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -799,8 +472,14 @@ export function SpreadsheetView({
                 <div
                   key={tab.id}
                   className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-sm transition-colors shrink-0 ${selectedTabId === tab.id
-                    ? 'bg-primary/10 text-primary border border-primary/30'
-                    : 'hover:bg-accent border border-transparent'}`}
+                    ? 'bg-primary/10 text-primary border border-primary/20'
+                    : 'hover:bg-accent/50 border border-transparent'}`}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setEditingTabId(tab.id);
+                    setEditingTabName(tab.name);
+                  }}
                 >
                   {editingTabId === tab.id ? (
                     <input
@@ -836,15 +515,6 @@ export function SpreadsheetView({
                     </button>
                   )}
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => {
-                        setEditingTabId(tab.id);
-                        setEditingTabName(tab.name);
-                      }}
-                      className="p-1 rounded hover:bg-accent transition-colors"
-                    >
-                      <Edit3 className="h-3 w-3" />
-                    </button>
                     {tabs.length > 1 && (
                       <button
                         onClick={() => onRemoveTab(tab.id)}
@@ -862,180 +532,60 @@ export function SpreadsheetView({
         </div>
       </div>
 
-      {pipeline.length > 0 && (
-        <div className="px-4 py-2.5 border-b bg-gradient-to-r from-background/80 via-background/60 to-background/80 backdrop-blur-sm">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={pipeline.map((step) => step.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <ScrollArea className="w-full">
-                <div className="flex items-start gap-2 pb-1.5">
-                  {pipeline.map((step, index) => (
-                    <SortableStep
-                      key={step.id}
-                      step={step}
-                      index={index}
-                      isLast={index === pipeline.length - 1}
-                      headers={headers}
-                      onStepClick={(s) => {
-                        setSelectedStepId(s.id);
-                        if (onStepClick) {
-                          onStepClick(s);
-                        }
-                      }}
-                      onStepDelete={onStepDelete || (() => { })}
-                      setCommandDialog={setCommandDialog}
-                    />
-                  ))}
-                </div>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
-            </SortableContext>
-          </DndContext>
-        </div>
-      )}
-
-      {selectedStepId && (() => {
-        const selectedStep = pipeline.find((s) => s.id === selectedStepId);
-        if (!selectedStep) return null;
-
-        return (
-          <div className="px-4 py-3 border-b bg-card/30">
-            <div className="grid grid-cols-2 gap-3">
-              {selectedStep.command.parameters.map((param) => (
-                <div key={param.name} className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    {param.name}
-                  </label>
-                  {param.type === "flag" || param.type === "boolean" ? (
-                    <input
-                      type="checkbox"
-                      checked={selectedStep.parameters[param.name] || false}
-                      onChange={(e) => {
-                        if (onStepUpdate) {
-                          onStepUpdate(selectedStep.id, {
-                            ...selectedStep.parameters,
-                            [param.name]: e.target.checked,
-                          });
-                        }
-                      }}
-                      className="h-4 w-4"
-                    />
-                  ) : param.type === "select" ? (
-                    <select
-                      value={
-                        selectedStep.parameters[param.name] ||
-                        param.default ||
-                        ""
-                      }
-                      onChange={(e) => {
-                        if (onStepUpdate) {
-                          onStepUpdate(selectedStep.id, {
-                            ...selectedStep.parameters,
-                            [param.name]: e.target.value,
-                          });
-                        }
-                      }}
-                      className="w-full h-8 px-2 text-xs border rounded bg-background"
-                    >
-                      {param.options?.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type={param.type === "number" ? "number" : "text"}
-                      value={
-                        selectedStep.parameters[param.name] ||
-                        param.default ||
-                        ""
-                      }
-                      onChange={(e) => {
-                        if (onStepUpdate) {
-                          onStepUpdate(selectedStep.id, {
-                            ...selectedStep.parameters,
-                            [param.name]:
-                              param.type === "number"
-                                ? Number(e.target.value)
-                                : e.target.value,
-                          });
-                        }
-                      }}
-                      placeholder={param.description}
-                      className="w-full h-8 px-2 text-xs border rounded bg-background"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
-
-      <div
-        className="flex-1 flex flex-col overflow-hidden relative"
-        onMouseMove={handleResizeMove}
-        onMouseUp={handleResizeEnd}
-        onMouseLeave={handleResizeEnd}
-      >
-        <div className="p-4 h-full flex flex-col">
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50 flex-1 overflow-hidden flex flex-col">
-            <ScrollArea className="flex-1">
-              <table ref={tableRef} className="w-full border-collapse table-fixed">
-                <colgroup>
-                  {headers.map((_, colIndex) => (
-                    <col key={colIndex} style={{ width: columnWidths[colIndex] || 80, minWidth: 80 }} />
-                  ))}
-                </colgroup>
-                <thead className="bg-muted/50 sticky top-0 z-10">
-                  <tr>
-                    {headers.map((header, colIndex) => (
-                      <HeaderCell
-                        key={colIndex}
-                        header={header}
-                        colIndex={colIndex}
-                        width={columnWidths[colIndex] || 80}
-                        isSelected={selectedCols.has(colIndex)}
-                        renamedColumns={renamedColumns}
-                        onHeaderSelect={handleHeaderSelect}
-                        onHeaderContextMenu={handleHeaderContextMenu}
-                        onHeaderClick={handleHeaderClick}
-                        onRenameApply={handleRenameApply}
-                        onResizeStart={handleResizeStart}
-                        hasRenamedColumns={hasRenamedColumns}
-                        isLastColumn={colIndex === headers.length - 1}
-                      />
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map((row, rowIndex) => (
-                    <TableRow
-                      key={rowIndex}
-                      rowData={row}
-                      rowIndex={rowIndex}
-                      columnWidths={columnWidths}
-                      hasSelectedCell={selectedRows.has(rowIndex)}
-                      selectedCellMap={selectedCellMap}
-                      onCellClick={handleCellClick}
-                      onContextMenu={handleContextMenu}
-                      headersLength={headers.length}
-                    />
-                  ))}
-                </tbody>
-              </table>
-              <ScrollBar orientation="horizontal" />
-              <ScrollBar orientation="vertical" />
-            </ScrollArea>
-          </Card>
-        </div>
+      <div className="flex-1 relative overflow-hidden">
+        <FlowPanel
+          steps={pipeline}
+          headers={displayHeaders}
+          rows={data}
+          columnWidths={columnWidths}
+          onStepsChange={(newPipeline) => {
+            if (onPipelineReorder && selectedTabId) {
+              onPipelineReorder(selectedTabId, newPipeline);
+            }
+          } }
+          onStepClick={(s) => {
+            if (onStepClick) {
+              onStepClick(s);
+            }
+            setCommandDialog({
+              type: s.command.name as any,
+              params: { ...s.parameters },
+              isUpdate: true,
+              stepId: s.id,
+            });
+          } }
+          onStepAliasUpdate={onStepAliasUpdate || (() => { })}
+          onStepRemove={onStepDelete || (() => { })}
+          onOpenFilterDialog={(col, x, y) => setFilterDialog({ col, x, y })}
+          onOpenPivotDialog={(x, y) => setPivotDialog({ x, y })}
+          onOpenDateTransformDialog={(col, x, y) => setDateTransformDialog({ col, x, y })}
+          onOpenSliceDialog={(col, x, y, sliceType) => setSplitDialog({ col, x, y, sliceType })}
+          onOpenReplaceDialog={(col, x, y) => setReplaceDialog({ col, x, y })}
+          onOpenWindowDialog={(col, x, y) => setWindowDialog({ col, x, y })}
+          onOpenPadDialog={(col, x, y, padType) => setPadDialog({ col, x, y, padType })}
+          onSort={handleQuickSort}
+          onDedup={handleContextMenuDedup}
+          onTranspose={handleContextMenuTranspose}
+          onReverse={handleContextMenuReverse}
+          onTextTransform={handleTextTransform}
+          onNumberTransform={handleNumberTransform}
+          onTableRename={handleTableRename}
+          onSave={handleSaveRenames}
+          selectedStepId={selectedStepId}
+          savedEdges={edges}
+          savedInputPosition={inputPosition}
+          onEdgesChange={(edges) => {
+            if (onEdgesChange && selectedTabId) {
+              onEdgesChange(selectedTabId, edges);
+            }
+          }}
+          onInputPositionChange={(position) => {
+            if (onInputPositionChange && selectedTabId) {
+              onInputPositionChange(selectedTabId, position);
+            }
+          }}
+          showMinimap={showMinimap}
+        />
       </div>
 
       {contextMenu && (
@@ -1047,6 +597,8 @@ export function SpreadsheetView({
           onOpenDateTransformDialog={(col, x, y) => setDateTransformDialog({ col, x, y })}
           onOpenSliceDialog={(col, x, y, sliceType) => setSplitDialog({ col, x, y, sliceType })}
           onOpenReplaceDialog={(col, x, y) => setReplaceDialog({ col, x, y })}
+          onOpenWindowDialog={(col, x, y) => setWindowDialog({ col, x, y })}
+          onOpenPadDialog={(col, x, y, padType) => setPadDialog({ col, x, y, padType })}
           onSort={handleQuickSort}
           onDedup={handleContextMenuDedup}
           onTranspose={handleContextMenuTranspose}
@@ -1111,12 +663,30 @@ export function SpreadsheetView({
         />
       )}
 
+      {padDialog && (
+        <PadDialog
+          padDialog={padDialog}
+          headers={headers}
+          onAddCommand={onAddCommand}
+          onClose={closePadDialog}
+        />
+      )}
+
       {replaceDialog && (
         <ReplaceDialog
           replaceDialog={replaceDialog}
           headers={headers}
           onAddCommand={onAddCommand}
           onClose={() => setReplaceDialog(null)}
+        />
+      )}
+
+      {windowDialog && (
+        <WindowDialog
+          windowDialog={windowDialog}
+          headers={headers}
+          onAddCommand={onAddCommand}
+          onClose={closeWindowDialog}
         />
       )}
 
