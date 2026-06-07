@@ -5,6 +5,7 @@ import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { ThemeAwareInput } from "@/components/theme/ThemeAwareInput";
+import { ThemeAwareButton } from "@/components/theme/ThemeAwareButton";
 
 interface WindowDialogState {
   col: number;
@@ -192,7 +193,7 @@ export function WindowDialog({
           onClick={onClose}
           className="no-drag p-0.5 hover:bg-accent rounded transition-colors shrink-0 text-muted-foreground/70 hover:text-foreground"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-4 w-4" />
         </button>
       </div>
 
@@ -290,18 +291,18 @@ export function WindowDialog({
       </ScrollArea>
 
       <div className="px-3 pb-2 flex gap-2">
-        <button
-          className="flex-1 px-2 py-1.5 rounded text-sm bg-muted transition-colors"
+        <ThemeAwareButton
+          className="flex-1"
           onClick={onClose}
         >
           Cancel
-        </button>
-        <button
-          className="flex-1 px-2 py-1.5 rounded text-sm bg-muted transition-colors"
+        </ThemeAwareButton>
+        <ThemeAwareButton
+          className="flex-1"
           onClick={handleApply}
         >
           Apply
-        </button>
+        </ThemeAwareButton>
       </div>
     </div>
   );

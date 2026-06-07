@@ -15,8 +15,7 @@ export function ThemeAwareCheckbox({
   className = "",
 }: ThemeAwareCheckboxProps) {
   const { theme } = useTheme();
-  
-  // 如果是 animal-island 主题，使用原生 checkbox 但添加特定的样式类
+
   if (theme === "animal-island") {
     return (
       <label className={`flex items-center gap-2 text-sm cursor-pointer ${className}`}>
@@ -30,8 +29,7 @@ export function ThemeAwareCheckbox({
       </label>
     );
   }
-  
-  // 否则使用原生 checkbox
+
   return (
     <label className={`flex items-center gap-2 text-sm cursor-pointer ${className}`}>
       <input

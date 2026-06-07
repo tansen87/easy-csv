@@ -5,6 +5,7 @@ import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { ThemeAwareInput } from "@/components/theme/ThemeAwareInput";
+import { ThemeAwareButton } from "@/components/theme/ThemeAwareButton";
 
 interface SplitDialogState {
   col: number;
@@ -189,7 +190,7 @@ export function SplitDialog({
           onClick={onClose}
           className="no-drag p-0.5 hover:bg-accent rounded transition-colors shrink-0 text-muted-foreground/70 hover:text-foreground dark:text-muted-foreground/80"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-4 w-4" />
         </button>
       </div>
       <ScrollArea className="h-[280px]">
@@ -357,17 +358,17 @@ export function SplitDialog({
         </div>
       </ScrollArea>
       <div className="flex items-center gap-2 px-3 py-2 shrink-0">
-        <button
+        <ThemeAwareButton
           onClick={onClose}
-          className="flex-1 px-2 py-1.5 rounded text-sm bg-muted transition-colors">
+          className="flex-1">
           Cancel
-        </button>
-        <button
+        </ThemeAwareButton>
+        <ThemeAwareButton
           onClick={handleApply}
           disabled={!selectedColumn || (sliceType === "split" && separator === "custom" && !customSeparator)}
-          className="flex-1 px-2 py-1.5 rounded text-sm bg-muted transition-colors">
+          className="flex-1">
           Apply
-        </button>
+        </ThemeAwareButton>
       </div>
     </div>
   );
