@@ -47,6 +47,29 @@
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
   }
+
+  .animal-island {
+    --background: 35 60% 96%;
+    --foreground: 30 30% 15%;
+    --card: 35 55% 92%;
+    --card-foreground: 30 30% 15%;
+    --popover: 35 55% 92%;
+    --popover-foreground: 30 30% 15%;
+    --primary: 25 70% 50%;
+    --primary-foreground: 35 60% 96%;
+    --secondary: 35 40% 85%;
+    --secondary-foreground: 30 30% 15%;
+    --muted: 35 40% 85%;
+    --muted-foreground: 30 20% 45%;
+    --accent: 25 60% 70%;
+    --accent-foreground: 30 30% 15%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 35 60% 96%;
+    --border: 35 50% 80%;
+    --input: 35 50% 80%;
+    --ring: 25 70% 50%;
+    --radius: 1rem;
+  }
 }
 
 @layer base {
@@ -122,6 +145,51 @@
     opacity: 0;
     stroke: #ff4757;
   }
+}
+
+/* Animal Island Theme Checkbox 样式 */
+.animal-checkbox {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid hsl(25 70% 50%);
+  border-radius: 4px;
+  background-color: hsl(35 60% 96%);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  box-shadow: 2px 2px 0 hsl(25 70% 50% / 0.3);
+}
+
+.animal-checkbox:hover {
+  background-color: hsl(35 55% 92%);
+  box-shadow: 3px 3px 0 hsl(25 70% 50% / 0.4);
+}
+
+.animal-checkbox:checked {
+  background-color: hsl(25 70% 50%);
+  border-color: hsl(25 70% 50%);
+}
+
+.animal-checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: hsl(35 60% 96%);
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.animal-checkbox:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(25 70% 50% / 0.3);
+}
+
+.animal-checkbox:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 

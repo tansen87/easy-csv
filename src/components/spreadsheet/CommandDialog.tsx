@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { ThemeAwareCheckbox } from "@/components/ThemeAwareCheckbox";
 
 export type CommandDialogType =
   | "search"
@@ -236,144 +237,120 @@ export function CommandDialog({
                   </div>
                 </div>
                 <div className="grid grid-cols-4 gap-2 mt-2">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params["invert-match"]}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            "invert-match": e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params["invert-match"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "invert-match": checked,
+                        },
+                      })
+                    }
+                  >
                     Invert Match
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.exact}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            exact: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.exact}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          exact: checked,
+                        },
+                      })
+                    }
+                  >
                     Exact
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.regex}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            regex: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.regex}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          regex: checked,
+                        },
+                      })
+                    }
+                  >
                     Regex
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params["url-prefix"]}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            "url-prefix": e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params["url-prefix"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "url-prefix": checked,
+                        },
+                      })
+                    }
+                  >
                     URL Prefix
-                  </label>
+                  </ThemeAwareCheckbox>
                 </div>
                 <div className="grid grid-cols-4 gap-2 mt-2">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params["non-empty"]}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            "non-empty": e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params["non-empty"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "non-empty": checked,
+                        },
+                      })
+                    }
+                  >
                     Non-Empty
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.empty}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            empty: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.empty}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          empty: checked,
+                        },
+                      })
+                    }
+                  >
                     Empty
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params["ignore-case"]}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            "ignore-case": e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params["ignore-case"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "ignore-case": checked,
+                        },
+                      })
+                    }
+                  >
                     Ignore Case
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.parallel}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            parallel: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.parallel}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          parallel: checked,
+                        },
+                      })
+                    }
+                  >
                     Parallel
-                  </label>
+                  </ThemeAwareCheckbox>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mt-1">
                   <div className="space-y-2">
@@ -495,57 +472,48 @@ export function CommandDialog({
                   </div>
                 </div>
                 <div className="grid grid-cols-4 gap-2 mt-2">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.overlapping}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            overlapping: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.overlapping}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          overlapping: checked,
+                        },
+                      })
+                    }
+                  >
                     Overlapping
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.left}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            left: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.left}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          left: checked,
+                        },
+                      })
+                    }
+                  >
                     Left
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.breakdown}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            breakdown: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.breakdown}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          breakdown: checked,
+                        },
+                      })
+                    }
+                  >
                     Breakdown
-                  </label>
+                  </ThemeAwareCheckbox>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mt-1">
                   <div className="space-y-2">
@@ -771,40 +739,34 @@ export function CommandDialog({
               />
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["invert-match"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "invert-match": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Invert Match
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.parallel}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        parallel: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Parallel
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params["invert-match"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "invert-match": checked,
+                        },
+                      })
+                    }
+                  >
+                    Invert Match
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.parallel}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          parallel: checked,
+                        },
+                      })
+                    }
+                  >
+                    Parallel
+                  </ThemeAwareCheckbox>
               <div className="flex">
                 <input
                   type="number"
@@ -947,161 +909,134 @@ export function CommandDialog({
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.reverse ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        reverse: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Reverse
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.numeric ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        numeric: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Numeric
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.check ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        check: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Check
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.uniq ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        uniq: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Uniq
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.unstable ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        unstable: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Unstable
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.reverse ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          reverse: checked,
+                        },
+                      })
+                    }
+                  >
+                    Reverse
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.numeric ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          numeric: checked,
+                        },
+                      })
+                    }
+                  >
+                    Numeric
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.check ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          check: checked,
+                        },
+                      })
+                    }
+                  >
+                    Check
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.uniq ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          uniq: checked,
+                        },
+                      })
+                    }
+                  >
+                    Uniq
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.unstable ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          unstable: checked,
+                        },
+                      })
+                    }
+                  >
+                    Unstable
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.parallel ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        parallel: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Parallel
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.external ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        external: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                External
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.columns ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        columns: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Columns
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.cells ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        cells: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Cells
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.parallel ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          parallel: checked,
+                        },
+                      })
+                    }
+                  >
+                    Parallel
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.external ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          external: checked,
+                        },
+                      })
+                    }
+                  >
+                    External
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.columns ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          columns: checked,
+                        },
+                      })
+                    }
+                  >
+                    Columns
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.cells ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          cells: checked,
+                        },
+                      })
+                    }
+                  >
+                    Cells
+                  </ThemeAwareCheckbox>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Tmp Dir</label>
@@ -1184,23 +1119,20 @@ export function CommandDialog({
               />
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.evaluate}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        evaluate: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Evaluate Expression
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.evaluate}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          evaluate: checked,
+                        },
+                      })
+                    }
+                  >
+                    Evaluate Expression
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -1269,27 +1201,20 @@ export function CommandDialog({
                 autoFocus
               />
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="view-all"
-                checked={commandDialog.params.all || false}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      all: e.target.checked,
-                      limit: e.target.checked ? 0 : commandDialog.params.limit || 10,
-                    },
-                  })
-                }
-                className="h-4 w-4"
-              />
-              <label htmlFor="view-all" className="text-sm cursor-pointer">
-                Show All Rows
-              </label>
-            </div>
+            <ThemeAwareCheckbox
+                  checked={commandDialog.params.all || false}
+                  onChange={(checked) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        all: checked,
+                      },
+                    })
+                  }
+                >
+                  Show All Rows
+                </ThemeAwareCheckbox>
             <div className="space-y-2">
               <label className="text-sm font-medium">Limit</label>
               <input
@@ -1355,23 +1280,20 @@ export function CommandDialog({
         {commandDialog.type === "count" && (
           <div className="space-y-4">
             <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.parallel}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        parallel: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Parallel
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.parallel}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          parallel: checked,
+                        },
+                      })
+                    }
+                  >
+                    Parallel
+                  </ThemeAwareCheckbox>
               <input
                 type="number"
                 value={commandDialog.params.threads}
@@ -1389,23 +1311,20 @@ export function CommandDialog({
                 placeholder="Number of threads"
                 className="h-10 px-3 text-sm border rounded-md bg-background"
               />
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.approx}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        approx: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Approximate
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.approx}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          approx: checked,
+                        },
+                      })
+                    }
+                  >
+                    Approximate
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -1757,23 +1676,20 @@ export function CommandDialog({
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.cursed ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        cursed: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Cursed
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.cursed ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          cursed: checked,
+                        },
+                      })
+                    }
+                  >
+                    Cursed
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -1841,91 +1757,76 @@ export function CommandDialog({
               />
             </div>
             <div className="grid grid-cols-5">
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.check}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        check: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
+              <ThemeAwareCheckbox
+                checked={commandDialog.params.check}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      check: checked,
+                    },
+                  })
+                }
+              >
                 Check
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.sorted}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        sorted: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
+              </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                checked={commandDialog.params.sorted}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      sorted: checked,
+                    },
+                  })
+                }
+              >
                 Sorted
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.external}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        external: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
+              </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                checked={commandDialog.params.external}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      external: checked,
+                    },
+                  })
+                }
+              >
                 External
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["keep-last"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "keep-last": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
+              </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                checked={commandDialog.params["keep-last"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "keep-last": checked,
+                    },
+                  })
+                }
+              >
                 Keep Last
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["keep-duplicates"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "keep-duplicates": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
+              </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                checked={commandDialog.params["keep-duplicates"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "keep-duplicates": checked,
+                    },
+                  })
+                }
+              >
                 Keep Duplicates
-              </label>
+              </ThemeAwareCheckbox>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -2028,23 +1929,20 @@ export function CommandDialog({
               />
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.external}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        external: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                External
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.external}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          l: checked,
+                        },
+                      })
+                    }
+                  >
+                    External
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -2167,74 +2065,62 @@ export function CommandDialog({
               </div>
             </div>
             <div className="grid grid-cols-5 gap-0">
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.all}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        all: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                All
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.approx}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        approx: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Approx
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["no-extra"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "no-extra": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                No Extra
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.parallel}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        parallel: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Parallel
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.all}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          l: checked,
+                        },
+                      })
+                    }
+                  >
+                    All
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.approx}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          x: checked,
+                        },
+                      })
+                    }
+                  >
+                    Approx
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params["no-extra"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          a: checked,
+                        },
+                      })
+                    }
+                  >
+                    No Extra
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.parallel}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          l: checked,
+                        },
+                      })
+                    }
+                  >
+                    Parallel
+                  </ThemeAwareCheckbox>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -2420,40 +2306,34 @@ export function CommandDialog({
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.sorted}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            sorted: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.sorted}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          d: checked,
+                        },
+                      })
+                    }
+                  >
                     Sorted
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.parallel}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            parallel: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.parallel}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          l: checked,
+                        },
+                      })
+                    }
+                  >
                     Parallel
-                  </label>
+                  </ThemeAwareCheckbox>
                   <div className="space-y-2">
                     <input
                       type="number"
@@ -2563,110 +2443,92 @@ export function CommandDialog({
               </div>
             </div>
             <div className="grid grid-cols-5 gap-0">
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.all}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        all: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                All
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.cardinality}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        cardinality: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Cardinality
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.quartiles}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        quartiles: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Quartiles
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.approx}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        approx: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Approx
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.nulls}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        nulls: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Nulls
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.all}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          l: checked,
+                        },
+                      })
+                    }
+                  >
+                    All
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.cardinality}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          y: checked,
+                        },
+                      })
+                    }
+                  >
+                    Cardinality
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.quartiles}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          s: checked,
+                        },
+                      })
+                    }
+                  >
+                    Quartiles
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.approx}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          x: checked,
+                        },
+                      })
+                    }
+                  >
+                    Approx
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.nulls}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          s: checked,
+                        },
+                      })
+                    }
+                  >
+                    Nulls
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.parallel}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        parallel: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Parallel
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.parallel}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          l: checked,
+                        },
+                      })
+                    }
+                  >
+                    Parallel
+                  </ThemeAwareCheckbox>
               <div className="flex-1">
                 <input
                   type="number"
@@ -2808,23 +2670,20 @@ export function CommandDialog({
               />
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.parallel}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        parallel: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Parallel
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.parallel}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          l: checked,
+                        },
+                      })
+                    }
+                  >
+                    Parallel
+                  </ThemeAwareCheckbox>
               <div className="flex-1">
                 <input
                   type="number"
@@ -3015,40 +2874,34 @@ export function CommandDialog({
               </div>
             </div>
             <div className="grid grid-cols-4 gap-0">
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.exact}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        exact: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Exact
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["no-extra"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "no-extra": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                No Extra
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.exact}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          t: checked,
+                        },
+                      })
+                    }
+                  >
+                    Exact
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params["no-extra"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          a: checked,
+                        },
+                      })
+                    }
+                  >
+                    No Extra
+                  </ThemeAwareCheckbox>
               <div></div>
               <div></div>
             </div>
@@ -3243,57 +3096,48 @@ export function CommandDialog({
               />
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["ignore-case"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "ignore-case": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Ignore Case
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["invert-match"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "invert-match": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Invert Match
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.count}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        count: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Count
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params["ignore-case"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "ignore-case": checked,
+                        },
+                      })
+                    }
+                  >
+                    Ignore Case
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params["invert-match"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "invert-match": checked,
+                        },
+                      })
+                    }
+                  >
+                    Invert Match
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.count}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          count: checked,
+                        },
+                      })
+                    }
+                  >
+                    Count
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -3341,23 +3185,20 @@ export function CommandDialog({
         {commandDialog.type === "headers" && (
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["just-names"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "just-names": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Just Names
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params["just-names"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "just-names": checked,
+                        },
+                      })
+                    }
+                  >
+                    Just Names
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -3457,108 +3298,90 @@ export function CommandDialog({
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.condense ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        condense: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Condense
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.wrap ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        wrap: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Wrap
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.flatter ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        flatter: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Flatter
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.csv ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        csv: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                CSV
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.rainbow ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        rainbow: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Rainbow
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["non-empty"] ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "non-empty": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.condense ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          condense: checked,
+                        },
+                      })
+                    }
+                  >
+                    Condense
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.wrap ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          wrap: checked,
+                        },
+                      })
+                    }
+                  >
+                    Wrap
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.flatter ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          flatter: checked,
+                        },
+                      })
+                    }
+                  >
+                    Flatter
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.csv ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          csv: checked,
+                        },
+                      })
+                    }
+                  >
+                    CSV
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.rainbow ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          rainbow: checked,
+                        },
+                      })
+                    }
+                  >
+                    Rainbow
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                checked={commandDialog.params["non-empty"] ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "non-empty": checked,
+                    },
+                  })
+                }
+              >
                 Non Empty
-              </label>
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -3668,57 +3491,48 @@ export function CommandDialog({
               />
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.rainbow ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        rainbow: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Rainbow
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.dates ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        dates: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Dates
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["hide-percent"] ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "hide-percent": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.rainbow ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          rainbow: checked,
+                        },
+                      })
+                    }
+                  >
+                    Rainbow
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.dates ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          dates: checked,
+                        },
+                      })
+                    }
+                  >
+                    Dates
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                checked={commandDialog.params["hide-percent"] ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "hide-percent": checked,
+                    },
+                  })
+                }
+              >
                 Hide Percent
-              </label>
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -3849,57 +3663,48 @@ export function CommandDialog({
               />
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.overwrite}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        overwrite: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Overwrite
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.filter}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        filter: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Filter
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.parallel}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        parallel: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Parallel
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.overwrite}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          overwrite: checked,
+                        },
+                      })
+                    }
+                  >
+                    Overwrite
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.filter}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          filter: checked,
+                        },
+                      })
+                    }
+                  >
+                    Filter
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.parallel}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          parallel: checked,
+                        },
+                      })
+                    }
+                  >
+                    Parallel
+                  </ThemeAwareCheckbox>
               <input
                 type="number"
                 value={commandDialog.params.threads || ""}
@@ -4034,23 +3839,20 @@ export function CommandDialog({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-4 flex-wrap">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={commandDialog.params.parallel}
-                        onChange={(e) =>
-                          setCommandDialog({
-                            ...commandDialog,
-                            params: {
-                              ...commandDialog.params,
-                              parallel: e.target.checked,
-                            },
-                          })
-                        }
-                        className="h-4 w-4"
-                      />
-                      Parallel
-                    </label>
+                    <ThemeAwareCheckbox
+                    checked={commandDialog.params.parallel}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          parallel: checked,
+                        },
+                      })
+                    }
+                  >
+                    Parallel
+                  </ThemeAwareCheckbox>
                   </div>
                   <div className="space-y-2">
                     <input
@@ -4158,40 +3960,34 @@ export function CommandDialog({
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["byte-offset"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "byte-offset": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Byte Offset
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.accumulate}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        accumulate: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Accumulate
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params["byte-offset"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "byte-offset": checked,
+                        },
+                      })
+                    }
+                  >
+                    Byte Offset
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.accumulate}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          accumulate: checked,
+                        },
+                      })
+                    }
+                  >
+                    Accumulate
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -4350,74 +4146,62 @@ export function CommandDialog({
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.check}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        check: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Check
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.dates}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        dates: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Dates
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.sorted}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        sorted: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Sorted
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.reverse}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        reverse: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Reverse
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.check}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          check: checked,
+                        },
+                      })
+                    }
+                  >
+                    Check
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.dates}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          dates: checked,
+                        },
+                      })
+                    }
+                  >
+                    Dates
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.sorted}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          sorted: checked,
+                        },
+                      })
+                    }
+                  >
+                    Sorted
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.reverse}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          reverse: checked,
+                        },
+                      })
+                    }
+                  >
+                    Reverse
+                  </ThemeAwareCheckbox>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -4578,23 +4362,20 @@ export function CommandDialog({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
+                <ThemeAwareCheckbox
                     checked={commandDialog.params.parallel}
-                    onChange={(e) =>
+                    onChange={(checked) =>
                       setCommandDialog({
                         ...commandDialog,
                         params: {
                           ...commandDialog.params,
-                          parallel: e.target.checked,
+                          parallel: checked,
                         },
                       })
                     }
-                    className="h-4 w-4"
-                  />
-                  Parallel
-                </label>
+                  >
+                    Parallel
+                  </ThemeAwareCheckbox>
               </div>
               <div className="space-y-2">
                 <input
@@ -4698,125 +4479,104 @@ export function CommandDialog({
               </div>
             </div>
             <div className="flex items-center gap-4 flex-wrap">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.regex}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        regex: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Regex
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.match}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        match: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Match
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.captures}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        captures: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Captures
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["all-captures"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "all-captures": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                All Captures
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["fixed-width"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "fixed-width": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Fixed Width
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.keep}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        keep: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Keep
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.trim}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        trim: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Trim
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.regex}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          regex: checked,
+                        },
+                      })
+                    }
+                  >
+                    Regex
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.match}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          match: checked,
+                        },
+                      })
+                    }
+                  >
+                    Match
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.captures}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          captures: checked,
+                        },
+                      })
+                    }
+                  >
+                    Captures
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params["all-captures"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "all-captures": checked,
+                        },
+                      })
+                    }
+                  >
+                    All Captures
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params["fixed-width"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "fixed-width": checked,
+                        },
+                      })
+                    }
+                  >
+                    Fixed Width
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.keep}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          keep: checked,
+                        },
+                      })
+                    }
+                  >
+                    Keep
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.trim}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          trim: checked,
+                        },
+                      })
+                    }
+                  >
+                    Trim
+                  </ThemeAwareCheckbox>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -5071,57 +4831,48 @@ export function CommandDialog({
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.reverse ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        reverse: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Reverse
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.lexicographic ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        lexicographic: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Lexicographic
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.ties ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        ties: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Ties
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.reverse ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          reverse: checked,
+                        },
+                      })
+                    }
+                  >
+                    Reverse
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.lexicographic ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          lexicographic: checked,
+                        },
+                      })
+                    }
+                  >
+                    Lexicographic
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.ties ?? false}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          ties: checked,
+                        },
+                      })
+                    }
+                  >
+                    Ties
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -5236,23 +4987,20 @@ export function CommandDialog({
               />
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.pad}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        pad: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Pad
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.pad}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          pad: checked,
+                        },
+                      })
+                    }
+                  >
+                    Pad
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -5458,40 +5206,34 @@ export function CommandDialog({
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params["ignore-case"]}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            "ignore-case": e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params["ignore-case"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "ignore-case": checked,
+                        },
+                      })
+                    }
+                  >
                     Ignore Case
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.nulls}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            nulls: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.nulls}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          nulls: checked,
+                        },
+                      })
+                    }
+                  >
                     Nulls
-                  </label>
+                  </ThemeAwareCheckbox>
                 </div>
               </div>
             </ScrollArea>
@@ -5624,57 +5366,48 @@ export function CommandDialog({
                   />
                 </div>
                 <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.numeric}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            numeric: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.numeric}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          numeric: checked,
+                        },
+                      })
+                    }
+                  >
                     Numeric
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.reverse}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            reverse: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.reverse}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          reverse: checked,
+                        },
+                      })
+                    }
+                  >
                     Reverse
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.uniq}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            uniq: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.uniq}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          uniq: checked,
+                        },
+                      })
+                    }
+                  >
                     Uniq
-                  </label>
+                  </ThemeAwareCheckbox>
                 </div>
               </div>
             </ScrollArea>
@@ -5797,108 +5530,90 @@ export function CommandDialog({
                   </div>
                 </div>
                 <div className="flex items-center gap-4 flex-wrap">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.regex}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            regex: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.regex}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          regex: checked,
+                        },
+                      })
+                    }
+                  >
                     Regex
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params["url-prefix"]}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            "url-prefix": e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params["url-prefix"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "url-prefix": checked,
+                        },
+                      })
+                    }
+                  >
                     Url Prefix
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params["ignore-case"]}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            "ignore-case": e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params["ignore-case"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "ignore-case": checked,
+                        },
+                      })
+                    }
+                  >
                     Ignore Case
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.simplified}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            simplified: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.simplified}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          simplified: checked,
+                        },
+                      })
+                    }
+                  >
                     Simplified
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.left}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            left: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.left}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          left: checked,
+                        },
+                      })
+                    }
+                  >
                     Left
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.parallel}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            parallel: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-4 w-4"
-                    />
+                  </ThemeAwareCheckbox>
+                  <ThemeAwareCheckbox
+                    checked={commandDialog.params.parallel}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          parallel: checked,
+                        },
+                      })
+                    }
+                  >
                     Parallel
-                  </label>
+                  </ThemeAwareCheckbox>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
@@ -6094,57 +5809,48 @@ export function CommandDialog({
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.slugify}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        slugify: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Slugify
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.replace}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        replace: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Replace
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.force}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        force: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Force
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.slugify}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          slugify: checked,
+                        },
+                      })
+                    }
+                  >
+                    Slugify
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.replace}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          replace: checked,
+                        },
+                      })
+                    }
+                  >
+                    Replace
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.force}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          force: checked,
+                        },
+                      })
+                    }
+                  >
+                    Force
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -6194,23 +5900,20 @@ export function CommandDialog({
         {commandDialog.type === "behead" && (
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.append}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        append: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Append
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.append}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          append: checked,
+                        },
+                      })
+                    }
+                  >
+                    Append
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -6278,23 +5981,20 @@ export function CommandDialog({
               />
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["trust-header"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "trust-header": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Trust Header
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params["trust-header"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "trust-header": checked,
+                        },
+                      })
+                    }
+                  >
+                    Trust Header
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -6392,40 +6092,34 @@ export function CommandDialog({
               />
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.singularize}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        singularize: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Singularize
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["drop-empty"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "drop-empty": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Drop Empty
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.singularize}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          singularize: checked,
+                        },
+                      })
+                    }
+                  >
+                    Singularize
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params["drop-empty"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "drop-empty": checked,
+                        },
+                      })
+                    }
+                  >
+                    Drop Empty
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -6528,108 +6222,90 @@ export function CommandDialog({
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["in-place"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "in-place": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                In Place
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.tabs}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        tabs: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Tabs
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.crlf}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        crlf: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                CRLF
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.ascii}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        ascii: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                ASCII
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["quote-always"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "quote-always": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Quote Always
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["quote-never"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "quote-never": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Quote Never
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params["in-place"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "in-place": checked,
+                        },
+                      })
+                    }
+                  >
+                    In Place
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.tabs}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          tabs: checked,
+                        },
+                      })
+                    }
+                  >
+                    Tabs
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.crlf}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          crlf: checked,
+                        },
+                      })
+                    }
+                  >
+                    CRLF
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.ascii}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          ascii: checked,
+                        },
+                      })
+                    }
+                  >
+                    ASCII
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params["quote-always"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "quote-always": checked,
+                        },
+                      })
+                    }
+                  >
+                    Quote Always
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params["quote-never"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "quote-never": checked,
+                        },
+                      })
+                    }
+                  >
+                    Quote Never
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -6746,40 +6422,34 @@ export function CommandDialog({
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-4">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={commandDialog.params.nulls}
-                        onChange={(e) =>
-                          setCommandDialog({
-                            ...commandDialog,
-                            params: {
-                              ...commandDialog.params,
-                              nulls: e.target.checked,
-                            },
-                          })
-                        }
-                        className="h-4 w-4"
-                      />
-                      Nulls
-                    </label>
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={commandDialog.params.omit}
-                        onChange={(e) =>
-                          setCommandDialog({
-                            ...commandDialog,
-                            params: {
-                              ...commandDialog.params,
-                              omit: e.target.checked,
-                            },
-                          })
-                        }
-                        className="h-4 w-4"
-                      />
-                      Omit Empty
-                    </label>
+                    <ThemeAwareCheckbox
+                    checked={commandDialog.params.nulls}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          nulls: checked,
+                        },
+                      })
+                    }
+                  >
+                    Nulls
+                  </ThemeAwareCheckbox>
+                    <ThemeAwareCheckbox
+                    checked={commandDialog.params.omit}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          omit: checked,
+                        },
+                      })
+                    }
+                  >
+                    Omit Empty
+                  </ThemeAwareCheckbox>
                   </div>
                 </div>
               )}
@@ -6981,23 +6651,20 @@ export function CommandDialog({
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={commandDialog.params["list-sheets"]}
-                        onChange={(e) =>
-                          setCommandDialog({
-                            ...commandDialog,
-                            params: {
-                              ...commandDialog.params,
-                              "list-sheets": e.target.checked,
-                            },
-                          })
-                        }
-                        className="h-4 w-4"
-                      />
-                      List Sheets
-                    </label>
+                    <ThemeAwareCheckbox
+                    checked={commandDialog.params["list-sheets"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "list-sheets": checked,
+                        },
+                      })
+                    }
+                  >
+                    List Sheets
+                  </ThemeAwareCheckbox>
                   </div>
                 </div>
               )}
@@ -7065,40 +6732,34 @@ export function CommandDialog({
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={commandDialog.params["sort-keys"]}
-                        onChange={(e) =>
-                          setCommandDialog({
-                            ...commandDialog,
-                            params: {
-                              ...commandDialog.params,
-                              "sort-keys": e.target.checked,
-                            },
-                          })
-                        }
-                        className="h-4 w-4"
-                      />
-                      Sort Keys
-                    </label>
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={commandDialog.params["single-object"]}
-                        onChange={(e) =>
-                          setCommandDialog({
-                            ...commandDialog,
-                            params: {
-                              ...commandDialog.params,
-                              "single-object": e.target.checked,
-                            },
-                          })
-                        }
-                        className="h-4 w-4"
-                      />
-                      Single Object
-                    </label>
+                    <ThemeAwareCheckbox
+                    checked={commandDialog.params["sort-keys"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "sort-keys": checked,
+                        },
+                      })
+                    }
+                  >
+                    Sort Keys
+                  </ThemeAwareCheckbox>
+                    <ThemeAwareCheckbox
+                    checked={commandDialog.params["single-object"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "single-object": checked,
+                        },
+                      })
+                    }
+                  >
+                    Single Object
+                  </ThemeAwareCheckbox>
                   </div>
                 </div>
               )}
@@ -7590,23 +7251,20 @@ export function CommandDialog({
               />
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.segments}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        segments: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Segments
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.segments}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          segments: checked,
+                        },
+                      })
+                    }
+                  >
+                    Segments
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -7728,57 +7386,48 @@ export function CommandDialog({
               />
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.sorted}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        sorted: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Sorted
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.drop}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        drop: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Drop Partition Column
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["case-sensitive"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "case-sensitive": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Case Sensitive
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.sorted}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          sorted: checked,
+                        },
+                      })
+                    }
+                  >
+                    Sorted
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.drop}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          drop: checked,
+                        },
+                      })
+                    }
+                  >
+                    Drop Partition Column
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params["case-sensitive"]}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          "case-sensitive": checked,
+                        },
+                      })
+                    }
+                  >
+                    Case Sensitive
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -7907,23 +7556,20 @@ export function CommandDialog({
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.inclusive}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        inclusive: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Inclusive
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.inclusive}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          inclusive: checked,
+                        },
+                      })
+                    }
+                  >
+                    Inclusive
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -8022,40 +7668,34 @@ export function CommandDialog({
               />
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.serialize}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        serialize: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Serialize
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.explain}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        explain: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4"
-                />
-                Explain
-              </label>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.serialize}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          serialize: checked,
+                        },
+                      })
+                    }
+                  >
+                    Serialize
+                  </ThemeAwareCheckbox>
+              <ThemeAwareCheckbox
+                    checked={commandDialog.params.explain}
+                    onChange={(checked) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: {
+                          ...commandDialog.params,
+                          explain: checked,
+                        },
+                      })
+                    }
+                  >
+                    Explain
+                  </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button

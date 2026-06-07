@@ -28,6 +28,7 @@ import {
   Redo2,
   Map as MapIcon,
   ChevronDown,
+  Palette,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/LogPanel";
@@ -1037,6 +1038,16 @@ function App() {
                       <Moon className="h-3.5 w-3.5" />
                     )}
                     {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setTheme("animal-island");
+                      setActiveMenu(null);
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    <Palette className="h-3.5 w-3.5" />
+                    Animal Island Theme
                   </button>
                   <button
                     onClick={() => {
