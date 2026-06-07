@@ -58,12 +58,12 @@ const textOperators: { value: TextOperator; label: string }[] = [
 ];
 
 const numberOperators: { value: NumberOperator; label: string }[] = [
-  { value: "equals", label: "Equals" },
-  { value: "not_equals", label: "Not equals" },
-  { value: "greater_than", label: "Greater than" },
-  { value: "greater_or_equal", label: "Greater or equal" },
-  { value: "less_than", label: "Less than" },
-  { value: "less_or_equal", label: "Less or equal" },
+  { value: "equals", label: "==" },
+  { value: "not_equals", label: "!=" },
+  { value: "greater_than", label: ">" },
+  { value: "greater_or_equal", label: "≥" },
+  { value: "less_than", label: "<" },
+  { value: "less_or_equal", label: "≤" },
 ];
 
 export function FilterDialog({
@@ -82,8 +82,6 @@ export function FilterDialog({
   const [position, setPosition] = useState({ x: filterDialog.x, y: filterDialog.y });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
-
-  const columnName = selectedColumn;
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest(".no-drag")) return;
@@ -152,36 +150,32 @@ export function FilterDialog({
       if (searchCommand) {
         if (textOperator === "is_null") {
           onAddCommand(searchCommand, {
-            select: columnName,
+            select: selectedColumn,
             empty: true,
-            output: "",
           });
         } else if (textOperator === "is_not_null") {
           onAddCommand(searchCommand, {
-            select: columnName,
+            select: selectedColumn,
             "non-empty": true,
-            output: "",
           });
         } else if (textOperator === "equals" || textOperator === "not_equals") {
           if (!textValue.trim()) return;
           onAddCommand(searchCommand, {
-            select: columnName,
+            select: selectedColumn,
             exact: true,
             pattern: textValue,
             "ignore-case": caseInsensitive,
             "invert-match": textOperator === "not_equals",
-            output: "",
           });
         } else {
           if (!textValue.trim()) return;
           const isNegative = ["not_starts_with", "not_ends_with", "not_contains"].includes(textOperator);
           onAddCommand(searchCommand, {
-            select: columnName,
+            select: selectedColumn,
             pattern: buildRegexPattern(textOperator, textValue),
             regex: true,
             "ignore-case": caseInsensitive,
             "invert-match": isNegative,
-            output: "",
           });
         }
       }
@@ -194,22 +188,22 @@ export function FilterDialog({
 
         switch (numberOperator) {
           case "equals":
-            expression = `col("${columnName}") == ${numberValue}`;
+            expression = `col("${selectedColumn}") == ${numberValue}`;
             break;
           case "not_equals":
-            expression = `col("${columnName}") != ${numberValue}`;
+            expression = `col("${selectedColumn}") != ${numberValue}`;
             break;
           case "greater_than":
-            expression = `col("${columnName}") > ${numberValue}`;
+            expression = `col("${selectedColumn}") > ${numberValue}`;
             break;
           case "greater_or_equal":
-            expression = `col("${columnName}") >= ${numberValue}`;
+            expression = `col("${selectedColumn}") >= ${numberValue}`;
             break;
           case "less_than":
-            expression = `col("${columnName}") < ${numberValue}`;
+            expression = `col("${selectedColumn}") < ${numberValue}`;
             break;
           case "less_or_equal":
-            expression = `col("${columnName}") <= ${numberValue}`;
+            expression = `col("${selectedColumn}") <= ${numberValue}`;
             break;
         }
 
@@ -217,7 +211,6 @@ export function FilterDialog({
           expression,
           parallel: false,
           threads: undefined,
-          output: "",
         });
       }
     }

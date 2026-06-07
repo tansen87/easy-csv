@@ -73,6 +73,12 @@ export const xanCommands: XanCommand[] = [
         default: false,
       },
       {
+        name: "threads",
+        type: "number",
+        description: "Parellize computations using this many threads",
+        required: false,
+      },
+      {
         name: "approx",
         type: "flag",
         description: "Attempt to approximate row count by sampling",
@@ -1978,11 +1984,19 @@ export const xanCommands: XanCommand[] = [
     category: "Format, convert & recombobulate",
     parameters: [
       {
+        name: "in-place",
+        type: "flag",
+        description: "Write the result in a temporary file and replace input file with it when finished",
+        required: false,
+        default: false,
+      },
+      {
         name: "out-delimiter",
         type: "select",
         description: "The field delimiter for writing CSV data",
         required: false,
         options: [",", "\\t", ";", "|", "^"],
+        default: ",",
       },
       {
         name: "tabs",

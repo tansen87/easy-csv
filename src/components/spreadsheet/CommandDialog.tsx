@@ -229,7 +229,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      placeholder="Enter search pattern"
+                      placeholder="Search condition"
                       className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                       autoFocus
                     />
@@ -1372,6 +1372,23 @@ export function CommandDialog({
                 />
                 Parallel
               </label>
+              <input
+                type="number"
+                value={commandDialog.params.threads}
+                onChange={(e) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      threads: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
+                    },
+                  })
+                }
+                placeholder="Number of threads"
+                className="h-10 px-3 text-sm border rounded-md bg-background"
+              />
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
@@ -6460,25 +6477,24 @@ export function CommandDialog({
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Output Delimiter</label>
-                <select
+                <SearchableSelect
                   value={commandDialog.params["out-delimiter"] || ","}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     setCommandDialog({
                       ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "out-delimiter": e.target.value,
-                      },
+                      params: { ...commandDialog.params, "out-delimiter": value },
                     })
                   }
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                >
-                  <option value=",">Comma (,)</option>
-                  <option value="\t">Tab (\t)</option>
-                  <option value=";">Semicolon (;)</option>
-                  <option value="|">Pipe (|)</option>
-                  <option value="^">Caret (^)</option>
-                </select>
+                  options={[
+                    { label: "Comma (,)", value: "," },
+                    { label: "Tab (\\t)", value: "\t" },
+                    { label: "Semicolon (;)", value: ";" },
+                    { label: "Pipe (|)", value: "|" },
+                    { label: "Caret (^)", value: "^" },
+                  ]}
+                  placeholder="Search or select..."
+                  size="md"
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Quote Character</label>
@@ -6512,6 +6528,23 @@ export function CommandDialog({
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params["in-place"]}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        "in-place": e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-4 w-4"
+                />
+                In Place
+              </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
