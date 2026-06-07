@@ -464,7 +464,7 @@ export function CommandList({
                       <div className="flex items-center justify-between">
                         <div className="flex gap-1">
                           <button
-                            className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
+                            className="text-xs px-2 py-1 border rounded-md hover:bg-accent transition-colors"
                             onClick={() => {
                               onLoadHistory(history);
                               onLoadCsvData(selectedTabId, history.inputFile);
@@ -474,7 +474,7 @@ export function CommandList({
                             Load
                           </button>
                           <button
-                            className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
+                            className="text-xs px-2 py-1 border rounded-md hover:bg-accent transition-colors"
                             onClick={() => {
                               onNewTabFromHistory(history);
                             }}

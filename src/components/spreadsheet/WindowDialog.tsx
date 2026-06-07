@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { ThemeAwareInput } from "@/components/theme/ThemeAwareInput";
 
 interface WindowDialogState {
   col: number;
@@ -185,7 +186,7 @@ export function WindowDialog({
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium">Window Aggregation</span>
+          <span className="text-base font-medium">Window Aggregation</span>
         </div>
         <button
           onClick={onClose}
@@ -198,26 +199,25 @@ export function WindowDialog({
       <ScrollArea className="h-[270px]">
         <div className="p-3 space-y-1">
           <div className="space-y-1">
-            <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+            <label className="text-sm font-medium text-muted-foreground mb-1 block">
               GroupBy (optional)
             </label>
-            <input
+            <ThemeAwareInput
               type="text"
               value={groupby}
               onChange={(e) => setGroupby(e.target.value)}
               placeholder="Column(s) to group by..."
-              className="w-full h-8 px-2 text-xs border rounded bg-background"
             />
           </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-medium text-muted-foreground">
+              <span className="text-sm font-medium text-muted-foreground">
                 Expressions
               </span>
               <button
                 onClick={addEntry}
-                className="flex items-center gap-1 px-2 py-0.5 text-[10px] hover:bg-accent rounded transition-colors"
+                className="flex items-center gap-1 px-2 py-0.5 text-sm hover:bg-accent rounded transition-colors"
               >
                 <Plus className="h-3 w-3" />
                 Add
@@ -230,7 +230,7 @@ export function WindowDialog({
                 <div key={index} className="border rounded-lg p-2 space-y-2 bg-muted/10">
                   <div className="flex gap-2 items-end">
                     <div className="flex-1 space-y-1">
-                      <label className="text-[10px] font-medium text-muted-foreground">Column</label>
+                      <label className="text-sm font-medium text-muted-foreground">Column</label>
                       <SearchableSelect
                         value={entry.column}
                         onChange={(value) => updateEntry(index, "column", value)}
@@ -239,13 +239,12 @@ export function WindowDialog({
                       />
                     </div>
                     <div className="flex-1 space-y-1">
-                      <label className="text-[10px] font-medium text-muted-foreground">Alias</label>
-                      <input
+                      <label className="text-sm font-medium text-muted-foreground">Alias</label>
+                      <ThemeAwareInput
                         type="text"
                         value={entry.alias}
                         onChange={(e) => updateEntry(index, "alias", e.target.value)}
                         placeholder="Alias (Optional)"
-                        className="w-full h-8 px-2 text-xs border rounded bg-background"
                       />
                     </div>
                     <div className="w-4 shrink-0 self-start">
@@ -262,7 +261,7 @@ export function WindowDialog({
 
                   <div className="flex gap-2 items-end">
                     <div className="flex-1 space-y-1">
-                      <label className="text-[10px] font-medium text-muted-foreground">Expression</label>
+                      <label className="text-sm font-medium text-muted-foreground">Expression</label>
                       <SearchableSelect
                         value={entry.func}
                         onChange={(value) => updateEntry(index, "func", value)}
@@ -272,12 +271,11 @@ export function WindowDialog({
                     </div>
                     {func?.hasWindowSize && (
                       <div className="flex-1 space-y-1">
-                        <label className="text-[10px] font-medium text-muted-foreground">WinSize</label>
-                        <input
+                        <label className="text-sm font-medium text-muted-foreground">WinSize</label>
+                        <ThemeAwareInput
                           type="number"
                           value={entry.windowSize}
                           onChange={(e) => updateEntry(index, "windowSize", e.target.value)}
-                          className="w-full h-8 px-2 text-xs border rounded bg-background"
                           min="1"
                         />
                       </div>
@@ -293,13 +291,13 @@ export function WindowDialog({
 
       <div className="px-3 pb-2 flex gap-2">
         <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+          className="flex-1 px-2 py-1.5 rounded text-sm bg-muted transition-colors"
           onClick={onClose}
         >
           Cancel
         </button>
         <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+          className="flex-1 px-2 py-1.5 rounded text-sm bg-muted transition-colors"
           onClick={handleApply}
         >
           Apply

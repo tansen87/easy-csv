@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { X, Plus, ChevronDown } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { ThemeAwareInput } from "@/components/theme/ThemeAwareInput";
 
 interface SplitDialogState {
   col: number;
@@ -51,21 +52,15 @@ export function SplitDialog({
   const [customSeparator, setCustomSeparator] = useState("");
   const [outputColumnName, setOutputColumnName] = useState("new_col");
   const [selectedColumn, setSelectedColumn] = useState(headers[splitDialog.col] || "");
-  const [isColumnOpen, setIsColumnOpen] = useState(false);
   const [leftLength, setLeftLength] = useState("4");
   const [rightLength, setRightLength] = useState("4");
   const [sliceStart, setSliceStart] = useState("0");
   const [sliceEnd, setSliceEnd] = useState("4");
   const [indices, setIndices] = useState<string[]>(["0"]);
   const [joinWith, setJoinWith] = useState("-");
-  const columnRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: splitDialog.x, y: splitDialog.y });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
-
-  const filteredHeaders = selectedColumn
-    ? headers.filter(header => header.toLowerCase().includes(selectedColumn.toLowerCase()))
-    : headers;
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest(".no-drag")) return;
@@ -105,28 +100,6 @@ export function SplitDialog({
       };
     }
   }, [isDragging, handleMouseMove, handleMouseUp]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (columnRef.current && !columnRef.current.contains(e.target as Node)) {
-        setIsColumnOpen(false);
-      }
-    };
-    if (isColumnOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [isColumnOpen]);
-
-  const handleColumnInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedColumn(e.target.value);
-    setIsColumnOpen(true);
-  };
-
-  const handleColumnSelect = (header: string) => {
-    setSelectedColumn(header);
-    setIsColumnOpen(false);
-  };
 
   const handleApply = () => {
     if (!selectedColumn) return;
@@ -210,7 +183,7 @@ export function SplitDialog({
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium">Slice</span>
+          <span className="text-base font-medium">Slice</span>
         </div>
         <button
           onClick={onClose}
@@ -220,53 +193,21 @@ export function SplitDialog({
         </button>
       </div>
       <ScrollArea className="h-[280px]">
-        <div className="p-3 space-y-1">
-          <div className="relative space-y-1" ref={columnRef}>
-            <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        <div className="p-3 space-y-2">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-muted-foreground mb-1 block">
               Column
             </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={selectedColumn}
-                onChange={handleColumnInputChange}
-                onFocus={() => setIsColumnOpen(true)}
-                placeholder="Search or select column..."
-                className="w-full h-8 px-2 pr-8 text-xs border rounded bg-background"
-              />
-              <button
-                onClick={() => setIsColumnOpen(!isColumnOpen)}
-                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 hover:bg-accent rounded transition-colors">
-                <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${isColumnOpen ? "rotate-180" : ""}`} />
-              </button>
-            </div>
-            {isColumnOpen && (
-              <div className="absolute z-50 w-[314px] border rounded bg-background shadow-lg">
-                <ScrollArea className="h-24">
-                  <div className="p-1">
-                    {filteredHeaders.length > 0 ? (
-                      filteredHeaders.map((header) => (
-                        <button
-                          key={header}
-                          onClick={() => handleColumnSelect(header)}
-                          className="w-full px-2 py-1.5 text-xs text-left hover:bg-accent transition-colors truncate"
-                        >
-                          {header}
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                        No columns found
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
-              </div>
-            )}
+            <SearchableSelect
+              value={selectedColumn}
+              onChange={setSelectedColumn}
+              options={headers.map(h => ({ label: h, value: h }))}
+              placeholder="Search or select column..."
+            />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground mb-1 block">
               Operation Type
             </label>
             <SearchableSelect
@@ -279,30 +220,26 @@ export function SplitDialog({
 
           {sliceType === "left" && (
             <div className="space-y-1">
-              <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+              <label className="text-sm font-medium text-muted-foreground mb-1 block">
                 Length
               </label>
-              <input
+              <ThemeAwareInput
                 type="number"
                 value={leftLength}
                 onChange={(e) => setLeftLength(e.target.value)}
-                placeholder="4"
-                className="w-full h-8 px-2 text-xs border rounded bg-background"
               />
             </div>
           )}
 
           {sliceType === "right" && (
             <div className="space-y-1">
-              <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+              <label className="text-sm font-medium text-muted-foreground mb-1 block">
                 Length
               </label>
-              <input
+              <ThemeAwareInput
                 type="number"
                 value={rightLength}
                 onChange={(e) => setRightLength(e.target.value)}
-                placeholder="4"
-                className="w-full h-8 px-2 text-xs border rounded bg-background"
               />
             </div>
           )}
@@ -310,27 +247,23 @@ export function SplitDialog({
           {sliceType === "slice" && (
             <div className="space-y-2">
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+                <label className="text-sm font-medium text-muted-foreground mb-1 block">
                   Start Index
                 </label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={sliceStart}
                   onChange={(e) => setSliceStart(e.target.value)}
-                  placeholder="0"
-                  className="w-full h-8 px-2 text-xs border rounded bg-background"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+                <label className="text-sm font-medium text-muted-foreground mb-1 block">
                   End Index
                 </label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={sliceEnd}
                   onChange={(e) => setSliceEnd(e.target.value)}
-                  placeholder="4"
-                  className="w-full h-8 px-2 text-xs border rounded bg-background"
                 />
               </div>
             </div>
@@ -339,7 +272,7 @@ export function SplitDialog({
           {sliceType === "split" && (
             <>
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+                <label className="text-sm font-medium text-muted-foreground mb-1 block">
                   Separator
                 </label>
                 <SearchableSelect
@@ -352,32 +285,29 @@ export function SplitDialog({
 
               {separator === "custom" && (
                 <div className="space-y-1">
-                  <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+                  <label className="text-sm font-medium text-muted-foreground mb-1 block">
                     Custom Separator
                   </label>
-                  <input
+                  <ThemeAwareInput
                     type="text"
                     value={customSeparator}
                     onChange={(e) => setCustomSeparator(e.target.value)}
-                    placeholder="Enter custom separator"
-                    className="w-full h-8 px-2 text-xs border rounded bg-background"
+                    placeholder="Custom separator"
                   />
                 </div>
               )}
 
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+                <label className="text-sm font-medium text-muted-foreground mb-1 block">
                   Array Indices (0-based)
                 </label>
                 <div className="space-y-1">
                   {indices.map((index, idx) => (
                     <div key={idx} className="flex items-center gap-1">
-                      <input
+                      <ThemeAwareInput
                         type="text"
                         value={index}
                         onChange={(e) => updateIndex(idx, e.target.value)}
-                        placeholder="0"
-                        className="flex-1 h-8 px-2 text-xs border rounded bg-background"
                       />
                       {indices.length > 1 && (
                         <button
@@ -400,30 +330,28 @@ export function SplitDialog({
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+                <label className="text-sm font-medium text-muted-foreground mb-1 block">
                   Join With (for multiple indices)
                 </label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={joinWith}
                   onChange={(e) => setJoinWith(e.target.value)}
                   placeholder="e.g., -, _, /, etc."
-                  className="w-full h-8 px-2 text-xs border rounded bg-background"
                 />
               </div>
             </>
           )}
 
           <div className="space-y-1">
-            <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+            <label className="text-sm font-medium text-muted-foreground mb-1 block">
               Output Column Name
             </label>
-            <input
+            <ThemeAwareInput
               type="text"
               value={outputColumnName}
               onChange={(e) => setOutputColumnName(e.target.value)}
               placeholder="Leave blank to keep original"
-              className="w-full h-8 px-2 text-xs border rounded bg-background"
             />
           </div>
         </div>
@@ -431,13 +359,13 @@ export function SplitDialog({
       <div className="flex items-center gap-2 px-3 py-2 shrink-0">
         <button
           onClick={onClose}
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors">
+          className="flex-1 px-2 py-1.5 rounded text-sm bg-muted transition-colors">
           Cancel
         </button>
         <button
           onClick={handleApply}
           disabled={!selectedColumn || (sliceType === "split" && separator === "custom" && !customSeparator)}
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors">
+          className="flex-1 px-2 py-1.5 rounded text-sm bg-muted transition-colors">
           Apply
         </button>
       </div>

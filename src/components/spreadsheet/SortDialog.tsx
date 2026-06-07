@@ -58,7 +58,7 @@ export function SortDialog({
         </button>
       </div>
       <div className="p-2 space-y-1">
-        <div className="text-[10px] font-medium text-muted-foreground px-1 mb-1">Text</div>
+        <div className="text-sm font-medium text-muted-foreground px-1 mb-1">Text</div>
         <button
           className="w-full px-2 py-1.5 rounded text-xs bg-muted hover:bg-accent transition-colors border text-left"
           onClick={() => handleSort("asc", false)}
@@ -71,7 +71,7 @@ export function SortDialog({
         >
           Z → A
         </button>
-        <div className="text-[10px] font-medium text-muted-foreground px-1 mb-1 mt-2">Number</div>
+        <div className="text-sm font-medium text-muted-foreground px-1 mb-1 mt-2">Number</div>
         <button
           className="w-full px-2 py-1.5 rounded text-xs bg-muted hover:bg-accent transition-colors border text-left"
           onClick={() => handleSort("asc", true)}

@@ -3,6 +3,8 @@ import { X } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { ThemeAwareInput } from "@/components/theme/ThemeAwareInput";
+import { ThemeAwareCheckbox } from "@/components/theme/ThemeAwareCheckbox";
 
 interface ReplaceDialogState {
   col: number;
@@ -37,7 +39,7 @@ export function ReplaceDialog({
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest(".no-drag")) return;
-    
+
     setIsDragging(true);
     dragRef.current = {
       startX: e.clientX,
@@ -113,7 +115,7 @@ export function ReplaceDialog({
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium">Replace</span>
+          <span className="text-base font-medium">Replace</span>
         </div>
         <button
           onClick={onClose}
@@ -122,9 +124,9 @@ export function ReplaceDialog({
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
-      <div className="p-3 space-y-1">
-        <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+      <div className="p-3 space-y-2">
+        <div>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">
             Column
           </label>
           <SearchableSelect
@@ -134,62 +136,54 @@ export function ReplaceDialog({
             placeholder="Search or select column..."
           />
         </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        <div>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">
             Pattern
           </label>
-          <input
+          <ThemeAwareInput
             type="text"
             value={pattern}
             onChange={(e) => setPattern(e.target.value)}
             placeholder="Pattern to search"
-            className="w-full h-8 px-2 text-xs border rounded bg-background"
             autoFocus
           />
         </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        <div>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">
             Replace With
           </label>
-          <input
+          <ThemeAwareInput
             type="text"
             value={replace}
             onChange={(e) => setReplace(e.target.value)}
             placeholder="Replacement string"
-            className="w-full h-8 px-2 text-xs border rounded bg-background"
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <label className="flex items-center gap-2 text-xs cursor-pointer">
-            <input
-              type="checkbox"
-              checked={ignoreCase}
-              onChange={(e) => setIgnoreCase(e.target.checked)}
-              className="h-4 w-4"
-            />
+          <ThemeAwareCheckbox
+            checked={ignoreCase}
+            onChange={(e) => setIgnoreCase(e)}
+          >
             Ignore Case
-          </label>
-          <label className="flex items-center gap-2 text-xs cursor-pointer">
-            <input
-              type="checkbox"
-              checked={regex}
-              onChange={(e) => setRegex(e.target.checked)}
-              className="h-4 w-4"
-            />
+          </ThemeAwareCheckbox>
+          <ThemeAwareCheckbox
+            checked={regex}
+            onChange={(e) => setRegex(e)}
+          >
             Regex
-          </label>
+          </ThemeAwareCheckbox>
         </div>
       </div>
 
       <div className="px-3 pb-2 flex gap-2">
         <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+          className="flex-1 px-2 py-1.5 rounded text-sm bg-muted transition-colors"
           onClick={onClose}
         >
           Cancel
         </button>
         <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+          className="flex-1 px-2 py-1.5 rounded text-sm bg-muted transition-colors"
           onClick={handleApply}
         >
           Apply

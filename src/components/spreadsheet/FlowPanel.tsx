@@ -26,6 +26,7 @@ import { Table, Edit3, Check, Settings } from "lucide-react";
 import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "@/components/spreadsheet/ContextMenu";
 import { useTheme } from "@/components/ThemeProvider";
+import { ThemeAwareInput } from "@/components/theme/ThemeAwareInput";
 
 interface TableNodeData {
   headers: string[];
@@ -129,7 +130,6 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
             }}
             options={headers.map((h, _i) => ({ label: h, value: h }))}
             placeholder="Search header to edit..."
-            size="sm"
           />
         </div>
         <span className="text-xs text-muted-foreground ml-auto">
@@ -175,13 +175,12 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
                     onDoubleClick={() => handleStartEdit(colIndex, header)}
                   >
                     {editingCol === colIndex ? (
-                      <input
+                      <ThemeAwareInput
                         type="text"
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
                         onBlur={handleFinishEdit}
                         onKeyDown={handleKeyDown}
-                        className="w-full bg-background px-1 py-0.5 text-xs border border-primary rounded"
                         autoFocus
                       />
                     ) : (

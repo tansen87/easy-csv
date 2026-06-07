@@ -188,7 +188,7 @@ export function ContextMenu({
       style={{ left: position.x, top: position.y }}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="px-3 py-1 text-xs font-semibold text-muted-foreground border-b mb-1">
+      <div className="px-3 py-1 text-sm font-semibold text-muted-foreground border-b mb-1">
         Quick Actions
       </div>
 

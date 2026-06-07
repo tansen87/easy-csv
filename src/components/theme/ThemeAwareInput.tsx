@@ -29,7 +29,7 @@ export function ThemeAwareInput({
   return (
     <input
       {...props}
-      className={`w-full h-10 px-3 text-sm border rounded-md bg-background ${className}`}
+      className={`w-full h-10 px-3 border rounded-md bg-background ${className}`}
     />
   );
 }

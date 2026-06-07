@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Search } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useTheme } from "@/components/ThemeProvider";
+import { ThemeAwareInput } from "@/components/theme/ThemeAwareInput";
 
 interface SearchableSelectProps {
   value: string;
@@ -17,6 +19,7 @@ export function SearchableSelect({
   placeholder = "Search or select...",
   size = "sm",
 }: SearchableSelectProps) {
+  const { theme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -51,36 +54,65 @@ export function SearchableSelect({
     setSearchValue("");
   };
 
-  const inputClassName = size === "md"
-    ? "w-full h-10 pl-8 pr-8 text-sm border rounded-md bg-background"
-    : "w-full h-8 pl-7 pr-8 text-xs border rounded bg-background";
+  const isAnimalIsland = theme === "animal-island";
 
-  const iconSize = size === "md" ? "h-4 w-4" : "h-3 w-3";
+  const iconSize = size === "sm" ? "h-3 w-3" : "h-4 w-4";
+
+  const dropdownClassName = isAnimalIsland
+    ? "absolute z-50 w-full border rounded-lg shadow-lg mt-1 bg-[#F7F3EC]"
+    : "absolute z-50 w-full border rounded bg-background shadow-lg mt-1";
+
+  const optionClassName = isAnimalIsland
+    ? "w-full px-2 py-0.5 text-sm text-left hover:bg-[#D4E5D7] transition-colors truncate rounded-xl"
+    : "w-full px-2 py-1.5 text-sm text-left hover:bg-accent transition-colors truncate rounded-xl";
+
+  const buttonClassName = isAnimalIsland
+    ? "absolute right-1 top-1/2 -translate-y-1/2 p-1 hover:bg-[#D4E5D7] rounded transition-colors"
+    : "absolute right-1 top-1/2 -translate-y-1/2 p-1 hover:bg-accent rounded transition-colors";
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <input
-        type="text"
-        value={isOpen ? searchValue : (selectedOption?.label || "")}
-        onChange={handleInputChange}
-        onFocus={() => setIsOpen(true)}
-        placeholder={placeholder}
-        className={inputClassName}
-      />
-      <span className="absolute left-1.5 top-1/2 -translate-y-1/2">
-        <Search className={`${iconSize} text-muted-foreground`} />
-      </span>
-      <button
-        onClick={() => {
-          setIsOpen(!isOpen);
-          if (!isOpen) setSearchValue("");
-        }}
-        className="absolute right-1 top-1/2 -translate-y-1/2 p-1 hover:bg-accent rounded transition-colors"
-      >
-        <ChevronDown className={`${iconSize} text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
-      </button>
+      {isAnimalIsland ? (
+        <div className="relative">
+          <ThemeAwareInput
+            type="text"
+            value={isOpen ? searchValue : (selectedOption?.label || "")}
+            onChange={handleInputChange}
+            onFocus={() => setIsOpen(true)}
+            placeholder={placeholder}
+          />
+          <button
+            onClick={() => {
+              setIsOpen(!isOpen);
+              if (!isOpen) setSearchValue("");
+            }}
+            className={`absolute right-1 top-1/2 -translate-y-1/2 p-1 hover:bg-[#D4E5D7] rounded-md transition-colors`}
+          >
+            <ChevronDown className={`${iconSize} text-[#6B8E6B] transition-transform ${isOpen ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+      ) : (
+        <div className="relative">
+          <ThemeAwareInput
+            type="text"
+            value={isOpen ? searchValue : (selectedOption?.label || "")}
+            onChange={handleInputChange}
+            onFocus={() => setIsOpen(true)}
+            placeholder={placeholder}
+          />
+          <button
+            onClick={() => {
+              setIsOpen(!isOpen);
+              if (!isOpen) setSearchValue("");
+            }}
+            className={buttonClassName}
+          >
+            <ChevronDown className={`${iconSize} text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+      )}
       {isOpen && (
-        <div className="absolute z-50 w-full border rounded bg-background shadow-lg mt-1">
+        <div className={dropdownClassName}>
           <ScrollArea className="h-40">
             <div className="p-1">
               {filteredOptions.length > 0 ? (
@@ -88,13 +120,13 @@ export function SearchableSelect({
                   <button
                     key={opt.value}
                     onClick={() => handleSelect(opt.value)}
-                    className="w-full px-2 py-1.5 text-xs text-left hover:bg-accent transition-colors truncate"
+                    className={`${optionClassName} ${opt.value === value ? (isAnimalIsland ? "bg-[#D4E5D7]" : "bg-accent") : ""}`}
                   >
                     {opt.label}
                   </button>
                 ))
               ) : (
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                <div className={`px-2 py-1.5 text-xs ${isAnimalIsland ? "text-[#6B8E6B]" : "text-muted-foreground"}`}>
                   No options found
                 </div>
               )}

@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { ThemeAwareInput } from "@/components/theme/ThemeAwareInput";
 
 interface PivotDialogState {
   x: number;
@@ -203,7 +204,7 @@ export function PivotDialog({
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium">Pivot Table</span>
+          <span className="text-base font-medium">Pivot Table</span>
         </div>
         <button
           onClick={onClose}
@@ -215,31 +216,30 @@ export function PivotDialog({
 
       <div className="px-3 py-2 border-b shrink-0">
         <div className="flex items-center gap-2">
-          <input
+          <ThemeAwareInput
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search columns..."
-            className="flex-1 h-7 px-2 text-xs border rounded bg-background"
           />
         </div>
       </div>
 
       <ScrollArea className="flex-1 p-3">
         <div>
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">
             Columns (pivot)
           </label>
           <ScrollArea>
-            <div className="flex flex-wrap gap-1 p-1.5 border rounded bg-background">
+            <div className="flex flex-wrap gap-1 p-1.5 border rounded-3xl bg-background">
               {filteredHeaders.length === 0 ? (
-                <span className="text-[10px] text-muted-foreground px-2 py-0.5">No matches</span>
+                <span className="text-sm text-muted-foreground px-2 py-0.5">No matches</span>
               ) : (
                 filteredHeaders.map((header) => (
                   <button
                     key={header}
                     onClick={() => toggleColumn(header)}
-                    className={`px-2 py-0.5 rounded text-[10px] transition-colors ${selectedColumns.includes(header)
+                    className={`px-2 py-0.5 rounded text-sm transition-colors rounded-xl ${selectedColumns.includes(header)
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted hover:bg-accent"
                       }`}
@@ -252,20 +252,20 @@ export function PivotDialog({
           </ScrollArea>
         </div>
 
-        <div>
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        <div className="mt-2">
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">
             Row (groupby)
           </label>
           <ScrollArea>
-            <div className="flex flex-wrap gap-1 p-1.5 border rounded bg-background">
+            <div className="flex flex-wrap gap-1 p-1.5 border rounded-3xl bg-background">
               {filteredHeaders.length === 0 ? (
-                <span className="text-[10px] text-muted-foreground px-2 py-0.5">No matches</span>
+                <span className="text-sm text-muted-foreground px-2 py-0.5">No matches</span>
               ) : (
                 filteredHeaders.map((header) => (
                   <button
                     key={header}
                     onClick={() => toggleGroupBy(header)}
-                    className={`px-2 py-0.5 rounded text-[10px] transition-colors ${selectedGroupBy.includes(header)
+                    className={`px-2 py-0.5 rounded text-sm transition-colors rounded-md ${selectedGroupBy.includes(header)
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted hover:bg-accent"
                       }`}
@@ -278,21 +278,21 @@ export function PivotDialog({
           </ScrollArea>
         </div>
 
-        <div>
+        <div className="mt-2">
           <div className="flex items-center justify-between mb-1">
-            <label className="text-[10px] font-medium text-muted-foreground">
+            <label className="text-sm font-medium text-muted-foreground">
               Values (agg)
             </label>
             <button
               onClick={addValueColumn}
               className="p-0.5 hover:bg-accent rounded transition-colors"
             >
-              <Plus className="h-3 w-3" />
+              <Plus className="h-4 w-4" />
             </button>
           </div>
-          <div className="space-y-1.5">
+          <div>
             {valueColumns.length === 0 ? (
-              <div className="p-2 border rounded bg-muted/30 text-[10px] text-muted-foreground text-center">
+              <div className="p-2 border rounded-3xl bg-muted/30 text-sm text-muted-foreground text-center">
                 Click + to add value columns
               </div>
             ) : (
@@ -326,16 +326,15 @@ export function PivotDialog({
           </div>
         </div>
 
-        <div>
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        <div className="mt-2">
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">
             Column Separator
           </label>
-          <input
+          <ThemeAwareInput
             type="text"
             value={columnSep}
             onChange={(e) => setColumnSep(e.target.value)}
             placeholder="_"
-            className="w-full h-7 px-2 text-xs border rounded bg-background"
             maxLength={5}
           />
         </div>
@@ -343,13 +342,13 @@ export function PivotDialog({
 
       <div className="flex gap-2 p-2 ml-1 mr-1 bg-muted/20 shrink-0">
         <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors hover:bg-accent"
+          className="flex-1 px-2 py-1.5 rounded text-sm bg-muted transition-colors hover:bg-accent"
           onClick={onClose}
         >
           Cancel
         </button>
         <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors disabled:opacity-50"
+          className="flex-1 px-2 py-1.5 rounded text-sm bg-muted transition-colors disabled:opacity-50"
           onClick={handleApply}
           disabled={valueColumns.length === 0}
         >

@@ -214,7 +214,7 @@ export function CommandDialog({
                       })}
                       options={headers.map((header) => ({ label: header, value: header }))}
                       placeholder="Search or select column..."
-                      size="md"
+                      size="sm"
                     />
                   </div>
                   <div className="space-y-2">
@@ -720,7 +720,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="e.g. column_name > 100"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
@@ -6053,7 +6052,7 @@ export function CommandDialog({
                     { label: "Caret (^)", value: "^" },
                   ]}
                   placeholder="Search or select..."
-                  size="md"
+                  size="sm"
                 />
               </div>
               <div className="space-y-2">
@@ -6239,7 +6238,7 @@ export function CommandDialog({
 
                   ]}
                   placeholder="Search or select format..."
-                  size="md"
+                  size="sm"
                 />
               </div>
             </div>
@@ -6461,7 +6460,7 @@ export function CommandDialog({
                     { label: "Markdown (.markdown)", value: "markdown" },
                   ]}
                   placeholder="Search or select format..."
-                  size="md"
+                  size="sm"
                 />
               </div>
             </div>

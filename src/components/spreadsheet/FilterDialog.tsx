@@ -1,8 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, SetStateAction } from "react";
 import { X } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { ThemeAwareInput } from "@/components/theme/ThemeAwareInput";
+import { ThemeAwareCheckbox } from "@/components/theme/ThemeAwareCheckbox";
 
 interface FilterDialogState {
   col: number;
@@ -77,7 +79,7 @@ export function FilterDialog({
   const [numberOperator, setNumberOperator] = useState<NumberOperator>("equals");
   const [textValue, setTextValue] = useState("");
   const [numberValue, setNumberValue] = useState("");
-  const [caseInsensitive, setCaseInsensitive] = useState(false);
+  const [ignoreCase, setIgnoreCase] = useState(false);
   const [selectedColumn, setSelectedColumn] = useState<string>(headers[filterDialog.col] || "");
   const [position, setPosition] = useState({ x: filterDialog.x, y: filterDialog.y });
   const [isDragging, setIsDragging] = useState(false);
@@ -85,7 +87,7 @@ export function FilterDialog({
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest(".no-drag")) return;
-    
+
     setIsDragging(true);
     dragRef.current = {
       startX: e.clientX,
@@ -164,7 +166,7 @@ export function FilterDialog({
             select: selectedColumn,
             exact: true,
             pattern: textValue,
-            "ignore-case": caseInsensitive,
+            "ignore-case": ignoreCase,
             "invert-match": textOperator === "not_equals",
           });
         } else {
@@ -174,7 +176,7 @@ export function FilterDialog({
             select: selectedColumn,
             pattern: buildRegexPattern(textOperator, textValue),
             regex: true,
-            "ignore-case": caseInsensitive,
+            "ignore-case": ignoreCase,
             "invert-match": isNegative,
           });
         }
@@ -230,7 +232,7 @@ export function FilterDialog({
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium">Filter</span>
+          <span className="text-base font-medium">Filter</span>
         </div>
         <button
           onClick={onClose}
@@ -240,32 +242,30 @@ export function FilterDialog({
         </button>
       </div>
 
-      <div className="p-3 space-y-1">
+      <div className="p-3 space-y-2">
         <div className="flex rounded-lg overflow-hidden border">
           <button
-            className={`flex-1 px-2 py-1.5 text-xs font-medium transition-colors ${
-              filterType === "text"
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted hover:bg-accent"
-            }`}
+            className={`flex-1 px-2 py-1.5 text-xs font-medium transition-colors ${filterType === "text"
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted hover:bg-accent"
+              }`}
             onClick={() => setFilterType("text")}
           >
             Text
           </button>
           <button
-            className={`flex-1 px-2 py-1.5 text-xs font-medium transition-colors ${
-              filterType === "number"
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted hover:bg-accent"
-            }`}
+            className={`flex-1 px-2 py-1.5 text-xs font-medium transition-colors ${filterType === "number"
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted hover:bg-accent"
+              }`}
             onClick={() => setFilterType("number")}
           >
             Number
           </button>
         </div>
 
-        <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        <div>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">
             Column
           </label>
           <SearchableSelect
@@ -278,8 +278,8 @@ export function FilterDialog({
 
         {filterType === "text" && (
           <>
-            <div className="space-y-1">
-              <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-1 block">
                 Operator
               </label>
               <SearchableSelect
@@ -293,30 +293,23 @@ export function FilterDialog({
             {textOperator !== "is_null" && textOperator !== "is_not_null" && (
               <>
                 <div>
-                  <label className="text-[10px] font-medium text-muted-foreground">
+                  <label className="text-sm font-medium text-muted-foreground">
                     {textOperator === "regex" ? "Pattern" : "Value"}
                   </label>
-                  <input
+                  <ThemeAwareInput
                     type="text"
                     value={textValue}
                     onChange={(e) => setTextValue(e.target.value)}
-                    placeholder={textOperator === "regex" ? "Enter regex pattern..." : "Enter search text..."}
-                    className="w-full h-7 px-1.5 text-xs border rounded bg-background"
+                    placeholder={textOperator === "regex" ? "Regex pattern..." : "Search text..."}
                   />
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="checkbox"
-                    id="case-insensitive"
-                    checked={caseInsensitive}
-                    onChange={(e) => setCaseInsensitive(e.target.checked)}
-                    className="h-3 w-3"
-                  />
-                  <label htmlFor="case-insensitive" className="text-[10px] cursor-pointer">
-                    Ignore case
-                  </label>
-                </div>
+                <ThemeAwareCheckbox
+                  checked={ignoreCase}
+                  onChange={(e) => setIgnoreCase(e)}
+                >
+                  Ignore case
+                </ThemeAwareCheckbox>
               </>
             )}
           </>
@@ -324,8 +317,8 @@ export function FilterDialog({
 
         {filterType === "number" && (
           <>
-            <div className="space-y-1">
-              <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-1 block">
                 Operator
               </label>
               <SearchableSelect
@@ -337,15 +330,14 @@ export function FilterDialog({
             </div>
 
             <div>
-              <label className="text-[10px] font-medium text-muted-foreground">
+              <label className="text-sm font-medium text-muted-foreground">
                 Value
               </label>
-              <input
+              <ThemeAwareInput
                 type="number"
                 value={numberValue}
-                onChange={(e) => setNumberValue(e.target.value)}
-                placeholder="Enter number..."
-                className="w-full h-7 px-1.5 text-xs border rounded bg-background"
+                onChange={(e: { target: { value: SetStateAction<string>; }; }) => setNumberValue(e.target.value)}
+                placeholder="Search number..."
               />
             </div>
           </>
@@ -354,13 +346,13 @@ export function FilterDialog({
 
       <div className="px-3 pb-2 flex gap-2">
         <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+          className="flex-1 px-2 py-1.5 rounded text-sm bg-muted transition-colors"
           onClick={onClose}
         >
           Cancel
         </button>
         <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+          className="flex-1 px-2 py-1.5 rounded text-sm bg-muted transition-colors"
           onClick={handleApply}
         >
           Apply
