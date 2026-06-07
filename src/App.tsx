@@ -24,6 +24,8 @@ import {
   ChevronRight,
   File,
   Play,
+  Undo2,
+  Redo2,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/LogPanel";
@@ -83,6 +85,11 @@ function App() {
   const [notifications, setNotifications] = useState<{ id: string; message: string; type: NotificationType }[]>([]);
   const [activeMenu, setActiveMenu] = useState<"file" | "settings" | null>(null);
   const [isMenuActivated, setIsMenuActivated] = useState<boolean>(false);
+
+  // Undo/Redo history state
+  const [undoStack, setUndoStack] = useState<Array<{ pipeline: PipelineStep[]; edges: PipelineEdge[]; inputPosition?: { x: number; y: number } }>>([]);
+  const [redoStack, setRedoStack] = useState<Array<{ pipeline: PipelineStep[]; edges: PipelineEdge[]; inputPosition?: { x: number; y: number } }>>([]);
+
   const showToastRef = useRef<(message: string, type: ToastType) => void>(() => { });
   const removeToastRef = useRef<(id: string) => void>(() => { });
   const addNotificationRef = useRef<(message: string, type: NotificationType) => void>(() => { });
@@ -321,6 +328,26 @@ function App() {
   };
 
   const updateTabPipeline = (tabIdOrPipeline: string | PipelineStep[], newPipeline?: PipelineStep[], edges?: PipelineEdge[], inputPosition?: { x: number; y: number }) => {
+    // Capture current state for undo (only if not already capturing for redo)
+    const currentTab = typeof tabIdOrPipeline === 'string'
+      ? tabs.find(t => t.id === tabIdOrPipeline)
+      : tabs.find(t => t.id === selectedTabId);
+
+    const newPipelineToSet = typeof tabIdOrPipeline === 'string' ? newPipeline! : tabIdOrPipeline as PipelineStep[];
+    const isStateChanged = currentTab &&
+      (JSON.stringify(currentTab.pipeline) !== JSON.stringify(newPipelineToSet) ||
+        JSON.stringify(currentTab.edges) !== JSON.stringify(edges ?? currentTab.edges) ||
+        JSON.stringify(currentTab.inputPosition) !== JSON.stringify(inputPosition ?? currentTab.inputPosition));
+
+    if (currentTab && isStateChanged) {
+      setUndoStack(prev => [...prev, {
+        pipeline: currentTab.pipeline,
+        edges: currentTab.edges || [],
+        inputPosition: currentTab.inputPosition
+      }]);
+      setRedoStack([]);
+    }
+
     if (typeof tabIdOrPipeline === 'string' && newPipeline) {
       setTabs((prev) =>
         prev.map((tab) =>
@@ -352,6 +379,76 @@ function App() {
       );
     }
   };
+
+  // Undo - restore previous pipeline state
+  const undo = useCallback(() => {
+    if (undoStack.length === 0) return;
+
+    const currentTab = tabs.find(t => t.id === selectedTabId);
+    if (!currentTab) return;
+
+    // Push current state to redo stack
+    setRedoStack(prev => [...prev, {
+      pipeline: currentTab.pipeline,
+      edges: currentTab.edges || [],
+      inputPosition: currentTab.inputPosition
+    }]);
+
+    // Pop from undo stack and apply
+    const previousState = undoStack[undoStack.length - 1];
+    setUndoStack(prev => prev.slice(0, -1));
+
+    setTabs(prev =>
+      prev.map((tab) =>
+        tab.id === selectedTabId
+          ? {
+            ...tab,
+            pipeline: previousState.pipeline,
+            edges: previousState.edges,
+            inputPosition: previousState.inputPosition,
+            updatedAt: formatDateTime(new Date()),
+          }
+          : tab,
+      ),
+    );
+
+    setSelectedStep(null);
+  }, [undoStack, redoStack, selectedTabId, tabs]);
+
+  // Redo - restore next pipeline state
+  const redo = useCallback(() => {
+    if (redoStack.length === 0) return;
+
+    const currentTab = tabs.find(t => t.id === selectedTabId);
+    if (!currentTab) return;
+
+    // Push current state to undo stack
+    setUndoStack(prev => [...prev, {
+      pipeline: currentTab.pipeline,
+      edges: currentTab.edges || [],
+      inputPosition: currentTab.inputPosition
+    }]);
+
+    // Pop from redo stack and apply
+    const nextState = redoStack[redoStack.length - 1];
+    setRedoStack(prev => prev.slice(0, -1));
+
+    setTabs(prev =>
+      prev.map((tab) =>
+        tab.id === selectedTabId
+          ? {
+            ...tab,
+            pipeline: nextState.pipeline,
+            edges: nextState.edges,
+            inputPosition: nextState.inputPosition,
+            updatedAt: formatDateTime(new Date()),
+          }
+          : tab,
+      ),
+    );
+
+    setSelectedStep(null);
+  }, [undoStack, redoStack, selectedTabId, tabs]);
 
   const addNewTab = () => {
     const newTabId = `tab-${Date.now()}`;
@@ -951,6 +1048,33 @@ function App() {
                 </div>
               )}
             </div>
+
+            {/* Undo/Redo buttons */}
+            <div className="flex items-center">
+              <button
+                onClick={undo}
+                disabled={undoStack.length === 0}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${undoStack.length === 0
+                  ? "text-muted-foreground/40 cursor-not-allowed"
+                  : "text-primary hover:bg-primary/10"
+                  }`}
+              >
+                <Undo2 className="h-3.5 w-3.5" />
+                Undo
+              </button>
+              <button
+                onClick={redo}
+                disabled={redoStack.length === 0}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${redoStack.length === 0
+                  ? "text-muted-foreground/40 cursor-not-allowed"
+                  : "text-primary hover:bg-primary/10"
+                  }`}
+              >
+                <Redo2 className="h-3.5 w-3.5" />
+                Redo
+              </button>
+            </div>
+
             <button
               onClick={() => handleExecute()}
               disabled={getCurrentPipeline().length === 0 || isExecuting}
