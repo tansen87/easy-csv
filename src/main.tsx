@@ -7,7 +7,7 @@ import { ThemeProvider } from "./components/ThemeProvider";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <ThemeProvider defaultTheme="light" storageKey="xan-gui-theme">
+    <ThemeProvider defaultTheme="animal-island" storageKey="xan-gui-theme">
       <App />
     </ThemeProvider>
   </React.StrictMode>,

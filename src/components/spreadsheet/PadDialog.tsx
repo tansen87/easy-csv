@@ -3,6 +3,8 @@ import { X } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { ThemeAwareInput } from "@/components/theme/ThemeAwareInput";
+import { ThemeAwareButton } from "@/components/theme/ThemeAwareButton";
 
 interface PadDialogState {
   col: number;
@@ -116,18 +118,18 @@ export function PadDialog({
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium">Pad</span>
+          <span className="text-sm font-medium">Pad</span>
         </div>
         <button
           onClick={onClose}
           className="no-drag p-0.5 hover:bg-accent rounded transition-colors shrink-0 text-muted-foreground/70 hover:text-foreground"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-4 w-4" />
         </button>
       </div>
-      <div className="p-3 space-y-1">
-        <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+      <div className="p-3 space-y-2">
+        <div>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">
             Column
           </label>
           <SearchableSelect
@@ -137,8 +139,8 @@ export function PadDialog({
             placeholder="Search or select column..."
           />
         </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        <div>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">
             Pad Type
           </label>
           <SearchableSelect
@@ -148,47 +150,45 @@ export function PadDialog({
             placeholder="Select pad type..."
           />
         </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        <div>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">
             Width
           </label>
-          <input
+          <ThemeAwareInput
             type="number"
             value={width}
             onChange={(e) => setWidth(e.target.value)}
             placeholder="Target width"
-            className="w-full h-8 px-2 text-xs border rounded bg-background"
             min="1"
           />
         </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        <div>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">
             Character (optional)
           </label>
-          <input
+          <ThemeAwareInput
             type="text"
             value={char}
             onChange={(e) => setChar(e.target.value)}
             placeholder="Space if blank"
-            className="w-full h-8 px-2 text-xs border rounded bg-background"
             maxLength={1}
           />
         </div>
       </div>
 
       <div className="px-3 pb-2 flex gap-2">
-        <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+        <ThemeAwareButton
+          className="flex-1"
           onClick={onClose}
         >
           Cancel
-        </button>
-        <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+        </ThemeAwareButton>
+        <ThemeAwareButton
+          className="flex-1"
           onClick={handleApply}
         >
           Apply
-        </button>
+        </ThemeAwareButton>
       </div>
     </div>
   );

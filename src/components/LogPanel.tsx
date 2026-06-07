@@ -152,7 +152,7 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose, isEx
         onMouseDown={handleMouseDown}
       >
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-primary text-primary-foreground shadow-sm">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md text-sm font-medium bg-primary text-primary-foreground shadow-sm">
             <FileText className="h-3.5 w-3.5" />
             Logs ({logs.length})
           </div>
@@ -166,7 +166,7 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose, isEx
             size="sm"
             onClick={onClear}
             disabled={logs.length === 0}
-            className="h-6 px-2 text-xs font-medium hover:bg-destructive/10 hover:text-destructive"
+            className="h-6 px-2 text-sm font-medium hover:bg-destructive/10 hover:text-destructive"
           >
             <Trash2 className="h-3 w-3" />
           </Button>
@@ -174,7 +174,7 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose, isEx
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="h-6 px-2 text-xs font-medium hover:bg-accent hover:text-foreground"
+            className="h-6 px-2 text-sm font-medium hover:bg-accent hover:text-foreground"
           >
             <X className="h-3 w-3" />
           </Button>
@@ -188,7 +188,7 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose, isEx
                 <TextQuote className="h-8 w-8 text-muted-foreground/50" />
               </div>
               <p className="text-sm font-medium text-muted-foreground mb-1">No logs yet</p>
-              <p className="text-xs text-muted-foreground/70">
+              <p className="text-sm text-muted-foreground/70">
                 Execute a pipeline to see output
               </p>
             </div>
@@ -203,10 +203,10 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose, isEx
                     <div className="mt-0.5 flex-shrink-0">{getLogIcon(log.type)}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5">
-                        <span className={`text-xs font-bold uppercase tracking-wider ${getLogColor(log.type)}`}>
+                        <span className={`text-sm font-bold uppercase tracking-wider ${getLogColor(log.type)}`}>
                           {log.type}
                         </span>
-                        <span className="text-xs text-muted-foreground/70">
+                        <span className="text-sm text-muted-foreground/70">
                           {log.timestamp.toLocaleTimeString()}
                         </span>
                         <Button

@@ -116,18 +116,18 @@ export function NotificationPanel({ notifications, onDismiss, onDismissAll }: No
         <div className="notification-panel-header flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border/30 cursor-grab select-none">
           <div className="flex items-center gap-2 flex-1">
             {warningCount > 0 && (
-              <span className="flex items-center gap-1 text-xs text-yellow-600">
+              <span className="flex items-center gap-1 text-sm text-yellow-600">
                 <AlertCircle className="h-3 w-3" />
                 {warningCount}
               </span>
             )}
             {errorCount > 0 && (
-              <span className="flex items-center gap-1 text-xs text-red-600">
+              <span className="flex items-center gap-1 text-sm text-red-600">
                 <AlertCircle className="h-3 w-3" />
                 {errorCount}
               </span>
             )}
-            <span className="text-xs font-medium text-muted-foreground">
+            <span className="text-sm font-medium text-muted-foreground">
               {notifications.length} notification{notifications.length > 1 ? "s" : ""}
             </span>
           </div>
@@ -136,7 +136,7 @@ export function NotificationPanel({ notifications, onDismiss, onDismissAll }: No
               e.stopPropagation();
               onDismissAll();
             }}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             Clear all
           </button>
@@ -166,7 +166,7 @@ export function NotificationPanel({ notifications, onDismiss, onDismissAll }: No
                   className={`flex items-center gap-2 px-3 py-2 border-b border-border/20 last:border-b-0 ${colorMap[notification.type]}`}
                 >
                   <Icon className={`h-4 w-4 ${iconColorMap[notification.type]} flex-shrink-0`} />
-                  <span className="text-xs flex-1">{notification.message}</span>
+                  <span className="text-sm flex-1">{notification.message}</span>
                   <button
                     onClick={() => onDismiss(notification.id)}
                     className="flex-shrink-0 hover:opacity-70 transition-opacity"

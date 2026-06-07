@@ -306,7 +306,7 @@ export function CommandList({
         <div className="flex items-center gap-2">
           <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
             <button
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all ${activePanel === "commands"
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-sm font-medium transition-all ${activePanel === "commands"
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-accent"
                 }`}
@@ -316,7 +316,7 @@ export function CommandList({
               Cmds
             </button>
             <button
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all ${activePanel === "history"
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-sm font-medium transition-all ${activePanel === "history"
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-accent"
                 }`}
@@ -331,7 +331,7 @@ export function CommandList({
           variant="ghost"
           size="sm"
           onClick={onClose}
-          className="h-6 px-2 text-xs font-medium hover:bg-accent hover:text-foreground"
+          className="h-6 px-2 text-sm font-medium hover:bg-accent hover:text-foreground"
         >
           <X className="h-3 w-3" />
         </Button>
@@ -348,7 +348,7 @@ export function CommandList({
             }
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 text-xs border border-border/50 rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
+            className="w-full pl-8 pr-3 py-1.5 text-sm border border-border/50 rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
           />
         </div>
       </div>
@@ -365,7 +365,7 @@ export function CommandList({
                     className="w-full flex items-center justify-between px-3 py-2 text-left rounded-lg hover:bg-accent/30 transition-colors"
                     onClick={() => toggleCategory(category)}
                   >
-                    <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
                       {category}
                     </h3>
                     <div className="text-muted-foreground/70">
@@ -396,7 +396,7 @@ export function CommandList({
                                     <CommandIcon className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
                                     <span className="font-semibold text-sm">{command.name}</span>
                                   </div>
-                                  <div className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2 mt-1">
+                                  <div className="text-sm text-muted-foreground/80 leading-relaxed line-clamp-2 mt-1">
                                     {command.description}
                                   </div>
                                 </div>
@@ -431,7 +431,7 @@ export function CommandList({
                     <Sparkles className="h-6 w-6 text-muted-foreground/50" />
                   </div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">No history found</p>
-                  <p className="text-xs text-muted-foreground/70">
+                  <p className="text-sm text-muted-foreground/70">
                     {searchQuery
                       ? "Try a different search term"
                       : "Execute pipelines to see them here"}
@@ -445,26 +445,26 @@ export function CommandList({
                       className="border rounded-lg p-3 hover:bg-muted/30 transition-colors"
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-semibold text-xs truncate">
+                        <h4 className="font-semibold text-sm truncate">
                           {history.name}
                         </h4>
                         <button
-                          className="text-xs px-2 py-1 rounded-md hover:bg-accent transition-colors text-red-600 hover:bg-red-500/10"
+                          className="text-sm px-2 py-1 rounded-md hover:bg-accent transition-colors text-red-600 hover:bg-red-500/10"
                           onClick={() => onDeleteHistory(history)}
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                      <p className="text-xs text-muted-foreground mb-1">
+                      <p className="text-sm text-muted-foreground mb-1">
                         {new Date(history.executedAt).toLocaleString()}
                       </p>
-                      <p className="text-xs text-muted-foreground mb-2 truncate">
+                      <p className="text-sm text-muted-foreground mb-2 truncate">
                         {history.inputFile.split("\\").pop()}
                       </p>
                       <div className="flex items-center justify-between">
                         <div className="flex gap-1">
                           <button
-                            className="text-xs px-2 py-1 border rounded-md hover:bg-accent transition-colors"
+                            className="text-sm px-2 py-1 border rounded-md hover:bg-accent transition-colors"
                             onClick={() => {
                               onLoadHistory(history);
                               onLoadCsvData(selectedTabId, history.inputFile);
@@ -474,7 +474,7 @@ export function CommandList({
                             Load
                           </button>
                           <button
-                            className="text-xs px-2 py-1 border rounded-md hover:bg-accent transition-colors"
+                            className="text-sm px-2 py-1 border rounded-md hover:bg-accent transition-colors"
                             onClick={() => {
                               onNewTabFromHistory(history);
                             }}
@@ -483,7 +483,7 @@ export function CommandList({
                           </button>
                         </div>
                         <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${history.success ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"}`}
+                          className={`text-sm px-2 py-0.5 rounded-full ${history.success ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"}`}
                         >
                           {history.success ? "Success" : "Failed"}
                         </span>
@@ -500,7 +500,7 @@ export function CommandList({
                 <Sparkles className="h-6 w-6 text-muted-foreground/50" />
               </div>
               <p className="text-sm font-medium text-muted-foreground mb-1">No commands found</p>
-              <p className="text-xs text-muted-foreground/70">
+              <p className="text-sm text-muted-foreground/70">
                 Try a different search term
               </p>
             </div>

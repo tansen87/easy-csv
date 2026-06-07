@@ -322,7 +322,7 @@ export function SplitDialog({
                   ))}
                   <button
                     onClick={addIndexField}
-                    className="w-full h-8 px-2 text-xs border border-dashed rounded hover:border-accent transition-colors flex items-center justify-center gap-1"
+                    className="w-full h-8 px-2 text-sm border border-dashed rounded hover:border-accent transition-colors flex items-center justify-center gap-1"
                   >
                     <Plus className="h-3 w-3 text-muted-foreground" />
                     Add Index
