@@ -5,7 +5,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
-import { ThemeAwareCheckbox } from "@/components/ThemeAwareCheckbox";
+import { ThemeAwareCheckbox } from "@/components/theme/ThemeAwareCheckbox";
+import { ThemeAwareInput } from "@/components/theme/ThemeAwareInput";
 
 export type CommandDialogType =
   | "search"
@@ -218,7 +219,7 @@ export function CommandDialog({
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Pattern</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.pattern}
                       onChange={(e) =>
@@ -231,7 +232,6 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Search condition"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                       autoFocus
                     />
                   </div>
@@ -355,7 +355,7 @@ export function CommandDialog({
                 <div className="grid grid-cols-2 gap-4 mt-1">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Flag Column</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.flag || ""}
                       onChange={(e) =>
@@ -365,12 +365,11 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Column name to report match status"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Count Column</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.count || ""}
                       onChange={(e) =>
@@ -383,14 +382,13 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Column name to report match count"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Limit</label>
-                    <input
+                    <ThemeAwareInput
                       type="number"
                       value={commandDialog.params.limit || ""}
                       onChange={(e) =>
@@ -405,12 +403,11 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Maximum rows to return"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Threads</label>
-                    <input
+                    <ThemeAwareInput
                       type="number"
                       value={commandDialog.params.threads || ""}
                       onChange={(e) =>
@@ -425,14 +422,13 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Number of threads"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Levenshtein</label>
-                    <input
+                    <ThemeAwareInput
                       type="number"
                       value={commandDialog.params.levenshtein || ""}
                       onChange={(e) =>
@@ -447,12 +443,11 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Levenshtein distance"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Damerau-Levenshtein</label>
-                    <input
+                    <ThemeAwareInput
                       type="number"
                       value={commandDialog.params["damerau-levenshtein"] || ""}
                       onChange={(e) =>
@@ -467,7 +462,6 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Damerau-Levenshtein distance"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -518,7 +512,7 @@ export function CommandDialog({
                 <div className="grid grid-cols-2 gap-4 mt-1">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Replace</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.replace || ""}
                       onChange={(e) =>
@@ -531,12 +525,11 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Replacement string"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Add Pattern</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params["add-pattern"] || ""}
                       onChange={(e) =>
@@ -549,14 +542,13 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Additional pattern"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Unique Matches</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params["unique-matches"] || ""}
                       onChange={(e) =>
@@ -569,12 +561,11 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Column name for unique matches"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Separator</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.sep || ""}
                       onChange={(e) =>
@@ -587,13 +578,12 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Separator for unique matches"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Patterns</label>
-                  <input
+                  <ThemeAwareInput
                     type="text"
                     value={commandDialog.params.patterns || ""}
                     onChange={(e) =>
@@ -606,13 +596,12 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Path to a text file"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Pattern Column</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params["pattern-column"] || ""}
                       onChange={(e) =>
@@ -625,12 +614,11 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Column with patterns"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Replacement Column</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params["replacement-column"] || ""}
                       onChange={(e) =>
@@ -643,13 +631,12 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Column with replacements"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Name Column</label>
-                  <input
+                  <ThemeAwareInput
                     type="text"
                     value={commandDialog.params["name-column"] || ""}
                     onChange={(e) =>
@@ -662,7 +649,6 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Column with pattern names"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
               </div>
@@ -721,7 +707,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Expression</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.expression}
                 onChange={(e) =>
@@ -740,35 +726,35 @@ export function CommandDialog({
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params["invert-match"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          "invert-match": checked,
-                        },
-                      })
-                    }
-                  >
-                    Invert Match
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params["invert-match"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "invert-match": checked,
+                    },
+                  })
+                }
+              >
+                Invert Match
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.parallel}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          parallel: checked,
-                        },
-                      })
-                    }
-                  >
-                    Parallel
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.parallel}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      parallel: checked,
+                    },
+                  })
+                }
+              >
+                Parallel
+              </ThemeAwareCheckbox>
               <div className="flex">
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.threads || ""}
                   onChange={(e) =>
@@ -783,11 +769,10 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Threads"
-                  className="w-20 h-8 px-1 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="flex">
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.limit || ""}
                   onChange={(e) =>
@@ -802,7 +787,6 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Limit"
-                  className="w-20 h-8 px-1 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -876,7 +860,7 @@ export function CommandDialog({
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Count</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.count ?? ""}
                   onChange={(e) =>
@@ -886,12 +870,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Number of times the line was consecutively duplicated"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Memory Limit</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params["memory-limit"] ?? 512}
                   onChange={(e) =>
@@ -904,143 +887,142 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Max memory for external sorting (MB)"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.reverse ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          reverse: checked,
-                        },
-                      })
-                    }
-                  >
-                    Reverse
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.reverse ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      reverse: checked,
+                    },
+                  })
+                }
+              >
+                Reverse
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.numeric ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          numeric: checked,
-                        },
-                      })
-                    }
-                  >
-                    Numeric
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.numeric ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      numeric: checked,
+                    },
+                  })
+                }
+              >
+                Numeric
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.check ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          check: checked,
-                        },
-                      })
-                    }
-                  >
-                    Check
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.check ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      check: checked,
+                    },
+                  })
+                }
+              >
+                Check
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.uniq ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          uniq: checked,
-                        },
-                      })
-                    }
-                  >
-                    Uniq
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.uniq ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      uniq: checked,
+                    },
+                  })
+                }
+              >
+                Uniq
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.unstable ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          unstable: checked,
-                        },
-                      })
-                    }
-                  >
-                    Unstable
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.unstable ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      unstable: checked,
+                    },
+                  })
+                }
+              >
+                Unstable
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.parallel ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          parallel: checked,
-                        },
-                      })
-                    }
-                  >
-                    Parallel
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.parallel ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      parallel: checked,
+                    },
+                  })
+                }
+              >
+                Parallel
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.external ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          external: checked,
-                        },
-                      })
-                    }
-                  >
-                    External
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.external ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      external: checked,
+                    },
+                  })
+                }
+              >
+                External
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.columns ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          columns: checked,
-                        },
-                      })
-                    }
-                  >
-                    Columns
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.columns ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      columns: checked,
+                    },
+                  })
+                }
+              >
+                Columns
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.cells ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          cells: checked,
-                        },
-                      })
-                    }
-                  >
-                    Cells
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.cells ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      cells: checked,
+                    },
+                  })
+                }
+              >
+                Cells
+              </ThemeAwareCheckbox>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Tmp Dir</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params["tmp-dir"] ?? ""}
                 onChange={(e) =>
@@ -1050,7 +1032,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Directory where external sorting chunks will be written"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -1101,7 +1082,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Selection</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.selection}
                 onChange={(e) =>
@@ -1114,25 +1095,24 @@ export function CommandDialog({
                   })
                 }
                 placeholder="e.g. column1,column2 or 0:4"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.evaluate}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          evaluate: checked,
-                        },
-                      })
-                    }
-                  >
-                    Evaluate Expression
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.evaluate}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      evaluate: checked,
+                    },
+                  })
+                }
+              >
+                Evaluate Expression
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -1184,7 +1164,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Select Columns</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.select || ""}
                 onChange={(e) =>
@@ -1197,27 +1177,26 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Leave empty to show all columns"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
             <ThemeAwareCheckbox
-                  checked={commandDialog.params.all || false}
-                  onChange={(checked) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        all: checked,
-                      },
-                    })
-                  }
-                >
-                  Show All Rows
-                </ThemeAwareCheckbox>
+              checked={commandDialog.params.all || false}
+              onChange={(checked) =>
+                setCommandDialog({
+                  ...commandDialog,
+                  params: {
+                    ...commandDialog.params,
+                    all: checked,
+                  },
+                })
+              }
+            >
+              Show All Rows
+            </ThemeAwareCheckbox>
             <div className="space-y-2">
               <label className="text-sm font-medium">Limit</label>
-              <input
+              <ThemeAwareInput
                 type="number"
                 value={commandDialog.params.limit}
                 onChange={(e) =>
@@ -1230,7 +1209,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Number of rows to display"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 disabled={commandDialog.params.all}
               />
             </div>
@@ -1281,20 +1259,20 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="flex items-center gap-6">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.parallel}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          parallel: checked,
-                        },
-                      })
-                    }
-                  >
-                    Parallel
-                  </ThemeAwareCheckbox>
-              <input
+                checked={commandDialog.params.parallel}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      parallel: checked,
+                    },
+                  })
+                }
+              >
+                Parallel
+              </ThemeAwareCheckbox>
+              <ThemeAwareInput
                 type="number"
                 value={commandDialog.params.threads}
                 onChange={(e) =>
@@ -1309,22 +1287,21 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Number of threads"
-                className="h-10 px-3 text-sm border rounded-md bg-background"
               />
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.approx}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          approx: checked,
-                        },
-                      })
-                    }
-                  >
-                    Approximate
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.approx}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      approx: checked,
+                    },
+                  })
+                }
+              >
+                Approximate
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -1374,7 +1351,7 @@ export function CommandDialog({
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Start</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.start || ""}
                   onChange={(e) =>
@@ -1389,12 +1366,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Start index"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">End</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.end || ""}
                   onChange={(e) =>
@@ -1409,12 +1385,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="End index"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Length</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.len || ""}
                   onChange={(e) =>
@@ -1429,7 +1404,6 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Length"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -1480,7 +1454,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Limit</label>
-              <input
+              <ThemeAwareInput
                 type="number"
                 value={commandDialog.params.limit || 10}
                 onChange={(e) =>
@@ -1493,7 +1467,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Number of rows to return"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -1543,7 +1516,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Limit</label>
-              <input
+              <ThemeAwareInput
                 type="number"
                 value={commandDialog.params.limit || 10}
                 onChange={(e) =>
@@ -1556,7 +1529,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Number of rows to return"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -1607,7 +1579,7 @@ export function CommandDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Sample Size</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params["sample-size"] ?? 10}
                   onChange={(e) =>
@@ -1620,13 +1592,12 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Number of rows to sample"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   autoFocus
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Seed</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.seed ?? ""}
                   onChange={(e) =>
@@ -1639,14 +1610,13 @@ export function CommandDialog({
                     })
                   }
                   placeholder="RNG seed"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Weight</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.weight ?? ""}
                   onChange={(e) =>
@@ -1656,12 +1626,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column containing weights to bias the sample"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Group By</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.groupby ?? ""}
                   onChange={(e) =>
@@ -1671,25 +1640,24 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Return a sample per group"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.cursed ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          cursed: checked,
-                        },
-                      })
-                    }
-                  >
-                    Cursed
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.cursed ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      cursed: checked,
+                    },
+                  })
+                }
+              >
+                Cursed
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -1742,7 +1710,7 @@ export function CommandDialog({
               <label className="text-sm font-medium">
                 Select Columns
               </label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.select || ""}
                 onChange={(e) =>
@@ -1752,7 +1720,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Column(s) to deduplicate on"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
@@ -1833,7 +1800,7 @@ export function CommandDialog({
                 <label className="text-sm font-medium">
                   Choose
                 </label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.choose || ""}
                   onChange={(e) =>
@@ -1843,14 +1810,13 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Expression to decide whether to keep a row (current_*, new_*)"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">
                   Flag
                 </label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.flag || ""}
                   onChange={(e) =>
@@ -1860,7 +1826,6 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Add column with this name to flag duplicates"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -1911,7 +1876,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Seed</label>
-              <input
+              <ThemeAwareInput
                 type="number"
                 value={commandDialog.params.seed || ""}
                 onChange={(e) =>
@@ -1924,25 +1889,24 @@ export function CommandDialog({
                   })
                 }
                 placeholder="RNG seed"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.external}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          l: checked,
-                        },
-                      })
-                    }
-                  >
-                    External
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.external}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      l: checked,
+                    },
+                  })
+                }
+              >
+                External
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -1994,7 +1958,7 @@ export function CommandDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Select Columns</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.select || ""}
                   onChange={(e) =>
@@ -2007,12 +1971,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column(s) to compute frequencies"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Separator</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.sep || ""}
                   onChange={(e) =>
@@ -2022,14 +1985,13 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Split cells by separator"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Group By</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.groupby || ""}
                   onChange={(e) =>
@@ -2042,12 +2004,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Compute frequencies per group"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Limit</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.limit || 10}
                   onChange={(e) =>
@@ -2060,69 +2021,68 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Top N items"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="grid grid-cols-5 gap-0">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.all}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          l: checked,
-                        },
-                      })
-                    }
-                  >
-                    All
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.all}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      l: checked,
+                    },
+                  })
+                }
+              >
+                All
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.approx}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          x: checked,
-                        },
-                      })
-                    }
-                  >
-                    Approx
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.approx}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      x: checked,
+                    },
+                  })
+                }
+              >
+                Approx
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params["no-extra"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          a: checked,
-                        },
-                      })
-                    }
-                  >
-                    No Extra
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params["no-extra"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      a: checked,
+                    },
+                  })
+                }
+              >
+                No Extra
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.parallel}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          l: checked,
-                        },
-                      })
-                    }
-                  >
-                    Parallel
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.parallel}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      l: checked,
+                    },
+                  })
+                }
+              >
+                Parallel
+              </ThemeAwareCheckbox>
               <div className="flex items-center gap-2">
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.threads || ""}
                   onChange={(e) =>
@@ -2137,7 +2097,6 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Threads"
-                  className="w-32 h-8 px-2 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -2193,7 +2152,7 @@ export function CommandDialog({
                 <div className="space-y-3">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Columns</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.columns || ""}
                       onChange={(e) =>
@@ -2206,13 +2165,12 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Columns to group by"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                       autoFocus
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Expression</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.expression || ""}
                       onChange={(e) =>
@@ -2225,14 +2183,13 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Aggregation expression"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Keep</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.keep || ""}
                       onChange={(e) =>
@@ -2245,12 +2202,11 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Keep these columns"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Total</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.total || ""}
                       onChange={(e) =>
@@ -2263,14 +2219,13 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Aggregation over whole file"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Along Columns</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params["along-cols"] || ""}
                       onChange={(e) =>
@@ -2283,12 +2238,11 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Aggregate over columns"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Along Matrix</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params["along-matrix"] || ""}
                       onChange={(e) =>
@@ -2301,7 +2255,6 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Aggregate all values"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -2335,7 +2288,7 @@ export function CommandDialog({
                     Parallel
                   </ThemeAwareCheckbox>
                   <div className="space-y-2">
-                    <input
+                    <ThemeAwareInput
                       type="number"
                       value={commandDialog.params.threads || ""}
                       onChange={(e) =>
@@ -2350,7 +2303,6 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Threads"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -2406,7 +2358,7 @@ export function CommandDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Select Columns</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.select || ""}
                   onChange={(e) =>
@@ -2419,13 +2371,12 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column(s) to compute stats"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   autoFocus
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Group By</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.groupby || ""}
                   onChange={(e) =>
@@ -2438,99 +2389,98 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Group by column(s)"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="grid grid-cols-5 gap-0">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.all}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          l: checked,
-                        },
-                      })
-                    }
-                  >
-                    All
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.all}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      l: checked,
+                    },
+                  })
+                }
+              >
+                All
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.cardinality}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          y: checked,
-                        },
-                      })
-                    }
-                  >
-                    Cardinality
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.cardinality}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      y: checked,
+                    },
+                  })
+                }
+              >
+                Cardinality
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.quartiles}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          s: checked,
-                        },
-                      })
-                    }
-                  >
-                    Quartiles
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.quartiles}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      s: checked,
+                    },
+                  })
+                }
+              >
+                Quartiles
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.approx}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          x: checked,
-                        },
-                      })
-                    }
-                  >
-                    Approx
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.approx}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      x: checked,
+                    },
+                  })
+                }
+              >
+                Approx
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.nulls}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          s: checked,
-                        },
-                      })
-                    }
-                  >
-                    Nulls
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.nulls}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      s: checked,
+                    },
+                  })
+                }
+              >
+                Nulls
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.parallel}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          l: checked,
-                        },
-                      })
-                    }
-                  >
-                    Parallel
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.parallel}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      l: checked,
+                    },
+                  })
+                }
+              >
+                Parallel
+              </ThemeAwareCheckbox>
               <div className="flex-1">
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.threads || ""}
                   onChange={(e) =>
@@ -2545,7 +2495,6 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Number of threads"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -2596,7 +2545,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Expression</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.expression || ""}
                 onChange={(e) =>
@@ -2609,14 +2558,13 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Aggregation expression (e.g., sum:col1)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Along Rows</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params["along-rows"] || ""}
                   onChange={(e) =>
@@ -2629,12 +2577,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Aggregate per row"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Along Columns</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params["along-cols"] || ""}
                   onChange={(e) =>
@@ -2647,13 +2594,12 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Aggregate per column"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Along Matrix</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params["along-matrix"] || ""}
                 onChange={(e) =>
@@ -2666,26 +2612,25 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Aggregate all values"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.parallel}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          l: checked,
-                        },
-                      })
-                    }
-                  >
-                    Parallel
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.parallel}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      l: checked,
+                    },
+                  })
+                }
+              >
+                Parallel
+              </ThemeAwareCheckbox>
               <div className="flex-1">
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.threads || ""}
                   onChange={(e) =>
@@ -2700,7 +2645,6 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Number of threads"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -2752,7 +2696,7 @@ export function CommandDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Column</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.column || ""}
                   onChange={(e) =>
@@ -2765,13 +2709,12 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column to bin"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   autoFocus
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Select Columns</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.select || ""}
                   onChange={(e) =>
@@ -2784,14 +2727,13 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Subset of columns"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Bins</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.bins || ""}
                   onChange={(e) =>
@@ -2806,7 +2748,6 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Number of bins"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -2834,7 +2775,7 @@ export function CommandDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Max Bins</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params["max-bins"] || ""}
                   onChange={(e) =>
@@ -2849,7 +2790,6 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Maximum bins"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -2875,40 +2815,40 @@ export function CommandDialog({
             </div>
             <div className="grid grid-cols-4 gap-0">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.exact}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          t: checked,
-                        },
-                      })
-                    }
-                  >
-                    Exact
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.exact}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      t: checked,
+                    },
+                  })
+                }
+              >
+                Exact
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params["no-extra"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          a: checked,
-                        },
-                      })
-                    }
-                  >
-                    No Extra
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params["no-extra"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      a: checked,
+                    },
+                  })
+                }
+              >
+                No Extra
+              </ThemeAwareCheckbox>
               <div></div>
               <div></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Min</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.min || ""}
                   onChange={(e) =>
@@ -2923,12 +2863,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Override min value"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Max</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.max || ""}
                   onChange={(e) =>
@@ -2943,7 +2882,6 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Override max value"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -2994,7 +2932,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">GroupBy (optional)</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.groupby || ""}
                 onChange={(e) =>
@@ -3007,12 +2945,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Reset aggregation on column(s)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Expression</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.expression || ""}
                 onChange={(e) =>
@@ -3025,7 +2962,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Window expression (e.g., lag:col1)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
@@ -3078,7 +3014,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Pattern</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.pattern}
                 onChange={(e) =>
@@ -3091,53 +3027,52 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Pattern to match"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params["ignore-case"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          "ignore-case": checked,
-                        },
-                      })
-                    }
-                  >
-                    Ignore Case
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params["ignore-case"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "ignore-case": checked,
+                    },
+                  })
+                }
+              >
+                Ignore Case
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params["invert-match"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          "invert-match": checked,
-                        },
-                      })
-                    }
-                  >
-                    Invert Match
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params["invert-match"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "invert-match": checked,
+                    },
+                  })
+                }
+              >
+                Invert Match
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.count}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          count: checked,
-                        },
-                      })
-                    }
-                  >
-                    Count
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.count}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      count: checked,
+                    },
+                  })
+                }
+              >
+                Count
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -3186,19 +3121,19 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params["just-names"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          "just-names": checked,
-                        },
-                      })
-                    }
-                  >
-                    Just Names
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params["just-names"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "just-names": checked,
+                    },
+                  })
+                }
+              >
+                Just Names
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -3249,7 +3184,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Select Columns</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.select ?? ""}
                 onChange={(e) =>
@@ -3259,13 +3194,12 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Column(s) to visualize"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Limit</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.limit ?? ""}
                   onChange={(e) =>
@@ -3278,12 +3212,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Maximum number of rows to read"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Separator</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.sep ?? "|"}
                   onChange={(e) =>
@@ -3293,81 +3226,80 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Delimiter for split values"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.condense ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          condense: checked,
-                        },
-                      })
-                    }
-                  >
-                    Condense
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.condense ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      condense: checked,
+                    },
+                  })
+                }
+              >
+                Condense
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.wrap ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          wrap: checked,
-                        },
-                      })
-                    }
-                  >
-                    Wrap
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.wrap ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      wrap: checked,
+                    },
+                  })
+                }
+              >
+                Wrap
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.flatter ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          flatter: checked,
-                        },
-                      })
-                    }
-                  >
-                    Flatter
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.flatter ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      flatter: checked,
+                    },
+                  })
+                }
+              >
+                Flatter
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.csv ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          csv: checked,
-                        },
-                      })
-                    }
-                  >
-                    CSV
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.csv ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      csv: checked,
+                    },
+                  })
+                }
+              >
+                CSV
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.rainbow ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          rainbow: checked,
-                        },
-                      })
-                    }
-                  >
-                    Rainbow
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.rainbow ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      rainbow: checked,
+                    },
+                  })
+                }
+              >
+                Rainbow
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
                 checked={commandDialog.params["non-empty"] ?? false}
                 onChange={(checked) =>
@@ -3432,7 +3364,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Name</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.name ?? "unknown"}
                 onChange={(e) =>
@@ -3442,12 +3374,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name of the represented field"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Field</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.field ?? "field"}
                 onChange={(e) =>
@@ -3457,12 +3388,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name of the field column"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Label</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.label ?? "value"}
                 onChange={(e) =>
@@ -3472,12 +3402,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name of the label column"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Value</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.value ?? "count"}
                 onChange={(e) =>
@@ -3487,38 +3416,37 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name of the count column"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.rainbow ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          rainbow: checked,
-                        },
-                      })
-                    }
-                  >
-                    Rainbow
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.rainbow ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      rainbow: checked,
+                    },
+                  })
+                }
+              >
+                Rainbow
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.dates ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          dates: checked,
-                        },
-                      })
-                    }
-                  >
-                    Dates
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.dates ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      dates: checked,
+                    },
+                  })
+                }
+              >
+                Dates
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
                 checked={commandDialog.params["hide-percent"] ?? false}
                 onChange={(checked) =>
@@ -3581,7 +3509,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Selection</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.selection || ""}
                 onChange={(e) =>
@@ -3594,7 +3522,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Columns to drop (comma-separated)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
@@ -3645,7 +3572,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Expression</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.expression || ""}
                 onChange={(e) =>
@@ -3658,54 +3585,53 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Expression to evaluate"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.overwrite}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          overwrite: checked,
-                        },
-                      })
-                    }
-                  >
-                    Overwrite
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.overwrite}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      overwrite: checked,
+                    },
+                  })
+                }
+              >
+                Overwrite
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.filter}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          filter: checked,
-                        },
-                      })
-                    }
-                  >
-                    Filter
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.filter}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      filter: checked,
+                    },
+                  })
+                }
+              >
+                Filter
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.parallel}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          parallel: checked,
-                        },
-                      })
-                    }
-                  >
-                    Parallel
-                  </ThemeAwareCheckbox>
-              <input
+                checked={commandDialog.params.parallel}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      parallel: checked,
+                    },
+                  })
+                }
+              >
+                Parallel
+              </ThemeAwareCheckbox>
+              <ThemeAwareInput
                 type="number"
                 value={commandDialog.params.threads || ""}
                 onChange={(e) =>
@@ -3718,7 +3644,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Number of threads"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -3771,7 +3696,7 @@ export function CommandDialog({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Column</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.column || ""}
                       onChange={(e) =>
@@ -3781,13 +3706,12 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Column to transform"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                       autoFocus
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Rename</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.rename || ""}
                       onChange={(e) =>
@@ -3797,13 +3721,12 @@ export function CommandDialog({
                         })
                       }
                       placeholder="New name for the column"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Expression</label>
-                  <input
+                  <ThemeAwareInput
                     type="text"
                     value={commandDialog.params.expression || ""}
                     onChange={(e) =>
@@ -3816,12 +3739,11 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Expression to evaluate"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Evaluate File</label>
-                  <input
+                  <ThemeAwareInput
                     type="text"
                     value={commandDialog.params["evaluate-file"] || ""}
                     onChange={(e) =>
@@ -3834,28 +3756,27 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Read expression from file"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-4 flex-wrap">
                     <ThemeAwareCheckbox
-                    checked={commandDialog.params.parallel}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          parallel: checked,
-                        },
-                      })
-                    }
-                  >
-                    Parallel
-                  </ThemeAwareCheckbox>
+                      checked={commandDialog.params.parallel}
+                      onChange={(checked) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            parallel: checked,
+                          },
+                        })
+                      }
+                    >
+                      Parallel
+                    </ThemeAwareCheckbox>
                   </div>
                   <div className="space-y-2">
-                    <input
+                    <ThemeAwareInput
                       type="number"
                       value={commandDialog.params.threads || ""}
                       onChange={(e) =>
@@ -3868,7 +3789,6 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Threads"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -3924,7 +3844,7 @@ export function CommandDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Column Name</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params["column-name"] || ""}
                   onChange={(e) =>
@@ -3937,12 +3857,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Name of the column to prepend"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Start</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.start || 0}
                   onChange={(e) =>
@@ -3955,39 +3874,38 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Number to count from"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params["byte-offset"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          "byte-offset": checked,
-                        },
-                      })
-                    }
-                  >
-                    Byte Offset
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params["byte-offset"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "byte-offset": checked,
+                    },
+                  })
+                }
+              >
+                Byte Offset
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.accumulate}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          accumulate: checked,
-                        },
-                      })
-                    }
-                  >
-                    Accumulate
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.accumulate}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      accumulate: checked,
+                    },
+                  })
+                }
+              >
+                Accumulate
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -4036,7 +3954,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Select</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.select || ""}
                 onChange={(e) =>
@@ -4046,12 +3964,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Selection of columns to fill"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Value</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.value || ""}
                 onChange={(e) =>
@@ -4061,7 +3978,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Fill empty cells using provided value"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -4112,7 +4028,7 @@ export function CommandDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Column</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.column || ""}
                   onChange={(e) =>
@@ -4122,13 +4038,12 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column to complete"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   autoFocus
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Group By</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.groupby || ""}
                   onChange={(e) =>
@@ -4141,72 +4056,71 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Columns to group by"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.check}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          check: checked,
-                        },
-                      })
-                    }
-                  >
-                    Check
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.check}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      check: checked,
+                    },
+                  })
+                }
+              >
+                Check
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.dates}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          dates: checked,
-                        },
-                      })
-                    }
-                  >
-                    Dates
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.dates}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      dates: checked,
+                    },
+                  })
+                }
+              >
+                Dates
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.sorted}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          sorted: checked,
-                        },
-                      })
-                    }
-                  >
-                    Sorted
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.sorted}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      sorted: checked,
+                    },
+                  })
+                }
+              >
+                Sorted
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.reverse}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          reverse: checked,
-                        },
-                      })
-                    }
-                  >
-                    Reverse
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.reverse}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      reverse: checked,
+                    },
+                  })
+                }
+              >
+                Reverse
+              </ThemeAwareCheckbox>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Min</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.min || ""}
                   onChange={(e) =>
@@ -4219,12 +4133,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Minimum value of range"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Max</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.max || ""}
                   onChange={(e) =>
@@ -4237,7 +4150,6 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Maximum value of range"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -4291,7 +4203,7 @@ export function CommandDialog({
             <div className="grid grid-cols-10 gap-4">
               <div className="col-span-7 space-y-2">
                 <label className="text-sm font-medium">Expression</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.expression || ""}
                   onChange={(e) =>
@@ -4304,13 +4216,12 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Expression to evaluate"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   autoFocus
                 />
               </div>
               <div className="col-span-3 space-y-2">
                 <label className="text-sm font-medium">Column</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.column || ""}
                   onChange={(e) =>
@@ -4320,13 +4231,12 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Evaluate File</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params["evaluate-file"] || ""}
                 onChange={(e) =>
@@ -4339,12 +4249,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Read expression from file"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Replace</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.replace || ""}
                 onChange={(e) =>
@@ -4357,28 +4266,27 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name of the column to replace"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center gap-4">
                 <ThemeAwareCheckbox
-                    checked={commandDialog.params.parallel}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          parallel: checked,
-                        },
-                      })
-                    }
-                  >
-                    Parallel
-                  </ThemeAwareCheckbox>
+                  checked={commandDialog.params.parallel}
+                  onChange={(checked) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        parallel: checked,
+                      },
+                    })
+                  }
+                >
+                  Parallel
+                </ThemeAwareCheckbox>
               </div>
               <div className="space-y-2">
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.threads || ""}
                   onChange={(e) =>
@@ -4391,7 +4299,6 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Threads"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -4445,7 +4352,7 @@ export function CommandDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Column</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.column || ""}
                   onChange={(e) =>
@@ -4455,13 +4362,12 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column to split"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   autoFocus
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Separator</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.separator || ","}
                   onChange={(e) =>
@@ -4474,114 +4380,113 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Separator to use"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="flex items-center gap-4 flex-wrap">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.regex}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          regex: checked,
-                        },
-                      })
-                    }
-                  >
-                    Regex
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.regex}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      regex: checked,
+                    },
+                  })
+                }
+              >
+                Regex
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.match}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          match: checked,
-                        },
-                      })
-                    }
-                  >
-                    Match
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.match}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      match: checked,
+                    },
+                  })
+                }
+              >
+                Match
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.captures}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          captures: checked,
-                        },
-                      })
-                    }
-                  >
-                    Captures
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.captures}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      captures: checked,
+                    },
+                  })
+                }
+              >
+                Captures
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params["all-captures"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          "all-captures": checked,
-                        },
-                      })
-                    }
-                  >
-                    All Captures
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params["all-captures"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "all-captures": checked,
+                    },
+                  })
+                }
+              >
+                All Captures
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params["fixed-width"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          "fixed-width": checked,
-                        },
-                      })
-                    }
-                  >
-                    Fixed Width
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params["fixed-width"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "fixed-width": checked,
+                    },
+                  })
+                }
+              >
+                Fixed Width
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.keep}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          keep: checked,
-                        },
-                      })
-                    }
-                  >
-                    Keep
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.keep}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      keep: checked,
+                    },
+                  })
+                }
+              >
+                Keep
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.trim}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          trim: checked,
-                        },
-                      })
-                    }
-                  >
-                    Trim
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.trim}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      trim: checked,
+                    },
+                  })
+                }
+              >
+                Trim
+              </ThemeAwareCheckbox>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Widths</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.widths || ""}
                   onChange={(e) =>
@@ -4594,12 +4499,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Comma-separated widths"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Cuts</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.cuts || ""}
                   onChange={(e) =>
@@ -4612,12 +4516,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Comma-separated cuts"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Offsets</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.offsets || ""}
                   onChange={(e) =>
@@ -4630,14 +4533,13 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Comma-separated offsets"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Max</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.max || ""}
                   onChange={(e) =>
@@ -4650,7 +4552,6 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Maximum splits"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -4677,7 +4578,7 @@ export function CommandDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Into</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.into || ""}
                   onChange={(e) =>
@@ -4690,12 +4591,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column names (comma-separated)"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Prefix</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.prefix || ""}
                   onChange={(e) =>
@@ -4708,7 +4608,6 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column prefix"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -4762,7 +4661,7 @@ export function CommandDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Column</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.column ?? ""}
                   onChange={(e) =>
@@ -4772,13 +4671,12 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column to top"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   autoFocus
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Limit</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.limit ?? 10}
                   onChange={(e) =>
@@ -4791,14 +4689,13 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Number of rows to return"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Group By</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.groupby ?? ""}
                   onChange={(e) =>
@@ -4811,12 +4708,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Return top n values per group"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Rank</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.rank ?? ""}
                   onChange={(e) =>
@@ -4826,53 +4722,52 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Name of a rank column to prepend"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.reverse ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          reverse: checked,
-                        },
-                      })
-                    }
-                  >
-                    Reverse
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.reverse ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      reverse: checked,
+                    },
+                  })
+                }
+              >
+                Reverse
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.lexicographic ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          lexicographic: checked,
-                        },
-                      })
-                    }
-                  >
-                    Lexicographic
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.lexicographic ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      lexicographic: checked,
+                    },
+                  })
+                }
+              >
+                Lexicographic
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.ties ?? false}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          ties: checked,
-                        },
-                      })
-                    }
-                  >
-                    Ties
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.ties ?? false}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      ties: checked,
+                    },
+                  })
+                }
+              >
+                Ties
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -4937,7 +4832,7 @@ export function CommandDialog({
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Paths</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.paths || ""}
                 onChange={(e) =>
@@ -4947,12 +4842,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Text file containing paths to CSV files"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Path Column</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params["path-column"] || ""}
                 onChange={(e) =>
@@ -4965,12 +4859,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Extract paths from this column"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Source Column</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params["source-column"] || ""}
                 onChange={(e) =>
@@ -4983,24 +4876,23 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name of source file column"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.pad}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          pad: checked,
-                        },
-                      })
-                    }
-                  >
-                    Pad
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.pad}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      pad: checked,
+                    },
+                  })
+                }
+              >
+                Pad
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -5052,7 +4944,7 @@ export function CommandDialog({
                 <div className="grid grid-cols-4 gap-4">
                   <div className="col-span-1 space-y-2">
                     <label className="text-sm font-medium">Columns</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.columns || ""}
                       onChange={(e) =>
@@ -5065,13 +4957,12 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Columns 1"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                       autoFocus
                     />
                   </div>
                   <div className="col-span-3 space-y-2">
                     <label className="text-sm font-medium">Input 1</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.input1 || ""}
                       onChange={(e) =>
@@ -5081,14 +4972,13 @@ export function CommandDialog({
                         })
                       }
                       placeholder="First input file path"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-4 gap-4">
                   <div className="col-span-1 space-y-2">
                     <label className="text-sm font-medium">Columns 2</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.columns2 || ""}
                       onChange={(e) =>
@@ -5101,12 +4991,11 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Columns 2"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="col-span-3 space-y-2">
                     <label className="text-sm font-medium">Input 2</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.input2 || ""}
                       onChange={(e) =>
@@ -5116,7 +5005,6 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Second input file path"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -5170,7 +5058,7 @@ export function CommandDialog({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Prefix Left</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params["prefix-left"] || ""}
                       onChange={(e) =>
@@ -5183,12 +5071,11 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Prefix for left columns"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Prefix Right</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params["prefix-right"] || ""}
                       onChange={(e) =>
@@ -5201,7 +5088,6 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Prefix for right columns"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -5286,7 +5172,7 @@ export function CommandDialog({
               <div className="space-y-4 pr-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Inputs</label>
-                  <input
+                  <ThemeAwareInput
                     type="text"
                     value={commandDialog.params.inputs || ""}
                     onChange={(e) =>
@@ -5296,12 +5182,11 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Input files to merge"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Select</label>
-                  <input
+                  <ThemeAwareInput
                     type="text"
                     value={commandDialog.params.select || ""}
                     onChange={(e) =>
@@ -5311,12 +5196,11 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Select a subset of columns to sort"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Paths</label>
-                  <input
+                  <ThemeAwareInput
                     type="text"
                     value={commandDialog.params.paths || ""}
                     onChange={(e) =>
@@ -5326,12 +5210,11 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Text file containing paths"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Path Column</label>
-                  <input
+                  <ThemeAwareInput
                     type="text"
                     value={commandDialog.params["path-column"] || ""}
                     onChange={(e) =>
@@ -5344,12 +5227,11 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Extract paths from this column"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Source Column</label>
-                  <input
+                  <ThemeAwareInput
                     type="text"
                     value={commandDialog.params["source-column"] || ""}
                     onChange={(e) =>
@@ -5362,7 +5244,6 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Name of source file column"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
                 <div className="flex items-center gap-4">
@@ -5461,7 +5342,7 @@ export function CommandDialog({
                 <div className="grid grid-cols-4 gap-4">
                   <div className="col-span-1 space-y-2">
                     <label className="text-sm font-medium">Columns</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.columns || ""}
                       onChange={(e) =>
@@ -5474,13 +5355,12 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Columns to join on"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                       autoFocus
                     />
                   </div>
                   <div className="col-span-3 space-y-2">
                     <label className="text-sm font-medium">Input</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.input || ""}
                       onChange={(e) =>
@@ -5490,14 +5370,13 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Input file path"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-4 gap-4">
                   <div className="col-span-1 space-y-2">
                     <label className="text-sm font-medium">Pattern Column</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params["pattern-column"] || ""}
                       onChange={(e) =>
@@ -5510,12 +5389,11 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Pattern column in patterns file"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="col-span-3 space-y-2">
                     <label className="text-sm font-medium">Patterns</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.patterns || ""}
                       onChange={(e) =>
@@ -5525,7 +5403,6 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Patterns file path"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -5618,7 +5495,7 @@ export function CommandDialog({
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Threads</label>
-                    <input
+                    <ThemeAwareInput
                       type="number"
                       value={commandDialog.params.threads || ""}
                       onChange={(e) =>
@@ -5631,7 +5508,6 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Number of threads"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
@@ -5659,7 +5535,7 @@ export function CommandDialog({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Prefix Left</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params["prefix-left"] || ""}
                       onChange={(e) =>
@@ -5672,12 +5548,11 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Prefix for left columns"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Prefix Right</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params["prefix-right"] || ""}
                       onChange={(e) =>
@@ -5690,7 +5565,6 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Prefix for right columns"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -5745,7 +5619,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Select</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.select || ""}
                 onChange={(e) =>
@@ -5755,12 +5629,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Columns to rename"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Columns</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.columns || ""}
                 onChange={(e) =>
@@ -5773,13 +5646,12 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Column mappings (e.g., old1:new1,old2:new2)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Prefix</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.prefix || ""}
                   onChange={(e) =>
@@ -5789,12 +5661,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Prefix to add to all column names"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Suffix</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.suffix || ""}
                   onChange={(e) =>
@@ -5804,53 +5675,52 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Suffix to add to all column names"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.slugify}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          slugify: checked,
-                        },
-                      })
-                    }
-                  >
-                    Slugify
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.slugify}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      slugify: checked,
+                    },
+                  })
+                }
+              >
+                Slugify
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.replace}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          replace: checked,
-                        },
-                      })
-                    }
-                  >
-                    Replace
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.replace}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      replace: checked,
+                    },
+                  })
+                }
+              >
+                Replace
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.force}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          force: checked,
-                        },
-                      })
-                    }
-                  >
-                    Force
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.force}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      force: checked,
+                    },
+                  })
+                }
+              >
+                Force
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -5901,19 +5771,19 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.append}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          append: checked,
-                        },
-                      })
-                    }
-                  >
-                    Append
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.append}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      append: checked,
+                    },
+                  })
+                }
+              >
+                Append
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -5964,7 +5834,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Length</label>
-              <input
+              <ThemeAwareInput
                 type="number"
                 value={commandDialog.params.length || ""}
                 onChange={(e) =>
@@ -5977,24 +5847,23 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Forcefully set the length of each record"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params["trust-header"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          "trust-header": checked,
-                        },
-                      })
-                    }
-                  >
-                    Trust Header
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params["trust-header"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "trust-header": checked,
+                    },
+                  })
+                }
+              >
+                Trust Header
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -6045,7 +5914,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Columns</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.columns || ""}
                 onChange={(e) =>
@@ -6058,12 +5927,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Columns to explode"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Separator</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.sep || "|"}
                 onChange={(e) =>
@@ -6073,12 +5941,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Separator to split the cells"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Rename</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.rename || ""}
                 onChange={(e) =>
@@ -6088,38 +5955,37 @@ export function CommandDialog({
                   })
                 }
                 placeholder="New names for the exploded columns"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.singularize}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          singularize: checked,
-                        },
-                      })
-                    }
-                  >
-                    Singularize
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.singularize}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      singularize: checked,
+                    },
+                  })
+                }
+              >
+                Singularize
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params["drop-empty"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          "drop-empty": checked,
-                        },
-                      })
-                    }
-                  >
-                    Drop Empty
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params["drop-empty"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "drop-empty": checked,
+                    },
+                  })
+                }
+              >
+                Drop Empty
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -6192,7 +6058,7 @@ export function CommandDialog({
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Quote Character</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.quote || '"'}
                   onChange={(e) =>
@@ -6202,12 +6068,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Quote character"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Escape Character</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params.escape || ""}
                   onChange={(e) =>
@@ -6217,95 +6082,94 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Escape character"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params["in-place"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          "in-place": checked,
-                        },
-                      })
-                    }
-                  >
-                    In Place
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params["in-place"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "in-place": checked,
+                    },
+                  })
+                }
+              >
+                In Place
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.tabs}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          tabs: checked,
-                        },
-                      })
-                    }
-                  >
-                    Tabs
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.tabs}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      tabs: checked,
+                    },
+                  })
+                }
+              >
+                Tabs
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.crlf}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          crlf: checked,
-                        },
-                      })
-                    }
-                  >
-                    CRLF
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.crlf}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      crlf: checked,
+                    },
+                  })
+                }
+              >
+                CRLF
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.ascii}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          ascii: checked,
-                        },
-                      })
-                    }
-                  >
-                    ASCII
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.ascii}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      ascii: checked,
+                    },
+                  })
+                }
+              >
+                ASCII
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params["quote-always"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          "quote-always": checked,
-                        },
-                      })
-                    }
-                  >
-                    Quote Always
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params["quote-always"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "quote-always": checked,
+                    },
+                  })
+                }
+              >
+                Quote Always
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params["quote-never"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          "quote-never": checked,
-                        },
-                      })
-                    }
-                  >
-                    Quote Never
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params["quote-never"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "quote-never": checked,
+                    },
+                  })
+                }
+              >
+                Quote Never
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -6386,7 +6250,7 @@ export function CommandDialog({
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Sample Size</label>
-                      <input
+                      <ThemeAwareInput
                         type="number"
                         value={commandDialog.params["sample-size"] || 512}
                         onChange={(e) =>
@@ -6399,12 +6263,11 @@ export function CommandDialog({
                           })
                         }
                         placeholder="Number of rows to sample"
-                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                       />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Strings</label>
-                      <input
+                      <ThemeAwareInput
                         type="text"
                         value={commandDialog.params.strings || ""}
                         onChange={(e) =>
@@ -6417,39 +6280,38 @@ export function CommandDialog({
                           })
                         }
                         placeholder="Force as raw strings"
-                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                       />
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-4">
                     <ThemeAwareCheckbox
-                    checked={commandDialog.params.nulls}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          nulls: checked,
-                        },
-                      })
-                    }
-                  >
-                    Nulls
-                  </ThemeAwareCheckbox>
+                      checked={commandDialog.params.nulls}
+                      onChange={(checked) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            nulls: checked,
+                          },
+                        })
+                      }
+                    >
+                      Nulls
+                    </ThemeAwareCheckbox>
                     <ThemeAwareCheckbox
-                    checked={commandDialog.params.omit}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          omit: checked,
-                        },
-                      })
-                    }
-                  >
-                    Omit Empty
-                  </ThemeAwareCheckbox>
+                      checked={commandDialog.params.omit}
+                      onChange={(checked) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            omit: checked,
+                          },
+                        })
+                      }
+                    >
+                      Omit Empty
+                    </ThemeAwareCheckbox>
                   </div>
                 </div>
               )}
@@ -6474,7 +6336,7 @@ export function CommandDialog({
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Select</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.select || ""}
                       onChange={(e) =>
@@ -6484,7 +6346,6 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Numerical columns to emit"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -6494,7 +6355,7 @@ export function CommandDialog({
               <div className="space-y-3">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Select</label>
-                  <input
+                  <ThemeAwareInput
                     type="text"
                     value={commandDialog.params.select || ""}
                     onChange={(e) =>
@@ -6504,7 +6365,6 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Column to emit as text"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
               </div>
@@ -6513,7 +6373,7 @@ export function CommandDialog({
               <div className="space-y-3">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Limit</label>
-                  <input
+                  <ThemeAwareInput
                     type="number"
                     value={commandDialog.params.limit || ""}
                     onChange={(e) =>
@@ -6526,7 +6386,6 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Maximum number of rows"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
               </div>
@@ -6615,7 +6474,7 @@ export function CommandDialog({
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Sheet Index</label>
-                      <input
+                      <ThemeAwareInput
                         type="number"
                         value={commandDialog.params["sheet-index"]}
                         onChange={(e) =>
@@ -6628,12 +6487,11 @@ export function CommandDialog({
                           })
                         }
                         placeholder="0-based index"
-                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                       />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Sheet Name</label>
-                      <input
+                      <ThemeAwareInput
                         type="text"
                         value={commandDialog.params["sheet-name"] || ""}
                         onChange={(e) =>
@@ -6646,25 +6504,24 @@ export function CommandDialog({
                           })
                         }
                         placeholder="Name of the sheet"
-                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                       />
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <ThemeAwareCheckbox
-                    checked={commandDialog.params["list-sheets"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          "list-sheets": checked,
-                        },
-                      })
-                    }
-                  >
-                    List Sheets
-                  </ThemeAwareCheckbox>
+                      checked={commandDialog.params["list-sheets"]}
+                      onChange={(checked) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            "list-sheets": checked,
+                          },
+                        })
+                      }
+                    >
+                      List Sheets
+                    </ThemeAwareCheckbox>
                   </div>
                 </div>
               )}
@@ -6676,7 +6533,7 @@ export function CommandDialog({
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Sample Size</label>
-                      <input
+                      <ThemeAwareInput
                         type="number"
                         value={commandDialog.params["sample-size"] || 64}
                         onChange={(e) =>
@@ -6689,12 +6546,11 @@ export function CommandDialog({
                           })
                         }
                         placeholder="Number of records to sample (default: 64)"
-                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                       />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Key Column</label>
-                      <input
+                      <ThemeAwareInput
                         type="text"
                         value={commandDialog.params["key-column"]}
                         onChange={(e) =>
@@ -6707,14 +6563,13 @@ export function CommandDialog({
                           })
                         }
                         placeholder="Name for the key column"
-                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Value Column</label>
-                      <input
+                      <ThemeAwareInput
                         type="text"
                         value={commandDialog.params["value-column"]}
                         onChange={(e) =>
@@ -6727,39 +6582,38 @@ export function CommandDialog({
                           })
                         }
                         placeholder="Name for the value column"
-                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                       />
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <ThemeAwareCheckbox
-                    checked={commandDialog.params["sort-keys"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          "sort-keys": checked,
-                        },
-                      })
-                    }
-                  >
-                    Sort Keys
-                  </ThemeAwareCheckbox>
+                      checked={commandDialog.params["sort-keys"]}
+                      onChange={(checked) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            "sort-keys": checked,
+                          },
+                        })
+                      }
+                    >
+                      Sort Keys
+                    </ThemeAwareCheckbox>
                     <ThemeAwareCheckbox
-                    checked={commandDialog.params["single-object"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          "single-object": checked,
-                        },
-                      })
-                    }
-                  >
-                    Single Object
-                  </ThemeAwareCheckbox>
+                      checked={commandDialog.params["single-object"]}
+                      onChange={(checked) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            "single-object": checked,
+                          },
+                        })
+                      }
+                    >
+                      Single Object
+                    </ThemeAwareCheckbox>
                   </div>
                 </div>
               )}
@@ -6769,7 +6623,7 @@ export function CommandDialog({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Column Name</label>
-                    <input
+                    <ThemeAwareInput
                       type="text"
                       value={commandDialog.params.column || ""}
                       onChange={(e) =>
@@ -6779,7 +6633,6 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Name of the column to create"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -6792,7 +6645,7 @@ export function CommandDialog({
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Nth Table</label>
-                      <input
+                      <ThemeAwareInput
                         type="number"
                         value={commandDialog.params["nth-table"] || 0}
                         onChange={(e) =>
@@ -6805,7 +6658,6 @@ export function CommandDialog({
                           })
                         }
                         placeholder="Select nth table (default: 0)"
-                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                       />
                     </div>
                   </div>
@@ -6953,7 +6805,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Columns</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.columns || ""}
                 onChange={(e) =>
@@ -6966,12 +6818,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Columns to pivot"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Expression</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.expr || ""}
                 onChange={(e) =>
@@ -6981,12 +6832,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Aggregation expression"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Group By</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.groupby || ""}
                 onChange={(e) =>
@@ -6999,12 +6849,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Group results by given selection of columns"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Column Separator</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params["column-sep"] || "_"}
                 onChange={(e) =>
@@ -7017,7 +6866,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Separator used to join column names"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -7070,7 +6918,7 @@ export function CommandDialog({
             </p>
             <div className="space-y-2">
               <label className="text-sm font-medium">Columns</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.columns || ""}
                 onChange={(e) =>
@@ -7083,12 +6931,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Columns to unpivot (required)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Name Column</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params["name-column"] || "name"}
                 onChange={(e) =>
@@ -7101,12 +6948,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name for the column containing unpivoted column names"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Value Column</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params["value-column"] || "value"}
                 onChange={(e) =>
@@ -7119,7 +6965,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name for the column containing unpivoted column values"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -7174,7 +7019,7 @@ export function CommandDialog({
             </p>
             <div className="space-y-2">
               <label className="text-sm font-medium">Output Directory</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params["out-dir"] || ""}
                 onChange={(e) =>
@@ -7187,7 +7032,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Where to write the chunks"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -7195,7 +7039,7 @@ export function CommandDialog({
                 <label className="text-sm font-medium">
                   Size (records per chunk)
                 </label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.size || 4096}
                   onChange={(e) =>
@@ -7208,12 +7052,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Records per chunk"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Chunks (max number)</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.chunks || ""}
                   onChange={(e) =>
@@ -7228,13 +7071,12 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Max number of chunks"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Filename Template</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.filename || "{}.csv"}
                 onChange={(e) =>
@@ -7247,24 +7089,23 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Filename template for output files"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.segments}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          segments: checked,
-                        },
-                      })
-                    }
-                  >
-                    Segments
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.segments}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      segments: checked,
+                    },
+                  })
+                }
+              >
+                Segments
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -7316,7 +7157,7 @@ export function CommandDialog({
             </p>
             <div className="space-y-2">
               <label className="text-sm font-medium">Column</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.column || ""}
                 onChange={(e) =>
@@ -7326,12 +7167,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Column to partition by (required)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Output Directory</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params["out-dir"] || ""}
                 onChange={(e) =>
@@ -7344,12 +7184,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Where to write the chunks"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Filename Template</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.filename || "{}.csv"}
                 onChange={(e) =>
@@ -7362,12 +7201,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Filename template for output files"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Prefix Length</label>
-              <input
+              <ThemeAwareInput
                 type="number"
                 value={commandDialog.params["prefix-length"] || ""}
                 onChange={(e) =>
@@ -7382,52 +7220,51 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Truncate partition column after n bytes"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.sorted}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          sorted: checked,
-                        },
-                      })
-                    }
-                  >
-                    Sorted
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.sorted}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      sorted: checked,
+                    },
+                  })
+                }
+              >
+                Sorted
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.drop}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          drop: checked,
-                        },
-                      })
-                    }
-                  >
-                    Drop Partition Column
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.drop}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      drop: checked,
+                    },
+                  })
+                }
+              >
+                Drop Partition Column
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params["case-sensitive"]}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          "case-sensitive": checked,
-                        },
-                      })
-                    }
-                  >
-                    Case Sensitive
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params["case-sensitive"]}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      "case-sensitive": checked,
+                    },
+                  })
+                }
+              >
+                Case Sensitive
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -7481,7 +7318,7 @@ export function CommandDialog({
             </p>
             <div className="space-y-2">
               <label className="text-sm font-medium">End</label>
-              <input
+              <ThemeAwareInput
                 type="number"
                 value={commandDialog.params.end || ""}
                 onChange={(e) =>
@@ -7496,13 +7333,12 @@ export function CommandDialog({
                   })
                 }
                 placeholder="End of the range (required)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Start</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.start ?? 0}
                   onChange={(e) =>
@@ -7515,12 +7351,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Start of the range"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Step</label>
-                <input
+                <ThemeAwareInput
                   type="number"
                   value={commandDialog.params.step ?? 1}
                   onChange={(e) =>
@@ -7533,12 +7368,11 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Step of the range"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Column Name</label>
-                <input
+                <ThemeAwareInput
                   type="text"
                   value={commandDialog.params["column-name"] || "n"}
                   onChange={(e) =>
@@ -7551,25 +7385,24 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Name of the column"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.inclusive}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          inclusive: checked,
-                        },
-                      })
-                    }
-                  >
-                    Inclusive
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.inclusive}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      inclusive: checked,
+                    },
+                  })
+                }
+              >
+                Inclusive
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -7621,7 +7454,7 @@ export function CommandDialog({
             </p>
             <div className="space-y-2">
               <label className="text-sm font-medium">Expression</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.expr || ""}
                 onChange={(e) =>
@@ -7631,12 +7464,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Expression to evaluate (required)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Headers</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.headers || ""}
                 onChange={(e) =>
@@ -7649,12 +7481,11 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Pretend headers, separated by commas"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Row</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.row || ""}
                 onChange={(e) =>
@@ -7664,38 +7495,37 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Pretend row with comma-separated cells"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex items-center gap-4">
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.serialize}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          serialize: checked,
-                        },
-                      })
-                    }
-                  >
-                    Serialize
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.serialize}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      serialize: checked,
+                    },
+                  })
+                }
+              >
+                Serialize
+              </ThemeAwareCheckbox>
               <ThemeAwareCheckbox
-                    checked={commandDialog.params.explain}
-                    onChange={(checked) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          explain: checked,
-                        },
-                      })
-                    }
-                  >
-                    Explain
-                  </ThemeAwareCheckbox>
+                checked={commandDialog.params.explain}
+                onChange={(checked) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: {
+                      ...commandDialog.params,
+                      explain: checked,
+                    },
+                  })
+                }
+              >
+                Explain
+              </ThemeAwareCheckbox>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -7744,7 +7574,7 @@ export function CommandDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Output Path</label>
-              <input
+              <ThemeAwareInput
                 type="text"
                 value={commandDialog.params.path || ""}
                 onChange={(e) =>
@@ -7754,7 +7584,6 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Enter output file path"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
