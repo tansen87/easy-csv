@@ -38,6 +38,7 @@ interface SpreadsheetViewProps {
   onOpenFile?: () => void;
   onImportPipeline?: () => void;
   onOpenUrl?: (url: string) => void;
+  showMinimap?: boolean;
 }
 
 export function SpreadsheetView({
@@ -59,6 +60,7 @@ export function SpreadsheetView({
   onOpenFile,
   onImportPipeline,
   onOpenUrl,
+  showMinimap,
 }: SpreadsheetViewProps) {
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
   const [contextMenu, setContextMenu] = useState<{
@@ -582,6 +584,7 @@ export function SpreadsheetView({
               onInputPositionChange(selectedTabId, position);
             }
           }}
+          showMinimap={showMinimap}
         />
       </div>
 

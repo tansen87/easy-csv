@@ -26,6 +26,8 @@ import {
   Play,
   Undo2,
   Redo2,
+  Map as MapIcon,
+  ChevronDown,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/LogPanel";
@@ -74,6 +76,7 @@ function App() {
   const [isHelpLoading, setIsHelpLoading] = useState<boolean>(false);
   const [showLogPanel, setShowLogPanel] = useState<boolean>(false);
   const [showCommandPanel, setShowCommandPanel] = useState<boolean>(false);
+  const [showMinimap, setShowMinimap] = useState<boolean>(false);
   const [historicalPipelines, setHistoricalPipelines] = useState<
     HistoricalPipeline[]
   >([]);
@@ -784,7 +787,7 @@ function App() {
         return;
       }
 
-      nextNodes.forEach(nextId => {
+      nextNodes.forEach((nextId: string) => {
         dfs(nextId, newPath);
       });
     };
@@ -1227,9 +1230,10 @@ function App() {
                 );
               }}
               onOpenFile={handleOpenFile}
-              onImportPipeline={handleImportPipeline}
-              onOpenUrl={handleOpenUrl}
-            />
+          onImportPipeline={handleImportPipeline}
+          onOpenUrl={handleOpenUrl}
+          showMinimap={showMinimap}
+        />
           </div>
         </main>
       </div>
@@ -1261,6 +1265,21 @@ function App() {
           <ChevronUp className="h-4 w-4" />
         ) : (
           <FileText className="h-4 w-4" />
+        )}
+      </Button>
+
+      {/* Minimap Toggle Button */}
+      <Button
+        onClick={() => setShowMinimap(!showMinimap)}
+        onContextMenu={(e) => e.preventDefault()}
+        className="fixed bottom-4 left-28 z-30 h-10 w-10 rounded-full shadow-md bg-gray-600/50 text-gray-200 hover:bg-gray-600/70 dark:bg-gray-700/60 dark:text-gray-300 dark:hover:bg-gray-600/70 transition-all flex items-center justify-center backdrop-blur-sm"
+        variant="default"
+        size="icon"
+      >
+        {showMinimap ? (
+          <ChevronDown className="h-4 w-4" />
+        ) : (
+          <MapIcon className="h-4 w-4" />
         )}
       </Button>
 
