@@ -5,7 +5,6 @@ import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { useTheme } from "@/components/ThemeProvider";
 import { ToastContainer, ToastType } from "@/components/Toast";
 import { NotificationPanel, NotificationType } from "@/components/PersistentNotification";
@@ -14,8 +13,6 @@ import {
   X,
   FileText,
   Loader2,
-  Sun,
-  Moon,
   Terminal,
   FolderOpen,
   Download,
@@ -63,7 +60,6 @@ function App() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isXanInstalled, setIsXanInstalled] = useState<boolean | null>(null);
   const [xanVersion, setXanVersion] = useState<string | null>(null);
-  const [showSettings, setShowSettings] = useState<boolean>(false);
   const [isSavingSettings, setIsSavingSettings] = useState<boolean>(false);
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(",");
   const [_xanPath, setXanPath] = useState<string>("");
@@ -453,7 +449,7 @@ function App() {
     setSelectedStep(null);
   }, [undoStack, redoStack, selectedTabId, tabs]);
 
-  const addNewTab = () => {
+  const addNewTab = (): string => {
     const newTabId = `tab-${Date.now()}`;
     const newTab: PipelineTab = {
       id: newTabId,
@@ -465,6 +461,7 @@ function App() {
     setTabs((prev) => [...prev, newTab]);
     setSelectedTabId(newTabId);
     setSelectedStep(null);
+    return newTabId;
   };
 
   const removeTab = (tabId: string) => {
@@ -915,14 +912,23 @@ function App() {
     }
   };
 
-  const handleThemeToggle = () => {
-    let currentTheme = theme;
-    if (theme === "system") {
-      currentTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
+  const handleOpenNewTabWithFile = async () => {
+    const newTabId = addNewTab();
+    const file = await open({
+      multiple: false,
+      filters: [
+        { name: "CSV Files", extensions: ["csv", "txt", "tsv"] },
+        { name: "JSON Files", extensions: ["json", "jsonl"] },
+        { name: "Excel Files", extensions: ["xlsx"] },
+        { name: "Parquet Files", extensions: ["parquet"] },
+        { name: "All Files", extensions: ["*"] },
+      ],
+    });
+
+    if (file) {
+      loadCsvData(newTabId, file);
     }
-    setTheme(currentTheme === "dark" ? "light" : "dark");
+    setActiveMenu(null);
   };
 
   const handleOpenUrl = async (url: string) => {
@@ -953,7 +959,7 @@ function App() {
                     }
                   }
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activeMenu === "file"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${activeMenu === "file"
                   ? "bg-accent text-foreground"
                   : "text-primary hover:text-primary hover:bg-primary/10"
                   }`}
@@ -968,17 +974,27 @@ function App() {
                       handleOpenFile();
                       setActiveMenu(null);
                     }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   >
                     <FolderOpen className="h-3.5 w-3.5" />
                     Open
                   </button>
                   <button
                     onClick={() => {
+                      handleOpenNewTabWithFile();
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Open New Tab
+                  </button>
+                  <div className="border-t border-border my-1" />
+                  <button
+                    onClick={() => {
                       handleImportPipeline();
                       setActiveMenu(null);
                     }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   >
                     <Upload className="h-3.5 w-3.5" />
                     Import
@@ -989,7 +1005,7 @@ function App() {
                       setActiveMenu(null);
                     }}
                     disabled={getCurrentPipeline().length === 0}
-                    className={`flex items-center gap-2 w-full px-3 py-2 text-xs font-medium transition-colors ${getCurrentPipeline().length === 0
+                    className={`flex items-center gap-2 w-full px-3 py-2 text-sm font-medium transition-colors ${getCurrentPipeline().length === 0
                       ? "text-muted-foreground/40 cursor-not-allowed"
                       : "text-muted-foreground hover:text-foreground hover:bg-accent"
                       }`}
@@ -1000,64 +1016,39 @@ function App() {
                 </div>
               )}
             </div>
-            <div className="relative">
-              <button
+            <button
                 onClick={() => {
-                  if (!isMenuActivated) {
-                    setIsMenuActivated(true);
-                    setActiveMenu("settings");
+                  // Check if settings tab already exists
+                  const existingSettingsTab = tabs.find(tab => tab.isSettings);
+                  if (existingSettingsTab) {
+                    setSelectedTabId(existingSettingsTab.id);
                   } else {
-                    if (activeMenu === "settings") {
-                      setActiveMenu(null);
-                    } else {
-                      setActiveMenu("settings");
-                    }
+                    // Create new settings tab
+                    const newTabId = `tab-${Date.now()}`;
+                    const newTab: PipelineTab = {
+                      id: newTabId,
+                      name: "Settings",
+                      pipeline: [],
+                      createdAt: formatDateTime(new Date()),
+                      updatedAt: formatDateTime(new Date()),
+                      isSettings: true,
+                    };
+                    setTabs((prev) => [...prev, newTab]);
+                    setSelectedTabId(newTabId);
                   }
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activeMenu === "settings"
-                  ? "bg-accent text-foreground"
-                  : "text-primary hover:text-primary hover:bg-primary/10"
-                  }`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-primary hover:text-primary hover:bg-primary/10 transition-colors"
               >
                 <Settings className="h-3.5 w-3.5" />
                 Settings
               </button>
-              {activeMenu === "settings" && (
-                <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[160px]">
-                  <button
-                    onClick={() => {
-                      handleThemeToggle();
-                      setActiveMenu(null);
-                    }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                  >
-                    {theme === "dark" ? (
-                      <Sun className="h-3.5 w-3.5" />
-                    ) : (
-                      <Moon className="h-3.5 w-3.5" />
-                    )}
-                    {theme === "dark" ? "Light Mode" : "Dark Mode"}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowSettings(true);
-                      setActiveMenu(null);
-                    }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                  >
-                    <Settings className="h-3.5 w-3.5" />
-                    Preferences
-                  </button>
-                </div>
-              )}
-            </div>
 
             {/* Undo/Redo buttons */}
             <div className="flex items-center">
               <button
                 onClick={undo}
                 disabled={undoStack.length === 0}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${undoStack.length === 0
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${undoStack.length === 0
                   ? "text-muted-foreground/40 cursor-not-allowed"
                   : "text-primary hover:bg-primary/10"
                   }`}
@@ -1068,7 +1059,7 @@ function App() {
               <button
                 onClick={redo}
                 disabled={redoStack.length === 0}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${redoStack.length === 0
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${redoStack.length === 0
                   ? "text-muted-foreground/40 cursor-not-allowed"
                   : "text-primary hover:bg-primary/10"
                   }`}
@@ -1081,7 +1072,7 @@ function App() {
             <button
               onClick={() => handleExecute()}
               disabled={getCurrentPipeline().length === 0 || isExecuting}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${isExecuting
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${isExecuting
                 ? "text-primary opacity-70"
                 : getCurrentPipeline().length === 0
                   ? "text-muted-foreground/40 cursor-not-allowed"
@@ -1110,10 +1101,9 @@ function App() {
         <div className="flex items-center gap-3 flex-1 justify-center">
         </div>
 
-        {/* Right: Status + Tools */}
         <div className="flex items-center gap-2">
           {isXanInstalled === null ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 text-sm text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               <span className="hidden sm:inline">Checking...</span>
             </div>
@@ -1137,7 +1127,7 @@ function App() {
                   }
                 }
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 rounded-lg text-xs font-medium border border-green-500/20 hover:bg-green-500/20 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 rounded-lg text-sm font-medium border border-green-500/20 hover:bg-green-500/20 transition-colors cursor-pointer"
             >
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
               <span className="hidden sm:inline">xan{xanVersion ? ` ${xanVersion.trim()}` : ""}</span>
@@ -1162,7 +1152,7 @@ function App() {
                   }
                 }
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-600 rounded-lg text-xs font-medium border border-red-500/20 hover:bg-red-500/20 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-600 rounded-lg text-sm font-medium border border-red-500/20 hover:bg-red-500/20 transition-colors cursor-pointer"
             >
               <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
               <span className="hidden sm:inline">xan missing</span>
@@ -1179,7 +1169,6 @@ function App() {
               tabs={tabs}
               selectedTabId={selectedTabId}
               onTabChange={setSelectedTabId}
-              onAddTab={addNewTab}
               onRemoveTab={removeTab}
               onRenameTab={renameTab}
               onAddCommand={handleCommandClick}
@@ -1233,6 +1222,36 @@ function App() {
           onImportPipeline={handleImportPipeline}
           onOpenUrl={handleOpenUrl}
           showMinimap={showMinimap}
+          theme={theme}
+          onThemeChange={setTheme}
+          defaultDelimiter={defaultDelimiter}
+          onDefaultDelimiterChange={setDefaultDelimiter}
+          noQuoting={noQuoting}
+          onNoQuotingChange={setNoQuoting}
+          noHeaders={noHeaders}
+          onNoHeadersChange={setNoHeaders}
+          onSaveSettings={async () => {
+            setIsSavingSettings(true);
+            try {
+              const savePromises: Promise<void>[] = [];
+              savePromises.push(
+                invoke("set_default_delimiter", { delimiter: defaultDelimiter })
+              );
+              savePromises.push(
+                invoke("set_no_quoting", { noQuoting })
+              );
+              savePromises.push(
+                invoke("set_no_headers", { noHeaders })
+              );
+              await Promise.all(savePromises);
+              showToastRef.current("Settings saved successfully", 'success');
+            } catch (error) {
+              showToastRef.current(`Failed to save settings: ${error}`, 'error');
+            } finally {
+              setIsSavingSettings(false);
+            }
+          }}
+          isSavingSettings={isSavingSettings}
         />
           </div>
         </main>
@@ -1331,119 +1350,6 @@ function App() {
         onClose={() => setShowLogPanel(false)}
         isExecuting={isExecuting}
       />
-
-      {/* Settings Dialog */}
-      {showSettings && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-card border rounded-lg shadow-lg p-6 w-full max-w-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Settings</h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowSettings(false)}
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  CSV Delimiter
-                </label>
-                <SearchableSelect
-                  value={defaultDelimiter}
-                  onChange={setDefaultDelimiter}
-                  options={[
-                    { label: "Comma (,)", value: "," },
-                    { label: "Semicolon (;)", value: ";" },
-                    { label: "Tab (\\t)", value: "\t" },
-                    { label: "Pipe (|)", value: "|" },
-                    { label: "Caret (^)", value: "^" },
-                  ]}
-                  placeholder="Select delimiter"
-                  size="sm"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Read the delimiter of CSV file
-                </p>
-              </div>
-              <div>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={noQuoting}
-                    onChange={(e) => setNoQuoting(e.target.checked)}
-                    className="w-4 h-4 rounded border-input"
-                  />
-                  <span className="text-sm font-medium">Disable Quoting</span>
-                </label>
-                <p className="text-xs text-muted-foreground mt-1 ml-6">
-                  Disable quoting completely for input command
-                </p>
-              </div>
-              <div>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={noHeaders}
-                    onChange={(e) => setNoHeaders(e.target.checked)}
-                    className="w-4 h-4 rounded border-input"
-                  />
-                  <span className="text-sm font-medium">No Headers</span>
-                </label>
-                <p className="text-xs text-muted-foreground mt-1 ml-6">
-                  Indicate that input file has no headers
-                </p>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowSettings(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  disabled={isSavingSettings}
-                  onClick={async () => {
-                    setIsSavingSettings(true);
-                    try {
-                      const savePromises: Promise<void>[] = [];
-
-                      savePromises.push(
-                        invoke("set_default_delimiter", { delimiter: defaultDelimiter })
-                      );
-                      savePromises.push(
-                        invoke("set_no_quoting", { noQuoting })
-                      );
-                      savePromises.push(
-                        invoke("set_no_headers", { noHeaders })
-                      );
-
-                      await Promise.all(savePromises);
-                      setShowSettings(false);
-                      showToastRef.current("Settings saved successfully", 'success');
-                    } catch (error) {
-                      showToastRef.current(`Failed to save settings: ${error}`, 'error');
-                    } finally {
-                      setIsSavingSettings(false);
-                    }
-                  }}
-                >
-                  {isSavingSettings ? (
-                    <>
-                      <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save"
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Help Dialog */}
       {showHelp && (

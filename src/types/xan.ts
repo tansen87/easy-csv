@@ -50,6 +50,7 @@ export interface PipelineTab {
   defaultDelimiter?: string;
   edges?: PipelineEdge[];
   inputPosition?: { x: number; y: number };
+  isSettings?: boolean;
 }
 
 export interface HistoricalPipeline {
