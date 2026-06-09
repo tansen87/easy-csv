@@ -351,7 +351,7 @@ export function SpreadsheetView({
                 {tabs.map((tab) => (
                   <div
                     key={tab.id}
-                    className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-sm transition-colors shrink-0 ${selectedTabId === tab.id
+                    className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-xs transition-colors shrink-0 ${selectedTabId === tab.id
                       ? 'bg-primary/10 text-primary border border-primary/20'
                       : 'hover:bg-accent/50 border border-transparent'}`}
                     onContextMenu={(e) => {
@@ -398,7 +398,7 @@ export function SpreadsheetView({
                       {tabs.length > 1 && (
                         <button
                           onClick={() => onRemoveTab(tab.id)}
-                          className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors text-muted-foreground/70 dark:text-muted-foreground/80"
+                          className="p-1 rounded hover:bg-muted hover:text-foreground transition-colors text-muted-foreground/70 dark:text-muted-foreground/80"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -439,7 +439,7 @@ export function SpreadsheetView({
                 {tabs.map((tab) => (
                   <div
                     key={tab.id}
-                    className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-sm transition-colors shrink-0 ${selectedTabId === tab.id
+                    className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-xs transition-colors shrink-0 ${selectedTabId === tab.id
                       ? 'bg-primary/10 text-primary border border-primary/20'
                       : 'hover:bg-accent/50 border border-transparent'}`}
                     onContextMenu={(e) => {
@@ -486,7 +486,7 @@ export function SpreadsheetView({
                       {tabs.length > 1 && (
                         <button
                           onClick={() => onRemoveTab(tab.id)}
-                          className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors text-muted-foreground/70 dark:text-muted-foreground/80"
+                          className="p-1 rounded hover:bg-muted hover:text-foreground transition-colors text-muted-foreground/70 dark:text-muted-foreground/80"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -561,7 +561,7 @@ export function SpreadsheetView({
               {tabs.map((tab) => (
                 <div
                   key={tab.id}
-                  className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-sm transition-colors shrink-0 ${selectedTabId === tab.id
+                  className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-xs transition-colors shrink-0 ${selectedTabId === tab.id
                     ? 'bg-primary/10 text-primary border border-primary/20'
                     : 'hover:bg-accent/50 border border-transparent'}`}
                   onContextMenu={(e) => {
@@ -608,7 +608,7 @@ export function SpreadsheetView({
                     {tabs.length > 1 && (
                       <button
                         onClick={() => onRemoveTab(tab.id)}
-                        className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        className="p-1 rounded hover:bg-muted hover:text-foreground transition-colors text-muted-foreground/70 dark:text-muted-foreground/80"
                       >
                         <X className="h-3 w-3" />
                       </button>

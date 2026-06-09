@@ -164,7 +164,6 @@ export function CommandList({
   commands,
   onCommandClick,
   onHelpClick,
-  selectedCommandId,
   searchQuery,
   onSearchChange,
   isVisible,
@@ -384,10 +383,7 @@ export function CommandList({
                         return (
                           <Card
                             key={command.id}
-                            className={`cursor-pointer transition-all duration-200 hover:shadow-md ${selectedCommandId === command.id
-                              ? "bg-gradient-to-r from-primary/10 to-primary/5 border-primary/50 shadow-sm"
-                              : "bg-card/80 hover:bg-accent/30 border-border/50"
-                              }`}
+                            className="cursor-pointer transition-all duration-200 hover:shadow-md bg-card/80 hover:bg-accent/30 border-border/50"
                           >
                             <div className="p-3">
                               <div className="flex items-center justify-between gap-3">
@@ -448,12 +444,13 @@ export function CommandList({
                         <h4 className="font-semibold text-xs truncate">
                           {history.name}
                         </h4>
-                        <button
-                          className="text-xs px-2 py-1 rounded-md hover:bg-accent transition-colors text-red-600 hover:bg-red-500/10"
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => onDeleteHistory(history)}
                         >
                           <X className="h-3.5 w-3.5" />
-                        </button>
+                        </Button>
                       </div>
                       <p className="text-xs text-muted-foreground mb-1">
                         {new Date(history.executedAt).toLocaleString()}
@@ -463,8 +460,9 @@ export function CommandList({
                       </p>
                       <div className="flex items-center justify-between">
                         <div className="flex gap-1">
-                          <button
-                            className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
+                          <Button
+                            variant="secondary"
+                            size="sm"
                             onClick={() => {
                               onLoadHistory(history);
                               onLoadCsvData(selectedTabId, history.inputFile);
@@ -472,15 +470,16 @@ export function CommandList({
                             }}
                           >
                             Load
-                          </button>
-                          <button
-                            className="text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
                             onClick={() => {
                               onNewTabFromHistory(history);
                             }}
                           >
                             New Tab
-                          </button>
+                          </Button>
                         </div>
                         <span
                           className={`text-xs px-2 py-0.5 rounded-full ${history.success ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"}`}

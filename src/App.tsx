@@ -959,7 +959,7 @@ function App() {
                     }
                   }
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${activeMenu === "file"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activeMenu === "file"
                   ? "bg-accent text-foreground"
                   : "text-primary hover:text-primary hover:bg-primary/10"
                   }`}
@@ -974,7 +974,7 @@ function App() {
                       handleOpenFile();
                       setActiveMenu(null);
                     }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   >
                     <FolderOpen className="h-3.5 w-3.5" />
                     Open
@@ -983,7 +983,7 @@ function App() {
                     onClick={() => {
                       handleOpenNewTabWithFile();
                     }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   >
                     <FileText className="h-3.5 w-3.5" />
                     Open New Tab
@@ -994,7 +994,7 @@ function App() {
                       handleImportPipeline();
                       setActiveMenu(null);
                     }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   >
                     <Upload className="h-3.5 w-3.5" />
                     Import
@@ -1005,7 +1005,7 @@ function App() {
                       setActiveMenu(null);
                     }}
                     disabled={getCurrentPipeline().length === 0}
-                    className={`flex items-center gap-2 w-full px-3 py-2 text-sm font-medium transition-colors ${getCurrentPipeline().length === 0
+                    className={`flex items-center gap-2 w-full px-3 py-2 text-xs font-medium transition-colors ${getCurrentPipeline().length === 0
                       ? "text-muted-foreground/40 cursor-not-allowed"
                       : "text-muted-foreground hover:text-foreground hover:bg-accent"
                       }`}
@@ -1037,7 +1037,7 @@ function App() {
                     setSelectedTabId(newTabId);
                   }
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-primary hover:text-primary hover:bg-primary/10 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-primary hover:text-primary hover:bg-primary/10 transition-colors"
               >
                 <Settings className="h-3.5 w-3.5" />
                 Settings
@@ -1048,7 +1048,7 @@ function App() {
               <button
                 onClick={undo}
                 disabled={undoStack.length === 0}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${undoStack.length === 0
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${undoStack.length === 0
                   ? "text-muted-foreground/40 cursor-not-allowed"
                   : "text-primary hover:bg-primary/10"
                   }`}
@@ -1059,7 +1059,7 @@ function App() {
               <button
                 onClick={redo}
                 disabled={redoStack.length === 0}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${redoStack.length === 0
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${redoStack.length === 0
                   ? "text-muted-foreground/40 cursor-not-allowed"
                   : "text-primary hover:bg-primary/10"
                   }`}
@@ -1072,7 +1072,7 @@ function App() {
             <button
               onClick={() => handleExecute()}
               disabled={getCurrentPipeline().length === 0 || isExecuting}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${isExecuting
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${isExecuting
                 ? "text-primary opacity-70"
                 : getCurrentPipeline().length === 0
                   ? "text-muted-foreground/40 cursor-not-allowed"
@@ -1127,7 +1127,7 @@ function App() {
                   }
                 }
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 rounded-lg text-sm font-medium border border-green-500/20 hover:bg-green-500/20 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 rounded-lg text-xs font-medium border border-green-500/20 hover:bg-green-500/20 transition-colors cursor-pointer"
             >
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
               <span className="hidden sm:inline">xan{xanVersion ? ` ${xanVersion.trim()}` : ""}</span>
@@ -1261,8 +1261,8 @@ function App() {
       <Button
         onClick={() => setShowCommandPanel(!showCommandPanel)}
         onContextMenu={(e) => e.preventDefault()}
-        className="fixed bottom-4 left-4 z-30 h-10 w-10 rounded-full shadow-md bg-gray-600/50 text-gray-200 hover:bg-gray-600/70 dark:bg-gray-700/60 dark:text-gray-300 dark:hover:bg-gray-600/70 transition-all flex items-center justify-center backdrop-blur-sm"
-        variant="default"
+        className="fixed bottom-4 left-4 z-30 h-10 w-10 rounded-full shadow-md"
+        variant="secondary"
         size="icon"
       >
         {showCommandPanel ? (
@@ -1276,8 +1276,8 @@ function App() {
       <Button
         onClick={() => setShowLogPanel(!showLogPanel)}
         onContextMenu={(e) => e.preventDefault()}
-        className="fixed bottom-4 left-16 z-30 h-10 w-10 rounded-full shadow-md bg-gray-600/50 text-gray-200 hover:bg-gray-600/70 dark:bg-gray-700/60 dark:text-gray-300 dark:hover:bg-gray-600/70 transition-all flex items-center justify-center backdrop-blur-sm"
-        variant="default"
+        className="fixed bottom-4 left-16 z-30 h-10 w-10 rounded-full shadow-md"
+        variant="secondary"
         size="icon"
       >
         {showLogPanel ? (
@@ -1291,8 +1291,8 @@ function App() {
       <Button
         onClick={() => setShowMinimap(!showMinimap)}
         onContextMenu={(e) => e.preventDefault()}
-        className="fixed bottom-4 left-28 z-30 h-10 w-10 rounded-full shadow-md bg-gray-600/50 text-gray-200 hover:bg-gray-600/70 dark:bg-gray-700/60 dark:text-gray-300 dark:hover:bg-gray-600/70 transition-all flex items-center justify-center backdrop-blur-sm"
-        variant="default"
+        className="fixed bottom-4 left-28 z-30 h-10 w-10 rounded-full shadow-md"
+        variant="secondary"
         size="icon"
       >
         {showMinimap ? (
@@ -1353,8 +1353,8 @@ function App() {
 
       {/* Help Dialog */}
       {showHelp && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-card border rounded-lg shadow-lg p-4 w-full max-w-4xl h-[80vh] flex flex-col">
+        <div className="fixed inset-0 bg-foreground/20 backdrop-blur-xs flex items-center justify-center z-50">
+          <div className="bg-card border rounded-lg shadow-xl p-4 w-full max-w-4xl h-[80vh] flex flex-col">
             <div className="flex items-center justify-between flex-shrink-0">
               <h3 className="text-lg font-semibold">{helpCommandName}</h3>
               <Button
@@ -1371,9 +1371,9 @@ function App() {
               </div>
             ) : (
               <ScrollArea className="flex-1 h-0">
-                <pre className="text-sm font-mono whitespace-pre-wrap bg-muted/30 p-4 rounded-lg border">
+                <div className="text-sm whitespace-pre-wrap bg-muted/30 p-4 rounded-lg border text-foreground/90 leading-relaxed font-mono">
                   {helpContent}
-                </pre>
+                </div>
               </ScrollArea>
             )}
           </div>

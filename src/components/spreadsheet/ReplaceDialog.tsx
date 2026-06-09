@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { X } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
+import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 interface ReplaceDialogState {
@@ -113,7 +114,7 @@ export function ReplaceDialog({
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium">Replace</span>
+          <span className="text-base font-medium">Replace</span>
         </div>
         <button
           onClick={onClose}
@@ -122,9 +123,9 @@ export function ReplaceDialog({
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
-      <div className="p-3 space-y-1">
-        <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+      <div className="p-3 space-y-3">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Column
           </label>
           <SearchableSelect
@@ -134,8 +135,8 @@ export function ReplaceDialog({
             placeholder="Search or select column..."
           />
         </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Pattern
           </label>
           <input
@@ -147,8 +148,8 @@ export function ReplaceDialog({
             autoFocus
           />
         </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Replace With
           </label>
           <input
@@ -165,7 +166,7 @@ export function ReplaceDialog({
               type="checkbox"
               checked={ignoreCase}
               onChange={(e) => setIgnoreCase(e.target.checked)}
-              className="h-4 w-4"
+              className="h-3.5 w-3.5 accent-foreground"
             />
             Ignore Case
           </label>
@@ -174,7 +175,7 @@ export function ReplaceDialog({
               type="checkbox"
               checked={regex}
               onChange={(e) => setRegex(e.target.checked)}
-              className="h-4 w-4"
+              className="h-3.5 w-3.5 accent-foreground"
             />
             Regex
           </label>
@@ -182,18 +183,22 @@ export function ReplaceDialog({
       </div>
 
       <div className="px-3 pb-2 flex gap-2">
-        <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+        <Button
+          className="flex-1 px-2 py-1.5 rounded-md"
+          variant="secondary"
+          size="sm"
           onClick={onClose}
         >
           Cancel
-        </button>
-        <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+        </Button>
+        <Button
+          className="flex-1 px-2 py-1.5 rounded-md"
+          variant="secondary"
+          size="sm"
           onClick={handleApply}
         >
           Apply
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Sun, Moon, Save, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
@@ -29,28 +29,41 @@ export function SettingsTabContent({
   isSaving,
 }: SettingsTabContentProps) {
   const [activeTab, setActiveTab] = useState<"preference" | "general">("preference");
+  const [isThemeTransitioning, setIsThemeTransitioning] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleThemeChange = useCallback((newTheme: "dark" | "light" | "system") => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    setIsThemeTransitioning(true);
+
+    timeoutRef.current = setTimeout(() => {
+      onThemeChange(newTheme);
+      setIsThemeTransitioning(false);
+    }, 50);
+  }, [onThemeChange]);
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-background" onContextMenu={(e) => e.preventDefault()}>
       {/* Settings Tabs */}
       <div className="flex border-b">
         <button
           onClick={() => setActiveTab("preference")}
-          className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
-            activeTab === "preference"
+          className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "preference"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
+            }`}
         >
           Preference
         </button>
         <button
           onClick={() => setActiveTab("general")}
-          className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
-            activeTab === "general"
+          className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "general"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
+            }`}
         >
           General
         </button>
@@ -62,40 +75,36 @@ export function SettingsTabContent({
           <div className="space-y-6">
             <div className="max-w-md">
               <h3 className="text-lg font-semibold mb-4">Theme</h3>
-              
-              <div className="flex gap-4">
-                {/* Light Theme */}
+              <div className="inline-flex bg-muted/50 rounded-md p-0.5 border border-border/50 relative">
+                <div
+                  className={`absolute top-0.5 bottom-0.5 left-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${
+                    theme === "dark" ? "translate-x-[calc(100%+2px)]" : "translate-x-0"
+                  }`}
+                  style={{ width: "calc(50% - 2px)" }}
+                />
                 <button
-                  onClick={() => onThemeChange("light")}
-                  className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-lg border transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
                     theme === "light"
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:border-primary/50"
-                  }`}
+                      ? "text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  } ${isThemeTransitioning ? "pointer-events-none opacity-60" : ""}`}
+                  onClick={() => handleThemeChange("light")}
+                  disabled={isThemeTransitioning}
                 >
-                  <div className="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center">
-                    <Sun className="h-6 w-6 text-yellow-600" />
-                  </div>
-                  <div className="text-center">
-                    <p className="font-medium text-sm">Light</p>
-                  </div>
+                  <Sun className="h-3.5 w-3.5" />
+                  Light
                 </button>
-
-                {/* Dark Theme */}
                 <button
-                  onClick={() => onThemeChange("dark")}
-                  className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-lg border transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
                     theme === "dark"
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:border-primary/50"
-                  }`}
+                      ? "text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  } ${isThemeTransitioning ? "pointer-events-none opacity-60" : ""}`}
+                  onClick={() => handleThemeChange("dark")}
+                  disabled={isThemeTransitioning}
                 >
-                  <div className="w-12 h-12 rounded-lg bg-gray-800 flex items-center justify-center">
-                    <Moon className="h-6 w-6 text-gray-300" />
-                  </div>
-                  <div className="text-center">
-                    <p className="font-medium text-sm">Dark</p>
-                  </div>
+                  <Moon className="h-3.5 w-3.5" />
+                  Dark
                 </button>
               </div>
             </div>
@@ -136,7 +145,7 @@ export function SettingsTabContent({
                   type="checkbox"
                   checked={noHeaders}
                   onChange={(e) => onNoHeadersChange(e.target.checked)}
-                  className="w-4 h-4 rounded border-input"
+                  className="w-4 h-4 rounded border-input accent-foreground"
                 />
                 <div className="text-left">
                   <p className="text-sm font-medium">No Headers</p>
@@ -152,7 +161,7 @@ export function SettingsTabContent({
                   type="checkbox"
                   checked={noQuoting}
                   onChange={(e) => onNoQuotingChange(e.target.checked)}
-                  className="w-4 h-4 rounded border-input"
+                  className="w-4 h-4 rounded border-input accent-foreground"
                 />
                 <div className="text-left">
                   <p className="text-sm font-medium">Disable Quoting</p>
@@ -179,6 +188,7 @@ export function SettingsTabContent({
           Reset to Defaults
         </Button>
         <Button
+          variant="outline"
           onClick={onSave}
           disabled={isSaving}
         >
