@@ -759,6 +759,13 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
+      {
+        name: "--every-column",
+        type: "flag",
+        description: "Only output a row when every selected column matches a pattern",
+        required: false,
+        default: false,
+      }
     ],
   },
   {

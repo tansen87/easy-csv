@@ -388,6 +388,23 @@ export function CommandDialog({
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <input
                       type="checkbox"
+                      checked={commandDialog.params["every-column"]}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            "every-column": e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-3.5 w-3.5 accent-foreground"
+                    />
+                    Every Column
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
                       checked={commandDialog.params.overlapping}
                       onChange={(e) =>
                         setCommandDialog({
