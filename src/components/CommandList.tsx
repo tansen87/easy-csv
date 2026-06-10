@@ -39,7 +39,6 @@ import {
   Files,
   GitMerge,
   Merge,
-  GitBranch,
   Type,
   Minus,
   Ruler,
@@ -110,7 +109,6 @@ const commandIconMap: Record<string, LucideIcon> = {
   cat: Files,
   join: GitMerge,
   merge: Merge,
-  "fuzzy-join": GitBranch,
 
   // Format, convert & recombobulate
   rename: Type,
