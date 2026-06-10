@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { X, ChevronDown } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
+import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 interface DateTransformDialogState {
@@ -180,7 +181,7 @@ export function DateTransformDialog({
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium">Date Transform</span>
+          <span className="text-base font-medium">Date Transform</span>
         </div>
         <button
           onClick={onClose}
@@ -189,9 +190,9 @@ export function DateTransformDialog({
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
-      <div className="p-3 space-y-1">
-        <div className="space-y-1" ref={columnRef}>
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+      <div className="p-3 space-y-3">
+        <div ref={columnRef}>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Column
           </label>
           <div className="relative">
@@ -230,8 +231,8 @@ export function DateTransformDialog({
           </div>
         </div>
 
-        <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Input Format
           </label>
           <SearchableSelect
@@ -242,8 +243,8 @@ export function DateTransformDialog({
           />
         </div>
 
-        <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Output Format
           </label>
           <SearchableSelect
@@ -254,8 +255,8 @@ export function DateTransformDialog({
           />
         </div>
 
-        <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Output Column Name
           </label>
           <input
@@ -268,18 +269,22 @@ export function DateTransformDialog({
         </div>
       </div>
       <div className="px-3 pb-2 flex gap-2">
-        <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+        <Button
+          className="flex-1 px-2 py-1.5 rounded-md"
+          variant="secondary"
+          size="sm"
           onClick={onClose}
         >
           Cancel
-        </button>
-        <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+        </Button>
+        <Button
+          className="flex-1 px-2 py-1.5 rounded-md"
+          variant="secondary"
+          size="sm"
           onClick={handleApply}
         >
           Apply
-        </button>
+        </Button>
       </div>
     </div>
   );

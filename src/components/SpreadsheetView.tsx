@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { X, Plus, Rows3, Repeat2, Repeat, FolderOpen, FileUp, Star } from "lucide-react";
+import { X, Rows3, Repeat2, Repeat, FolderOpen, FileUp, Star } from "lucide-react";
 import { ToastContainer, ToastType } from "@/components/Toast";
 import { PipelineStep, PipelineEdge, XanCommand, PipelineTab } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
@@ -20,7 +20,6 @@ interface SpreadsheetViewProps {
   tabs: PipelineTab[];
   selectedTabId: string;
   onTabChange: (tabId: string) => void;
-  onAddTab: () => void;
   onRemoveTab: (tabId: string) => void;
   onRenameTab: (tabId: string, name: string) => void;
   onAddCommand: (
@@ -45,7 +44,6 @@ export function SpreadsheetView({
   tabs,
   selectedTabId,
   onTabChange,
-  onAddTab,
   onRemoveTab,
   onRenameTab,
   onAddCommand,
@@ -319,27 +317,19 @@ export function SpreadsheetView({
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
+  
+
   if (!inputFile) {
     return (
       <div className="h-full flex flex-col bg-background">
         <div className="bg-transparent" onContextMenu={(e) => e.preventDefault()}>
           <div className="h-[48px] px-4 flex items-center">
-            <div className="flex items-center shrink-0">
-              <div className="flex bg-muted/30 rounded-lg p-0.5 border border-transparent">
-                <button
-                  onClick={onAddTab}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            <ScrollArea className="h-full flex-1 ml-4">
+            <ScrollArea className="h-full flex-1">
               <div className="flex items-center gap-2 pr-4">
                 {tabs.map((tab) => (
                   <div
                     key={tab.id}
-                    className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-sm transition-colors shrink-0 ${selectedTabId === tab.id
+                    className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-xs transition-colors shrink-0 ${selectedTabId === tab.id
                       ? 'bg-primary/10 text-primary border border-primary/20'
                       : 'hover:bg-accent/50 border border-transparent'}`}
                     onContextMenu={(e) => {
@@ -386,7 +376,7 @@ export function SpreadsheetView({
                       {tabs.length > 1 && (
                         <button
                           onClick={() => onRemoveTab(tab.id)}
-                          className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors text-muted-foreground/70 dark:text-muted-foreground/80"
+                          className="p-1 rounded hover:bg-muted hover:text-foreground transition-colors text-muted-foreground/70 dark:text-muted-foreground/80"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -455,23 +445,13 @@ export function SpreadsheetView({
   return (
     <div className="h-full flex flex-col bg-background">
       <div className="bg-transparent" onContextMenu={(e) => e.preventDefault()}>
-        <div className="h-[48px] px-2 flex items-center">
-          <div className="flex items-center shrink-0">
-            <div className="flex bg-muted/30 rounded-lg p-0.5 border border-transparent">
-              <button
-                onClick={onAddTab}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm hover:bg-accent/70 transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-          <ScrollArea className="h-full flex-1 ml-4">
+        <div className="h-[48px] px-4 flex items-center">
+          <ScrollArea className="h-full flex-1">
             <div className="flex items-center gap-2 pr-4">
               {tabs.map((tab) => (
                 <div
                   key={tab.id}
-                  className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-sm transition-colors shrink-0 ${selectedTabId === tab.id
+                  className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-xs transition-colors shrink-0 ${selectedTabId === tab.id
                     ? 'bg-primary/10 text-primary border border-primary/20'
                     : 'hover:bg-accent/50 border border-transparent'}`}
                   onContextMenu={(e) => {
@@ -518,7 +498,7 @@ export function SpreadsheetView({
                     {tabs.length > 1 && (
                       <button
                         onClick={() => onRemoveTab(tab.id)}
-                        className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        className="p-1 rounded hover:bg-muted hover:text-foreground transition-colors text-muted-foreground/70 dark:text-muted-foreground/80"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -542,7 +522,7 @@ export function SpreadsheetView({
             if (onPipelineReorder && selectedTabId) {
               onPipelineReorder(selectedTabId, newPipeline);
             }
-          } }
+          }}
           onStepClick={(s) => {
             if (onStepClick) {
               onStepClick(s);
@@ -553,7 +533,7 @@ export function SpreadsheetView({
               isUpdate: true,
               stepId: s.id,
             });
-          } }
+          }}
           onStepAliasUpdate={onStepAliasUpdate || (() => { })}
           onStepRemove={onStepDelete || (() => { })}
           onOpenFilterDialog={(col, x, y) => setFilterDialog({ col, x, y })}

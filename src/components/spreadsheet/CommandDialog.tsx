@@ -120,7 +120,7 @@ export function CommandDialog({
   return (
     <div className="fixed inset-0 z-50">
       <div
-        className="absolute bg-card border rounded-lg shadow-lg w-full max-w-2xl p-4"
+        className="absolute bg-card border rounded-xl shadow-xl w-full max-w-2xl p-4"
         style={{
           left: `calc(50% + ${offset.x}px)`,
           top: `calc(50% + ${offset.y}px)`,
@@ -190,7 +190,7 @@ export function CommandDialog({
             size="icon"
             onClick={() => setCommandDialog(null)}
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4 accent-foreground" />
           </Button>
         </div>
 
@@ -230,7 +230,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Search condition"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                       autoFocus
                     />
                   </div>
@@ -249,7 +249,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Invert Match
                   </label>
@@ -266,7 +266,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Exact
                   </label>
@@ -283,7 +283,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Regex
                   </label>
@@ -300,7 +300,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     URL Prefix
                   </label>
@@ -319,7 +319,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Non-Empty
                   </label>
@@ -336,7 +336,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Empty
                   </label>
@@ -353,7 +353,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Ignore Case
                   </label>
@@ -370,7 +370,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Parallel
                   </label>
@@ -388,7 +388,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Column name to report match status"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
@@ -406,7 +406,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Column name to report match count"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -428,7 +428,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Maximum rows to return"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
@@ -448,7 +448,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Number of threads"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -470,7 +470,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Levenshtein distance"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
@@ -490,7 +490,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Damerau-Levenshtein distance"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -508,7 +508,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Overlapping
                   </label>
@@ -525,7 +525,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Left
                   </label>
@@ -542,7 +542,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Breakdown
                   </label>
@@ -563,7 +563,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Replacement string"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
@@ -581,7 +581,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Additional pattern"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -601,7 +601,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Column name for unique matches"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
@@ -619,7 +619,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Separator for unique matches"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -638,7 +638,7 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Path to a text file"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -657,7 +657,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Column with patterns"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
@@ -675,7 +675,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Column with replacements"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -694,7 +694,7 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Column with pattern names"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
               </div>
@@ -766,7 +766,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="e.g. column_name > 100"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
@@ -784,7 +784,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Invert Match
               </label>
@@ -801,7 +801,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Parallel
               </label>
@@ -895,22 +895,17 @@ export function CommandDialog({
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Column</label>
-                <select
+                <SearchableSelect
                   value={commandDialog.params.select}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     setCommandDialog({
                       ...commandDialog,
-                      params: { ...commandDialog.params, select: e.target.value },
+                      params: { ...commandDialog.params, select: value },
                     })
                   }
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
-                >
-                  {headers.map((header) => (
-                    <option key={header} value={header}>
-                      {header}
-                    </option>
-                  ))}
-                </select>
+                  options={headers.map((header) => ({ label: header, value: header }))}
+                  placeholder="Select column..."
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Count</label>
@@ -924,7 +919,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Number of times the line was consecutively duplicated"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -942,7 +937,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Max memory for external sorting (MB)"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -960,7 +955,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Reverse
               </label>
@@ -977,7 +972,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Numeric
               </label>
@@ -994,7 +989,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Check
               </label>
@@ -1011,7 +1006,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Uniq
               </label>
@@ -1028,7 +1023,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Unstable
               </label>
@@ -1047,7 +1042,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Parallel
               </label>
@@ -1064,7 +1059,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 External
               </label>
@@ -1081,7 +1076,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Columns
               </label>
@@ -1098,7 +1093,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Cells
               </label>
@@ -1115,7 +1110,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Directory where external sorting chunks will be written"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -1179,7 +1174,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="e.g. column1,column2 or 0:4"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
@@ -1197,7 +1192,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Evaluate Expression
               </label>
@@ -1265,7 +1260,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Leave empty to show all columns"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
@@ -1284,7 +1279,7 @@ export function CommandDialog({
                     },
                   })
                 }
-                className="h-4 w-4"
+                className="h-3.5 w-3.5 accent-foreground"
               />
               <label htmlFor="view-all" className="text-sm cursor-pointer">
                 Show All Rows
@@ -1305,8 +1300,30 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Number of rows to display"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 disabled={commandDialog.params.all}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Theme</label>
+              <SearchableSelect
+                value={commandDialog.params.theme || "borderless"}
+                onChange={(value) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: { ...commandDialog.params, theme: value },
+                  })
+                }
+                options={[
+                  { label: "table", value: "table" },
+                  { label: "borderless", value: "borderless" },
+                  { label: "compact", value: "compact" },
+                  { label: "rounded", value: "rounded" },
+                  { label: "slim", value: "slim" },
+                  { label: "striped", value: "striped" },
+                ]}
+                placeholder="Select theme..."
+                size="md"
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -1333,12 +1350,15 @@ export function CommandDialog({
                       const params = {
                         ...viewCmd.parameters.reduce(
                           (acc, param) => {
-                            acc[param.name] = param.default;
+                            if (param.default !== undefined) {
+                              acc[param.name] = param.default;
+                            }
                             return acc;
                           },
                           {} as Record<string, any>,
                         ),
                         ...commandDialog.params,
+                        theme: commandDialog.params.theme || "borderless",
                       };
                       onAddCommand(viewCmd, params);
                     }
@@ -1368,7 +1388,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Parallel
               </label>
@@ -1387,7 +1407,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Number of threads"
-                className="h-10 px-3 text-sm border rounded-md bg-background"
+                className="h-8 px-3 text-sm border rounded-md bg-background"
               />
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
@@ -1402,7 +1422,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Approximate
               </label>
@@ -1470,7 +1490,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Start index"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -1490,7 +1510,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="End index"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -1510,7 +1530,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Length"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -1574,7 +1594,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Number of rows to return"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -1637,7 +1657,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Number of rows to return"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -1701,7 +1721,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Number of rows to sample"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   autoFocus
                 />
               </div>
@@ -1720,7 +1740,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="RNG seed"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -1737,7 +1757,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column containing weights to bias the sample"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -1752,7 +1772,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Return a sample per group"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -1770,7 +1790,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Cursed
               </label>
@@ -1836,7 +1856,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Column(s) to deduplicate on"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
@@ -1854,7 +1874,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Check
               </label>
@@ -1871,7 +1891,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Sorted
               </label>
@@ -1888,7 +1908,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 External
               </label>
@@ -1905,7 +1925,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Keep Last
               </label>
@@ -1922,7 +1942,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Keep Duplicates
               </label>
@@ -1942,7 +1962,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Expression to decide whether to keep a row (current_*, new_*)"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -1959,7 +1979,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Add column with this name to flag duplicates"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -2023,7 +2043,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="RNG seed"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
@@ -2041,7 +2061,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 External
               </label>
@@ -2109,7 +2129,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column(s) to compute frequencies"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -2124,7 +2144,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Split cells by separator"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -2144,7 +2164,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Compute frequencies per group"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -2162,7 +2182,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Top N items"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -2180,7 +2200,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 All
               </label>
@@ -2197,7 +2217,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Approx
               </label>
@@ -2214,7 +2234,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 No Extra
               </label>
@@ -2231,7 +2251,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Parallel
               </label>
@@ -2320,7 +2340,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Columns to group by"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                       autoFocus
                     />
                   </div>
@@ -2339,7 +2359,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Aggregation expression"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -2359,7 +2379,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Keep these columns"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
@@ -2377,7 +2397,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Aggregation over whole file"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -2397,7 +2417,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Aggregate over columns"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
@@ -2415,7 +2435,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Aggregate all values"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -2433,7 +2453,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Sorted
                   </label>
@@ -2450,7 +2470,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Parallel
                   </label>
@@ -2470,7 +2490,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Threads"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -2539,7 +2559,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column(s) to compute stats"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   autoFocus
                 />
               </div>
@@ -2558,7 +2578,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Group by column(s)"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -2576,7 +2596,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 All
               </label>
@@ -2593,7 +2613,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Cardinality
               </label>
@@ -2610,7 +2630,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Quartiles
               </label>
@@ -2627,7 +2647,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Approx
               </label>
@@ -2644,7 +2664,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Nulls
               </label>
@@ -2663,7 +2683,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Parallel
               </label>
@@ -2683,7 +2703,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Number of threads"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -2747,7 +2767,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Aggregation expression (e.g., sum:col1)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
@@ -2767,7 +2787,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Aggregate per row"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -2785,7 +2805,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Aggregate per column"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -2804,7 +2824,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Aggregate all values"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex items-center gap-4">
@@ -2821,7 +2841,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Parallel
               </label>
@@ -2841,7 +2861,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Number of threads"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -2906,7 +2926,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column to bin"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   autoFocus
                 />
               </div>
@@ -2925,7 +2945,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Subset of columns"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -2947,7 +2967,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Number of bins"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -2963,7 +2983,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 >
                   <option value="">None</option>
                   <option value="freedman-diaconis">Freedman-Diaconis</option>
@@ -2990,7 +3010,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Maximum bins"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -3006,7 +3026,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 >
                   <option value="full">Full</option>
                   <option value="lower">Lower</option>
@@ -3028,7 +3048,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Exact
               </label>
@@ -3045,7 +3065,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 No Extra
               </label>
@@ -3070,7 +3090,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Override min value"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -3090,7 +3110,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Override max value"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -3154,7 +3174,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Reset aggregation on column(s)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -3172,7 +3192,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Window expression (e.g., lag:col1)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
@@ -3238,7 +3258,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Pattern to match"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
@@ -3256,7 +3276,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Ignore Case
               </label>
@@ -3273,7 +3293,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Invert Match
               </label>
@@ -3290,7 +3310,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Count
               </label>
@@ -3354,7 +3374,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Just Names
               </label>
@@ -3418,7 +3438,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Column(s) to visualize"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -3437,7 +3457,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Maximum number of rows to read"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -3452,7 +3472,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Delimiter for split values"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -3470,7 +3490,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Condense
               </label>
@@ -3487,7 +3507,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Wrap
               </label>
@@ -3504,7 +3524,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Flatter
               </label>
@@ -3521,7 +3541,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 CSV
               </label>
@@ -3538,7 +3558,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Rainbow
               </label>
@@ -3555,7 +3575,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Non Empty
               </label>
@@ -3619,7 +3639,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name of the represented field"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -3634,7 +3654,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name of the field column"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -3649,7 +3669,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name of the label column"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -3664,7 +3684,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name of the count column"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex items-center gap-4">
@@ -3681,7 +3701,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Rainbow
               </label>
@@ -3698,7 +3718,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Dates
               </label>
@@ -3715,7 +3735,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Hide Percent
               </label>
@@ -3780,7 +3800,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Columns to drop (comma-separated)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
@@ -3844,7 +3864,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Expression to evaluate"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>
@@ -3862,7 +3882,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Overwrite
               </label>
@@ -3879,7 +3899,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Filter
               </label>
@@ -3896,7 +3916,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Parallel
               </label>
@@ -3913,7 +3933,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Number of threads"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -3976,7 +3996,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Column to transform"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                       autoFocus
                     />
                   </div>
@@ -3992,7 +4012,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="New name for the column"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -4011,7 +4031,7 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Expression to evaluate"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
                 <div className="space-y-2">
@@ -4029,7 +4049,7 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Read expression from file"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -4047,7 +4067,7 @@ export function CommandDialog({
                             },
                           })
                         }
-                        className="h-4 w-4"
+                        className="h-3.5 w-3.5 accent-foreground"
                       />
                       Parallel
                     </label>
@@ -4066,7 +4086,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Threads"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -4135,7 +4155,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Name of the column to prepend"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -4153,7 +4173,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Number to count from"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -4171,7 +4191,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Byte Offset
               </label>
@@ -4188,7 +4208,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Accumulate
               </label>
@@ -4250,7 +4270,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Selection of columns to fill"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -4265,7 +4285,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Fill empty cells using provided value"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -4326,7 +4346,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column to complete"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   autoFocus
                 />
               </div>
@@ -4345,7 +4365,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Columns to group by"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -4363,7 +4383,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Check
               </label>
@@ -4380,7 +4400,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Dates
               </label>
@@ -4397,7 +4417,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Sorted
               </label>
@@ -4414,7 +4434,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Reverse
               </label>
@@ -4435,7 +4455,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Minimum value of range"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -4453,7 +4473,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Maximum value of range"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -4520,7 +4540,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Expression to evaluate"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   autoFocus
                 />
               </div>
@@ -4536,7 +4556,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -4555,7 +4575,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Read expression from file"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -4573,7 +4593,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name of the column to replace"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -4591,7 +4611,7 @@ export function CommandDialog({
                         },
                       })
                     }
-                    className="h-4 w-4"
+                    className="h-3.5 w-3.5 accent-foreground"
                   />
                   Parallel
                 </label>
@@ -4610,7 +4630,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Threads"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -4674,7 +4694,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column to split"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   autoFocus
                 />
               </div>
@@ -4693,7 +4713,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Separator to use"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -4711,7 +4731,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Regex
               </label>
@@ -4728,7 +4748,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Match
               </label>
@@ -4745,7 +4765,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Captures
               </label>
@@ -4762,7 +4782,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 All Captures
               </label>
@@ -4779,7 +4799,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Fixed Width
               </label>
@@ -4796,7 +4816,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Keep
               </label>
@@ -4813,7 +4833,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Trim
               </label>
@@ -4834,7 +4854,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Comma-separated widths"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -4852,7 +4872,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Comma-separated cuts"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -4870,7 +4890,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Comma-separated offsets"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -4890,7 +4910,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Maximum splits"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -4906,7 +4926,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 >
                   <option value="error">error</option>
                   <option value="drop">drop</option>
@@ -4930,7 +4950,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column names (comma-separated)"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -4948,7 +4968,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column prefix"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -5012,7 +5032,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Column to top"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   autoFocus
                 />
               </div>
@@ -5031,7 +5051,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Number of rows to return"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -5051,7 +5071,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Return top n values per group"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -5066,7 +5086,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Name of a rank column to prepend"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -5084,7 +5104,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Reverse
               </label>
@@ -5101,7 +5121,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Lexicographic
               </label>
@@ -5118,7 +5138,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Ties
               </label>
@@ -5178,7 +5198,7 @@ export function CommandDialog({
                     params: { ...commandDialog.params, mode: e.target.value },
                   })
                 }
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               >
                 <option value="rows">Rows</option>
                 <option value="columns">Columns</option>
@@ -5196,7 +5216,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Text file containing paths to CSV files"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -5214,7 +5234,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Extract paths from this column"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -5232,7 +5252,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name of source file column"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex items-center gap-4">
@@ -5249,7 +5269,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Pad
               </label>
@@ -5317,7 +5337,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Columns 1"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                       autoFocus
                     />
                   </div>
@@ -5333,7 +5353,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="First input file path"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -5353,7 +5373,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Columns 2"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="col-span-3 space-y-2">
@@ -5368,7 +5388,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Second input file path"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -5386,7 +5406,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     >
                       <option value="inner">Inner</option>
                       <option value="left">Left</option>
@@ -5410,7 +5430,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     >
                       <option value="left">Left</option>
                       <option value="right">Right</option>
@@ -5435,7 +5455,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Prefix for left columns"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
@@ -5453,7 +5473,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Prefix for right columns"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -5471,7 +5491,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Ignore Case
                   </label>
@@ -5488,7 +5508,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Nulls
                   </label>
@@ -5554,7 +5574,7 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Input files to merge"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
                 <div className="space-y-2">
@@ -5569,7 +5589,7 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Select a subset of columns to sort"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
                 <div className="space-y-2">
@@ -5584,7 +5604,7 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Text file containing paths"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
                 <div className="space-y-2">
@@ -5602,7 +5622,7 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Extract paths from this column"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
                 <div className="space-y-2">
@@ -5620,7 +5640,7 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Name of source file column"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
                 <div className="flex items-center gap-4">
@@ -5637,7 +5657,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Numeric
                   </label>
@@ -5654,7 +5674,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Reverse
                   </label>
@@ -5671,7 +5691,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Uniq
                   </label>
@@ -5741,7 +5761,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Columns to join on"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                       autoFocus
                     />
                   </div>
@@ -5757,7 +5777,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Input file path"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -5777,7 +5797,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Pattern column in patterns file"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="col-span-3 space-y-2">
@@ -5792,7 +5812,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Patterns file path"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -5810,7 +5830,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Regex
                   </label>
@@ -5827,7 +5847,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Url Prefix
                   </label>
@@ -5844,7 +5864,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Ignore Case
                   </label>
@@ -5861,7 +5881,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Simplified
                   </label>
@@ -5878,7 +5898,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Left
                   </label>
@@ -5895,7 +5915,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 accent-foreground"
                     />
                     Parallel
                   </label>
@@ -5916,7 +5936,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Number of threads"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
@@ -5932,7 +5952,7 @@ export function CommandDialog({
                           },
                         })
                       }
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     >
                       <option value="left">Left</option>
                       <option value="right">Right</option>
@@ -5957,7 +5977,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Prefix for left columns"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                   <div className="space-y-2">
@@ -5975,7 +5995,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Prefix for right columns"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -6040,7 +6060,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Columns to rename"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -6058,7 +6078,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Column mappings (e.g., old1:new1,old2:new2)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -6074,7 +6094,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Prefix to add to all column names"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -6089,7 +6109,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Suffix to add to all column names"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -6107,7 +6127,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Slugify
               </label>
@@ -6124,7 +6144,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Replace
               </label>
@@ -6141,7 +6161,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Force
               </label>
@@ -6207,7 +6227,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Append
               </label>
@@ -6274,7 +6294,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Forcefully set the length of each record"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex items-center gap-4">
@@ -6291,7 +6311,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Trust Header
               </label>
@@ -6358,7 +6378,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Columns to explode"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -6373,7 +6393,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Separator to split the cells"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -6388,7 +6408,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="New names for the exploded columns"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex items-center gap-4">
@@ -6405,7 +6425,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Singularize
               </label>
@@ -6422,7 +6442,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Drop Empty
               </label>
@@ -6508,7 +6528,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Quote character"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -6523,7 +6543,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Escape character"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -6541,7 +6561,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 In Place
               </label>
@@ -6558,7 +6578,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Tabs
               </label>
@@ -6575,7 +6595,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 CRLF
               </label>
@@ -6592,7 +6612,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 ASCII
               </label>
@@ -6609,7 +6629,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Quote Always
               </label>
@@ -6626,7 +6646,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Quote Never
               </label>
@@ -6723,7 +6743,7 @@ export function CommandDialog({
                           })
                         }
                         placeholder="Number of rows to sample"
-                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                       />
                     </div>
                     <div className="space-y-2">
@@ -6741,7 +6761,7 @@ export function CommandDialog({
                           })
                         }
                         placeholder="Force as raw strings"
-                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                       />
                     </div>
                   </div>
@@ -6759,7 +6779,7 @@ export function CommandDialog({
                             },
                           })
                         }
-                        className="h-4 w-4"
+                        className="h-3.5 w-3.5 accent-foreground"
                       />
                       Nulls
                     </label>
@@ -6776,7 +6796,7 @@ export function CommandDialog({
                             },
                           })
                         }
-                        className="h-4 w-4"
+                        className="h-3.5 w-3.5 accent-foreground"
                       />
                       Omit Empty
                     </label>
@@ -6796,7 +6816,7 @@ export function CommandDialog({
                           params: { ...commandDialog.params, dtype: e.target.value },
                         })
                       }
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     >
                       <option value="f32">f32</option>
                       <option value="f64">f64</option>
@@ -6814,7 +6834,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Numerical columns to emit"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -6834,7 +6854,7 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Column to emit as text"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
               </div>
@@ -6856,7 +6876,7 @@ export function CommandDialog({
                       })
                     }
                     placeholder="Maximum number of rows"
-                    className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
               </div>
@@ -6958,7 +6978,7 @@ export function CommandDialog({
                           })
                         }
                         placeholder="0-based index"
-                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                       />
                     </div>
                     <div className="space-y-2">
@@ -6976,7 +6996,7 @@ export function CommandDialog({
                           })
                         }
                         placeholder="Name of the sheet"
-                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                       />
                     </div>
                   </div>
@@ -6994,7 +7014,7 @@ export function CommandDialog({
                             },
                           })
                         }
-                        className="h-4 w-4"
+                        className="h-3.5 w-3.5 accent-foreground"
                       />
                       List Sheets
                     </label>
@@ -7022,7 +7042,7 @@ export function CommandDialog({
                           })
                         }
                         placeholder="Number of records to sample (default: 64)"
-                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                       />
                     </div>
                     <div className="space-y-2">
@@ -7040,7 +7060,7 @@ export function CommandDialog({
                           })
                         }
                         placeholder="Name for the key column"
-                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                       />
                     </div>
                   </div>
@@ -7060,7 +7080,7 @@ export function CommandDialog({
                           })
                         }
                         placeholder="Name for the value column"
-                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                       />
                     </div>
                   </div>
@@ -7078,7 +7098,7 @@ export function CommandDialog({
                             },
                           })
                         }
-                        className="h-4 w-4"
+                        className="h-3.5 w-3.5 accent-foreground"
                       />
                       Sort Keys
                     </label>
@@ -7095,7 +7115,7 @@ export function CommandDialog({
                             },
                           })
                         }
-                        className="h-4 w-4"
+                        className="h-3.5 w-3.5 accent-foreground"
                       />
                       Single Object
                     </label>
@@ -7118,7 +7138,7 @@ export function CommandDialog({
                         })
                       }
                       placeholder="Name of the column to create"
-                      className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
                 </div>
@@ -7144,7 +7164,7 @@ export function CommandDialog({
                           })
                         }
                         placeholder="Select nth table (default: 0)"
-                        className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                       />
                     </div>
                   </div>
@@ -7305,7 +7325,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Columns to pivot"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -7320,7 +7340,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Aggregation expression"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -7338,7 +7358,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Group results by given selection of columns"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -7356,7 +7376,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Separator used to join column names"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -7422,7 +7442,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Columns to unpivot (required)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -7440,7 +7460,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name for the column containing unpivoted column names"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -7458,7 +7478,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Name for the column containing unpivoted column values"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -7526,7 +7546,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Where to write the chunks"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -7547,7 +7567,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Records per chunk"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -7567,7 +7587,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Max number of chunks"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -7586,7 +7606,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Filename template for output files"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex items-center gap-4">
@@ -7603,7 +7623,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Segments
               </label>
@@ -7668,7 +7688,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Column to partition by (required)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -7686,7 +7706,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Where to write the chunks"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -7704,7 +7724,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Filename template for output files"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -7724,7 +7744,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Truncate partition column after n bytes"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex items-center gap-4">
@@ -7741,7 +7761,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Sorted
               </label>
@@ -7758,7 +7778,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Drop Partition Column
               </label>
@@ -7775,7 +7795,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Case Sensitive
               </label>
@@ -7847,7 +7867,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="End of the range (required)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="grid grid-cols-3 gap-4">
@@ -7866,7 +7886,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Start of the range"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -7884,7 +7904,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Step of the range"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -7902,7 +7922,7 @@ export function CommandDialog({
                     })
                   }
                   placeholder="Name of the column"
-                  className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -7920,7 +7940,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Inclusive
               </label>
@@ -7985,7 +8005,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Expression to evaluate (required)"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -8003,7 +8023,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Pretend headers, separated by commas"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -8018,7 +8038,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Pretend row with comma-separated cells"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
             <div className="flex items-center gap-4">
@@ -8035,7 +8055,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Serialize
               </label>
@@ -8052,7 +8072,7 @@ export function CommandDialog({
                       },
                     })
                   }
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5 accent-foreground"
                 />
                 Explain
               </label>
@@ -8114,7 +8134,7 @@ export function CommandDialog({
                   })
                 }
                 placeholder="Enter output file path"
-                className="w-full h-10 px-3 text-sm border rounded-md bg-background"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                 autoFocus
               />
             </div>

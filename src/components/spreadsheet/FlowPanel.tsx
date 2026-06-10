@@ -541,10 +541,10 @@ function getLayoutedElements(
       type: "default",
       data: { curvature: 0.5 },
       animated: sourceId === "table-node",
-      style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
+      style: { stroke: "var(--flow-line-color)", strokeWidth: 1.5 },
       markerEnd: {
         type: MarkerType.ArrowClosed,
-        color: "hsl(var(--primary))",
+        color: "var(--flow-line-color)",
       },
     };
 
@@ -787,10 +787,10 @@ export function FlowPanel({
           type: "default",
           data: { curvature: 0.5 },
           animated: edge.source === "table-node",
-          style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
+          style: { stroke: "var(--flow-line-color)", strokeWidth: 1.5 },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: "hsl(var(--primary))",
+            color: "var(--flow-line-color)",
           },
         };
 
@@ -1235,12 +1235,12 @@ export function FlowPanel({
         curvature: 0.5,
       },
       style: {
-        stroke: 'hsl(var(--primary))',
-        strokeWidth: 2,
+        stroke: 'var(--flow-line-color)',
+        strokeWidth: 1.5,
       },
       markerEnd: {
         type: MarkerType.ArrowClosed,
-        color: 'hsl(var(--primary))',
+        color: 'var(--flow-line-color)',
       },
     };
 
@@ -1432,8 +1432,6 @@ export function FlowPanel({
 
   const onConnect = useCallback(
     (connection: Connection) => {
-      console.log("[Pipeline] New connection:", `${connection.source} -> ${connection.target}`);
-
       if (!connection.source || !connection.target) return;
 
       const sourceNode = nodes.find(n => n.id === connection.source);
@@ -1487,10 +1485,10 @@ export function FlowPanel({
         targetHandle,
         type: "default",
         animated: false,
-        style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
+        style: { stroke: "var(--flow-line-color)", strokeWidth: 1.5 },
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          color: "hsl(var(--primary))",
+          color: "var(--flow-line-color)",
         },
       };
 
@@ -1572,7 +1570,7 @@ export function FlowPanel({
         maxZoom={1.5}
         defaultEdgeOptions={{
           type: "default",
-          style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
+          style: { stroke: "var(--flow-line-color)", strokeWidth: 1.5 },
         }}
         proOptions={{ hideAttribution: true }}
         onInit={(instance) => { reactFlowInstance.current = instance; }}
@@ -1783,8 +1781,8 @@ export function FlowPanel({
         >
           <defs>
             <linearGradient id="connectGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="hsl(var(--primary))" />
-              <stop offset="100%" stopColor="hsl(var(--primary) / 0.5)" />
+              <stop offset="0%" stopColor="var(--flow-line-color)" />
+              <stop offset="100%" stopColor="color-mix(in oklch, var(--flow-line-color), transparent 50%)" />
             </linearGradient>
           </defs>
 
@@ -1809,7 +1807,7 @@ export function FlowPanel({
             cx={connectPath[0]?.x || 0}
             cy={connectPath[0]?.y || 0}
             r="8"
-            fill="hsl(var(--primary))"
+            fill="var(--flow-line-color)"
             opacity="0.8"
           />
 
@@ -1818,7 +1816,7 @@ export function FlowPanel({
             <text
               x={connectPath[connectPath.length - 1]?.x || 0}
               y={(connectPath[connectPath.length - 1]?.y || 0) - 20}
-              fill="hsl(var(--primary))"
+              fill="var(--flow-line-color)"
               fontSize="12"
               textAnchor="middle"
             >

@@ -5,7 +5,6 @@ import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { useTheme } from "@/components/ThemeProvider";
 import { ToastContainer, ToastType } from "@/components/Toast";
 import { NotificationPanel, NotificationType } from "@/components/PersistentNotification";
@@ -14,8 +13,6 @@ import {
   X,
   FileText,
   Loader2,
-  Sun,
-  Moon,
   Terminal,
   FolderOpen,
   Download,
@@ -31,6 +28,7 @@ import {
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/LogPanel";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import { SpreadsheetView } from "@/components/SpreadsheetView";
 import { xanCommands } from "@/data/commands";
 import {
@@ -63,7 +61,6 @@ function App() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isXanInstalled, setIsXanInstalled] = useState<boolean | null>(null);
   const [xanVersion, setXanVersion] = useState<string | null>(null);
-  const [showSettings, setShowSettings] = useState<boolean>(false);
   const [isSavingSettings, setIsSavingSettings] = useState<boolean>(false);
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(",");
   const [_xanPath, setXanPath] = useState<string>("");
@@ -88,6 +85,7 @@ function App() {
   const [notifications, setNotifications] = useState<{ id: string; message: string; type: NotificationType }[]>([]);
   const [activeMenu, setActiveMenu] = useState<"file" | "settings" | null>(null);
   const [isMenuActivated, setIsMenuActivated] = useState<boolean>(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState<boolean>(false);
 
   // Undo/Redo history state
   const [undoStack, setUndoStack] = useState<Array<{ pipeline: PipelineStep[]; edges: PipelineEdge[]; inputPosition?: { x: number; y: number } }>>([]);
@@ -453,7 +451,7 @@ function App() {
     setSelectedStep(null);
   }, [undoStack, redoStack, selectedTabId, tabs]);
 
-  const addNewTab = () => {
+  const addNewTab = (): string => {
     const newTabId = `tab-${Date.now()}`;
     const newTab: PipelineTab = {
       id: newTabId,
@@ -465,6 +463,7 @@ function App() {
     setTabs((prev) => [...prev, newTab]);
     setSelectedTabId(newTabId);
     setSelectedStep(null);
+    return newTabId;
   };
 
   const removeTab = (tabId: string) => {
@@ -915,14 +914,23 @@ function App() {
     }
   };
 
-  const handleThemeToggle = () => {
-    let currentTheme = theme;
-    if (theme === "system") {
-      currentTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
+  const handleOpenNewTabWithFile = async () => {
+    const newTabId = addNewTab();
+    const file = await open({
+      multiple: false,
+      filters: [
+        { name: "CSV Files", extensions: ["csv", "txt", "tsv"] },
+        { name: "JSON Files", extensions: ["json", "jsonl"] },
+        { name: "Excel Files", extensions: ["xlsx"] },
+        { name: "Parquet Files", extensions: ["parquet"] },
+        { name: "All Files", extensions: ["*"] },
+      ],
+    });
+
+    if (file) {
+      loadCsvData(newTabId, file);
     }
-    setTheme(currentTheme === "dark" ? "light" : "dark");
+    setActiveMenu(null);
   };
 
   const handleOpenUrl = async (url: string) => {
@@ -975,6 +983,16 @@ function App() {
                   </button>
                   <button
                     onClick={() => {
+                      handleOpenNewTabWithFile();
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Open New Tab
+                  </button>
+                  <div className="border-t border-border my-1" />
+                  <button
+                    onClick={() => {
                       handleImportPipeline();
                       setActiveMenu(null);
                     }}
@@ -1000,57 +1018,15 @@ function App() {
                 </div>
               )}
             </div>
-            <div className="relative">
-              <button
+            <button
                 onClick={() => {
-                  if (!isMenuActivated) {
-                    setIsMenuActivated(true);
-                    setActiveMenu("settings");
-                  } else {
-                    if (activeMenu === "settings") {
-                      setActiveMenu(null);
-                    } else {
-                      setActiveMenu("settings");
-                    }
-                  }
+                  setShowSettingsDialog(true);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activeMenu === "settings"
-                  ? "bg-accent text-foreground"
-                  : "text-primary hover:text-primary hover:bg-primary/10"
-                  }`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-primary hover:text-primary hover:bg-primary/10 transition-colors"
               >
                 <Settings className="h-3.5 w-3.5" />
                 Settings
               </button>
-              {activeMenu === "settings" && (
-                <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[160px]">
-                  <button
-                    onClick={() => {
-                      handleThemeToggle();
-                      setActiveMenu(null);
-                    }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                  >
-                    {theme === "dark" ? (
-                      <Sun className="h-3.5 w-3.5" />
-                    ) : (
-                      <Moon className="h-3.5 w-3.5" />
-                    )}
-                    {theme === "dark" ? "Light Mode" : "Dark Mode"}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowSettings(true);
-                      setActiveMenu(null);
-                    }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                  >
-                    <Settings className="h-3.5 w-3.5" />
-                    Preferences
-                  </button>
-                </div>
-              )}
-            </div>
 
             {/* Undo/Redo buttons */}
             <div className="flex items-center">
@@ -1110,10 +1086,9 @@ function App() {
         <div className="flex items-center gap-3 flex-1 justify-center">
         </div>
 
-        {/* Right: Status + Tools */}
         <div className="flex items-center gap-2">
           {isXanInstalled === null ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 text-sm text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               <span className="hidden sm:inline">Checking...</span>
             </div>
@@ -1162,7 +1137,7 @@ function App() {
                   }
                 }
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-600 rounded-lg text-xs font-medium border border-red-500/20 hover:bg-red-500/20 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-600 rounded-lg text-sm font-medium border border-red-500/20 hover:bg-red-500/20 transition-colors cursor-pointer"
             >
               <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
               <span className="hidden sm:inline">xan missing</span>
@@ -1179,7 +1154,6 @@ function App() {
               tabs={tabs}
               selectedTabId={selectedTabId}
               onTabChange={setSelectedTabId}
-              onAddTab={addNewTab}
               onRemoveTab={removeTab}
               onRenameTab={renameTab}
               onAddCommand={handleCommandClick}
@@ -1230,10 +1204,10 @@ function App() {
                 );
               }}
               onOpenFile={handleOpenFile}
-          onImportPipeline={handleImportPipeline}
-          onOpenUrl={handleOpenUrl}
-          showMinimap={showMinimap}
-        />
+              onImportPipeline={handleImportPipeline}
+              onOpenUrl={handleOpenUrl}
+              showMinimap={showMinimap}
+            />
           </div>
         </main>
       </div>
@@ -1242,8 +1216,8 @@ function App() {
       <Button
         onClick={() => setShowCommandPanel(!showCommandPanel)}
         onContextMenu={(e) => e.preventDefault()}
-        className="fixed bottom-4 left-4 z-30 h-10 w-10 rounded-full shadow-md bg-gray-600/50 text-gray-200 hover:bg-gray-600/70 dark:bg-gray-700/60 dark:text-gray-300 dark:hover:bg-gray-600/70 transition-all flex items-center justify-center backdrop-blur-sm"
-        variant="default"
+        className="fixed bottom-4 left-4 z-30 h-10 w-10 rounded-full shadow-md"
+        variant="secondary"
         size="icon"
       >
         {showCommandPanel ? (
@@ -1257,8 +1231,8 @@ function App() {
       <Button
         onClick={() => setShowLogPanel(!showLogPanel)}
         onContextMenu={(e) => e.preventDefault()}
-        className="fixed bottom-4 left-16 z-30 h-10 w-10 rounded-full shadow-md bg-gray-600/50 text-gray-200 hover:bg-gray-600/70 dark:bg-gray-700/60 dark:text-gray-300 dark:hover:bg-gray-600/70 transition-all flex items-center justify-center backdrop-blur-sm"
-        variant="default"
+        className="fixed bottom-4 left-16 z-30 h-10 w-10 rounded-full shadow-md"
+        variant="secondary"
         size="icon"
       >
         {showLogPanel ? (
@@ -1272,8 +1246,8 @@ function App() {
       <Button
         onClick={() => setShowMinimap(!showMinimap)}
         onContextMenu={(e) => e.preventDefault()}
-        className="fixed bottom-4 left-28 z-30 h-10 w-10 rounded-full shadow-md bg-gray-600/50 text-gray-200 hover:bg-gray-600/70 dark:bg-gray-700/60 dark:text-gray-300 dark:hover:bg-gray-600/70 transition-all flex items-center justify-center backdrop-blur-sm"
-        variant="default"
+        className="fixed bottom-4 left-28 z-30 h-10 w-10 rounded-full shadow-md"
+        variant="secondary"
         size="icon"
       >
         {showMinimap ? (
@@ -1332,131 +1306,18 @@ function App() {
         isExecuting={isExecuting}
       />
 
-      {/* Settings Dialog */}
-      {showSettings && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-card border rounded-lg shadow-lg p-6 w-full max-w-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Settings</h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowSettings(false)}
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  CSV Delimiter
-                </label>
-                <SearchableSelect
-                  value={defaultDelimiter}
-                  onChange={setDefaultDelimiter}
-                  options={[
-                    { label: "Comma (,)", value: "," },
-                    { label: "Semicolon (;)", value: ";" },
-                    { label: "Tab (\\t)", value: "\t" },
-                    { label: "Pipe (|)", value: "|" },
-                    { label: "Caret (^)", value: "^" },
-                  ]}
-                  placeholder="Select delimiter"
-                  size="sm"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Read the delimiter of CSV file
-                </p>
-              </div>
-              <div>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={noQuoting}
-                    onChange={(e) => setNoQuoting(e.target.checked)}
-                    className="w-4 h-4 rounded border-input"
-                  />
-                  <span className="text-sm font-medium">Disable Quoting</span>
-                </label>
-                <p className="text-xs text-muted-foreground mt-1 ml-6">
-                  Disable quoting completely for input command
-                </p>
-              </div>
-              <div>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={noHeaders}
-                    onChange={(e) => setNoHeaders(e.target.checked)}
-                    className="w-4 h-4 rounded border-input"
-                  />
-                  <span className="text-sm font-medium">No Headers</span>
-                </label>
-                <p className="text-xs text-muted-foreground mt-1 ml-6">
-                  Indicate that input file has no headers
-                </p>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowSettings(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  disabled={isSavingSettings}
-                  onClick={async () => {
-                    setIsSavingSettings(true);
-                    try {
-                      const savePromises: Promise<void>[] = [];
-
-                      savePromises.push(
-                        invoke("set_default_delimiter", { delimiter: defaultDelimiter })
-                      );
-                      savePromises.push(
-                        invoke("set_no_quoting", { noQuoting })
-                      );
-                      savePromises.push(
-                        invoke("set_no_headers", { noHeaders })
-                      );
-
-                      await Promise.all(savePromises);
-                      setShowSettings(false);
-                      showToastRef.current("Settings saved successfully", 'success');
-                    } catch (error) {
-                      showToastRef.current(`Failed to save settings: ${error}`, 'error');
-                    } finally {
-                      setIsSavingSettings(false);
-                    }
-                  }}
-                >
-                  {isSavingSettings ? (
-                    <>
-                      <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save"
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Help Dialog */}
       {showHelp && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-card border rounded-lg shadow-lg p-4 w-full max-w-4xl h-[80vh] flex flex-col">
+        <div className="fixed inset-0 bg-foreground/20 backdrop-blur-xs flex items-center justify-center z-50">
+          <div className="bg-card border rounded-lg shadow-xl p-4 w-full max-w-4xl h-[80vh] flex flex-col">
             <div className="flex items-center justify-between flex-shrink-0">
-              <h3 className="text-lg font-semibold">{helpCommandName}</h3>
+              <h3 className="text-lg">{helpCommandName}</h3>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowHelp(false)}
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </Button>
             </div>
             {isHelpLoading ? (
@@ -1465,9 +1326,9 @@ function App() {
               </div>
             ) : (
               <ScrollArea className="flex-1 h-0">
-                <pre className="text-sm font-mono whitespace-pre-wrap bg-muted/30 p-4 rounded-lg border">
+                <div className="text-sm whitespace-pre-wrap bg-muted/30 p-2 rounded-lg text-foreground/90 leading-relaxed font-mono">
                   {helpContent}
-                </pre>
+                </div>
               </ScrollArea>
             )}
           </div>
@@ -1476,6 +1337,42 @@ function App() {
 
       <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
       <NotificationPanel notifications={notifications} onDismiss={removeNotificationRef.current} onDismissAll={dismissAllNotifications} />
+
+      {/* Settings Dialog */}
+      <SettingsDialog
+        isOpen={showSettingsDialog}
+        onClose={() => setShowSettingsDialog(false)}
+        theme={theme}
+        onThemeChange={setTheme}
+        defaultDelimiter={defaultDelimiter}
+        onDefaultDelimiterChange={setDefaultDelimiter}
+        noQuoting={noQuoting}
+        onNoQuotingChange={setNoQuoting}
+        noHeaders={noHeaders}
+        onNoHeadersChange={setNoHeaders}
+        onSave={async () => {
+          setIsSavingSettings(true);
+          try {
+            const savePromises: Promise<void>[] = [];
+            savePromises.push(
+              invoke("set_default_delimiter", { delimiter: defaultDelimiter })
+            );
+            savePromises.push(
+              invoke("set_no_quoting", { noQuoting })
+            );
+            savePromises.push(
+              invoke("set_no_headers", { noHeaders })
+            );
+            await Promise.all(savePromises);
+            showToastRef.current("Settings saved successfully", 'success');
+          } catch (error) {
+            showToastRef.current(`Failed to save settings: ${error}`, 'error');
+          } finally {
+            setIsSavingSettings(false);
+          }
+        }}
+        isSaving={isSavingSettings}
+      />
     </div>
   );
 }

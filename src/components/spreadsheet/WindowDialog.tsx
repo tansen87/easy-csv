@@ -3,6 +3,7 @@ import { X, Plus, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
+import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 interface WindowDialogState {
@@ -185,7 +186,7 @@ export function WindowDialog({
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium">Window Aggregation</span>
+          <span className="text-base font-medium">Window Aggregation</span>
         </div>
         <button
           onClick={onClose}
@@ -196,9 +197,9 @@ export function WindowDialog({
       </div>
 
       <ScrollArea className="h-[270px]">
-        <div className="p-3 space-y-1">
-          <div className="space-y-1">
-            <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        <div className="p-3 space-y-3">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">
               GroupBy (optional)
             </label>
             <input
@@ -212,12 +213,12 @@ export function WindowDialog({
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-medium text-muted-foreground">
+              <span className="text-xs font-medium text-muted-foreground">
                 Expressions
               </span>
               <button
                 onClick={addEntry}
-                className="flex items-center gap-1 px-2 py-0.5 text-[10px] hover:bg-accent rounded transition-colors"
+                className="flex items-center gap-1 px-2 py-0.5 text-xs hover:bg-accent rounded transition-colors text-muted-foreground"
               >
                 <Plus className="h-3 w-3" />
                 Add
@@ -230,7 +231,7 @@ export function WindowDialog({
                 <div key={index} className="border rounded-lg p-2 space-y-2 bg-muted/10">
                   <div className="flex gap-2 items-end">
                     <div className="flex-1 space-y-1">
-                      <label className="text-[10px] font-medium text-muted-foreground">Column</label>
+                      <label className="text-xs font-medium text-muted-foreground">Column</label>
                       <SearchableSelect
                         value={entry.column}
                         onChange={(value) => updateEntry(index, "column", value)}
@@ -239,7 +240,7 @@ export function WindowDialog({
                       />
                     </div>
                     <div className="flex-1 space-y-1">
-                      <label className="text-[10px] font-medium text-muted-foreground">Alias</label>
+                      <label className="text-xs font-medium text-muted-foreground">Alias</label>
                       <input
                         type="text"
                         value={entry.alias}
@@ -262,7 +263,7 @@ export function WindowDialog({
 
                   <div className="flex gap-2 items-end">
                     <div className="flex-1 space-y-1">
-                      <label className="text-[10px] font-medium text-muted-foreground">Expression</label>
+                      <label className="text-xs font-medium text-muted-foreground">Expression</label>
                       <SearchableSelect
                         value={entry.func}
                         onChange={(value) => updateEntry(index, "func", value)}
@@ -272,7 +273,7 @@ export function WindowDialog({
                     </div>
                     {func?.hasWindowSize && (
                       <div className="flex-1 space-y-1">
-                        <label className="text-[10px] font-medium text-muted-foreground">WinSize</label>
+                        <label className="text-xs font-medium text-muted-foreground">WinSize</label>
                         <input
                           type="number"
                           value={entry.windowSize}
@@ -292,18 +293,22 @@ export function WindowDialog({
       </ScrollArea>
 
       <div className="px-3 pb-2 flex gap-2">
-        <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+        <Button
+          className="flex-1 px-2 py-1.5 rounded-md"
+          variant="secondary"
+          size="sm"
           onClick={onClose}
         >
           Cancel
-        </button>
-        <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+        </Button>
+        <Button
+          className="flex-1 px-2 py-1.5 rounded-md"
+          variant="secondary"
+          size="sm"
           onClick={handleApply}
         >
           Apply
-        </button>
+        </Button>
       </div>
     </div>
   );

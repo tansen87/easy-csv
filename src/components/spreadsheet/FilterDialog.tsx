@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { X } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
+import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 interface FilterDialogState {
@@ -82,21 +83,33 @@ export function FilterDialog({
   const [position, setPosition] = useState({ x: filterDialog.x, y: filterDialog.y });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
+  const positionRef = useRef(position);
+  const isDraggingRef = useRef(isDragging);
+
+  useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
+
+  useEffect(() => {
+    isDraggingRef.current = isDragging;
+  }, [isDragging]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest(".no-drag")) return;
-    
+
+    e.preventDefault();
     setIsDragging(true);
+    isDraggingRef.current = true;
     dragRef.current = {
       startX: e.clientX,
       startY: e.clientY,
-      startPosX: position.x,
-      startPosY: position.y,
+      startPosX: positionRef.current.x,
+      startPosY: positionRef.current.y,
     };
-  }, [position.x, position.y]);
+  }, []);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging) return;
+    if (!isDraggingRef.current) return;
 
     const deltaX = e.clientX - dragRef.current.startX;
     const deltaY = e.clientY - dragRef.current.startY;
@@ -105,22 +118,21 @@ export function FilterDialog({
       x: Math.max(0, Math.min(dragRef.current.startPosX + deltaX, window.innerWidth - 260)),
       y: Math.max(0, Math.min(dragRef.current.startPosY + deltaY, window.innerHeight - 400)),
     });
-  }, [isDragging]);
+  }, []);
 
   const handleMouseUp = useCallback(() => {
+    isDraggingRef.current = false;
     setIsDragging(false);
   }, []);
 
   useEffect(() => {
-    if (isDragging) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
-    }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [handleMouseMove, handleMouseUp]);
 
   const buildRegexPattern = (
     operator: TextOperator,
@@ -230,7 +242,7 @@ export function FilterDialog({
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium">Filter</span>
+          <span className="text-base font-medium">Filter</span>
         </div>
         <button
           onClick={onClose}
@@ -240,32 +252,30 @@ export function FilterDialog({
         </button>
       </div>
 
-      <div className="p-3 space-y-1">
-        <div className="flex rounded-lg overflow-hidden border">
+      <div className="p-3 space-y-3">
+        <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
           <button
-            className={`flex-1 px-2 py-1.5 text-xs font-medium transition-colors ${
-              filterType === "text"
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted hover:bg-accent"
-            }`}
+            className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${filterType === "text"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
             onClick={() => setFilterType("text")}
           >
             Text
           </button>
           <button
-            className={`flex-1 px-2 py-1.5 text-xs font-medium transition-colors ${
-              filterType === "number"
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted hover:bg-accent"
-            }`}
+            className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${filterType === "number"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
             onClick={() => setFilterType("number")}
           >
             Number
           </button>
         </div>
 
-        <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+        <div className="no-drag">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Column
           </label>
           <SearchableSelect
@@ -278,8 +288,8 @@ export function FilterDialog({
 
         {filterType === "text" && (
           <>
-            <div className="space-y-1">
-              <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+            <div className="no-drag">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
                 Operator
               </label>
               <SearchableSelect
@@ -292,16 +302,16 @@ export function FilterDialog({
 
             {textOperator !== "is_null" && textOperator !== "is_not_null" && (
               <>
-                <div>
-                  <label className="text-[10px] font-medium text-muted-foreground">
+                <div className="no-drag">
+                  <label className="text-xs font-medium text-muted-foreground">
                     {textOperator === "regex" ? "Pattern" : "Value"}
                   </label>
                   <input
                     type="text"
                     value={textValue}
                     onChange={(e) => setTextValue(e.target.value)}
-                    placeholder={textOperator === "regex" ? "Enter regex pattern..." : "Enter search text..."}
-                    className="w-full h-7 px-1.5 text-xs border rounded bg-background"
+                    placeholder={textOperator === "regex" ? "Regex pattern..." : "Search text..."}
+                    className="w-full h-7 px-3 text-sm border rounded bg-background"
                   />
                 </div>
 
@@ -311,9 +321,9 @@ export function FilterDialog({
                     id="case-insensitive"
                     checked={caseInsensitive}
                     onChange={(e) => setCaseInsensitive(e.target.checked)}
-                    className="h-3 w-3"
+                    className="h-3.5 w-3.5 accent-foreground"
                   />
-                  <label htmlFor="case-insensitive" className="text-[10px] cursor-pointer">
+                  <label htmlFor="case-insensitive" className="text-xs cursor-pointer">
                     Ignore case
                   </label>
                 </div>
@@ -324,8 +334,8 @@ export function FilterDialog({
 
         {filterType === "number" && (
           <>
-            <div className="space-y-1">
-              <label className="text-[10px] font-medium text-muted-foreground mb-1 block">
+            <div className="no-drag">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
                 Operator
               </label>
               <SearchableSelect
@@ -336,16 +346,16 @@ export function FilterDialog({
               />
             </div>
 
-            <div>
-              <label className="text-[10px] font-medium text-muted-foreground">
+            <div className="no-drag">
+              <label className="text-xs font-medium text-muted-foreground">
                 Value
               </label>
               <input
                 type="number"
                 value={numberValue}
                 onChange={(e) => setNumberValue(e.target.value)}
-                placeholder="Enter number..."
-                className="w-full h-7 px-1.5 text-xs border rounded bg-background"
+                placeholder="Search number..."
+                className="w-full h-7 px-3 text-sm border rounded bg-background"
               />
             </div>
           </>
@@ -353,18 +363,22 @@ export function FilterDialog({
       </div>
 
       <div className="px-3 pb-2 flex gap-2">
-        <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+        <Button
+          className="flex-1 px-2 py-1.5 rounded-md"
+          variant="secondary"
+          size="sm"
           onClick={onClose}
         >
           Cancel
-        </button>
-        <button
-          className="flex-1 px-2 py-1.5 rounded text-xs bg-muted transition-colors"
+        </Button>
+        <Button
+          className="flex-1 px-2 py-1.5 rounded-md"
+          variant="secondary"
+          size="sm"
           onClick={handleApply}
         >
           Apply
-        </button>
+        </Button>
       </div>
     </div>
   );
