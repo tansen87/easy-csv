@@ -800,44 +800,13 @@ export const xanCommands: XanCommand[] = [
         description: "Column containing pattern name for breakdown",
         required: false,
       },
-
-    ],
-  },
-  {
-    id: "grep",
-    name: "grep",
-    description: "Coarse but fast filtering of CSV data",
-    category: "Search & filter",
-    parameters: [
       {
-        name: "pattern",
-        type: "string",
-        description: "Pattern to match",
-        required: true,
-        isPositional: true,
-      },
-      {
-        name: "ignore-case",
+        name: "fast-parser",
         type: "flag",
-        description: "Ignore case while matching",
+        description: "Use a faster, zero-copy parser when searching the file",
         required: false,
         default: false,
       },
-      {
-        name: "invert-match",
-        type: "flag",
-        description: "Only return rows that did not match",
-        required: false,
-        default: false,
-      },
-      {
-        name: "count",
-        type: "flag",
-        description: "Only return the number of matching rows",
-        required: false,
-        default: false,
-      },
-
     ],
   },
   {

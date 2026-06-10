@@ -16,7 +16,6 @@ export type CommandDialogType =
   | "slice"
   | "head"
   | "tail"
-  | "grep"
   | "sample"
   | "dedup"
   | "shuffle"
@@ -142,7 +141,6 @@ export function CommandDialog({
             {commandDialog.type === "slice" && "Slice"}
             {commandDialog.type === "head" && "Head"}
             {commandDialog.type === "tail" && "Tail"}
-            {commandDialog.type === "grep" && "Grep"}
             {commandDialog.type === "sample" && "Sample"}
             {commandDialog.type === "dedup" && "Dedup"}
             {commandDialog.type === "shuffle" && "Shuffle"}
@@ -321,7 +319,7 @@ export function CommandDialog({
                       }
                       className="h-3.5 w-3.5 accent-foreground"
                     />
-                    Non-Empty
+                    Non Empty
                   </label>
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <input
@@ -373,6 +371,74 @@ export function CommandDialog({
                       className="h-3.5 w-3.5 accent-foreground"
                     />
                     Parallel
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params["fast-parser"]}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            "fast-parser": e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-3.5 w-3.5 accent-foreground"
+                    />
+                    Fast Parser
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params.overlapping}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            overlapping: e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-3.5 w-3.5 accent-foreground"
+                    />
+                    Overlapping
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params.left}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            left: e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-3.5 w-3.5 accent-foreground"
+                    />
+                    Left
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params.breakdown}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            breakdown: e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-3.5 w-3.5 accent-foreground"
+                    />
+                    Breakdown
                   </label>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mt-1">
@@ -493,59 +559,6 @@ export function CommandDialog({
                       className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
-                </div>
-                <div className="grid grid-cols-4 gap-2 mt-2">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.overlapping}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            overlapping: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-3.5 w-3.5 accent-foreground"
-                    />
-                    Overlapping
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.left}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            left: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-3.5 w-3.5 accent-foreground"
-                    />
-                    Left
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.breakdown}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            breakdown: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-3.5 w-3.5 accent-foreground"
-                    />
-                    Breakdown
-                  </label>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mt-1">
                   <div className="space-y-2">
@@ -3230,123 +3243,6 @@ export function CommandDialog({
                         ...commandDialog.params,
                       };
                       onAddCommand(windowCmd, params);
-                    }
-                  }
-                  setCommandDialog(null);
-                }}
-              >
-                {commandDialog.isUpdate ? "Update" : "Add"}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {commandDialog.type === "grep" && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Pattern</label>
-              <input
-                type="text"
-                value={commandDialog.params.pattern}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      pattern: e.target.value,
-                    },
-                  })
-                }
-                placeholder="Pattern to match"
-                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                autoFocus
-              />
-            </div>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["ignore-case"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "ignore-case": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-3.5 w-3.5 accent-foreground"
-                />
-                Ignore Case
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["invert-match"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "invert-match": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-3.5 w-3.5 accent-foreground"
-                />
-                Invert Match
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.count}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        count: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-3.5 w-3.5 accent-foreground"
-                />
-                Count
-              </label>
-            </div>
-            <div className="flex justify-end gap-2 mt-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setCommandDialog(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  if (
-                    commandDialog.isUpdate &&
-                    commandDialog.stepId &&
-                    onStepUpdate
-                  ) {
-                    onStepUpdate(commandDialog.stepId, commandDialog.params);
-                  } else {
-                    const grepCmd = xanCommands.find((c) => c.id === "grep");
-                    if (grepCmd) {
-                      const params = {
-                        ...grepCmd.parameters.reduce(
-                          (acc, param) => {
-                            acc[param.name] = param.default;
-                            return acc;
-                          },
-                          {} as Record<string, any>,
-                        ),
-                        ...commandDialog.params,
-                      };
-                      onAddCommand(grepCmd, params);
                     }
                   }
                   setCommandDialog(null);

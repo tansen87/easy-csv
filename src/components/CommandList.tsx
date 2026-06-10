@@ -22,7 +22,6 @@ import {
   Layers,
   Columns3,
   Search,
-  Zap,
   Filter,
   ArrowUp,
   Scissors,
@@ -89,7 +88,6 @@ const commandIconMap: Record<string, LucideIcon> = {
 
   // Search & filter
   search: Search,
-  grep: Zap,
   filter: Filter,
 
   // Sort & deduplicate
