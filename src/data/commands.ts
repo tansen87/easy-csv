@@ -550,54 +550,6 @@ export const xanCommands: XanCommand[] = [
     ],
   },
   {
-    id: "flatmap",
-    name: "flatmap",
-    description: "Apply expression to column and flatten results",
-    category: "Add, transform, drop and move columns",
-    parameters: [
-      {
-        name: "expression",
-        type: "string",
-        description: "Expression to evaluate",
-        required: true,
-        isPositional: true,
-      },
-      {
-        name: "column",
-        type: "string",
-        description: "Column to apply expression to",
-        required: true,
-        isPositional: true,
-      },
-      {
-        name: "evaluate-file",
-        type: "string",
-        description: "Read evaluation expression from a file instead",
-        required: false,
-      },
-      {
-        name: "replace",
-        type: "string",
-        description: "Name of the column that will be replaced by the mapped values",
-        required: false,
-      },
-      {
-        name: "parallel",
-        type: "flag",
-        description: "Whether to use parallelization to speed up computations",
-        required: false,
-        default: false,
-      },
-      {
-        name: "threads",
-        type: "number",
-        description: "Parellize computations using this many threads",
-        required: false,
-      },
-
-    ],
-  },
-  {
     id: "separate",
     name: "separate",
     description: "Split a single column into multiple ones",
@@ -1932,17 +1884,36 @@ export const xanCommands: XanCommand[] = [
         default: "|",
       },
       {
+        name: "evaluate",
+        type: "string",
+        description: "Evaluate an expression to split cells instead of using a simple separator",
+        required: false,
+      },
+      {
+        name: "evaluate-file",
+        type: "string",
+        description: "Read splitting expression from a file instead",
+        required: false,
+      },
+      {
         name: "singularize",
         type: "flag",
-        description: "Singularize the exploded column names",
+        description: "Singularize (supporting only very simple English-centric cases) the exploded column names",
         required: false,
         default: false,
       },
       {
         name: "rename",
         type: "string",
-        description: "New names for the exploded columns",
+        description: "New names for the exploded columns. Must be written in CSV format if exploding multiple columns",
         required: false,
+      },
+      {
+        name: "keep",
+        type: "flag",
+        description: "Keep the exploded columns alongside each split",
+        required: false,
+        default: false,
       },
       {
         name: "drop-empty",
@@ -1951,7 +1922,13 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: false,
       },
-
+      {
+        name: "pad",
+        type: "flag",
+        description: "When exploding multiple columns at once, pad shorter splits to align them with the longest one instead of erroring",
+        required: false,
+        default: false,
+      },
     ],
   },
   {

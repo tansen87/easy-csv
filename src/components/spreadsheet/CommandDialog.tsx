@@ -34,7 +34,6 @@ export type CommandDialogType =
   | "enum"
   | "fill"
   | "complete"
-  | "flatmap"
   | "separate"
   | "top"
   | "cat"
@@ -159,7 +158,6 @@ export function CommandDialog({
             {commandDialog.type === "enum" && "Enum"}
             {commandDialog.type === "fill" && "Fill"}
             {commandDialog.type === "complete" && "Complete"}
-            {commandDialog.type === "flatmap" && "Flatmap"}
             {commandDialog.type === "separate" && "Separate"}
             {commandDialog.type === "top" && "Top"}
             {commandDialog.type === "cat" && "Cat"}
@@ -4418,163 +4416,6 @@ export function CommandDialog({
           </div>
         )}
 
-        {commandDialog.type === "flatmap" && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-10 gap-4">
-              <div className="col-span-7 space-y-2">
-                <label className="text-sm font-medium">Expression</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.expression || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        expression: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="Expression to evaluate"
-                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                  autoFocus
-                />
-              </div>
-              <div className="col-span-3 space-y-2">
-                <label className="text-sm font-medium">Column</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.column || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: { ...commandDialog.params, column: e.target.value },
-                    })
-                  }
-                  placeholder="Column"
-                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Evaluate File</label>
-              <input
-                type="text"
-                value={commandDialog.params["evaluate-file"] || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      "evaluate-file": e.target.value,
-                    },
-                  })
-                }
-                placeholder="Read expression from file"
-                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Replace</label>
-              <input
-                type="text"
-                value={commandDialog.params.replace || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      replace: e.target.value,
-                    },
-                  })
-                }
-                placeholder="Name of the column to replace"
-                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={commandDialog.params.parallel}
-                    onChange={(e) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          parallel: e.target.checked,
-                        },
-                      })
-                    }
-                    className="h-3.5 w-3.5 accent-foreground"
-                  />
-                  Parallel
-                </label>
-              </div>
-              <div className="space-y-2">
-                <input
-                  type="number"
-                  value={commandDialog.params.threads || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        threads: e.target.value ? Number(e.target.value) : undefined,
-                      },
-                    })
-                  }
-                  placeholder="Threads"
-                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 mt-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setCommandDialog(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  if (
-                    commandDialog.isUpdate &&
-                    commandDialog.stepId &&
-                    onStepUpdate
-                  ) {
-                    onStepUpdate(commandDialog.stepId, commandDialog.params);
-                  } else {
-                    const flatmapCmd = xanCommands.find(
-                      (c) => c.id === "flatmap",
-                    );
-                    if (flatmapCmd) {
-                      const params = {
-                        ...flatmapCmd.parameters.reduce(
-                          (acc, param) => {
-                            acc[param.name] = param.default;
-                            return acc;
-                          },
-                          {} as Record<string, any>,
-                        ),
-                        ...commandDialog.params,
-                      };
-                      onAddCommand(flatmapCmd, params);
-                    }
-                  }
-                  setCommandDialog(null);
-                }}
-              >
-                {commandDialog.isUpdate ? "Update" : "Add"}
-              </Button>
-            </div>
-          </div>
-        )}
-
         {commandDialog.type === "separate" && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -6258,54 +6099,88 @@ export function CommandDialog({
         )}
 
         {commandDialog.type === "explode" && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Columns</label>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Columns</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.columns || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        columns: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="Columns to explode"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Separator</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.sep || "|"}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, sep: e.target.value },
+                    })
+                  }
+                  placeholder="Separator to split the cells"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Evaluate File</label>
               <input
                 type="text"
-                value={commandDialog.params.columns || ""}
+                value={commandDialog.params["evaluate-file"] || ""}
                 onChange={(e) =>
                   setCommandDialog({
                     ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      columns: e.target.value,
-                    },
+                    params: { ...commandDialog.params, "evaluate-file": e.target.value },
                   })
                 }
-                placeholder="Columns to explode"
+                placeholder="Read splitting expression from a file instead"
                 className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Separator</label>
-              <input
-                type="text"
-                value={commandDialog.params.sep || "|"}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, sep: e.target.value },
-                  })
-                }
-                placeholder="Separator to split the cells"
-                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Rename</label>
-              <input
-                type="text"
-                value={commandDialog.params.rename || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, rename: e.target.value },
-                  })
-                }
-                placeholder="New names for the exploded columns"
-                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Evaluate</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.evaluate || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, evaluate: e.target.value },
+                    })
+                  }
+                  placeholder="Evaluate an expression to split cells instead of using a simple separator"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Rename</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.rename || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, rename: e.target.value },
+                    })
+                  }
+                  placeholder="New names for the exploded columns"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -6328,6 +6203,23 @@ export function CommandDialog({
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
+                  checked={commandDialog.params.keep}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        keep: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Keep
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
                   checked={commandDialog.params["drop-empty"]}
                   onChange={(e) =>
                     setCommandDialog({
@@ -6341,6 +6233,23 @@ export function CommandDialog({
                   className="h-3.5 w-3.5 accent-foreground"
                 />
                 Drop Empty
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.pad}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        pad: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Pad
               </label>
             </div>
             <div className="flex justify-end gap-2 mt-2">
