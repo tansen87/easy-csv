@@ -120,7 +120,7 @@ export function CommandDialog({
   return (
     <div className="fixed inset-0 z-50">
       <div
-        className="absolute bg-card border rounded-lg shadow-lg w-full max-w-2xl p-4"
+        className="absolute bg-card border rounded-xl shadow-xl w-full max-w-2xl p-4"
         style={{
           left: `calc(50% + ${offset.x}px)`,
           top: `calc(50% + ${offset.y}px)`,
@@ -1304,6 +1304,28 @@ export function CommandDialog({
                 disabled={commandDialog.params.all}
               />
             </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Theme</label>
+              <SearchableSelect
+                value={commandDialog.params.theme || "borderless"}
+                onChange={(value) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: { ...commandDialog.params, theme: value },
+                  })
+                }
+                options={[
+                  { label: "table", value: "table" },
+                  { label: "borderless", value: "borderless" },
+                  { label: "compact", value: "compact" },
+                  { label: "rounded", value: "rounded" },
+                  { label: "slim", value: "slim" },
+                  { label: "striped", value: "striped" },
+                ]}
+                placeholder="Select theme..."
+                size="md"
+              />
+            </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
@@ -1328,12 +1350,15 @@ export function CommandDialog({
                       const params = {
                         ...viewCmd.parameters.reduce(
                           (acc, param) => {
-                            acc[param.name] = param.default;
+                            if (param.default !== undefined) {
+                              acc[param.name] = param.default;
+                            }
                             return acc;
                           },
                           {} as Record<string, any>,
                         ),
                         ...commandDialog.params,
+                        theme: commandDialog.params.theme || "borderless",
                       };
                       onAddCommand(viewCmd, params);
                     }

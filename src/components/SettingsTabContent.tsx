@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 interface SettingsTabContentProps {
+  activeTab: "preference" | "general";
   theme: "dark" | "light" | "system";
   onThemeChange: (theme: "dark" | "light" | "system") => void;
   defaultDelimiter: string;
@@ -17,6 +18,7 @@ interface SettingsTabContentProps {
 }
 
 export function SettingsTabContent({
+  activeTab,
   theme,
   onThemeChange,
   defaultDelimiter,
@@ -28,7 +30,6 @@ export function SettingsTabContent({
   onSave,
   isSaving,
 }: SettingsTabContentProps) {
-  const [activeTab, setActiveTab] = useState<"preference" | "general">("preference");
   const [isThemeTransitioning, setIsThemeTransitioning] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -47,28 +48,6 @@ export function SettingsTabContent({
 
   return (
     <div className="h-full flex flex-col bg-background" onContextMenu={(e) => e.preventDefault()}>
-      {/* Settings Tabs */}
-      <div className="flex border-b">
-        <button
-          onClick={() => setActiveTab("preference")}
-          className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "preference"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-        >
-          Preference
-        </button>
-        <button
-          onClick={() => setActiveTab("general")}
-          className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "general"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-        >
-          General
-        </button>
-      </div>
-
       {/* Content Area */}
       <div className="flex-1 overflow-auto p-6">
         {activeTab === "preference" && (
@@ -174,7 +153,7 @@ export function SettingsTabContent({
       </div>
 
       {/* Footer */}
-      <div className="border-t p-4 flex justify-end gap-3">
+      <div className="p-4 flex justify-end gap-3 mb-1">
         <Button
           variant="outline"
           onClick={() => {

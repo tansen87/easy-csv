@@ -42,6 +42,14 @@ export const xanCommands: XanCommand[] = [
         required: false,
         default: 10,
       },
+      {
+        name: "theme",
+        type: "string",
+        description: "Theme for the table display",
+        required: false,
+        options: ["table", "borderless", "compact", "rounded", "slim", "striped"],
+        default: "borderless",
+      },
     ],
   },
   {

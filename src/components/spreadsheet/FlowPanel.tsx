@@ -1432,8 +1432,6 @@ export function FlowPanel({
 
   const onConnect = useCallback(
     (connection: Connection) => {
-      console.log("[Pipeline] New connection:", `${connection.source} -> ${connection.target}`);
-
       if (!connection.source || !connection.target) return;
 
       const sourceNode = nodes.find(n => n.id === connection.source);

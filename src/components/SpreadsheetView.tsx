@@ -15,7 +15,6 @@ import { PadDialog } from "@/components/spreadsheet/PadDialog";
 import { ReplaceDialog } from "@/components/spreadsheet/ReplaceDialog";
 import { WindowDialog } from "@/components/spreadsheet/WindowDialog";
 import { FlowPanel } from "@/components/spreadsheet/FlowPanel";
-import { SettingsTabContent } from "@/components/SettingsTabContent";
 
 interface SpreadsheetViewProps {
   tabs: PipelineTab[];
@@ -39,16 +38,6 @@ interface SpreadsheetViewProps {
   onImportPipeline?: () => void;
   onOpenUrl?: (url: string) => void;
   showMinimap?: boolean;
-  theme?: "dark" | "light" | "system";
-  onThemeChange?: (theme: "dark" | "light" | "system") => void;
-  defaultDelimiter?: string;
-  onDefaultDelimiterChange?: (delimiter: string) => void;
-  noQuoting?: boolean;
-  onNoQuotingChange?: (value: boolean) => void;
-  noHeaders?: boolean;
-  onNoHeadersChange?: (value: boolean) => void;
-  onSaveSettings?: () => void;
-  isSavingSettings?: boolean;
 }
 
 export function SpreadsheetView({
@@ -70,16 +59,6 @@ export function SpreadsheetView({
   onImportPipeline,
   onOpenUrl,
   showMinimap,
-  theme,
-  onThemeChange,
-  defaultDelimiter,
-  onDefaultDelimiterChange,
-  noQuoting,
-  onNoQuotingChange,
-  noHeaders,
-  onNoHeadersChange,
-  onSaveSettings,
-  isSavingSettings,
 }: SpreadsheetViewProps) {
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
   const [contextMenu, setContextMenu] = useState<{
@@ -338,96 +317,7 @@ export function SpreadsheetView({
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  // Check if current tab is settings tab
-  const isSettingsTab = currentTab?.isSettings;
-
-  if (isSettingsTab) {
-    return (
-      <div className="h-full flex flex-col bg-background">
-        <div className="bg-transparent" onContextMenu={(e) => e.preventDefault()}>
-          <div className="h-[48px] px-4 flex items-center">
-            <ScrollArea className="h-full flex-1">
-              <div className="flex items-center gap-2 pr-4">
-                {tabs.map((tab) => (
-                  <div
-                    key={tab.id}
-                    className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-xs transition-colors shrink-0 ${selectedTabId === tab.id
-                      ? 'bg-primary/10 text-primary border border-primary/20'
-                      : 'hover:bg-accent/50 border border-transparent'}`}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setEditingTabId(tab.id);
-                      setEditingTabName(tab.name);
-                    }}
-                  >
-                    {editingTabId === tab.id ? (
-                      <input
-                        type="text"
-                        value={editingTabName}
-                        onChange={(e) => setEditingTabName(e.target.value)}
-                        onBlur={() => {
-                          if (editingTabName.trim()) {
-                            onRenameTab(tab.id, editingTabName.trim());
-                          }
-                          setEditingTabId(null);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            if (editingTabName.trim()) {
-                              onRenameTab(tab.id, editingTabName.trim());
-                            }
-                            setEditingTabId(null);
-                          } else if (e.key === 'Escape') {
-                            setEditingTabId(null);
-                          }
-                        }}
-                        className="w-24 px-2 py-0.5 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary h-6"
-                        style={{ lineHeight: '1.2' }}
-                        autoFocus
-                      />
-                    ) : (
-                      <button
-                        onClick={() => onTabChange(tab.id)}
-                        className="text-left truncate max-w-[120px]"
-                      >
-                        {tab.name}
-                      </button>
-                    )}
-                    <div className="flex items-center gap-1">
-                      {tabs.length > 1 && (
-                        <button
-                          onClick={() => onRemoveTab(tab.id)}
-                          className="p-1 rounded hover:bg-muted hover:text-foreground transition-colors text-muted-foreground/70 dark:text-muted-foreground/80"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
-          </div>
-        </div>
-        <div className="flex-1 overflow-hidden">
-          <SettingsTabContent
-            theme={theme || "light"}
-            onThemeChange={onThemeChange || (() => { })}
-            defaultDelimiter={defaultDelimiter || ","}
-            onDefaultDelimiterChange={onDefaultDelimiterChange || (() => { })}
-            noQuoting={noQuoting || false}
-            onNoQuotingChange={onNoQuotingChange || (() => { })}
-            noHeaders={noHeaders || false}
-            onNoHeadersChange={onNoHeadersChange || (() => { })}
-            onSave={onSaveSettings || (() => { })}
-            isSaving={isSavingSettings || false}
-          />
-        </div>
-      </div>
-    );
-  }
+  
 
   if (!inputFile) {
     return (

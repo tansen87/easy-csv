@@ -446,7 +446,7 @@ export function CommandList({
                         </h4>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="xs"
                           onClick={() => onDeleteHistory(history)}
                         >
                           <X className="h-3.5 w-3.5" />
@@ -462,7 +462,7 @@ export function CommandList({
                         <div className="flex gap-1">
                           <Button
                             variant="secondary"
-                            size="sm"
+                            size="xs"
                             onClick={() => {
                               onLoadHistory(history);
                               onLoadCsvData(selectedTabId, history.inputFile);
@@ -473,7 +473,7 @@ export function CommandList({
                           </Button>
                           <Button
                             variant="secondary"
-                            size="sm"
+                            size="xs"
                             onClick={() => {
                               onNewTabFromHistory(history);
                             }}

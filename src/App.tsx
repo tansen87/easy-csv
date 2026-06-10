@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/LogPanel";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import { SpreadsheetView } from "@/components/SpreadsheetView";
 import { xanCommands } from "@/data/commands";
 import {
@@ -84,6 +85,7 @@ function App() {
   const [notifications, setNotifications] = useState<{ id: string; message: string; type: NotificationType }[]>([]);
   const [activeMenu, setActiveMenu] = useState<"file" | "settings" | null>(null);
   const [isMenuActivated, setIsMenuActivated] = useState<boolean>(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState<boolean>(false);
 
   // Undo/Redo history state
   const [undoStack, setUndoStack] = useState<Array<{ pipeline: PipelineStep[]; edges: PipelineEdge[]; inputPosition?: { x: number; y: number } }>>([]);
@@ -1018,24 +1020,7 @@ function App() {
             </div>
             <button
                 onClick={() => {
-                  // Check if settings tab already exists
-                  const existingSettingsTab = tabs.find(tab => tab.isSettings);
-                  if (existingSettingsTab) {
-                    setSelectedTabId(existingSettingsTab.id);
-                  } else {
-                    // Create new settings tab
-                    const newTabId = `tab-${Date.now()}`;
-                    const newTab: PipelineTab = {
-                      id: newTabId,
-                      name: "Settings",
-                      pipeline: [],
-                      createdAt: formatDateTime(new Date()),
-                      updatedAt: formatDateTime(new Date()),
-                      isSettings: true,
-                    };
-                    setTabs((prev) => [...prev, newTab]);
-                    setSelectedTabId(newTabId);
-                  }
+                  setShowSettingsDialog(true);
                 }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-primary hover:text-primary hover:bg-primary/10 transition-colors"
               >
@@ -1219,40 +1204,10 @@ function App() {
                 );
               }}
               onOpenFile={handleOpenFile}
-          onImportPipeline={handleImportPipeline}
-          onOpenUrl={handleOpenUrl}
-          showMinimap={showMinimap}
-          theme={theme}
-          onThemeChange={setTheme}
-          defaultDelimiter={defaultDelimiter}
-          onDefaultDelimiterChange={setDefaultDelimiter}
-          noQuoting={noQuoting}
-          onNoQuotingChange={setNoQuoting}
-          noHeaders={noHeaders}
-          onNoHeadersChange={setNoHeaders}
-          onSaveSettings={async () => {
-            setIsSavingSettings(true);
-            try {
-              const savePromises: Promise<void>[] = [];
-              savePromises.push(
-                invoke("set_default_delimiter", { delimiter: defaultDelimiter })
-              );
-              savePromises.push(
-                invoke("set_no_quoting", { noQuoting })
-              );
-              savePromises.push(
-                invoke("set_no_headers", { noHeaders })
-              );
-              await Promise.all(savePromises);
-              showToastRef.current("Settings saved successfully", 'success');
-            } catch (error) {
-              showToastRef.current(`Failed to save settings: ${error}`, 'error');
-            } finally {
-              setIsSavingSettings(false);
-            }
-          }}
-          isSavingSettings={isSavingSettings}
-        />
+              onImportPipeline={handleImportPipeline}
+              onOpenUrl={handleOpenUrl}
+              showMinimap={showMinimap}
+            />
           </div>
         </main>
       </div>
@@ -1356,13 +1311,13 @@ function App() {
         <div className="fixed inset-0 bg-foreground/20 backdrop-blur-xs flex items-center justify-center z-50">
           <div className="bg-card border rounded-lg shadow-xl p-4 w-full max-w-4xl h-[80vh] flex flex-col">
             <div className="flex items-center justify-between flex-shrink-0">
-              <h3 className="text-lg font-semibold">{helpCommandName}</h3>
+              <h3 className="text-lg">{helpCommandName}</h3>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowHelp(false)}
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </Button>
             </div>
             {isHelpLoading ? (
@@ -1371,7 +1326,7 @@ function App() {
               </div>
             ) : (
               <ScrollArea className="flex-1 h-0">
-                <div className="text-sm whitespace-pre-wrap bg-muted/30 p-4 rounded-lg border text-foreground/90 leading-relaxed font-mono">
+                <div className="text-sm whitespace-pre-wrap bg-muted/30 p-2 rounded-lg text-foreground/90 leading-relaxed font-mono">
                   {helpContent}
                 </div>
               </ScrollArea>
@@ -1382,6 +1337,42 @@ function App() {
 
       <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
       <NotificationPanel notifications={notifications} onDismiss={removeNotificationRef.current} onDismissAll={dismissAllNotifications} />
+
+      {/* Settings Dialog */}
+      <SettingsDialog
+        isOpen={showSettingsDialog}
+        onClose={() => setShowSettingsDialog(false)}
+        theme={theme}
+        onThemeChange={setTheme}
+        defaultDelimiter={defaultDelimiter}
+        onDefaultDelimiterChange={setDefaultDelimiter}
+        noQuoting={noQuoting}
+        onNoQuotingChange={setNoQuoting}
+        noHeaders={noHeaders}
+        onNoHeadersChange={setNoHeaders}
+        onSave={async () => {
+          setIsSavingSettings(true);
+          try {
+            const savePromises: Promise<void>[] = [];
+            savePromises.push(
+              invoke("set_default_delimiter", { delimiter: defaultDelimiter })
+            );
+            savePromises.push(
+              invoke("set_no_quoting", { noQuoting })
+            );
+            savePromises.push(
+              invoke("set_no_headers", { noHeaders })
+            );
+            await Promise.all(savePromises);
+            showToastRef.current("Settings saved successfully", 'success');
+          } catch (error) {
+            showToastRef.current(`Failed to save settings: ${error}`, 'error');
+          } finally {
+            setIsSavingSettings(false);
+          }
+        }}
+        isSaving={isSavingSettings}
+      />
     </div>
   );
 }

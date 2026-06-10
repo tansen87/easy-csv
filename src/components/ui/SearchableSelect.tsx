@@ -52,10 +52,10 @@ export function SearchableSelect({
   };
 
   const inputClassName = size === "md"
-    ? "w-full h-10 px-3 pr-8 text-sm border rounded-md bg-background"
+    ? "w-full h-8 px-3 pr-8 text-sm border rounded-md bg-background"
     : "w-full h-8 px-3 pr-8 text-xs border rounded-md bg-background";
 
-  const iconSize = size === "md" ? "h-4 w-4" : "h-3 w-3";
+  const iconSize = size === "md" ? "h-3 w-3" : "h-3 w-3";
 
   return (
     <div className="relative" ref={dropdownRef}>

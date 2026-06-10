@@ -214,7 +214,7 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose, isEx
                         </span>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="xs"
                           onClick={(e) => {
                             e.stopPropagation();
                             navigator.clipboard.writeText(log.message);
@@ -225,7 +225,7 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose, isEx
                           <Copy className="text-muted-foreground/70" />
                         </Button>
                       </div>
-                      <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-foreground/90">
+                      <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-foreground/90 font-mono">
                         {log.message}
                       </p>
                     </div>
