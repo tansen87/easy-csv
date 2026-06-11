@@ -8,6 +8,7 @@ import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 export type CommandDialogType =
   | "search"
+  | "bisect"
   | "filter"
   | "sort"
   | "select"
@@ -16,7 +17,6 @@ export type CommandDialogType =
   | "slice"
   | "head"
   | "tail"
-  | "grep"
   | "sample"
   | "dedup"
   | "shuffle"
@@ -35,17 +35,18 @@ export type CommandDialogType =
   | "enum"
   | "fill"
   | "complete"
-  | "flatmap"
   | "separate"
   | "top"
   | "cat"
   | "join"
   | "merge"
-  | "fuzzy-join"
   | "rename"
   | "behead"
   | "fixlengths"
   | "explode"
+  | "implode"
+  | "input"
+  | "scrape"
   | "fmt"
   | "to"
   | "from"
@@ -134,6 +135,7 @@ export function CommandDialog({
         >
           <h3 className="text-lg font-semibold">
             {commandDialog.type === "search" && "Search"}
+            {commandDialog.type === "bisect" && "Bisect"}
             {commandDialog.type === "filter" && "Filter"}
             {commandDialog.type === "sort" && "Sort"}
             {commandDialog.type === "select" && "Select"}
@@ -142,7 +144,6 @@ export function CommandDialog({
             {commandDialog.type === "slice" && "Slice"}
             {commandDialog.type === "head" && "Head"}
             {commandDialog.type === "tail" && "Tail"}
-            {commandDialog.type === "grep" && "Grep"}
             {commandDialog.type === "sample" && "Sample"}
             {commandDialog.type === "dedup" && "Dedup"}
             {commandDialog.type === "shuffle" && "Shuffle"}
@@ -161,17 +162,18 @@ export function CommandDialog({
             {commandDialog.type === "enum" && "Enum"}
             {commandDialog.type === "fill" && "Fill"}
             {commandDialog.type === "complete" && "Complete"}
-            {commandDialog.type === "flatmap" && "Flatmap"}
             {commandDialog.type === "separate" && "Separate"}
             {commandDialog.type === "top" && "Top"}
             {commandDialog.type === "cat" && "Cat"}
             {commandDialog.type === "join" && "Join"}
             {commandDialog.type === "merge" && "Merge"}
-            {commandDialog.type === "fuzzy-join" && "Fuzzy Join"}
             {commandDialog.type === "rename" && "Rename"}
             {commandDialog.type === "behead" && "Behead"}
             {commandDialog.type === "fixlengths" && "Fix Lengths"}
             {commandDialog.type === "explode" && "Explode"}
+            {commandDialog.type === "implode" && "Implode"}
+            {commandDialog.type === "input" && "Input"}
+            {commandDialog.type === "scrape" && "Scrape"}
             {commandDialog.type === "fmt" && "Format"}
             {commandDialog.type === "to" && "To"}
             {commandDialog.type === "from" && "From"}
@@ -321,7 +323,7 @@ export function CommandDialog({
                       }
                       className="h-3.5 w-3.5 accent-foreground"
                     />
-                    Non-Empty
+                    Non Empty
                   </label>
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <input
@@ -373,6 +375,91 @@ export function CommandDialog({
                       className="h-3.5 w-3.5 accent-foreground"
                     />
                     Parallel
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params["fast-parser"]}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            "fast-parser": e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-3.5 w-3.5 accent-foreground"
+                    />
+                    Fast Parser
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params["every-column"]}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            "every-column": e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-3.5 w-3.5 accent-foreground"
+                    />
+                    Every Column
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params.overlapping}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            overlapping: e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-3.5 w-3.5 accent-foreground"
+                    />
+                    Overlapping
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params.left}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            left: e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-3.5 w-3.5 accent-foreground"
+                    />
+                    Left
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params.breakdown}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            breakdown: e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-3.5 w-3.5 accent-foreground"
+                    />
+                    Breakdown
                   </label>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mt-1">
@@ -493,59 +580,6 @@ export function CommandDialog({
                       className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
-                </div>
-                <div className="grid grid-cols-4 gap-2 mt-2">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.overlapping}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            overlapping: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-3.5 w-3.5 accent-foreground"
-                    />
-                    Overlapping
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.left}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            left: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-3.5 w-3.5 accent-foreground"
-                    />
-                    Left
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.breakdown}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            breakdown: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-3.5 w-3.5 accent-foreground"
-                    />
-                    Breakdown
-                  </label>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mt-1">
                   <div className="space-y-2">
@@ -749,6 +783,173 @@ export function CommandDialog({
           </>
         )}
 
+        {commandDialog.type === "bisect" && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Column</label>
+                <SearchableSelect
+                  value={commandDialog.params.column}
+                  onChange={(value) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, column: value },
+                    })
+                  }
+                  options={headers.map((header) => ({ label: header, value: header }))}
+                  placeholder="Select column..."
+                  size="md"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Value</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.value || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, value: e.target.value },
+                    })
+                  }
+                  placeholder="Value to search for"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.search}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        search: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Search
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.reverse}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        reverse: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Reverse
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.numeric}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        numeric: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Numeric
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.exclude}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        exclude: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Exclude
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.verbose}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        verbose: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Verbose
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 mt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (
+                    commandDialog.isUpdate &&
+                    commandDialog.stepId &&
+                    onStepUpdate
+                  ) {
+                    onStepUpdate(commandDialog.stepId, commandDialog.params);
+                  } else {
+                    const bisectCmd = xanCommands.find(
+                      (c) => c.id === "bisect",
+                    );
+                    if (bisectCmd) {
+                      const params = {
+                        ...bisectCmd.parameters.reduce(
+                          (acc, param) => {
+                            acc[param.name] = param.default;
+                            return acc;
+                          },
+                          {} as Record<string, any>,
+                        ),
+                        ...commandDialog.params,
+                      };
+                      onAddCommand(bisectCmd, params);
+                    }
+                  }
+                  setCommandDialog(null);
+                }}
+                disabled={!commandDialog.params.column || !commandDialog.params.value}
+              >
+                {commandDialog.isUpdate ? "Update" : "Add"}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {commandDialog.type === "filter" && (
           <div className="space-y-4">
             <div className="space-y-2">
@@ -891,7 +1092,7 @@ export function CommandDialog({
         )}
 
         {commandDialog.type === "sort" && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Column</label>
@@ -1013,25 +1214,6 @@ export function CommandDialog({
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={commandDialog.params.unstable ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        unstable: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-3.5 w-3.5 accent-foreground"
-                />
-                Unstable
-              </label>
-            </div>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
                   checked={commandDialog.params.parallel ?? false}
                   onChange={(e) =>
                     setCommandDialog({
@@ -1080,6 +1262,8 @@ export function CommandDialog({
                 />
                 Columns
               </label>
+            </div>
+            <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
@@ -1113,7 +1297,7 @@ export function CommandDialog({
                 className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 mt-2">
+            <div className="flex justify-end gap-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -3241,123 +3425,6 @@ export function CommandDialog({
           </div>
         )}
 
-        {commandDialog.type === "grep" && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Pattern</label>
-              <input
-                type="text"
-                value={commandDialog.params.pattern}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      pattern: e.target.value,
-                    },
-                  })
-                }
-                placeholder="Pattern to match"
-                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                autoFocus
-              />
-            </div>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["ignore-case"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "ignore-case": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-3.5 w-3.5 accent-foreground"
-                />
-                Ignore Case
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params["invert-match"]}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        "invert-match": e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-3.5 w-3.5 accent-foreground"
-                />
-                Invert Match
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.count}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        count: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-3.5 w-3.5 accent-foreground"
-                />
-                Count
-              </label>
-            </div>
-            <div className="flex justify-end gap-2 mt-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setCommandDialog(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  if (
-                    commandDialog.isUpdate &&
-                    commandDialog.stepId &&
-                    onStepUpdate
-                  ) {
-                    onStepUpdate(commandDialog.stepId, commandDialog.params);
-                  } else {
-                    const grepCmd = xanCommands.find((c) => c.id === "grep");
-                    if (grepCmd) {
-                      const params = {
-                        ...grepCmd.parameters.reduce(
-                          (acc, param) => {
-                            acc[param.name] = param.default;
-                            return acc;
-                          },
-                          {} as Record<string, any>,
-                        ),
-                        ...commandDialog.params,
-                      };
-                      onAddCommand(grepCmd, params);
-                    }
-                  }
-                  setCommandDialog(null);
-                }}
-              >
-                {commandDialog.isUpdate ? "Update" : "Add"}
-              </Button>
-            </div>
-          </div>
-        )}
-
         {commandDialog.type === "headers" && (
           <div className="space-y-4">
             <div className="flex items-center gap-4">
@@ -4522,163 +4589,6 @@ export function CommandDialog({
           </div>
         )}
 
-        {commandDialog.type === "flatmap" && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-10 gap-4">
-              <div className="col-span-7 space-y-2">
-                <label className="text-sm font-medium">Expression</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.expression || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        expression: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="Expression to evaluate"
-                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                  autoFocus
-                />
-              </div>
-              <div className="col-span-3 space-y-2">
-                <label className="text-sm font-medium">Column</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.column || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: { ...commandDialog.params, column: e.target.value },
-                    })
-                  }
-                  placeholder="Column"
-                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Evaluate File</label>
-              <input
-                type="text"
-                value={commandDialog.params["evaluate-file"] || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      "evaluate-file": e.target.value,
-                    },
-                  })
-                }
-                placeholder="Read expression from file"
-                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Replace</label>
-              <input
-                type="text"
-                value={commandDialog.params.replace || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      replace: e.target.value,
-                    },
-                  })
-                }
-                placeholder="Name of the column to replace"
-                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={commandDialog.params.parallel}
-                    onChange={(e) =>
-                      setCommandDialog({
-                        ...commandDialog,
-                        params: {
-                          ...commandDialog.params,
-                          parallel: e.target.checked,
-                        },
-                      })
-                    }
-                    className="h-3.5 w-3.5 accent-foreground"
-                  />
-                  Parallel
-                </label>
-              </div>
-              <div className="space-y-2">
-                <input
-                  type="number"
-                  value={commandDialog.params.threads || ""}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        threads: e.target.value ? Number(e.target.value) : undefined,
-                      },
-                    })
-                  }
-                  placeholder="Threads"
-                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 mt-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setCommandDialog(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  if (
-                    commandDialog.isUpdate &&
-                    commandDialog.stepId &&
-                    onStepUpdate
-                  ) {
-                    onStepUpdate(commandDialog.stepId, commandDialog.params);
-                  } else {
-                    const flatmapCmd = xanCommands.find(
-                      (c) => c.id === "flatmap",
-                    );
-                    if (flatmapCmd) {
-                      const params = {
-                        ...flatmapCmd.parameters.reduce(
-                          (acc, param) => {
-                            acc[param.name] = param.default;
-                            return acc;
-                          },
-                          {} as Record<string, any>,
-                        ),
-                        ...commandDialog.params,
-                      };
-                      onAddCommand(flatmapCmd, params);
-                    }
-                  }
-                  setCommandDialog(null);
-                }}
-              >
-                {commandDialog.isUpdate ? "Update" : "Add"}
-              </Button>
-            </div>
-          </div>
-        )}
-
         {commandDialog.type === "separate" && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -5320,7 +5230,7 @@ export function CommandDialog({
         {commandDialog.type === "join" && (
           <>
             <ScrollArea className="h-[30vh]">
-              <div className="space-y-4 pr-4">
+              <div className="space-y-3 pr-4">
                 <div className="grid grid-cols-4 gap-4">
                   <div className="col-span-1 space-y-2">
                     <label className="text-sm font-medium">Columns</label>
@@ -5341,7 +5251,7 @@ export function CommandDialog({
                       autoFocus
                     />
                   </div>
-                  <div className="col-span-3 space-y-2">
+                  <div className="col-span-3">
                     <label className="text-sm font-medium">Input 1</label>
                     <input
                       type="text"
@@ -5358,7 +5268,7 @@ export function CommandDialog({
                   </div>
                 </div>
                 <div className="grid grid-cols-4 gap-4">
-                  <div className="col-span-1 space-y-2">
+                  <div className="col-span-1">
                     <label className="text-sm font-medium">Columns 2</label>
                     <input
                       type="text"
@@ -5376,7 +5286,7 @@ export function CommandDialog({
                       className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
-                  <div className="col-span-3 space-y-2">
+                  <div className="col-span-3">
                     <label className="text-sm font-medium">Input 2</label>
                     <input
                       type="text"
@@ -5393,54 +5303,57 @@ export function CommandDialog({
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div>
                     <label className="text-sm font-medium">Join Type</label>
-                    <select
+                    <SearchableSelect
                       value={commandDialog.params["join-type"] || "inner"}
-                      onChange={(e) =>
+                      onChange={(value) =>
                         setCommandDialog({
                           ...commandDialog,
                           params: {
                             ...commandDialog.params,
-                            "join-type": e.target.value,
+                            "join-type": value,
                           },
                         })
                       }
-                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                    >
-                      <option value="inner">Inner</option>
-                      <option value="left">Left</option>
-                      <option value="right">Right</option>
-                      <option value="full">Full</option>
-                      <option value="semi">Semi</option>
-                      <option value="anti">Anti</option>
-                      <option value="cross">Cross</option>
-                    </select>
+                      options={[
+                        { label: "Inner", value: "inner" },
+                        { label: "Left", value: "left" },
+                        { label: "Right", value: "right" },
+                        { label: "Full", value: "full" },
+                        { label: "Semi", value: "semi" },
+                        { label: "Anti", value: "anti" },
+                        { label: "Cross", value: "cross" },
+                        { label: "Fuzzy", value: "fuzzy" },
+                      ]}
+                      placeholder="Select join type..."
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Drop Key</label>
-                    <select
+                    <SearchableSelect
                       value={commandDialog.params["drop-key"] || "none"}
-                      onChange={(e) =>
+                      onChange={(value) =>
                         setCommandDialog({
                           ...commandDialog,
                           params: {
                             ...commandDialog.params,
-                            "drop-key": e.target.value,
+                            "drop-key": value,
                           },
                         })
                       }
-                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                    >
-                      <option value="left">Left</option>
-                      <option value="right">Right</option>
-                      <option value="none">None</option>
-                      <option value="both">Both</option>
-                    </select>
+                      options={[
+                        { label: "Left", value: "left" },
+                        { label: "Right", value: "right" },
+                        { label: "None", value: "none" },
+                        { label: "Both", value: "both" },
+                      ]}
+                      placeholder="Select drop key..."
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div>
                     <label className="text-sm font-medium">Prefix Left</label>
                     <input
                       type="text"
@@ -5458,7 +5371,7 @@ export function CommandDialog({
                       className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div>
                     <label className="text-sm font-medium">Prefix Right</label>
                     <input
                       type="text"
@@ -5512,7 +5425,169 @@ export function CommandDialog({
                     />
                     Nulls
                   </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params.sorted}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            sorted: e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-3.5 w-3.5 accent-foreground"
+                    />
+                    Sorted
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params.reverse}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            reverse: e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-3.5 w-3.5 accent-foreground"
+                    />
+                    Reverse
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={commandDialog.params.numeric}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: {
+                            ...commandDialog.params,
+                            numeric: e.target.checked,
+                          },
+                        })
+                      }
+                      className="h-3.5 w-3.5 accent-foreground"
+                    />
+                    Numeric
+                  </label>
                 </div>
+                {commandDialog.params["join-type"] === "fuzzy" && (
+                  <>
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={commandDialog.params.contains}
+                          onChange={(e) =>
+                            setCommandDialog({
+                              ...commandDialog,
+                              params: {
+                                ...commandDialog.params,
+                                contains: e.target.checked,
+                              },
+                            })
+                          }
+                          className="h-3.5 w-3.5 accent-foreground"
+                        />
+                        Contains
+                      </label>
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={commandDialog.params.regex}
+                          onChange={(e) =>
+                            setCommandDialog({
+                              ...commandDialog,
+                              params: {
+                                ...commandDialog.params,
+                                regex: e.target.checked,
+                              },
+                            })
+                          }
+                          className="h-3.5 w-3.5 accent-foreground"
+                        />
+                        Regex
+                      </label>
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={commandDialog.params["url-prefix"]}
+                          onChange={(e) =>
+                            setCommandDialog({
+                              ...commandDialog,
+                              params: {
+                                ...commandDialog.params,
+                                "url-prefix": e.target.checked,
+                              },
+                            })
+                          }
+                          className="h-3.5 w-3.5 accent-foreground"
+                        />
+                        URL Prefix
+                      </label>
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={commandDialog.params["simplified-urls"]}
+                          onChange={(e) =>
+                            setCommandDialog({
+                              ...commandDialog,
+                              params: {
+                                ...commandDialog.params,
+                                "simplified-urls": e.target.checked,
+                              },
+                            })
+                          }
+                          className="h-3.5 w-3.5 accent-foreground"
+                        />
+                        Simplified URLs
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={commandDialog.params.parallel}
+                          onChange={(e) =>
+                            setCommandDialog({
+                              ...commandDialog,
+                              params: {
+                                ...commandDialog.params,
+                                parallel: e.target.checked,
+                              },
+                            })
+                          }
+                          className="h-3.5 w-3.5 accent-foreground"
+                        />
+                        Parallel
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium">Threads</label>
+                        <input
+                          type="number"
+                          value={commandDialog.params.threads || ""}
+                          onChange={(e) =>
+                            setCommandDialog({
+                              ...commandDialog,
+                              params: {
+                                ...commandDialog.params,
+                                threads: e.target.value ? Number(e.target.value) : undefined,
+                              },
+                            })
+                          }
+                          placeholder="Threads"
+                          className="w-20 h-8 px-2 text-sm border rounded-md bg-background"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </ScrollArea>
             <div className="flex justify-end gap-2 mt-2">
@@ -5730,311 +5805,6 @@ export function CommandDialog({
                         ...commandDialog.params,
                       };
                       onAddCommand(mergeCmd, params);
-                    }
-                  }
-                  setCommandDialog(null);
-                }}
-              >
-                {commandDialog.isUpdate ? "Update" : "Add"}
-              </Button>
-            </div>
-          </>
-        )}
-
-        {commandDialog.type === "fuzzy-join" && (
-          <>
-            <ScrollArea className="h-[30vh]">
-              <div className="space-y-4 pr-4">
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="col-span-1 space-y-2">
-                    <label className="text-sm font-medium">Columns</label>
-                    <input
-                      type="text"
-                      value={commandDialog.params.columns || ""}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            columns: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder="Columns to join on"
-                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                      autoFocus
-                    />
-                  </div>
-                  <div className="col-span-3 space-y-2">
-                    <label className="text-sm font-medium">Input</label>
-                    <input
-                      type="text"
-                      value={commandDialog.params.input || ""}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: { ...commandDialog.params, input: e.target.value },
-                        })
-                      }
-                      placeholder="Input file path"
-                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="col-span-1 space-y-2">
-                    <label className="text-sm font-medium">Pattern Column</label>
-                    <input
-                      type="text"
-                      value={commandDialog.params["pattern-column"] || ""}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            "pattern-column": e.target.value,
-                          },
-                        })
-                      }
-                      placeholder="Pattern column in patterns file"
-                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                    />
-                  </div>
-                  <div className="col-span-3 space-y-2">
-                    <label className="text-sm font-medium">Patterns</label>
-                    <input
-                      type="text"
-                      value={commandDialog.params.patterns || ""}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: { ...commandDialog.params, patterns: e.target.value },
-                        })
-                      }
-                      placeholder="Patterns file path"
-                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 flex-wrap">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.regex}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            regex: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-3.5 w-3.5 accent-foreground"
-                    />
-                    Regex
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params["url-prefix"]}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            "url-prefix": e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-3.5 w-3.5 accent-foreground"
-                    />
-                    Url Prefix
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params["ignore-case"]}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            "ignore-case": e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-3.5 w-3.5 accent-foreground"
-                    />
-                    Ignore Case
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.simplified}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            simplified: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-3.5 w-3.5 accent-foreground"
-                    />
-                    Simplified
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.left}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            left: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-3.5 w-3.5 accent-foreground"
-                    />
-                    Left
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params.parallel}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            parallel: e.target.checked,
-                          },
-                        })
-                      }
-                      className="h-3.5 w-3.5 accent-foreground"
-                    />
-                    Parallel
-                  </label>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Threads</label>
-                    <input
-                      type="number"
-                      value={commandDialog.params.threads || ""}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            threads: e.target.value ? Number(e.target.value) : undefined,
-                          },
-                        })
-                      }
-                      placeholder="Number of threads"
-                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Drop Key</label>
-                    <select
-                      value={commandDialog.params["drop-key"] || "none"}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            "drop-key": e.target.value,
-                          },
-                        })
-                      }
-                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                    >
-                      <option value="left">Left</option>
-                      <option value="right">Right</option>
-                      <option value="none">None</option>
-                      <option value="both">Both</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Prefix Left</label>
-                    <input
-                      type="text"
-                      value={commandDialog.params["prefix-left"] || ""}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            "prefix-left": e.target.value,
-                          },
-                        })
-                      }
-                      placeholder="Prefix for left columns"
-                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Prefix Right</label>
-                    <input
-                      type="text"
-                      value={commandDialog.params["prefix-right"] || ""}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: {
-                            ...commandDialog.params,
-                            "prefix-right": e.target.value,
-                          },
-                        })
-                      }
-                      placeholder="Prefix for right columns"
-                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-                    />
-                  </div>
-                </div>
-              </div>
-            </ScrollArea>
-            <div className="flex justify-end gap-2 mt-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setCommandDialog(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  if (
-                    commandDialog.isUpdate &&
-                    commandDialog.stepId &&
-                    onStepUpdate
-                  ) {
-                    onStepUpdate(commandDialog.stepId, commandDialog.params);
-                  } else {
-                    const fuzzyJoinCmd = xanCommands.find(
-                      (c) => c.id === "fuzzy-join",
-                    );
-                    if (fuzzyJoinCmd) {
-                      const params = {
-                        ...fuzzyJoinCmd.parameters.reduce(
-                          (acc, param) => {
-                            acc[param.name] = param.default;
-                            return acc;
-                          },
-                          {} as Record<string, any>,
-                        ),
-                        ...commandDialog.params,
-                      };
-                      onAddCommand(fuzzyJoinCmd, params);
                     }
                   }
                   setCommandDialog(null);
@@ -6362,54 +6132,88 @@ export function CommandDialog({
         )}
 
         {commandDialog.type === "explode" && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Columns</label>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Columns</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.columns || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        columns: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="Columns to explode"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Separator</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.sep || "|"}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, sep: e.target.value },
+                    })
+                  }
+                  placeholder="Separator to split the cells"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Evaluate File</label>
               <input
                 type="text"
-                value={commandDialog.params.columns || ""}
+                value={commandDialog.params["evaluate-file"] || ""}
                 onChange={(e) =>
                   setCommandDialog({
                     ...commandDialog,
-                    params: {
-                      ...commandDialog.params,
-                      columns: e.target.value,
-                    },
+                    params: { ...commandDialog.params, "evaluate-file": e.target.value },
                   })
                 }
-                placeholder="Columns to explode"
+                placeholder="Read splitting expression from a file instead"
                 className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Separator</label>
-              <input
-                type="text"
-                value={commandDialog.params.sep || "|"}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, sep: e.target.value },
-                  })
-                }
-                placeholder="Separator to split the cells"
-                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Rename</label>
-              <input
-                type="text"
-                value={commandDialog.params.rename || ""}
-                onChange={(e) =>
-                  setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, rename: e.target.value },
-                  })
-                }
-                placeholder="New names for the exploded columns"
-                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Evaluate</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.evaluate || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, evaluate: e.target.value },
+                    })
+                  }
+                  placeholder="Evaluate an expression to split cells instead of using a simple separator"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Rename</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.rename || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, rename: e.target.value },
+                    })
+                  }
+                  placeholder="New names for the exploded columns"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -6432,6 +6236,23 @@ export function CommandDialog({
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
+                  checked={commandDialog.params.keep}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        keep: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Keep
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
                   checked={commandDialog.params["drop-empty"]}
                   onChange={(e) =>
                     setCommandDialog({
@@ -6445,6 +6266,23 @@ export function CommandDialog({
                   className="h-3.5 w-3.5 accent-foreground"
                 />
                 Drop Empty
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.pad}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        pad: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Pad
               </label>
             </div>
             <div className="flex justify-end gap-2 mt-2">
@@ -6490,6 +6328,592 @@ export function CommandDialog({
               </Button>
             </div>
           </div>
+        )}
+
+        {commandDialog.type === "implode" && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Columns</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.columns || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        columns: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="Columns to implode"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Separator</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.sep || "|"}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, sep: e.target.value },
+                    })
+                  }
+                  placeholder="Separator for joining cells"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Rename</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.rename || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, rename: e.target.value },
+                    })
+                  }
+                  placeholder="New name for the diverging column"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Compare Columns</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.cmp || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, cmp: e.target.value },
+                    })
+                  }
+                  placeholder="Columns to compare for merging"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.pluralize}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        pluralize: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Pluralize
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 mt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (
+                    commandDialog.isUpdate &&
+                    commandDialog.stepId &&
+                    onStepUpdate
+                  ) {
+                    onStepUpdate(commandDialog.stepId, commandDialog.params);
+                  } else {
+                    const implodeCmd = xanCommands.find(
+                      (c) => c.id === "implode",
+                    );
+                    if (implodeCmd) {
+                      const params = {
+                        ...implodeCmd.parameters.reduce(
+                          (acc, param) => {
+                            acc[param.name] = param.default;
+                            return acc;
+                          },
+                          {} as Record<string, any>,
+                        ),
+                        ...commandDialog.params,
+                      };
+                      onAddCommand(implodeCmd, params);
+                    }
+                  }
+                  setCommandDialog(null);
+                }}
+                disabled={!commandDialog.params.columns}
+              >
+                {commandDialog.isUpdate ? "Update" : "Add"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {commandDialog.type === "input" && (
+          <><ScrollArea className="h-[25vh]">
+            <div className="space-y-3 pr-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Quote Character</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.quote || "\""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, quote: e.target.value },
+                    })}
+                    placeholder="Quote character"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Escape Character</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.escape || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, escape: e.target.value },
+                    })}
+                    placeholder="Escape character"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Comment Character</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.comment || ""}
+                  onChange={(e) => setCommandDialog({
+                    ...commandDialog,
+                    params: { ...commandDialog.params, comment: e.target.value },
+                  })}
+                  placeholder="Skip records starting with this character"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params.tabs}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        tabs: e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  Tabs
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params["no-quoting"]}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        "no-quoting": e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  No Quoting
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params.trim}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        trim: e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  Trim
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params.tolerant}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        tolerant: e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  Tolerant
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params.gzip}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        gzip: e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  Gzip
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params.zstd}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        zstd: e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  Zstd
+                </label>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Skip Lines</label>
+                  <input
+                    type="number"
+                    value={commandDialog.params["skip-lines"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        "skip-lines": e.target.value ? Number(e.target.value) : undefined,
+                      },
+                    })}
+                    placeholder="Skip the first n lines"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Skip Until</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["skip-until"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "skip-until": e.target.value },
+                    })}
+                    placeholder="Skip lines until matches"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Skip While</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["skip-while"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "skip-while": e.target.value },
+                    })}
+                    placeholder="Skip lines while matches"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+              </div>
+            </div>
+          </ScrollArea><div className="flex justify-end gap-2 mt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (commandDialog.isUpdate &&
+                    commandDialog.stepId &&
+                    onStepUpdate) {
+                    onStepUpdate(commandDialog.stepId, commandDialog.params);
+                  } else {
+                    const inputCmd = xanCommands.find(
+                      (c) => c.id === "input"
+                    );
+                    if (inputCmd) {
+                      const params = {
+                        ...inputCmd.parameters.reduce(
+                          (acc, param) => {
+                            acc[param.name] = param.default;
+                            return acc;
+                          },
+                          {} as Record<string, any>
+                        ),
+                        ...commandDialog.params,
+                      };
+                      onAddCommand(inputCmd, params);
+                    }
+                  }
+                  setCommandDialog(null);
+                }}
+              >
+                {commandDialog.isUpdate ? "Update" : "Add"}
+              </Button>
+            </div></>
+        )}
+
+        {commandDialog.type === "scrape" && (
+          <><ScrollArea className="h-[30vh]">
+            <div className="space-y-3 pr-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Evaluate</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.evaluate || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, evaluate: e.target.value },
+                    })}
+                    placeholder="Scraping expression"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Evaluate File</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["evaluate-file"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "evaluate-file": e.target.value },
+                    })}
+                    placeholder="Path to expression file"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Paths</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.paths || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, paths: e.target.value },
+                    })}
+                    placeholder="Input file with document paths"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Path Column</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["path-column"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "path-column": e.target.value },
+                    })}
+                    placeholder="Column name containing paths"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Docs</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.docs || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, docs: e.target.value },
+                    })}
+                    placeholder="CSV file with inline documents"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Doc Column</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["doc-column"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "doc-column": e.target.value },
+                    })}
+                    placeholder="Column name containing documents"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Glob</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.glob || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, glob: e.target.value },
+                    })}
+                    placeholder="Glob pattern"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Input Directory</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["input-dir"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "input-dir": e.target.value },
+                    })}
+                    placeholder="Base path for document paths"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params["stdin-doc"]}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        "stdin-doc": e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  Read from stdin
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params.parallel}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        parallel: e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  Parallel
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Encoding</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.encoding || "utf-8"}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, encoding: e.target.value },
+                    })}
+                    placeholder="File encoding"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Threads</label>
+                  <input
+                    type="number"
+                    value={commandDialog.params.threads || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        threads: e.target.value ? Number(e.target.value) : undefined,
+                      },
+                    })}
+                    placeholder="Number of threads"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Keep Columns</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.keep || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, keep: e.target.value },
+                    })}
+                    placeholder="Columns to keep in output"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">URL Column</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["url-column"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "url-column": e.target.value },
+                    })}
+                    placeholder="Column containing base URL"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">For Each CSS Selector</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.foreach || ""}
+                  onChange={(e) => setCommandDialog({
+                    ...commandDialog,
+                    params: { ...commandDialog.params, foreach: e.target.value },
+                  })}
+                  placeholder="CSS selector for iteration"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+              </div>
+            </div>
+          </ScrollArea><div className="flex justify-end gap-2 mt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (commandDialog.isUpdate &&
+                    commandDialog.stepId &&
+                    onStepUpdate) {
+                    onStepUpdate(commandDialog.stepId, commandDialog.params);
+                  } else {
+                    const scrapeCmd = xanCommands.find(
+                      (c) => c.id === "scrape"
+                    );
+                    if (scrapeCmd) {
+                      const params = {
+                        ...scrapeCmd.parameters.reduce(
+                          (acc, param) => {
+                            acc[param.name] = param.default;
+                            return acc;
+                          },
+                          {} as Record<string, any>
+                        ),
+                        ...commandDialog.params,
+                      };
+                      onAddCommand(scrapeCmd, params);
+                    }
+                  }
+                  setCommandDialog(null);
+                }}
+              >
+                {commandDialog.isUpdate ? "Update" : "Add"}
+              </Button>
+            </div></>
         )}
 
         {commandDialog.type === "fmt" && (
