@@ -708,7 +708,7 @@ function App() {
         executedAt: formatDateTime(new Date()),
         success: allResults.every(r => r.success),
         output: allResults.map(r => r.output).filter(Boolean).join("\n---\n"),
-        edges: currentTab.edges,
+        edges: edges,
         inputPosition: currentTab.inputPosition,
       };
 
@@ -1284,13 +1284,22 @@ function App() {
             id: newTabId,
             name: `${history.name} (History)`,
             pipeline: history.pipeline,
-            edges: history.edges,
+            edges: history.edges || [],
             inputPosition: history.inputPosition,
+            inputFile: history.inputFile,
+            defaultDelimiter: history.defaultDelimiter,
             createdAt: formatDateTime(new Date()),
             updatedAt: formatDateTime(new Date()),
           };
           setTabs((prev) => [...prev, newTab]);
           setSelectedTabId(newTabId);
+
+          if (history.inputFile) {
+            loadCsvData(newTabId, history.inputFile);
+          }
+          if (history.defaultDelimiter) {
+            setDefaultDelimiter(history.defaultDelimiter);
+          }
         }}
         onDeleteHistory={(history) => {
           const updatedHistory = historicalPipelines.filter((h) => h.id !== history.id);
