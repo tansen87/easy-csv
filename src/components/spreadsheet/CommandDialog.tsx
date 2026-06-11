@@ -46,6 +46,7 @@ export type CommandDialogType =
   | "explode"
   | "implode"
   | "input"
+  | "scrape"
   | "fmt"
   | "to"
   | "from"
@@ -172,6 +173,7 @@ export function CommandDialog({
             {commandDialog.type === "explode" && "Explode"}
             {commandDialog.type === "implode" && "Implode"}
             {commandDialog.type === "input" && "Input"}
+            {commandDialog.type === "scrape" && "Scrape"}
             {commandDialog.type === "fmt" && "Format"}
             {commandDialog.type === "to" && "To"}
             {commandDialog.type === "from" && "From"}
@@ -6680,6 +6682,247 @@ export function CommandDialog({
                         ...commandDialog.params,
                       };
                       onAddCommand(inputCmd, params);
+                    }
+                  }
+                  setCommandDialog(null);
+                }}
+              >
+                {commandDialog.isUpdate ? "Update" : "Add"}
+              </Button>
+            </div></>
+        )}
+
+        {commandDialog.type === "scrape" && (
+          <><ScrollArea className="h-[30vh]">
+            <div className="space-y-3 pr-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Evaluate</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.evaluate || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, evaluate: e.target.value },
+                    })}
+                    placeholder="Scraping expression"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Evaluate File</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["evaluate-file"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "evaluate-file": e.target.value },
+                    })}
+                    placeholder="Path to expression file"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Paths</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.paths || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, paths: e.target.value },
+                    })}
+                    placeholder="Input file with document paths"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Path Column</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["path-column"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "path-column": e.target.value },
+                    })}
+                    placeholder="Column name containing paths"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Docs</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.docs || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, docs: e.target.value },
+                    })}
+                    placeholder="CSV file with inline documents"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Doc Column</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["doc-column"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "doc-column": e.target.value },
+                    })}
+                    placeholder="Column name containing documents"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Glob</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.glob || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, glob: e.target.value },
+                    })}
+                    placeholder="Glob pattern"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Input Directory</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["input-dir"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "input-dir": e.target.value },
+                    })}
+                    placeholder="Base path for document paths"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params["stdin-doc"]}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        "stdin-doc": e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  Read from stdin
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params.parallel}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        parallel: e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  Parallel
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Encoding</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.encoding || "utf-8"}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, encoding: e.target.value },
+                    })}
+                    placeholder="File encoding"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Threads</label>
+                  <input
+                    type="number"
+                    value={commandDialog.params.threads || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        threads: e.target.value ? Number(e.target.value) : undefined,
+                      },
+                    })}
+                    placeholder="Number of threads"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Keep Columns</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.keep || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, keep: e.target.value },
+                    })}
+                    placeholder="Columns to keep in output"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">URL Column</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["url-column"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "url-column": e.target.value },
+                    })}
+                    placeholder="Column containing base URL"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">For Each CSS Selector</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.foreach || ""}
+                  onChange={(e) => setCommandDialog({
+                    ...commandDialog,
+                    params: { ...commandDialog.params, foreach: e.target.value },
+                  })}
+                  placeholder="CSS selector for iteration"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+              </div>
+            </div>
+          </ScrollArea><div className="flex justify-end gap-2 mt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (commandDialog.isUpdate &&
+                    commandDialog.stepId &&
+                    onStepUpdate) {
+                    onStepUpdate(commandDialog.stepId, commandDialog.params);
+                  } else {
+                    const scrapeCmd = xanCommands.find(
+                      (c) => c.id === "scrape"
+                    );
+                    if (scrapeCmd) {
+                      const params = {
+                        ...scrapeCmd.parameters.reduce(
+                          (acc, param) => {
+                            acc[param.name] = param.default;
+                            return acc;
+                          },
+                          {} as Record<string, any>
+                        ),
+                        ...commandDialog.params,
+                      };
+                      onAddCommand(scrapeCmd, params);
                     }
                   }
                   setCommandDialog(null);

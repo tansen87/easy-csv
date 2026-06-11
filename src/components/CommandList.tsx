@@ -59,6 +59,7 @@ import {
   LayersMinus,
   FileInput,
   ScanSearch,
+  Pickaxe,
   type LucideIcon,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
@@ -122,6 +123,7 @@ const commandIconMap: Record<string, LucideIcon> = {
   fmt: FileText,
   explode: LayersPlus,
   implode: LayersMinus,
+  scrape: Pickaxe,
   to: MoveRight,
   from: MoveLeft,
   reverse: Repeat,
