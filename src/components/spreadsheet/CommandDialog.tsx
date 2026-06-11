@@ -1092,7 +1092,7 @@ export function CommandDialog({
         )}
 
         {commandDialog.type === "sort" && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Column</label>
@@ -1214,25 +1214,6 @@ export function CommandDialog({
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={commandDialog.params.unstable ?? false}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: {
-                        ...commandDialog.params,
-                        unstable: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-3.5 w-3.5 accent-foreground"
-                />
-                Unstable
-              </label>
-            </div>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
                   checked={commandDialog.params.parallel ?? false}
                   onChange={(e) =>
                     setCommandDialog({
@@ -1281,6 +1262,8 @@ export function CommandDialog({
                 />
                 Columns
               </label>
+            </div>
+            <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
@@ -1314,7 +1297,7 @@ export function CommandDialog({
                 className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
-            <div className="flex justify-end gap-2 mt-2">
+            <div className="flex justify-end gap-2">
               <Button
                 variant="secondary"
                 size="sm"
