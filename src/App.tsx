@@ -552,6 +552,7 @@ function App() {
 
   const handleStepRemove = (stepId: string) => {
     const currentPipeline = getCurrentPipeline();
+    const currentTab = getCurrentTab();
     const removedStep = currentPipeline.find(s => s.id === stepId);
 
     // If removing an output step, clear all output-related notifications
@@ -562,7 +563,11 @@ function App() {
     }
 
     const updatedPipeline = currentPipeline.filter((s) => s.id !== stepId);
-    updateTabPipeline(updatedPipeline);
+    // Also remove edges connected to the removed step
+    const updatedEdges = (currentTab.edges || []).filter(
+      (e) => e.source !== stepId && e.target !== stepId
+    );
+    updateTabPipeline(updatedPipeline, undefined, updatedEdges);
     if (selectedStep?.id === stepId) {
       setSelectedStep(null);
     }
