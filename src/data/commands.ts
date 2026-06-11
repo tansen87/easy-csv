@@ -1829,7 +1829,7 @@ export const xanCommands: XanCommand[] = [
   {
     id: "explode",
     name: "explode",
-    description: "Explode columns into multiple rows",
+    description: "Explode rows based on some column separator",
     category: "Format, convert & recombobulate",
     parameters: [
       {
@@ -1891,6 +1891,47 @@ export const xanCommands: XanCommand[] = [
         description: "When exploding multiple columns at once, pad shorter splits to align them with the longest one instead of erroring",
         required: false,
         default: false,
+      },
+    ],
+  },
+  {
+    id: "implode",
+    name: "implode",
+    description: "Collapse consecutive identical rows based on a diverging column",
+    category: "Format, convert & recombobulate",
+    parameters: [
+      {
+        name: "columns",
+        type: "string",
+        description: "Columns to implode",
+        required: true,
+        isPositional: true,
+      },
+      {
+        name: "sep",
+        type: "string",
+        description: "Separator that will be used to join the diverging cells",
+        required: false,
+        default: "|",
+      },
+      {
+        name: "pluralize",
+        type: "flag",
+        description: "Pluralize (supporting only very simple English-centric cases) the imploded column names. Does not work with -r, --rename.",
+        required: false,
+        default: false,
+      },
+      {
+        name: "rename",
+        type: "string",
+        description: "New name for the diverging column. Does not work with -P, --pluralize.",
+        required: false,
+      },
+      {
+        name: "cmp",
+        type: "string",
+        description: "Restrict the columns to compare to assert whether consecutive rows must be merged",
+        required: false,
       },
     ],
   },

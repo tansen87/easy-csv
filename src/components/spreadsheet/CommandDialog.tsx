@@ -43,6 +43,7 @@ export type CommandDialogType =
   | "behead"
   | "fixlengths"
   | "explode"
+  | "implode"
   | "fmt"
   | "to"
   | "from"
@@ -166,6 +167,7 @@ export function CommandDialog({
             {commandDialog.type === "behead" && "Behead"}
             {commandDialog.type === "fixlengths" && "Fix Lengths"}
             {commandDialog.type === "explode" && "Explode"}
+            {commandDialog.type === "implode" && "Implode"}
             {commandDialog.type === "fmt" && "Format"}
             {commandDialog.type === "to" && "To"}
             {commandDialog.type === "from" && "From"}
@@ -6165,6 +6167,140 @@ export function CommandDialog({
                   }
                   setCommandDialog(null);
                 }}
+              >
+                {commandDialog.isUpdate ? "Update" : "Add"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {commandDialog.type === "implode" && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Columns</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.columns || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        columns: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="Columns to implode"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Separator</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.sep || "|"}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, sep: e.target.value },
+                    })
+                  }
+                  placeholder="Separator for joining cells"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Rename</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.rename || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, rename: e.target.value },
+                    })
+                  }
+                  placeholder="New name for the diverging column"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Compare Columns</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.cmp || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, cmp: e.target.value },
+                    })
+                  }
+                  placeholder="Columns to compare for merging"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.pluralize}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        pluralize: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Pluralize
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 mt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (
+                    commandDialog.isUpdate &&
+                    commandDialog.stepId &&
+                    onStepUpdate
+                  ) {
+                    onStepUpdate(commandDialog.stepId, commandDialog.params);
+                  } else {
+                    const implodeCmd = xanCommands.find(
+                      (c) => c.id === "implode",
+                    );
+                    if (implodeCmd) {
+                      const params = {
+                        ...implodeCmd.parameters.reduce(
+                          (acc, param) => {
+                            acc[param.name] = param.default;
+                            return acc;
+                          },
+                          {} as Record<string, any>,
+                        ),
+                        ...commandDialog.params,
+                      };
+                      onAddCommand(implodeCmd, params);
+                    }
+                  }
+                  setCommandDialog(null);
+                }}
+                disabled={!commandDialog.params.columns}
               >
                 {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
