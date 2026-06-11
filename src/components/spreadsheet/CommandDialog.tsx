@@ -8,6 +8,7 @@ import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 export type CommandDialogType =
   | "search"
+  | "bisect"
   | "filter"
   | "sort"
   | "select"
@@ -133,6 +134,7 @@ export function CommandDialog({
         >
           <h3 className="text-lg font-semibold">
             {commandDialog.type === "search" && "Search"}
+            {commandDialog.type === "bisect" && "Bisect"}
             {commandDialog.type === "filter" && "Filter"}
             {commandDialog.type === "sort" && "Sort"}
             {commandDialog.type === "select" && "Select"}
@@ -777,6 +779,173 @@ export function CommandDialog({
               </Button>
             </div>
           </>
+        )}
+
+        {commandDialog.type === "bisect" && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Column</label>
+                <SearchableSelect
+                  value={commandDialog.params.column}
+                  onChange={(value) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, column: value },
+                    })
+                  }
+                  options={headers.map((header) => ({ label: header, value: header }))}
+                  placeholder="Select column..."
+                  size="md"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Value</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.value || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, value: e.target.value },
+                    })
+                  }
+                  placeholder="Value to search for"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.search}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        search: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Search
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.reverse}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        reverse: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Reverse
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.numeric}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        numeric: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Numeric
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.exclude}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        exclude: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Exclude
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.verbose}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        verbose: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Verbose
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 mt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (
+                    commandDialog.isUpdate &&
+                    commandDialog.stepId &&
+                    onStepUpdate
+                  ) {
+                    onStepUpdate(commandDialog.stepId, commandDialog.params);
+                  } else {
+                    const bisectCmd = xanCommands.find(
+                      (c) => c.id === "bisect",
+                    );
+                    if (bisectCmd) {
+                      const params = {
+                        ...bisectCmd.parameters.reduce(
+                          (acc, param) => {
+                            acc[param.name] = param.default;
+                            return acc;
+                          },
+                          {} as Record<string, any>,
+                        ),
+                        ...commandDialog.params,
+                      };
+                      onAddCommand(bisectCmd, params);
+                    }
+                  }
+                  setCommandDialog(null);
+                }}
+                disabled={!commandDialog.params.column || !commandDialog.params.value}
+              >
+                {commandDialog.isUpdate ? "Update" : "Add"}
+              </Button>
+            </div>
+          </div>
         )}
 
         {commandDialog.type === "filter" && (

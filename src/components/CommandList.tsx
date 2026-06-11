@@ -58,6 +58,7 @@ import {
   LayersPlus,
   LayersMinus,
   FileInput,
+  ScanSearch,
   type LucideIcon,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
@@ -88,13 +89,14 @@ const commandIconMap: Record<string, LucideIcon> = {
   // Search & filter
   search: Search,
   filter: Filter,
-
-  // Sort & deduplicate
   head: ArrowUp,
   tail: ArrowDown,
   slice: Scissors,
   top: Trophy,
   sample: Dices,
+  bisect: ScanSearch,
+
+  // Sort & deduplicate
   sort: ArrowUpDown,
   dedup: Rows3,
   shuffle: Shuffle,
