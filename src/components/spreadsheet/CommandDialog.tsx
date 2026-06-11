@@ -44,6 +44,7 @@ export type CommandDialogType =
   | "fixlengths"
   | "explode"
   | "implode"
+  | "input"
   | "fmt"
   | "to"
   | "from"
@@ -168,6 +169,7 @@ export function CommandDialog({
             {commandDialog.type === "fixlengths" && "Fix Lengths"}
             {commandDialog.type === "explode" && "Explode"}
             {commandDialog.type === "implode" && "Implode"}
+            {commandDialog.type === "input" && "Input"}
             {commandDialog.type === "fmt" && "Format"}
             {commandDialog.type === "to" && "To"}
             {commandDialog.type === "from" && "From"}
@@ -6306,6 +6308,217 @@ export function CommandDialog({
               </Button>
             </div>
           </div>
+        )}
+
+        {commandDialog.type === "input" && (
+          <><ScrollArea className="h-[25vh]">
+            <div className="space-y-3 pr-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Quote Character</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.quote || "\""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, quote: e.target.value },
+                    })}
+                    placeholder="Quote character"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Escape Character</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.escape || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, escape: e.target.value },
+                    })}
+                    placeholder="Escape character"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Comment Character</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.comment || ""}
+                  onChange={(e) => setCommandDialog({
+                    ...commandDialog,
+                    params: { ...commandDialog.params, comment: e.target.value },
+                  })}
+                  placeholder="Skip records starting with this character"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params.tabs}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        tabs: e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  Tabs
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params["no-quoting"]}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        "no-quoting": e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  No Quoting
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params.trim}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        trim: e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  Trim
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params.tolerant}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        tolerant: e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  Tolerant
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params.gzip}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        gzip: e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  Gzip
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params.zstd}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        zstd: e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  Zstd
+                </label>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Skip Lines</label>
+                  <input
+                    type="number"
+                    value={commandDialog.params["skip-lines"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        "skip-lines": e.target.value ? Number(e.target.value) : undefined,
+                      },
+                    })}
+                    placeholder="Skip the first n lines"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Skip Until</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["skip-until"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "skip-until": e.target.value },
+                    })}
+                    placeholder="Skip lines until matches"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Skip While</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["skip-while"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "skip-while": e.target.value },
+                    })}
+                    placeholder="Skip lines while matches"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+              </div>
+            </div>
+          </ScrollArea><div className="flex justify-end gap-2 mt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (commandDialog.isUpdate &&
+                    commandDialog.stepId &&
+                    onStepUpdate) {
+                    onStepUpdate(commandDialog.stepId, commandDialog.params);
+                  } else {
+                    const inputCmd = xanCommands.find(
+                      (c) => c.id === "input"
+                    );
+                    if (inputCmd) {
+                      const params = {
+                        ...inputCmd.parameters.reduce(
+                          (acc, param) => {
+                            acc[param.name] = param.default;
+                            return acc;
+                          },
+                          {} as Record<string, any>
+                        ),
+                        ...commandDialog.params,
+                      };
+                      onAddCommand(inputCmd, params);
+                    }
+                  }
+                  setCommandDialog(null);
+                }}
+              >
+                {commandDialog.isUpdate ? "Update" : "Add"}
+              </Button>
+            </div></>
         )}
 
         {commandDialog.type === "fmt" && (

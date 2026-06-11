@@ -57,6 +57,7 @@ import {
   History,
   LayersPlus,
   LayersMinus,
+  FileInput,
   type LucideIcon,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
@@ -114,6 +115,7 @@ const commandIconMap: Record<string, LucideIcon> = {
   // Format, convert & recombobulate
   rename: Type,
   behead: Minus,
+  input: FileInput,
   fixlengths: Ruler,
   fmt: FileText,
   explode: LayersPlus,
