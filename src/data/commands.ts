@@ -161,13 +161,6 @@ export const xanCommands: XanCommand[] = [
         default: false,
       },
       {
-        name: "color",
-        type: "string",
-        description: "When to color the output using ANSI escape codes",
-        required: false,
-        default: "auto",
-      },
-      {
         name: "split",
         type: "string",
         description: "Split columns containing multiple values separated by --sep to be displayed as a list",
@@ -214,28 +207,24 @@ export const xanCommands: XanCommand[] = [
         type: "string",
         description: "Name of the represented field when no field column is present",
         required: false,
-        default: "unknown",
       },
       {
         name: "field",
         type: "string",
         description: "Name of the field column",
         required: false,
-        default: "field",
       },
       {
         name: "label",
         type: "string",
         description: "Name of the label column",
         required: false,
-        default: "value",
       },
       {
         name: "value",
         type: "string",
         description: "Name of the count column",
         required: false,
-        default: "count",
       },
       {
         name: "bar-size",
@@ -269,13 +258,6 @@ export const xanCommands: XanCommand[] = [
         type: "string",
         description: "Name of the categorical column that will be used to assign distinct colors per category",
         required: false,
-      },
-      {
-        name: "color",
-        type: "string",
-        description: "When to color the output using ANSI escape codes",
-        required: false,
-        default: "auto",
       },
       {
         name: "hide-percent",
@@ -1542,7 +1524,27 @@ export const xanCommands: XanCommand[] = [
       {
         name: "groupby",
         type: "string",
-        description: "If given, resets the computed aggregations each time the given selection yields a new identity",
+        description: "If given, runs the aggregation per group symbolized by given column selection.",
+        required: false,
+      },
+      {
+        name: "sorted",
+        type: "flag",
+        description: "",
+        required: false,
+        default: false,
+      },
+      {
+        name: "overwrite",
+        type: "flag",
+        description: "",
+        required: false,
+        default: false,
+      },
+      {
+        name: "along-columns",
+        type: "string",
+        description: "Repeat same expression over a selection of columns at once",
         required: false,
       },
 
@@ -2463,14 +2465,12 @@ export const xanCommands: XanCommand[] = [
         type: "string",
         description: "Name for the column that will contain unpivoted column names",
         required: false,
-        default: "name",
       },
       {
         name: "value-column",
         type: "string",
         description: "Name for the column that will contain unpivoted column values",
         required: false,
-        default: "value",
       },
 
     ],

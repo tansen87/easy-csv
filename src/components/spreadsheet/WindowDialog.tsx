@@ -232,11 +232,12 @@ export function WindowDialog({
                   <div className="flex gap-2 items-end">
                     <div className="flex-1 space-y-1">
                       <label className="text-xs font-medium text-muted-foreground">Column</label>
-                      <SearchableSelect
+                      <input
+                        type="text"
                         value={entry.column}
-                        onChange={(value) => updateEntry(index, "column", value)}
-                        options={headers.map(h => ({ value: h, label: h }))}
-                        placeholder="Select column..."
+                        onChange={(e) => updateEntry(index, "column", e.target.value)}
+                        placeholder="Column..."
+                        className="w-full h-8 px-2 text-xs border rounded bg-background"
                       />
                     </div>
                     <div className="flex-1 space-y-1">
