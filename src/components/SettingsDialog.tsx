@@ -39,7 +39,7 @@ export function SettingsDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
         className="absolute inset-0 bg-black/20 backdrop-blur-none"
-        onClick={onClose}
+        onContextMenu={(e) => e.preventDefault()}
       />
       <div
         className="relative bg-card rounded-lg shadow-xl w-full max-w-2xl h-[48vh] overflow-hidden"

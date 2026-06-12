@@ -31,7 +31,7 @@ const iconColorMap = {
   info: "text-blue-500",
 };
 
-export function Toast({ message, type = "info", onClose, duration = 3000 }: ToastProps) {
+export function Toast({ message, type = "info", onClose, duration = 5000 }: ToastProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {

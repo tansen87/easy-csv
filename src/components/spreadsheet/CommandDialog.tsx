@@ -117,7 +117,11 @@ export function CommandDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black/20 backdrop-blur-none"
+        onContextMenu={(e) => e.preventDefault()}
+      />
       <div
         className="absolute bg-card border rounded-xl shadow-xl w-full max-w-2xl p-4"
         style={{
@@ -126,6 +130,7 @@ export function CommandDialog({
           transform: "translate(-50%, -50%)",
         }}
         onContextMenu={(e) => e.preventDefault()}
+        onClick={(e) => e.stopPropagation()}
       >
         <div
           className="flex items-center justify-between mb-2 cursor-move select-none"
@@ -2525,7 +2530,7 @@ export function CommandDialog({
         {commandDialog.type === "groupby" && (
           <>
             <ScrollArea className="h-[24vh]">
-              <div className="space-y-3 pr-4">
+              <div className="space-y-3 pr-2.5">
                 <div className="space-y-3">
                   <div>
                     <label className="text-sm font-medium">Columns</label>
@@ -4120,7 +4125,7 @@ export function CommandDialog({
 
         {commandDialog.type === "transform" && (
           <>
-            <div className="space-y-3 pr-4">
+            <div className="space-y-3">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium">Column</label>
@@ -5281,7 +5286,7 @@ export function CommandDialog({
         {commandDialog.type === "join" && (
           <>
             <ScrollArea className="h-[30vh]">
-              <div className="space-y-3 pr-4">
+              <div className="space-y-3 pr-2.5">
                 <div className="grid grid-cols-4 gap-4">
                   <div className="col-span-1">
                     <label className="text-sm font-medium">Columns</label>
@@ -5687,7 +5692,7 @@ export function CommandDialog({
         {commandDialog.type === "merge" && (
           <>
             <ScrollArea className="h-[30vh]">
-              <div className="space-y-3 pr-4">
+              <div className="space-y-3 pr-2.5">
                 <div>
                   <label className="text-sm font-medium">Inputs</label>
                   <input
@@ -6517,7 +6522,7 @@ export function CommandDialog({
 
         {commandDialog.type === "input" && (
           <><ScrollArea className="h-[25vh]">
-            <div className="space-y-3 pr-4">
+            <div className="space-y-3 pr-2.5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium">Quote Character</label>
@@ -6730,7 +6735,7 @@ export function CommandDialog({
 
         {commandDialog.type === "scrape" && (
           <><ScrollArea className="h-[30vh]">
-            <div className="space-y-3 pr-4">
+            <div className="space-y-3 pr-2.5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium">Evaluate</label>
