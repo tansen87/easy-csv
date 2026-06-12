@@ -638,6 +638,7 @@ function App() {
       const allResults: { success: boolean; output?: string; error?: string; branchSteps: string[] }[] = [];
 
       // Execute each branch sequentially
+      let pipelineFailed = false;
       for (let i = 0; i < branches.length; i++) {
         const branchSteps = branches[i];
         if (branchSteps.length === 0) continue;
@@ -652,8 +653,8 @@ function App() {
             isPositional: param.isPositional,
           }));
 
-          // Add output parameter to the last command if output path is specified
-          if (index === branchSteps.length - 1 && outputPath) {
+          // Add output parameter to the last command only if pipeline hasn't failed
+          if (index === branchSteps.length - 1 && outputPath && !pipelineFailed) {
             params.push({
               name: "output",
               value: outputPath,
@@ -687,6 +688,7 @@ function App() {
           }
         } else {
           addLog("error", `${result.error}`);
+          pipelineFailed = true;
         }
       }
 
@@ -735,7 +737,10 @@ function App() {
       if (successCount === branches.length) {
         addLog("success", `All ${branches.length} branch(es) executed successfully`);
       } else {
-        showToastRef.current(`${successCount}/${branches.length} branch(es) succeeded`, 'warning');
+        const failedMsg = pipelineFailed
+          ? `Pipeline failed - check logs for errors`
+          : `${successCount}/${branches.length} branch(es) succeeded`;
+        showToastRef.current(failedMsg, pipelineFailed ? 'error' : 'warning');
       }
     } catch (error) {
       showToastRef.current(`${error}`, 'error');
