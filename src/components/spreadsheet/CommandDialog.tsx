@@ -69,7 +69,6 @@ export interface CommandDialogState {
 
 interface CommandDialogProps {
   commandDialog: CommandDialogState;
-  headers: string[];
   onAddCommand: (
     command: XanCommand,
     initialParameters?: Record<string, any>,
@@ -80,7 +79,6 @@ interface CommandDialogProps {
 
 export function CommandDialog({
   commandDialog,
-  headers,
   onAddCommand,
   onStepUpdate,
   setCommandDialog,

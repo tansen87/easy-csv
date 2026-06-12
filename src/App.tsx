@@ -768,14 +768,6 @@ function App() {
       }
     });
 
-    // Find starting nodes (nodes that are not targets of any edge)
-    const targetIds = new Set(edges.map(e => e.target));
-    const startNodes = steps.filter(step => !targetIds.has(step.id)).map(step => step.id);
-
-    if (startNodes.length === 0) {
-      return steps.map(step => [step]);
-    }
-
     // Build all paths using DFS
     const branches: PipelineStep[][] = [];
 
@@ -795,6 +787,24 @@ function App() {
         dfs(nextId, newPath);
       });
     };
+
+    // Find starting nodes (nodes that are not targets of any edge)
+    const targetIds = new Set(edges.map(e => e.target));
+    const startNodes = steps.filter(step => !targetIds.has(step.id)).map(step => step.id);
+
+    if (startNodes.length === 0) {
+      // 如果没有找到起始节点,检查是否有从 table-node 出发的边
+      const tableEdges = adjacency.get("table-node") || [];
+      if (tableEdges.length > 0) {
+        // 从 table-node 的直接后继节点开始构建分支
+        tableEdges.forEach(startId => {
+          dfs(startId, []);
+        });
+        return branches;
+      }
+      // 如果也没有从 table-node 出发的边,每个步骤独立执行
+      return steps.map(step => [step]);
+    }
 
     startNodes.forEach(startId => {
       dfs(startId, []);
@@ -1024,14 +1034,14 @@ function App() {
               )}
             </div>
             <button
-                onClick={() => {
-                  setShowSettingsDialog(true);
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-primary hover:text-primary hover:bg-primary/10 transition-colors"
-              >
-                <Settings className="h-3.5 w-3.5" />
-                Settings
-              </button>
+              onClick={() => {
+                setShowSettingsDialog(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-primary hover:text-primary hover:bg-primary/10 transition-colors"
+            >
+              <Settings className="h-3.5 w-3.5" />
+              Settings
+            </button>
 
             {/* Undo/Redo buttons */}
             <div className="flex items-center">

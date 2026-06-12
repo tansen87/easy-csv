@@ -591,7 +591,6 @@ export function SpreadsheetView({
       {commandDialog && (
         <CommandDialog
           commandDialog={commandDialog}
-          headers={headers}
           onAddCommand={onAddCommand}
           onStepUpdate={onStepUpdate}
           setCommandDialog={setCommandDialog}
