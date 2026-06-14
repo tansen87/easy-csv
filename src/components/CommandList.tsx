@@ -14,7 +14,7 @@ import {
   BarChart3,
   CheckCheck,
   Trash2,
-  GitCompare,
+  SquareFunction,
   RefreshCw,
   ListOrdered,
   PaintBucket,
@@ -60,6 +60,7 @@ import {
   FileInput,
   ScanSearch,
   Pickaxe,
+  ChartBar,
   type LucideIcon,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
@@ -74,13 +75,14 @@ const commandIconMap: Record<string, LucideIcon> = {
   view: Eye,
   headers: List,
   count: Hash,
-  flatten: ArrowDown,
+  flatten: Minus,
   hist: BarChart3,
+  plot: ChartBar,
 
   // Add, transform, drop and move columns
   select: CheckCheck,
   drop: Trash2,
-  map: GitCompare,
+  map: SquareFunction,
   transform: RefreshCw,
   enum: ListOrdered,
   fill: PaintBucket,
