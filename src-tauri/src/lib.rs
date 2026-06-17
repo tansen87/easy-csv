@@ -1,11 +1,11 @@
 use std::fs::File;
-use std::io::{Read, Write};
-use std::process::Command;
-use std::sync::{Arc, Mutex};
-use std::{path::Path, process::Stdio, thread};
-
+use std::io::{BufReader, Read, Write};
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
+use std::path::Path;
+use std::process::{Command, Stdio};
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
@@ -62,9 +62,6 @@ async fn read_csv_file(
     delimiter: String,
     limit: Option<usize>,
 ) -> Result<CsvData, String> {
-    use std::fs::File;
-    use std::io::BufReader;
-
     let file = File::open(&file_path).map_err(|e| format!("Failed to open file: {}", e))?;
 
     let mut rdr = csv::ReaderBuilder::new()
@@ -369,15 +366,6 @@ async fn execute_xan_pipeline(
                 });
             }
 
-            // Wait for all pipe threads to finish and check for errors
-            for t in pipe_threads {
-                match t.join() {
-                    Ok(Ok(())) => {}
-                    Ok(Err(e)) => return Err(format!("Pipe thread error: {}", e)),
-                    Err(_) => return Err("Pipe thread panicked".to_string()),
-                }
-            }
-
             // Get output from last child using non-blocking approach
             let mut last_child = children.pop().unwrap();
             let last_stdout = output_handles.pop().unwrap();
@@ -390,17 +378,114 @@ async fn execute_xan_pipeline(
                 buf
             });
 
-            // Wait for last child to finish
-            let status = last_child
-                .wait()
-                .map_err(|e| format!("Wait for final command failed: {}", e))?;
+            // Monitor middle commands while waiting for last child
+            // If any middle command fails, kill the last child to break deadlock
+            let mut final_status = None;
+            let mut elapsed = std::time::Duration::from_secs(0);
+            let timeout = std::time::Duration::from_secs(120); // 2 minutes max
+
+            while final_status.is_none() && elapsed < timeout {
+                // Check if last child has exited
+                match last_child.try_wait() {
+                    Ok(Some(status)) => {
+                        final_status = Some(status);
+                        break;
+                    }
+                    Ok(None) => {
+                        // Last child still running, check middle commands
+                        let mut any_failed = false;
+                        for child in &mut children {
+                            match child.try_wait() {
+                                Ok(Some(child_status)) => {
+                                    if !child_status.success() {
+                                        any_failed = true;
+                                        if final_status.is_none() {
+                                            final_status = Some(child_status);
+                                        }
+                                    }
+                                }
+                                Ok(None) => {} // Still running
+                                Err(_) => {}
+                            }
+                        }
+
+                        // If any middle command failed
+                        if any_failed {
+                            // Kill all middle commands to unblock the pipeline
+                            // This will cause pipe threads to exit (BrokenPipe)
+                            // and eventually close last_child's stdin
+                            for child in &mut children {
+                                let _ = child.kill();
+                            }
+
+                            // Wait for all middle commands to exit
+                            for child in &mut children {
+                                let _ = child.wait();
+                            }
+
+                            // Now wait for last child to exit naturally
+                            // Give it enough time to finish writing (especially for output command)
+                            let mut wait_elapsed = std::time::Duration::from_secs(0);
+                            let wait_timeout = std::time::Duration::from_secs(10);
+                            while wait_elapsed < wait_timeout {
+                                match last_child.try_wait() {
+                                    Ok(Some(status)) => {
+                                        if final_status.is_none() {
+                                            final_status = Some(status);
+                                        }
+                                        break;
+                                    }
+                                    Ok(None) => {
+                                        thread::sleep(std::time::Duration::from_millis(100));
+                                        wait_elapsed += std::time::Duration::from_millis(100);
+                                    }
+                                    Err(_) => break,
+                                }
+                            }
+
+                            // If last child still hasn't exited, kill it
+                            if final_status.is_none() {
+                                let _ = last_child.kill();
+                                if let Ok(status) = last_child.wait() {
+                                    final_status = Some(status);
+                                }
+                            }
+                            break;
+                        }
+
+                        thread::sleep(std::time::Duration::from_millis(50));
+                        elapsed += std::time::Duration::from_millis(50);
+                    }
+                    Err(e) => {
+                        eprintln!("Error checking last child status: {}", e);
+                        break;
+                    }
+                }
+            }
+
+            // If timeout, kill the last child
+            let final_status = if let Some(status) = final_status {
+                status
+            } else {
+                let _ = last_child.kill();
+                last_child
+                    .wait()
+                    .unwrap_or_else(|_| std::process::Command::new("").status().unwrap())
+            };
 
             // Get stdout from thread
             let stdout = stdout_thread.join().unwrap_or_default();
 
-            // Wait for all other children without blocking on output
+            // Clean up remaining children
             for mut child in children {
+                let _ = child.kill();
                 let _ = child.wait();
+            }
+
+            // Wait for all pipe threads to finish
+            // They should exit after children are killed (BrokenPipe)
+            for t in pipe_threads {
+                let _ = t.join();
             }
 
             // Wait for all stderr threads and combine stderr
@@ -410,7 +495,7 @@ async fn execute_xan_pipeline(
             let combined_stderr = all_stderr.lock().unwrap().join(&b"\n"[..]);
 
             Ok(std::process::Output {
-                status,
+                status: final_status,
                 stdout,
                 stderr: combined_stderr,
             })
@@ -517,7 +602,10 @@ async fn get_xan_version() -> Result<String, String> {
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
         let code = output.status.code().unwrap_or(-1);
-        Err(format!("xan --version failed with exit code {}: {}", code, stderr))
+        Err(format!(
+            "xan --version failed with exit code {}: {}",
+            code, stderr
+        ))
     }
 }
 
@@ -613,7 +701,10 @@ async fn set_window_title(window: tauri::Window, title: String) -> Result<(), St
     match window.set_title(&title) {
         Ok(_) => Ok(()),
         Err(e) => {
-            eprintln!("Warning: Failed to set window title (window may not be ready yet): {}", e);
+            eprintln!(
+                "Warning: Failed to set window title (window may not be ready yet): {}",
+                e
+            );
             Ok(())
         }
     }
