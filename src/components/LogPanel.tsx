@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ResizeHandle } from "@/components/ui/resize-handle";
-import { Trash2, Info, CheckCircle, AlertCircle, XCircle, TextQuote, FileText, Copy, X, LoaderPinwheel } from "lucide-react";
+import { Trash2, Info, CheckCircle, AlertCircle, XCircle, TextQuote, FileText, Copy, X } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { LogEntry } from "@/types/xan";
 import { ToastType } from "@/components/Toast";
@@ -13,10 +13,9 @@ interface LogPanelProps {
   showToastRef?: React.RefObject<(message: string, type: ToastType) => void>;
   isVisible: boolean;
   onClose: () => void;
-  isExecuting?: boolean;
 }
 
-export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose, isExecuting = false }: LogPanelProps) {
+export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose }: LogPanelProps) {
   const [height, setHeight] = useState<number>(300);
   const isDraggingRef = useRef(false);
   const dragStateRef = useRef({
@@ -159,9 +158,6 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose, isEx
             <FileText className="h-3.5 w-3.5" />
             Logs ({logs.length})
           </div>
-          {isExecuting && (
-            <LoaderPinwheel className="h-4 w-4 animate-spin" />
-          )}
         </div>
         <div className="flex items-center gap-1">
           <Button

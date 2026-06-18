@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { X, Rows3, Repeat2, Repeat, FolderOpen, FileUp, Star } from "lucide-react";
-import { ToastContainer, ToastType } from "@/components/Toast";
 import { PipelineStep, PipelineEdge, XanCommand, PipelineTab } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 import { ContextMenu } from "@/components/spreadsheet/ContextMenu";
@@ -38,6 +37,8 @@ interface SpreadsheetViewProps {
   onImportPipeline?: () => void;
   onOpenUrl?: (url: string) => void;
   showMinimap?: boolean;
+  branchProgress?: { current: number; total: number; name: string; status: "executing" | "completed" | "error" } | null;
+  showProgressBar?: boolean;
 }
 
 export function SpreadsheetView({
@@ -59,6 +60,8 @@ export function SpreadsheetView({
   onImportPipeline,
   onOpenUrl,
   showMinimap,
+  branchProgress,
+  showProgressBar,
 }: SpreadsheetViewProps) {
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
   const [contextMenu, setContextMenu] = useState<{
@@ -81,7 +84,6 @@ export function SpreadsheetView({
   const [padDialog, setPadDialog] = useState<{ col: number; x: number; y: number; padType: string } | null>(null);
   const [windowDialog, setWindowDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [renamedColumns, setRenamedColumns] = useState<Record<number, string>>({});
-  const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
 
   const currentTab = tabs.find((tab) => tab.id === selectedTabId);
   const data = currentTab?.data || [];
@@ -93,26 +95,6 @@ export function SpreadsheetView({
   const inputFile = currentTab?.inputFile || "";
   const edges = currentTab?.edges || [];
   const inputPosition = currentTab?.inputPosition;
-
-  const showToastRef = useRef<(message: string, type: ToastType) => void>(() => { });
-  const removeToastRef = useRef<(id: string) => void>(() => { });
-
-  const showToast = useCallback((message: string, type: ToastType = "info") => {
-    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      removeToastRef.current(id);
-    }, 3000);
-  }, []);
-
-  const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  }, []);
-
-  useEffect(() => {
-    showToastRef.current = showToast;
-    removeToastRef.current = removeToast;
-  }, [showToast, removeToast]);
 
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
@@ -177,12 +159,9 @@ export function SpreadsheetView({
         ).join(",");
         onAddCommand(renameCommand, { columns });
         setRenamedColumns({});
-        showToast("Column renames applied to pipeline", "success");
       }
     }
-  }, [renamedColumns, headers, onAddCommand, showToast]);
-
-
+  }, [renamedColumns, headers, onAddCommand]);
 
   const handleDedup = useCallback(() => {
     if (!operationDialog || !onAddCommand) return;
@@ -317,8 +296,6 @@ export function SpreadsheetView({
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  
-
   if (!inputFile) {
     return (
       <div className="h-full flex flex-col bg-background">
@@ -444,7 +421,7 @@ export function SpreadsheetView({
 
   return (
     <div className="h-full flex flex-col bg-background">
-      <div className="bg-transparent" onContextMenu={(e) => e.preventDefault()}>
+      <div className="bg-transparent relative" onContextMenu={(e) => e.preventDefault()}>
         <div className="h-[48px] px-4 flex items-center">
           <ScrollArea className="h-full flex-1">
             <div className="flex items-center gap-2 pr-4">
@@ -510,6 +487,38 @@ export function SpreadsheetView({
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </div>
+
+        {/* Progress bar in center of Tab bar */}
+        {showProgressBar && branchProgress && (
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg shadow-md pointer-events-auto">
+              <span className="text-xs font-medium text-muted-foreground">
+                Branch {branchProgress.current}/{branchProgress.total}
+              </span>
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${branchProgress.status === "completed"
+                ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                : branchProgress.status === "executing"
+                  ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                  : "bg-red-500/10 text-red-600 dark:text-red-400"
+                }`}>
+                {branchProgress.status === "executing" && (
+                  <div className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                )}
+                {branchProgress.status === "completed" && (
+                  <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+                {branchProgress.status === "error" && (
+                  <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                )}
+                <span className="max-w-[240px] truncate">{branchProgress.name}</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 relative overflow-hidden">
@@ -712,8 +721,6 @@ export function SpreadsheetView({
           </div>
         </div>
       )}
-
-      <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
     </div>
   );
 }

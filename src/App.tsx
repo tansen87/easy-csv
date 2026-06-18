@@ -86,6 +86,9 @@ function App() {
   const [activeMenu, setActiveMenu] = useState<"file" | "settings" | null>(null);
   const [isMenuActivated, setIsMenuActivated] = useState<boolean>(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState<boolean>(false);
+  const [showProgressBar, setShowProgressBar] = useState<boolean>(false);
+  const [branchProgress, setBranchProgress] = useState<{ current: number; total: number; name: string; status: "executing" | "completed" | "error" } | null>(null);
+  const progressHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Undo/Redo history state
   const [undoStack, setUndoStack] = useState<Array<{ pipeline: PipelineStep[]; edges: PipelineEdge[]; inputPosition?: { x: number; y: number } }>>([]);
@@ -616,6 +619,13 @@ function App() {
 
     setIsExecuting(true);
     setShowLogPanel(true);
+    setShowProgressBar(true);
+
+    // Clear any existing hide timer
+    if (progressHideTimerRef.current) {
+      clearTimeout(progressHideTimerRef.current);
+      progressHideTimerRef.current = null;
+    }
 
     try {
       // Check if there's an output command in the pipeline
@@ -644,7 +654,11 @@ function App() {
         if (branchSteps.length === 0) continue;
 
         const branchStepNames = branchSteps.map(s => s.alias || s.command.name);
-        addLog("info", `Executing branch ${i + 1}: ${branchStepNames.join(" -> ")}`);
+        const branchName = branchStepNames.join(" -> ");
+        addLog("info", `Executing branch ${i + 1}/${branches.length}: ${branchName}`);
+
+        // Update branch progress
+        setBranchProgress({ current: i + 1, total: branches.length, name: branchName, status: "executing" });
 
         const commands = branchSteps.map((step, index) => {
           const params = step.command.parameters.map((param) => ({
@@ -680,6 +694,9 @@ function App() {
           error: result.error,
           branchSteps: branchStepNames,
         });
+
+        // Update branch progress based on result
+        setBranchProgress({ current: i + 1, total: branches.length, name: branchName, status: result.success ? "completed" : "error" });
 
         if (result.success) {
           if (result.output) {
@@ -736,16 +753,16 @@ function App() {
       const successCount = allResults.filter(r => r.success).length;
       if (successCount === branches.length) {
         addLog("success", `All ${branches.length} branch(es) executed successfully`);
-      } else {
-        const failedMsg = pipelineFailed
-          ? `Pipeline failed - check logs for errors`
-          : `${successCount}/${branches.length} branch(es) succeeded`;
-        showToastRef.current(failedMsg, pipelineFailed ? 'error' : 'warning');
       }
     } catch (error) {
       showToastRef.current(`${error}`, 'error');
     } finally {
       setIsExecuting(false);
+      // Auto-hide progress bar after 5 seconds
+      progressHideTimerRef.current = setTimeout(() => {
+        setShowProgressBar(false);
+        setBranchProgress(null);
+      }, 5000);
     }
   };
 
@@ -1103,8 +1120,7 @@ function App() {
         </div>
 
         {/* Center: Empty */}
-        <div className="flex items-center gap-3 flex-1 justify-center">
-        </div>
+        <div className="flex-1" />
 
         <div className="flex items-center gap-2">
           {isXanInstalled === null ? (
@@ -1227,6 +1243,8 @@ function App() {
               onImportPipeline={handleImportPipeline}
               onOpenUrl={handleOpenUrl}
               showMinimap={showMinimap}
+              branchProgress={branchProgress}
+              showProgressBar={showProgressBar}
             />
           </div>
         </main>
@@ -1332,7 +1350,6 @@ function App() {
         showToastRef={showToastRef}
         isVisible={showLogPanel}
         onClose={() => setShowLogPanel(false)}
-        isExecuting={isExecuting}
       />
 
       {/* Help Dialog */}
