@@ -1315,7 +1315,7 @@ function App() {
           const newTabId = `tab-${Date.now()}`;
           const newTab: PipelineTab = {
             id: newTabId,
-            name: `${history.name} (History)`,
+            name: `${history.name}`,
             pipeline: history.pipeline,
             edges: history.edges || [],
             inputPosition: history.inputPosition,
@@ -1347,7 +1347,6 @@ function App() {
       <LogPanel
         logs={logs}
         onClear={handleClearLogs}
-        showToastRef={showToastRef}
         isVisible={showLogPanel}
         onClose={() => setShowLogPanel(false)}
       />

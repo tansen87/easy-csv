@@ -1,22 +1,21 @@
+import { Trash2, Info, CheckCircle, AlertCircle, XCircle, TextQuote, FileText, Copy, Check, X } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ResizeHandle } from "@/components/ui/resize-handle";
-import { Trash2, Info, CheckCircle, AlertCircle, XCircle, TextQuote, FileText, Copy, X } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
 import { LogEntry } from "@/types/xan";
-import { ToastType } from "@/components/Toast";
 
 interface LogPanelProps {
   logs: LogEntry[];
   onClear: () => void;
-  showToastRef?: React.RefObject<(message: string, type: ToastType) => void>;
   isVisible: boolean;
   onClose: () => void;
 }
 
-export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose }: LogPanelProps) {
+export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
   const [height, setHeight] = useState<number>(300);
+  const [copiedLogId, setCopiedLogId] = useState<string | null>(null);
   const isDraggingRef = useRef(false);
   const dragStateRef = useRef({
     startX: 0,
@@ -214,11 +213,20 @@ export function LogPanel({ logs, onClear, showToastRef, isVisible, onClose }: Lo
                           onClick={(e) => {
                             e.stopPropagation();
                             navigator.clipboard.writeText(log.message);
-                            showToastRef?.current?.("Copied!", "success");
+                            setCopiedLogId(log.id);
+                            setTimeout(() => setCopiedLogId(null), 3000);
                           }}
                           className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-primary/10"
                         >
-                          <Copy className="text-muted-foreground/70" />
+                          {copiedLogId === log.id ? (
+                            <>
+                              <Check className="text-green-500" />
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="text-muted-foreground" />
+                            </>
+                          )}
                         </Button>
                       </div>
                       <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-foreground/90 font-mono">
