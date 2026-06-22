@@ -42,8 +42,8 @@ export interface PipelineTab {
   id: string;
   name: string;
   pipeline: PipelineStep[];
-  createdAt: string;
-  updatedAt: string;
+  created: string;
+  updated: string;
   data?: string[][];
   headers?: string[];
   inputFile?: string;
@@ -70,8 +70,8 @@ export interface Workspace {
   version: string;
   name: string;
   description?: string;
-  createdAt: string;
-  updatedAt: string;
+  created: string;
+  updated: string;
   pipeline: PipelineStep[];
   inputFile: string;
   defaultDelimiter: string;
