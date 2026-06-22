@@ -197,38 +197,6 @@ export function SpreadsheetView({
     closeOperationDialog();
   }, [onAddCommand, closeOperationDialog]);
 
-  const handleContextMenuDedup = useCallback((col: number) => {
-    if (!onAddCommand) return;
-    const dedupCommand = xanCommands.find((cmd) => cmd.id === "dedup");
-    if (dedupCommand) {
-      const columnName = headers[col];
-      onAddCommand(dedupCommand, {
-        select: columnName,
-        output: "",
-      });
-    }
-  }, [onAddCommand, headers]);
-
-  const handleContextMenuTranspose = useCallback(() => {
-    if (!onAddCommand) return;
-    const transposeCommand = xanCommands.find((cmd) => cmd.id === "transpose");
-    if (transposeCommand) {
-      onAddCommand(transposeCommand, {
-        output: "",
-      });
-    }
-  }, [onAddCommand]);
-
-  const handleContextMenuReverse = useCallback(() => {
-    if (!onAddCommand) return;
-    const reverseCommand = xanCommands.find((cmd) => cmd.id === "reverse");
-    if (reverseCommand) {
-      onAddCommand(reverseCommand, {
-        output: "",
-      });
-    }
-  }, [onAddCommand]);
-
   const handleTextTransform = useCallback((col: number, transformType: string) => {
     if (!onAddCommand) return;
     const mapCommand = xanCommands.find((cmd) => cmd.id === "map");
@@ -553,9 +521,6 @@ export function SpreadsheetView({
           onOpenWindowDialog={(col, x, y) => setWindowDialog({ col, x, y })}
           onOpenPadDialog={(col, x, y, padType) => setPadDialog({ col, x, y, padType })}
           onSort={handleQuickSort}
-          onDedup={handleContextMenuDedup}
-          onTranspose={handleContextMenuTranspose}
-          onReverse={handleContextMenuReverse}
           onTextTransform={handleTextTransform}
           onNumberTransform={handleNumberTransform}
           onTableRename={handleTableRename}
@@ -589,9 +554,6 @@ export function SpreadsheetView({
           onOpenWindowDialog={(col, x, y) => setWindowDialog({ col, x, y })}
           onOpenPadDialog={(col, x, y, padType) => setPadDialog({ col, x, y, padType })}
           onSort={handleQuickSort}
-          onDedup={handleContextMenuDedup}
-          onTranspose={handleContextMenuTranspose}
-          onReverse={handleContextMenuReverse}
           onTextTransform={handleTextTransform}
           onNumberTransform={handleNumberTransform}
         />

@@ -410,9 +410,6 @@ interface FlowPanelProps {
   onOpenWindowDialog: (col: number, x: number, y: number) => void;
   onOpenPadDialog: (col: number, x: number, y: number, padType: string) => void;
   onSort: (col: number, order: "asc" | "desc", numeric: boolean) => void;
-  onDedup: (col: number) => void;
-  onTranspose: (col: number) => void;
-  onReverse: (col: number) => void;
   onTextTransform: (col: number, transformType: string) => void;
   onNumberTransform: (col: number, transformType: string) => void;
   onTableRename: (col: number, newName: string) => void;
@@ -618,9 +615,6 @@ export function FlowPanel({
   onOpenWindowDialog,
   onOpenPadDialog,
   onSort,
-  onDedup,
-  onTranspose,
-  onReverse,
   onTextTransform,
   onNumberTransform,
   onTableRename,
@@ -1758,9 +1752,6 @@ export function FlowPanel({
           onOpenWindowDialog={onOpenWindowDialog}
           onOpenPadDialog={onOpenPadDialog}
           onSort={onSort}
-          onDedup={onDedup}
-          onTranspose={onTranspose}
-          onReverse={onReverse}
           onTextTransform={onTextTransform}
           onNumberTransform={onNumberTransform}
         />

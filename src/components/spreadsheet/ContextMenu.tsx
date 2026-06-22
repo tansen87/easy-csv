@@ -10,10 +10,6 @@ import {
   ArrowUp01,
   ArrowDown01,
   Grid3X3,
-  Rows3,
-  Repeat,
-  Repeat2,
-  Settings2,
   Calendar,
   Scissors,
   Slice,
@@ -55,9 +51,6 @@ interface ContextMenuProps {
   onOpenWindowDialog: (col: number, x: number, y: number) => void;
   onOpenPadDialog: (col: number, x: number, y: number, padType: string) => void;
   onSort: (col: number, order: "asc" | "desc", numeric: boolean) => void;
-  onDedup: (col: number) => void;
-  onTranspose: (col: number) => void;
-  onReverse: (col: number) => void;
   onTextTransform: (col: number, transformType: string) => void;
   onNumberTransform: (col: number, transformType: string) => void;
 }
@@ -73,9 +66,6 @@ export function ContextMenu({
   onOpenWindowDialog,
   onOpenPadDialog,
   onSort,
-  onDedup,
-  onTranspose,
-  onReverse,
   onTextTransform,
   onNumberTransform,
 }: ContextMenuProps) {
@@ -149,12 +139,6 @@ export function ContextMenu({
     { label: "Z → A", icon: ArrowUpAZ, order: "desc" as const, numeric: false },
     { label: "0 → 9", icon: ArrowDown01, order: "asc" as const, numeric: true },
     { label: "9 → 0", icon: ArrowUp01, order: "desc" as const, numeric: true },
-  ];
-
-  const operationOptions = [
-    { label: "Dedup", icon: Rows3, action: onDedup },
-    { label: "Transpose", icon: Repeat2, action: onTranspose },
-    { label: "Reverse", icon: Repeat, action: onReverse },
   ];
 
   const textTransformOptions = [
@@ -394,52 +378,6 @@ export function ContextMenu({
                     e.stopPropagation();
                     onClose();
                     onSort(contextMenu.col, option.order, option.numeric);
-                  }}
-                >
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      <div className="relative group">
-        <button
-          className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center justify-between gap-2"
-          onMouseEnter={handleSubmenuOpen}
-          onMouseLeave={(e) => {
-            const dropdown = e.currentTarget.nextElementSibling;
-            if (dropdown) dropdown.classList.add("hidden");
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <Settings2 className="h-4 w-4 text-muted-foreground" />
-            Operation
-          </div>
-          <ChevronRight className="h-3 w-3 text-muted-foreground" />
-        </button>
-
-        <div className="absolute top-0 hidden pl-1"
-          onMouseEnter={(e) => {
-            e.currentTarget.classList.remove("hidden");
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.classList.add("hidden");
-          }}
-        >
-          <div className="bg-card border rounded-lg shadow-lg py-1 min-w-[160px]">
-            {operationOptions.map((option) => {
-              const Icon = option.icon;
-              return (
-                <button
-                  key={option.label}
-                  className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onClose();
-                    option.action(contextMenu.col);
                   }}
                 >
                   <Icon className="h-4 w-4 text-muted-foreground" />
