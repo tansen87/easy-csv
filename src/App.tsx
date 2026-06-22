@@ -25,6 +25,7 @@ import {
   Redo2,
   Map as MapIcon,
   ChevronDown,
+  FileType,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/LogPanel";
@@ -857,6 +858,53 @@ function App() {
     setLogs([]);
   };
 
+  const handleSavePipeline = async () => {
+    const currentPipeline = getCurrentPipeline();
+    if (currentPipeline.length === 0) {
+      showToastRef.current("No pipeline to save", 'warning');
+      return;
+    }
+
+    try {
+      const pipelineLines = currentPipeline.map((step) => {
+        const params = step.command.parameters.map((param) => {
+          const value = step.parameters[param.name] ?? param.default;
+
+          if (param.type === "flag") {
+            if (value !== true) {
+              return "";
+            }
+            return `--${param.name}`;
+          }
+
+          if (value === undefined || value === null || value === "") {
+            return "";
+          }
+
+          const prefix = param.isPositional ? "" : `--${param.name}`;
+          const escapedValue = typeof value === 'string' && value.includes(' ') ? `"${value}"` : value;
+          return `${prefix} ${escapedValue}`.trim();
+        }).filter(Boolean).join(' ');
+
+        return `xan ${step.command.name} ${params}`.trim();
+      });
+
+      const pipelineContent = pipelineLines.join(' | ');
+      const filePath = await save({
+        filters: [{ name: "Xan Stream Files", extensions: ["xs"] }],
+        defaultPath: `${getCurrentTab().name}.xs`,
+      });
+
+      if (filePath) {
+        const encoder = new TextEncoder();
+        await writeFile(filePath, encoder.encode(pipelineContent));
+        showToastRef.current(`Pipeline saved to: ${filePath}`, 'success');
+      }
+    } catch (error) {
+      showToastRef.current(`Failed to save pipeline: ${error}`, 'error');
+    }
+  };
+
   const handleExportPipeline = async () => {
     const currentPipeline = getCurrentPipeline();
     const currentTab = getCurrentTab();
@@ -1048,13 +1096,27 @@ function App() {
                   <div className="border-t border-border my-1" />
                   <button
                     onClick={() => {
+                      handleSavePipeline();
+                      setActiveMenu(null);
+                    }}
+                    disabled={getCurrentPipeline().length === 0}
+                    className={`flex items-center gap-2 w-full px-3 py-2 text-xs font-medium transition-colors ${getCurrentPipeline().length === 0
+                      ? "text-muted-foreground/40 cursor-not-allowed"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                      }`}
+                  >
+                    <FileType className="h-3.5 w-3.5" />
+                    Save Pipeline
+                  </button>
+                  <button
+                    onClick={() => {
                       handleImportPipeline();
                       setActiveMenu(null);
                     }}
                     className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   >
                     <Upload className="h-3.5 w-3.5" />
-                    Import
+                    Import Workspace
                   </button>
                   <button
                     onClick={() => {
@@ -1068,7 +1130,7 @@ function App() {
                       }`}
                   >
                     <Download className="h-3.5 w-3.5" />
-                    Export
+                    Export Workspace
                   </button>
                 </div>
               )}
