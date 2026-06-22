@@ -192,6 +192,14 @@ function App() {
     [defaultDelimiter],
   );
 
+  // 当分割符变化时,自动重新加载当前tab的数据
+  useEffect(() => {
+    const currentTab = tabs.find(t => t.id === selectedTabId);
+    if (currentTab?.inputFile && isCsvFile(currentTab.inputFile)) {
+      loadCsvData(selectedTabId, currentTab.inputFile);
+    }
+  }, [defaultDelimiter, selectedTabId]);
+
   const loadHistoricalPipelines = async () => {
     try {
       const content = await invoke<string>("load_history");
