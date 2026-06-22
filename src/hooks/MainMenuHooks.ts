@@ -234,11 +234,15 @@ export function MainMenuHooks({
     }
 
     try {
-      const pipelineLines = currentPipeline.map((step) => {
-        const params = step.command.parameters.map((param) => {
+      const outputStep = currentPipeline.find(step => step.command.id === "output");
+      const outputPath = outputStep?.parameters.path || "";
+      const executableSteps = currentPipeline.filter(step => step.command.id !== "output");
+
+      const pipelineLines = executableSteps.map((step, index) => {
+        let params = step.command.parameters.map((param) => {
           const value = step.parameters[param.name] ?? param.default;
 
-          if (param.type === "boolean") {
+          if (param.type === "flag") {
             if (value !== true) {
               return "";
             }
@@ -250,17 +254,27 @@ export function MainMenuHooks({
           }
 
           const prefix = param.isPositional ? "" : `--${param.name}`;
-          const escapedValue = typeof value === 'string' && value.includes(' ') ? `"${value}"` : value;
+          let escapedValue = value;
+          if (typeof value === 'string') {
+            if (value.includes(' ') || value.includes('"') || value.includes("'") || value.includes('|')) {
+              escapedValue = `"${value.replace(/"/g, '\\"')}"`;
+            }
+          }
           return `${prefix} ${escapedValue}`.trim();
-        }).filter(Boolean).join(' ');
+        }).filter(Boolean);
 
-        return `xan ${step.command.name} ${params}`.trim();
+        if (index === executableSteps.length - 1 && outputPath) {
+          const escapedOutputPath = `"${outputPath.replace(/"/g, '\\"')}"`;
+          params.push(`--output ${escapedOutputPath}`);
+        }
+
+        return `xan ${step.command.name} ${params.join(' ')}`.trim();
       });
 
       const pipelineContent = pipelineLines.join(' | ');
       const filePath = await save({
-        filters: [{ name: "Xan Stream Files", extensions: ["xs"] }],
-        defaultPath: `${getCurrentTab().name}.xs`,
+        filters: [{ name: "Xan Stream Files", extensions: ["xanscript"] }],
+        defaultPath: `${getCurrentTab().name}.xanscript`,
       });
 
       if (filePath) {
@@ -301,8 +315,8 @@ export function MainMenuHooks({
 
       const jsonContent = JSON.stringify(pipelineData, null, 2);
       const filePath = await save({
-        filters: [{ name: "Pipeline Files", extensions: ["xan"] }],
-        defaultPath: `${getCurrentTab().name}.xan`,
+        filters: [{ name: "Pipeline Files", extensions: ["xanflow"] }],
+        defaultPath: `${currentTab.name}.xanflow`,
       });
 
       if (filePath) {
