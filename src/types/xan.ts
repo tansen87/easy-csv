@@ -8,7 +8,7 @@ export interface XanCommand {
 
 export interface XanParameter {
   name: string;
-  type: "string" | "number" | "boolean" | "select" | "file" | "flag";
+  type: "string" | "number" | "boolean" | "select";
   description: string;
   required: boolean;
   default?: string | number | boolean;

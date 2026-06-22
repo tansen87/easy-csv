@@ -238,7 +238,7 @@ export function MainMenuHooks({
         const params = step.command.parameters.map((param) => {
           const value = step.parameters[param.name] ?? param.default;
 
-          if (param.type === "flag") {
+          if (param.type === "boolean") {
             if (value !== true) {
               return "";
             }
