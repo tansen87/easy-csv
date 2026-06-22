@@ -4,11 +4,18 @@ use std::io::{BufReader, ErrorKind, Read, Write};
 use std::os::windows::process::CommandExt;
 use std::path::Path;
 use std::process::{Command, Stdio};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
+
+// Global cache for xan path
+static XAN_PATH_CACHE: OnceLock<Mutex<Option<String>>> = OnceLock::new();
+
+fn get_xan_path_cache() -> &'static Mutex<Option<String>> {
+  XAN_PATH_CACHE.get_or_init(|| Mutex::new(None))
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -560,10 +567,23 @@ fn save_config(config: &AppConfig) -> Result<(), String> {
 }
 
 fn find_xan_executable() -> Option<String> {
+  // Check cache first
+  {
+    let cache = get_xan_path_cache().lock().unwrap();
+    if let Some(ref cached_path) = *cache {
+      return Some(cached_path.clone());
+    }
+  }
+
   // Only check user configured path, no automatic searching
   let config = load_config();
   if let Some(ref xan_path) = config.xan_path {
     if Path::new(xan_path).exists() {
+      // Cache the path
+      {
+        let mut cache = get_xan_path_cache().lock().unwrap();
+        *cache = Some(xan_path.clone());
+      }
       return Some(xan_path.clone());
     } else {
       eprintln!("Configured xan path does not exist: {}", xan_path);
@@ -571,6 +591,11 @@ fn find_xan_executable() -> Option<String> {
   }
 
   None
+}
+
+fn invalidate_xan_path_cache() {
+  let mut cache = get_xan_path_cache().lock().unwrap();
+  *cache = None;
 }
 
 #[tauri::command]
@@ -622,6 +647,7 @@ async fn set_xan_path(path: String) -> Result<(), String> {
 
   let mut config = load_config();
   config.xan_path = Some(path);
+  invalidate_xan_path_cache();
   save_config(&config)
 }
 
