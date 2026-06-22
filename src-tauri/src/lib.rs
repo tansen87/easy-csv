@@ -124,7 +124,7 @@ async fn execute_xan_pipeline(
       }
     }
 
-    let supports_delimiter = !matches!(cmd.name.as_str(), "from" | "range" | "eval");
+    let supports_delimiter = !matches!(cmd.name.as_str(), "from" | "range" | "eval" | "run");
 
     if supports_delimiter {
       args.push("-d".to_string());

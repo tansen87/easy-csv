@@ -141,6 +141,9 @@ const commandIconMap: Record<string, LucideIcon> = {
 
   // Generate CSV files
   range: Table,
+
+  // Scripting
+  run: Terminal,
   eval: Calculator,
 };
 

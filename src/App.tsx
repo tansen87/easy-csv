@@ -661,11 +661,21 @@ function App() {
         setBranchProgress({ current: i + 1, total: branches.length, name: branchName, status: "executing" });
 
         const commands = branchSteps.map((step, index) => {
-          const params = step.command.parameters.map((param) => ({
+          let params = step.command.parameters.map((param) => ({
             name: param.name,
             value: String(step.parameters[param.name] || param.default || ""),
             isPositional: param.isPositional,
           }));
+
+          // Special handling for run command: filter parameters based on mode
+          if (step.command.name === "run") {
+            const mode = step.parameters.mode || "pipeline";
+            params = params.filter(param => {
+              if (mode === "script" && param.name === "pipeline") return false;
+              if (mode === "pipeline" && param.name === "file") return false;
+              return true;
+            });
+          }
 
           // Add output parameter to the last command only if pipeline hasn't failed
           if (index === branchSteps.length - 1 && outputPath && !pipelineFailed) {

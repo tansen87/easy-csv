@@ -2852,10 +2852,38 @@ export const xanCommands: XanCommand[] = [
     ],
   },
   {
+    id: "run",
+    name: "run",
+    description: "Run a xan pipeline or script",
+    category: "Scripting",
+    parameters: [
+      {
+        name: "pipeline",
+        type: "string",
+        description: "Pipeline to run",
+        required: true,
+        isPositional: true,
+      },
+      {
+        name: "file",
+        type: "string",
+        description: "Run pipeline from a script file instead",
+        required: false,
+      },
+      {
+        name: "tee",
+        type: "flag",
+        description: "Interleave a call to `xan view -T` between each step of given pipeline",
+        required: false,
+        default: false,
+      },
+    ],
+  },
+  {
     id: "eval",
     name: "eval",
     description: "Evaluate/debug a single expression",
-    category: "Debug",
+    category: "Scripting",
     parameters: [
       {
         name: "expr",
@@ -2906,5 +2934,5 @@ export const commandCategories = [
   "Transpose & pivot",
   "Split a CSV file into multiple",
   "Generate CSV files",
-  "Debug",
+  "Scripting",
 ];

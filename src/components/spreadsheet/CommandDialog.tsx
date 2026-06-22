@@ -58,6 +58,7 @@ export type CommandDialogType =
   | "split"
   | "partition"
   | "range"
+  | "run"
   | "eval"
   | "output";
 
@@ -190,6 +191,7 @@ export function CommandDialog({
             {commandDialog.type === "partition" && "Partition"}
             {commandDialog.type === "range" && "Range"}
             {commandDialog.type === "eval" && "Eval"}
+            {commandDialog.type === "run" && "Run"}
             {commandDialog.type === "output" && "Output"}
           </h3>
           <Button
@@ -9127,6 +9129,146 @@ export function CommandDialog({
                   }
                   setCommandDialog(null);
                 }}
+              >
+                {commandDialog.isUpdate ? "Update" : "Add"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {commandDialog.type === "run" && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium">Mode</label>
+              <div className="flex gap-4 mt-1">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="run-mode"
+                    value="pipeline"
+                    checked={commandDialog.params.mode === "pipeline" || !commandDialog.params.mode}
+                    onChange={(e) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: { ...commandDialog.params, mode: e.target.value },
+                      })
+                    }
+                    className="h-3.5 w-3.5 accent-foreground"
+                  />
+                  Pipeline
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="run-mode"
+                    value="script"
+                    checked={commandDialog.params.mode === "script"}
+                    onChange={(e) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: { ...commandDialog.params, mode: e.target.value },
+                      })
+                    }
+                    className="h-3.5 w-3.5 accent-foreground"
+                  />
+                  Script
+                </label>
+              </div>
+            </div>
+            {commandDialog.params.mode !== "script" && (
+              <div>
+                <label className="text-sm font-medium">Pipeline</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.pipeline || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, pipeline: e.target.value },
+                    })
+                  }
+                  placeholder="Pipeline to run"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+            )}
+            {(commandDialog.params.mode || "pipeline") !== "pipeline" && (
+              <div>
+                <label className="text-sm font-medium">Script File</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.file || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, file: e.target.value },
+                    })
+                  }
+                  placeholder="Run <pipeline> from a script file instead"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+            )}
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.tee}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        tee: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Tee
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 mt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (
+                    commandDialog.isUpdate &&
+                    commandDialog.stepId &&
+                    onStepUpdate
+                  ) {
+                    onStepUpdate(commandDialog.stepId, commandDialog.params);
+                  } else {
+                    const runCmd = xanCommands.find((c) => c.id === "run");
+                    if (runCmd) {
+                      const params = {
+                        ...runCmd.parameters.reduce(
+                          (acc, param) => {
+                            acc[param.name] = param.default;
+                            return acc;
+                          },
+                          {} as Record<string, any>,
+                        ),
+                        ...commandDialog.params,
+                      };
+                      onAddCommand(runCmd, params);
+                    }
+                  }
+                  setCommandDialog(null);
+                }}
+                disabled={
+                  (commandDialog.params.mode === "pipeline" || !commandDialog.params.mode) && !commandDialog.params.pipeline ||
+                  commandDialog.params.mode === "script" && !commandDialog.params.file ||
+                  commandDialog.params.mode === "both" && (!commandDialog.params.pipeline || !commandDialog.params.file)
+                }
               >
                 {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>
