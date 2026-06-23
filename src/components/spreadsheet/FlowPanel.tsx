@@ -441,7 +441,7 @@ function getLayoutedElements(
 ): { nodes: Node[]; edges: Edge[] } {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
-  dagreGraph.setGraph({ rankdir: "LR", nodesep: 40, ranksep: 80 });
+  dagreGraph.setGraph({ rankdir: "LR", nodesep: 25, ranksep: 50 });
 
   const nodes: Node[] = [];
 
@@ -562,9 +562,37 @@ function getLayoutedElements(
 
   dagre.layout(dagreGraph);
 
-  const MAX_STEPS_PER_COLUMN = 4;
-  const COLUMN_WIDTH = 280;
-  const ROW_HEIGHT = 120;
+  const MAX_STEPS_PER_COLUMN = 5;
+  const COLUMN_WIDTH = 220;
+  const ROW_HEIGHT = 75;
+
+  const occupiedPositions = new Set<string>();
+
+  nodes.forEach((n) => {
+    if (n.id !== "table-node") {
+      const pos = `${Math.round(n.position.x / COLUMN_WIDTH)}-${Math.round(n.position.y / ROW_HEIGHT)}`;
+      occupiedPositions.add(pos);
+    }
+  });
+
+  const findFirstAvailablePosition = (): { x: number; y: number } => {
+    for (let col = 0; col < Math.ceil(steps.length / MAX_STEPS_PER_COLUMN) + 2; col++) {
+      for (let row = 0; row < MAX_STEPS_PER_COLUMN; row++) {
+        const posKey = `${col}-${row}`;
+        if (!occupiedPositions.has(posKey)) {
+          occupiedPositions.add(posKey);
+          return { x: col * COLUMN_WIDTH, y: row * ROW_HEIGHT };
+        }
+      }
+    }
+
+    const totalNodes = nodes.filter(n => n.id !== "table-node").length;
+    const column = Math.floor(totalNodes / MAX_STEPS_PER_COLUMN);
+    const rowInColumn = totalNodes % MAX_STEPS_PER_COLUMN;
+    const newPos = { x: column * COLUMN_WIDTH, y: rowInColumn * ROW_HEIGHT };
+    occupiedPositions.add(`${column}-${rowInColumn}`);
+    return newPos;
+  };
 
   nodes.forEach((node) => {
     const step = steps.find((s) => s.id === node.id);
@@ -584,13 +612,9 @@ function getLayoutedElements(
             y: nodeWithPosition.y - height / 2,
           };
         }
-      } else {
-        const column = Math.floor(stepIndex / MAX_STEPS_PER_COLUMN);
-        const rowInColumn = stepIndex % MAX_STEPS_PER_COLUMN;
-        node.position = {
-          x: column * COLUMN_WIDTH,
-          y: rowInColumn * ROW_HEIGHT,
-        };
+      } else if (!step?.position) {
+        const availablePos = findFirstAvailablePosition();
+        node.position = availablePos;
       }
     }
   });

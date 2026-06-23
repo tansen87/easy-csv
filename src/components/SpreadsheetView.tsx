@@ -341,7 +341,7 @@ export function SpreadsheetView({
                 Welcome to Easy CSV
               </h2>
               <p className="text-sm text-muted-foreground">
-                Open a file or import a pipeline to get started
+                Open a file or import a flow to get started
               </p>
             </div>
             <div className="grid grid-cols-3 gap-32 justify-items-center">
@@ -365,8 +365,8 @@ export function SpreadsheetView({
                   <FileUp className="h-6 w-6 text-primary" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-foreground">Import Pipeline</p>
-                  <p className="text-xs text-muted-foreground mt-1">.xan files</p>
+                  <p className="text-sm font-medium text-foreground">Import Flow</p>
+                  <p className="text-xs text-muted-foreground mt-1">.xanflow files</p>
                 </div>
               </button>
               <button
