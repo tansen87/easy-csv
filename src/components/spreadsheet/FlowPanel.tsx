@@ -725,7 +725,7 @@ export function FlowPanel({
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
 
-  // 当 savedEdges 变化时（如从 history 导入）,更新本地 edges 状态
+  // 当savedEdges变化时(如从history导入),更新本地edges状态
   useEffect(() => {
     if (savedEdges && savedEdges.length > 0) {
       const newEdges: Edge[] = savedEdges.map((edge) => {
@@ -875,7 +875,7 @@ export function FlowPanel({
 
       if (!sourcePos || !targetPos) return;
 
-      // 连线的起点和终点（使用节点的中点）
+      // 连线的起点和终点(使用节点的中点)
       const edgeStart = {
         x: sourcePos.x + sourcePos.width,
         y: sourcePos.y + sourcePos.height / 2,
@@ -1076,7 +1076,7 @@ export function FlowPanel({
       const rect = reactFlowWrapper.current.getBoundingClientRect();
       setConnectPath(prev => [...prev.slice(-20), { x: e.clientX - rect.left, y: e.clientY - rect.top }]);
 
-      // 检测鼠标是否悬停在目标节点上（允许 table-node 作为目标）
+      // 检测鼠标是否悬停在目标节点上(允许 table-node 作为目标)
       const hoveredNode = getNodeAtPosition(e.clientX, e.clientY);
       if (hoveredNode && hoveredNode !== connectSourceNode) {
         setConnectTargetNode(hoveredNode);
@@ -1084,10 +1084,10 @@ export function FlowPanel({
         setConnectTargetNode(null);
       }
     } else if (isCutting && !isClosingCut && reactFlowWrapper.current) {
-      // 切水果模式 - 显示为直线（起点到当前点）
+      // 切水果模式 - 显示为直线(起点到当前点)
       const rect = reactFlowWrapper.current.getBoundingClientRect();
       const newPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      // 显示用的路径只保留起点和当前点（直线）
+      // 显示用的路径只保留起点和当前点(直线)
       if (cutStartPoint) {
         setCutPath([cutStartPoint, newPoint]);
       }

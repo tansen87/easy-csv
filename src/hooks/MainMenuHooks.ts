@@ -12,6 +12,7 @@ interface MainMenuHooksProps {
   redoStack: Array<{ pipeline: PipelineStep[]; edges: PipelineEdge[]; inputPosition?: { x: number; y: number } }>;
   historicalPipelines: HistoricalPipeline[];
   defaultDelimiter: string;
+  setDefaultDelimiter: React.Dispatch<React.SetStateAction<string>>;
   showToast: (message: string, type?: "info" | "success" | "warning" | "error") => void;
   addLog: (type: LogEntry["type"], message: string) => void;
   setTabs: React.Dispatch<React.SetStateAction<PipelineTab[]>>;
@@ -24,7 +25,7 @@ interface MainMenuHooksProps {
   setShowProgressBar: React.Dispatch<React.SetStateAction<boolean>>;
   setBranchProgress: React.Dispatch<React.SetStateAction<{ current: number; total: number; name: string; status: "executing" | "completed" | "error" } | null>>;
   progressHideTimerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
-  loadCsvData: (tabId: string, filePath: string) => Promise<void>;
+  loadCsvData: (tabId: string, filePath: string, customDelimiter?: string) => Promise<void>;
   updateHistoricalPipelines: (history: HistoricalPipeline[]) => void;
   formatDateTime: (date: Date) => string;
 }
@@ -332,7 +333,7 @@ export function MainMenuHooks({
   const handleImportPipeline = useCallback(async () => {
     const file = await open({
       multiple: false,
-      filters: [{ name: "Pipeline Files", extensions: ["xan"] }],
+      filters: [{ name: "Pipeline Files", extensions: ["xanflow"] }],
     });
 
     if (!file) return;
@@ -369,10 +370,7 @@ export function MainMenuHooks({
 
       updateTabPipeline(importedPipeline, undefined, pipelineData.edges, pipelineData.inputPosition);
       if (pipelineData.inputFile) {
-        loadCsvData(selectedTabId, pipelineData.inputFile);
-      }
-      if (pipelineData.defaultDelimiter) {
-        // Note: We can't update defaultDelimiter from here, it's a prop
+        loadCsvData(selectedTabId, pipelineData.inputFile, pipelineData.defaultDelimiter);
       }
 
       showToast(`Imported pipeline with ${importedPipeline.length} steps`, 'success');

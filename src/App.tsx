@@ -94,7 +94,7 @@ function App() {
   const headerRef = useRef<HTMLDivElement>(null);
 
   const showToast = useCallback((message: string, type: ToastType = "info") => {
-    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     setToasts((prev) => [...prev, { id, message, type }]);
   }, []);
 
@@ -108,7 +108,7 @@ function App() {
       if (prev.some(n => n.message === message)) {
         return prev;
       }
-      const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       return [...prev, { id, message, type }];
     });
   }, []);
@@ -135,7 +135,7 @@ function App() {
 
   // Load CSV file for a specific tab
   const loadCsvData = useCallback(
-    async (tabId: string, filePath: string) => {
+    async (tabId: string, filePath: string, customDelimiter?: string) => {
       if (!filePath) {
         setTabs((prev) =>
           prev.map((tab) =>
@@ -167,7 +167,7 @@ function App() {
           "read_csv_file",
           {
             filePath,
-            delimiter: defaultDelimiter,
+            delimiter: customDelimiter || defaultDelimiter,
             limit: 31,
           },
         );
@@ -283,7 +283,7 @@ function App() {
 
   const addLog = (type: LogEntry["type"], message: string) => {
     const newLog: LogEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       timestamp: new Date(),
       type,
       message,
@@ -348,6 +348,7 @@ function App() {
     redoStack,
     historicalPipelines,
     defaultDelimiter,
+    setDefaultDelimiter,
     showToast,
     addLog,
     setTabs,
