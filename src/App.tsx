@@ -782,9 +782,6 @@ function App() {
         activePanel={activeLeftPanel}
         onActivePanelChange={setActiveLeftPanel}
         historicalPipelines={historicalPipelines}
-        onLoadHistory={(history) => {
-          updateTabPipeline(history.pipeline, undefined, history.edges, history.inputPosition);
-        }}
         onNewTabFromHistory={(history) => {
           const newTabId = `tab-${Date.now()}`;
           const newTab: PipelineTab = {
@@ -812,9 +809,6 @@ function App() {
           const updatedHistory = historicalPipelines.filter((h) => h.id !== history.id);
           updateHistoricalPipelines(updatedHistory);
         }}
-        onLoadCsvData={loadCsvData}
-        onDefaultDelimiterChange={setDefaultDelimiter}
-        selectedTabId={selectedTabId}
       />
 
       {/* Floating Log Panel */}

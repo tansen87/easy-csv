@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { X, ChevronDown } from "lucide-react";
+import { X } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
@@ -75,15 +75,11 @@ export function DateTransformDialog({
   const [outputFormat, setOutputFormat] = useState("%d/%m/%Y");
   const [outputColumnName, setOutputColumnName] = useState("new_date");
   const [selectedColumn, setSelectedColumn] = useState(headers[dateTransformDialog.col] || "");
-  const [isColumnOpen, setIsColumnOpen] = useState(false);
   const [position, setPosition] = useState({ x: dateTransformDialog.x, y: dateTransformDialog.y });
   const [isDragging, setIsDragging] = useState(false);
-  const columnRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
 
-  const filteredHeaders = selectedColumn
-    ? headers.filter(header => header.toLowerCase().includes(selectedColumn.toLowerCase()))
-    : headers;
+  const columnOptions = headers.map(header => ({ label: header, value: header }));
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest(".no-drag")) return;
@@ -123,28 +119,6 @@ export function DateTransformDialog({
       };
     }
   }, [isDragging, handleMouseMove, handleMouseUp]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (columnRef.current && !columnRef.current.contains(e.target as Node)) {
-        setIsColumnOpen(false);
-      }
-    };
-    if (isColumnOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [isColumnOpen]);
-
-  const handleColumnInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedColumn(e.target.value);
-    setIsColumnOpen(true);
-  };
-
-  const handleColumnSelect = (header: string) => {
-    setSelectedColumn(header);
-    setIsColumnOpen(false);
-  };
 
   const handleApply = () => {
     if (!selectedColumn) return;
@@ -191,44 +165,16 @@ export function DateTransformDialog({
         </button>
       </div>
       <div className="p-3 space-y-3">
-        <div ref={columnRef}>
+        <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Column
           </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={selectedColumn}
-              onChange={handleColumnInputChange}
-              onFocus={() => setIsColumnOpen(true)}
-              placeholder="Search or select column..."
-              className="w-full h-8 px-2 pr-8 text-xs border rounded bg-background"
-            />
-            <button
-              onClick={() => setIsColumnOpen(!isColumnOpen)}
-              className="absolute right-1 top-1/2 -translate-y-1/2 p-1 hover:bg-accent rounded transition-colors">
-              <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${isColumnOpen ? "rotate-180" : ""}`} />
-            </button>
-            {isColumnOpen && (
-              <div className="absolute z-50 w-full overflow-y-auto border rounded bg-background shadow-lg mt-1">
-                {filteredHeaders.length > 0 ? (
-                  filteredHeaders.map((header) => (
-                    <button
-                      key={header}
-                      onClick={() => handleColumnSelect(header)}
-                      className="w-full px-2 py-1.5 text-xs text-left hover:bg-accent transition-colors truncate"
-                    >
-                      {header}
-                    </button>
-                  ))
-                ) : (
-                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                    No columns found
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <SearchableSelect
+            value={selectedColumn}
+            onChange={setSelectedColumn}
+            options={columnOptions}
+            placeholder="Search or select column..."
+          />
         </div>
 
         <div>
@@ -257,14 +203,14 @@ export function DateTransformDialog({
 
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Output Column Name
+            Alias (Optional)
           </label>
           <input
             type="text"
             value={outputColumnName}
             onChange={(e) => setOutputColumnName(e.target.value)}
             placeholder="Leave blank to keep original"
-            className="w-full h-8 px-2 text-xs border rounded bg-background"
+            className="w-full h-8 px-2 text-xs border rounded-md bg-background"
           />
         </div>
       </div>

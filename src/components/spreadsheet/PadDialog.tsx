@@ -158,7 +158,7 @@ export function PadDialog({
             value={width}
             onChange={(e) => setWidth(e.target.value)}
             placeholder="Target width"
-            className="w-full h-8 px-2 text-xs border rounded bg-background"
+            className="w-full h-8 px-2 text-xs border rounded-md bg-background"
             min="1"
           />
         </div>
@@ -171,7 +171,7 @@ export function PadDialog({
             value={char}
             onChange={(e) => setChar(e.target.value)}
             placeholder="Space if blank"
-            className="w-full h-8 px-2 text-xs border rounded bg-background"
+            className="w-full h-8 px-2 text-xs border rounded-md bg-background"
             maxLength={1}
           />
         </div>

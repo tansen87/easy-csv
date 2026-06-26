@@ -311,7 +311,7 @@ export function FilterDialog({
                     value={textValue}
                     onChange={(e) => setTextValue(e.target.value)}
                     placeholder={textOperator === "regex" ? "Regex pattern..." : "Search text..."}
-                    className="w-full h-7 px-3 text-sm border rounded bg-background"
+                    className="w-full h-7 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
 
@@ -355,7 +355,7 @@ export function FilterDialog({
                 value={numberValue}
                 onChange={(e) => setNumberValue(e.target.value)}
                 placeholder="Search number..."
-                className="w-full h-7 px-3 text-sm border rounded bg-background"
+                className="w-full h-7 px-3 text-sm border rounded-md bg-background"
               />
             </div>
           </>

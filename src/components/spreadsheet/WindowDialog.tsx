@@ -207,7 +207,7 @@ export function WindowDialog({
               value={groupby}
               onChange={(e) => setGroupby(e.target.value)}
               placeholder="Column(s) to group by..."
-              className="w-full h-8 px-2 text-xs border rounded bg-background"
+              className="w-full h-8 px-2 text-xs border rounded-md bg-background"
             />
           </div>
 
@@ -218,7 +218,7 @@ export function WindowDialog({
               </span>
               <button
                 onClick={addEntry}
-                className="flex items-center gap-1 px-2 py-0.5 text-xs hover:bg-accent rounded transition-colors text-muted-foreground"
+                className="flex items-center gap-1 px-2 py-0.5 text-xs hover:bg-accent rounded-md transition-colors text-muted-foreground"
               >
                 <Plus className="h-3 w-3" />
                 Add
@@ -228,7 +228,7 @@ export function WindowDialog({
             {entries.map((entry, index) => {
               const func = WINDOW_EXPRS.find(f => f.value === entry.func);
               return (
-                <div key={index} className="border rounded-lg p-2 space-y-2 bg-muted/10">
+                <div key={index} className="border rounded-md p-2 space-y-2 bg-muted/10">
                   <div className="flex gap-2 items-end">
                     <div className="flex-1 space-y-1">
                       <label className="text-xs font-medium text-muted-foreground">Column</label>
@@ -237,7 +237,7 @@ export function WindowDialog({
                         value={entry.column}
                         onChange={(e) => updateEntry(index, "column", e.target.value)}
                         placeholder="Column..."
-                        className="w-full h-8 px-2 text-xs border rounded bg-background"
+                        className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                       />
                     </div>
                     <div className="flex-1 space-y-1">
@@ -247,14 +247,14 @@ export function WindowDialog({
                         value={entry.alias}
                         onChange={(e) => updateEntry(index, "alias", e.target.value)}
                         placeholder="Alias (Optional)"
-                        className="w-full h-8 px-2 text-xs border rounded bg-background"
+                        className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                       />
                     </div>
                     <div className="w-4 shrink-0 self-start">
                       {entries.length > 1 && (
                         <button
                           onClick={() => removeEntry(index)}
-                          className="p-0.5 hover:bg-accent rounded transition-colors"
+                          className="p-0.5 hover:bg-accent rounded-md transition-colors"
                         >
                           <Trash2 className="h-3 w-3 text-muted-foreground" />
                         </button>
@@ -279,7 +279,7 @@ export function WindowDialog({
                           type="number"
                           value={entry.windowSize}
                           onChange={(e) => updateEntry(index, "windowSize", e.target.value)}
-                          className="w-full h-8 px-2 text-xs border rounded bg-background"
+                          className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                           min="1"
                         />
                       </div>

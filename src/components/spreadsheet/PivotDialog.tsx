@@ -232,7 +232,7 @@ export function PivotDialog({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search columns..."
-            className="no-drag flex-1 h-7 px-2 text-xs border rounded bg-background"
+            className="no-drag flex-1 h-7 px-2 text-xs border rounded-md bg-background"
           />
         </div>
       </div>
@@ -243,7 +243,7 @@ export function PivotDialog({
             Columns (pivot)
           </label>
           <ScrollArea>
-            <div className="flex flex-wrap gap-1 p-1.5 border rounded bg-background">
+            <div className="flex flex-wrap gap-1 p-1.5 border rounded-md bg-background">
               {filteredHeaders.length === 0 ? (
                 <span className="text-xs text-muted-foreground px-2 py-0.5">No matches</span>
               ) : (
@@ -269,7 +269,7 @@ export function PivotDialog({
             Row (groupby)
           </label>
           <ScrollArea>
-            <div className="flex flex-wrap gap-1 p-1.5 border rounded bg-background">
+            <div className="flex flex-wrap gap-1 p-1.5 border rounded-md bg-background">
               {filteredHeaders.length === 0 ? (
                 <span className="text-xs text-muted-foreground px-2 py-0.5">No matches</span>
               ) : (
@@ -297,7 +297,7 @@ export function PivotDialog({
             </label>
             <button
               onClick={addValueColumn}
-              className="flex items-center gap-1 px-2 py-0.5 text-xs hover:bg-accent rounded transition-colors text-muted-foreground"
+              className="flex items-center gap-1 px-2 py-0.5 text-xs hover:bg-accent rounded-md transition-colors text-muted-foreground"
             >
               <Plus className="h-3.5 w-3.5" />
               Add
@@ -305,7 +305,7 @@ export function PivotDialog({
           </div>
           <div className="space-y-1.5">
             {valueColumns.length === 0 ? (
-              <div className="p-2 border rounded bg-muted/30 text-xs text-muted-foreground text-center">
+              <div className="p-2 border rounded-md bg-muted/30 text-xs text-muted-foreground text-center">
                 Click + to add value columns
               </div>
             ) : (
@@ -348,7 +348,7 @@ export function PivotDialog({
             value={columnSep}
             onChange={(e) => setColumnSep(e.target.value)}
             placeholder="_"
-            className="no-drag w-full h-7 px-2 text-xs border rounded bg-background"
+            className="no-drag w-full h-7 px-2 text-xs border rounded-md bg-background"
             maxLength={5}
           />
         </div>

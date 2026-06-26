@@ -144,7 +144,7 @@ export function ReplaceDialog({
             value={pattern}
             onChange={(e) => setPattern(e.target.value)}
             placeholder="Pattern to search"
-            className="w-full h-8 px-2 text-xs border rounded bg-background"
+            className="w-full h-8 px-2 text-xs border rounded-md bg-background"
             autoFocus
           />
         </div>
@@ -157,7 +157,7 @@ export function ReplaceDialog({
             value={replace}
             onChange={(e) => setReplace(e.target.value)}
             placeholder="Replacement string"
-            className="w-full h-8 px-2 text-xs border rounded bg-background"
+            className="w-full h-8 px-2 text-xs border rounded-md bg-background"
           />
         </div>
         <div className="grid grid-cols-2 gap-2">

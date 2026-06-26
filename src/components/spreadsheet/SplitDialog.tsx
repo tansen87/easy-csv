@@ -228,7 +228,7 @@ export function SplitDialog({
                 value={leftLength}
                 onChange={(e) => setLeftLength(e.target.value)}
                 placeholder="4"
-                className="w-full h-8 px-2 text-xs border rounded bg-background"
+                className="w-full h-8 px-2 text-xs border rounded-md bg-background"
               />
             </div>
           )}
@@ -243,7 +243,7 @@ export function SplitDialog({
                 value={rightLength}
                 onChange={(e) => setRightLength(e.target.value)}
                 placeholder="4"
-                className="w-full h-8 px-2 text-xs border rounded bg-background"
+                className="w-full h-8 px-2 text-xs border rounded-md bg-background"
               />
             </div>
           )}
@@ -259,7 +259,7 @@ export function SplitDialog({
                   value={sliceStart}
                   onChange={(e) => setSliceStart(e.target.value)}
                   placeholder="0"
-                  className="w-full h-8 px-2 text-xs border rounded bg-background"
+                  className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                 />
               </div>
               <div>
@@ -271,7 +271,7 @@ export function SplitDialog({
                   value={sliceEnd}
                   onChange={(e) => setSliceEnd(e.target.value)}
                   placeholder="4"
-                  className="w-full h-8 px-2 text-xs border rounded bg-background"
+                  className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -301,7 +301,7 @@ export function SplitDialog({
                     value={customSeparator}
                     onChange={(e) => setCustomSeparator(e.target.value)}
                     placeholder="Enter custom separator"
-                    className="w-full h-8 px-2 text-xs border rounded bg-background"
+                    className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                   />
                 </div>
               )}
@@ -318,7 +318,7 @@ export function SplitDialog({
                         value={index}
                         onChange={(e) => updateIndex(idx, e.target.value)}
                         placeholder="0"
-                        className="flex-1 h-8 px-2 text-xs border rounded bg-background"
+                        className="flex-1 h-8 px-2 text-xs border rounded-md bg-background"
                       />
                       {indices.length > 1 && (
                         <button
@@ -332,7 +332,7 @@ export function SplitDialog({
                   ))}
                   <button
                     onClick={addIndexField}
-                    className="w-full h-8 px-2 text-xs border border-dashed rounded hover:border-accent transition-colors flex items-center justify-center gap-1"
+                    className="w-full h-8 px-2 text-xs border border-dashed rounded-md hover:border-accent transition-colors flex items-center justify-center gap-1"
                   >
                     <Plus className="h-3 w-3 text-muted-foreground" />
                     Add Index
@@ -349,7 +349,7 @@ export function SplitDialog({
                   value={joinWith}
                   onChange={(e) => setJoinWith(e.target.value)}
                   placeholder="e.g., -, _, /, etc."
-                  className="w-full h-8 px-2 text-xs border rounded bg-background"
+                  className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                 />
               </div>
             </div>
@@ -357,14 +357,14 @@ export function SplitDialog({
 
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
-              Output Column Name
+              Alias (Optional)
             </label>
             <input
               type="text"
               value={outputColumnName}
               onChange={(e) => setOutputColumnName(e.target.value)}
               placeholder="Leave blank to keep original"
-              className="w-full h-8 px-2 text-xs border rounded bg-background"
+              className="w-full h-8 px-2 text-xs border rounded-md bg-background"
             />
           </div>
         </div>
