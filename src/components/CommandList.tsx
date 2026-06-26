@@ -272,9 +272,11 @@ export function CommandList({
     if (isVisible && panelRef.current) {
       const rect = panelRef.current.getBoundingClientRect();
       const newX = Math.min(rect.left, window.innerWidth - 280);
-      const newY = Math.max(rect.top, 100);
+      const panelHeight = panelRef.current.offsetHeight;
+      const newY = Math.max(100, Math.min(window.innerHeight - panelHeight, (window.innerHeight - panelHeight) / 2));
       panelRef.current.style.left = `${newX}px`;
       panelRef.current.style.top = `${newY}px`;
+      panelRef.current.style.transform = "none";
     }
   }, [isVisible]);
 
@@ -292,7 +294,8 @@ export function CommandList({
       ref={panelRef}
       style={{
         left: 0,
-        top: 100
+        top: "50%",
+        transform: "translateY(-50%)"
       }}
       className={`fixed w-[280px] h-[500px] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isDragging ? "shadow-2xl" : ""}`}
       onContextMenu={(e) => e.preventDefault()}
