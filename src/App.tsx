@@ -3,12 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "@/components/ThemeProvider";
 import { ToastContainer, ToastType } from "@/components/Toast";
 import { NotificationPanel, NotificationType } from "@/components/PersistentNotification";
 import {
-  X,
   Loader2,
   Terminal,
   ChevronUp,
@@ -21,7 +19,9 @@ import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/LogPanel";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { SpreadsheetView } from "@/components/SpreadsheetView";
+import { HelpDialog } from "@/components/help/HelpDialog";
 import { xanCommands } from "@/data/commands";
+import { helpDocs } from "@/generated/help-docs";
 import { MainMenu } from "@/components/MainMenu";
 import { MainMenuHooks } from "@/hooks/MainMenuHooks";
 import {
@@ -63,7 +63,6 @@ function App() {
   const [showHelp, setShowHelp] = useState<boolean>(false);
   const [helpContent, setHelpContent] = useState<string>("");
   const [helpCommandName, setHelpCommandName] = useState<string>("");
-  const [isHelpLoading, setIsHelpLoading] = useState<boolean>(false);
   const [showLogPanel, setShowLogPanel] = useState<boolean>(false);
   const [showCommandPanel, setShowCommandPanel] = useState<boolean>(false);
   const [showMinimap, setShowMinimap] = useState<boolean>(false);
@@ -485,19 +484,15 @@ function App() {
     setSelectedStep(newStep);
   };
 
-  const handleHelpClick = async (command: XanCommand) => {
+  const handleHelpClick = (command: XanCommand) => {
     setShowHelp(true);
-    setIsHelpLoading(true);
-    try {
-      const helpText = await invoke<string>("get_xan_help", {
-        commandName: command.name,
-      });
+    const helpText = helpDocs[command.name];
+    if (helpText) {
       setHelpContent(helpText);
       setHelpCommandName(command.name);
-    } catch (error) {
-      showToastRef.current(`Failed to get help for ${command.name}: ${error}`, 'error');
-    } finally {
-      setIsHelpLoading(false);
+    } else {
+      setHelpContent(`Help not found for command: ${command.name}`);
+      setHelpCommandName(command.name);
     }
   };
 
@@ -820,33 +815,12 @@ function App() {
       />
 
       {/* Help Dialog */}
-      {showHelp && (
-        <div className="fixed inset-0 bg-foreground/20 backdrop-blur-xs flex items-center justify-center z-50">
-          <div className="bg-card border rounded-lg shadow-xl p-4 w-full max-w-4xl h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between flex-shrink-0">
-              <h3 className="text-lg">{helpCommandName}</h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowHelp(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            {isHelpLoading ? (
-              <div className="flex-1 flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <ScrollArea className="flex-1 h-0">
-                <div className="text-sm whitespace-pre-wrap bg-muted/30 p-2 rounded-lg text-foreground/90 leading-relaxed font-mono">
-                  {helpContent}
-                </div>
-              </ScrollArea>
-            )}
-          </div>
-        </div>
-      )}
+      <HelpDialog
+        isOpen={showHelp}
+        onClose={() => setShowHelp(false)}
+        commandName={helpCommandName}
+        content={helpContent}
+      />
 
       <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
       <NotificationPanel notifications={notifications} onDismiss={removeNotificationRef.current} onDismissAll={dismissAllNotifications} />

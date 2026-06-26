@@ -665,37 +665,6 @@ async fn set_no_headers(no_headers: bool) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn get_xan_help(command_name: String) -> Result<String, String> {
-  let xan_path = find_xan_executable().ok_or("xan executable not found")?;
-
-  let mut command = tokio::process::Command::new(&xan_path);
-  command.arg(&command_name);
-  command.arg("--help");
-  command.kill_on_drop(true);
-
-  #[cfg(target_os = "windows")]
-  {
-    command.creation_flags(0x08000000); // CREATE_NO_WINDOW
-  }
-
-  let output = command
-    .output()
-    .await
-    .map_err(|e| format!("Failed to execute xan {} --help: {}", command_name, e))?;
-
-  if output.status.success() {
-    Ok(String::from_utf8_lossy(&output.stdout).to_string())
-  } else {
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    if !stderr.is_empty() {
-      Ok(stderr)
-    } else {
-      Err(format!("Failed to get help for command: {}", command_name))
-    }
-  }
-}
-
-#[tauri::command]
 async fn set_window_title(window: tauri::Window, title: String) -> Result<(), String> {
   match window.set_title(&title) {
     Ok(_) => Ok(()),
@@ -760,7 +729,6 @@ pub fn run() {
       set_no_quoting,
       get_no_headers,
       set_no_headers,
-      get_xan_help,
       save_history,
       load_history,
       read_csv_file,

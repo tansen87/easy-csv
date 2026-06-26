@@ -1,0 +1,185 @@
+<!-- Generated -->
+# xan parallel
+
+```txt
+Parallel processing of CSV data.
+
+This command usually parallelizes computation over multiple files, but is also
+able to automatically chunk CSV files and bgzipped CSV files (when a `.gzi` index
+can be found) when the number of available threads is greater than the number
+of files to read.
+
+This means this command is quite capable of parallelizing over a single CSV file.
+
+To process a single CSV file in parallel:
+
+    $ xan parallel count docs.csv
+
+To process multiple files at once, you must give their paths as multiple
+arguments to the command or give them through stdin with one path
+per line or in a CSV column when using the --path-column flag:
+
+    Multiple arguments through shell glob:
+    $ xan parallel count data/**/docs.csv
+
+    One path per line, fed through stdin:
+    $ ls data/**/docs.csv | xan parallel count
+
+    Paths from a CSV column through stdin:
+    $ cat filelist.csv | xan parallel count --path-column path
+
+You can also use the --glob flag to feed the command a glob pattern (for instance
+if your shell does not support it natively or if the number of files exceeds the
+arguments limit):
+
+    $ xan parallel count --glob 'data/**/docs.csv'
+
+Note that sometimes you might find useful to use the `split` or `partition`
+command to preemptively split a large file into manageable chunks, if you can
+spare the disk space.
+
+This command has multiple subcommands that each perform some typical
+parallel reduce operation:
+
+    - `count`: counts the number of rows in the whole dataset.
+    - `cat`: preprocess the files and redirect the concatenated
+        rows to your output (e.g. searching all the files in parallel and
+        retrieving the results).
+    - `freq`: builds frequency tables in parallel. See "xan freq -h" for
+        an example of output.
+    - `stats`: computes well-known statistics in parallel. See "xan stats -h" for
+        an example of output.
+    - `agg`: parallelize a custom aggregation. See "xan agg -h" for more details.
+    - `groupby`: parallelize a custom grouped aggregation. See "xan groupby -h"
+        for more details.
+    - `top`: return top 10 rows (or any count using the -l/--limit flag) maximizing
+        given <column>.
+    - `map`: writes the result of given preprocessing in a new
+        file besides the original one. This subcommand takes a filename template
+        where `{}` will be replaced by the name of each target file without any
+        extension (`.csv` or `.csv.gz` would be stripped for instance). This
+        command is unable to leverage CSV file chunking.
+
+For instance, the following command:
+
+    $ xan parallel map '{}_freq.csv' -P 'freq -s Category' *.csv
+
+Will create a file suffixed "_freq.csv" for each CSV file in current directory
+containing its frequency table for the "Category" command.
+
+Finally, preprocessing on each file can be done using two different methods:
+
+1. Using only xan subcommands with -P, --preprocess:
+    $ xan parallel count -P "search -s name John | slice -l 10" file.csv
+
+2. Using a subcommand passed to "$SHELL -c" or "cmd /C" with -H, --shell-preprocess:
+    $ xan parallel count -H "rg john | xan from -f ndjson" data.ndjson
+
+Usage:
+    xan parallel count [options] [<inputs>...]
+    xan parallel cat [options] [<inputs>...]
+    xan parallel freq [options] [<inputs>...]
+    xan parallel stats [options] [<inputs>...]
+    xan parallel agg [options] <expr> [<inputs>...]
+    xan parallel groupby [options] <group> <expr> [<inputs>...]
+    xan parallel top [options] <column> [<inputs>...]
+    xan parallel map [options] <template> [<inputs>...]
+    xan parallel --help
+    xan p count [options] [<inputs>...]
+    xan p cat [options] [<inputs>...]
+    xan p freq [options] [<inputs>...]
+    xan p stats [options] [<inputs>...]
+    xan p agg [options] <expr> [<inputs>...]
+    xan p groupby [options] <group> <expr> [<inputs>...]
+    xan p top [options] <column> [<inputs>...]
+    xan p map [options] <template> [<inputs>...]
+    xan p --help
+
+parallel options:
+    -P, --preprocess <op>        Preprocessing using only `xan` subcommands.
+    -H, --shell-preprocess <op>  Preprocessing commands that will run directly in your
+                                 own shell using the -c flag.
+    --run <path>                 Run xan script at given <path> as preprocessing.
+                                 See `xan run -h` for more information.
+    --progress                   Display a progress bar for the parallel tasks. The
+                                 per file/chunk bars will tick once per CSV row only
+                                 AFTER pre-processing!
+    -t, --threads <n>            Number of threads to use. Will default to a sensible
+                                 number based on the available CPUs.
+    --path-column <name>         Name of the path column if stdin is given as a CSV file
+                                 instead of one path per line.
+    --glob <pattern>             Use given glob <pattern> to collect files to process.
+    --dont-chunk                 Tell the command not to attempt to split CSV inputs into
+                                 chunks when the number of available threads is larger
+                                 than the number of files to process. This can be useful
+                                 when preprocessing needs to deal with non-standard
+                                 CSV files such as those dealt with by `xan input`.
+
+parallel count options:
+    -S, --source-column <name>  If given, will return a CSV file containing a column with
+                                the source file being counted and a column with the count itself.
+
+parallel cat options:
+    -B, --buffer-size <n>       Number of rows a thread is allowed to keep in memory
+                                before flushing to the output. Set to -1 for infinite buffer size,
+                                which means flushing only once per processed file. This can be
+                                useful to ensure resulting rows are grouped by input file in the output.
+                                But keep in mind this could also cost a lot of memory.
+                                [default: 1024]
+    -S, --source-column <name>  Name of a column to prepend in the output of indicating the
+                                path to source file.
+
+parallel freq options:
+    -s, --select <cols>       Columns for which to build frequency tables.
+    --sep <char>              Split the cell into multiple values to count using the
+                              provided separator.
+    -A, --all                 Remove the limit.
+    -l, --limit <n>           Limit the frequency table to the N most common
+                              items. Use -A, -all or set to 0 to disable the limit.
+                              [default: 10]
+    -a, --approx              If set, return the items most likely having the top counts,
+                              as per given --limit. Won't work if --limit is 0 or
+                              with -A, --all. Accuracy of results increases with the given
+                              limit.
+    -X, --approx-algo <name>  Name of the algorithm to use to find top-k approximation when
+                              using the -a/--approx flag. Can be either the default
+                              `space-saving` (`ss`) algorithm, or `heavy-keeper` (`hk`) algorithm,
+                              which is more suited to zipfian streams (items distribution following
+                              a power law).
+                              [default: heavy-keeper]
+    -N, --no-extra            Don't include empty cells & remaining counts.
+
+parallel stats options:
+    -s, --select <cols>    Columns for which to build statistics.
+    -A, --all              Shorthand for -cq.
+    -c, --cardinality      Show cardinality and modes.
+                           This requires storing all CSV data in memory.
+    -q, --quartiles        Show quartiles.
+                           This requires storing all CSV data in memory.
+    -a, --approx           Show approximated statistics.
+    --nulls                Include empty values in the population size for computing
+                           mean and standard deviation.
+
+parallel top options:
+    -l, --limit <n>       Number of top items to return. Cannot be < 1.
+                          [default: 10]
+    -R, --reverse         Reverse order.
+    -L, --lexicographic   Rank values lexicographically instead of considering
+                          them as numbers.
+    -r, --rank <col>      Name of a rank column to prepend.
+    -T, --ties            Keep all rows tied for last. Will therefore
+                          consume O(k + t) memory, t being the number of ties.
+
+parallel map options:
+    -z, --compress <kind>  Compress created files using either "gz|gzip" or "zst|zstd"
+                           compression.
+
+Common options:
+    -h, --help             Display this message
+    -o, --output <file>    Write output to <file> instead of stdout.
+    -n, --no-headers       When set, the first row will NOT be interpreted
+                           as column names. Note that this has no effect when
+                           concatenating columns.
+    -d, --delimiter <arg>  The field delimiter for reading CSV data.
+                           Must be a single character.
+```
