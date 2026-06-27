@@ -5,10 +5,6 @@ import {
   ChevronRight,
   ArrowDown,
   ArrowUp,
-  ArrowDownAZ,
-  ArrowUpAZ,
-  ArrowUp01,
-  ArrowDown01,
   Grid3X3,
   Calendar,
   Scissors,
@@ -54,7 +50,7 @@ interface ContextMenuProps {
   onOpenWindowDialog: (col: number, x: number, y: number) => void;
   onOpenPadDialog: (col: number, x: number, y: number, padType: string) => void;
   onOpenNumberTransformDialog: (col: number, x: number, y: number, transformType?: NumberTransformType) => void;
-  onSort: (col: number, order: "asc" | "desc", numeric: boolean) => void;
+  onOpenSortDialog: (col: number, x: number, y: number) => void;
 }
 
 export function ContextMenu({
@@ -69,7 +65,7 @@ export function ContextMenu({
   onOpenWindowDialog,
   onOpenPadDialog,
   onOpenNumberTransformDialog,
-  onSort,
+  onOpenSortDialog,
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: contextMenu.x, y: contextMenu.y });
@@ -135,13 +131,6 @@ export function ContextMenu({
       dropdown.style.top = "0";
     }
   };
-
-  const sortOptions = [
-    { label: "A → Z", icon: ArrowDownAZ, order: "asc" as const, numeric: false },
-    { label: "Z → A", icon: ArrowUpAZ, order: "desc" as const, numeric: false },
-    { label: "0 → 9", icon: ArrowDown01, order: "asc" as const, numeric: true },
-    { label: "9 → 0", icon: ArrowUp01, order: "desc" as const, numeric: true },
-  ];
 
   const textTransformOptions = [
     { label: "Len", icon: RulerDimensionLine, transformType: "len" as TextTransformType },
@@ -344,52 +333,17 @@ export function ContextMenu({
         </div>
       </div>
 
-      <div className="relative group">
-        <button
-          className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center justify-between gap-2"
-          onMouseEnter={handleSubmenuOpen}
-          onMouseLeave={(e) => {
-            const dropdown = e.currentTarget.nextElementSibling;
-            if (dropdown) dropdown.classList.add("hidden");
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-            Sort
-          </div>
-          <ChevronRight className="h-3 w-3 text-muted-foreground" />
-        </button>
-
-        <div
-          className="absolute top-0 hidden pl-1"
-          onMouseEnter={(e) => {
-            e.currentTarget.classList.remove("hidden");
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.classList.add("hidden");
-          }}
-        >
-          <div className="bg-card border rounded-lg shadow-lg py-1 min-w-[160px]">
-            {sortOptions.map((option) => {
-              const Icon = option.icon;
-              return (
-                <button
-                  key={`${option.order}-${option.numeric}`}
-                  className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onClose();
-                    onSort(contextMenu.col, option.order, option.numeric);
-                  }}
-                >
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      <button
+        className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+          onOpenSortDialog(contextMenu.col, contextMenu.x, contextMenu.y);
+        }}
+      >
+        <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+        Sort
+      </button>
     </div>
   );
 }

@@ -411,7 +411,7 @@ interface FlowPanelProps {
   onOpenReplaceDialog: (col: number, x: number, y: number) => void;
   onOpenWindowDialog: (col: number, x: number, y: number) => void;
   onOpenPadDialog: (col: number, x: number, y: number, padType: string) => void;
-  onSort: (col: number, order: "asc" | "desc", numeric: boolean) => void;
+  onOpenSortDialog: (col: number, x: number, y: number) => void;
   onOpenTextTransformDialog: (col: number, x: number, y: number, transformType?: TextTransformType) => void;
   onOpenNumberTransformDialog: (col: number, x: number, y: number, transformType?: NumberTransformType) => void;
   onTableRename: (col: number, newName: string) => void;
@@ -640,7 +640,7 @@ export function FlowPanel({
   onOpenReplaceDialog,
   onOpenWindowDialog,
   onOpenPadDialog,
-  onSort,
+  onOpenSortDialog,
   onOpenTextTransformDialog,
   onOpenNumberTransformDialog,
   onTableRename,
@@ -1779,7 +1779,7 @@ export function FlowPanel({
           onOpenWindowDialog={onOpenWindowDialog}
           onOpenPadDialog={onOpenPadDialog}
           onOpenNumberTransformDialog={onOpenNumberTransformDialog}
-          onSort={onSort}
+          onOpenSortDialog={onOpenSortDialog}
         />
       )}
 

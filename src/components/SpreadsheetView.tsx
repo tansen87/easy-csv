@@ -139,20 +139,6 @@ export function SpreadsheetView({
     setWindowDialog(null);
   }, []);
 
-  const handleQuickSort = useCallback((col: number, order: "asc" | "desc", numeric: boolean) => {
-    if (!onAddCommand) return;
-    const sortCommand = xanCommands.find((cmd) => cmd.id === "sort");
-    if (sortCommand) {
-      const columnName = headers[col];
-      onAddCommand(sortCommand, {
-        select: columnName,
-        reverse: order === "desc",
-        numeric: numeric,
-        output: "",
-      });
-    }
-  }, [headers, onAddCommand]);
-
   const handleTableRename = useCallback((col: number, newName: string) => {
     setRenamedColumns((prev) => ({ ...prev, [col]: newName }));
   }, []);
@@ -444,7 +430,7 @@ export function SpreadsheetView({
           onOpenReplaceDialog={(col, x, y) => setReplaceDialog({ col, x, y })}
           onOpenWindowDialog={(col, x, y) => setWindowDialog({ col, x, y })}
           onOpenPadDialog={(col, x, y, padType) => setPadDialog({ col, x, y, padType })}
-          onSort={handleQuickSort}
+          onOpenSortDialog={(col, x, y) => setSortDialog({ col, x, y })}
           onOpenTextTransformDialog={(col, x, y, transformType) => setTextTransformDialog({ col, x, y, transformType })}
           onOpenNumberTransformDialog={(col, x, y, transformType) => setNumberTransformDialog({ col, x, y, transformType })}
           onTableRename={handleTableRename}
@@ -479,7 +465,7 @@ export function SpreadsheetView({
           onOpenReplaceDialog={(col, x, y) => setReplaceDialog({ col, x, y })}
           onOpenWindowDialog={(col, x, y) => setWindowDialog({ col, x, y })}
           onOpenPadDialog={(col, x, y, padType) => setPadDialog({ col, x, y, padType })}
-          onSort={handleQuickSort}
+          onOpenSortDialog={(col, x, y) => setSortDialog({ col, x, y })}
         />
       )}
 
