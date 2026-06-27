@@ -204,7 +204,7 @@ export function PivotDialog({
 
   return (
     <div
-      className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[360px] h-[406px] flex flex-col select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+      className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[360px] h-[420px] flex flex-col select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
         left: position.x,
         top: position.y,
@@ -354,7 +354,7 @@ export function PivotDialog({
         </div>
       </ScrollArea>
 
-      <div className="flex gap-2 p-2 ml-1 mr-1 bg-muted/20 shrink-0">
+      <div className="px-3 pb-3 flex gap-2 shrink-0">
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
           variant="secondary"

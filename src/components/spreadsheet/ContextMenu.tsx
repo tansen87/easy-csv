@@ -32,6 +32,7 @@ import {
   Eraser,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { TransformType } from "@/components/spreadsheet/TextTransformDialog";
 
 interface ContextMenuState {
   x: number;
@@ -46,12 +47,12 @@ interface ContextMenuProps {
   onOpenFilterDialog: (col: number, x: number, y: number) => void;
   onOpenPivotDialog: (x: number, y: number) => void;
   onOpenDateTransformDialog: (col: number, x: number, y: number) => void;
+  onOpenTextTransformDialog: (col: number, x: number, y: number, transformType?: TransformType) => void;
   onOpenSliceDialog: (col: number, x: number, y: number, sliceType?: string) => void;
   onOpenReplaceDialog: (col: number, x: number, y: number) => void;
   onOpenWindowDialog: (col: number, x: number, y: number) => void;
   onOpenPadDialog: (col: number, x: number, y: number, padType: string) => void;
   onSort: (col: number, order: "asc" | "desc", numeric: boolean) => void;
-  onTextTransform: (col: number, transformType: string) => void;
   onNumberTransform: (col: number, transformType: string) => void;
 }
 
@@ -61,12 +62,12 @@ export function ContextMenu({
   onOpenFilterDialog,
   onOpenPivotDialog,
   onOpenDateTransformDialog,
+  onOpenTextTransformDialog,
   onOpenSliceDialog,
   onOpenReplaceDialog,
   onOpenWindowDialog,
   onOpenPadDialog,
   onSort,
-  onTextTransform,
   onNumberTransform,
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -142,13 +143,13 @@ export function ContextMenu({
   ];
 
   const textTransformOptions = [
-    { label: "Len", icon: RulerDimensionLine, transformType: "len" },
-    { label: "Lowercase", icon: CaseLower, transformType: "lower" },
-    { label: "Uppercase", icon: CaseUpper, transformType: "upper" },
-    { label: "Trim", icon: AlignCenter, transformType: "trim" },
-    { label: "LTrim", icon: AlignLeft, transformType: "ltrim" },
-    { label: "RTrim", icon: AlignRight, transformType: "rtrim" },
-    { label: "Strip", icon: Eraser, transformType: "strip" },
+    { label: "Len", icon: RulerDimensionLine, transformType: "len" as TransformType },
+    { label: "Lowercase", icon: CaseLower, transformType: "lower" as TransformType },
+    { label: "Uppercase", icon: CaseUpper, transformType: "upper" as TransformType },
+    { label: "Trim", icon: AlignCenter, transformType: "trim" as TransformType },
+    { label: "LTrim", icon: AlignLeft, transformType: "ltrim" as TransformType },
+    { label: "RTrim", icon: AlignRight, transformType: "rtrim" as TransformType },
+    { label: "Strip", icon: Eraser, transformType: "strip" as TransformType },
     { label: "Left", icon: ArrowLeftFromLine, transformType: "splitLeft" },
     { label: "Right", icon: ArrowRightFromLine, transformType: "splitRight" },
     { label: "Slice", icon: Slice, transformType: "slice" },
@@ -281,7 +282,7 @@ export function ContextMenu({
                       } else if (option.transformType === "pad") {
                         onOpenPadDialog(contextMenu.col, contextMenu.x, contextMenu.y, "pad");
                       } else {
-                        onTextTransform(contextMenu.col, option.transformType);
+                        onOpenTextTransformDialog(contextMenu.col, contextMenu.x, contextMenu.y, option.transformType as TransformType);
                       }
                     }}
                   >
