@@ -25,7 +25,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, Edit3, Check, Settings } from "lucide-react";
 import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "@/components/spreadsheet/ContextMenu";
-import { TransformType } from "@/components/spreadsheet/TextTransformDialog";
+import { TextTransformType } from "@/components/spreadsheet/TextTransformDialog";
+import { NumberTransformType } from "@/components/spreadsheet/NumberTransformDialog";
 import { useTheme } from "@/components/ThemeProvider";
 
 interface TableNodeData {
@@ -411,8 +412,8 @@ interface FlowPanelProps {
   onOpenWindowDialog: (col: number, x: number, y: number) => void;
   onOpenPadDialog: (col: number, x: number, y: number, padType: string) => void;
   onSort: (col: number, order: "asc" | "desc", numeric: boolean) => void;
-  onOpenTextTransformDialog: (col: number, x: number, y: number, transformType?: TransformType) => void;
-  onNumberTransform: (col: number, transformType: string) => void;
+  onOpenTextTransformDialog: (col: number, x: number, y: number, transformType?: TextTransformType) => void;
+  onOpenNumberTransformDialog: (col: number, x: number, y: number, transformType?: NumberTransformType) => void;
   onTableRename: (col: number, newName: string) => void;
   onSave: () => void;
   selectedStepId?: string;
@@ -641,7 +642,7 @@ export function FlowPanel({
   onOpenPadDialog,
   onSort,
   onOpenTextTransformDialog,
-  onNumberTransform,
+  onOpenNumberTransformDialog,
   onTableRename,
   onSave,
   selectedStepId,
@@ -1777,8 +1778,8 @@ export function FlowPanel({
           onOpenReplaceDialog={onOpenReplaceDialog}
           onOpenWindowDialog={onOpenWindowDialog}
           onOpenPadDialog={onOpenPadDialog}
+          onOpenNumberTransformDialog={onOpenNumberTransformDialog}
           onSort={onSort}
-          onNumberTransform={onNumberTransform}
         />
       )}
 

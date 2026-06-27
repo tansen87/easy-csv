@@ -32,7 +32,8 @@ import {
   Eraser,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { TransformType } from "@/components/spreadsheet/TextTransformDialog";
+import { TextTransformType } from "@/components/spreadsheet/TextTransformDialog";
+import { NumberTransformType } from "@/components/spreadsheet/NumberTransformDialog";
 
 interface ContextMenuState {
   x: number;
@@ -47,13 +48,13 @@ interface ContextMenuProps {
   onOpenFilterDialog: (col: number, x: number, y: number) => void;
   onOpenPivotDialog: (x: number, y: number) => void;
   onOpenDateTransformDialog: (col: number, x: number, y: number) => void;
-  onOpenTextTransformDialog: (col: number, x: number, y: number, transformType?: TransformType) => void;
+  onOpenTextTransformDialog: (col: number, x: number, y: number, transformType?: TextTransformType) => void;
   onOpenSliceDialog: (col: number, x: number, y: number, sliceType?: string) => void;
   onOpenReplaceDialog: (col: number, x: number, y: number) => void;
   onOpenWindowDialog: (col: number, x: number, y: number) => void;
   onOpenPadDialog: (col: number, x: number, y: number, padType: string) => void;
+  onOpenNumberTransformDialog: (col: number, x: number, y: number, transformType?: NumberTransformType) => void;
   onSort: (col: number, order: "asc" | "desc", numeric: boolean) => void;
-  onNumberTransform: (col: number, transformType: string) => void;
 }
 
 export function ContextMenu({
@@ -67,8 +68,8 @@ export function ContextMenu({
   onOpenReplaceDialog,
   onOpenWindowDialog,
   onOpenPadDialog,
+  onOpenNumberTransformDialog,
   onSort,
-  onNumberTransform,
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: contextMenu.x, y: contextMenu.y });
@@ -143,13 +144,13 @@ export function ContextMenu({
   ];
 
   const textTransformOptions = [
-    { label: "Len", icon: RulerDimensionLine, transformType: "len" as TransformType },
-    { label: "Lowercase", icon: CaseLower, transformType: "lower" as TransformType },
-    { label: "Uppercase", icon: CaseUpper, transformType: "upper" as TransformType },
-    { label: "Trim", icon: AlignCenter, transformType: "trim" as TransformType },
-    { label: "LTrim", icon: AlignLeft, transformType: "ltrim" as TransformType },
-    { label: "RTrim", icon: AlignRight, transformType: "rtrim" as TransformType },
-    { label: "Strip", icon: Eraser, transformType: "strip" as TransformType },
+    { label: "Len", icon: RulerDimensionLine, transformType: "len" as TextTransformType },
+    { label: "Lowercase", icon: CaseLower, transformType: "lower" as TextTransformType },
+    { label: "Uppercase", icon: CaseUpper, transformType: "upper" as TextTransformType },
+    { label: "Trim", icon: AlignCenter, transformType: "trim" as TextTransformType },
+    { label: "LTrim", icon: AlignLeft, transformType: "ltrim" as TextTransformType },
+    { label: "RTrim", icon: AlignRight, transformType: "rtrim" as TextTransformType },
+    { label: "Strip", icon: Eraser, transformType: "strip" as TextTransformType },
     { label: "Left", icon: ArrowLeftFromLine, transformType: "splitLeft" },
     { label: "Right", icon: ArrowRightFromLine, transformType: "splitRight" },
     { label: "Slice", icon: Slice, transformType: "slice" },
@@ -282,7 +283,7 @@ export function ContextMenu({
                       } else if (option.transformType === "pad") {
                         onOpenPadDialog(contextMenu.col, contextMenu.x, contextMenu.y, "pad");
                       } else {
-                        onOpenTextTransformDialog(contextMenu.col, contextMenu.x, contextMenu.y, option.transformType as TransformType);
+                        onOpenTextTransformDialog(contextMenu.col, contextMenu.x, contextMenu.y, option.transformType as TextTransformType);
                       }
                     }}
                   >
@@ -331,7 +332,7 @@ export function ContextMenu({
                   onClick={(e) => {
                     e.stopPropagation();
                     onClose();
-                    onNumberTransform(contextMenu.col, option.transformType);
+                    onOpenNumberTransformDialog(contextMenu.col, contextMenu.x, contextMenu.y, option.transformType as NumberTransformType);
                   }}
                 >
                   <Icon className="h-4 w-4 text-muted-foreground" />

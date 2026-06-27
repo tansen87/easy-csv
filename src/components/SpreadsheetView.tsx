@@ -9,7 +9,8 @@ import { FilterDialog } from "@/components/spreadsheet/FilterDialog";
 import { SortDialog } from "@/components/spreadsheet/SortDialog";
 import { PivotDialog } from "@/components/spreadsheet/PivotDialog";
 import { DateTransformDialog } from "@/components/spreadsheet/DateTransformDialog";
-import { TextTransformDialog, TransformType } from "@/components/spreadsheet/TextTransformDialog";
+import { TextTransformDialog, TextTransformType } from "@/components/spreadsheet/TextTransformDialog";
+import { NumberTransformDialog, NumberTransformType } from "@/components/spreadsheet/NumberTransformDialog";
 import { SplitDialog } from "@/components/spreadsheet/SplitDialog";
 import { PadDialog } from "@/components/spreadsheet/PadDialog";
 import { ReplaceDialog } from "@/components/spreadsheet/ReplaceDialog";
@@ -81,7 +82,8 @@ export function SpreadsheetView({
   const [pivotDialog, setPivotDialog] = useState<{ x: number; y: number } | null>(null);
   const [replaceDialog, setReplaceDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [dateTransformDialog, setDateTransformDialog] = useState<{ col: number; x: number; y: number } | null>(null);
-  const [textTransformDialog, setTextTransformDialog] = useState<{ col: number; x: number; y: number; transformType?: TransformType } | null>(null);
+  const [textTransformDialog, setTextTransformDialog] = useState<{ col: number; x: number; y: number; transformType?: TextTransformType } | null>(null);
+  const [numberTransformDialog, setNumberTransformDialog] = useState<{ col: number; x: number; y: number; transformType?: NumberTransformType } | null>(null);
   const [splitDialog, setSplitDialog] = useState<{ col: number; x: number; y: number; sliceType?: string } | null>(null);
   const [padDialog, setPadDialog] = useState<{ col: number; x: number; y: number; padType: string } | null>(null);
   const [windowDialog, setWindowDialog] = useState<{ col: number; x: number; y: number } | null>(null);
@@ -124,6 +126,10 @@ export function SpreadsheetView({
 
   const closeTextTransformDialog = useCallback(() => {
     setTextTransformDialog(null);
+  }, []);
+
+  const closeNumberTransformDialog = useCallback(() => {
+    setNumberTransformDialog(null);
   }, []);
 
   const closeSplitDialog = useCallback(() => {
@@ -202,30 +208,6 @@ export function SpreadsheetView({
     }
     closeOperationDialog();
   }, [onAddCommand, closeOperationDialog]);
-
-  const handleNumberTransform = useCallback((col: number, transformType: string) => {
-    if (!onAddCommand) return;
-    const mapCommand = xanCommands.find((cmd) => cmd.id === "map");
-    if (mapCommand) {
-      const columnName = headers[col];
-      const expressionMap: Record<string, string> = {
-        abs: `abs(col("${columnName}")) as "${columnName}"`,
-        floor: `floor(col("${columnName}")) as "${columnName}"`,
-        ceil: `ceil(col("${columnName}")) as "${columnName}"`,
-        int: `trunc(col("${columnName}")) as "${columnName}"`,
-        float: `float(col("${columnName}")) as "${columnName}"`,
-        round: `to_fixed(round(col("${columnName}"), 0.01), 2) as "${columnName}"`,
-      };
-      const expression = expressionMap[transformType];
-      if (expression) {
-        onAddCommand(mapCommand, {
-          expression,
-          overwrite: true,
-          output: "",
-        });
-      }
-    }
-  }, [onAddCommand, headers]);
 
   const closeAllDialogsRef = useRef(() => {
     closeContextMenu();
@@ -503,7 +485,7 @@ export function SpreadsheetView({
           onOpenPadDialog={(col, x, y, padType) => setPadDialog({ col, x, y, padType })}
           onSort={handleQuickSort}
           onOpenTextTransformDialog={(col, x, y, transformType) => setTextTransformDialog({ col, x, y, transformType })}
-          onNumberTransform={handleNumberTransform}
+          onOpenNumberTransformDialog={(col, x, y, transformType) => setNumberTransformDialog({ col, x, y, transformType })}
           onTableRename={handleTableRename}
           onSave={handleSaveRenames}
           selectedStepId={selectedStepId}
@@ -531,12 +513,12 @@ export function SpreadsheetView({
           onOpenPivotDialog={(x, y) => setPivotDialog({ x, y })}
           onOpenDateTransformDialog={(col, x, y) => setDateTransformDialog({ col, x, y })}
           onOpenTextTransformDialog={(col, x, y, transformType) => setTextTransformDialog({ col, x, y, transformType })}
+          onOpenNumberTransformDialog={(col, x, y, transformType) => setNumberTransformDialog({ col, x, y, transformType })}
           onOpenSliceDialog={(col, x, y, sliceType) => setSplitDialog({ col, x, y, sliceType })}
           onOpenReplaceDialog={(col, x, y) => setReplaceDialog({ col, x, y })}
           onOpenWindowDialog={(col, x, y) => setWindowDialog({ col, x, y })}
           onOpenPadDialog={(col, x, y, padType) => setPadDialog({ col, x, y, padType })}
           onSort={handleQuickSort}
-          onNumberTransform={handleNumberTransform}
         />
       )}
 
@@ -591,6 +573,15 @@ export function SpreadsheetView({
           headers={headers}
           onAddCommand={onAddCommand}
           onClose={closeTextTransformDialog}
+        />
+      )}
+
+      {numberTransformDialog && (
+        <NumberTransformDialog
+          numberTransformDialog={numberTransformDialog}
+          headers={headers}
+          onAddCommand={onAddCommand}
+          onClose={closeNumberTransformDialog}
         />
       )}
 

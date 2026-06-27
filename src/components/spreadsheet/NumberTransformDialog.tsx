@@ -5,17 +5,17 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 
-export type TextTransformType = "len" | "lower" | "upper" | "trim" | "ltrim" | "rtrim" | "strip";
+export type NumberTransformType = "abs" | "floor" | "ceil" | "int" | "float" | "round";
 
-interface TextTransformDialogState {
+interface NumberTransformDialogState {
   col: number;
   x: number;
   y: number;
-  transformType?: TextTransformType;
+  transformType?: NumberTransformType;
 }
 
-interface TextTransformDialogProps {
-  textTransformDialog: TextTransformDialogState;
+interface NumberTransformDialogProps {
+  numberTransformDialog: NumberTransformDialogState;
   headers: string[];
   onAddCommand: (
     command: XanCommand,
@@ -24,31 +24,30 @@ interface TextTransformDialogProps {
   onClose: () => void;
 }
 
-const transformOptions: { value: TextTransformType; label: string }[] = [
-  { value: "len", label: "Len" },
-  { value: "lower", label: "Lower" },
-  { value: "upper", label: "Upper" },
-  { value: "trim", label: "Trim" },
-  { value: "ltrim", label: "Ltrim" },
-  { value: "rtrim", label: "Rtrim" },
-  { value: "strip", label: "Strip" },
+const transformOptions: { value: NumberTransformType; label: string }[] = [
+  { value: "abs", label: "Abs" },
+  { value: "floor", label: "Floor" },
+  { value: "ceil", label: "Ceil" },
+  { value: "int", label: "Integer" },
+  { value: "float", label: "Float" },
+  { value: "round", label: "Round" },
 ];
 
-export function TextTransformDialog({
-  textTransformDialog,
+export function NumberTransformDialog({
+  numberTransformDialog,
   headers,
   onAddCommand,
   onClose,
-}: TextTransformDialogProps) {
+}: NumberTransformDialogProps) {
   const [selectedColumns, setSelectedColumns] = useState<string[]>(() => {
-    const initialColumn = headers[textTransformDialog.col];
+    const initialColumn = headers[numberTransformDialog.col];
     return initialColumn ? [initialColumn] : [];
   });
-  const [selectedTransform, setSelectedTransform] = useState<TextTransformType>(
-    textTransformDialog.transformType || "lower"
+  const [selectedTransform, setSelectedTransform] = useState<NumberTransformType>(
+    numberTransformDialog.transformType || "abs"
   );
   const [search, setSearch] = useState("");
-  const [position, setPosition] = useState({ x: textTransformDialog.x, y: textTransformDialog.y });
+  const [position, setPosition] = useState({ x: numberTransformDialog.x, y: numberTransformDialog.y });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
   const positionRef = useRef(position);
@@ -118,14 +117,13 @@ export function TextTransformDialog({
     const mapCommand = xanCommands.find((cmd) => cmd.id === "map");
     if (!mapCommand) return;
 
-    const expressionMap: Record<TextTransformType, (col: string) => string> = {
-      len: (col) => `col("${col}").len() as "${col}"`,
-      lower: (col) => `col("${col}").lower() as "${col}"`,
-      upper: (col) => `col("${col}").upper() as "${col}"`,
-      trim: (col) => `col("${col}").trim() as "${col}"`,
-      ltrim: (col) => `col("${col}").ltrim() as "${col}"`,
-      rtrim: (col) => `col("${col}").rtrim() as "${col}"`,
-      strip: (col) => `replace(col("${col}"), /[\r\t\n]/, "") as "${col}"`,
+    const expressionMap: Record<NumberTransformType, (col: string) => string> = {
+      abs: (col) => `abs(col("${col}")) as "${col}"`,
+      floor: (col) => `floor(col("${col}")) as "${col}"`,
+      ceil: (col) => `ceil(col("${col}")) as "${col}"`,
+      int: (col) => `trunc(col("${col}")) as "${col}"`,
+      float: (col) => `float(col("${col}")) as "${col}"`,
+      round: (col) => `to_fixed(round(col("${col}"), 0.01), 2) as "${col}"`,
     };
 
     const expressions = selectedColumns.map((col) => expressionMap[selectedTransform](col)).join(", ");
@@ -151,7 +149,7 @@ export function TextTransformDialog({
     >
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-base font-medium">Text Transform</span>
+          <span className="text-base font-medium">Number Transform</span>
         </div>
         <button
           onClick={onClose}
