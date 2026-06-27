@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { X, Rows3, Repeat2, Repeat, FolderOpen, FileUp, Star } from "lucide-react";
+import { X, FolderOpen, FileUp, Star } from "lucide-react";
 import { PipelineStep, PipelineEdge, XanCommand, PipelineTab } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 import { ContextMenu } from "@/components/spreadsheet/ContextMenu";
@@ -78,7 +78,6 @@ export function SpreadsheetView({
   const [editingTabName, setEditingTabName] = useState<string>("");
   const [filterDialog, setFilterDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [sortDialog, setSortDialog] = useState<{ col: number; x: number; y: number } | null>(null);
-  const [operationDialog, setOperationDialog] = useState<{ col: number; x: number; y: number; columnName: string } | null>(null);
   const [pivotDialog, setPivotDialog] = useState<{ x: number; y: number } | null>(null);
   const [replaceDialog, setReplaceDialog] = useState<{ col: number; x: number; y: number } | null>(null);
   const [dateTransformDialog, setDateTransformDialog] = useState<{ col: number; x: number; y: number } | null>(null);
@@ -110,10 +109,6 @@ export function SpreadsheetView({
 
   const closeSortDialog = useCallback(() => {
     setSortDialog(null);
-  }, []);
-
-  const closeOperationDialog = useCallback(() => {
-    setOperationDialog(null);
   }, []);
 
   const closePivotDialog = useCallback(() => {
@@ -174,40 +169,6 @@ export function SpreadsheetView({
       }
     }
   }, [renamedColumns, headers, onAddCommand]);
-
-  const handleDedup = useCallback(() => {
-    if (!operationDialog || !onAddCommand) return;
-    const dedupCommand = xanCommands.find((cmd) => cmd.id === "dedup");
-    if (dedupCommand) {
-      onAddCommand(dedupCommand, {
-        select: operationDialog.columnName,
-        output: "",
-      });
-    }
-    closeOperationDialog();
-  }, [operationDialog, onAddCommand, closeOperationDialog]);
-
-  const handleTranspose = useCallback(() => {
-    if (!onAddCommand) return;
-    const transposeCommand = xanCommands.find((cmd) => cmd.id === "transpose");
-    if (transposeCommand) {
-      onAddCommand(transposeCommand, {
-        output: "",
-      });
-    }
-    closeOperationDialog();
-  }, [onAddCommand, closeOperationDialog]);
-
-  const handleReverse = useCallback(() => {
-    if (!onAddCommand) return;
-    const reverseCommand = xanCommands.find((cmd) => cmd.id === "reverse");
-    if (reverseCommand) {
-      onAddCommand(reverseCommand, {
-        output: "",
-      });
-    }
-    closeOperationDialog();
-  }, [onAddCommand, closeOperationDialog]);
 
   const closeAllDialogsRef = useRef(() => {
     closeContextMenu();
@@ -619,50 +580,6 @@ export function SpreadsheetView({
           onAddCommand={onAddCommand}
           onClose={closeWindowDialog}
         />
-      )}
-
-      {operationDialog && (
-        <div
-          className="fixed bg-card border rounded-lg shadow-xl z-50 w-[180px]"
-          style={{
-            left: Math.min(operationDialog.x, window.innerWidth - 200),
-            top: Math.min(operationDialog.y, window.innerHeight - 200),
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20">
-            <span className="text-xs font-medium truncate max-w-[120px]">{operationDialog.columnName}</span>
-            <button
-              onClick={closeOperationDialog}
-              className="p-0.5 hover:bg-accent rounded transition-colors shrink-0"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <div className="p-2 space-y-1">
-            <button
-              onClick={handleDedup}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors"
-            >
-              <Rows3 className="h-3.5 w-3.5" />
-              Dedup
-            </button>
-            <button
-              onClick={handleTranspose}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors"
-            >
-              <Repeat2 className="h-3.5 w-3.5" />
-              Transpose
-            </button>
-            <button
-              onClick={handleReverse}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors"
-            >
-              <Repeat className="h-3.5 w-3.5" />
-              Reverse
-            </button>
-          </div>
-        </div>
       )}
     </div>
   );
