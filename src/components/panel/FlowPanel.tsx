@@ -24,10 +24,10 @@ import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, Edit3, Check, Settings } from "lucide-react";
 import { PipelineStep, PipelineEdge } from "@/types/xan";
-import { ContextMenu } from "@/components/spreadsheet/ContextMenu";
-import { TextTransformType } from "@/components/spreadsheet/TextTransformDialog";
-import { NumberTransformType } from "@/components/spreadsheet/NumberTransformDialog";
-import { useTheme } from "@/components/ThemeProvider";
+import { ContextMenu } from "@/components/menu/ContextMenu";
+import { TextTransformType } from "@/components/dialog/TextTransformDialog";
+import { NumberTransformType } from "@/components/dialog/NumberTransformDialog";
+import { useTheme } from "@/components/setting/ThemeProvider";
 
 interface TableNodeData {
   headers: string[];

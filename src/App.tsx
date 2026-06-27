@@ -3,9 +3,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "@/components/ThemeProvider";
-import { ToastContainer, ToastType } from "@/components/Toast";
-import { NotificationPanel, NotificationType } from "@/components/PersistentNotification";
+import { useTheme } from "@/components/setting/ThemeProvider";
+import { ToastContainer, ToastType } from "@/components/setting/Toast";
+import { NotificationPanel, NotificationType } from "@/components/setting/PersistentNotification";
 import {
   Loader2,
   Terminal,
@@ -16,13 +16,13 @@ import {
   FileText,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
-import { LogPanel } from "@/components/LogPanel";
-import { SettingsDialog } from "@/components/SettingsDialog";
-import { SpreadsheetView } from "@/components/SpreadsheetView";
+import { LogPanel } from "@/components/panel/LogPanel";
+import { SettingsDialog } from "@/components/setting/SettingsDialog";
+import { SpreadsheetView } from "@/components/HomeView";
 import { HelpDialog } from "@/components/help/HelpDialog";
 import { xanCommands } from "@/data/commands";
 import { helpDocs } from "@/generated/help-docs";
-import { MainMenu } from "@/components/MainMenu";
+import { MainMenu } from "@/components/menu/MainMenu";
 import { MainMenuHooks } from "@/hooks/MainMenuHooks";
 import {
   PipelineStep,
@@ -54,7 +54,6 @@ function App() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isXanInstalled, setIsXanInstalled] = useState<boolean | null>(null);
   const [xanVersion, setXanVersion] = useState<string | null>(null);
-  const [isSavingSettings, setIsSavingSettings] = useState<boolean>(false);
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(",");
   const [_xanPath, setXanPath] = useState<string>("");
   const [noQuoting, setNoQuoting] = useState<boolean>(false);
@@ -838,7 +837,6 @@ function App() {
         noHeaders={noHeaders}
         onNoHeadersChange={setNoHeaders}
         onSave={async () => {
-          setIsSavingSettings(true);
           try {
             const savePromises: Promise<void>[] = [];
             savePromises.push(
@@ -854,11 +852,8 @@ function App() {
             showToastRef.current("Settings saved successfully", 'success');
           } catch (error) {
             showToastRef.current(`Failed to save settings: ${error}`, 'error');
-          } finally {
-            setIsSavingSettings(false);
           }
         }}
-        isSaving={isSavingSettings}
       />
     </div>
   );

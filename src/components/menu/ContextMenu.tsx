@@ -28,8 +28,8 @@ import {
   Eraser,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { TextTransformType } from "@/components/spreadsheet/TextTransformDialog";
-import { NumberTransformType } from "@/components/spreadsheet/NumberTransformDialog";
+import { TextTransformType } from "@/components/dialog/TextTransformDialog";
+import { NumberTransformType } from "@/components/dialog/NumberTransformDialog";
 
 interface ContextMenuState {
   x: number;

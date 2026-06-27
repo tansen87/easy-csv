@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X } from "lucide-react";
-import { SettingsTabContent } from "@/components/SettingsTabContent";
+import { SettingsTabContent } from "@/components/setting/SettingsTabContent";
 
 interface SettingsDialogProps {
   isOpen: boolean;
@@ -14,7 +14,6 @@ interface SettingsDialogProps {
   noHeaders: boolean;
   onNoHeadersChange: (value: boolean) => void;
   onSave: () => void;
-  isSaving: boolean;
 }
 
 export function SettingsDialog({
@@ -29,7 +28,6 @@ export function SettingsDialog({
   noHeaders,
   onNoHeadersChange,
   onSave,
-  isSaving,
 }: SettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<"preference" | "general">("preference");
 
@@ -96,7 +94,6 @@ export function SettingsDialog({
             noHeaders={noHeaders}
             onNoHeadersChange={onNoHeadersChange}
             onSave={onSave}
-            isSaving={isSaving}
           />
         </div>
       </div>

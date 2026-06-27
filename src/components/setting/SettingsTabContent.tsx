@@ -14,7 +14,6 @@ interface SettingsTabContentProps {
   noHeaders: boolean;
   onNoHeadersChange: (value: boolean) => void;
   onSave: () => void;
-  isSaving: boolean;
 }
 
 export function SettingsTabContent({
@@ -28,7 +27,6 @@ export function SettingsTabContent({
   noHeaders,
   onNoHeadersChange,
   onSave,
-  isSaving,
 }: SettingsTabContentProps) {
   const [isThemeTransitioning, setIsThemeTransitioning] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -56,17 +54,15 @@ export function SettingsTabContent({
               <h3 className="text-lg font-semibold mb-4">Theme</h3>
               <div className="inline-flex bg-muted/50 rounded-md p-0.5 border border-border/50 relative">
                 <div
-                  className={`absolute top-0.5 bottom-0.5 left-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${
-                    theme === "dark" ? "translate-x-[calc(100%+2px)]" : "translate-x-0"
-                  }`}
+                  className={`absolute top-0.5 bottom-0.5 left-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${theme === "dark" ? "translate-x-[calc(100%+2px)]" : "translate-x-0"
+                    }`}
                   style={{ width: "calc(50% - 2px)" }}
                 />
                 <button
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
-                    theme === "light"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${theme === "light"
                       ? "text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
-                  } ${isThemeTransitioning ? "pointer-events-none opacity-60" : ""}`}
+                    } ${isThemeTransitioning ? "pointer-events-none opacity-60" : ""}`}
                   onClick={() => handleThemeChange("light")}
                   disabled={isThemeTransitioning}
                 >
@@ -74,11 +70,10 @@ export function SettingsTabContent({
                   Light
                 </button>
                 <button
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
-                    theme === "dark"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${theme === "dark"
                       ? "text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
-                  } ${isThemeTransitioning ? "pointer-events-none opacity-60" : ""}`}
+                    } ${isThemeTransitioning ? "pointer-events-none opacity-60" : ""}`}
                   onClick={() => handleThemeChange("dark")}
                   disabled={isThemeTransitioning}
                 >
@@ -155,7 +150,7 @@ export function SettingsTabContent({
       {/* Footer */}
       <div className="p-4 flex justify-end gap-3 mb-1">
         <Button
-          variant="outline"
+          variant="secondary"
           onClick={() => {
             onThemeChange("light");
             onDefaultDelimiterChange(",");
@@ -167,21 +162,11 @@ export function SettingsTabContent({
           Reset to Defaults
         </Button>
         <Button
-          variant="outline"
+          variant="secondary"
           onClick={onSave}
-          disabled={isSaving}
         >
-          {isSaving ? (
-            <>
-              <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Save Settings
-            </>
-          )}
+          <Save className="h-4 w-4 mr-2" />
+          Save Settings
         </Button>
       </div>
     </div>

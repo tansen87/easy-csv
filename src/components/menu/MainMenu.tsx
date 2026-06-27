@@ -175,11 +175,11 @@ export function MainMenu({
           {isExecuting ? (
             <>
               <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              Executing...
+              Executing
             </>
           ) : (
             <>
-              <Play className="h-3 w-3 mr-1.5" />
+              <Play className="h-3.5 w-3.5" />
               Execute
               {currentPipelineLength > 0 && (
                 <span className="ml-0.5">({currentPipelineLength})</span>
