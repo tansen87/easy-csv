@@ -242,10 +242,32 @@ function PipelineStepNode({
   const [editValue, setEditValue] = useState(data.step.alias || "");
 
   const activeParams = useMemo(() => {
-    return Object.entries(data.step.parameters).filter(
-      ([, value]) => value !== undefined && value !== "" && value !== false
-    );
+    return Object.entries(data.step.parameters)
+      .filter(([, value]) => {
+        // 对于布尔值(flag参数),只有值为true时才显示
+        if (typeof value === "boolean") {
+          return value === true;
+        }
+        // 对于其他参数,过滤掉 undefined 和空字符串
+        return value !== undefined && value !== "";
+      })
+      .map(([key, value]) => {
+        // 对于布尔值(flag参数),只显示参数名
+        if (typeof value === "boolean") {
+          return [key, null]; // null 表示不显示值
+        }
+        return [key, value];
+      });
   }, [data.step.parameters]);
+
+  // 分离flag参数和非flag参数
+  const flagParams = useMemo(() => {
+    return activeParams.filter(([, value]) => value === null);
+  }, [activeParams]);
+
+  const nonFlagParams = useMemo(() => {
+    return activeParams.filter(([, value]) => value !== null);
+  }, [activeParams]);
 
   const handleAliasSave = () => {
     data.onStepAliasUpdate(data.step.id, editValue.trim());
@@ -294,56 +316,71 @@ function PipelineStepNode({
           style={{ opacity: 0, pointerEvents: 'none' }}
         />
         <div className="p-3">
-          <div className="flex items-center gap-2">
-            <div className="flex-1 min-w-0">
-              {isEditing ? (
-                <div className="flex items-center gap-1 flex-1">
-                  <input
-                    type="text"
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    className="h-6 px-1.5 text-xs border rounded bg-background w-20 focus:outline-none focus:ring-1 focus:ring-primary/50"
-                    autoFocus
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={handleKeyDown}
-                  />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAliasSave();
-                    }}
-                    className="w-5 h-5 bg-green-500/10 hover:bg-green-500/20 rounded flex items-center justify-center transition-colors"
-                  >
-                    <Check className="h-3 w-3 text-green-600" />
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="font-semibold text-xs truncate">
-                    {data.step.alias || data.step.command.name}
-                  </div>
-                  {data.step.alias && (
-                    <span className="text-[9px] text-muted-foreground/70 bg-muted/60 px-1 py-0.5 rounded border border-border/40">
-                      {data.step.command.name}
-                    </span>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-          {activeParams.length > 0 && (
-            <div className="text-[10px] text-muted-foreground flex flex-wrap gap-0.5 mt-1.5">
-              {activeParams.slice(0, 2).map(([key, value]) => (
-                <span
-                  key={key}
-                  className="bg-muted/70 px-1 py-0.5 rounded border border-border/40"
+          <div className="flex items-center gap-2 w-full">
+            {isEditing ? (
+              <div className="flex items-center gap-1 w-full">
+                <input
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="w-[90%] h-6 px-2 text-xs border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  autoFocus
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Alias"
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAliasSave();
+                  }}
+                  className="w-[5%] h-6 bg-green-500/10 hover:bg-green-500/20 rounded flex items-center justify-center transition-colors min-w-[24px]"
                 >
-                  <span className="text-muted-foreground/80">{key}=</span>
-                  <span className="font-medium">{String(value).slice(0, 8)}</span>
-                </span>
-              ))}
-              {activeParams.length > 2 && (
-                <span className="text-muted-foreground/60">+{activeParams.length - 2}</span>
+                  <Check className="h-3 w-3 text-green-600" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="font-semibold text-xs truncate flex-1 min-w-0">
+                  {data.step.alias || data.step.command.name}
+                </div>
+                {data.step.alias && (
+                  <span className="text-[9px] text-muted-foreground/70 bg-muted/60 px-1 py-0.5 rounded border border-border/40 ml-auto">
+                    {data.step.command.name}
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+          {(nonFlagParams.length > 0 || flagParams.length > 0) && (
+            <div className="mt-1 space-y-0.5">
+              {/* 非 flag 参数 - 参数少的情况下可以多个占一行 */}
+              {nonFlagParams.length > 0 && (
+                <div className="text-[9px] text-muted-foreground flex flex-wrap gap-0.5">
+                  {nonFlagParams.map(([key, value]) => (
+                    <span
+                      key={key}
+                      className="bg-muted/70 px-1 py-0.5 rounded border border-border/40 max-w-full overflow-hidden"
+                      style={{ wordBreak: 'break-word' }}
+                    >
+                      <span className="text-muted-foreground/80">{key}=</span>
+                      <span className="font-medium">{String(value)}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {/* flag 参数 - 在下一行显示，可以多个在同一行 */}
+              {flagParams.length > 0 && (
+                <div className="text-[9px] text-muted-foreground flex flex-wrap gap-0.5">
+                  {flagParams.map(([key]) => (
+                    <span
+                      key={key}
+                      className="bg-muted/70 px-1 py-0.5 rounded border border-border/40"
+                    >
+                      <span className="font-medium">{key}</span>
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
           )}
