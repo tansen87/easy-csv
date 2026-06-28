@@ -18,7 +18,7 @@ import {
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/panel/LogPanel";
 import { SettingsDialog } from "@/components/setting/SettingsDialog";
-import { SpreadsheetView } from "@/components/HomeView";
+import { HomeView } from "@/components/HomeView";
 import { HelpDialog } from "@/components/help/HelpDialog";
 import { xanCommands } from "@/data/commands";
 import { helpDocs } from "@/generated/help-docs";
@@ -455,11 +455,13 @@ function App() {
   const handleCommandClick = (
     command: XanCommand,
     initialParameters?: Record<string, any>,
+    alias?: string,
   ) => {
     const newStep: PipelineStep = {
       id: `${command.id}-${Date.now()}`,
       command,
       parameters: {},
+      alias,
     };
 
     command.parameters.forEach((param) => {
@@ -651,10 +653,9 @@ function App() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-
         <main className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-hidden">
-            <SpreadsheetView
+            <HomeView
               tabs={tabs}
               selectedTabId={selectedTabId}
               onTabChange={setSelectedTabId}
@@ -805,7 +806,6 @@ function App() {
         }}
       />
 
-      {/* Floating Log Panel */}
       <LogPanel
         logs={logs}
         onClear={handleClearLogs}
@@ -813,7 +813,6 @@ function App() {
         onClose={() => setShowLogPanel(false)}
       />
 
-      {/* Help Dialog */}
       <HelpDialog
         isOpen={showHelp}
         onClose={() => setShowHelp(false)}
@@ -824,7 +823,6 @@ function App() {
       <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
       <NotificationPanel notifications={notifications} onDismiss={removeNotificationRef.current} onDismissAll={dismissAllNotifications} />
 
-      {/* Settings Dialog */}
       <SettingsDialog
         isOpen={showSettingsDialog}
         onClose={() => setShowSettingsDialog(false)}

@@ -18,6 +18,7 @@ interface ReplaceDialogProps {
   onAddCommand: (
     command: XanCommand,
     initialParameters?: Record<string, any>,
+    alias?: string,
   ) => void;
   onClose: () => void;
 }
@@ -117,7 +118,7 @@ export function ReplaceDialog({
         expression,
         overwrite: true,
         output: "",
-      });
+      }, "Replace");
     }
     onClose();
   };

@@ -17,6 +17,7 @@ interface SortDialogProps {
   onAddCommand: (
     command: XanCommand,
     initialParameters?: Record<string, any>,
+    alias?: string,
   ) => void;
   onClose: () => void;
 }
@@ -113,7 +114,7 @@ export function SortDialog({
       numeric: sortNumeric,
     };
 
-    onAddCommand(sortCommand, params);
+    onAddCommand(sortCommand, params, "Sort");
     onClose();
   };
 

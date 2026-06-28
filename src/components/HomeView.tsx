@@ -17,7 +17,7 @@ import { ReplaceDialog } from "@/components/dialog/ReplaceDialog";
 import { WindowDialog } from "@/components/dialog/WindowDialog";
 import { FlowPanel } from "@/components/panel/FlowPanel";
 
-interface SpreadsheetViewProps {
+interface HomeViewProps {
   tabs: PipelineTab[];
   selectedTabId: string;
   onTabChange: (tabId: string) => void;
@@ -26,6 +26,7 @@ interface SpreadsheetViewProps {
   onAddCommand: (
     command: XanCommand,
     initialParameters?: Record<string, any>,
+    alias?: string,
   ) => void;
   onStepClick?: (step: PipelineStep) => void;
   onStepUpdate?: (stepId: string, parameters: Record<string, any>) => void;
@@ -43,7 +44,7 @@ interface SpreadsheetViewProps {
   showProgressBar?: boolean;
 }
 
-export function SpreadsheetView({
+export function HomeView({
   tabs,
   selectedTabId,
   onTabChange,
@@ -64,7 +65,7 @@ export function SpreadsheetView({
   showMinimap,
   branchProgress,
   showProgressBar,
-}: SpreadsheetViewProps) {
+}: HomeViewProps) {
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
   const [contextMenu, setContextMenu] = useState<{
     x: number;

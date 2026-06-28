@@ -20,6 +20,7 @@ interface NumberTransformDialogProps {
   onAddCommand: (
     command: XanCommand,
     initialParameters?: Record<string, any>,
+    alias?: string,
   ) => void;
   onClose: () => void;
 }
@@ -127,12 +128,13 @@ export function NumberTransformDialog({
     };
 
     const expressions = selectedColumns.map((col) => expressionMap[selectedTransform](col)).join(", ");
+    const alias = transformOptions.find(opt => opt.value === selectedTransform)?.label || selectedTransform;
 
     onAddCommand(mapCommand, {
       expression: expressions,
       overwrite: true,
       output: "",
-    });
+    }, alias);
     onClose();
   };
 

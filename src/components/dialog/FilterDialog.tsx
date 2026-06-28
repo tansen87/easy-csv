@@ -17,6 +17,7 @@ interface FilterDialogProps {
   onAddCommand: (
     command: XanCommand,
     initialParameters?: Record<string, any>,
+    alias?: string,
   ) => void;
   onClose: () => void;
 }
@@ -164,12 +165,12 @@ export function FilterDialog({
           onAddCommand(searchCommand, {
             select: selectedColumn,
             empty: true,
-          });
+          }, textOperator);
         } else if (textOperator === "is_not_null") {
           onAddCommand(searchCommand, {
             select: selectedColumn,
             "non-empty": true,
-          });
+          }, textOperator);
         } else if (textOperator === "equals" || textOperator === "not_equals") {
           if (!textValue.trim()) return;
           onAddCommand(searchCommand, {
@@ -178,7 +179,7 @@ export function FilterDialog({
             pattern: textValue,
             "ignore-case": caseInsensitive,
             "invert-match": textOperator === "not_equals",
-          });
+          }, textOperator);
         } else {
           if (!textValue.trim()) return;
           const isNegative = ["not_starts_with", "not_ends_with", "not_contains"].includes(textOperator);
@@ -188,7 +189,7 @@ export function FilterDialog({
             regex: true,
             "ignore-case": caseInsensitive,
             "invert-match": isNegative,
-          });
+          }, textOperator);
         }
       }
     } else {
@@ -223,7 +224,7 @@ export function FilterDialog({
           expression,
           parallel: false,
           threads: undefined,
-        });
+        }, numberOperator);
       }
     }
     onClose();

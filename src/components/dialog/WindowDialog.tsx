@@ -17,7 +17,8 @@ interface WindowDialogProps {
   headers: string[];
   onAddCommand: (
     command: XanCommand,
-    initialParameters?: Record<string, any>
+    initialParameters?: Record<string, any>,
+    alias?: string,
   ) => void;
   onClose: () => void;
 }
@@ -169,7 +170,7 @@ export function WindowDialog({
       expression,
       groupby: groupby.trim() || undefined,
       output: "",
-    });
+    }, "Window");
     onClose();
   };
 

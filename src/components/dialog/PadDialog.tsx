@@ -18,6 +18,7 @@ interface PadDialogProps {
   onAddCommand: (
     command: XanCommand,
     initialParameters?: Record<string, any>,
+    alias?: string,
   ) => void;
   onClose: () => void;
 }
@@ -100,7 +101,7 @@ export function PadDialog({
         expression,
         overwrite: true,
         output: "",
-      });
+      }, padType);
     }
     onClose();
   };

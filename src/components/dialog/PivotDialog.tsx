@@ -17,6 +17,7 @@ interface PivotDialogProps {
   onAddCommand: (
     command: XanCommand,
     initialParameters?: Record<string, any>,
+    alias?: string,
   ) => void;
   onClose: () => void;
 }
@@ -176,7 +177,7 @@ export function PivotDialog({
         onAddCommand(aggCommand, {
           expression: columnsExpr,
           output: "",
-        });
+        }, "Agg");
       }
     } else if (selectedColumns.length === 0) {
       const groupbyCommand = xanCommands.find((cmd) => cmd.id === "groupby");
@@ -185,7 +186,7 @@ export function PivotDialog({
           columns: selectedGroupBy.map((col) => `"${col}"`).join(","),
           expression: columnsExpr,
           output: "",
-        });
+        }, "Groupby");
       }
     } else {
       const pivotCommand = xanCommands.find((cmd) => cmd.id === "pivot");
@@ -196,7 +197,7 @@ export function PivotDialog({
           groupby: selectedGroupBy.length > 0 ? selectedGroupBy.map((col) => `"${col}"`).join(",") : undefined,
           "column-sep": columnSep || "_",
           output: "",
-        });
+        }, "Pivot");
       }
     }
     onClose();

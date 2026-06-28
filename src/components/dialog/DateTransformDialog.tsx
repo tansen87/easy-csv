@@ -15,7 +15,10 @@ interface DateTransformDialogProps {
   dateTransformDialog: DateTransformDialogState;
   headers: string[];
   onAddCommand: (
-    command: XanCommand, initialParameters?: Record<string, any>) => void;
+    command: XanCommand,
+    initialParameters?: Record<string, any>,
+    alias?: string,
+  ) => void;
   onClose: () => void;
 }
 
@@ -138,7 +141,7 @@ export function DateTransformDialog({
       expression: expressionWithAlias,
       output: "",
       overwrite: isOverwrite,
-    });
+    }, "Date Transform");
     onClose();
   };
 

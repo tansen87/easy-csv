@@ -17,7 +17,10 @@ interface SplitDialogProps {
   splitDialog: SplitDialogState;
   headers: string[];
   onAddCommand: (
-    command: XanCommand, initialParameters?: Record<string, any>) => void;
+    command: XanCommand,
+    initialParameters?: Record<string, any>,
+    alias?: string,
+  ) => void;
   onClose: () => void;
 }
 
@@ -150,7 +153,7 @@ export function SplitDialog({
       expression: expressionWithAlias,
       output: "",
       overwrite: isOverwrite,
-    });
+    }, sliceType);
     onClose();
   };
 
@@ -375,7 +378,7 @@ export function SplitDialog({
           variant="secondary"
           size="sm"
           onClick={onClose}
-          >
+        >
           Cancel
         </Button>
         <Button
@@ -384,7 +387,7 @@ export function SplitDialog({
           size="sm"
           onClick={handleApply}
           disabled={!selectedColumn || (sliceType === "split" && separator === "custom" && !customSeparator)}
-          >
+        >
           Apply
         </Button>
       </div>
