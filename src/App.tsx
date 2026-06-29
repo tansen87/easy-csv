@@ -299,6 +299,24 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const handleKeyDown = async (event: KeyboardEvent) => {
+      if (event.key === "F12") {
+        event.preventDefault();
+        try {
+          await invoke("toggle_devtools");
+        } catch (error) {
+          console.error("Failed to toggle DevTools:", error);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
     const updateTitle = async () => {
       const currentTab = tabs.find((tab) => tab.id === selectedTabId);
       const inputFile = currentTab?.inputFile || "";

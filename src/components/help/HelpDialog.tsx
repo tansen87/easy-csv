@@ -187,7 +187,7 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
 
         {/* 内容区域 */}
         <ScrollArea ref={scrollAreaRef} className="flex-1 h-0">
-          <div className="text-sm font-mono pr-4">
+          <div className="text-sm font-mono pr-2">
             <HelpMarkdown 
               content={content}
               searchQuery={searchQuery}

@@ -117,17 +117,6 @@ async fn execute_xan_pipeline(
       }
     }
 
-    let supports_delimiter = !matches!(cmd.name.as_str(), "from" | "range" | "eval" | "run");
-
-    if supports_delimiter {
-      args.push("-d".to_string());
-      if i == 0 {
-        args.push(default_delimiter.clone());
-      } else {
-        args.push(",".to_string());
-      }
-    }
-
     let mut positional_args = Vec::new();
     let mut optional_args = Vec::new();
 
@@ -144,8 +133,15 @@ async fn execute_xan_pipeline(
       }
     }
 
-    args.extend(optional_args);
+    let supports_delimiter = !matches!(cmd.name.as_str(), "from" | "range" | "eval" | "run");
+
+    if supports_delimiter && i == 0 {
+      optional_args.push("-d".to_string());
+      optional_args.push(default_delimiter.clone());
+    }
+
     args.extend(positional_args);
+    args.extend(optional_args);
 
     cmd_args_list.push(args);
   }
@@ -710,6 +706,19 @@ async fn load_history(app: tauri::AppHandle) -> Result<String, String> {
   }
 }
 
+#[tauri::command]
+async fn toggle_devtools(window: tauri::Window) -> Result<(), String> {
+  let webviews = window.webviews();
+  if let Some(webview) = webviews.first() {
+    if webview.is_devtools_open() {
+      webview.close_devtools();
+    } else {
+      webview.open_devtools();
+    }
+  }
+  Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -732,7 +741,8 @@ pub fn run() {
       save_history,
       load_history,
       read_csv_file,
-      set_window_title
+      set_window_title,
+      toggle_devtools
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

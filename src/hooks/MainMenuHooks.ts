@@ -539,9 +539,15 @@ export function MainMenuHooks({
           if (result.output) {
             const output = (result.output as string).trimStart().trimEnd();
             addLog("success", `${output}`);
+          } else {
+            addLog("info", `Branch ${i + 1} completed successfully with no output`);
           }
         } else {
-          addLog("error", `${result.error}`);
+          if (result.error) {
+            addLog("error", `${result.error}`);
+          } else {
+            addLog("error", `Branch ${i + 1} failed with no error message`);
+          }
           pipelineFailed = true;
         }
       }
