@@ -238,6 +238,7 @@ async fn execute_xan_pipeline(
     } else {
       // Multi-command pipeline with concurrent stderr reading
       let all_stderr = Arc::new(Mutex::new(Vec::new()));
+      let all_errors = Arc::new(Mutex::new(Vec::new()));
       let mut children = Vec::new();
       let mut stderr_threads = Vec::new();
       let mut pipe_threads = Vec::new();
@@ -294,6 +295,7 @@ async fn execute_xan_pipeline(
         let prev_stdout = output_handles
           .pop()
           .ok_or("Failed to get previous stdout handle")?;
+        let errors_clone = Arc::clone(&all_errors);
         let pipe_thread = thread::spawn(move || {
           let mut reader = BufReader::new(prev_stdout);
           let mut writer = child_stdin;
@@ -305,15 +307,21 @@ async fn execute_xan_pipeline(
               Ok(n) => {
                 if let Err(e) = writer.write_all(&buffer[..n]) {
                   if e.kind() != ErrorKind::BrokenPipe {
-                    return Err(format!("Pipe write failed: {}", e));
+                    if let Ok(mut guard) = errors_clone.lock() {
+                      guard.push(format!("Pipe write failed: {}", e));
+                    }
                   }
                   break;
                 }
               }
-              Err(e) => return Err(format!("Pipe read failed: {}", e)),
+              Err(e) => {
+                if let Ok(mut guard) = errors_clone.lock() {
+                  guard.push(format!("Pipe read failed: {}", e));
+                }
+                break;
+              }
             }
           }
-          Ok(())
         });
         pipe_threads.push(pipe_thread);
 
@@ -347,15 +355,28 @@ async fn execute_xan_pipeline(
         let mut input_file_clone =
           File::open(&input_file).map_err(|e| format!("Failed to open input file: {}", e))?;
 
+        let errors_clone = Arc::clone(&all_errors);
         thread::spawn(move || {
           let mut buffer = vec![0; 64 * 1024];
           loop {
             match input_file_clone.read(&mut buffer) {
               Ok(0) => break,
               Ok(n) => {
-                let _ = stdin.write_all(&buffer[..n]);
+                if let Err(e) = stdin.write_all(&buffer[..n]) {
+                  if e.kind() != ErrorKind::BrokenPipe {
+                    if let Ok(mut guard) = errors_clone.lock() {
+                      guard.push(format!("Write to stdin failed: {}", e));
+                    }
+                  }
+                  break;
+                }
               }
-              Err(_) => break,
+              Err(e) => {
+                if let Ok(mut guard) = errors_clone.lock() {
+                  guard.push(format!("Read input file failed: {}", e));
+                }
+                break;
+              }
             }
           }
         });
@@ -371,26 +392,28 @@ async fn execute_xan_pipeline(
       let stdout_thread = thread::spawn(move || {
         let mut reader = BufReader::new(last_stdout);
         let mut buf = Vec::new();
-        let _ = reader.read_to_end(&mut buf);
-        buf
+        match reader.read_to_end(&mut buf) {
+          Ok(_) => buf,
+          Err(e) => {
+            let mut error_buf = Vec::new();
+            error_buf.extend_from_slice(format!("Stdout read failed: {}", e).as_bytes());
+            error_buf
+          }
+        }
       });
 
       // Monitor middle commands while waiting for last child
       // If any middle command fails, kill the last child to break deadlock
       let mut final_status = None;
       let mut try_wait_error = None;
-      let mut elapsed = std::time::Duration::from_secs(0);
-      let timeout = std::time::Duration::from_secs(120); // 2 minutes max
 
-      while final_status.is_none() && try_wait_error.is_none() && elapsed < timeout {
-        // Check if last child has exited
+      while final_status.is_none() && try_wait_error.is_none() {
         match last_child.try_wait() {
           Ok(Some(status)) => {
             final_status = Some(status);
             break;
           }
           Ok(None) => {
-            // Last child still running, check middle commands
             let mut any_failed = false;
             for child in &mut children {
               match child.try_wait() {
@@ -402,51 +425,21 @@ async fn execute_xan_pipeline(
                     }
                   }
                 }
-                Ok(None) => {} // Still running
+                Ok(None) => {}
                 Err(_) => {}
               }
             }
 
-            // If any middle command failed
             if any_failed {
-              // Kill all middle commands to unblock the pipeline
-              // This will cause pipe threads to exit (BrokenPipe)
-              // and eventually close last_child's stdin
               for child in &mut children {
                 let _ = child.kill();
               }
-
-              // Wait for all middle commands to exit
               for child in &mut children {
                 let _ = child.wait();
               }
-
-              // Now wait for last child to exit naturally
-              // Give it enough time to finish writing (especially for output command)
-              let mut wait_elapsed = std::time::Duration::from_secs(0);
-              let wait_timeout = std::time::Duration::from_secs(10);
-              while wait_elapsed < wait_timeout && try_wait_error.is_none() {
-                match last_child.try_wait() {
-                  Ok(Some(status)) => {
-                    if final_status.is_none() {
-                      final_status = Some(status);
-                    }
-                    break;
-                  }
-                  Ok(None) => {
-                    thread::sleep(std::time::Duration::from_millis(100));
-                    wait_elapsed += std::time::Duration::from_millis(100);
-                  }
-                  Err(e) => {
-                    try_wait_error = Some(format!("Error checking last child status: {}", e));
-                  }
-                }
-              }
-
-              // If last child still hasn't exited, kill it
-              if final_status.is_none() && try_wait_error.is_none() {
-                let _ = last_child.kill();
-                if let Ok(status) = last_child.wait() {
+              let _ = last_child.kill();
+              if let Ok(status) = last_child.wait() {
+                if final_status.is_none() {
                   final_status = Some(status);
                 }
               }
@@ -454,7 +447,6 @@ async fn execute_xan_pipeline(
             }
 
             thread::sleep(std::time::Duration::from_millis(50));
-            elapsed += std::time::Duration::from_millis(50);
           }
           Err(e) => {
             try_wait_error = Some(format!("Error checking last child status: {}", e));
@@ -466,11 +458,9 @@ async fn execute_xan_pipeline(
         return Err(err);
       }
 
-      // If timeout, kill the last child
       let final_status = if let Some(status) = final_status {
         status
       } else {
-        let _ = last_child.kill();
         last_child
           .wait()
           .unwrap_or_else(|_| std::process::Command::new("").status().unwrap())
@@ -495,7 +485,16 @@ async fn execute_xan_pipeline(
       for t in stderr_threads {
         let _ = t.join();
       }
-      let combined_stderr = all_stderr.lock().unwrap().join(&b"\n"[..]);
+      let mut combined_stderr = all_stderr.lock().unwrap().join(&b"\n"[..]);
+
+      // Add any pipe/input errors to stderr
+      let errors = all_errors.lock().unwrap();
+      if !errors.is_empty() {
+        if !combined_stderr.is_empty() {
+          combined_stderr.extend_from_slice(&b"\n"[..]);
+        }
+        combined_stderr.extend_from_slice(errors.join("\n").as_bytes());
+      }
 
       Ok(std::process::Output {
         status: final_status,
