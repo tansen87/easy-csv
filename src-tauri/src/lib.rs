@@ -8,11 +8,12 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 use serde::{Deserialize, Serialize};
-use tauri::Manager;
+
+// Embed xan.exe binary at compile time
+const XAN_EXE_BYTES: &[u8] = include_bytes!("../resources/xan.exe");
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppConfig {
-  pub xan_path: Option<String>,
   pub default_delimiter: Option<String>,
   pub no_quoting: Option<bool>,
   pub no_headers: Option<bool>,
@@ -21,7 +22,6 @@ pub struct AppConfig {
 impl Default for AppConfig {
   fn default() -> Self {
     Self {
-      xan_path: None,
       default_delimiter: None,
       no_quoting: None,
       no_headers: None,
@@ -100,7 +100,7 @@ async fn execute_xan_pipeline(
     return Err(format!("Input file does not exist: {}", input_file));
   }
 
-  let config = load_config();
+  let config = load_config()?;
   let no_quoting_enabled = config.no_quoting.unwrap_or(false);
   let no_headers_enabled = config.no_headers.unwrap_or(false);
 
@@ -170,8 +170,6 @@ async fn execute_xan_pipeline(
 
     if num_commands == 1 {
       // Single command: feed input file and wait for it
-      eprintln!("Single command execution");
-
       // For commands that require actual file paths (like sort), pass the file path as an argument
       // instead of feeding through stdin
       let first_cmd_name = &cmd_args_list[0][0];
@@ -210,7 +208,10 @@ async fn execute_xan_pipeline(
       } else {
         // Feed input file content into first command's stdin
         {
-          let mut stdin = first_child.stdin.take().unwrap();
+          let mut stdin = first_child
+            .stdin
+            .take()
+            .ok_or("Failed to get stdin handle")?;
           let mut buffer = vec![0; 256 * 1024]; // 256KB buffer for better performance
           loop {
             match input_file_handle.read(&mut buffer) {
@@ -236,10 +237,6 @@ async fn execute_xan_pipeline(
       }
     } else {
       // Multi-command pipeline with concurrent stderr reading
-      eprintln!(
-        "Multi-command pipeline execution with {} commands",
-        num_commands
-      );
       let all_stderr = Arc::new(Mutex::new(Vec::new()));
       let mut children = Vec::new();
       let mut stderr_threads = Vec::new();
@@ -247,7 +244,10 @@ async fn execute_xan_pipeline(
       let mut output_handles = Vec::new();
 
       // Read first child's stderr in background thread
-      let first_stderr = first_child.stderr.take().unwrap();
+      let first_stderr = first_child
+        .stderr
+        .take()
+        .ok_or("Failed to get stderr handle")?;
       let stderr_clone = Arc::clone(&all_stderr);
       stderr_threads.push(thread::spawn(move || {
         let mut reader = BufReader::new(first_stderr);
@@ -260,18 +260,15 @@ async fn execute_xan_pipeline(
       }));
 
       // Store stdout handle for piping
-      let first_stdout = first_child.stdout.take().unwrap();
+      let first_stdout = first_child
+        .stdout
+        .take()
+        .ok_or("Failed to get stdout handle")?;
       children.push(first_child);
       output_handles.push(first_stdout);
 
       // Start all remaining commands and connect pipes BEFORE feeding input
-      for (idx, args) in cmd_args_list.into_iter().skip(1).enumerate() {
-        eprintln!(
-          "Spawning command {} (index {}): {}",
-          idx + 2,
-          idx,
-          args.join(" ")
-        );
+      for (_idx, args) in cmd_args_list.into_iter().skip(1).enumerate() {
         let mut command = Command::new(&xan_path);
         command.args(args);
         command.stdin(Stdio::piped());
@@ -288,13 +285,15 @@ async fn execute_xan_pipeline(
           .map_err(|e| format!("Start pipeline command failed: {}", e))?;
 
         // Get stdin handle for next pipe connection
-        let child_stdin = child.stdin.take().unwrap();
+        let child_stdin = child.stdin.take().ok_or("Failed to get stdin handle")?;
 
         // Get stdout handle for storing
-        let child_stdout = child.stdout.take().unwrap();
+        let child_stdout = child.stdout.take().ok_or("Failed to get stdout handle")?;
 
         // Connect previous stdout to this child's stdin using thread
-        let prev_stdout = output_handles.pop().unwrap();
+        let prev_stdout = output_handles
+          .pop()
+          .ok_or("Failed to get previous stdout handle")?;
         let pipe_thread = thread::spawn(move || {
           let mut reader = BufReader::new(prev_stdout);
           let mut writer = child_stdin;
@@ -319,7 +318,7 @@ async fn execute_xan_pipeline(
         pipe_threads.push(pipe_thread);
 
         // Read this child's stderr in background thread
-        let child_stderr = child.stderr.take().unwrap();
+        let child_stderr = child.stderr.take().ok_or("Failed to get stderr handle")?;
         let stderr_clone = Arc::clone(&all_stderr);
         stderr_threads.push(thread::spawn(move || {
           let mut reader = BufReader::new(child_stderr);
@@ -337,10 +336,12 @@ async fn execute_xan_pipeline(
 
       // Now feed input file to the first command
       // All pipes are connected, so no deadlock will occur
-      eprintln!("Feeding input file to first command...");
       {
-        let first_child = children.first_mut().unwrap();
-        let mut stdin = first_child.stdin.take().unwrap();
+        let first_child = children.first_mut().ok_or("Failed to get first child")?;
+        let mut stdin = first_child
+          .stdin
+          .take()
+          .ok_or("Failed to get stdin handle")?;
 
         // Use a thread to feed input to avoid blocking main thread
         let mut input_file_clone =
@@ -361,8 +362,10 @@ async fn execute_xan_pipeline(
       }
 
       // Get output from last child using non-blocking approach
-      let mut last_child = children.pop().unwrap();
-      let last_stdout = output_handles.pop().unwrap();
+      let mut last_child = children.pop().ok_or("Failed to get last child")?;
+      let last_stdout = output_handles
+        .pop()
+        .ok_or("Failed to get last stdout handle")?;
 
       // Read stdout in a thread to prevent deadlock
       let stdout_thread = thread::spawn(move || {
@@ -375,10 +378,11 @@ async fn execute_xan_pipeline(
       // Monitor middle commands while waiting for last child
       // If any middle command fails, kill the last child to break deadlock
       let mut final_status = None;
+      let mut try_wait_error = None;
       let mut elapsed = std::time::Duration::from_secs(0);
       let timeout = std::time::Duration::from_secs(120); // 2 minutes max
 
-      while final_status.is_none() && elapsed < timeout {
+      while final_status.is_none() && try_wait_error.is_none() && elapsed < timeout {
         // Check if last child has exited
         match last_child.try_wait() {
           Ok(Some(status)) => {
@@ -421,7 +425,7 @@ async fn execute_xan_pipeline(
               // Give it enough time to finish writing (especially for output command)
               let mut wait_elapsed = std::time::Duration::from_secs(0);
               let wait_timeout = std::time::Duration::from_secs(10);
-              while wait_elapsed < wait_timeout {
+              while wait_elapsed < wait_timeout && try_wait_error.is_none() {
                 match last_child.try_wait() {
                   Ok(Some(status)) => {
                     if final_status.is_none() {
@@ -433,12 +437,14 @@ async fn execute_xan_pipeline(
                     thread::sleep(std::time::Duration::from_millis(100));
                     wait_elapsed += std::time::Duration::from_millis(100);
                   }
-                  Err(_) => break,
+                  Err(e) => {
+                    try_wait_error = Some(format!("Error checking last child status: {}", e));
+                  }
                 }
               }
 
               // If last child still hasn't exited, kill it
-              if final_status.is_none() {
+              if final_status.is_none() && try_wait_error.is_none() {
                 let _ = last_child.kill();
                 if let Ok(status) = last_child.wait() {
                   final_status = Some(status);
@@ -451,10 +457,13 @@ async fn execute_xan_pipeline(
             elapsed += std::time::Duration::from_millis(50);
           }
           Err(e) => {
-            eprintln!("Error checking last child status: {}", e);
-            break;
+            try_wait_error = Some(format!("Error checking last child status: {}", e));
           }
         }
+      }
+
+      if let Some(err) = try_wait_error {
+        return Err(err);
       }
 
       // If timeout, kill the last child
@@ -506,30 +515,25 @@ async fn execute_xan_pipeline(
 }
 
 fn get_config_file_path() -> std::path::PathBuf {
-  let config_dir =
-    dirs::config_dir().unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-  config_dir.join("xan-gui").join("config.json")
+  get_resources_dir().join("config.json")
 }
 
-fn load_config() -> AppConfig {
+fn load_config() -> Result<AppConfig, String> {
   let config_path = get_config_file_path();
 
   if config_path.exists() {
-    match File::open(&config_path) {
-      Ok(mut file) => {
-        let mut contents = String::new();
-        if file.read_to_string(&mut contents).is_ok() {
-          match serde_json::from_str(&contents) {
-            Ok(config) => return config,
-            Err(e) => eprintln!("Failed to parse config file: {}", e),
-          }
-        }
-      }
-      Err(e) => eprintln!("Failed to open config file: {}", e),
-    }
-  }
+    let mut file =
+      File::open(&config_path).map_err(|e| format!("Failed to open config file: {}", e))?;
 
-  AppConfig::default()
+    let mut contents = String::new();
+    file
+      .read_to_string(&mut contents)
+      .map_err(|e| format!("Failed to read config file: {}", e))?;
+
+    serde_json::from_str(&contents).map_err(|e| format!("Failed to parse config file: {}", e))
+  } else {
+    Ok(AppConfig::default())
+  }
 }
 
 fn save_config(config: &AppConfig) -> Result<(), String> {
@@ -555,18 +559,44 @@ fn save_config(config: &AppConfig) -> Result<(), String> {
   Ok(())
 }
 
-fn find_xan_executable() -> Option<String> {
-  // Only check user configured path, no automatic searching
-  let config = load_config();
-  if let Some(ref xan_path) = config.xan_path {
-    if Path::new(xan_path).exists() {
-      return Some(xan_path.clone());
-    } else {
-      eprintln!("Configured xan path does not exist: {}", xan_path);
+/// Get the resources directory path (next to the executable)
+fn get_resources_dir() -> std::path::PathBuf {
+  let exe_path = std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("."));
+  let exe_dir = exe_path.parent().unwrap_or(Path::new("."));
+  exe_dir.join("easy-csv_resources")
+}
+
+/// Extract embedded xan.exe to resources directory
+fn extract_xan_executable() -> Result<String, String> {
+  let resources_dir = get_resources_dir();
+  let xan_path = resources_dir.join("xan.exe");
+
+  // Check if already extracted and valid
+  if xan_path.exists() {
+    // Verify the file size matches (simple integrity check)
+    if let Ok(metadata) = std::fs::metadata(&xan_path) {
+      if metadata.len() == XAN_EXE_BYTES.len() as u64 {
+        return Ok(xan_path.to_string_lossy().to_string());
+      }
     }
   }
 
-  None
+  // Create resources directory if it doesn't exist
+  if !resources_dir.exists() {
+    std::fs::create_dir_all(&resources_dir)
+      .map_err(|e| format!("Failed to create resources directory: {}", e))?;
+  }
+
+  // Extract xan.exe
+  std::fs::write(&xan_path, XAN_EXE_BYTES)
+    .map_err(|e| format!("Failed to extract xan.exe: {}", e))?;
+
+  Ok(xan_path.to_string_lossy().to_string())
+}
+
+fn find_xan_executable() -> Option<String> {
+  // Extract or get the embedded xan.exe path
+  extract_xan_executable().ok()
 }
 
 #[tauri::command]
@@ -605,84 +635,60 @@ async fn get_xan_version() -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn get_xan_path() -> Option<String> {
-  let config = load_config();
-  config.xan_path
-}
-
-#[tauri::command]
-async fn set_xan_path(path: String) -> Result<(), String> {
-  if !Path::new(&path).exists() {
-    return Err(format!("File does not exist: {}", path));
-  }
-
-  let mut config = load_config();
-  config.xan_path = Some(path);
-  save_config(&config)
-}
-
-#[tauri::command]
 async fn get_default_delimiter() -> Option<String> {
-  let config = load_config();
+  let config = load_config().unwrap_or_default();
   config.default_delimiter
 }
 
 #[tauri::command]
 async fn set_default_delimiter(delimiter: String) -> Result<(), String> {
-  let mut config = load_config();
+  let mut config = load_config()?;
   config.default_delimiter = Some(delimiter);
   save_config(&config)
 }
 
 #[tauri::command]
 async fn get_no_quoting() -> Option<bool> {
-  let config = load_config();
+  let config = load_config().unwrap_or_default();
   config.no_quoting
 }
 
 #[tauri::command]
 async fn set_no_quoting(no_quoting: bool) -> Result<(), String> {
-  let mut config = load_config();
+  let mut config = load_config()?;
   config.no_quoting = Some(no_quoting);
   save_config(&config)
 }
 
 #[tauri::command]
 async fn get_no_headers() -> Option<bool> {
-  let config = load_config();
+  let config = load_config().unwrap_or_default();
   config.no_headers
 }
 
 #[tauri::command]
 async fn set_no_headers(no_headers: bool) -> Result<(), String> {
-  let mut config = load_config();
+  let mut config = load_config()?;
   config.no_headers = Some(no_headers);
   save_config(&config)
 }
 
 #[tauri::command]
 async fn set_window_title(window: tauri::Window, title: String) -> Result<(), String> {
-  match window.set_title(&title) {
-    Ok(_) => Ok(()),
-    Err(e) => {
-      eprintln!(
-        "Warning: Failed to set window title (window may not be ready yet): {}",
-        e
-      );
-      Ok(())
-    }
-  }
+  window
+    .set_title(&title)
+    .map_err(|e| format!("Failed to set window title: {}", e))
 }
 
 #[tauri::command]
-async fn save_history(app: tauri::AppHandle, history: String) -> Result<(), String> {
-  let app_data_dir = app.path().app_data_dir().map_err(|e| format!("{e}"))?;
-  let history_path = app_data_dir.join("history.json");
-  eprintln!("{:?}", history_path);
+async fn save_history(history: String) -> Result<(), String> {
+  let resources_dir = get_resources_dir();
+  let history_path = resources_dir.join("history.json");
 
   // Create directory if it doesn't exist
-  if let Some(parent) = history_path.parent() {
-    std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
+  if !resources_dir.exists() {
+    std::fs::create_dir_all(&resources_dir)
+      .map_err(|e| format!("Failed to create directory: {}", e))?;
   }
 
   // Save history to file
@@ -692,9 +698,9 @@ async fn save_history(app: tauri::AppHandle, history: String) -> Result<(), Stri
 }
 
 #[tauri::command]
-async fn load_history(app: tauri::AppHandle) -> Result<String, String> {
-  let app_data_dir = app.path().app_data_dir().map_err(|e| format!("{e}"))?;
-  let history_path = app_data_dir.join("history.json");
+async fn load_history() -> Result<String, String> {
+  let resources_dir = get_resources_dir();
+  let history_path = resources_dir.join("history.json");
 
   // Load history from file
   if history_path.exists() {
@@ -730,8 +736,6 @@ pub fn run() {
       execute_xan_pipeline,
       check_xan_installed,
       get_xan_version,
-      get_xan_path,
-      set_xan_path,
       get_default_delimiter,
       set_default_delimiter,
       get_no_quoting,

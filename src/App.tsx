@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/setting/ThemeProvider";
 import { ToastContainer, ToastType } from "@/components/setting/Toast";
 import { NotificationPanel, NotificationType } from "@/components/setting/PersistentNotification";
 import {
-  Loader2,
   Terminal,
   ChevronUp,
   ChevronRight,
@@ -24,6 +22,7 @@ import { xanCommands } from "@/data/commands";
 import { helpDocs } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
 import { MainMenuHooks } from "@/hooks/MainMenuHooks";
+import { SplashScreen } from "@/components/help/SplashScreen";
 import {
   PipelineStep,
   LogEntry,
@@ -40,6 +39,8 @@ function formatDateTime(date: Date): string {
 
 function App() {
   const { theme, setTheme } = useTheme();
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadingText, setLoadingText] = useState<string>("Initializing...");
   const [tabs, setTabs] = useState<PipelineTab[]>([
     {
       id: "tab-1",
@@ -52,10 +53,8 @@ function App() {
   const [selectedTabId, setSelectedTabId] = useState<string>("tab-1");
   const [selectedStep, setSelectedStep] = useState<PipelineStep | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [isXanInstalled, setIsXanInstalled] = useState<boolean | null>(null);
   const [xanVersion, setXanVersion] = useState<string | null>(null);
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(",");
-  const [_xanPath, setXanPath] = useState<string>("");
   const [noQuoting, setNoQuoting] = useState<boolean>(false);
   const [noHeaders, setNoHeaders] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
@@ -218,17 +217,6 @@ function App() {
     saveHistoricalPipelines(newHistory);
   };
 
-  const loadXanPath = async () => {
-    try {
-      const savedPath = await invoke<string | null>("get_xan_path");
-      if (savedPath) {
-        setXanPath(savedPath);
-      }
-    } catch (error) {
-      showToastRef.current(`Failed to load xan path: ${error}`, 'error');
-    }
-  };
-
   const loadDefaultDelimiter = async () => {
     try {
       const savedDelimiter = await invoke<string | null>(
@@ -264,18 +252,12 @@ function App() {
     }
   };
 
-  const checkXanInstallation = async () => {
+  const loadXanVersion = async () => {
     try {
-      const installed = await invoke<boolean>("check_xan_installed");
-      setIsXanInstalled(installed);
-
-      if (installed) {
-        const version = await invoke<string>("get_xan_version");
-        setXanVersion(version);
-      }
+      const version = await invoke<string>("get_xan_version");
+      setXanVersion(version);
     } catch (error) {
-      setIsXanInstalled(false);
-      showToastRef.current(`Failed to check xan installation: ${error}`, 'error');
+      showToastRef.current(`Failed to load xan version: ${error}`, 'error');
     }
   };
 
@@ -290,12 +272,31 @@ function App() {
   };
 
   useEffect(() => {
-    checkXanInstallation();
-    loadXanPath();
-    loadDefaultDelimiter();
-    loadNoQuoting();
-    loadNoHeaders();
-    loadHistoricalPipelines();
+    const initializeApp = async () => {
+      try {
+        setLoadingText("Initializing xan environment...");
+        // Initialize xan - this will trigger extraction if needed
+        await invoke("check_xan_installed");
+
+        setLoadingText("Loading version information...");
+        await loadXanVersion();
+
+        setLoadingText("Loading configuration...");
+        await loadDefaultDelimiter();
+        await loadNoQuoting();
+        await loadNoHeaders();
+
+        setLoadingText("Loading historical records...");
+        await loadHistoricalPipelines();
+
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Initialization failed:", error);
+        setIsLoading(false);
+      }
+    };
+
+    initializeApp();
   }, []);
 
   useEffect(() => {
@@ -584,294 +585,248 @@ function App() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background relative overflow-hidden">
-      <header ref={headerRef} className="h-14 border-b bg-card shadow-sm flex items-center justify-between px-4 gap-4 relative z-10" onContextMenu={(e) => e.preventDefault()}>
-        {/* Left: Main Menu */}
-        <MainMenu
-          activeMenu={activeMenu}
-          setActiveMenu={setActiveMenu}
-          isMenuActivated={isMenuActivated}
-          setIsMenuActivated={setIsMenuActivated}
-          undoStack={undoStack}
-          redoStack={redoStack}
-          onUndo={undo}
-          onRedo={redo}
-          onExecute={handleExecute}
-          onOpenFile={handleOpenFile}
-          onOpenNewTabWithFile={handleOpenNewTabWithFile}
-          onSavePipeline={handleSavePipeline}
-          onImportPipeline={handleImportPipeline}
-          onExportPipeline={handleExportPipeline}
-          onOpenSettings={() => setShowSettingsDialog(true)}
-          isExecuting={isExecuting}
-          currentPipelineLength={getCurrentPipeline().length}
-        />
-
-        {/* Center: Empty */}
-        <div className="flex-1" />
-
-        <div className="flex items-center gap-2">
-          {isXanInstalled === null ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 text-sm text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              <span className="hidden sm:inline">Checking...</span>
-            </div>
-          ) : isXanInstalled ? (
-            <button
-              onClick={async () => {
-                const file = await openDialog({
-                  multiple: false,
-                  filters: [
-                    { name: "Executable Files", extensions: ["exe"] },
-                  ],
-                });
-                if (file) {
-                  setXanPath(file as string);
-                  try {
-                    await invoke("set_xan_path", { path: file });
-                    await checkXanInstallation();
-                    showToastRef.current("Xan path updated successfully", 'success');
-                  } catch (error) {
-                    showToastRef.current(`Failed to update xan path: ${error}`, 'error');
-                  }
-                }
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 rounded-lg text-xs font-medium border border-green-500/20 hover:bg-green-500/20 transition-colors cursor-pointer"
-            >
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
-              <span className="hidden sm:inline">xan{xanVersion ? ` ${xanVersion.trim()}` : ""}</span>
-            </button>
-          ) : (
-            <button
-              onClick={async () => {
-                const file = await openDialog({
-                  multiple: false,
-                  filters: [
-                    { name: "Executable Files", extensions: ["exe"] },
-                  ],
-                });
-                if (file) {
-                  setXanPath(file as string);
-                  try {
-                    await invoke("set_xan_path", { path: file });
-                    await checkXanInstallation();
-                    showToastRef.current("Xan path updated successfully", 'success');
-                  } catch (error) {
-                    showToastRef.current(`Failed to update xan path: ${error}`, 'error');
-                  }
-                }
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-600 rounded-lg text-sm font-medium border border-red-500/20 hover:bg-red-500/20 transition-colors cursor-pointer"
-            >
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-              <span className="hidden sm:inline">xan missing</span>
-            </button>
-          )}
-        </div>
-      </header>
-
-      <div className="flex-1 flex overflow-hidden">
-        <main className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-hidden">
-            <HomeView
-              tabs={tabs}
-              selectedTabId={selectedTabId}
-              onTabChange={setSelectedTabId}
-              onRemoveTab={removeTab}
-              onRenameTab={renameTab}
-              onAddCommand={handleCommandClick}
-              onStepClick={handleStepClick}
-              onStepUpdate={handleStepUpdate}
-              onStepAliasUpdate={handleStepAliasUpdate}
-              onStepDelete={handleStepRemove}
-              onPipelineReorder={updateTabPipeline}
-              onEdgesChange={(tabId, edges) => {
-                // Validate output connections when edges change
-                const tab = tabs.find(t => t.id === tabId);
-                if (tab) {
-                  // Remove all output-related notifications first
-                  setNotifications((prev) =>
-                    prev.filter(n => !n.message.startsWith("Output"))
-                  );
-
-                  const outputSteps = tab.pipeline.filter(s => s.command.id === "output");
-                  outputSteps.forEach(outputStep => {
-                    // Check if output is connected as source (wrong direction)
-                    const outputAsSource = edges.filter(e => e.source === outputStep.id);
-                    if (outputAsSource.length > 0) {
-                      addNotificationRef.current("Output should be at the end of a branch", 'error');
-                    }
-                    // Check if output has no incoming connections and no outgoing connections
-                    const outputAsTarget = edges.filter(e => e.target === outputStep.id);
-                    if (outputAsTarget.length === 0 && outputAsSource.length === 0) {
-                      addNotificationRef.current("Output is not connected", 'warning');
-                    }
-                  });
-                }
-
-                setTabs((prev) =>
-                  prev.map((tab) =>
-                    tab.id === tabId
-                      ? { ...tab, edges, updatedAt: formatDateTime(new Date()) }
-                      : tab,
-                  ),
-                );
-              }}
-              onInputPositionChange={(tabId, position) => {
-                setTabs((prev) =>
-                  prev.map((tab) =>
-                    tab.id === tabId
-                      ? { ...tab, inputPosition: position, updatedAt: formatDateTime(new Date()) }
-                      : tab,
-                  ),
-                );
-              }}
+    <>
+      {isLoading ? (
+        <SplashScreen loadingText={loadingText} />
+      ) : (
+        <div className="h-screen flex flex-col bg-background relative overflow-hidden">
+          <header ref={headerRef} className="h-14 border-b bg-card shadow-sm flex items-center justify-between px-4 gap-4 relative z-10" onContextMenu={(e) => e.preventDefault()}>
+            {/* Left: Main Menu */}
+            <MainMenu
+              activeMenu={activeMenu}
+              setActiveMenu={setActiveMenu}
+              isMenuActivated={isMenuActivated}
+              setIsMenuActivated={setIsMenuActivated}
+              undoStack={undoStack}
+              redoStack={redoStack}
+              onUndo={undo}
+              onRedo={redo}
+              onExecute={handleExecute}
               onOpenFile={handleOpenFile}
+              onOpenNewTabWithFile={handleOpenNewTabWithFile}
+              onSavePipeline={handleSavePipeline}
               onImportPipeline={handleImportPipeline}
-              onOpenUrl={handleOpenUrl}
-              showMinimap={showMinimap}
-              branchProgress={branchProgress}
-              showProgressBar={showProgressBar}
+              onExportPipeline={handleExportPipeline}
+              onOpenSettings={() => setShowSettingsDialog(true)}
+              isExecuting={isExecuting}
+              currentPipelineLength={getCurrentPipeline().length}
             />
+
+            {/* Center: Empty */}
+            <div className="flex-1" />
+
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 rounded-lg text-xs font-medium border border-green-500/20">
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
+                <span className="hidden sm:inline">xan{xanVersion ? ` ${xanVersion.trim()}` : ""}</span>
+              </div>
+            </div>
+          </header>
+
+          <div className="flex-1 flex overflow-hidden">
+            <main className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-hidden">
+                <HomeView
+                  tabs={tabs}
+                  selectedTabId={selectedTabId}
+                  onTabChange={setSelectedTabId}
+                  onRemoveTab={removeTab}
+                  onRenameTab={renameTab}
+                  onAddCommand={handleCommandClick}
+                  onStepClick={handleStepClick}
+                  onStepUpdate={handleStepUpdate}
+                  onStepAliasUpdate={handleStepAliasUpdate}
+                  onStepDelete={handleStepRemove}
+                  onPipelineReorder={updateTabPipeline}
+                  onEdgesChange={(tabId, edges) => {
+                    // Validate output connections when edges change
+                    const tab = tabs.find(t => t.id === tabId);
+                    if (tab) {
+                      // Remove all output-related notifications first
+                      setNotifications((prev) =>
+                        prev.filter(n => !n.message.startsWith("Output"))
+                      );
+
+                      const outputSteps = tab.pipeline.filter(s => s.command.id === "output");
+                      outputSteps.forEach(outputStep => {
+                        // Check if output is connected as source (wrong direction)
+                        const outputAsSource = edges.filter(e => e.source === outputStep.id);
+                        if (outputAsSource.length > 0) {
+                          addNotificationRef.current("Output should be at the end of a branch", 'error');
+                        }
+                        // Check if output has no incoming connections and no outgoing connections
+                        const outputAsTarget = edges.filter(e => e.target === outputStep.id);
+                        if (outputAsTarget.length === 0 && outputAsSource.length === 0) {
+                          addNotificationRef.current("Output is not connected", 'warning');
+                        }
+                      });
+                    }
+
+                    setTabs((prev) =>
+                      prev.map((tab) =>
+                        tab.id === tabId
+                          ? { ...tab, edges, updatedAt: formatDateTime(new Date()) }
+                          : tab,
+                      ),
+                    );
+                  }}
+                  onInputPositionChange={(tabId, position) => {
+                    setTabs((prev) =>
+                      prev.map((tab) =>
+                        tab.id === tabId
+                          ? { ...tab, inputPosition: position, updatedAt: formatDateTime(new Date()) }
+                          : tab,
+                      ),
+                    );
+                  }}
+                  onOpenFile={handleOpenFile}
+                  onImportPipeline={handleImportPipeline}
+                  onOpenUrl={handleOpenUrl}
+                  showMinimap={showMinimap}
+                  branchProgress={branchProgress}
+                  showProgressBar={showProgressBar}
+                />
+              </div>
+            </main>
           </div>
-        </main>
-      </div>
 
-      {/* Command Panel Toggle Button */}
-      <Button
-        onClick={() => setShowCommandPanel(!showCommandPanel)}
-        onContextMenu={(e) => e.preventDefault()}
-        className="fixed bottom-4 left-4 z-30 h-10 w-10 rounded-full shadow-md"
-        variant="secondary"
-        size="icon"
-      >
-        {showCommandPanel ? (
-          <ChevronRight className="h-4 w-4" />
-        ) : (
-          <Terminal className="h-4 w-4" />
-        )}
-      </Button>
+          {/* Command Panel Toggle Button */}
+          <Button
+            onClick={() => setShowCommandPanel(!showCommandPanel)}
+            onContextMenu={(e) => e.preventDefault()}
+            className="fixed bottom-4 left-4 z-30 h-10 w-10 rounded-full shadow-md"
+            variant="secondary"
+            size="icon"
+          >
+            {showCommandPanel ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <Terminal className="h-4 w-4" />
+            )}
+          </Button>
 
-      {/* Log Panel Toggle Button */}
-      <Button
-        onClick={() => setShowLogPanel(!showLogPanel)}
-        onContextMenu={(e) => e.preventDefault()}
-        className="fixed bottom-4 left-16 z-30 h-10 w-10 rounded-full shadow-md"
-        variant="secondary"
-        size="icon"
-      >
-        {showLogPanel ? (
-          <ChevronUp className="h-4 w-4" />
-        ) : (
-          <FileText className="h-4 w-4" />
-        )}
-      </Button>
+          {/* Log Panel Toggle Button */}
+          <Button
+            onClick={() => setShowLogPanel(!showLogPanel)}
+            onContextMenu={(e) => e.preventDefault()}
+            className="fixed bottom-4 left-16 z-30 h-10 w-10 rounded-full shadow-md"
+            variant="secondary"
+            size="icon"
+          >
+            {showLogPanel ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <FileText className="h-4 w-4" />
+            )}
+          </Button>
 
-      {/* Minimap Toggle Button */}
-      <Button
-        onClick={() => setShowMinimap(!showMinimap)}
-        onContextMenu={(e) => e.preventDefault()}
-        className="fixed bottom-4 left-28 z-30 h-10 w-10 rounded-full shadow-md"
-        variant="secondary"
-        size="icon"
-      >
-        {showMinimap ? (
-          <ChevronDown className="h-4 w-4" />
-        ) : (
-          <MapIcon className="h-4 w-4" />
-        )}
-      </Button>
+          {/* Minimap Toggle Button */}
+          <Button
+            onClick={() => setShowMinimap(!showMinimap)}
+            onContextMenu={(e) => e.preventDefault()}
+            className="fixed bottom-4 left-28 z-30 h-10 w-10 rounded-full shadow-md"
+            variant="secondary"
+            size="icon"
+          >
+            {showMinimap ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <MapIcon className="h-4 w-4" />
+            )}
+          </Button>
 
-      {/* Floating Command Panel */}
-      <CommandList
-        commands={xanCommands}
-        onCommandClick={handleCommandClick}
-        onHelpClick={handleHelpClick}
-        selectedCommandId={selectedStep?.command.id}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        isVisible={showCommandPanel}
-        onClose={() => setShowCommandPanel(false)}
-        activePanel={activeLeftPanel}
-        onActivePanelChange={setActiveLeftPanel}
-        historicalPipelines={historicalPipelines}
-        onNewTabFromHistory={(history) => {
-          const newTabId = `tab-${Date.now()}`;
-          const newTab: PipelineTab = {
-            id: newTabId,
-            name: `${history.name}`,
-            pipeline: history.pipeline,
-            edges: history.edges || [],
-            inputPosition: history.inputPosition,
-            inputFile: history.inputFile,
-            defaultDelimiter: history.defaultDelimiter,
-            created: formatDateTime(new Date()),
-            updated: formatDateTime(new Date()),
-          };
-          setTabs((prev) => [...prev, newTab]);
-          setSelectedTabId(newTabId);
+          {/* Floating Command Panel */}
+          <CommandList
+            commands={xanCommands}
+            onCommandClick={handleCommandClick}
+            onHelpClick={handleHelpClick}
+            selectedCommandId={selectedStep?.command.id}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            isVisible={showCommandPanel}
+            onClose={() => setShowCommandPanel(false)}
+            activePanel={activeLeftPanel}
+            onActivePanelChange={setActiveLeftPanel}
+            historicalPipelines={historicalPipelines}
+            onNewTabFromHistory={(history) => {
+              const newTabId = `tab-${Date.now()}`;
+              const newTab: PipelineTab = {
+                id: newTabId,
+                name: `${history.name}`,
+                pipeline: history.pipeline,
+                edges: history.edges || [],
+                inputPosition: history.inputPosition,
+                inputFile: history.inputFile,
+                defaultDelimiter: history.defaultDelimiter,
+                created: formatDateTime(new Date()),
+                updated: formatDateTime(new Date()),
+              };
+              setTabs((prev) => [...prev, newTab]);
+              setSelectedTabId(newTabId);
 
-          if (history.inputFile) {
-            loadCsvData(newTabId, history.inputFile);
-          }
-          if (history.defaultDelimiter) {
-            setDefaultDelimiter(history.defaultDelimiter);
-          }
-        }}
-        onDeleteHistory={(history) => {
-          const updatedHistory = historicalPipelines.filter((h) => h.id !== history.id);
-          updateHistoricalPipelines(updatedHistory);
-        }}
-      />
+              if (history.inputFile) {
+                loadCsvData(newTabId, history.inputFile);
+              }
+              if (history.defaultDelimiter) {
+                setDefaultDelimiter(history.defaultDelimiter);
+              }
+            }}
+            onDeleteHistory={(history) => {
+              const updatedHistory = historicalPipelines.filter((h) => h.id !== history.id);
+              updateHistoricalPipelines(updatedHistory);
+            }}
+          />
 
-      <LogPanel
-        logs={logs}
-        onClear={handleClearLogs}
-        isVisible={showLogPanel}
-        onClose={() => setShowLogPanel(false)}
-      />
+          <LogPanel
+            logs={logs}
+            onClear={handleClearLogs}
+            isVisible={showLogPanel}
+            onClose={() => setShowLogPanel(false)}
+          />
 
-      <HelpDialog
-        isOpen={showHelp}
-        onClose={() => setShowHelp(false)}
-        commandName={helpCommandName}
-        content={helpContent}
-      />
+          <HelpDialog
+            isOpen={showHelp}
+            onClose={() => setShowHelp(false)}
+            commandName={helpCommandName}
+            content={helpContent}
+          />
 
-      <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
-      <NotificationPanel notifications={notifications} onDismiss={removeNotificationRef.current} onDismissAll={dismissAllNotifications} />
+          <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
+          <NotificationPanel notifications={notifications} onDismiss={removeNotificationRef.current} onDismissAll={dismissAllNotifications} />
 
-      <SettingsDialog
-        isOpen={showSettingsDialog}
-        onClose={() => setShowSettingsDialog(false)}
-        theme={theme}
-        onThemeChange={setTheme}
-        defaultDelimiter={defaultDelimiter}
-        onDefaultDelimiterChange={setDefaultDelimiter}
-        noQuoting={noQuoting}
-        onNoQuotingChange={setNoQuoting}
-        noHeaders={noHeaders}
-        onNoHeadersChange={setNoHeaders}
-        onSave={async () => {
-          try {
-            const savePromises: Promise<void>[] = [];
-            savePromises.push(
-              invoke("set_default_delimiter", { delimiter: defaultDelimiter })
-            );
-            savePromises.push(
-              invoke("set_no_quoting", { noQuoting })
-            );
-            savePromises.push(
-              invoke("set_no_headers", { noHeaders })
-            );
-            await Promise.all(savePromises);
-            showToastRef.current("Settings saved successfully", 'success');
-          } catch (error) {
-            showToastRef.current(`Failed to save settings: ${error}`, 'error');
-          }
-        }}
-      />
-    </div>
+          <SettingsDialog
+            isOpen={showSettingsDialog}
+            onClose={() => setShowSettingsDialog(false)}
+            theme={theme}
+            onThemeChange={setTheme}
+            defaultDelimiter={defaultDelimiter}
+            onDefaultDelimiterChange={setDefaultDelimiter}
+            noQuoting={noQuoting}
+            onNoQuotingChange={setNoQuoting}
+            noHeaders={noHeaders}
+            onNoHeadersChange={setNoHeaders}
+            onSave={async () => {
+              try {
+                const savePromises: Promise<void>[] = [];
+                savePromises.push(
+                  invoke("set_default_delimiter", { delimiter: defaultDelimiter })
+                );
+                savePromises.push(
+                  invoke("set_no_quoting", { noQuoting })
+                );
+                savePromises.push(
+                  invoke("set_no_headers", { noHeaders })
+                );
+                await Promise.all(savePromises);
+                showToastRef.current("Settings saved successfully", 'success');
+              } catch (error) {
+                showToastRef.current(`Failed to save settings: ${error}`, 'error');
+              }
+            }}
+          />
+        </div>
+      )}
+    </>
   );
 }
 
