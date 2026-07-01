@@ -96,13 +96,15 @@ async fn execute_xan_pipeline(
 ) -> Result<ExecutionResult, String> {
   let xan_path = find_xan_executable().ok_or("xan executable not found")?;
 
-  if !Path::new(&input_file).exists() {
-    return Err(format!("Input file does not exist: {}", input_file));
-  }
-
   let config = load_config()?;
   let no_quoting_enabled = config.no_quoting.unwrap_or(false);
   let no_headers_enabled = config.no_headers.unwrap_or(false);
+
+  let first_cmd = commands.first().ok_or("No commands provided")?;
+  let first_is_cat = matches!(first_cmd.name.as_str(), "cat");
+  if !first_is_cat && !Path::new(&input_file).exists() {
+    return Err(format!("Input file does not exist"));
+  }
 
   let mut cmd_args_list = Vec::new();
   for (i, cmd) in commands.iter().enumerate() {
@@ -147,15 +149,24 @@ async fn execute_xan_pipeline(
   }
 
   let output = tokio::task::spawn_blocking(move || -> Result<std::process::Output, String> {
-    let mut input_file_handle =
-      File::open(&input_file).map_err(|e| format!("Failed to open input file: {}", e))?;
-
+    let first_cmd_name = &cmd_args_list[0][0].clone();
+    let is_cat_command = first_cmd_name.as_str() == "cat";
     let num_commands = cmd_args_list.len();
+
+    let mut input_file_handle: Option<File> = if is_cat_command {
+      None
+    } else {
+      Some(File::open(&input_file).map_err(|e| format!("Failed to open input file: {}", e))?)
+    };
 
     // Always use piped I/O so we can capture output
     let mut command = Command::new(&xan_path);
     command.args(&cmd_args_list[0]);
-    command.stdin(Stdio::piped());
+    if is_cat_command {
+      command.stdin(Stdio::null());
+    } else {
+      command.stdin(Stdio::piped());
+    }
     command.stdout(Stdio::piped());
     command.stderr(Stdio::piped());
 
@@ -169,15 +180,13 @@ async fn execute_xan_pipeline(
       .map_err(|e| format!("Failed to start first xan command: {}", e))?;
 
     if num_commands == 1 {
-      // Single command: feed input file and wait for it
-      // For commands that require actual file paths (like sort), pass the file path as an argument
-      // instead of feeding through stdin
+      // Single command pipeline
       let first_cmd_name = &cmd_args_list[0][0];
       let needs_file_path = matches!(first_cmd_name.as_str(), "sort" | "dedup" | "shuffle");
 
       if needs_file_path {
         // For commands that need file paths, ensure input file is the last argument
-        let mut args = vec![cmd_args_list[0][0].clone()]; // Command name
+        let mut args = vec![cmd_args_list[0][0].clone()];
 
         // Add all parameters except the command name
         // This already includes delimiter and other options
@@ -205,20 +214,23 @@ async fn execute_xan_pipeline(
         child
           .wait_with_output()
           .map_err(|e| format!("Wait for command failed: {}", e))
+      } else if is_cat_command {
+        first_child
+          .wait_with_output()
+          .map_err(|e| format!("Wait for command failed: {}", e))
       } else {
-        // Feed input file content into first command's stdin
         {
           let mut stdin = first_child
             .stdin
             .take()
             .ok_or("Failed to get stdin handle")?;
-          let mut buffer = vec![0; 256 * 1024]; // 256KB buffer for better performance
+          let mut buffer = vec![0; 256 * 1024];
+          let mut file = input_file_handle.take().unwrap();
           loop {
-            match input_file_handle.read(&mut buffer) {
-              Ok(0) => break, // EOF
+            match file.read(&mut buffer) {
+              Ok(0) => break,
               Ok(n) => {
                 if let Err(e) = stdin.write_all(&buffer[..n]) {
-                  // Broken pipe is acceptable if child exits early
                   if e.kind() != ErrorKind::BrokenPipe {
                     return Err(format!("Write to stdin failed: {}", e));
                   }
@@ -228,7 +240,6 @@ async fn execute_xan_pipeline(
               Err(e) => return Err(format!("Read input file failed: {}", e)),
             }
           }
-          // stdin closed automatically here
         }
 
         first_child
@@ -236,7 +247,7 @@ async fn execute_xan_pipeline(
           .map_err(|e| format!("Wait for command failed: {}", e))
       }
     } else {
-      // Multi-command pipeline with concurrent stderr reading
+      // Multi-command pipeline
       let all_stderr = Arc::new(Mutex::new(Vec::new()));
       let all_errors = Arc::new(Mutex::new(Vec::new()));
       let mut children = Vec::new();
@@ -342,16 +353,13 @@ async fn execute_xan_pipeline(
         output_handles.push(child_stdout);
       }
 
-      // Now feed input file to the first command
-      // All pipes are connected, so no deadlock will occur
-      {
+      if !is_cat_command {
         let first_child = children.first_mut().ok_or("Failed to get first child")?;
         let mut stdin = first_child
           .stdin
           .take()
           .ok_or("Failed to get stdin handle")?;
 
-        // Use a thread to feed input to avoid blocking main thread
         let mut input_file_clone =
           File::open(&input_file).map_err(|e| format!("Failed to open input file: {}", e))?;
 

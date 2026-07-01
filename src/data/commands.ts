@@ -1797,18 +1797,19 @@ export const xanCommands: XanCommand[] = [
         required: true,
         options: ["rows", "columns"],
         default: "rows",
+        isPositional: true,
       },
       {
         name: "pad",
         type: "flag",
-        description: "When concatenating columns, this flag will cause all records to appear",
+        description: "When concatenating columns, this flag will cause all records to appear. It will pad each row if other CSV data isn't long enough.",
         required: false,
         default: false,
       },
       {
         name: "paths",
         type: "string",
-        description: "When concatenating rows, give a text file containing one path of CSV file to concatenate per line",
+        description: "When concatenating rows, give a text file (use \"-\" for stdin) containing one path of CSV file to concatenate per line",
         required: false,
       },
       {
@@ -1818,10 +1819,41 @@ export const xanCommands: XanCommand[] = [
         required: false,
       },
       {
+        name: "glob",
+        type: "string",
+        description: "Use given glob pattern to collect files to concatenate",
+        required: false,
+      },
+      {
         name: "source-column",
         type: "string",
         description: "Name of a column to prepend in the output of 'cat rows' indicating the path to source file",
         required: false,
+      },
+      {
+        name: "preprocess",
+        type: "string",
+        description: "Preprocessing using only xan subcommands. See xan parallel -h for more information about preprocessing.",
+        required: false,
+      },
+      {
+        name: "run",
+        type: "string",
+        description: "Run xan script at given path as preprocessing. See xan run -h for more information.",
+        required: false,
+      },
+      {
+        name: "shell-preprocess",
+        type: "string",
+        description: "Preprocessing commands that will run directly in your own shell using the -c flag. See xan parallel -h for more information about preprocessing.",
+        required: false,
+      },
+      {
+        name: "raw",
+        type: "flag",
+        description: "Concatenate files as fast as possible, while skipping subsequent files' headers. Will not normalize the CSV stream at all while doing so, nor verify columns alignment. Only use for performance, and if you know what you are doing.",
+        required: false,
+        default: false,
       },
 
     ],

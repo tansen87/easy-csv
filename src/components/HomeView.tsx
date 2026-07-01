@@ -175,7 +175,7 @@ export function HomeView({
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  if (!inputFile) {
+  if (!inputFile && pipeline.length === 0) {
     return (
       <div className="h-full flex flex-col bg-background">
         <div className="bg-transparent" onContextMenu={(e) => e.preventDefault()}>

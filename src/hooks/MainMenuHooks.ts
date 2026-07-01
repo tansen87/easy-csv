@@ -449,11 +449,6 @@ export function MainMenuHooks({
       return;
     }
 
-    if (!inputFile) {
-      showToast("No input file selected", 'warning');
-      return;
-    }
-
     setIsExecuting(true);
     setShowLogPanel(true);
     setShowProgressBar(true);
@@ -593,7 +588,7 @@ export function MainMenuHooks({
         addLog("success", `All ${branches.length} branch(es) executed successfully`);
       }
     } catch (error) {
-      showToast(`${error}`, 'error');
+      addLog("error", `${error}`);
     } finally {
       setIsExecuting(false);
       progressHideTimerRef.current = setTimeout(() => {
