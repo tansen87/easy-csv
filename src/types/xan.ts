@@ -65,15 +65,3 @@ export interface HistoricalPipeline {
   edges?: PipelineEdge[];
   inputPosition?: { x: number; y: number };
 }
-
-export interface Workspace {
-  version: string;
-  name: string;
-  description?: string;
-  created: string;
-  updated: string;
-  pipeline: PipelineStep[];
-  inputFile: string;
-  defaultDelimiter: string;
-  noQuoting: boolean;
-}

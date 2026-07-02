@@ -15,7 +15,6 @@ const XAN_EXE_BYTES: &[u8] = include_bytes!("../resources/xan.exe");
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppConfig {
   pub default_delimiter: Option<String>,
-  pub no_quoting: Option<bool>,
   pub no_headers: Option<bool>,
 }
 
@@ -23,7 +22,6 @@ impl Default for AppConfig {
   fn default() -> Self {
     Self {
       default_delimiter: None,
-      no_quoting: None,
       no_headers: None,
     }
   }
@@ -75,7 +73,7 @@ async fn read_csv_file(
     .map(|s| s.to_string())
     .collect();
 
-  let row_limit = limit.unwrap_or(100);
+  let row_limit = limit.unwrap_or(51);
   let mut rows = Vec::new();
   for result in rdr.records() {
     if rows.len() >= row_limit {
@@ -97,7 +95,6 @@ async fn execute_xan_pipeline(
   let xan_path = find_xan_executable().ok_or("xan executable not found")?;
 
   let config = load_config()?;
-  let no_quoting_enabled = config.no_quoting.unwrap_or(false);
   let no_headers_enabled = config.no_headers.unwrap_or(false);
 
   let first_cmd = commands.first().ok_or("No commands provided")?;
@@ -111,9 +108,6 @@ async fn execute_xan_pipeline(
     let mut args = vec![cmd.name.clone()];
 
     if i == 0 {
-      if no_quoting_enabled {
-        args.push("--no-quoting".to_string());
-      }
       if no_headers_enabled {
         args.push("--no-headers".to_string());
       }
@@ -655,19 +649,6 @@ async fn set_default_delimiter(delimiter: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn get_no_quoting() -> Option<bool> {
-  let config = load_config().unwrap_or_default();
-  config.no_quoting
-}
-
-#[tauri::command]
-async fn set_no_quoting(no_quoting: bool) -> Result<(), String> {
-  let mut config = load_config()?;
-  config.no_quoting = Some(no_quoting);
-  save_config(&config)
-}
-
-#[tauri::command]
 async fn get_no_headers() -> Option<bool> {
   let config = load_config().unwrap_or_default();
   config.no_headers
@@ -745,8 +726,6 @@ pub fn run() {
       get_xan_version,
       get_default_delimiter,
       set_default_delimiter,
-      get_no_quoting,
-      set_no_quoting,
       get_no_headers,
       set_no_headers,
       save_history,

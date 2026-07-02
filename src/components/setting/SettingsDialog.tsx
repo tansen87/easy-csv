@@ -9,8 +9,6 @@ interface SettingsDialogProps {
   onThemeChange: (theme: "dark" | "light" | "system") => void;
   defaultDelimiter: string;
   onDefaultDelimiterChange: (delimiter: string) => void;
-  noQuoting: boolean;
-  onNoQuotingChange: (value: boolean) => void;
   noHeaders: boolean;
   onNoHeadersChange: (value: boolean) => void;
   onSave: () => void;
@@ -23,8 +21,6 @@ export function SettingsDialog({
   onThemeChange,
   defaultDelimiter,
   onDefaultDelimiterChange,
-  noQuoting,
-  onNoQuotingChange,
   noHeaders,
   onNoHeadersChange,
   onSave,
@@ -89,8 +85,6 @@ export function SettingsDialog({
             onThemeChange={onThemeChange}
             defaultDelimiter={defaultDelimiter}
             onDefaultDelimiterChange={onDefaultDelimiterChange}
-            noQuoting={noQuoting}
-            onNoQuotingChange={onNoQuotingChange}
             noHeaders={noHeaders}
             onNoHeadersChange={onNoHeadersChange}
             onSave={onSave}

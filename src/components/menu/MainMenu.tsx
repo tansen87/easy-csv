@@ -80,6 +80,7 @@ export function MainMenu({
               <button
                 onClick={() => {
                   onOpenNewTabWithFile();
+                  setActiveMenu(null);
                 }}
                 className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
@@ -129,7 +130,10 @@ export function MainMenu({
           )}
         </div>
         <button
-          onClick={onOpenSettings}
+          onClick={() => {
+            onOpenSettings();
+            setActiveMenu(null);
+          }}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-primary hover:text-primary hover:bg-primary/10 transition-colors"
         >
           <Settings className="h-3.5 w-3.5" />

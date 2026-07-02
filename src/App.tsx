@@ -55,7 +55,6 @@ function App() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [xanVersion, setXanVersion] = useState<string | null>(null);
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(",");
-  const [noQuoting, setNoQuoting] = useState<boolean>(false);
   const [noHeaders, setNoHeaders] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [showHelp, setShowHelp] = useState<boolean>(false);
@@ -230,17 +229,6 @@ function App() {
     }
   };
 
-  const loadNoQuoting = async () => {
-    try {
-      const savedNoQuoting = await invoke<boolean | null>("get_no_quoting");
-      if (savedNoQuoting !== null) {
-        setNoQuoting(savedNoQuoting);
-      }
-    } catch (error) {
-      showToastRef.current(`Failed to load no quoting setting: ${error}`, 'error');
-    }
-  };
-
   const loadNoHeaders = async () => {
     try {
       const savedNoHeaders = await invoke<boolean | null>("get_no_headers");
@@ -278,15 +266,10 @@ function App() {
         // Initialize xan - this will trigger extraction if needed
         await invoke("check_xan_installed");
 
-        setLoadingText("Loading version information...");
-        await loadXanVersion();
-
         setLoadingText("Loading configuration...");
+        await loadXanVersion();
         await loadDefaultDelimiter();
-        await loadNoQuoting();
         await loadNoHeaders();
-
-        setLoadingText("Loading historical records...");
         await loadHistoricalPipelines();
 
         setIsLoading(false);
@@ -801,23 +784,12 @@ function App() {
             onThemeChange={setTheme}
             defaultDelimiter={defaultDelimiter}
             onDefaultDelimiterChange={setDefaultDelimiter}
-            noQuoting={noQuoting}
-            onNoQuotingChange={setNoQuoting}
             noHeaders={noHeaders}
             onNoHeadersChange={setNoHeaders}
             onSave={async () => {
               try {
-                const savePromises: Promise<void>[] = [];
-                savePromises.push(
-                  invoke("set_default_delimiter", { delimiter: defaultDelimiter })
-                );
-                savePromises.push(
-                  invoke("set_no_quoting", { noQuoting })
-                );
-                savePromises.push(
-                  invoke("set_no_headers", { noHeaders })
-                );
-                await Promise.all(savePromises);
+                await invoke("set_default_delimiter", { delimiter: defaultDelimiter });
+                await invoke("set_no_headers", { noHeaders });
                 showToastRef.current("Settings saved successfully", 'success');
               } catch (error) {
                 showToastRef.current(`Failed to save settings: ${error}`, 'error');

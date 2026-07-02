@@ -9,8 +9,6 @@ interface SettingsTabContentProps {
   onThemeChange: (theme: "dark" | "light" | "system") => void;
   defaultDelimiter: string;
   onDefaultDelimiterChange: (delimiter: string) => void;
-  noQuoting: boolean;
-  onNoQuotingChange: (value: boolean) => void;
   noHeaders: boolean;
   onNoHeadersChange: (value: boolean) => void;
   onSave: () => void;
@@ -22,8 +20,6 @@ export function SettingsTabContent({
   onThemeChange,
   defaultDelimiter,
   onDefaultDelimiterChange,
-  noQuoting,
-  onNoQuotingChange,
   noHeaders,
   onNoHeadersChange,
   onSave,
@@ -60,8 +56,8 @@ export function SettingsTabContent({
                 />
                 <button
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${theme === "light"
-                      ? "text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
+                    ? "text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                     } ${isThemeTransitioning ? "pointer-events-none opacity-60" : ""}`}
                   onClick={() => handleThemeChange("light")}
                   disabled={isThemeTransitioning}
@@ -71,8 +67,8 @@ export function SettingsTabContent({
                 </button>
                 <button
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${theme === "dark"
-                      ? "text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
+                    ? "text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                     } ${isThemeTransitioning ? "pointer-events-none opacity-60" : ""}`}
                   onClick={() => handleThemeChange("dark")}
                   disabled={isThemeTransitioning}
@@ -87,8 +83,6 @@ export function SettingsTabContent({
 
         {activeTab === "general" && (
           <div className="space-y-6 max-w-md">
-            <h3 className="text-lg font-semibold mb-4">CSV Settings</h3>
-
             {/* Delimiter */}
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -108,10 +102,9 @@ export function SettingsTabContent({
                 size="sm"
               />
               <p className="text-sm text-muted-foreground mt-2">
-                Default delimiter for reading CSV files
+                The field delimiter for reading CSV data
               </p>
             </div>
-
             {/* No Headers */}
             <div>
               <label className="flex items-center gap-3 cursor-pointer">
@@ -123,23 +116,7 @@ export function SettingsTabContent({
                 />
                 <div className="text-left">
                   <p className="text-sm font-medium">No Headers</p>
-                  <p className="text-sm text-muted-foreground">Indicate that input file has no headers</p>
-                </div>
-              </label>
-            </div>
-
-            {/* No Quoting */}
-            <div>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={noQuoting}
-                  onChange={(e) => onNoQuotingChange(e.target.checked)}
-                  className="w-4 h-4 rounded border-input accent-foreground"
-                />
-                <div className="text-left">
-                  <p className="text-sm font-medium">Disable Quoting</p>
-                  <p className="text-sm text-muted-foreground">Disable quoting completely for input command</p>
+                  <p className="text-sm text-muted-foreground">When set, the first row will not be interpreted as headers</p>
                 </div>
               </label>
             </div>
@@ -154,7 +131,6 @@ export function SettingsTabContent({
           onClick={() => {
             onThemeChange("light");
             onDefaultDelimiterChange(",");
-            onNoQuotingChange(false);
             onNoHeadersChange(false);
           }}
         >
