@@ -7289,14 +7289,14 @@ export function CommandDialog({
         )}
 
         {commandDialog.type === "input" && (
-          <><ScrollArea className="h-[25vh]">
-            <div className="space-y-3 pr-2.5">
-              <div className="grid grid-cols-2 gap-4">
+          <>
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="text-sm font-medium">Quote Character</label>
                   <input
                     type="text"
-                    value={commandDialog.params.quote || "\""}
+                    value={commandDialog.params.quote || ""}
                     onChange={(e) => setCommandDialog({
                       ...commandDialog,
                       params: { ...commandDialog.params, quote: e.target.value },
@@ -7316,20 +7316,61 @@ export function CommandDialog({
                     placeholder="Escape character"
                     className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
                 </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Comment Character</label>
-                <input
-                  type="text"
-                  value={commandDialog.params.comment || ""}
-                  onChange={(e) => setCommandDialog({
-                    ...commandDialog,
-                    params: { ...commandDialog.params, comment: e.target.value },
-                  })}
-                  placeholder="Skip records starting with this character"
-                  className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                <div>
+                  <label className="text-sm font-medium">Comment Character</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.comment || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, comment: e.target.value },
+                    })}
+                    placeholder="Skip records starting with this character"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
               </div>
               <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-sm font-medium">Skip Lines</label>
+                  <input
+                    type="number"
+                    value={commandDialog.params["skip-lines"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        "skip-lines": e.target.value ? Number(e.target.value) : undefined,
+                      },
+                    })}
+                    placeholder="Skip the first n lines"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Skip Until</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["skip-until"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "skip-until": e.target.value },
+                    })}
+                    placeholder="Skip lines until matches"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Skip While</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params["skip-while"] || ""}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "skip-while": e.target.value },
+                    })}
+                    placeholder="Skip lines while matches"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
+                </div>
+              </div>
+              <div className="grid grid-cols-6 gap-2">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
                     type="checkbox"
@@ -7398,7 +7439,7 @@ export function CommandDialog({
                       },
                     })}
                     className="h-3.5 w-3.5 accent-foreground" />
-                  Gzip
+                  .gz
                 </label>
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
@@ -7412,52 +7453,96 @@ export function CommandDialog({
                       },
                     })}
                     className="h-3.5 w-3.5 accent-foreground" />
-                  Zstd
+                  .zst
                 </label>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Skip Lines</label>
+              <div className="grid grid-cols-6 gap-2">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
-                    type="number"
-                    value={commandDialog.params["skip-lines"] || ""}
+                    type="checkbox"
+                    checked={commandDialog.params.vcf}
                     onChange={(e) => setCommandDialog({
                       ...commandDialog,
                       params: {
                         ...commandDialog.params,
-                        "skip-lines": e.target.value ? Number(e.target.value) : undefined,
+                        vcf: e.target.checked,
                       },
                     })}
-                    placeholder="Skip the first n lines"
-                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Skip Until</label>
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  .vcf
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
-                    type="text"
-                    value={commandDialog.params["skip-until"] || ""}
+                    type="checkbox"
+                    checked={commandDialog.params.gtf}
                     onChange={(e) => setCommandDialog({
                       ...commandDialog,
-                      params: { ...commandDialog.params, "skip-until": e.target.value },
+                      params: {
+                        ...commandDialog.params,
+                        gtf: e.target.checked,
+                      },
                     })}
-                    placeholder="Skip lines until matches"
-                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Skip While</label>
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  .gtf
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
-                    type="text"
-                    value={commandDialog.params["skip-while"] || ""}
+                    type="checkbox"
+                    checked={commandDialog.params.gff}
                     onChange={(e) => setCommandDialog({
                       ...commandDialog,
-                      params: { ...commandDialog.params, "skip-while": e.target.value },
+                      params: {
+                        ...commandDialog.params,
+                        gff: e.target.checked,
+                      },
                     })}
-                    placeholder="Skip lines while matches"
-                    className="w-full h-8 px-3 text-sm border rounded-md bg-background" />
-                </div>
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  .gff
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params.sam}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        sam: e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  .sam
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params.bed}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        bed: e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  .bed
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={commandDialog.params.cdx}
+                    onChange={(e) => setCommandDialog({
+                      ...commandDialog,
+                      params: {
+                        ...commandDialog.params,
+                        cdx: e.target.checked,
+                      },
+                    })}
+                    className="h-3.5 w-3.5 accent-foreground" />
+                  .cdx
+                </label>
               </div>
             </div>
-          </ScrollArea>
             <div className="flex justify-end gap-2 mt-2">
               <Button
                 variant="secondary"
