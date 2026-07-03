@@ -2967,13 +2967,6 @@ export const xanCommands: XanCommand[] = [
         isPositional: true,
       },
       {
-        name: "serialize",
-        type: "flag",
-        description: "Serialize the value in CSV",
-        required: false,
-        default: false,
-      },
-      {
         name: "explain",
         type: "flag",
         description: "Print concrete expression plan",

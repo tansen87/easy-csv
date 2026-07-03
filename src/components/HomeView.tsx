@@ -178,7 +178,7 @@ export function HomeView({
   if (!inputFile && pipeline.length === 0) {
     return (
       <div className="h-full relative">
-        <div className="absolute top-10 ml-2" onContextMenu={(e) => e.preventDefault()}>
+        <div className="absolute top-11 ml-2" onContextMenu={(e) => e.preventDefault()}>
           <div className="h-[48px] px-4 flex items-center">
             <ScrollArea className="h-full flex-1">
               <div className="flex items-center gap-2">
@@ -353,7 +353,7 @@ export function HomeView({
         />
       </div>
 
-      <div className="absolute top-10 ml-2 z-10" onContextMenu={(e) => e.preventDefault()}>
+      <div className="absolute top-11 ml-2 z-10" onContextMenu={(e) => e.preventDefault()}>
         <div className="h-[48px] px-4 flex items-center">
           <ScrollArea className="h-full flex-1">
             <div className="flex items-center gap-2 pr-4">

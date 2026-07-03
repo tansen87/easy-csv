@@ -196,11 +196,11 @@ export function MainMenuHooks({
     const file = await open({
       multiple: false,
       filters: [
-        { name: "CSV Files", extensions: ["csv", "txt", "tsv"] },
-        { name: "JSON Files", extensions: ["json", "jsonl"] },
-        { name: "Excel Files", extensions: ["xlsx"] },
-        { name: "Parquet Files", extensions: ["parquet"] },
-        { name: "All Files", extensions: ["*"] },
+        { name: "CSV", extensions: ["csv", "txt", "tsv"] },
+        { name: "JSON", extensions: ["json", "jsonl"] },
+        { name: "Excel", extensions: ["xlsx", "xls", "xlsm"] },
+        { name: "Parquet", extensions: ["parquet"] },
+        { name: "All", extensions: ["*"] },
       ],
     });
 
@@ -210,19 +210,19 @@ export function MainMenuHooks({
   }, [selectedTabId, loadCsvData]);
 
   const handleOpenNewTabWithFile = useCallback(async () => {
-    const newTabId = addNewTab();
     const file = await open({
       multiple: false,
       filters: [
-        { name: "CSV Files", extensions: ["csv", "txt", "tsv"] },
-        { name: "JSON Files", extensions: ["json", "jsonl"] },
-        { name: "Excel Files", extensions: ["xlsx"] },
-        { name: "Parquet Files", extensions: ["parquet"] },
-        { name: "All Files", extensions: ["*"] },
+        { name: "CSV", extensions: ["csv", "txt", "tsv"] },
+        { name: "JSON", extensions: ["json", "jsonl"] },
+        { name: "Excel", extensions: ["xlsx", "xls", "xlsm"] },
+        { name: "Parquet", extensions: ["parquet"] },
+        { name: "All", extensions: ["*"] },
       ],
     });
 
     if (file) {
+      const newTabId = addNewTab();
       loadCsvData(newTabId, file);
     }
   }, [addNewTab, loadCsvData]);
