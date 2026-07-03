@@ -177,15 +177,15 @@ export function HomeView({
 
   if (!inputFile && pipeline.length === 0) {
     return (
-      <div className="h-full flex flex-col bg-background">
-        <div className="bg-transparent" onContextMenu={(e) => e.preventDefault()}>
+      <div className="h-full relative">
+        <div className="absolute top-10 ml-2" onContextMenu={(e) => e.preventDefault()}>
           <div className="h-[48px] px-4 flex items-center">
             <ScrollArea className="h-full flex-1">
-              <div className="flex items-center gap-2 pr-4">
+              <div className="flex items-center gap-2">
                 {tabs.map((tab) => (
                   <div
                     key={tab.id}
-                    className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-xs transition-colors shrink-0 ${selectedTabId === tab.id
+                    className={`flex items-center gap-2 px-1.5 py-1 rounded-md text-xs transition-colors shrink-0 ${selectedTabId === tab.id
                       ? 'bg-primary/10 text-primary border border-primary/20'
                       : 'hover:bg-accent/50 border border-transparent'}`}
                     onContextMenu={(e) => {
@@ -245,7 +245,7 @@ export function HomeView({
             </ScrollArea>
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-center" onContextMenu={(e) => e.preventDefault()}>
+        <div className="absolute inset-0 pt-[96px] flex items-center justify-center" onContextMenu={(e) => e.preventDefault()}>
           <div className="max-w-md w-full px-8">
             <div className="text-center mb-8">
               <h2 className="text-xl font-semibold text-foreground mb-2">
@@ -299,15 +299,68 @@ export function HomeView({
   }
 
   return (
-    <div className="h-full flex flex-col bg-background">
-      <div className="bg-transparent relative" onContextMenu={(e) => e.preventDefault()}>
+    <div className="h-full relative">
+      <div className="absolute inset-0 overflow-hidden">
+        <FlowPanel
+          steps={pipeline}
+          headers={displayHeaders}
+          rows={data}
+          columnWidths={columnWidths}
+          onStepsChange={(newPipeline) => {
+            if (onPipelineReorder && selectedTabId) {
+              onPipelineReorder(selectedTabId, newPipeline);
+            }
+          }}
+          onStepClick={(s) => {
+            if (onStepClick) {
+              onStepClick(s);
+            }
+            setCommandDialog({
+              type: s.command.name as any,
+              params: { ...s.parameters },
+              isUpdate: true,
+              stepId: s.id,
+            });
+          }}
+          onStepAliasUpdate={onStepAliasUpdate || (() => { })}
+          onStepRemove={onStepDelete || (() => { })}
+          onOpenFilterDialog={(col, x, y) => setFilterDialog({ col, x, y })}
+          onOpenPivotDialog={(x, y) => setPivotDialog({ x, y })}
+          onOpenDateTransformDialog={(col, x, y) => setDateTransformDialog({ col, x, y })}
+          onOpenSliceDialog={(col, x, y, sliceType) => setSplitDialog({ col, x, y, sliceType })}
+          onOpenReplaceDialog={(col, x, y) => setReplaceDialog({ col, x, y })}
+          onOpenWindowDialog={(col, x, y) => setWindowDialog({ col, x, y })}
+          onOpenPadDialog={(col, x, y, padType) => setPadDialog({ col, x, y, padType })}
+          onOpenSortDialog={(col, x, y) => setSortDialog({ col, x, y })}
+          onOpenTextTransformDialog={(col, x, y, transformType) => setTextTransformDialog({ col, x, y, transformType })}
+          onOpenNumberTransformDialog={(col, x, y, transformType) => setNumberTransformDialog({ col, x, y, transformType })}
+          onTableRename={handleTableRename}
+          onSave={handleSaveRenames}
+          selectedStepId={selectedStepId}
+          savedEdges={edges}
+          savedInputPosition={inputPosition}
+          onEdgesChange={(edges) => {
+            if (onEdgesChange && selectedTabId) {
+              onEdgesChange(selectedTabId, edges);
+            }
+          }}
+          onInputPositionChange={(position) => {
+            if (onInputPositionChange && selectedTabId) {
+              onInputPositionChange(selectedTabId, position);
+            }
+          }}
+          showMinimap={showMinimap}
+        />
+      </div>
+
+      <div className="absolute top-10 ml-2 z-10" onContextMenu={(e) => e.preventDefault()}>
         <div className="h-[48px] px-4 flex items-center">
           <ScrollArea className="h-full flex-1">
             <div className="flex items-center gap-2 pr-4">
               {tabs.map((tab) => (
                 <div
                   key={tab.id}
-                  className={`flex items-center gap-2 px-2.5 py-1 mt-2 rounded-lg text-xs transition-colors shrink-0 ${selectedTabId === tab.id
+                  className={`flex items-center gap-2 px-1.5 py-1 rounded-md text-xs transition-colors shrink-0 ${selectedTabId === tab.id
                     ? 'bg-primary/10 text-primary border border-primary/20'
                     : 'hover:bg-accent/50 border border-transparent'}`}
                   onContextMenu={(e) => {
@@ -366,92 +419,38 @@ export function HomeView({
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </div>
+      </div>
 
-        {/* Progress bar in center of Tab bar */}
-        {showProgressBar && branchProgress && (
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg shadow-md pointer-events-auto">
-              <span className="text-xs font-medium text-muted-foreground">
-                Branch {branchProgress.current}/{branchProgress.total}
-              </span>
-              <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${branchProgress.status === "completed"
-                ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                : branchProgress.status === "executing"
-                  ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                  : "bg-red-500/10 text-red-600 dark:text-red-400"
-                }`}>
-                {branchProgress.status === "executing" && (
-                  <div className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                )}
-                {branchProgress.status === "completed" && (
-                  <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-                {branchProgress.status === "error" && (
-                  <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                )}
-                <span className="max-w-[240px] truncate">{branchProgress.name}</span>
-              </div>
+      {showProgressBar && branchProgress && (
+        <div className="absolute left-1/2 top-12 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-card/80 backdrop-blur-sm border border-border rounded-lg shadow-md pointer-events-auto">
+            <span className="text-xs font-medium text-muted-foreground">
+              Branch {branchProgress.current}/{branchProgress.total}
+            </span>
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${branchProgress.status === "completed"
+              ? "bg-green-500/10 text-green-600 dark:text-green-400"
+              : branchProgress.status === "executing"
+                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                : "bg-red-500/10 text-red-600 dark:text-red-400"
+              }`}>
+              {branchProgress.status === "executing" && (
+                <div className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              )}
+              {branchProgress.status === "completed" && (
+                <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+              {branchProgress.status === "error" && (
+                <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              )}
+              <span className="max-w-[240px] truncate">{branchProgress.name}</span>
             </div>
           </div>
-        )}
-      </div>
-
-      <div className="flex-1 relative overflow-hidden">
-        <FlowPanel
-          steps={pipeline}
-          headers={displayHeaders}
-          rows={data}
-          columnWidths={columnWidths}
-          onStepsChange={(newPipeline) => {
-            if (onPipelineReorder && selectedTabId) {
-              onPipelineReorder(selectedTabId, newPipeline);
-            }
-          }}
-          onStepClick={(s) => {
-            if (onStepClick) {
-              onStepClick(s);
-            }
-            setCommandDialog({
-              type: s.command.name as any,
-              params: { ...s.parameters },
-              isUpdate: true,
-              stepId: s.id,
-            });
-          }}
-          onStepAliasUpdate={onStepAliasUpdate || (() => { })}
-          onStepRemove={onStepDelete || (() => { })}
-          onOpenFilterDialog={(col, x, y) => setFilterDialog({ col, x, y })}
-          onOpenPivotDialog={(x, y) => setPivotDialog({ x, y })}
-          onOpenDateTransformDialog={(col, x, y) => setDateTransformDialog({ col, x, y })}
-          onOpenSliceDialog={(col, x, y, sliceType) => setSplitDialog({ col, x, y, sliceType })}
-          onOpenReplaceDialog={(col, x, y) => setReplaceDialog({ col, x, y })}
-          onOpenWindowDialog={(col, x, y) => setWindowDialog({ col, x, y })}
-          onOpenPadDialog={(col, x, y, padType) => setPadDialog({ col, x, y, padType })}
-          onOpenSortDialog={(col, x, y) => setSortDialog({ col, x, y })}
-          onOpenTextTransformDialog={(col, x, y, transformType) => setTextTransformDialog({ col, x, y, transformType })}
-          onOpenNumberTransformDialog={(col, x, y, transformType) => setNumberTransformDialog({ col, x, y, transformType })}
-          onTableRename={handleTableRename}
-          onSave={handleSaveRenames}
-          selectedStepId={selectedStepId}
-          savedEdges={edges}
-          savedInputPosition={inputPosition}
-          onEdgesChange={(edges) => {
-            if (onEdgesChange && selectedTabId) {
-              onEdgesChange(selectedTabId, edges);
-            }
-          }}
-          onInputPositionChange={(position) => {
-            if (onInputPositionChange && selectedTabId) {
-              onInputPositionChange(selectedTabId, position);
-            }
-          }}
-          showMinimap={showMinimap}
-        />
-      </div>
+        </div>
+      )}
 
       {contextMenu && (
         <ContextMenu

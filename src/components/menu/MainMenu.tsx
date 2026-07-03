@@ -1,9 +1,9 @@
-import { File, Settings, Undo2, Redo2, Play, FolderOpen, FileText, Save, Upload, Download } from "lucide-react";
+import { File, Undo2, Redo2, Play, FolderOpen, FileText, Save, Upload, Download } from "lucide-react";
 import { PipelineStep } from "@/types/xan";
 
 interface MainMenuProps {
-  activeMenu: "file" | "settings" | null;
-  setActiveMenu: (menu: "file" | "settings" | null) => void;
+  activeMenu: "file" | null;
+  setActiveMenu: (menu: "file" | null) => void;
   isMenuActivated: boolean;
   setIsMenuActivated: (activated: boolean) => void;
   undoStack: Array<{ pipeline: PipelineStep[] }>;
@@ -16,7 +16,6 @@ interface MainMenuProps {
   onSavePipeline: () => void;
   onImportPipeline: () => void;
   onExportPipeline: () => void;
-  onOpenSettings: () => void;
   isExecuting: boolean;
   currentPipelineLength: number;
 }
@@ -36,13 +35,12 @@ export function MainMenu({
   onSavePipeline,
   onImportPipeline,
   onExportPipeline,
-  onOpenSettings,
   isExecuting,
   currentPipelineLength,
 }: MainMenuProps) {
   return (
     <div className="relative">
-      <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+      <div className="flex rounded-md p-0.5">
         <div className="relative">
           <button
             onClick={() => {
@@ -94,7 +92,7 @@ export function MainMenu({
                   setActiveMenu(null);
                 }}
                 disabled={currentPipelineLength === 0}
-                className={`flex items-center gap-2 w-full px-3 py-2 text-xs font-medium transition-colors ${currentPipelineLength === 0
+                className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium transition-colors ${currentPipelineLength === 0
                   ? "text-muted-foreground/40 cursor-not-allowed"
                   : "text-muted-foreground hover:text-foreground hover:bg-accent"
                   }`}
@@ -107,7 +105,7 @@ export function MainMenu({
                   onImportPipeline();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
                 <Upload className="h-3.5 w-3.5" />
                 Import Workflow
@@ -118,7 +116,7 @@ export function MainMenu({
                   setActiveMenu(null);
                 }}
                 disabled={currentPipelineLength === 0}
-                className={`flex items-center gap-2 w-full px-3 py-2 text-xs font-medium transition-colors ${currentPipelineLength === 0
+                className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium transition-colors ${currentPipelineLength === 0
                   ? "text-muted-foreground/40 cursor-not-allowed"
                   : "text-muted-foreground hover:text-foreground hover:bg-accent"
                   }`}
@@ -129,16 +127,6 @@ export function MainMenu({
             </div>
           )}
         </div>
-        <button
-          onClick={() => {
-            onOpenSettings();
-            setActiveMenu(null);
-          }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-primary hover:text-primary hover:bg-primary/10 transition-colors"
-        >
-          <Settings className="h-3.5 w-3.5" />
-          Settings
-        </button>
 
         {/* Undo/Redo buttons */}
         <div className="flex items-center">

@@ -14,6 +14,7 @@ import {
   FileText,
   CloudDownload,
   RefreshCw,
+  Settings,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/panel/LogPanel";
@@ -56,7 +57,6 @@ function App() {
   const [selectedTabId, setSelectedTabId] = useState<string>("tab-1");
   const [selectedStep, setSelectedStep] = useState<PipelineStep | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [xanVersion, setXanVersion] = useState<string | null>(null);
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(",");
   const [noHeaders, setNoHeaders] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
@@ -75,7 +75,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
   const [notifications, setNotifications] = useState<{ id: string; message: string; type: NotificationType }[]>([]);
-  const [activeMenu, setActiveMenu] = useState<"file" | "settings" | null>(null);
+  const [activeMenu, setActiveMenu] = useState<"file" | null>(null);
   const [isMenuActivated, setIsMenuActivated] = useState<boolean>(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState<boolean>(false);
   const [showProgressBar, setShowProgressBar] = useState<boolean>(false);
@@ -251,15 +251,6 @@ function App() {
     }
   };
 
-  const loadXanVersion = async () => {
-    try {
-      const version = await invoke<string>("get_xan_version");
-      setXanVersion(version);
-    } catch (error) {
-      showToastRef.current(`Failed to load xan version: ${error}`, 'error');
-    }
-  };
-
   const checkForUpdates = async () => {
     setIsCheckingUpdate(true);
     try {
@@ -275,9 +266,9 @@ function App() {
       const latestVersionRaw = data.tag_name || "";
       const latestVersion = latestVersionRaw.replace(/^v/, "");
       const changelog = data.body || "";
-      
+
       const hasUpdate = currentVersion && latestVersion && latestVersion !== currentVersion;
-      
+
       setUpdateInfo({
         hasUpdate,
         latestVersion,
@@ -304,16 +295,11 @@ function App() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        setLoadingText("Initializing xan environment...");
-        // Initialize xan - this will trigger extraction if needed
-        await invoke("check_xan_installed");
-
         setLoadingText("Loading configuration...");
-        await loadXanVersion();
+        await invoke("check_xan_installed");
         await loadDefaultDelimiter();
         await loadNoHeaders();
         await loadHistoricalPipelines();
-
         setIsLoading(false);
       } catch (error) {
         console.error("Initialization failed:", error);
@@ -614,8 +600,8 @@ function App() {
       {isLoading ? (
         <SplashScreen loadingText={loadingText} />
       ) : (
-        <div className="h-screen flex flex-col bg-background relative overflow-hidden">
-          <header ref={headerRef} className="h-14 border-b bg-card shadow-sm flex items-center justify-between px-4 gap-4 relative z-10" onContextMenu={(e) => e.preventDefault()}>
+        <div className="h-screen relative overflow-hidden">
+          <header ref={headerRef} className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-4 gap-4 z-20" onContextMenu={(e) => e.preventDefault()}>
             {/* Left: Main Menu */}
             <MainMenu
               activeMenu={activeMenu}
@@ -632,7 +618,6 @@ function App() {
               onSavePipeline={handleSavePipeline}
               onImportPipeline={handleImportPipeline}
               onExportPipeline={handleExportPipeline}
-              onOpenSettings={() => setShowSettingsDialog(true)}
               isExecuting={isExecuting}
               currentPipelineLength={getCurrentPipeline().length}
             />
@@ -640,98 +625,101 @@ function App() {
             {/* Center: Empty */}
             <div className="flex-1" />
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center rounded-md p-0.5">
               <button
                 onClick={checkForUpdates}
                 disabled={isCheckingUpdate}
-                className="p-1.5 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                className={`flex items-center px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${isCheckingUpdate
+                  ? "text-primary opacity-70"
+                  : "text-primary hover:bg-primary/10"
+                  }`}
               >
                 {isCheckingUpdate ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <CloudDownload className="h-4 w-4" />
+                  <CloudDownload className="h-3.5 w-3.5" />
                 )}
               </button>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 rounded-lg text-xs font-medium border border-green-500/20">
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
-                <span className="hidden sm:inline">xan{xanVersion ? ` ${xanVersion.trim()}` : ""}</span>
-              </div>
+              <button
+                onClick={() => setShowSettingsDialog(true)}
+                className="flex items-center px-3 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+              >
+                <Settings className="h-3.5 w-3.5" />
+              </button>
             </div>
           </header>
 
-          <div className="flex-1 flex overflow-hidden">
-            <main className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-hidden">
-                <HomeView
-                  tabs={tabs}
-                  selectedTabId={selectedTabId}
-                  onTabChange={setSelectedTabId}
-                  onRemoveTab={removeTab}
-                  onRenameTab={renameTab}
-                  onAddCommand={handleCommandClick}
-                  onStepClick={handleStepClick}
-                  onStepUpdate={handleStepUpdate}
-                  onStepAliasUpdate={handleStepAliasUpdate}
-                  onStepDelete={handleStepRemove}
-                  onPipelineReorder={updateTabPipeline}
-                  onEdgesChange={(tabId, edges) => {
-                    // Validate output connections when edges change
-                    const tab = tabs.find(t => t.id === tabId);
-                    if (tab) {
-                      // Remove all output-related notifications first
-                      setNotifications((prev) =>
-                        prev.filter(n => !n.message.startsWith("Output"))
-                      );
-
-                      const outputSteps = tab.pipeline.filter(s => s.command.id === "output");
-                      outputSteps.forEach(outputStep => {
-                        // Check if output is connected as source (wrong direction)
-                        const outputAsSource = edges.filter(e => e.source === outputStep.id);
-                        if (outputAsSource.length > 0) {
-                          addNotificationRef.current("Output should be at the end of a branch", 'error');
-                        }
-                        // Check if output has no incoming connections and no outgoing connections
-                        const outputAsTarget = edges.filter(e => e.target === outputStep.id);
-                        if (outputAsTarget.length === 0 && outputAsSource.length === 0) {
-                          addNotificationRef.current("Output is not connected", 'warning');
-                        }
-                      });
-                    }
-
-                    setTabs((prev) =>
-                      prev.map((tab) =>
-                        tab.id === tabId
-                          ? { ...tab, edges, updatedAt: formatDateTime(new Date()) }
-                          : tab,
-                      ),
+          <main className="absolute inset-0 flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-hidden">
+              <HomeView
+                tabs={tabs}
+                selectedTabId={selectedTabId}
+                onTabChange={setSelectedTabId}
+                onRemoveTab={removeTab}
+                onRenameTab={renameTab}
+                onAddCommand={handleCommandClick}
+                onStepClick={handleStepClick}
+                onStepUpdate={handleStepUpdate}
+                onStepAliasUpdate={handleStepAliasUpdate}
+                onStepDelete={handleStepRemove}
+                onPipelineReorder={updateTabPipeline}
+                onEdgesChange={(tabId, edges) => {
+                  // Validate output connections when edges change
+                  const tab = tabs.find(t => t.id === tabId);
+                  if (tab) {
+                    // Remove all output-related notifications first
+                    setNotifications((prev) =>
+                      prev.filter(n => !n.message.startsWith("Output"))
                     );
-                  }}
-                  onInputPositionChange={(tabId, position) => {
-                    setTabs((prev) =>
-                      prev.map((tab) =>
-                        tab.id === tabId
-                          ? { ...tab, inputPosition: position, updatedAt: formatDateTime(new Date()) }
-                          : tab,
-                      ),
-                    );
-                  }}
-                  onOpenFile={handleOpenFile}
-                  onImportPipeline={handleImportPipeline}
-                  onOpenUrl={handleOpenUrl}
-                  showMinimap={showMinimap}
-                  branchProgress={branchProgress}
-                  showProgressBar={showProgressBar}
-                />
-              </div>
-            </main>
-          </div>
+
+                    const outputSteps = tab.pipeline.filter(s => s.command.id === "output");
+                    outputSteps.forEach(outputStep => {
+                      // Check if output is connected as source (wrong direction)
+                      const outputAsSource = edges.filter(e => e.source === outputStep.id);
+                      if (outputAsSource.length > 0) {
+                        addNotificationRef.current("Output should be at the end of a branch", 'error');
+                      }
+                      // Check if output has no incoming connections and no outgoing connections
+                      const outputAsTarget = edges.filter(e => e.target === outputStep.id);
+                      if (outputAsTarget.length === 0 && outputAsSource.length === 0) {
+                        addNotificationRef.current("Output is not connected", 'warning');
+                      }
+                    });
+                  }
+
+                  setTabs((prev) =>
+                    prev.map((tab) =>
+                      tab.id === tabId
+                        ? { ...tab, edges, updatedAt: formatDateTime(new Date()) }
+                        : tab,
+                    ),
+                  );
+                }}
+                onInputPositionChange={(tabId, position) => {
+                  setTabs((prev) =>
+                    prev.map((tab) =>
+                      tab.id === tabId
+                        ? { ...tab, inputPosition: position, updatedAt: formatDateTime(new Date()) }
+                        : tab,
+                    ),
+                  );
+                }}
+                onOpenFile={handleOpenFile}
+                onImportPipeline={handleImportPipeline}
+                onOpenUrl={handleOpenUrl}
+                showMinimap={showMinimap}
+                branchProgress={branchProgress}
+                showProgressBar={showProgressBar}
+              />
+            </div>
+          </main>
 
           {/* Command Panel Toggle Button */}
           <Button
             onClick={() => setShowCommandPanel(!showCommandPanel)}
             onContextMenu={(e) => e.preventDefault()}
             className="fixed bottom-4 left-4 z-30 h-10 w-10 rounded-full shadow-md"
-            variant="secondary"
+            variant="ghost"
             size="icon"
           >
             {showCommandPanel ? (
@@ -746,7 +734,7 @@ function App() {
             onClick={() => setShowLogPanel(!showLogPanel)}
             onContextMenu={(e) => e.preventDefault()}
             className="fixed bottom-4 left-16 z-30 h-10 w-10 rounded-full shadow-md"
-            variant="secondary"
+            variant="ghost"
             size="icon"
           >
             {showLogPanel ? (
@@ -761,7 +749,7 @@ function App() {
             onClick={() => setShowMinimap(!showMinimap)}
             onContextMenu={(e) => e.preventDefault()}
             className="fixed bottom-4 left-28 z-30 h-10 w-10 rounded-full shadow-md"
-            variant="secondary"
+            variant="ghost"
             size="icon"
           >
             {showMinimap ? (

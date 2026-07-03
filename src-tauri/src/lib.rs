@@ -606,36 +606,6 @@ async fn check_xan_installed() -> bool {
 }
 
 #[tauri::command]
-async fn get_xan_version() -> Result<String, String> {
-  let xan_path = find_xan_executable().ok_or("xan executable not found")?;
-
-  let mut command = tokio::process::Command::new(&xan_path);
-  command.arg("--version");
-  command.kill_on_drop(true);
-
-  #[cfg(target_os = "windows")]
-  {
-    command.creation_flags(0x08000000); // CREATE_NO_WINDOW
-  }
-
-  let output = command
-    .output()
-    .await
-    .map_err(|e| format!("Failed to execute xan: {}", e))?;
-
-  if output.status.success() {
-    Ok(String::from_utf8_lossy(&output.stdout).to_string())
-  } else {
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    let code = output.status.code().unwrap_or(-1);
-    Err(format!(
-      "xan --version failed with exit code {}: {}",
-      code, stderr
-    ))
-  }
-}
-
-#[tauri::command]
 async fn get_default_delimiter() -> Option<String> {
   let config = load_config().unwrap_or_default();
   config.default_delimiter
@@ -723,7 +693,6 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       execute_xan_pipeline,
       check_xan_installed,
-      get_xan_version,
       get_default_delimiter,
       set_default_delimiter,
       get_no_headers,
