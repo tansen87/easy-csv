@@ -12,12 +12,15 @@ import {
   Map as MapIcon,
   ChevronDown,
   FileText,
+  CloudDownload,
+  RefreshCw,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/panel/LogPanel";
 import { SettingsDialog } from "@/components/setting/SettingsDialog";
 import { HomeView } from "@/components/HomeView";
 import { HelpDialog } from "@/components/help/HelpDialog";
+import { UpdateDialog } from "@/components/dialog/UpdateDialog";
 import { xanCommands } from "@/data/commands";
 import { helpDocs } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
@@ -77,7 +80,15 @@ function App() {
   const [showSettingsDialog, setShowSettingsDialog] = useState<boolean>(false);
   const [showProgressBar, setShowProgressBar] = useState<boolean>(false);
   const [branchProgress, setBranchProgress] = useState<{ current: number; total: number; name: string; status: "executing" | "completed" | "error" } | null>(null);
+  const [showUpdateDialog, setShowUpdateDialog] = useState<boolean>(false);
+  const [updateInfo, setUpdateInfo] = useState<{
+    hasUpdate: boolean;
+    latestVersion: string;
+    changelog: string;
+  } | null>(null);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState<boolean>(false);
   const progressHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentVersion = "0.1.0";
 
   // Undo/Redo history state
   const [undoStack, setUndoStack] = useState<Array<{ pipeline: PipelineStep[]; edges: PipelineEdge[]; inputPosition?: { x: number; y: number } }>>([]);
@@ -246,6 +257,37 @@ function App() {
       setXanVersion(version);
     } catch (error) {
       showToastRef.current(`Failed to load xan version: ${error}`, 'error');
+    }
+  };
+
+  const checkForUpdates = async () => {
+    setIsCheckingUpdate(true);
+    try {
+      const response = await fetch("https://api.github.com/repos/tansen87/easy-csv/releases/latest");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Expected JSON response, got: ${contentType}`);
+      }
+      const data = await response.json();
+      const latestVersionRaw = data.tag_name || "";
+      const latestVersion = latestVersionRaw.replace(/^v/, "");
+      const changelog = data.body || "";
+      
+      const hasUpdate = currentVersion && latestVersion && latestVersion !== currentVersion;
+      
+      setUpdateInfo({
+        hasUpdate,
+        latestVersion,
+        changelog,
+      });
+      setShowUpdateDialog(true);
+    } catch (error) {
+      showToastRef.current(`Failed to check for updates: ${error}`, 'error');
+    } finally {
+      setIsCheckingUpdate(false);
     }
   };
 
@@ -599,6 +641,17 @@ function App() {
             <div className="flex-1" />
 
             <div className="flex items-center gap-2">
+              <button
+                onClick={checkForUpdates}
+                disabled={isCheckingUpdate}
+                className="p-1.5 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+              >
+                {isCheckingUpdate ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CloudDownload className="h-4 w-4" />
+                )}
+              </button>
               <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 rounded-lg text-xs font-medium border border-green-500/20">
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
                 <span className="hidden sm:inline">xan{xanVersion ? ` ${xanVersion.trim()}` : ""}</span>
@@ -795,6 +848,13 @@ function App() {
                 showToastRef.current(`Failed to save settings: ${error}`, 'error');
               }
             }}
+          />
+
+          <UpdateDialog
+            isOpen={showUpdateDialog}
+            onClose={() => setShowUpdateDialog(false)}
+            updateInfo={updateInfo}
+            currentVersion={currentVersion}
           />
         </div>
       )}
