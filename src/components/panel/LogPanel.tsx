@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import { LogEntry } from "@/types/xan";
+import { useLanguage } from "@/i18n";
 
 interface LogPanelProps {
   logs: LogEntry[];
@@ -14,6 +15,7 @@ interface LogPanelProps {
 }
 
 export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
+  const { t } = useLanguage();
   const [height, setHeight] = useState<number>(300);
   const [copiedLogId, setCopiedLogId] = useState<string | null>(null);
   const isDraggingRef = useRef(false);
@@ -155,7 +157,7 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-primary text-primary-foreground shadow-sm">
             <FileText className="h-3.5 w-3.5" />
-            Logs ({logs.length})
+            {t.logs} ({logs.length})
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -185,9 +187,9 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
               <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
                 <TextQuote className="h-8 w-8 text-muted-foreground/50" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">No logs yet</p>
+              <p className="text-sm font-medium text-muted-foreground mb-1">{t.noLogsYet}</p>
               <p className="text-xs text-muted-foreground/70">
-                Execute a pipeline to see output
+                {t.executePipelineHint}
               </p>
             </div>
           ) : (

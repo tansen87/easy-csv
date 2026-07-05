@@ -16,13 +16,14 @@ import { LogPanel } from "@/components/panel/LogPanel";
 import { SettingsDialog } from "@/components/setting/SettingsDialog";
 import { HomeView } from "@/components/HomeView";
 import { HelpDialog } from "@/components/help/HelpDialog";
-import { helpContent as appHelpContent } from "@/components/help/HelpContent";
+import { getHelpContent } from "@/components/help/HelpContent";
 import { UpdateDialog } from "@/components/dialog/UpdateDialog";
 import { xanCommands } from "@/data/commands";
-import { helpDocs } from "@/generated/help-docs";
+import { helpDocs, helpDocsZh } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
 import { MainMenuHooks } from "@/hooks/MainMenuHooks";
-import { SplashScreen } from "@/components/help/SplashScreen";
+import { SplashScreen } from "@/components/menu/SplashScreen";
+import { LanguageProvider, useLanguage } from "@/i18n";
 import {
   PipelineStep,
   LogEntry,
@@ -44,7 +45,16 @@ interface RecentFile {
 }
 
 function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
+  );
+}
+
+function AppContent() {
   const { theme, setTheme } = useTheme();
+  const { language } = useLanguage();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loadingText, setLoadingText] = useState<string>("Initializing...");
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
@@ -552,7 +562,8 @@ function App() {
 
   const handleHelpClick = (command: XanCommand) => {
     setShowHelp(true);
-    const helpText = helpDocs[command.name];
+    const docs = language === "zh" ? helpDocsZh : helpDocs;
+    const helpText = docs[command.name];
     if (helpText) {
       setHelpContent(helpText);
       setHelpCommandName(command.name);
@@ -677,8 +688,8 @@ function App() {
               onImportPipeline={handleImportPipeline}
               onExportPipeline={handleExportPipeline}
               onHelp={() => {
-                setHelpCommandName("Help");
-                setHelpContent(appHelpContent);
+                setHelpCommandName(language === "zh" ? "帮助" : "Help");
+                setHelpContent(getHelpContent(language));
                 setShowHelp(true);
               }}
               onCheckUpdate={checkForUpdates}

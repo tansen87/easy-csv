@@ -3,6 +3,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { X, FolderOpen, FileUp, Star, Clock, File } from "lucide-react";
 import { PipelineStep, PipelineEdge, XanCommand, PipelineTab } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
+import { useLanguage } from "@/i18n";
 import { ContextMenu } from "@/components/menu/ContextMenu";
 import { CommandDialog, CommandDialogState } from "@/components/dialog/CommandDialog";
 import { FilterDialog } from "@/components/dialog/FilterDialog";
@@ -76,6 +77,7 @@ export function HomeView({
   recentFiles = [],
   onOpenRecentFile,
 }: HomeViewProps) {
+  const { t } = useLanguage();
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -197,10 +199,10 @@ export function HomeView({
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-8" onContextMenu={(e) => e.preventDefault()}>
           <div className="text-center">
             <h2 className="text-xl font-semibold text-foreground mb-2">
-              Welcome to Easy CSV
+              {t.welcomeTitle}
             </h2>
             <p className="text-sm text-muted-foreground">
-              Open a file or import a flow to get started
+              {t.welcomeSubtitle}
             </p>
           </div>
           <div className="max-w-md w-full px-8">
@@ -213,8 +215,8 @@ export function HomeView({
                   <FolderOpen className="h-6 w-6 text-primary" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-foreground">Open File</p>
-                  <p className="text-xs text-muted-foreground mt-1">CSV, Excel, JSON</p>
+                  <p className="text-sm font-medium text-foreground">{t.openFile}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t.openFileFormats}</p>
                 </div>
               </button>
               <button
@@ -225,8 +227,8 @@ export function HomeView({
                   <FileUp className="h-6 w-6 text-primary" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-foreground">Import Flow</p>
-                  <p className="text-xs text-muted-foreground mt-1">.xanflow files</p>
+                  <p className="text-sm font-medium text-foreground">{t.importFlow}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t.importFlowFormats}</p>
                 </div>
               </button>
               <button
@@ -237,7 +239,7 @@ export function HomeView({
                   <Star className="h-6 w-6 text-yellow-500" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-foreground">Star on GitHub</p>
+                  <p className="text-sm font-medium text-foreground">{t.starOnGitHub}</p>
                 </div>
               </button>
             </div>
@@ -247,7 +249,7 @@ export function HomeView({
             <div className="max-w-3xl w-full px-8">
               <div className="flex items-center gap-2 mb-3">
                 <Clock className="h-4 w-4 text-muted-foreground" />
-                <p className="text-sm font-medium text-muted-foreground">Recent Files</p>
+                <p className="text-sm font-medium text-muted-foreground">{t.recentFiles}</p>
               </div>
               <ScrollArea className="h-[28vh]">
                 <div className="space-y-1 pr-4">
@@ -401,7 +403,7 @@ export function HomeView({
         <div className="absolute left-1/2 top-12 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-card/80 backdrop-blur-sm border border-border rounded-lg shadow-md pointer-events-auto">
             <span className="text-xs font-medium text-muted-foreground">
-              Branch {branchProgress.current}/{branchProgress.total}
+              {t.branchProgress} {branchProgress.current}/{branchProgress.total}
             </span>
             <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${branchProgress.status === "completed"
               ? "bg-green-500/10 text-green-600 dark:text-green-400"

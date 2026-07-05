@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { PipelineStep } from "@/types/xan";
 import { useKeyboardShortcuts } from "@/hooks/KeyboardShortcuts";
+import { useLanguage } from "@/i18n";
 
 interface MainMenuProps {
   activeMenu: "file" | null;
@@ -61,6 +62,7 @@ export function MainMenu({
   isCheckingUpdate,
   currentPipelineLength,
 }: MainMenuProps) {
+  const { t } = useLanguage();
   useKeyboardShortcuts(
     {
       onOpenFile,
@@ -107,7 +109,7 @@ export function MainMenu({
             }`}
           >
             <File className="h-3.5 w-3.5" />
-            File
+            {t.file}
           </button>
           {activeMenu === "file" && (
             <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[160px]">
@@ -119,7 +121,7 @@ export function MainMenu({
                 className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
                 <FolderOpen className="h-3.5 w-3.5" />
-                Open
+                {t.open}
               </button>
               <button
                 onClick={() => {
@@ -129,7 +131,7 @@ export function MainMenu({
                 className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
                 <FileText className="h-3.5 w-3.5" />
-                Open New Tab
+                {t.openNewTab}
               </button>
               <div className="border-t border-border my-1" />
               <button
@@ -145,7 +147,7 @@ export function MainMenu({
                 }`}
               >
                 <Save className="h-3.5 w-3.5" />
-                Save Pipeline
+                {t.savePipeline}
               </button>
               <button
                 onClick={() => {
@@ -155,7 +157,7 @@ export function MainMenu({
                 className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
                 <Upload className="h-3.5 w-3.5" />
-                Import Workflow
+                {t.importWorkflow}
               </button>
               <button
                 onClick={() => {
@@ -170,7 +172,7 @@ export function MainMenu({
                 }`}
               >
                 <Download className="h-3.5 w-3.5" />
-                Export Workflow
+                {t.exportWorkflow}
               </button>
             </div>
           )}
@@ -188,7 +190,7 @@ export function MainMenu({
             }`}
           >
             <Undo2 className="h-3.5 w-3.5" />
-            Undo
+            {t.undo}
           </button>
           <button
             onClick={onRedo}
@@ -200,7 +202,7 @@ export function MainMenu({
             }`}
           >
             <Redo2 className="h-3.5 w-3.5" />
-            Redo
+            {t.redo}
           </button>
         </div>
 
@@ -218,12 +220,12 @@ export function MainMenu({
           {isExecuting ? (
             <>
               <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              Executing
+              {t.executing}
             </>
           ) : (
             <>
               <Play className="h-3.5 w-3.5" />
-              Execute
+              {t.execute}
               {currentPipelineLength > 0 && (
                 <span className="ml-0.5">({currentPipelineLength})</span>
               )}

@@ -1,4 +1,8 @@
-export const helpContent = `
+import { helpContentCn } from "./HelpContentCn";
+
+export const getHelpContent = (lang: "en" | "zh") => lang === "zh" ? helpContentCn : helpContentEn;
+
+export const helpContentEn = `
 ## Easy CSV - CSV Processing Tool
 > Handle CSV data in a modular way (chain operations together like building blocks using xan)
 
@@ -47,13 +51,11 @@ export const helpContent = `
 ---
 
 ### Log Panel
-View execution logs and debug information by clicking the log icon in the bottom-right corner.
+View execution logs and debug information by clicking the log icon in the bottom-left corner.
 
 ---
 
 ### Settings
-Customize the application:
-- **Theme**: Light or dark mode
 - **Default delimiter**: Configure default CSV delimiter
 - **No headers**: Toggle header detection
 `;

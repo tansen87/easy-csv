@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef } from "react";
-import { Sun, Moon, Save, RotateCcw } from "lucide-react";
+import { Sun, Moon, Save, RotateCcw, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { useLanguage } from "@/i18n";
 
 interface SettingsTabContentProps {
   activeTab: "preference" | "general";
@@ -26,6 +27,7 @@ export function SettingsTabContent({
 }: SettingsTabContentProps) {
   const [isThemeTransitioning, setIsThemeTransitioning] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { language, setLanguage, t } = useLanguage();
 
   const handleThemeChange = useCallback((newTheme: "dark" | "light" | "system") => {
     if (timeoutRef.current) {
@@ -46,8 +48,41 @@ export function SettingsTabContent({
       <div className="flex-1 overflow-auto p-6">
         {activeTab === "preference" && (
           <div className="space-y-6">
+            {/* Language */}
             <div className="max-w-md">
-              <h3 className="text-lg font-semibold mb-4">Theme</h3>
+              <h3 className="text-lg font-semibold mb-4">{t.language}</h3>
+              <div className="inline-flex bg-muted/50 rounded-md p-0.5 border border-border/50 relative">
+                <div
+                  className={`absolute top-0.5 bottom-0.5 left-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${language === "zh" ? "translate-x-[calc(100%+2px)]" : "translate-x-0"
+                    }`}
+                  style={{ width: "calc(50% - 2px)" }}
+                />
+                <button
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${language === "en"
+                    ? "text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  onClick={() => setLanguage("en")}
+                >
+                  <Globe className="h-3.5 w-3.5" />
+                  English
+                </button>
+                <button
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${language === "zh"
+                    ? "text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  onClick={() => setLanguage("zh")}
+                >
+                  <Globe className="h-3.5 w-3.5" />
+                  中文
+                </button>
+              </div>
+            </div>
+
+            {/* Theme */}
+            <div className="max-w-md">
+              <h3 className="text-lg font-semibold mb-4">{t.theme}</h3>
               <div className="inline-flex bg-muted/50 rounded-md p-0.5 border border-border/50 relative">
                 <div
                   className={`absolute top-0.5 bottom-0.5 left-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${theme === "dark" ? "translate-x-[calc(100%+2px)]" : "translate-x-0"
@@ -63,7 +98,7 @@ export function SettingsTabContent({
                   disabled={isThemeTransitioning}
                 >
                   <Sun className="h-3.5 w-3.5" />
-                  Light
+                  {t.light}
                 </button>
                 <button
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${theme === "dark"
@@ -74,7 +109,7 @@ export function SettingsTabContent({
                   disabled={isThemeTransitioning}
                 >
                   <Moon className="h-3.5 w-3.5" />
-                  Dark
+                  {t.dark}
                 </button>
               </div>
             </div>
@@ -86,7 +121,7 @@ export function SettingsTabContent({
             {/* Delimiter */}
             <div>
               <label className="block text-sm font-medium mb-2">
-                CSV Delimiter
+                {t.csvDelimiter}
               </label>
               <SearchableSelect
                 value={defaultDelimiter}
@@ -98,11 +133,11 @@ export function SettingsTabContent({
                   { label: "Pipe (|)", value: "|" },
                   { label: "Caret (^)", value: "^" },
                 ]}
-                placeholder="Select delimiter"
+                placeholder={t.selectDelimiter}
                 size="sm"
               />
               <p className="text-sm text-muted-foreground mt-2">
-                The field delimiter for reading CSV data
+                {t.delimiterDesc}
               </p>
             </div>
             {/* No Headers */}
@@ -115,8 +150,8 @@ export function SettingsTabContent({
                   className="w-4 h-4 rounded border-input accent-foreground"
                 />
                 <div className="text-left">
-                  <p className="text-sm font-medium">No Headers</p>
-                  <p className="text-sm text-muted-foreground">When set, the first row will not be interpreted as headers</p>
+                  <p className="text-sm font-medium">{t.noHeaders}</p>
+                  <p className="text-sm text-muted-foreground">{t.noHeadersDesc}</p>
                 </div>
               </label>
             </div>
@@ -135,14 +170,14 @@ export function SettingsTabContent({
           }}
         >
           <RotateCcw className="h-4 w-4 mr-2" />
-          Reset to Defaults
+          {t.resetToDefaults}
         </Button>
         <Button
           variant="secondary"
           onClick={onSave}
         >
           <Save className="h-4 w-4 mr-2" />
-          Save Settings
+          {t.saveSettings}
         </Button>
       </div>
     </div>

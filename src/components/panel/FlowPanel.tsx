@@ -528,7 +528,7 @@ function getCutIntersectionPoints(
     }
   }
 
-  // 去重（距离小于2的点视为同一个）
+  // 去重(距离小于2的点视为同一个)
   const unique: { x: number; y: number }[] = [];
   for (const p of intersections) {
     if (!unique.some(u => Math.abs(u.x - p.x) < 2 && Math.abs(u.y - p.y) < 2)) {
@@ -540,7 +540,7 @@ function getCutIntersectionPoints(
     return { p1: unique[0], p2: unique[1] };
   }
 
-  // 如果只有一个交点（切割线从角开始）,添加角点作为第二个交点
+  // 如果只有一个交点(切割线从角开始),添加角点作为第二个交点
   if (unique.length === 1) {
     const p = unique[0];
     // 找到最近的角
@@ -581,7 +581,7 @@ function generateCutClipPaths(
     { x: rx, y: ry + rh },      // 左下 (BL)
   ];
 
-  // 计算每个角在切割线的哪一侧（使用叉积）
+  // 计算每个角在切割线的哪一侧(使用叉积)
   const cross = (ax: number, ay: number, bx: number, by: number) => ax * by - ay * bx;
   const lineDx = p2.x - p1.x;
   const lineDy = p2.y - p1.y;
@@ -601,18 +601,18 @@ function generateCutClipPaths(
     }
   }
 
-  // 构建多边形：角点 + 交点
+  // 构建多边形:角点 + 交点
   const buildPolygon = (side: { x: number; y: number }[]): string => {
     if (side.length === 0) return '';
 
-    // 按角度排序角点（相对于 p1）
+    // 按角度排序角点(相对于 p1)
     const sorted = [...side].sort((a, b) => {
       const angleA = Math.atan2(a.y - p1.y, a.x - p1.x);
       const angleB = Math.atan2(b.y - p1.y, b.x - p1.x);
       return angleA - angleB;
     });
 
-    // 构建多边形：交点p1 -> 排序的角点 -> 交点p2 -> 回到p1
+    // 构建多边形:交点p1 -> 排序的角点 -> 交点p2 -> 回到p1
     const points = [p1, ...sorted, p2];
     return `polygon(${points.map(p => `${p.x}px ${p.y}px`).join(', ')})`;
   };
@@ -623,7 +623,7 @@ function generateCutClipPaths(
   return { partA, partB };
 }
 
-// 计算坠落方向（重力 + 切割方向混合）
+// 计算坠落方向(重力 + 切割方向混合)
 function calculateFallVector(
   cutPath: { x: number; y: number }[]
 ): { dx: number; dy: number; rotation: number } {
@@ -631,7 +631,7 @@ function calculateFallVector(
     return { dx: 0, dy: 200, rotation: 15 };
   }
 
-  // 切割方向：从末尾两点计算
+  // 切割方向:从末尾两点计算
   const last = cutPath[cutPath.length - 1];
   const prev = cutPath[cutPath.length - 2];
   let cutDx = last.x - prev.x;
@@ -643,13 +643,13 @@ function calculateFallVector(
     cutDy /= cutLen;
   }
 
-  // 混合：70% 重力方向（向下） + 30% 切割方向
+  // 混合:70% 重力方向(向下) + 30% 切割方向
   const gravityWeight = 0.7;
   const cutWeight = 0.3;
   const fdx = cutDx * cutWeight * 120;
   const fdy = (1 * gravityWeight + cutDy * cutWeight) * 200;
 
-  // 旋转角度：根据方向计算
+  // 旋转角度:根据方向计算
   const angle = Math.atan2(cutDx, 1) * (180 / Math.PI);
   const rotation = Math.max(-30, Math.min(30, angle * 0.5));
 
@@ -927,7 +927,7 @@ export function FlowPanel({
   // 被切元素的动画状态
   const [cutNodes, setCutNodes] = useState<Set<string>>(new Set());
   const [cutEdges, setCutEdges] = useState<Set<string>>(new Set());
-  // 切割部分信息（用于自由坠落动画）
+  // 切割部分信息(用于自由坠落动画)
   const [cutParts, setCutParts] = useState<CutPartInfo[]>([]);
   // 实时高亮状态 - 用于显示即将被删除的元素
   const [pendingDeleteNodes, setPendingDeleteNodes] = useState<Set<string>>(new Set());
@@ -977,10 +977,10 @@ export function FlowPanel({
     onTableRename(col, newName);
   }, [onTableRename]);
 
-  // Ctrl+F 全局快捷键（HelpDialog 打开时由 HelpDialog 处理）
+  // Ctrl+F 全局快捷键(HelpDialog 打开时由 HelpDialog 处理)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 如果对话框打开，不拦截 Ctrl+F
+      // 如果对话框打开,不拦截 Ctrl+F
       const dialog = document.querySelector('[role="dialog"]');
       if (dialog) return;
 
@@ -1031,13 +1031,13 @@ export function FlowPanel({
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
 
-  // 搜索结果：匹配命令名称或 alias
+  // 搜索结果:匹配命令名称或 alias
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
     const results: { step: PipelineStep | null; displayName: string; secondaryName: string | null; isTableNode?: boolean }[] = [];
 
-    // 搜索 "Input Data" 节点（不搜索其列名）
+    // 搜索 "Input Data" 节点(不搜索其列名)
     if ("input data".includes(query) || "input".includes(query)) {
       results.push({ step: null, displayName: "Input Data", secondaryName: null, isTableNode: true });
     }
@@ -1058,13 +1058,13 @@ export function FlowPanel({
     return results;
   }, [searchQuery, steps]);
 
-  // 点击搜索结果：跳转到节点并高亮
+  // 点击搜索结果:跳转到节点并高亮
   const handleSearchResultClick = useCallback((step: PipelineStep | null, isTable?: boolean) => {
     const nodeId = isTable ? "table-node" : step!.id;
     const node = nodes.find((n) => n.id === nodeId);
     if (!node || !reactFlowInstance.current) return;
 
-    // 使用 setCenter 跳转到节点位置（居中显示）
+    // 使用 setCenter 跳转到节点位置(居中显示)
     const w = node.type === "tableNode" ? 260 : 110;
     const h = node.type === "tableNode" ? 130 : 45;
     reactFlowInstance.current.setCenter(
@@ -1076,7 +1076,7 @@ export function FlowPanel({
       }
     );
 
-    // 设置高亮节点（触发动画）
+    // 设置高亮节点(触发动画)
     setHighlightedNodeId(nodeId);
     setTimeout(() => setHighlightedNodeId(null), 1500);
 
@@ -1312,7 +1312,7 @@ export function FlowPanel({
       nodesToDelete.forEach(id => newCutNodes.add(id));
       setCutNodes(newCutNodes);
 
-      // 为被切节点计算切割部分（自由坠落动画）
+      // 为被切节点计算切割部分(自由坠落动画)
       const fallVec = calculateFallVector(path);
       const newCutParts: CutPartInfo[] = [];
 
@@ -1320,7 +1320,7 @@ export function FlowPanel({
         const nodePos = nodePositions.get(nodeId);
         if (!nodePos) return;
 
-        // 使用 flowPath（ReactFlow 坐标）来计算交点
+        // 使用 flowPath(ReactFlow 坐标)来计算交点
         const localStart = { x: flowPath[0].x - nodePos.x, y: flowPath[0].y - nodePos.y };
         const localEnd = { x: flowPath[flowPath.length - 1].x - nodePos.x, y: flowPath[flowPath.length - 1].y - nodePos.y };
 

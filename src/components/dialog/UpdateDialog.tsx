@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useLanguage } from "@/i18n";
 
 interface UpdateDialogProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export function UpdateDialog({
   updateInfo,
   currentVersion,
 }: UpdateDialogProps) {
+  const { t } = useLanguage();
   if (!isOpen) return null;
 
   const handleOpenRelease = () => {
@@ -45,7 +47,7 @@ export function UpdateDialog({
         onContextMenu={(e) => e.preventDefault()}
       >
         <div className="flex items-center justify-between px-4 py-3 bg-muted/20">
-          <h3 className="text-sm font-semibold text-foreground">Check for Updates</h3>
+          <h3 className="text-sm font-semibold text-foreground">{t.checkForUpdates}</h3>
           <button
             onClick={handleClose}
             className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
@@ -58,10 +60,10 @@ export function UpdateDialog({
             updateInfo.hasUpdate ? (
               <div>
                 <div className="text-sm font-medium text-foreground mb-2">
-                  New version available: {updateInfo.latestVersion}
+                  {t.newVersionAvailable}: {updateInfo.latestVersion}
                 </div>
                 <div className="text-xs text-muted-foreground mb-3">
-                  Current version: {currentVersion}
+                  {t.currentVersion}: {currentVersion}
                 </div>
                 <div className="text-xs text-muted-foreground bg-muted/50 rounded p-3 border border-border/50">
                   <ReactMarkdown
@@ -106,16 +108,16 @@ export function UpdateDialog({
             ) : (
               <div className="text-center py-4">
                 <div className="text-sm font-medium text-foreground mb-2">
-                  You are using the latest version
+                  {t.usingLatestVersion}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Version: {currentVersion}
+                  {t.latestVersion}: {currentVersion}
                 </div>
               </div>
             )
           ) : (
             <div className="text-center py-4">
-              <div className="text-sm text-muted-foreground">Loading update information...</div>
+              <div className="text-sm text-muted-foreground">{t.loadingUpdateInfo}</div>
             </div>
           )}
         </ScrollArea>
@@ -125,14 +127,14 @@ export function UpdateDialog({
             size="sm"
             onClick={handleClose}
           >
-            Cancel
+            {t.cancel}
           </Button>
           <Button
             variant="secondary"
             size="sm"
             onClick={handleOpenRelease}
           >
-            Update
+            {t.update}
           </Button>
         </div>
       </div>
