@@ -15,12 +15,14 @@ import {
   CloudDownload,
   RefreshCw,
   Settings,
+  MessageCircleQuestionMark,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/panel/LogPanel";
 import { SettingsDialog } from "@/components/setting/SettingsDialog";
 import { HomeView } from "@/components/HomeView";
 import { HelpDialog } from "@/components/help/HelpDialog";
+import { helpContent as appHelpContent } from "@/components/help/HelpContent";
 import { UpdateDialog } from "@/components/dialog/UpdateDialog";
 import { xanCommands } from "@/data/commands";
 import { helpDocs } from "@/generated/help-docs";
@@ -625,26 +627,36 @@ function App() {
             {/* Center: Empty */}
             <div className="flex-1" />
 
-            <div className="flex items-center rounded-md p-0.5">
+            <div className="flex items-center rounded-md gap-2">
               <button
                 onClick={checkForUpdates}
                 disabled={isCheckingUpdate}
-                className={`flex items-center px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${isCheckingUpdate
+                className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${isCheckingUpdate
                   ? "text-primary opacity-70"
                   : "text-primary hover:bg-primary/10"
                   }`}
               >
                 {isCheckingUpdate ? (
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  <RefreshCw className="h-4 w-4 animate-spin" />
                 ) : (
-                  <CloudDownload className="h-3.5 w-3.5" />
+                  <CloudDownload className="h-4 w-4" />
                 )}
               </button>
               <button
-                onClick={() => setShowSettingsDialog(true)}
-                className="flex items-center px-3 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                onClick={() => {
+                  setHelpCommandName("Help");
+                  setHelpContent(appHelpContent);
+                  setShowHelp(true);
+                }}
+                className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
               >
-                <Settings className="h-3.5 w-3.5" />
+                <MessageCircleQuestionMark className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setShowSettingsDialog(true)}
+                className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+              >
+                <Settings className="h-4 w-4" />
               </button>
             </div>
           </header>
