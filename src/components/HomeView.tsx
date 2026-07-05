@@ -194,16 +194,16 @@ export function HomeView({
   if (!inputFile && pipeline.length === 0) {
     return (
       <div className="h-full relative">
-        <div className="absolute inset-0 flex items-center justify-center" onContextMenu={(e) => e.preventDefault()}>
-          <div className="max-w-3xl w-full px-8">
-            <div className="text-center mb-8">
-              <h2 className="text-xl font-semibold text-foreground mb-2">
-                Welcome to Easy CSV
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Open a file or import a flow to get started
-              </p>
-            </div>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-8" onContextMenu={(e) => e.preventDefault()}>
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-foreground mb-2">
+              Welcome to Easy CSV
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Open a file or import a flow to get started
+            </p>
+          </div>
+          <div className="max-w-md w-full px-8">
             <div className="grid grid-cols-3 gap-32 justify-items-center">
               <button
                 onClick={onOpenFile}
@@ -241,34 +241,34 @@ export function HomeView({
                 </div>
               </button>
             </div>
-
-            {recentFiles.length > 0 && (
-              <div className="mt-8">
-                <div className="flex items-center gap-2 mb-3">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-sm font-medium text-muted-foreground">Recent Files</p>
-                </div>
-                <ScrollArea className="h-[28vh]">
-                  <div className="space-y-1 pr-4">
-                    {recentFiles.map((file) => (
-                      <button
-                        key={file.path}
-                        onClick={() => onOpenRecentFile?.(file.path)}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-accent transition-colors group"
-                      >
-                        <File className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{file.path}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                  <ScrollBar />
-                </ScrollArea>
-              </div>
-            )}
           </div>
+
+          {recentFiles.length > 0 && (
+            <div className="max-w-3xl w-full px-8">
+              <div className="flex items-center gap-2 mb-3">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm font-medium text-muted-foreground">Recent Files</p>
+              </div>
+              <ScrollArea className="h-[28vh]">
+                <div className="space-y-1 pr-4">
+                  {recentFiles.map((file) => (
+                    <button
+                      key={file.path}
+                      onClick={() => onOpenRecentFile?.(file.path)}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-accent transition-colors group"
+                    >
+                      <File className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{file.path}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <ScrollBar />
+              </ScrollArea>
+            </div>
+          )}
         </div>
       </div>
     );

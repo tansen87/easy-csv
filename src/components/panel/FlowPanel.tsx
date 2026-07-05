@@ -1998,7 +1998,7 @@ export function FlowPanel({
                     handleSearchResultClick(searchResults[0].step, searchResults[0].isTableNode);
                   }
                 }}
-                placeholder="Search for commands in the flow..."
+                placeholder="Search in the workflow..."
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
               <span className="text-[10px] text-muted-foreground">
