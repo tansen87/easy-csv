@@ -8,8 +8,6 @@ import ReactFlow, {
   EdgeChange,
   applyNodeChanges,
   applyEdgeChanges,
-  BackgroundVariant,
-  Background,
   ConnectionMode,
   MarkerType,
   Connection,
@@ -22,8 +20,9 @@ import "reactflow/dist/style.css";
 import { Card } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Table, Edit3, Check, Settings, Search, Terminal } from "lucide-react";
+import { Table, Edit3, Check, Settings, Search, Terminal, X } from "lucide-react";
 import { commandIconMap } from "@/components/CommandList";
+import { CoordinateGrid } from "@/components/panel/CoordinateGrid";
 import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "@/components/menu/ContextMenu";
 import { TextTransformType } from "@/components/dialog/TextTransformDialog";
@@ -37,10 +36,11 @@ interface TableNodeData {
   onContextMenu: (col: number, x: number, y: number) => void;
   onRename: (col: number, newName: string) => void;
   onSave: () => void;
+  onDelete?: () => void;
 }
 
 function TableNode({ data, selected }: { data: TableNodeData; selected: boolean }) {
-  const { headers, rows, columnWidths, onContextMenu, onRename, onSave } = data;
+  const { headers, rows, columnWidths, onContextMenu, onRename, onSave, onDelete } = data;
   const [editingCol, setEditingCol] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
   const [showSaveButton, setShowSaveButton] = useState(false);
@@ -144,11 +144,17 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
               onSave();
               setShowSaveButton(false);
             }}
-            className="w-5 h-5 rounded-xl flex items-center justify-center border border-green-500"
+            className="w-5 h-5 rounded-md flex items-center justify-center hover:bg-primary/10"
           >
             <Check className="h-3 w-3 text-green-500" />
           </button>
         )}
+        <button
+          onClick={() => onDelete?.()}
+          className="w-5 h-5 rounded-md flex items-center justify-center hover:bg-primary/10 transition-colors"
+        >
+          <X className="h-3 w-3" />
+        </button>
       </div>
       <ScrollArea
         className="h-[180px]"
@@ -673,6 +679,7 @@ interface FlowPanelProps {
   onOpenNumberTransformDialog: (col: number, x: number, y: number, transformType?: NumberTransformType) => void;
   onTableRename: (col: number, newName: string) => void;
   onSave: () => void;
+  onTableDelete?: () => void;
   selectedStepId?: string;
   onEdgesChange?: (edges: PipelineEdge[]) => void;
   onInputPositionChange?: (position: { x: number; y: number }) => void;
@@ -697,7 +704,8 @@ function getLayoutedElements(
   selectedStepId?: string,
   savedEdges?: PipelineEdge[],
   savedInputPosition?: { x: number; y: number },
-  highlightedNodeId?: string | null
+  highlightedNodeId?: string | null,
+  onTableDelete?: () => void
 ): { nodes: Node[]; edges: Edge[] } {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -718,6 +726,7 @@ function getLayoutedElements(
         onContextMenu: onTableContextMenu,
         onRename: onTableRename,
         onSave,
+        onDelete: onTableDelete,
       },
       selected: false,
       dragHandle: ".table-node-header",
@@ -904,6 +913,7 @@ export function FlowPanel({
   onOpenNumberTransformDialog,
   onTableRename,
   onSave,
+  onTableDelete,
   selectedStepId,
   onEdgesChange,
   onInputPositionChange,
@@ -1036,9 +1046,10 @@ export function FlowPanel({
         selectedStepId,
         savedEdges,
         savedInputPosition,
-        highlightedNodeId
+        highlightedNodeId,
+        onTableDelete
       ),
-    [hasTable, steps, headers, rows, columnWidths, selectedStepId, handleContextMenu, handleTableContextMenu, handleTableRename, onSave, savedEdges, savedInputPosition, highlightedNodeId]
+    [hasTable, steps, headers, rows, columnWidths, selectedStepId, handleContextMenu, handleTableContextMenu, handleTableRename, onSave, savedEdges, savedInputPosition, highlightedNodeId, onTableDelete]
   );
 
   const [nodes, setNodes] = useNodesState(initialNodes);
@@ -1048,30 +1059,41 @@ export function FlowPanel({
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
+    const results: { step: PipelineStep | null; displayName: string; secondaryName: string | null; isTableNode?: boolean }[] = [];
 
-    return steps.filter((step) => {
+    // 搜索 "Input Data" 节点（不搜索其列名）
+    if ("input data".includes(query) || "input".includes(query)) {
+      results.push({ step: null, displayName: "Input Data", secondaryName: null, isTableNode: true });
+    }
+
+    // 搜索 pipeline 步骤
+    for (const step of steps) {
       const name = step.command.name.toLowerCase();
       const alias = step.alias?.toLowerCase() || "";
-      return name.includes(query) || alias.includes(query);
-    }).map((step) => ({
-      step,
-      // 优先显示 alias，没有则显示 command name
-      displayName: step.alias || step.command.name,
-      // 如果有 alias，显示 command name 作为副标签
-      secondaryName: step.alias ? step.command.name : null,
-    }));
+      if (name.includes(query) || alias.includes(query)) {
+        results.push({
+          step,
+          displayName: step.alias || step.command.name,
+          secondaryName: step.alias ? step.command.name : null,
+        });
+      }
+    }
+
+    return results;
   }, [searchQuery, steps]);
 
   // 点击搜索结果：跳转到节点并高亮
-  const handleSearchResultClick = useCallback((step: PipelineStep) => {
-    // 找到对应的 ReactFlow node
-    const node = nodes.find((n) => n.id === step.id);
+  const handleSearchResultClick = useCallback((step: PipelineStep | null, isTable?: boolean) => {
+    const nodeId = isTable ? "table-node" : step!.id;
+    const node = nodes.find((n) => n.id === nodeId);
     if (!node || !reactFlowInstance.current) return;
 
     // 使用 setCenter 跳转到节点位置（居中显示）
+    const w = node.type === "tableNode" ? 260 : 110;
+    const h = node.type === "tableNode" ? 130 : 45;
     reactFlowInstance.current.setCenter(
-      node.position.x + 110, // 节点中心 X (宽度220/2)
-      node.position.y + 45,  // 节点中心 Y (高度~90/2)
+      node.position.x + w,
+      node.position.y + h,
       {
         zoom: Math.max(reactFlowInstance.current.getZoom(), 0.8),
         duration: 400,
@@ -1079,7 +1101,7 @@ export function FlowPanel({
     );
 
     // 设置高亮节点（触发动画）
-    setHighlightedNodeId(step.id);
+    setHighlightedNodeId(nodeId);
     setTimeout(() => setHighlightedNodeId(null), 1500);
 
     // 关闭搜索框
@@ -1723,7 +1745,9 @@ export function FlowPanel({
       onSave,
       selectedStepId,
       savedEdges,
-      savedInputPosition
+      savedInputPosition,
+      undefined,
+      onTableDelete
     );
 
     const updatedNodes = layoutedNodes.map((newNode) => {
@@ -1735,7 +1759,7 @@ export function FlowPanel({
     });
 
     setNodes(updatedNodes);
-  }, [hasTable, steps, headers, rows, columnWidths, selectedStepId, onStepClick, onStepRemove, onStepAliasUpdate, handleContextMenu, handleTableContextMenu, handleTableRename, onSave, setNodes, savedEdges, savedInputPosition]);
+  }, [hasTable, steps, headers, rows, columnWidths, selectedStepId, onStepClick, onStepRemove, onStepAliasUpdate, handleContextMenu, handleTableContextMenu, handleTableRename, onSave, setNodes, savedEdges, savedInputPosition, onTableDelete]);
 
   // 更新节点的 isCutting 属性、待删除高亮效果和切割部分
   useEffect(() => {
@@ -1975,7 +1999,7 @@ export function FlowPanel({
         proOptions={{ hideAttribution: true }}
         onInit={(instance) => { reactFlowInstance.current = instance; }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+        <CoordinateGrid />
         {showMinimap && (
           <MiniMap
             pannable
@@ -2023,7 +2047,7 @@ export function FlowPanel({
                     setIsSearchOpen(false);
                     setSearchQuery("");
                   } else if (e.key === "Enter" && searchResults.length > 0) {
-                    handleSearchResultClick(searchResults[0].step);
+                    handleSearchResultClick(searchResults[0].step, searchResults[0].isTableNode);
                   }
                 }}
                 placeholder="Search for commands in the flow..."
@@ -2039,11 +2063,13 @@ export function FlowPanel({
               <ScrollArea className="h-[16vh]">
                 <div className="py-1">
                   {searchResults.map((result) => {
-                    const CommandIcon = commandIconMap[result.step.command.name] || Terminal;
+                    const CommandIcon = result.isTableNode
+                      ? Table
+                      : (commandIconMap[result.step!.command.name] || Terminal);
                     return (
                       <button
-                        key={result.step.id}
-                        onClick={() => handleSearchResultClick(result.step)}
+                        key={result.isTableNode ? "table-node" : result.step!.id}
+                        onClick={() => handleSearchResultClick(result.step, result.isTableNode)}
                         className="w-full px-3 py-2 text-left hover:bg-accent/50 transition-colors flex items-center justify-between gap-2"
                       >
                         <div className="flex items-center gap-2 min-w-0">

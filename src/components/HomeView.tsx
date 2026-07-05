@@ -33,6 +33,7 @@ interface HomeViewProps {
   onStepAliasUpdate?: (stepId: string, alias: string) => void;
   onStepDelete?: (stepId: string | string[]) => void;
   onPipelineReorder?: (tabId: string, newPipeline: PipelineStep[]) => void;
+  onTableDelete?: () => void;
   selectedStepId?: string;
   onEdgesChange?: (tabId: string, edges: PipelineEdge[]) => void;
   onInputPositionChange?: (tabId: string, position: { x: number; y: number }) => void;
@@ -56,6 +57,7 @@ export function HomeView({
   onStepAliasUpdate,
   onStepDelete,
   onPipelineReorder,
+  onTableDelete,
   selectedStepId,
   onEdgesChange,
   onInputPositionChange,
@@ -156,6 +158,12 @@ export function HomeView({
       }
     }
   }, [renamedColumns, headers, onAddCommand]);
+
+  const handleTableDelete = useCallback(() => {
+    if (onTableDelete) {
+      onTableDelete();
+    }
+  }, [onTableDelete]);
 
   const closeAllDialogsRef = useRef(() => {
     closeContextMenu();
@@ -269,6 +277,7 @@ export function HomeView({
           onOpenNumberTransformDialog={(col, x, y, transformType) => setNumberTransformDialog({ col, x, y, transformType })}
           onTableRename={handleTableRename}
           onSave={handleSaveRenames}
+          onTableDelete={handleTableDelete}
           selectedStepId={selectedStepId}
           savedEdges={edges}
           savedInputPosition={inputPosition}

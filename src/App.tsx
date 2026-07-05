@@ -533,6 +533,24 @@ function App() {
     setSelectedStep(step);
   };
 
+  const handleClearInputData = () => {
+    if (!selectedTabId) return;
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === selectedTabId
+          ? {
+              ...tab,
+              data: undefined,
+              headers: undefined,
+              inputFile: undefined,
+              updatedAt: formatDateTime(new Date()),
+            }
+          : tab,
+      ),
+    );
+    setSelectedStep(null);
+  };
+
   const handleStepRemove = (stepId: string | string[]) => {
     const stepIds = Array.isArray(stepId) ? stepId : [stepId];
     const currentPipeline = getCurrentPipeline();
@@ -679,6 +697,7 @@ function App() {
                 onStepUpdate={handleStepUpdate}
                 onStepAliasUpdate={handleStepAliasUpdate}
                 onStepDelete={handleStepRemove}
+                onTableDelete={handleClearInputData}
                 onPipelineReorder={updateTabPipeline}
                 onEdgesChange={(tabId, edges) => {
                   // Validate output connections when edges change
