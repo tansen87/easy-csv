@@ -178,74 +178,7 @@ export function HomeView({
   if (!inputFile && pipeline.length === 0) {
     return (
       <div className="h-full relative">
-        <div className="absolute top-11 ml-2" onContextMenu={(e) => e.preventDefault()}>
-          <div className="h-[48px] px-4 flex items-center">
-            <ScrollArea className="h-full flex-1">
-              <div className="flex items-center gap-2">
-                {tabs.map((tab) => (
-                  <div
-                    key={tab.id}
-                    className={`flex items-center gap-2 px-1.5 py-1 rounded-md text-xs transition-colors shrink-0 ${selectedTabId === tab.id
-                      ? 'bg-primary/10 text-primary border border-primary/20'
-                      : 'hover:bg-accent/50 border border-transparent'}`}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setEditingTabId(tab.id);
-                      setEditingTabName(tab.name);
-                    }}
-                  >
-                    {editingTabId === tab.id ? (
-                      <input
-                        type="text"
-                        value={editingTabName}
-                        onChange={(e) => setEditingTabName(e.target.value)}
-                        onBlur={() => {
-                          if (editingTabName.trim()) {
-                            onRenameTab(tab.id, editingTabName.trim());
-                          }
-                          setEditingTabId(null);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            if (editingTabName.trim()) {
-                              onRenameTab(tab.id, editingTabName.trim());
-                            }
-                            setEditingTabId(null);
-                          } else if (e.key === 'Escape') {
-                            setEditingTabId(null);
-                          }
-                        }}
-                        className="w-24 px-2 py-0.5 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary h-6"
-                        style={{ lineHeight: '1.2' }}
-                        autoFocus
-                      />
-                    ) : (
-                      <button
-                        onClick={() => onTabChange(tab.id)}
-                        className="text-left truncate max-w-[120px]"
-                      >
-                        {tab.name}
-                      </button>
-                    )}
-                    <div className="flex items-center gap-1">
-                      {tabs.length > 1 && (
-                        <button
-                          onClick={() => onRemoveTab(tab.id)}
-                          className="p-1 rounded hover:bg-muted hover:text-foreground transition-colors text-muted-foreground/70 dark:text-muted-foreground/80"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
-          </div>
-        </div>
-        <div className="absolute inset-0 pt-[96px] flex items-center justify-center" onContextMenu={(e) => e.preventDefault()}>
+        <div className="absolute inset-0 flex items-center justify-center" onContextMenu={(e) => e.preventDefault()}>
           <div className="max-w-md w-full px-8">
             <div className="text-center mb-8">
               <h2 className="text-xl font-semibold text-foreground mb-2">

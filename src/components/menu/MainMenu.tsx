@@ -40,7 +40,7 @@ export function MainMenu({
 }: MainMenuProps) {
   return (
     <div className="relative">
-      <div className="flex rounded-md p-0.5">
+      <div className="flex rounded-md">
         <div className="relative">
           <button
             onClick={() => {
