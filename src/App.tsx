@@ -533,25 +533,30 @@ function App() {
     setSelectedStep(step);
   };
 
-  const handleStepRemove = (stepId: string) => {
+  const handleStepRemove = (stepId: string | string[]) => {
+    const stepIds = Array.isArray(stepId) ? stepId : [stepId];
     const currentPipeline = getCurrentPipeline();
     const currentTab = getCurrentTab();
-    const removedStep = currentPipeline.find(s => s.id === stepId);
 
-    // If removing an output step, clear all output-related notifications
-    if (removedStep?.command.id === "output") {
-      setNotifications((prev) =>
-        prev.filter(n => !n.message.startsWith("Output"))
-      );
-    }
+    // 清除被删除步骤的输出相关通知
+    stepIds.forEach(id => {
+      const removedStep = currentPipeline.find(s => s.id === id);
+      if (removedStep?.command.id === "output") {
+        setNotifications((prev) =>
+          prev.filter(n => !n.message.startsWith("Output"))
+        );
+      }
+    });
 
-    const updatedPipeline = currentPipeline.filter((s) => s.id !== stepId);
-    // Also remove edges connected to the removed step
+    const updatedPipeline = currentPipeline.filter((s) => !stepIds.includes(s.id));
+    // 同时移除与被删除步骤相关的边
     const updatedEdges = (currentTab.edges || []).filter(
-      (e) => e.source !== stepId && e.target !== stepId
+      (e) => !stepIds.includes(e.source) && !stepIds.includes(e.target)
     );
     updateTabPipeline(updatedPipeline, undefined, updatedEdges);
-    if (selectedStep?.id === stepId) {
+
+    // 如果当前选中的步骤在删除列表中,则取消选中
+    if (selectedStep?.id && stepIds.includes(selectedStep.id)) {
       setSelectedStep(null);
     }
   };

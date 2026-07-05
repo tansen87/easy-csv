@@ -31,7 +31,7 @@ interface HomeViewProps {
   onStepClick?: (step: PipelineStep) => void;
   onStepUpdate?: (stepId: string, parameters: Record<string, any>) => void;
   onStepAliasUpdate?: (stepId: string, alias: string) => void;
-  onStepDelete?: (stepId: string) => void;
+  onStepDelete?: (stepId: string | string[]) => void;
   onPipelineReorder?: (tabId: string, newPipeline: PipelineStep[]) => void;
   selectedStepId?: string;
   onEdgesChange?: (tabId: string, edges: PipelineEdge[]) => void;

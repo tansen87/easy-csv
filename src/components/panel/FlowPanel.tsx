@@ -222,7 +222,7 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
 interface PipelineStepNodeData {
   step: PipelineStep;
   onStepClick: (step: PipelineStep) => void;
-  onStepRemove: (stepId: string) => void;
+  onStepRemove: (stepId: string | string[]) => void;
   onStepAliasUpdate: (stepId: string, alias: string) => void;
   onContextMenu: (stepId: string, x: number, y: number) => void;
   isSelected: boolean;
@@ -415,7 +415,7 @@ function PipelineStepNode({
     : "bg-card/95 hover:bg-accent/30 border-border/60 hover:border-primary/30"
     } ${data.isPendingDelete ? "border-orange-500" : ""}`;
 
-  // 如果有切割部分，渲染两个切割碎片
+  // 如果有切割部分,渲染两个切割碎片
   if (data.cutParts && data.cutParts.length > 0) {
     return (
       <div className="relative w-[220px]" style={{ height: 'auto' }}>
@@ -534,7 +534,7 @@ function getCutIntersectionPoints(
     return { p1: unique[0], p2: unique[1] };
   }
 
-  // 如果只有一个交点（切割线从角开始），添加角点作为第二个交点
+  // 如果只有一个交点（切割线从角开始）,添加角点作为第二个交点
   if (unique.length === 1) {
     const p = unique[0];
     // 找到最近的角
@@ -658,7 +658,7 @@ interface FlowPanelProps {
   onStepsChange: (steps: PipelineStep[]) => void;
   onStepClick: (step: PipelineStep) => void;
   onStepAliasUpdate: (stepId: string, alias: string) => void;
-  onStepRemove: (stepId: string) => void;
+  onStepRemove: (stepId: string | string[]) => void;
   onOpenFilterDialog: (col: number, x: number, y: number) => void;
   onOpenPivotDialog: (x: number, y: number) => void;
   onOpenDateTransformDialog: (col: number, x: number, y: number) => void;
@@ -686,7 +686,7 @@ function getLayoutedElements(
   rows: string[][],
   columnWidths: Record<number, number>,
   onStepClick: (step: PipelineStep) => void,
-  onStepRemove: (stepId: string) => void,
+  onStepRemove: (stepId: string | string[]) => void,
   onStepAliasUpdate: (stepId: string, alias: string) => void,
   onContextMenu: (stepId: string, x: number, y: number) => void,
   onTableContextMenu: (col: number, x: number, y: number) => void,
@@ -1253,7 +1253,7 @@ export function FlowPanel({
         if (intersection) {
           const { partA, partB } = generateCutClipPaths(intersection.p1, intersection.p2, rect);
 
-          // Part A: 一侧，坠落方向与切割方向同向
+          // Part A: 一侧,坠落方向与切割方向同向
           newCutParts.push({
             nodeId,
             partIndex: 0,
@@ -1262,7 +1262,7 @@ export function FlowPanel({
             fallDy: fallVec.dy,
             fallRotation: fallVec.rotation,
           });
-          // Part B: 另一侧，坠落方向相反
+          // Part B: 另一侧,坠落方向相反
           newCutParts.push({
             nodeId,
             partIndex: 1,
@@ -1290,9 +1290,10 @@ export function FlowPanel({
           }
         }
 
-        nodesToDelete.forEach(nodeId => {
-          onStepRemove(nodeId);
-        });
+        // 传递所有需要删除的节点ID给父组件
+        if (nodesToDelete.length > 0) {
+          onStepRemove(nodesToDelete);
+        }
 
         // 清除动画状态
         setCutEdges(new Set());
