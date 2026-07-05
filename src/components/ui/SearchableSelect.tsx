@@ -78,7 +78,7 @@ export function SearchableSelect({
       </button>
       {isOpen && (
         <div className="absolute z-50 w-full border rounded-md bg-background shadow-lg mt-1">
-          <ScrollArea className="h-40">
+          <ScrollArea className="h-40 pr-2">
             <div className="p-1">
               {filteredOptions.length > 0 ? (
                 filteredOptions.map((opt) => (

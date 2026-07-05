@@ -1,0 +1,61 @@
+<!-- Generated -->
+# xan to
+
+```txt
+Convert a CSV file to a variety of data formats.
+
+Usage:
+    xan to <format> [options] [<input>]
+    xan to --help
+
+Supported formats:
+    html    - HTML table
+    json    - JSON array or object
+    jsonl   - JSON lines (same as `ndjson`)
+    latex   - LaTeX table
+    md      - Markdown table
+    ndjson  - Newline-delimited JSON (same as `jsonl`)
+    npy     - Numpy arrayrconf.path.as_ref().unwrap();
+    txt     - Text lines
+    xlsx    - Excel spreadsheet
+
+Some formats can be streamed, some others require the full CSV file to be loaded into
+memory.
+
+Streamable formats are `html`, `jsonl`, `ndjson`, `npy` and `txt`.
+
+JSON options:
+    --sample-size <size>  Number of CSV rows to sample to infer column types.
+                          Set to -1 to sample whole CSV input.
+                          [default: 512]
+    --nulls               Convert empty string to a null value.
+    --omit                Ignore the empty values.
+    --strings <columns>   Force selected columns to be considered as raw strings
+                          instead of integers, floats etc.
+
+NPY options:
+    --dtype <type>       Number type to use for the npy conversion. Must be one of "f32"
+                         or "f64". [default: f64]
+    -s, --select <cols>  Numerical columns of the file to emit.
+
+TXT options:
+    -s, --select <col>  Column of file to emit as text. Will error if file
+                        to convert to text has multiple columns or if
+                        selection yields more than a single column.
+
+Markdown options:
+    -l, --limit <n>  Maximum number of rows to emit. If the end of the table is not
+                     reached within limit, a dummy row containing ellipsis characters
+                     will be written in the end.
+
+LateX options:
+    --caption <caption>  Optional name of the caption set in the latex, will be empty if not specified.
+
+Common options:
+    -h, --help             Display this message
+    -o, --output <file>    Write output to <file> instead of stdout.
+    -n, --no-headers       When set, the first row will not be evaled
+                           as headers.
+    -d, --delimiter <arg>  The field delimiter for reading CSV data.
+                           Must be a single character.
+```

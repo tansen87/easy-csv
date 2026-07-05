@@ -8,7 +8,7 @@ export interface XanCommand {
 
 export interface XanParameter {
   name: string;
-  type: "string" | "number" | "boolean" | "select" | "file" | "flag";
+  type: "string" | "number" | "flag" | "select";
   description: string;
   required: boolean;
   default?: string | number | boolean;
@@ -42,8 +42,8 @@ export interface PipelineTab {
   id: string;
   name: string;
   pipeline: PipelineStep[];
-  createdAt: string;
-  updatedAt: string;
+  created: string;
+  updated: string;
   data?: string[][];
   headers?: string[];
   inputFile?: string;
@@ -64,16 +64,4 @@ export interface HistoricalPipeline {
   output?: string;
   edges?: PipelineEdge[];
   inputPosition?: { x: number; y: number };
-}
-
-export interface Workspace {
-  version: string;
-  name: string;
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
-  pipeline: PipelineStep[];
-  inputFile: string;
-  defaultDelimiter: string;
-  noQuoting: boolean;
 }

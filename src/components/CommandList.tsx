@@ -159,12 +159,8 @@ interface CommandListProps {
   activePanel: "commands" | "history";
   onActivePanelChange: (panel: "commands" | "history") => void;
   historicalPipelines: any[];
-  onLoadHistory: (history: any) => void;
   onNewTabFromHistory: (history: any) => void;
   onDeleteHistory: (history: any) => void;
-  onLoadCsvData: (tabId: string, filePath: string) => void;
-  onDefaultDelimiterChange: (delimiter: string) => void;
-  selectedTabId: string;
 }
 
 export function CommandList({
@@ -178,12 +174,8 @@ export function CommandList({
   activePanel,
   onActivePanelChange,
   historicalPipelines,
-  onLoadHistory,
   onNewTabFromHistory,
   onDeleteHistory,
-  onLoadCsvData,
-  onDefaultDelimiterChange,
-  selectedTabId,
 }: CommandListProps) {
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>(
     commandCategories.reduce((acc, category) => {
@@ -280,9 +272,11 @@ export function CommandList({
     if (isVisible && panelRef.current) {
       const rect = panelRef.current.getBoundingClientRect();
       const newX = Math.min(rect.left, window.innerWidth - 280);
-      const newY = Math.max(rect.top, 100);
+      const panelHeight = panelRef.current.offsetHeight;
+      const newY = Math.max(100, Math.min(window.innerHeight - panelHeight, (window.innerHeight - panelHeight) / 2));
       panelRef.current.style.left = `${newX}px`;
       panelRef.current.style.top = `${newY}px`;
+      panelRef.current.style.transform = "none";
     }
   }, [isVisible]);
 
@@ -300,7 +294,8 @@ export function CommandList({
       ref={panelRef}
       style={{
         left: 0,
-        top: 100
+        top: "50%",
+        transform: "translateY(-50%)"
       }}
       className={`fixed w-[280px] h-[500px] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isDragging ? "shadow-2xl" : ""}`}
       onContextMenu={(e) => e.preventDefault()}
@@ -466,28 +461,15 @@ export function CommandList({
                         {history.inputFile.split("\\").pop()}
                       </p>
                       <div className="flex items-center justify-between">
-                        <div className="flex gap-1">
-                          <Button
-                            variant="secondary"
-                            size="xs"
-                            onClick={() => {
-                              onLoadHistory(history);
-                              onLoadCsvData(selectedTabId, history.inputFile);
-                              onDefaultDelimiterChange(history.defaultDelimiter);
-                            }}
-                          >
-                            Load
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="xs"
-                            onClick={() => {
-                              onNewTabFromHistory(history);
-                            }}
-                          >
-                            New Tab
-                          </Button>
-                        </div>
+                        <Button
+                          variant="secondary"
+                          size="xs"
+                          onClick={() => {
+                            onNewTabFromHistory(history);
+                          }}
+                        >
+                          New Tab
+                        </Button>
                         <span
                           className={`text-xs px-2 py-0.5 rounded-full ${history.success ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"}`}
                         >

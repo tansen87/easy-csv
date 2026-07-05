@@ -235,7 +235,7 @@
   }
 }
 
-/* 连线切断效果 - 优化性能 */
+/* 连线切断效果 */
 .cut-edge {
   will-change: stroke-dashoffset, opacity;
   animation: cut-edge-animation 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
@@ -254,4 +254,39 @@
     opacity: 0;
     stroke: #ff4757;
   }
+}
+
+/* Splash screen animations */
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
+}
+.animate-slide-up {
+  animation: slide-up 0.6s ease-out;
+}
+.animate-fade-in-delay {
+  animation: fade-in 0.6s ease-out 0.4s both;
+}
+.animate-fade-in-delay-2 {
+  animation: fade-in 0.4s ease-out 0.6s both;
+}
+.animate-fade-in-delay-3 {
+  animation: fade-in 0.6s ease-out 1s both;
 }

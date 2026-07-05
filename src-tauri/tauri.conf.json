@@ -15,7 +15,8 @@
         "title": "Easy Csv",
         "width": 1200,
         "height": 800,
-        "maximized": true
+        "maximized": true,
+        "devtools": true
       }
     ],
     "security": {
