@@ -200,7 +200,7 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
           <span className="mr-4">Ctrl+F: Search</span>
           <span className="mr-4">↑: Previous match</span>
           <span className="mr-4">↓: Next match</span>
-          <span>Escape: Close</span>
+          <span>ESC: Close</span>
         </div>
       </div>
     </div>

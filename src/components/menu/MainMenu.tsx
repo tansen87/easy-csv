@@ -1,5 +1,20 @@
-import { File, Undo2, Redo2, Play, FolderOpen, FileText, Save, Upload, Download } from "lucide-react";
+import {
+  File,
+  Undo2,
+  Redo2,
+  Play,
+  FolderOpen,
+  FileText,
+  Save,
+  Upload,
+  Download,
+  CloudDownload,
+  RefreshCw,
+  Settings,
+  MessageCircleQuestionMark,
+} from "lucide-react";
 import { PipelineStep } from "@/types/xan";
+import { useKeyboardShortcuts } from "@/hooks/KeyboardShortcuts";
 
 interface MainMenuProps {
   activeMenu: "file" | null;
@@ -16,7 +31,11 @@ interface MainMenuProps {
   onSavePipeline: () => void;
   onImportPipeline: () => void;
   onExportPipeline: () => void;
+  onHelp: () => void;
+  onCheckUpdate: () => void;
+  onShowSettings: () => void;
   isExecuting: boolean;
+  isCheckingUpdate: boolean;
   currentPipelineLength: number;
 }
 
@@ -35,11 +54,37 @@ export function MainMenu({
   onSavePipeline,
   onImportPipeline,
   onExportPipeline,
+  onHelp,
+  onCheckUpdate,
+  onShowSettings,
   isExecuting,
+  isCheckingUpdate,
   currentPipelineLength,
 }: MainMenuProps) {
+  useKeyboardShortcuts(
+    {
+      onOpenFile,
+      onOpenNewTabWithFile,
+      onSavePipeline,
+      onImportPipeline,
+      onExportPipeline,
+      onUndo,
+      onRedo,
+      onExecute,
+      onHelp,
+      onCheckUpdate,
+      onShowSettings,
+    },
+    {
+      undoStackLength: undoStack.length,
+      redoStackLength: redoStack.length,
+      currentPipelineLength,
+      isExecuting,
+    },
+  );
+
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <div className="flex rounded-md">
         <div className="relative">
           <button
@@ -55,10 +100,11 @@ export function MainMenu({
                 }
               }
             }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activeMenu === "file"
-              ? "bg-accent text-foreground"
-              : "text-primary hover:text-primary hover:bg-primary/10"
-              }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              activeMenu === "file"
+                ? "bg-accent text-foreground"
+                : "text-primary hover:text-primary hover:bg-primary/10"
+            }`}
           >
             <File className="h-3.5 w-3.5" />
             File
@@ -92,10 +138,11 @@ export function MainMenu({
                   setActiveMenu(null);
                 }}
                 disabled={currentPipelineLength === 0}
-                className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium transition-colors ${currentPipelineLength === 0
-                  ? "text-muted-foreground/40 cursor-not-allowed"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                  }`}
+                className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                  currentPipelineLength === 0
+                    ? "text-muted-foreground/40 cursor-not-allowed"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                }`}
               >
                 <Save className="h-3.5 w-3.5" />
                 Save Pipeline
@@ -116,10 +163,11 @@ export function MainMenu({
                   setActiveMenu(null);
                 }}
                 disabled={currentPipelineLength === 0}
-                className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium transition-colors ${currentPipelineLength === 0
-                  ? "text-muted-foreground/40 cursor-not-allowed"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                  }`}
+                className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                  currentPipelineLength === 0
+                    ? "text-muted-foreground/40 cursor-not-allowed"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                }`}
               >
                 <Download className="h-3.5 w-3.5" />
                 Export Workflow
@@ -133,10 +181,11 @@ export function MainMenu({
           <button
             onClick={onUndo}
             disabled={undoStack.length === 0}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${undoStack.length === 0
-              ? "text-muted-foreground/40 cursor-not-allowed"
-              : "text-primary hover:bg-primary/10"
-              }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              undoStack.length === 0
+                ? "text-muted-foreground/40 cursor-not-allowed"
+                : "text-primary hover:bg-primary/10"
+            }`}
           >
             <Undo2 className="h-3.5 w-3.5" />
             Undo
@@ -144,10 +193,11 @@ export function MainMenu({
           <button
             onClick={onRedo}
             disabled={redoStack.length === 0}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${redoStack.length === 0
-              ? "text-muted-foreground/40 cursor-not-allowed"
-              : "text-primary hover:bg-primary/10"
-              }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              redoStack.length === 0
+                ? "text-muted-foreground/40 cursor-not-allowed"
+                : "text-primary hover:bg-primary/10"
+            }`}
           >
             <Redo2 className="h-3.5 w-3.5" />
             Redo
@@ -157,12 +207,13 @@ export function MainMenu({
         <button
           onClick={onExecute}
           disabled={currentPipelineLength === 0 || isExecuting}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${isExecuting
-            ? "text-primary opacity-70"
-            : currentPipelineLength === 0
-              ? "text-muted-foreground/40 cursor-not-allowed"
-              : "text-primary hover:text-primary hover:bg-primary/10"
-            }`}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            isExecuting
+              ? "text-primary opacity-70"
+              : currentPipelineLength === 0
+                ? "text-muted-foreground/40 cursor-not-allowed"
+                : "text-primary hover:text-primary hover:bg-primary/10"
+          }`}
         >
           {isExecuting ? (
             <>
@@ -179,6 +230,40 @@ export function MainMenu({
             </>
           )}
         </button>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Right side buttons */}
+        <div className="flex items-center rounded-md gap-1">
+          <button
+            onClick={onCheckUpdate}
+            disabled={isCheckingUpdate}
+            className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              isCheckingUpdate
+                ? "text-primary opacity-70"
+                : "text-primary hover:bg-primary/10"
+            }`}
+          >
+            {isCheckingUpdate ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : (
+              <CloudDownload className="h-4 w-4" />
+            )}
+          </button>
+          <button
+            onClick={onHelp}
+            className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+          >
+            <MessageCircleQuestionMark className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onShowSettings}
+            className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
   );
