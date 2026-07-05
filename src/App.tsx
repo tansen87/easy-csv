@@ -37,10 +37,17 @@ function formatDateTime(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
+interface RecentFile {
+  path: string;
+  name: string;
+  openedAt: string;
+}
+
 function App() {
   const { theme, setTheme } = useTheme();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loadingText, setLoadingText] = useState<string>("Initializing...");
+  const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [tabs, setTabs] = useState<PipelineTab[]>([
     {
       id: "tab-1",
@@ -149,6 +156,17 @@ function App() {
         return;
       }
 
+      // Add to recent files
+      const fileName = filePath.split(/[\\/]/).pop() || filePath;
+      setRecentFiles((prev) => {
+        const updated = [
+          { path: filePath, name: fileName, openedAt: formatDateTime(new Date()) },
+          ...prev.filter((f) => f.path !== filePath),
+        ].slice(0, 10);
+        saveRecentFiles(updated);
+        return updated;
+      });
+
       if (!isCsvFile(filePath)) {
         const ext = filePath.split('.').pop();
         addLog("info", `Non-CSV file selected. Use "from" command in Flow panel to convert ${ext} to CSV.`);
@@ -220,6 +238,27 @@ function App() {
   const updateHistoricalPipelines = (newHistory: HistoricalPipeline[]) => {
     setHistoricalPipelines(newHistory);
     saveHistoricalPipelines(newHistory);
+  };
+
+  // Recent files management
+  const loadRecentFiles = async () => {
+    try {
+      const content = await invoke<string>("load_recent_files");
+      const files = JSON.parse(content);
+      setRecentFiles(files);
+    } catch (error) {
+      setRecentFiles([]);
+    }
+  };
+
+  const saveRecentFiles = async (files: RecentFile[]) => {
+    try {
+      await invoke("save_recent_files", {
+        recentFiles: JSON.stringify(files, null, 2),
+      });
+    } catch (error) {
+      addLog("error", `Failed to save recent files: ${error}`);
+    }
   };
 
   const loadDefaultDelimiter = async () => {
@@ -295,6 +334,7 @@ function App() {
         await loadDefaultDelimiter();
         await loadNoHeaders();
         await loadHistoricalPipelines();
+        await loadRecentFiles();
         setIsLoading(false);
       } catch (error) {
         console.error("Initialization failed:", error);
@@ -710,6 +750,8 @@ function App() {
                 onOpenUrl={handleOpenUrl}
                 branchProgress={branchProgress}
                 showProgressBar={showProgressBar}
+                recentFiles={recentFiles}
+                onOpenRecentFile={(filePath) => loadCsvData(selectedTabId, filePath)}
               />
             </div>
           </main>

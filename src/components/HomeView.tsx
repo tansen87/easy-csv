@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { X, FolderOpen, FileUp, Star } from "lucide-react";
+import { X, FolderOpen, FileUp, Star, Clock, File } from "lucide-react";
 import { PipelineStep, PipelineEdge, XanCommand, PipelineTab } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 import { ContextMenu } from "@/components/menu/ContextMenu";
@@ -16,6 +16,12 @@ import { PadDialog } from "@/components/dialog/PadDialog";
 import { ReplaceDialog } from "@/components/dialog/ReplaceDialog";
 import { WindowDialog } from "@/components/dialog/WindowDialog";
 import { FlowPanel } from "@/components/panel/FlowPanel";
+
+interface RecentFile {
+  path: string;
+  name: string;
+  openedAt: string;
+}
 
 interface HomeViewProps {
   tabs: PipelineTab[];
@@ -42,6 +48,8 @@ interface HomeViewProps {
   onOpenUrl?: (url: string) => void;
   branchProgress?: { current: number; total: number; name: string; status: "executing" | "completed" | "error" } | null;
   showProgressBar?: boolean;
+  recentFiles?: RecentFile[];
+  onOpenRecentFile?: (filePath: string) => void;
 }
 
 export function HomeView({
@@ -65,6 +73,8 @@ export function HomeView({
   onOpenUrl,
   branchProgress,
   showProgressBar,
+  recentFiles = [],
+  onOpenRecentFile,
 }: HomeViewProps) {
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
   const [contextMenu, setContextMenu] = useState<{
@@ -185,7 +195,7 @@ export function HomeView({
     return (
       <div className="h-full relative">
         <div className="absolute inset-0 flex items-center justify-center" onContextMenu={(e) => e.preventDefault()}>
-          <div className="max-w-md w-full px-8">
+          <div className="max-w-3xl w-full px-8">
             <div className="text-center mb-8">
               <h2 className="text-xl font-semibold text-foreground mb-2">
                 Welcome to Easy CSV
@@ -231,6 +241,33 @@ export function HomeView({
                 </div>
               </button>
             </div>
+
+            {recentFiles.length > 0 && (
+              <div className="mt-8">
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm font-medium text-muted-foreground">Recent Files</p>
+                </div>
+                <ScrollArea className="h-[28vh]">
+                  <div className="space-y-1 pr-4">
+                    {recentFiles.map((file) => (
+                      <button
+                        key={file.path}
+                        onClick={() => onOpenRecentFile?.(file.path)}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-accent transition-colors group"
+                      >
+                        <File className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{file.path}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <ScrollBar />
+                </ScrollArea>
+              </div>
+            )}
           </div>
         </div>
       </div>
