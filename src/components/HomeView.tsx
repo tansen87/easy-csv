@@ -40,7 +40,6 @@ interface HomeViewProps {
   onOpenFile?: () => void;
   onImportPipeline?: () => void;
   onOpenUrl?: (url: string) => void;
-  showMinimap?: boolean;
   branchProgress?: { current: number; total: number; name: string; status: "executing" | "completed" | "error" } | null;
   showProgressBar?: boolean;
 }
@@ -64,7 +63,6 @@ export function HomeView({
   onOpenFile,
   onImportPipeline,
   onOpenUrl,
-  showMinimap,
   branchProgress,
   showProgressBar,
 }: HomeViewProps) {
@@ -291,7 +289,6 @@ export function HomeView({
               onInputPositionChange(selectedTabId, position);
             }
           }}
-          showMinimap={showMinimap}
         />
       </div>
 

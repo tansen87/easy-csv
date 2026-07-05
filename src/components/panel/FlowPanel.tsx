@@ -13,7 +13,6 @@ import ReactFlow, {
   Connection,
   Handle,
   Position,
-  MiniMap,
 } from "reactflow";
 import dagre from "dagre";
 import "reactflow/dist/style.css";
@@ -27,7 +26,6 @@ import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "@/components/menu/ContextMenu";
 import { TextTransformType } from "@/components/dialog/TextTransformDialog";
 import { NumberTransformType } from "@/components/dialog/NumberTransformDialog";
-import { useTheme } from "@/components/setting/ThemeProvider";
 
 interface TableNodeData {
   headers: string[];
@@ -685,7 +683,6 @@ interface FlowPanelProps {
   onInputPositionChange?: (position: { x: number; y: number }) => void;
   savedEdges?: PipelineEdge[];
   savedInputPosition?: { x: number; y: number };
-  showMinimap?: boolean;
 }
 
 function getLayoutedElements(
@@ -919,28 +916,7 @@ export function FlowPanel({
   onInputPositionChange,
   savedEdges,
   savedInputPosition,
-  showMinimap,
 }: FlowPanelProps) {
-  const { theme: rawTheme } = useTheme();
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    const updateTheme = () => {
-      if (rawTheme === 'system') {
-        setIsDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
-      } else {
-        setIsDark(rawTheme === 'dark');
-      }
-    };
-
-    updateTheme();
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleSystemThemeChange = () => updateTheme();
-    mediaQuery.addEventListener('change', handleSystemThemeChange);
-    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
-  }, [rawTheme]);
-
-  const theme = isDark ? 'dark' : 'light';
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   // 切水果功能状态
@@ -2000,34 +1976,6 @@ export function FlowPanel({
         onInit={(instance) => { reactFlowInstance.current = instance; }}
       >
         <CoordinateGrid />
-        {showMinimap && (
-          <MiniMap
-            pannable
-            zoomable
-            zoomStep={2}
-            nodeColor={(node) => {
-              if (node.id === 'table-node') return '#22c55e';
-              return '#3b82f6';
-            }}
-            maskColor={theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}
-            ariaLabel=""
-            onClick={(_, position) => {
-              if (reactFlowInstance.current) {
-                reactFlowInstance.current.setCenter(position.x, position.y, {
-                  zoom: reactFlowInstance.current.getZoom(),
-                  duration: 300,
-                });
-              }
-            }}
-            style={{
-              backgroundColor: theme === 'dark' ? 'rgba(30, 30, 30, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-              border: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(0, 0, 0, 0.1)',
-              borderRadius: '8px',
-              width: 280,
-              height: 200,
-            }}
-          />
-        )}
       </ReactFlow>
 
       {/* 画布搜索框 */}

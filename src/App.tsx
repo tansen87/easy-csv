@@ -9,8 +9,6 @@ import {
   Terminal,
   ChevronUp,
   ChevronRight,
-  Map as MapIcon,
-  ChevronDown,
   FileText,
   CloudDownload,
   RefreshCw,
@@ -67,7 +65,6 @@ function App() {
   const [helpCommandName, setHelpCommandName] = useState<string>("");
   const [showLogPanel, setShowLogPanel] = useState<boolean>(false);
   const [showCommandPanel, setShowCommandPanel] = useState<boolean>(false);
-  const [showMinimap, setShowMinimap] = useState<boolean>(false);
   const [historicalPipelines, setHistoricalPipelines] = useState<
     HistoricalPipeline[]
   >([]);
@@ -743,7 +740,6 @@ function App() {
                 onOpenFile={handleOpenFile}
                 onImportPipeline={handleImportPipeline}
                 onOpenUrl={handleOpenUrl}
-                showMinimap={showMinimap}
                 branchProgress={branchProgress}
                 showProgressBar={showProgressBar}
               />
@@ -777,21 +773,6 @@ function App() {
               <ChevronUp className="h-4 w-4" />
             ) : (
               <FileText className="h-4 w-4" />
-            )}
-          </Button>
-
-          {/* Minimap Toggle Button */}
-          <Button
-            onClick={() => setShowMinimap(!showMinimap)}
-            onContextMenu={(e) => e.preventDefault()}
-            className="fixed bottom-4 left-28 z-30 h-10 w-10 rounded-full shadow-md"
-            variant="ghost"
-            size="icon"
-          >
-            {showMinimap ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <MapIcon className="h-4 w-4" />
             )}
           </Button>
 
