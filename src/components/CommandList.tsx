@@ -67,7 +67,7 @@ import { useState, useRef, useEffect } from "react";
 import { XanCommand } from "@/types/xan";
 import { commandCategories } from "@/data/commands";
 
-const commandIconMap: Record<string, LucideIcon> = {
+export const commandIconMap: Record<string, LucideIcon> = {
   // Output
   output: Download,
 

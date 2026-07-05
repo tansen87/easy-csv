@@ -283,6 +283,20 @@
   }
 }
 
+/* flow搜索结果动画 */
+@keyframes pulse-once {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(var(--primary), 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(var(--primary), 0);
+  }
+}
+
+.animate-pulse-once {
+  animation: pulse-once 0.8s ease-in-out 2;
+}
+
 /* Splash screen animations */
 @keyframes fade-in {
   0% {

@@ -22,7 +22,8 @@ import "reactflow/dist/style.css";
 import { Card } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Table, Edit3, Check, Settings } from "lucide-react";
+import { Table, Edit3, Check, Settings, Search, Terminal } from "lucide-react";
+import { commandIconMap } from "@/components/CommandList";
 import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "@/components/menu/ContextMenu";
 import { TextTransformType } from "@/components/dialog/TextTransformDialog";
@@ -230,6 +231,7 @@ interface PipelineStepNodeData {
   isCutting?: boolean;
   isPendingDelete?: boolean;
   cutParts?: CutPartInfo[];
+  isHighlighted?: boolean;
 }
 
 function PipelineStepNode({
@@ -413,7 +415,7 @@ function PipelineStepNode({
   const cardClass = `w-[220px] transition-all duration-200 hover:shadow-lg group relative ${selected
     ? "bg-gradient-to-r from-primary/15 to-primary/5 border-primary/50 shadow-md ring-2 ring-primary/20"
     : "bg-card/95 hover:bg-accent/30 border-border/60 hover:border-primary/30"
-    } ${data.isPendingDelete ? "border-orange-500" : ""}`;
+    } ${data.isPendingDelete ? "border-orange-500" : ""} ${data.isHighlighted ? "ring-2 ring-primary ring-offset-2 animate-pulse-once" : ""}`;
 
   // 如果有切割部分,渲染两个切割碎片
   if (data.cutParts && data.cutParts.length > 0) {
@@ -694,7 +696,8 @@ function getLayoutedElements(
   onSave: () => void,
   selectedStepId?: string,
   savedEdges?: PipelineEdge[],
-  savedInputPosition?: { x: number; y: number }
+  savedInputPosition?: { x: number; y: number },
+  highlightedNodeId?: string | null
 ): { nodes: Node[]; edges: Edge[] } {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -734,6 +737,7 @@ function getLayoutedElements(
         onStepAliasUpdate,
         onContextMenu,
         isSelected: selectedStepId === step.id,
+        isHighlighted: highlightedNodeId === step.id,
       },
       selected: selectedStepId === step.id,
     });
@@ -943,6 +947,12 @@ export function FlowPanel({
   const [pendingDeleteNodes, setPendingDeleteNodes] = useState<Set<string>>(new Set());
   const [pendingDeleteEdges, setPendingDeleteEdges] = useState<Set<string>>(new Set());
 
+  // 画布搜索状态
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   // 右键连接功能状态
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectSourceNode, setConnectSourceNode] = useState<string | null>(null);
@@ -981,6 +991,31 @@ export function FlowPanel({
     onTableRename(col, newName);
   }, [onTableRename]);
 
+  // Ctrl+F 全局快捷键（HelpDialog 打开时由 HelpDialog 处理）
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 如果对话框打开，不拦截 Ctrl+F
+      const dialog = document.querySelector('[role="dialog"]');
+      if (dialog) return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key === "f") {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // 搜索框打开时自动聚焦
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+      searchInputRef.current.select();
+    }
+  }, [isSearchOpen]);
+
   const hasTable = headers.length > 0 && rows.length > 0;
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
@@ -1000,13 +1035,57 @@ export function FlowPanel({
         onSave,
         selectedStepId,
         savedEdges,
-        savedInputPosition
+        savedInputPosition,
+        highlightedNodeId
       ),
-    [hasTable, steps, headers, rows, columnWidths, selectedStepId, handleContextMenu, handleTableContextMenu, handleTableRename, onSave, savedEdges, savedInputPosition]
+    [hasTable, steps, headers, rows, columnWidths, selectedStepId, handleContextMenu, handleTableContextMenu, handleTableRename, onSave, savedEdges, savedInputPosition, highlightedNodeId]
   );
 
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
+
+  // 搜索结果：匹配命令名称或 alias
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+
+    return steps.filter((step) => {
+      const name = step.command.name.toLowerCase();
+      const alias = step.alias?.toLowerCase() || "";
+      return name.includes(query) || alias.includes(query);
+    }).map((step) => ({
+      step,
+      // 优先显示 alias，没有则显示 command name
+      displayName: step.alias || step.command.name,
+      // 如果有 alias，显示 command name 作为副标签
+      secondaryName: step.alias ? step.command.name : null,
+    }));
+  }, [searchQuery, steps]);
+
+  // 点击搜索结果：跳转到节点并高亮
+  const handleSearchResultClick = useCallback((step: PipelineStep) => {
+    // 找到对应的 ReactFlow node
+    const node = nodes.find((n) => n.id === step.id);
+    if (!node || !reactFlowInstance.current) return;
+
+    // 使用 setCenter 跳转到节点位置（居中显示）
+    reactFlowInstance.current.setCenter(
+      node.position.x + 110, // 节点中心 X (宽度220/2)
+      node.position.y + 45,  // 节点中心 Y (高度~90/2)
+      {
+        zoom: Math.max(reactFlowInstance.current.getZoom(), 0.8),
+        duration: 400,
+      }
+    );
+
+    // 设置高亮节点（触发动画）
+    setHighlightedNodeId(step.id);
+    setTimeout(() => setHighlightedNodeId(null), 1500);
+
+    // 关闭搜索框
+    setIsSearchOpen(false);
+    setSearchQuery("");
+  }, [nodes]);
 
   // 当savedEdges变化时(如从history导入),更新本地edges状态
   useEffect(() => {
@@ -1926,6 +2005,72 @@ export function FlowPanel({
           />
         )}
       </ReactFlow>
+
+      {/* 画布搜索框 */}
+      {isSearchOpen && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 w-80">
+          <div className="bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+            {/* 搜索输入框 */}
+            <div className="flex items-center gap-2 px-3 py-2 border-b">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setIsSearchOpen(false);
+                    setSearchQuery("");
+                  } else if (e.key === "Enter" && searchResults.length > 0) {
+                    handleSearchResultClick(searchResults[0].step);
+                  }
+                }}
+                placeholder="Search for commands in the flow..."
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              />
+              <span className="text-[10px] text-muted-foreground">
+                ESC
+              </span>
+            </div>
+
+            {/* 搜索结果下拉列表 - 仅在有搜索内容时显示 */}
+            {searchQuery && searchResults.length > 0 && (
+              <ScrollArea className="h-[16vh]">
+                <div className="py-1">
+                  {searchResults.map((result) => {
+                    const CommandIcon = commandIconMap[result.step.command.name] || Terminal;
+                    return (
+                      <button
+                        key={result.step.id}
+                        onClick={() => handleSearchResultClick(result.step)}
+                        className="w-full px-3 py-2 text-left hover:bg-accent/50 transition-colors flex items-center justify-between gap-2"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <CommandIcon className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="text-sm truncate">{result.displayName}</span>
+                        </div>
+                        {result.secondaryName && (
+                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+                            {result.secondaryName}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            )}
+
+            {/* 无结果提示 - 仅在有搜索内容但无匹配时显示 */}
+            {searchQuery && searchResults.length === 0 && (
+              <div className="px-3 py-4 text-center text-sm text-muted-foreground">
+                No matching command found
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 切水果轨迹线 */}
       {(isCutting || isClosingCut) && cutPath.length > 1 && (
