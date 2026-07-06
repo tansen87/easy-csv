@@ -193,6 +193,17 @@
   }
 }
 
+/* 坐标网格 */
+.coordinate-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
 /* 节点被切效果 */
 .cut-node {
   will-change: transform, opacity;
@@ -235,6 +246,33 @@
   }
 }
 
+/* 切割部分自由坠落动画 */
+.cut-part-fall {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation: cut-part-fall 0.7s cubic-bezier(0.45, 0, 0.85, 0.4) forwards;
+}
+
+@keyframes cut-part-fall {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  12% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--fall-dx), var(--fall-dy)) rotate(var(--fall-rotation));
+    opacity: 0;
+  }
+}
+
 /* 连线切断效果 */
 .cut-edge {
   will-change: stroke-dashoffset, opacity;
@@ -254,6 +292,20 @@
     opacity: 0;
     stroke: #ff4757;
   }
+}
+
+/* flow搜索结果动画 */
+@keyframes pulse-once {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(var(--primary), 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(var(--primary), 0);
+  }
+}
+
+.animate-pulse-once {
+  animation: pulse-once 0.8s ease-in-out 2;
 }
 
 /* Splash screen animations */

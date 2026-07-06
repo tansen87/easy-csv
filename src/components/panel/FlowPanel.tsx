@@ -8,26 +8,25 @@ import ReactFlow, {
   EdgeChange,
   applyNodeChanges,
   applyEdgeChanges,
-  BackgroundVariant,
-  Background,
   ConnectionMode,
   MarkerType,
   Connection,
   Handle,
   Position,
-  MiniMap,
 } from "reactflow";
 import dagre from "dagre";
 import "reactflow/dist/style.css";
 import { Card } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Table, Edit3, Check, Settings } from "lucide-react";
+import { Table, Edit3, Check, Settings, Search, Terminal, X } from "lucide-react";
+import { commandIconMap } from "@/components/CommandList";
+import { CoordinateGrid } from "@/components/panel/CoordinateGrid";
 import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "@/components/menu/ContextMenu";
 import { TextTransformType } from "@/components/dialog/TextTransformDialog";
 import { NumberTransformType } from "@/components/dialog/NumberTransformDialog";
-import { useTheme } from "@/components/setting/ThemeProvider";
+import { useLanguage } from "@/i18n";
 
 interface TableNodeData {
   headers: string[];
@@ -36,10 +35,11 @@ interface TableNodeData {
   onContextMenu: (col: number, x: number, y: number) => void;
   onRename: (col: number, newName: string) => void;
   onSave: () => void;
+  onDelete?: () => void;
 }
 
 function TableNode({ data, selected }: { data: TableNodeData; selected: boolean }) {
-  const { headers, rows, columnWidths, onContextMenu, onRename, onSave } = data;
+  const { headers, rows, columnWidths, onContextMenu, onRename, onSave, onDelete } = data;
   const [editingCol, setEditingCol] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
   const [showSaveButton, setShowSaveButton] = useState(false);
@@ -103,6 +103,8 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
     }
   };
 
+  const { t } = useLanguage();
+
   return (
     <Card
       className={`w-[500px] overflow-hidden transition-all duration-200 ${selected
@@ -130,7 +132,7 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
               }
             }}
             options={headers.map((h, _i) => ({ label: h, value: h }))}
-            placeholder="Search header to edit..."
+            placeholder={t.headerRename}
             size="sm"
           />
         </div>
@@ -143,11 +145,17 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
               onSave();
               setShowSaveButton(false);
             }}
-            className="w-5 h-5 rounded-xl flex items-center justify-center border border-green-500"
+            className="w-5 h-5 rounded-md flex items-center justify-center hover:bg-primary/10"
           >
             <Check className="h-3 w-3 text-green-500" />
           </button>
         )}
+        <button
+          onClick={() => onDelete?.()}
+          className="w-5 h-5 rounded-md flex items-center justify-center hover:bg-primary/10 transition-colors"
+        >
+          <X className="h-3 w-3" />
+        </button>
       </div>
       <ScrollArea
         className="h-[180px]"
@@ -222,13 +230,15 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
 interface PipelineStepNodeData {
   step: PipelineStep;
   onStepClick: (step: PipelineStep) => void;
-  onStepRemove: (stepId: string) => void;
+  onStepRemove: (stepId: string | string[]) => void;
   onStepAliasUpdate: (stepId: string, alias: string) => void;
   onContextMenu: (stepId: string, x: number, y: number) => void;
   isSelected: boolean;
   index: number;
   isCutting?: boolean;
   isPendingDelete?: boolean;
+  cutParts?: CutPartInfo[];
+  isHighlighted?: boolean;
 }
 
 function PipelineStepNode({
@@ -283,14 +293,172 @@ function PipelineStepNode({
     }
   };
 
+  // 渲染节点内容的辅助函数
+  const renderCardContent = () => (
+    <>
+      {/* 双向 Handle - 左侧既是 target 也是 source */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="left-target"
+        className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
+        style={{ opacity: 0, pointerEvents: 'none' }}
+      />
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="left-source"
+        className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
+        style={{ opacity: 0, pointerEvents: 'none' }}
+      />
+      <div className="p-3">
+        <div className="flex items-center gap-2 w-full">
+          {isEditing ? (
+            <div className="flex items-center gap-1 w-full">
+              <input
+                type="text"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                className="w-[90%] h-6 px-2 text-xs border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
+                autoFocus
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={handleKeyDown}
+                placeholder="Alias"
+              />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAliasSave();
+                }}
+                className="w-[5%] h-6 bg-green-500/10 hover:bg-green-500/20 rounded flex items-center justify-center transition-colors min-w-[24px]"
+              >
+                <Check className="h-3 w-3 text-green-600" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="font-semibold text-xs truncate flex-1 min-w-0">
+                {data.step.alias || data.step.command.name}
+              </div>
+              {data.step.alias && (
+                <span className="text-[9px] text-muted-foreground/70 bg-muted/60 px-1 py-0.5 rounded border border-border/40 ml-auto">
+                  {data.step.command.name}
+                </span>
+              )}
+            </>
+          )}
+        </div>
+        {(nonFlagParams.length > 0 || flagParams.length > 0) && (
+          <div className="mt-1 space-y-0.5">
+            {nonFlagParams.length > 0 && (
+              <div className="text-[9px] text-muted-foreground flex flex-wrap gap-0.5">
+                {nonFlagParams.map(([key, value]) => (
+                  <span
+                    key={key}
+                    className="bg-muted/70 px-1 py-0.5 rounded border border-border/40 max-w-full overflow-hidden"
+                    style={{ wordBreak: 'break-word' }}
+                  >
+                    <span className="text-muted-foreground/80">{key}=</span>
+                    <span className="font-medium">{String(value)}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+            {flagParams.length > 0 && (
+              <div className="text-[9px] text-muted-foreground flex flex-wrap gap-0.5">
+                {flagParams.map(([key]) => (
+                  <span
+                    key={key}
+                    className="bg-muted/70 px-1 py-0.5 rounded border border-border/40"
+                  >
+                    <span className="font-medium">{key}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="absolute -top-2 -right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            data.onStepClick(data.step);
+          }}
+          className="w-5 h-5 bg-background border shadow-sm rounded flex items-center justify-center hover:bg-accent transition-colors"
+        >
+          <Settings className="h-2.5 w-2.5" />
+        </button>
+        {!isEditing && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+            className="w-5 h-5 bg-background border shadow-sm rounded flex items-center justify-center hover:bg-accent transition-colors"
+          >
+            <Edit3 className="h-2.5 w-2.5" />
+          </button>
+        )}
+      </div>
+      {/* 双向 Handle - 右侧既是 source 也是 target */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right-source"
+        className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
+        style={{ opacity: 0, pointerEvents: 'none' }}
+      />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="right-target"
+        className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
+        style={{ opacity: 0, pointerEvents: 'none' }}
+      />
+    </>
+  );
+
+  const cardClass = `w-[220px] transition-all duration-200 hover:shadow-lg group relative ${selected
+    ? "bg-gradient-to-r from-primary/15 to-primary/5 border-primary/50 shadow-md ring-2 ring-primary/20"
+    : "bg-card/95 hover:bg-accent/30 border-border/60 hover:border-primary/30"
+    } ${data.isPendingDelete ? "border-orange-500" : ""} ${data.isHighlighted ? "ring-2 ring-primary ring-offset-2 animate-pulse-once" : ""}`;
+
+  // 如果有切割部分,渲染两个切割碎片
+  if (data.cutParts && data.cutParts.length > 0) {
+    return (
+      <div className="relative w-[220px]" style={{ height: 'auto' }}>
+        {data.cutParts.map((part, idx) => (
+          <div
+            key={idx}
+            className="cut-part-fall"
+            style={{
+              clipPath: part.clipPath,
+              '--fall-dx': `${part.fallDx}px`,
+              '--fall-dy': `${part.fallDy}px`,
+              '--fall-rotation': `${part.fallRotation}deg`,
+            } as React.CSSProperties}
+          >
+            <Card
+              className={cardClass}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                data.onContextMenu(data.step.id, e.clientX, e.clientY);
+              }}
+            >
+              {renderCardContent()}
+            </Card>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className={`relative ${data.isCutting ? "cutting-animation" : ""}`}>
-      {/* 被切掉的节点 - 虚线边框效果 */}
       <Card
-        className={`w-[220px] transition-all duration-200 hover:shadow-lg group relative ${selected
-          ? "bg-gradient-to-r from-primary/15 to-primary/5 border-primary/50 shadow-md ring-2 ring-primary/20"
-          : "bg-card/95 hover:bg-accent/30 border-border/60 hover:border-primary/30"
-          } ${data.isCutting ? "cut-node" : ""} ${data.isPendingDelete ? "border-orange-500" : ""}`}
+        className={`${cardClass} ${data.isCutting ? "cut-node" : ""}`}
         style={{
           boxShadow: data.isPendingDelete ? '0 0 12px rgba(249, 115, 22, 0.6)' : undefined,
         }}
@@ -300,128 +468,7 @@ function PipelineStepNode({
           data.onContextMenu(data.step.id, e.clientX, e.clientY);
         }}
       >
-        {/* 双向 Handle - 左侧既是 target 也是 source */}
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="left-target"
-          className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
-          style={{ opacity: 0, pointerEvents: 'none' }}
-        />
-        <Handle
-          type="source"
-          position={Position.Left}
-          id="left-source"
-          className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
-          style={{ opacity: 0, pointerEvents: 'none' }}
-        />
-        <div className="p-3">
-          <div className="flex items-center gap-2 w-full">
-            {isEditing ? (
-              <div className="flex items-center gap-1 w-full">
-                <input
-                  type="text"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  className="w-[90%] h-6 px-2 text-xs border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
-                  autoFocus
-                  onClick={(e) => e.stopPropagation()}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Alias"
-                />
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAliasSave();
-                  }}
-                  className="w-[5%] h-6 bg-green-500/10 hover:bg-green-500/20 rounded flex items-center justify-center transition-colors min-w-[24px]"
-                >
-                  <Check className="h-3 w-3 text-green-600" />
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="font-semibold text-xs truncate flex-1 min-w-0">
-                  {data.step.alias || data.step.command.name}
-                </div>
-                {data.step.alias && (
-                  <span className="text-[9px] text-muted-foreground/70 bg-muted/60 px-1 py-0.5 rounded border border-border/40 ml-auto">
-                    {data.step.command.name}
-                  </span>
-                )}
-              </>
-            )}
-          </div>
-          {(nonFlagParams.length > 0 || flagParams.length > 0) && (
-            <div className="mt-1 space-y-0.5">
-              {/* 非 flag 参数 - 参数少的情况下可以多个占一行 */}
-              {nonFlagParams.length > 0 && (
-                <div className="text-[9px] text-muted-foreground flex flex-wrap gap-0.5">
-                  {nonFlagParams.map(([key, value]) => (
-                    <span
-                      key={key}
-                      className="bg-muted/70 px-1 py-0.5 rounded border border-border/40 max-w-full overflow-hidden"
-                      style={{ wordBreak: 'break-word' }}
-                    >
-                      <span className="text-muted-foreground/80">{key}=</span>
-                      <span className="font-medium">{String(value)}</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-              {/* flag 参数 - 在下一行显示，可以多个在同一行 */}
-              {flagParams.length > 0 && (
-                <div className="text-[9px] text-muted-foreground flex flex-wrap gap-0.5">
-                  {flagParams.map(([key]) => (
-                    <span
-                      key={key}
-                      className="bg-muted/70 px-1 py-0.5 rounded border border-border/40"
-                    >
-                      <span className="font-medium">{key}</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="absolute -top-2 -right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              data.onStepClick(data.step);
-            }}
-            className="w-5 h-5 bg-background border shadow-sm rounded flex items-center justify-center hover:bg-accent transition-colors"
-          >
-            <Settings className="h-2.5 w-2.5" />
-          </button>
-          {!isEditing && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsEditing(true);
-              }}
-              className="w-5 h-5 bg-background border shadow-sm rounded flex items-center justify-center hover:bg-accent transition-colors"
-            >
-              <Edit3 className="h-2.5 w-2.5" />
-            </button>
-          )}
-        </div>
-        {/* 双向 Handle - 右侧既是 source 也是 target */}
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="right-source"
-          className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
-          style={{ opacity: 0, pointerEvents: 'none' }}
-        />
-        <Handle
-          type="target"
-          position={Position.Right}
-          id="right-target"
-          className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
-          style={{ opacity: 0, pointerEvents: 'none' }}
-        />
+        {renderCardContent()}
       </Card>
     </div>
   );
@@ -432,6 +479,186 @@ const nodeTypes = {
   pipelineStep: PipelineStepNode,
 };
 
+// 切割部分信息
+interface CutPartInfo {
+  nodeId: string;
+  partIndex: 0 | 1;
+  clipPath: string;
+  fallDx: number;
+  fallDy: number;
+  fallRotation: number;
+}
+
+// 计算线段与矩形的两个交点
+function getCutIntersectionPoints(
+  lineStart: { x: number; y: number },
+  lineEnd: { x: number; y: number },
+  rect: { x: number; y: number; width: number; height: number }
+): { p1: { x: number; y: number }; p2: { x: number; y: number } } | null {
+  const { x: rx, y: ry, width: rw, height: rh } = rect;
+  const dx = lineEnd.x - lineStart.x;
+  const dy = lineEnd.y - lineStart.y;
+
+  if (dx === 0 && dy === 0) return null;
+
+  const intersections: { x: number; y: number }[] = [];
+
+  // 检查与四条边的交点
+  const edges = [
+    { x1: rx, y1: ry, x2: rx + rw, y2: ry },           // 上边
+    { x1: rx + rw, y1: ry, x2: rx + rw, y2: ry + rh }, // 右边
+    { x1: rx, y1: ry + rh, x2: rx + rw, y2: ry + rh }, // 下边
+    { x1: rx, y1: ry, x2: rx, y2: ry + rh },            // 左边
+  ];
+
+  for (const edge of edges) {
+    const ex = edge.x2 - edge.x1;
+    const ey = edge.y2 - edge.y1;
+
+    const denom = dx * ey - dy * ex;
+    if (Math.abs(denom) < 1e-10) continue;
+
+    const t = ((edge.x1 - lineStart.x) * ey - (edge.y1 - lineStart.y) * ex) / denom;
+    const u = ((edge.x1 - lineStart.x) * dy - (edge.y1 - lineStart.y) * dx) / denom;
+
+    if (t >= -0.001 && t <= 1.001 && u >= -0.001 && u <= 1.001) {
+      const px = lineStart.x + t * dx;
+      const py = lineStart.y + t * dy;
+      // 限制在矩形边界内
+      const cx = Math.max(rx, Math.min(rx + rw, px));
+      const cy = Math.max(ry, Math.min(ry + rh, py));
+      intersections.push({ x: cx, y: cy });
+    }
+  }
+
+  // 去重(距离小于2的点视为同一个)
+  const unique: { x: number; y: number }[] = [];
+  for (const p of intersections) {
+    if (!unique.some(u => Math.abs(u.x - p.x) < 2 && Math.abs(u.y - p.y) < 2)) {
+      unique.push(p);
+    }
+  }
+
+  if (unique.length >= 2) {
+    return { p1: unique[0], p2: unique[1] };
+  }
+
+  // 如果只有一个交点(切割线从角开始),添加角点作为第二个交点
+  if (unique.length === 1) {
+    const p = unique[0];
+    // 找到最近的角
+    const corners = [
+      { x: rx, y: ry },
+      { x: rx + rw, y: ry },
+      { x: rx + rw, y: ry + rh },
+      { x: rx, y: ry + rh },
+    ];
+    let nearestCorner = corners[0];
+    let minDist = Infinity;
+    for (const c of corners) {
+      const dist = Math.sqrt((p.x - c.x) ** 2 + (p.y - c.y) ** 2);
+      if (dist < minDist) {
+        minDist = dist;
+        nearestCorner = c;
+      }
+    }
+    return { p1: p, p2: nearestCorner };
+  }
+
+  return null;
+}
+
+// 根据切割线和交点生成两部分的 clip-path 多边形
+function generateCutClipPaths(
+  p1: { x: number; y: number },
+  p2: { x: number; y: number },
+  rect: { x: number; y: number; width: number; height: number }
+): { partA: string; partB: string } {
+  const { x: rx, y: ry, width: rw, height: rh } = rect;
+
+  // 矩形的四个角
+  const corners = [
+    { x: rx, y: ry },           // 左上 (TL)
+    { x: rx + rw, y: ry },      // 右上 (TR)
+    { x: rx + rw, y: ry + rh }, // 右下 (BR)
+    { x: rx, y: ry + rh },      // 左下 (BL)
+  ];
+
+  // 计算每个角在切割线的哪一侧(使用叉积)
+  const cross = (ax: number, ay: number, bx: number, by: number) => ax * by - ay * bx;
+  const lineDx = p2.x - p1.x;
+  const lineDy = p2.y - p1.y;
+
+  const sideA: { x: number; y: number }[] = []; // 切割线左侧
+  const sideB: { x: number; y: number }[] = []; // 切割线右侧
+
+  for (const corner of corners) {
+    const dx = corner.x - p1.x;
+    const dy = corner.y - p1.y;
+    const c = cross(lineDx, lineDy, dx, dy);
+
+    if (c >= 0) {
+      sideA.push(corner);
+    } else {
+      sideB.push(corner);
+    }
+  }
+
+  // 构建多边形:角点 + 交点
+  const buildPolygon = (side: { x: number; y: number }[]): string => {
+    if (side.length === 0) return '';
+
+    // 按角度排序角点(相对于 p1)
+    const sorted = [...side].sort((a, b) => {
+      const angleA = Math.atan2(a.y - p1.y, a.x - p1.x);
+      const angleB = Math.atan2(b.y - p1.y, b.x - p1.x);
+      return angleA - angleB;
+    });
+
+    // 构建多边形:交点p1 -> 排序的角点 -> 交点p2 -> 回到p1
+    const points = [p1, ...sorted, p2];
+    return `polygon(${points.map(p => `${p.x}px ${p.y}px`).join(', ')})`;
+  };
+
+  const partA = buildPolygon(sideA);
+  const partB = buildPolygon(sideB);
+
+  return { partA, partB };
+}
+
+// 计算坠落方向(重力 + 切割方向混合)
+function calculateFallVector(
+  cutPath: { x: number; y: number }[]
+): { dx: number; dy: number; rotation: number } {
+  if (cutPath.length < 2) {
+    return { dx: 0, dy: 200, rotation: 15 };
+  }
+
+  // 切割方向:从末尾两点计算
+  const last = cutPath[cutPath.length - 1];
+  const prev = cutPath[cutPath.length - 2];
+  let cutDx = last.x - prev.x;
+  let cutDy = last.y - prev.y;
+  const cutLen = Math.sqrt(cutDx * cutDx + cutDy * cutDy);
+
+  if (cutLen > 0) {
+    cutDx /= cutLen;
+    cutDy /= cutLen;
+  }
+
+  // 混合:70% 重力方向(向下) + 30% 切割方向
+  const gravityWeight = 0.7;
+  const cutWeight = 0.3;
+  const fdx = cutDx * cutWeight * 120;
+  const fdy = (1 * gravityWeight + cutDy * cutWeight) * 200;
+
+  // 旋转角度:根据方向计算
+  const angle = Math.atan2(cutDx, 1) * (180 / Math.PI);
+  const rotation = Math.max(-30, Math.min(30, angle * 0.5));
+
+  return { dx: fdx, dy: fdy, rotation };
+}
+
 interface FlowPanelProps {
   steps: PipelineStep[];
   headers: string[];
@@ -440,7 +667,7 @@ interface FlowPanelProps {
   onStepsChange: (steps: PipelineStep[]) => void;
   onStepClick: (step: PipelineStep) => void;
   onStepAliasUpdate: (stepId: string, alias: string) => void;
-  onStepRemove: (stepId: string) => void;
+  onStepRemove: (stepId: string | string[]) => void;
   onOpenFilterDialog: (col: number, x: number, y: number) => void;
   onOpenPivotDialog: (x: number, y: number) => void;
   onOpenDateTransformDialog: (col: number, x: number, y: number) => void;
@@ -453,12 +680,12 @@ interface FlowPanelProps {
   onOpenNumberTransformDialog: (col: number, x: number, y: number, transformType?: NumberTransformType) => void;
   onTableRename: (col: number, newName: string) => void;
   onSave: () => void;
+  onTableDelete?: () => void;
   selectedStepId?: string;
   onEdgesChange?: (edges: PipelineEdge[]) => void;
   onInputPositionChange?: (position: { x: number; y: number }) => void;
   savedEdges?: PipelineEdge[];
   savedInputPosition?: { x: number; y: number };
-  showMinimap?: boolean;
 }
 
 function getLayoutedElements(
@@ -468,7 +695,7 @@ function getLayoutedElements(
   rows: string[][],
   columnWidths: Record<number, number>,
   onStepClick: (step: PipelineStep) => void,
-  onStepRemove: (stepId: string) => void,
+  onStepRemove: (stepId: string | string[]) => void,
   onStepAliasUpdate: (stepId: string, alias: string) => void,
   onContextMenu: (stepId: string, x: number, y: number) => void,
   onTableContextMenu: (col: number, x: number, y: number) => void,
@@ -476,7 +703,9 @@ function getLayoutedElements(
   onSave: () => void,
   selectedStepId?: string,
   savedEdges?: PipelineEdge[],
-  savedInputPosition?: { x: number; y: number }
+  savedInputPosition?: { x: number; y: number },
+  highlightedNodeId?: string | null,
+  onTableDelete?: () => void
 ): { nodes: Node[]; edges: Edge[] } {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -497,6 +726,7 @@ function getLayoutedElements(
         onContextMenu: onTableContextMenu,
         onRename: onTableRename,
         onSave,
+        onDelete: onTableDelete,
       },
       selected: false,
       dragHandle: ".table-node-header",
@@ -516,6 +746,7 @@ function getLayoutedElements(
         onStepAliasUpdate,
         onContextMenu,
         isSelected: selectedStepId === step.id,
+        isHighlighted: highlightedNodeId === step.id,
       },
       selected: selectedStepId === step.id,
     });
@@ -682,33 +913,13 @@ export function FlowPanel({
   onOpenNumberTransformDialog,
   onTableRename,
   onSave,
+  onTableDelete,
   selectedStepId,
   onEdgesChange,
   onInputPositionChange,
   savedEdges,
   savedInputPosition,
-  showMinimap,
 }: FlowPanelProps) {
-  const { theme: rawTheme } = useTheme();
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    const updateTheme = () => {
-      if (rawTheme === 'system') {
-        setIsDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
-      } else {
-        setIsDark(rawTheme === 'dark');
-      }
-    };
-
-    updateTheme();
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleSystemThemeChange = () => updateTheme();
-    mediaQuery.addEventListener('change', handleSystemThemeChange);
-    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
-  }, [rawTheme]);
-
-  const theme = isDark ? 'dark' : 'light';
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   // 切水果功能状态
@@ -719,9 +930,17 @@ export function FlowPanel({
   // 被切元素的动画状态
   const [cutNodes, setCutNodes] = useState<Set<string>>(new Set());
   const [cutEdges, setCutEdges] = useState<Set<string>>(new Set());
+  // 切割部分信息(用于自由坠落动画)
+  const [cutParts, setCutParts] = useState<CutPartInfo[]>([]);
   // 实时高亮状态 - 用于显示即将被删除的元素
   const [pendingDeleteNodes, setPendingDeleteNodes] = useState<Set<string>>(new Set());
   const [pendingDeleteEdges, setPendingDeleteEdges] = useState<Set<string>>(new Set());
+
+  // 画布搜索状态
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // 右键连接功能状态
   const [isConnecting, setIsConnecting] = useState(false);
@@ -761,6 +980,31 @@ export function FlowPanel({
     onTableRename(col, newName);
   }, [onTableRename]);
 
+  // Ctrl+F 全局快捷键(HelpDialog 打开时由 HelpDialog 处理)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 如果对话框打开,不拦截 Ctrl+F
+      const dialog = document.querySelector('[role="dialog"]');
+      if (dialog) return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key === "f") {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // 搜索框打开时自动聚焦
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+      searchInputRef.current.select();
+    }
+  }, [isSearchOpen]);
+
   const hasTable = headers.length > 0 && rows.length > 0;
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
@@ -780,13 +1024,69 @@ export function FlowPanel({
         onSave,
         selectedStepId,
         savedEdges,
-        savedInputPosition
+        savedInputPosition,
+        highlightedNodeId,
+        onTableDelete
       ),
-    [hasTable, steps, headers, rows, columnWidths, selectedStepId, handleContextMenu, handleTableContextMenu, handleTableRename, onSave, savedEdges, savedInputPosition]
+    [hasTable, steps, headers, rows, columnWidths, selectedStepId, handleContextMenu, handleTableContextMenu, handleTableRename, onSave, savedEdges, savedInputPosition, highlightedNodeId, onTableDelete]
   );
 
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
+
+  // 搜索结果:匹配命令名称或 alias
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    const results: { step: PipelineStep | null; displayName: string; secondaryName: string | null; isTableNode?: boolean }[] = [];
+
+    // 搜索 "Input Data" 节点(不搜索其列名)
+    if ("input data".includes(query) || "input".includes(query)) {
+      results.push({ step: null, displayName: "Input Data", secondaryName: null, isTableNode: true });
+    }
+
+    // 搜索 pipeline 步骤
+    for (const step of steps) {
+      const name = step.command.name.toLowerCase();
+      const alias = step.alias?.toLowerCase() || "";
+      if (name.includes(query) || alias.includes(query)) {
+        results.push({
+          step,
+          displayName: step.alias || step.command.name,
+          secondaryName: step.alias ? step.command.name : null,
+        });
+      }
+    }
+
+    return results;
+  }, [searchQuery, steps]);
+
+  // 点击搜索结果:跳转到节点并高亮
+  const handleSearchResultClick = useCallback((step: PipelineStep | null, isTable?: boolean) => {
+    const nodeId = isTable ? "table-node" : step!.id;
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node || !reactFlowInstance.current) return;
+
+    // 使用 setCenter 跳转到节点位置(居中显示)
+    const w = node.type === "tableNode" ? 260 : 110;
+    const h = node.type === "tableNode" ? 130 : 45;
+    reactFlowInstance.current.setCenter(
+      node.position.x + w,
+      node.position.y + h,
+      {
+        zoom: Math.max(reactFlowInstance.current.getZoom(), 0.8),
+        duration: 400,
+      }
+    );
+
+    // 设置高亮节点(触发动画)
+    setHighlightedNodeId(nodeId);
+    setTimeout(() => setHighlightedNodeId(null), 1500);
+
+    // 关闭搜索框
+    setIsSearchOpen(false);
+    setSearchQuery("");
+  }, [nodes]);
 
   // 当savedEdges变化时(如从history导入),更新本地edges状态
   useEffect(() => {
@@ -1015,6 +1315,47 @@ export function FlowPanel({
       nodesToDelete.forEach(id => newCutNodes.add(id));
       setCutNodes(newCutNodes);
 
+      // 为被切节点计算切割部分(自由坠落动画)
+      const fallVec = calculateFallVector(path);
+      const newCutParts: CutPartInfo[] = [];
+
+      nodesToDelete.forEach(nodeId => {
+        const nodePos = nodePositions.get(nodeId);
+        if (!nodePos) return;
+
+        // 使用 flowPath(ReactFlow 坐标)来计算交点
+        const localStart = { x: flowPath[0].x - nodePos.x, y: flowPath[0].y - nodePos.y };
+        const localEnd = { x: flowPath[flowPath.length - 1].x - nodePos.x, y: flowPath[flowPath.length - 1].y - nodePos.y };
+
+        const rect = { x: 0, y: 0, width: nodePos.width, height: nodePos.height };
+        const intersection = getCutIntersectionPoints(localStart, localEnd, rect);
+
+        if (intersection) {
+          const { partA, partB } = generateCutClipPaths(intersection.p1, intersection.p2, rect);
+
+          // Part A: 一侧,坠落方向与切割方向同向
+          newCutParts.push({
+            nodeId,
+            partIndex: 0,
+            clipPath: partA,
+            fallDx: fallVec.dx,
+            fallDy: fallVec.dy,
+            fallRotation: fallVec.rotation,
+          });
+          // Part B: 另一侧,坠落方向相反
+          newCutParts.push({
+            nodeId,
+            partIndex: 1,
+            clipPath: partB,
+            fallDx: -fallVec.dx * 0.6,
+            fallDy: fallVec.dy * 1.2,
+            fallRotation: -fallVec.rotation,
+          });
+        }
+      });
+
+      setCutParts(newCutParts);
+
       // 动画完成后删除元素
       setTimeout(() => {
         if (edgesToDelete.length > 0) {
@@ -1029,14 +1370,16 @@ export function FlowPanel({
           }
         }
 
-        nodesToDelete.forEach(nodeId => {
-          onStepRemove(nodeId);
-        });
+        // 传递所有需要删除的节点ID给父组件
+        if (nodesToDelete.length > 0) {
+          onStepRemove(nodesToDelete);
+        }
 
         // 清除动画状态
         setCutEdges(new Set());
         setCutNodes(new Set());
-      }, 400); // 动画持续时间
+        setCutParts([]);
+      }, 700); // 动画持续时间
     }
   }, [edges, nodes, setEdges, onStepRemove, onEdgesChange, cutEdges, cutNodes]);
 
@@ -1381,7 +1724,9 @@ export function FlowPanel({
       onSave,
       selectedStepId,
       savedEdges,
-      savedInputPosition
+      savedInputPosition,
+      undefined,
+      onTableDelete
     );
 
     const updatedNodes = layoutedNodes.map((newNode) => {
@@ -1393,9 +1738,9 @@ export function FlowPanel({
     });
 
     setNodes(updatedNodes);
-  }, [hasTable, steps, headers, rows, columnWidths, selectedStepId, onStepClick, onStepRemove, onStepAliasUpdate, handleContextMenu, handleTableContextMenu, handleTableRename, onSave, setNodes, savedEdges, savedInputPosition]);
+  }, [hasTable, steps, headers, rows, columnWidths, selectedStepId, onStepClick, onStepRemove, onStepAliasUpdate, handleContextMenu, handleTableContextMenu, handleTableRename, onSave, setNodes, savedEdges, savedInputPosition, onTableDelete]);
 
-  // 更新节点的 isCutting 属性和待删除高亮效果
+  // 更新节点的 isCutting 属性、待删除高亮效果和切割部分
   useEffect(() => {
     setNodes(prevNodes => prevNodes.map(node => ({
       ...node,
@@ -1403,9 +1748,10 @@ export function FlowPanel({
         ...node.data,
         isCutting: cutNodes.has(node.id),
         isPendingDelete: pendingDeleteNodes.has(node.id),
+        cutParts: cutParts.filter(p => p.nodeId === node.id),
       },
     })));
-  }, [cutNodes, pendingDeleteNodes]);
+  }, [cutNodes, pendingDeleteNodes, cutParts]);
 
   // 更新连线的切断效果和待删除高亮效果
   useEffect(() => {
@@ -1603,6 +1949,8 @@ export function FlowPanel({
     [steps, onStepsChange, setEdges, onEdgesChange, nodes]
   );
 
+  const { t } = useLanguage();
+
   return (
     <div
       ref={reactFlowWrapper}
@@ -1632,36 +1980,76 @@ export function FlowPanel({
         proOptions={{ hideAttribution: true }}
         onInit={(instance) => { reactFlowInstance.current = instance; }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-        {showMinimap && (
-          <MiniMap
-            pannable
-            zoomable
-            zoomStep={2}
-            nodeColor={(node) => {
-              if (node.id === 'table-node') return '#22c55e';
-              return '#3b82f6';
-            }}
-            maskColor={theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}
-            ariaLabel=""
-            onClick={(_, position) => {
-              if (reactFlowInstance.current) {
-                reactFlowInstance.current.setCenter(position.x, position.y, {
-                  zoom: reactFlowInstance.current.getZoom(),
-                  duration: 300,
-                });
-              }
-            }}
-            style={{
-              backgroundColor: theme === 'dark' ? 'rgba(30, 30, 30, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-              border: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(0, 0, 0, 0.1)',
-              borderRadius: '8px',
-              width: 280,
-              height: 200,
-            }}
-          />
-        )}
+        <CoordinateGrid />
       </ReactFlow>
+
+      {/* 画布搜索框 */}
+      {isSearchOpen && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 w-80">
+          <div className="bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+            {/* 搜索输入框 */}
+            <div className="flex items-center gap-2 px-3 py-2 border-b">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setIsSearchOpen(false);
+                    setSearchQuery("");
+                  } else if (e.key === "Enter" && searchResults.length > 0) {
+                    handleSearchResultClick(searchResults[0].step, searchResults[0].isTableNode);
+                  }
+                }}
+                placeholder={t.searchFlow}
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              />
+              <span className="text-[10px] text-muted-foreground">
+                ESC
+              </span>
+            </div>
+
+            {/* 搜索结果下拉列表 - 仅在有搜索内容时显示 */}
+            {searchQuery && searchResults.length > 0 && (
+              <ScrollArea className="h-[16vh]">
+                <div className="py-1">
+                  {searchResults.map((result) => {
+                    const CommandIcon = result.isTableNode
+                      ? Table
+                      : (commandIconMap[result.step!.command.name] || Terminal);
+                    return (
+                      <button
+                        key={result.isTableNode ? "table-node" : result.step!.id}
+                        onClick={() => handleSearchResultClick(result.step, result.isTableNode)}
+                        className="w-full px-3 py-2 text-left hover:bg-accent/50 transition-colors flex items-center justify-between gap-2"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <CommandIcon className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="text-sm truncate">{result.displayName}</span>
+                        </div>
+                        {result.secondaryName && (
+                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+                            {result.secondaryName}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            )}
+
+            {/* 无结果提示 - 仅在有搜索内容但无匹配时显示 */}
+            {searchQuery && searchResults.length === 0 && (
+              <div className="px-3 py-4 text-center text-sm text-muted-foreground">
+                No matching command found
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 切水果轨迹线 */}
       {(isCutting || isClosingCut) && cutPath.length > 1 && (
@@ -1874,7 +2262,7 @@ export function FlowPanel({
               fontSize="12"
               textAnchor="middle"
             >
-              松开右键连接
+              {t.connectionTips}
             </text>
           )}
         </svg>

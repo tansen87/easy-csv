@@ -66,8 +66,9 @@ import {
 import { useState, useRef, useEffect } from "react";
 import { XanCommand } from "@/types/xan";
 import { commandCategories } from "@/data/commands";
+import { useLanguage } from "@/i18n";
 
-const commandIconMap: Record<string, LucideIcon> = {
+export const commandIconMap: Record<string, LucideIcon> = {
   // Output
   output: Download,
 
@@ -191,12 +192,14 @@ export function CommandList({
     offsetY: 0,
   });
   const panelRef = useRef<HTMLDivElement>(null);
+  const { language, t } = useLanguage();
 
   const filteredCommands = commands.filter((command) => {
     const query = searchQuery.toLowerCase();
+    const desc = language === "zh" ? command.descriptionCn : command.description;
     return (
       command.name.toLowerCase().includes(query) ||
-      command.description.toLowerCase().includes(query) ||
+      desc.toLowerCase().includes(query) ||
       command.category.toLowerCase().includes(query)
     );
   });
@@ -314,7 +317,7 @@ export function CommandList({
               onClick={() => onActivePanelChange("commands")}
             >
               <Terminal className="h-3.5 w-3.5" />
-              Cmds
+              {t.cmds}
             </button>
             <button
               className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all ${activePanel === "history"
@@ -324,7 +327,7 @@ export function CommandList({
               onClick={() => onActivePanelChange("history")}
             >
               <History className="h-3.5 w-3.5" />
-              History
+              {t.history}
             </button>
           </div>
         </div>
@@ -344,8 +347,8 @@ export function CommandList({
             type="text"
             placeholder={
               activePanel === "commands"
-                ? "Search command"
-                : "Search history"
+                ? t.searchCommand
+                : t.searchHistory
             }
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -395,7 +398,7 @@ export function CommandList({
                                     <span className="font-semibold text-sm">{command.name}</span>
                                   </div>
                                   <div className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2 mt-1">
-                                    {command.description}
+                                    {language === "zh" ? command.descriptionCn : command.description}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -428,11 +431,11 @@ export function CommandList({
                   <div className="w-12 h-12 mx-auto mb-3 bg-muted/50 rounded-xl flex items-center justify-center">
                     <Sparkles className="h-6 w-6 text-muted-foreground/50" />
                   </div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">No history found</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">{t.noHistoryFound}</p>
                   <p className="text-xs text-muted-foreground/70">
                     {searchQuery
-                      ? "Try a different search term"
-                      : "Execute pipelines to see them here"}
+                      ? t.tryDifferentSearch
+                      : t.executePipelinesHint}
                   </p>
                 </div>
               ) : (
@@ -468,7 +471,7 @@ export function CommandList({
                             onNewTabFromHistory(history);
                           }}
                         >
-                          New Tab
+                          {t.newTab}
                         </Button>
                         <span
                           className={`text-xs px-2 py-0.5 rounded-full ${history.success ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"}`}
@@ -487,9 +490,9 @@ export function CommandList({
               <div className="w-12 h-12 mx-auto mb-3 bg-muted/50 rounded-xl flex items-center justify-center">
                 <Sparkles className="h-6 w-6 text-muted-foreground/50" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">No commands found</p>
+              <p className="text-sm font-medium text-muted-foreground mb-1">{t.noCommandsFound}</p>
               <p className="text-xs text-muted-foreground/70">
-                Try a different search term
+                {t.tryDifferentSearch}
               </p>
             </div>
           )}

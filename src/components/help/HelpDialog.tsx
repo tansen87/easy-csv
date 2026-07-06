@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { HelpMarkdown } from "@/components/help/HelpMarkdown";
 import { X, Search, ArrowUp, ArrowDown } from "lucide-react";
+import { useLanguage } from "@/i18n";
 
 interface HelpDialogProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
   const [matchCount, setMatchCount] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
 
   // 转义正则表达式特殊字符
   const escapeRegExp = (string: string) => {
@@ -140,7 +142,7 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
               <Input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Search (Ctrl+F)"
+                placeholder={t.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 h-8"
@@ -197,10 +199,10 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
 
         {/* 底部提示 */}
         <div className="flex-shrink-0 pt-2 text-xs text-muted-foreground">
-          <span className="mr-4">Ctrl+F: Search</span>
-          <span className="mr-4">↑: Previous match</span>
-          <span className="mr-4">↓: Next match</span>
-          <span>Escape: Close</span>
+          <span className="mr-4">{t.searchShortcut}</span>
+          <span className="mr-4">{t.previousMatch}</span>
+          <span className="mr-4">{t.nextMatch}</span>
+          <span>{t.close}</span>
         </div>
       </div>
     </div>

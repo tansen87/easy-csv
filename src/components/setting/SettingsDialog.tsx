@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { SettingsTabContent } from "@/components/setting/SettingsTabContent";
+import { useLanguage } from "@/i18n";
 
 interface SettingsDialogProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export function SettingsDialog({
   onSave,
 }: SettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<"preference" | "general">("preference");
+  const { t } = useLanguage();
 
   if (!isOpen) return null;
 
@@ -57,7 +59,7 @@ export function SettingsDialog({
                 }`}
                 onClick={() => setActiveTab("preference")}
               >
-                Preference
+                {t.preference}
               </button>
               <button
                 className={`flex items-center px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
@@ -67,7 +69,7 @@ export function SettingsDialog({
                 }`}
                 onClick={() => setActiveTab("general")}
               >
-                General
+                {t.general}
               </button>
             </div>
           </div>

@@ -9,26 +9,21 @@ import {
   Terminal,
   ChevronUp,
   ChevronRight,
-  Map as MapIcon,
-  ChevronDown,
   FileText,
-  CloudDownload,
-  RefreshCw,
-  Settings,
-  MessageCircleQuestionMark,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/panel/LogPanel";
 import { SettingsDialog } from "@/components/setting/SettingsDialog";
 import { HomeView } from "@/components/HomeView";
 import { HelpDialog } from "@/components/help/HelpDialog";
-import { helpContent as appHelpContent } from "@/components/help/HelpContent";
+import { getHelpContent } from "@/components/help/HelpContent";
 import { UpdateDialog } from "@/components/dialog/UpdateDialog";
 import { xanCommands } from "@/data/commands";
-import { helpDocs } from "@/generated/help-docs";
+import { helpDocs, helpDocsZh } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
 import { MainMenuHooks } from "@/hooks/MainMenuHooks";
-import { SplashScreen } from "@/components/help/SplashScreen";
+import { SplashScreen } from "@/components/menu/SplashScreen";
+import { LanguageProvider, useLanguage } from "@/i18n";
 import {
   PipelineStep,
   LogEntry,
@@ -43,10 +38,26 @@ function formatDateTime(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
+interface RecentFile {
+  path: string;
+  name: string;
+  openedAt: string;
+}
+
 function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
+  );
+}
+
+function AppContent() {
   const { theme, setTheme } = useTheme();
+  const { language } = useLanguage();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loadingText, setLoadingText] = useState<string>("Initializing...");
+  const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [tabs, setTabs] = useState<PipelineTab[]>([
     {
       id: "tab-1",
@@ -67,7 +78,6 @@ function App() {
   const [helpCommandName, setHelpCommandName] = useState<string>("");
   const [showLogPanel, setShowLogPanel] = useState<boolean>(false);
   const [showCommandPanel, setShowCommandPanel] = useState<boolean>(false);
-  const [showMinimap, setShowMinimap] = useState<boolean>(false);
   const [historicalPipelines, setHistoricalPipelines] = useState<
     HistoricalPipeline[]
   >([]);
@@ -90,7 +100,7 @@ function App() {
   } | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState<boolean>(false);
   const progressHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const currentVersion = "0.1.0";
+  const currentVersion = "0.2.0";
 
   // Undo/Redo history state
   const [undoStack, setUndoStack] = useState<Array<{ pipeline: PipelineStep[]; edges: PipelineEdge[]; inputPosition?: { x: number; y: number } }>>([]);
@@ -155,6 +165,17 @@ function App() {
         );
         return;
       }
+
+      // Add to recent files
+      const fileName = filePath.split(/[\\/]/).pop() || filePath;
+      setRecentFiles((prev) => {
+        const updated = [
+          { path: filePath, name: fileName, openedAt: formatDateTime(new Date()) },
+          ...prev.filter((f) => f.path !== filePath),
+        ].slice(0, 10);
+        saveRecentFiles(updated);
+        return updated;
+      });
 
       if (!isCsvFile(filePath)) {
         const ext = filePath.split('.').pop();
@@ -227,6 +248,27 @@ function App() {
   const updateHistoricalPipelines = (newHistory: HistoricalPipeline[]) => {
     setHistoricalPipelines(newHistory);
     saveHistoricalPipelines(newHistory);
+  };
+
+  // Recent files management
+  const loadRecentFiles = async () => {
+    try {
+      const content = await invoke<string>("load_recent_files");
+      const files = JSON.parse(content);
+      setRecentFiles(files);
+    } catch (error) {
+      setRecentFiles([]);
+    }
+  };
+
+  const saveRecentFiles = async (files: RecentFile[]) => {
+    try {
+      await invoke("save_recent_files", {
+        recentFiles: JSON.stringify(files, null, 2),
+      });
+    } catch (error) {
+      addLog("error", `Failed to save recent files: ${error}`);
+    }
   };
 
   const loadDefaultDelimiter = async () => {
@@ -302,6 +344,7 @@ function App() {
         await loadDefaultDelimiter();
         await loadNoHeaders();
         await loadHistoricalPipelines();
+        await loadRecentFiles();
         setIsLoading(false);
       } catch (error) {
         console.error("Initialization failed:", error);
@@ -519,7 +562,8 @@ function App() {
 
   const handleHelpClick = (command: XanCommand) => {
     setShowHelp(true);
-    const helpText = helpDocs[command.name];
+    const docs = language === "zh" ? helpDocsZh : helpDocs;
+    const helpText = docs[command.name];
     if (helpText) {
       setHelpContent(helpText);
       setHelpCommandName(command.name);
@@ -533,25 +577,48 @@ function App() {
     setSelectedStep(step);
   };
 
-  const handleStepRemove = (stepId: string) => {
+  const handleClearInputData = () => {
+    if (!selectedTabId) return;
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === selectedTabId
+          ? {
+              ...tab,
+              data: undefined,
+              headers: undefined,
+              inputFile: undefined,
+              updatedAt: formatDateTime(new Date()),
+            }
+          : tab,
+      ),
+    );
+    setSelectedStep(null);
+  };
+
+  const handleStepRemove = (stepId: string | string[]) => {
+    const stepIds = Array.isArray(stepId) ? stepId : [stepId];
     const currentPipeline = getCurrentPipeline();
     const currentTab = getCurrentTab();
-    const removedStep = currentPipeline.find(s => s.id === stepId);
 
-    // If removing an output step, clear all output-related notifications
-    if (removedStep?.command.id === "output") {
-      setNotifications((prev) =>
-        prev.filter(n => !n.message.startsWith("Output"))
-      );
-    }
+    // 清除被删除步骤的输出相关通知
+    stepIds.forEach(id => {
+      const removedStep = currentPipeline.find(s => s.id === id);
+      if (removedStep?.command.id === "output") {
+        setNotifications((prev) =>
+          prev.filter(n => !n.message.startsWith("Output"))
+        );
+      }
+    });
 
-    const updatedPipeline = currentPipeline.filter((s) => s.id !== stepId);
-    // Also remove edges connected to the removed step
+    const updatedPipeline = currentPipeline.filter((s) => !stepIds.includes(s.id));
+    // 同时移除与被删除步骤相关的边
     const updatedEdges = (currentTab.edges || []).filter(
-      (e) => e.source !== stepId && e.target !== stepId
+      (e) => !stepIds.includes(e.source) && !stepIds.includes(e.target)
     );
     updateTabPipeline(updatedPipeline, undefined, updatedEdges);
-    if (selectedStep?.id === stepId) {
+
+    // 如果当前选中的步骤在删除列表中,则取消选中
+    if (selectedStep?.id && stepIds.includes(selectedStep.id)) {
       setSelectedStep(null);
     }
   };
@@ -620,45 +687,17 @@ function App() {
               onSavePipeline={handleSavePipeline}
               onImportPipeline={handleImportPipeline}
               onExportPipeline={handleExportPipeline}
+              onHelp={() => {
+                setHelpCommandName(language === "zh" ? "帮助" : "Help");
+                setHelpContent(getHelpContent(language));
+                setShowHelp(true);
+              }}
+              onCheckUpdate={checkForUpdates}
+              onShowSettings={() => setShowSettingsDialog(true)}
               isExecuting={isExecuting}
+              isCheckingUpdate={isCheckingUpdate}
               currentPipelineLength={getCurrentPipeline().length}
             />
-
-            {/* Center: Empty */}
-            <div className="flex-1" />
-
-            <div className="flex items-center rounded-md gap-2">
-              <button
-                onClick={checkForUpdates}
-                disabled={isCheckingUpdate}
-                className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${isCheckingUpdate
-                  ? "text-primary opacity-70"
-                  : "text-primary hover:bg-primary/10"
-                  }`}
-              >
-                {isCheckingUpdate ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CloudDownload className="h-4 w-4" />
-                )}
-              </button>
-              <button
-                onClick={() => {
-                  setHelpCommandName("Help");
-                  setHelpContent(appHelpContent);
-                  setShowHelp(true);
-                }}
-                className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
-              >
-                <MessageCircleQuestionMark className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setShowSettingsDialog(true)}
-                className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
-              >
-                <Settings className="h-4 w-4" />
-              </button>
-            </div>
           </header>
 
           <main className="absolute inset-0 flex flex-col overflow-hidden">
@@ -674,6 +713,7 @@ function App() {
                 onStepUpdate={handleStepUpdate}
                 onStepAliasUpdate={handleStepAliasUpdate}
                 onStepDelete={handleStepRemove}
+                onTableDelete={handleClearInputData}
                 onPipelineReorder={updateTabPipeline}
                 onEdgesChange={(tabId, edges) => {
                   // Validate output connections when edges change
@@ -719,9 +759,10 @@ function App() {
                 onOpenFile={handleOpenFile}
                 onImportPipeline={handleImportPipeline}
                 onOpenUrl={handleOpenUrl}
-                showMinimap={showMinimap}
                 branchProgress={branchProgress}
                 showProgressBar={showProgressBar}
+                recentFiles={recentFiles}
+                onOpenRecentFile={(filePath) => loadCsvData(selectedTabId, filePath)}
               />
             </div>
           </main>
@@ -753,21 +794,6 @@ function App() {
               <ChevronUp className="h-4 w-4" />
             ) : (
               <FileText className="h-4 w-4" />
-            )}
-          </Button>
-
-          {/* Minimap Toggle Button */}
-          <Button
-            onClick={() => setShowMinimap(!showMinimap)}
-            onContextMenu={(e) => e.preventDefault()}
-            className="fixed bottom-4 left-28 z-30 h-10 w-10 rounded-full shadow-md"
-            variant="ghost"
-            size="icon"
-          >
-            {showMinimap ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <MapIcon className="h-4 w-4" />
             )}
           </Button>
 

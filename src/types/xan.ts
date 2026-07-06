@@ -2,6 +2,7 @@ export interface XanCommand {
   id: string;
   name: string;
   description: string;
+  descriptionCn: string;
   category: string;
   parameters: XanParameter[];
 }

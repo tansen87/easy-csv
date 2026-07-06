@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { X, FolderOpen, FileUp, Star } from "lucide-react";
+import { X, FolderOpen, FileUp, Star, Clock, File } from "lucide-react";
 import { PipelineStep, PipelineEdge, XanCommand, PipelineTab } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
+import { useLanguage } from "@/i18n";
 import { ContextMenu } from "@/components/menu/ContextMenu";
 import { CommandDialog, CommandDialogState } from "@/components/dialog/CommandDialog";
 import { FilterDialog } from "@/components/dialog/FilterDialog";
@@ -16,6 +17,12 @@ import { PadDialog } from "@/components/dialog/PadDialog";
 import { ReplaceDialog } from "@/components/dialog/ReplaceDialog";
 import { WindowDialog } from "@/components/dialog/WindowDialog";
 import { FlowPanel } from "@/components/panel/FlowPanel";
+
+interface RecentFile {
+  path: string;
+  name: string;
+  openedAt: string;
+}
 
 interface HomeViewProps {
   tabs: PipelineTab[];
@@ -31,17 +38,19 @@ interface HomeViewProps {
   onStepClick?: (step: PipelineStep) => void;
   onStepUpdate?: (stepId: string, parameters: Record<string, any>) => void;
   onStepAliasUpdate?: (stepId: string, alias: string) => void;
-  onStepDelete?: (stepId: string) => void;
+  onStepDelete?: (stepId: string | string[]) => void;
   onPipelineReorder?: (tabId: string, newPipeline: PipelineStep[]) => void;
+  onTableDelete?: () => void;
   selectedStepId?: string;
   onEdgesChange?: (tabId: string, edges: PipelineEdge[]) => void;
   onInputPositionChange?: (tabId: string, position: { x: number; y: number }) => void;
   onOpenFile?: () => void;
   onImportPipeline?: () => void;
   onOpenUrl?: (url: string) => void;
-  showMinimap?: boolean;
   branchProgress?: { current: number; total: number; name: string; status: "executing" | "completed" | "error" } | null;
   showProgressBar?: boolean;
+  recentFiles?: RecentFile[];
+  onOpenRecentFile?: (filePath: string) => void;
 }
 
 export function HomeView({
@@ -56,16 +65,19 @@ export function HomeView({
   onStepAliasUpdate,
   onStepDelete,
   onPipelineReorder,
+  onTableDelete,
   selectedStepId,
   onEdgesChange,
   onInputPositionChange,
   onOpenFile,
   onImportPipeline,
   onOpenUrl,
-  showMinimap,
   branchProgress,
   showProgressBar,
+  recentFiles = [],
+  onOpenRecentFile,
 }: HomeViewProps) {
+  const { t } = useLanguage();
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -157,6 +169,12 @@ export function HomeView({
     }
   }, [renamedColumns, headers, onAddCommand]);
 
+  const handleTableDelete = useCallback(() => {
+    if (onTableDelete) {
+      onTableDelete();
+    }
+  }, [onTableDelete]);
+
   const closeAllDialogsRef = useRef(() => {
     closeContextMenu();
   });
@@ -178,83 +196,16 @@ export function HomeView({
   if (!inputFile && pipeline.length === 0) {
     return (
       <div className="h-full relative">
-        <div className="absolute top-11 ml-2" onContextMenu={(e) => e.preventDefault()}>
-          <div className="h-[48px] px-4 flex items-center">
-            <ScrollArea className="h-full flex-1">
-              <div className="flex items-center gap-2">
-                {tabs.map((tab) => (
-                  <div
-                    key={tab.id}
-                    className={`flex items-center gap-2 px-1.5 py-1 rounded-md text-xs transition-colors shrink-0 ${selectedTabId === tab.id
-                      ? 'bg-primary/10 text-primary border border-primary/20'
-                      : 'hover:bg-accent/50 border border-transparent'}`}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setEditingTabId(tab.id);
-                      setEditingTabName(tab.name);
-                    }}
-                  >
-                    {editingTabId === tab.id ? (
-                      <input
-                        type="text"
-                        value={editingTabName}
-                        onChange={(e) => setEditingTabName(e.target.value)}
-                        onBlur={() => {
-                          if (editingTabName.trim()) {
-                            onRenameTab(tab.id, editingTabName.trim());
-                          }
-                          setEditingTabId(null);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            if (editingTabName.trim()) {
-                              onRenameTab(tab.id, editingTabName.trim());
-                            }
-                            setEditingTabId(null);
-                          } else if (e.key === 'Escape') {
-                            setEditingTabId(null);
-                          }
-                        }}
-                        className="w-24 px-2 py-0.5 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary h-6"
-                        style={{ lineHeight: '1.2' }}
-                        autoFocus
-                      />
-                    ) : (
-                      <button
-                        onClick={() => onTabChange(tab.id)}
-                        className="text-left truncate max-w-[120px]"
-                      >
-                        {tab.name}
-                      </button>
-                    )}
-                    <div className="flex items-center gap-1">
-                      {tabs.length > 1 && (
-                        <button
-                          onClick={() => onRemoveTab(tab.id)}
-                          className="p-1 rounded hover:bg-muted hover:text-foreground transition-colors text-muted-foreground/70 dark:text-muted-foreground/80"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-8" onContextMenu={(e) => e.preventDefault()}>
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-foreground mb-2">
+              {t.welcomeTitle}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {t.welcomeSubtitle}
+            </p>
           </div>
-        </div>
-        <div className="absolute inset-0 pt-[96px] flex items-center justify-center" onContextMenu={(e) => e.preventDefault()}>
           <div className="max-w-md w-full px-8">
-            <div className="text-center mb-8">
-              <h2 className="text-xl font-semibold text-foreground mb-2">
-                Welcome to Easy CSV
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Open a file or import a flow to get started
-              </p>
-            </div>
             <div className="grid grid-cols-3 gap-32 justify-items-center">
               <button
                 onClick={onOpenFile}
@@ -264,8 +215,8 @@ export function HomeView({
                   <FolderOpen className="h-6 w-6 text-primary" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-foreground">Open File</p>
-                  <p className="text-xs text-muted-foreground mt-1">CSV, Excel, JSON</p>
+                  <p className="text-sm font-medium text-foreground">{t.openFile}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t.openFileFormats}</p>
                 </div>
               </button>
               <button
@@ -276,8 +227,8 @@ export function HomeView({
                   <FileUp className="h-6 w-6 text-primary" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-foreground">Import Flow</p>
-                  <p className="text-xs text-muted-foreground mt-1">.xanflow files</p>
+                  <p className="text-sm font-medium text-foreground">{t.importFlow}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t.importFlowFormats}</p>
                 </div>
               </button>
               <button
@@ -288,11 +239,38 @@ export function HomeView({
                   <Star className="h-6 w-6 text-yellow-500" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-foreground">Star on GitHub</p>
+                  <p className="text-sm font-medium text-foreground">{t.starOnGitHub}</p>
                 </div>
               </button>
             </div>
           </div>
+
+          {recentFiles.length > 0 && (
+            <div className="max-w-3xl w-full px-8">
+              <div className="flex items-center gap-2 mb-3">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm font-medium text-muted-foreground">{t.recentFiles}</p>
+              </div>
+              <ScrollArea className="h-[28vh]">
+                <div className="space-y-1 pr-4">
+                  {recentFiles.map((file) => (
+                    <button
+                      key={file.path}
+                      onClick={() => onOpenRecentFile?.(file.path)}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-accent transition-colors group"
+                    >
+                      <File className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{file.path}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <ScrollBar />
+              </ScrollArea>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -336,6 +314,7 @@ export function HomeView({
           onOpenNumberTransformDialog={(col, x, y, transformType) => setNumberTransformDialog({ col, x, y, transformType })}
           onTableRename={handleTableRename}
           onSave={handleSaveRenames}
+          onTableDelete={handleTableDelete}
           selectedStepId={selectedStepId}
           savedEdges={edges}
           savedInputPosition={inputPosition}
@@ -349,7 +328,6 @@ export function HomeView({
               onInputPositionChange(selectedTabId, position);
             }
           }}
-          showMinimap={showMinimap}
         />
       </div>
 
@@ -425,7 +403,7 @@ export function HomeView({
         <div className="absolute left-1/2 top-12 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-card/80 backdrop-blur-sm border border-border rounded-lg shadow-md pointer-events-auto">
             <span className="text-xs font-medium text-muted-foreground">
-              Branch {branchProgress.current}/{branchProgress.total}
+              {t.branchProgress} {branchProgress.current}/{branchProgress.total}
             </span>
             <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${branchProgress.status === "completed"
               ? "bg-green-500/10 text-green-600 dark:text-green-400"

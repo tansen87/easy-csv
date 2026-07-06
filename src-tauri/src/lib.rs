@@ -671,6 +671,39 @@ async fn load_history() -> Result<String, String> {
 }
 
 #[tauri::command]
+async fn save_recent_files(recent_files: String) -> Result<(), String> {
+  let resources_dir = get_resources_dir();
+  let recent_files_path = resources_dir.join("recent-files.json");
+
+  // Create directory if it doesn't exist
+  if !resources_dir.exists() {
+    std::fs::create_dir_all(&resources_dir)
+      .map_err(|e| format!("Failed to create directory: {}", e))?;
+  }
+
+  // Save recent files to file
+  std::fs::write(&recent_files_path, recent_files)
+    .map_err(|e| format!("Failed to save recent files: {}", e))?;
+
+  Ok(())
+}
+
+#[tauri::command]
+async fn load_recent_files() -> Result<String, String> {
+  let resources_dir = get_resources_dir();
+  let recent_files_path = resources_dir.join("recent-files.json");
+
+  // Load recent files from file
+  if recent_files_path.exists() {
+    let content = std::fs::read_to_string(&recent_files_path)
+      .map_err(|e| format!("Failed to read recent files: {}", e))?;
+    Ok(content)
+  } else {
+    Ok("[]".to_string())
+  }
+}
+
+#[tauri::command]
 async fn toggle_devtools(window: tauri::Window) -> Result<(), String> {
   let webviews = window.webviews();
   if let Some(webview) = webviews.first() {
@@ -699,6 +732,8 @@ pub fn run() {
       set_no_headers,
       save_history,
       load_history,
+      save_recent_files,
+      load_recent_files,
       read_csv_file,
       set_window_title,
       toggle_devtools

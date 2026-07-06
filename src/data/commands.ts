@@ -5,6 +5,7 @@ export const xanCommands: XanCommand[] = [
     id: "output",
     name: "output",
     description: "Write output to file instead of stdout",
+    descriptionCn: "将输出写入文件而非stdout",
     category: "Output",
     parameters: [
       {
@@ -20,6 +21,7 @@ export const xanCommands: XanCommand[] = [
     id: "view",
     name: "view",
     description: "Preview a CSV file in a human-friendly way",
+    descriptionCn: "预览 CSV 文件",
     category: "Explore & visualize",
     parameters: [
       {
@@ -70,6 +72,7 @@ export const xanCommands: XanCommand[] = [
     id: "headers",
     name: "headers",
     description: "Show header names",
+    descriptionCn: "显示列名",
     category: "Explore & visualize",
     parameters: [
       {
@@ -92,6 +95,7 @@ export const xanCommands: XanCommand[] = [
     id: "count",
     name: "count",
     description: "Count rows in file",
+    descriptionCn: "统计文件行数",
     category: "Explore & visualize",
     parameters: [
       {
@@ -120,6 +124,7 @@ export const xanCommands: XanCommand[] = [
     id: "flatten",
     name: "flatten",
     description: "Display a flattened version of each row",
+    descriptionCn: "以flatten显示每一行",
     category: "Explore & visualize",
     parameters: [
       {
@@ -221,6 +226,7 @@ export const xanCommands: XanCommand[] = [
     id: "hist",
     name: "hist",
     description: "Print a histogram with rows as bars",
+    descriptionCn: "打印以行为条形的直方图",
     category: "Explore & visualize",
     parameters: [
       {
@@ -320,6 +326,7 @@ export const xanCommands: XanCommand[] = [
     id: "plot",
     name: "plot",
     description: "Plot data from a CSV file",
+    descriptionCn: "绘制 CSV 文件数据图表",
     category: "Explore & visualize",
     parameters: [
       {
@@ -533,6 +540,7 @@ export const xanCommands: XanCommand[] = [
     id: "select",
     name: "select",
     description: "Select columns from a CSV file",
+    descriptionCn: "从 CSV 文件中选择列",
     category: "Add, transform, drop and move columns",
     parameters: [
       {
@@ -562,6 +570,7 @@ export const xanCommands: XanCommand[] = [
     id: "drop",
     name: "drop",
     description: "Drop columns from a CSV file",
+    descriptionCn: "从 CSV 文件中删除列",
     category: "Add, transform, drop and move columns",
     parameters: [
       {
@@ -578,6 +587,7 @@ export const xanCommands: XanCommand[] = [
     id: "map",
     name: "map",
     description: "Create new columns by evaluating expressions",
+    descriptionCn: "通过计算表达式创建新列",
     category: "Add, transform, drop and move columns",
     parameters: [
       {
@@ -627,6 +637,7 @@ export const xanCommands: XanCommand[] = [
     id: "transform",
     name: "transform",
     description: "Transform a column by evaluating an expression",
+    descriptionCn: "通过计算表达式转换列",
     category: "Add, transform, drop and move columns",
     parameters: [
       {
@@ -650,6 +661,7 @@ export const xanCommands: XanCommand[] = [
     id: "enum",
     name: "enum",
     description: "Enumerate CSV file by prepending an index column",
+    descriptionCn: "通过添加索引列来枚举 CSV 文件",
     category: "Add, transform, drop and move columns",
     parameters: [
       {
@@ -686,6 +698,7 @@ export const xanCommands: XanCommand[] = [
     id: "fill",
     name: "fill",
     description: "Fill empty cells",
+    descriptionCn: "填充空值",
     category: "Add, transform, drop and move columns",
     parameters: [
       {
@@ -707,6 +720,7 @@ export const xanCommands: XanCommand[] = [
     id: "complete",
     name: "complete",
     description: "Complete missing values in a range",
+    descriptionCn: "补全范围内的缺失值",
     category: "Add, transform, drop and move columns",
     parameters: [
       {
@@ -769,6 +783,7 @@ export const xanCommands: XanCommand[] = [
     id: "separate",
     name: "separate",
     description: "Split a single column into multiple ones",
+    descriptionCn: "将单列拆分为多列",
     category: "Add, transform, drop and move columns",
     parameters: [
       {
@@ -792,6 +807,7 @@ export const xanCommands: XanCommand[] = [
     id: "search",
     name: "search",
     description: "Search for (or replace) patterns in CSV data",
+    descriptionCn: "在 CSV 数据中搜索(或替换)",
     category: "Search & filter",
     parameters: [
       {
@@ -988,6 +1004,7 @@ export const xanCommands: XanCommand[] = [
     id: "bisect",
     name: "bisect",
     description: "Binary search on sorted CSV data",
+    descriptionCn: "在已排序的 CSV 数据上进行二分查找",
     category: "Search & filter",
     parameters: [
       {
@@ -1045,6 +1062,7 @@ export const xanCommands: XanCommand[] = [
     id: "filter",
     name: "filter",
     description: "Only keep some CSV rows based on an evaluated expression",
+    descriptionCn: "根据表达式结果筛选 CSV 行",
     category: "Search & filter",
     parameters: [
       {
@@ -1075,6 +1093,7 @@ export const xanCommands: XanCommand[] = [
     id: "head",
     name: "head",
     description: "First rows of CSV file",
+    descriptionCn: "CSV 文件的前几行",
     category: "Search & filter",
     parameters: [
       {
@@ -1091,6 +1110,7 @@ export const xanCommands: XanCommand[] = [
     id: "tail",
     name: "tail",
     description: "Last rows of CSV file",
+    descriptionCn: "CSV 文件的后几行",
     category: "Search & filter",
     parameters: [
       {
@@ -1107,6 +1127,7 @@ export const xanCommands: XanCommand[] = [
     id: "slice",
     name: "slice",
     description: "Slice rows of CSV file",
+    descriptionCn: "截取 CSV 文件的行",
     category: "Search & filter",
     parameters: [
       {
@@ -1134,6 +1155,7 @@ export const xanCommands: XanCommand[] = [
     id: "top",
     name: "top",
     description: "Find top rows according to some column",
+    descriptionCn: "按列查找排名靠前的行",
     category: "Search & filter",
     parameters: [
       {
@@ -1190,6 +1212,7 @@ export const xanCommands: XanCommand[] = [
     id: "sample",
     name: "sample",
     description: "Randomly sample CSV data",
+    descriptionCn: "随机采样 CSV 数据",
     category: "Search & filter",
     parameters: [
       {
@@ -1231,6 +1254,7 @@ export const xanCommands: XanCommand[] = [
     id: "sort",
     name: "sort",
     description: "Sort CSV data",
+    descriptionCn: "排序 CSV 数据",
     category: "Sort & deduplicate",
     parameters: [
       {
@@ -1335,6 +1359,7 @@ export const xanCommands: XanCommand[] = [
     id: "dedup",
     name: "dedup",
     description: "Deduplicate a CSV file",
+    descriptionCn: "去重 CSV 文件",
     category: "Sort & deduplicate",
     parameters: [
       {
@@ -1397,6 +1422,7 @@ export const xanCommands: XanCommand[] = [
     id: "shuffle",
     name: "shuffle",
     description: "Shuffle CSV data",
+    descriptionCn: "打乱 CSV 数据顺序",
     category: "Sort & deduplicate",
     parameters: [
       {
@@ -1419,6 +1445,7 @@ export const xanCommands: XanCommand[] = [
     id: "frequency",
     name: "frequency",
     description: "Show frequency tables",
+    descriptionCn: "显示频率表",
     category: "Aggregate",
     parameters: [
       {
@@ -1487,6 +1514,7 @@ export const xanCommands: XanCommand[] = [
     id: "groupby",
     name: "groupby",
     description: "Aggregate data by groups",
+    descriptionCn: "按组聚合数据",
     category: "Aggregate",
     parameters: [
       {
@@ -1554,6 +1582,7 @@ export const xanCommands: XanCommand[] = [
     id: "stats",
     name: "stats",
     description: "Compute basic statistics",
+    descriptionCn: "计算基本统计信息",
     category: "Aggregate",
     parameters: [
       {
@@ -1623,6 +1652,7 @@ export const xanCommands: XanCommand[] = [
     id: "agg",
     name: "agg",
     description: "Aggregate data from CSV file",
+    descriptionCn: "聚合 CSV 文件数据",
     category: "Aggregate",
     parameters: [
       {
@@ -1670,6 +1700,7 @@ export const xanCommands: XanCommand[] = [
     id: "bins",
     name: "bins",
     description: "Dispatch numeric columns into bins",
+    descriptionCn: "将数值列分箱",
     category: "Aggregate",
     parameters: [
       {
@@ -1746,6 +1777,7 @@ export const xanCommands: XanCommand[] = [
     id: "window",
     name: "window",
     description: "Compute window functions",
+    descriptionCn: "计算窗口函数",
     category: "Aggregate",
     parameters: [
       {
@@ -1788,6 +1820,7 @@ export const xanCommands: XanCommand[] = [
     id: "cat",
     name: "cat",
     description: "Concatenate by row or column",
+    descriptionCn: "按行或列拼接",
     category: "Combine multiple CSV files",
     parameters: [
       {
@@ -1862,6 +1895,7 @@ export const xanCommands: XanCommand[] = [
     id: "join",
     name: "join",
     description: "Join CSV files",
+    descriptionCn: "连接 CSV 文件",
     category: "Combine multiple CSV files",
     parameters: [
       {
@@ -2001,6 +2035,7 @@ export const xanCommands: XanCommand[] = [
     id: "merge",
     name: "merge",
     description: "Merge and sort CSV files",
+    descriptionCn: "合并并排序 CSV 文件",
     category: "Combine multiple CSV files",
     parameters: [
       {
@@ -2062,6 +2097,7 @@ export const xanCommands: XanCommand[] = [
     id: "rename",
     name: "rename",
     description: "Rename columns of a CSV file",
+    descriptionCn: "重命名 CSV 文件的列",
     category: "Format, convert & recombobulate",
     parameters: [
       {
@@ -2117,6 +2153,7 @@ export const xanCommands: XanCommand[] = [
     id: "behead",
     name: "behead",
     description: "Drop the header row",
+    descriptionCn: "删除表头行",
     category: "Format, convert & recombobulate",
     parameters: [
       {
@@ -2133,6 +2170,7 @@ export const xanCommands: XanCommand[] = [
     id: "fixlengths",
     name: "fixlengths",
     description: "Fix record lengths",
+    descriptionCn: "修复记录长度",
     category: "Format, convert & recombobulate",
     parameters: [
       {
@@ -2155,6 +2193,7 @@ export const xanCommands: XanCommand[] = [
     id: "explode",
     name: "explode",
     description: "Explode rows based on some column separator",
+    descriptionCn: "根据列分隔符展开行",
     category: "Format, convert & recombobulate",
     parameters: [
       {
@@ -2223,6 +2262,7 @@ export const xanCommands: XanCommand[] = [
     id: "implode",
     name: "implode",
     description: "Collapse consecutive identical rows based on a diverging column",
+    descriptionCn: "根据差异列合并连续相同的行",
     category: "Format, convert & recombobulate",
     parameters: [
       {
@@ -2264,6 +2304,7 @@ export const xanCommands: XanCommand[] = [
     id: "input",
     name: "input",
     description: "Read unusually formatted CSV data",
+    descriptionCn: "读取特殊格式的 CSV 数据",
     category: "Format, convert & recombobulate",
     parameters: [
       {
@@ -2393,6 +2434,7 @@ export const xanCommands: XanCommand[] = [
     id: "scrape",
     name: "scrape",
     description: "Scrape HTML into CSV data",
+    descriptionCn: "将 HTML 抓取为 CSV 数据",
     category: "Format, convert & recombobulate",
     parameters: [
       {
@@ -2494,6 +2536,7 @@ export const xanCommands: XanCommand[] = [
     id: "fmt",
     name: "fmt",
     description: "Format CSV output (change field delimiter)",
+    descriptionCn: "格式化 CSV 输出(更改分隔符)",
     category: "Format, convert & recombobulate",
     parameters: [
       {
@@ -2566,6 +2609,7 @@ export const xanCommands: XanCommand[] = [
     id: "to",
     name: "to",
     description: "Convert a CSV file to other formats",
+    descriptionCn: "将 CSV 文件转换为其他格式",
     category: "Format, convert & recombobulate",
     parameters: [
       {
@@ -2629,6 +2673,7 @@ export const xanCommands: XanCommand[] = [
     id: "from",
     name: "from",
     description: "Convert from other formats to CSV",
+    descriptionCn: "从其他格式转换为 CSV",
     category: "Format, convert & recombobulate",
     parameters: [
       {
@@ -2709,6 +2754,7 @@ export const xanCommands: XanCommand[] = [
     id: "reverse",
     name: "reverse",
     description: "Reverse rows of CSV data",
+    descriptionCn: "反转 CSV 数据的行顺序",
     category: "Format, convert & recombobulate",
     parameters: [],
   },
@@ -2716,6 +2762,7 @@ export const xanCommands: XanCommand[] = [
     id: "transpose",
     name: "transpose",
     description: "Transpose CSV file",
+    descriptionCn: "转置 CSV 文件",
     category: "Transpose & pivot",
     parameters: [],
   },
@@ -2723,6 +2770,7 @@ export const xanCommands: XanCommand[] = [
     id: "pivot",
     name: "pivot",
     description: "Split distinct values into their own columns",
+    descriptionCn: "将不同值拆分为各自的列",
     category: "Transpose & pivot",
     parameters: [
       {
@@ -2759,6 +2807,7 @@ export const xanCommands: XanCommand[] = [
     id: "unpivot",
     name: "unpivot",
     description: "Stack multiple columns into fewer columns",
+    descriptionCn: "将多列堆叠为更少的列",
     category: "Transpose & pivot",
     parameters: [
       {
@@ -2787,6 +2836,7 @@ export const xanCommands: XanCommand[] = [
     id: "split",
     name: "split",
     description: "Split CSV data into chunks",
+    descriptionCn: "将 CSV 数据分割为多个块",
     category: "Split a CSV file into multiple",
     parameters: [
       {
@@ -2829,6 +2879,7 @@ export const xanCommands: XanCommand[] = [
     id: "partition",
     name: "partition",
     description: "Partition CSV data based on a column value",
+    descriptionCn: "根据列值分割 CSV 数据",
     category: "Split a CSV file into multiple",
     parameters: [
       {
@@ -2885,6 +2936,7 @@ export const xanCommands: XanCommand[] = [
     id: "range",
     name: "range",
     description: "Create a CSV file from a numerical range",
+    descriptionCn: "从数值范围创建 CSV 文件",
     category: "Generate CSV files",
     parameters: [
       {
@@ -2929,6 +2981,7 @@ export const xanCommands: XanCommand[] = [
     id: "run",
     name: "run",
     description: "Run a xan pipeline or script",
+    descriptionCn: "运行 xan 工作流或脚本",
     category: "Scripting",
     parameters: [
       {
@@ -2957,6 +3010,7 @@ export const xanCommands: XanCommand[] = [
     id: "eval",
     name: "eval",
     description: "Evaluate/debug a single expression",
+    descriptionCn: "评估/调试单个表达式",
     category: "Scripting",
     parameters: [
       {

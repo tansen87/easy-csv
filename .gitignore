@@ -34,3 +34,5 @@ coverage/
 
 # Misc
 *.local
+
+/.mimocode/
