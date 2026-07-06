@@ -100,7 +100,7 @@ function AppContent() {
   } | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState<boolean>(false);
   const progressHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const currentVersion = "0.1.0";
+  const currentVersion = "0.2.0";
 
   // Undo/Redo history state
   const [undoStack, setUndoStack] = useState<Array<{ pipeline: PipelineStep[]; edges: PipelineEdge[]; inputPosition?: { x: number; y: number } }>>([]);

@@ -26,6 +26,7 @@ import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "@/components/menu/ContextMenu";
 import { TextTransformType } from "@/components/dialog/TextTransformDialog";
 import { NumberTransformType } from "@/components/dialog/NumberTransformDialog";
+import { useLanguage } from "@/i18n";
 
 interface TableNodeData {
   headers: string[];
@@ -102,6 +103,8 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
     }
   };
 
+  const { t } = useLanguage();
+
   return (
     <Card
       className={`w-[500px] overflow-hidden transition-all duration-200 ${selected
@@ -129,7 +132,7 @@ function TableNode({ data, selected }: { data: TableNodeData; selected: boolean 
               }
             }}
             options={headers.map((h, _i) => ({ label: h, value: h }))}
-            placeholder="Search header to edit..."
+            placeholder={t.headerRename}
             size="sm"
           />
         </div>
@@ -1946,6 +1949,8 @@ export function FlowPanel({
     [steps, onStepsChange, setEdges, onEdgesChange, nodes]
   );
 
+  const { t } = useLanguage();
+
   return (
     <div
       ref={reactFlowWrapper}
@@ -1998,7 +2003,7 @@ export function FlowPanel({
                     handleSearchResultClick(searchResults[0].step, searchResults[0].isTableNode);
                   }
                 }}
-                placeholder="Search in the workflow..."
+                placeholder={t.searchFlow}
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
               <span className="text-[10px] text-muted-foreground">
@@ -2257,7 +2262,7 @@ export function FlowPanel({
               fontSize="12"
               textAnchor="middle"
             >
-              松开右键连接
+              {t.connectionTips}
             </text>
           )}
         </svg>

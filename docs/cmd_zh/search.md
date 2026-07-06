@@ -169,12 +169,14 @@ search mode options:
     -r, --regex            使用正则表达式执行匹配.
     -E, --empty            搜索空单元格,即过滤掉任何完全非空的选择.
     -N, --non-empty        搜索非空单元格,即过滤掉任何完全为空的选择.
-    -u, --url-prefix       按 url 前缀匹配,即单元格必须包含与搜索的 url 前缀匹配的 url.Url 首先使用称为 LRU 的方案重新排序,
+    -u, --url-prefix       按 url 前缀匹配,即单元格必须包含与搜索的 url 前缀匹配的 url.
+                           Url 首先使用称为 LRU 的方案重新排序,
                            您可以在此处了解:https://github.com/medialab/ural?tab=readme-ov-file#about-lrus
     -L, --levenshtein <k>  如果单元格与模式之间的 Levenshtein 距离小于或等于给定的 <k> 阈值,则匹配.
                            出于性能原因并避免不合理的内存消耗,<k> 不允许大于 5.
     -D, --damerau-levenshtein <k>
-                           与 -L/--levenshtein 相同,但将转置成本设置为 1 而不是 2.可用于匹配更常见的拼写错误,而无需过多增加 <k>.
+                           与 -L/--levenshtein 相同,但将转置成本设置为 1 而不是 2.
+                           可用于匹配更常见的拼写错误,而无需过多增加 <k>.
 
 search options:
     -i, --ignore-case          不区分大小写的搜索.
@@ -189,28 +191,34 @@ search options:
     -R, --replace <with>       如果提供,命令将不会过滤行,而是将匹配项替换为给定的替换项.不适用于 --replacement-column.
                                正则表达式替换字符串语法可在此处找到:
                                https://docs.rs/regex/latest/regex/struct.Regex.html#replacement-string-syntax
-    -l, --limit <n>            要返回的最大行数.有时可用于避免下游缓冲(例如,在将大文件管道传输到 `view` 或 `flatten` 之前搜索很少的行).
+    -l, --limit <n>            要返回的最大行数.有时可用于避免下游缓冲
+                               (例如,在将大文件管道传输到 `view` 或 `flatten` 之前搜索很少的行).
     -B, --before-context <n>   在匹配行之前保留的行数.
     -A, --after-context <n>    在匹配行之后保留的行数.
-    --left                     使用 -U/--unique-matches 或 -b/--breakdown 或 -c/--count 时,没有匹配项的行将保留在输出中.
+    --left                     使用 -U/--unique-matches 或 -b/--breakdown 或 -c/--count 时,
+                               没有匹配项的行将保留在输出中.
     -x, --pattern-file <path>  从给定文件 <path> 读取模式并修剪它,或在使用 -r/--regex 时切换详细模式 `(?x)`
                                (这意味着正则表达式可以使用空格和注释).当您的模式复杂且难以处理时,这可能很有用.
                                不要与应用于多个模式的 --patterns 混淆.
     -Z, --fast-parser          搜索文件时使用更快的零拷贝解析器.请注意,当不使用 -s/--select 时,不会对输入格式进行规范化.
-                               此外,这只能使用此命令的默认模式(即过滤),不能与并行化一起使用.请注意,此解析器也无法取消 CSV 单元格的转义.
+                               此外,这只能使用此命令的默认模式(即过滤),不能与并行化一起使用.
+                               请注意,此解析器也无法取消 CSV 单元格的转义.
                                这意味着您必须注意将引号视为加倍,并且当不使用 -s/--select 使用此标志时,命令将尝试一次匹配整行,
                                因此它可能包含原始分隔符和换行符.
-    -p, --parallel             是否使用并行化来加速计算.将根据核心数自动选择合适的线程数.如果您想自己指定线程数,请使用 -t, --threads.
+    -p, --parallel             是否使用并行化来加速计算.将根据核心数自动选择合适的线程数.
+                               如果您想自己指定线程数,请使用 -t, --threads.
     -t, --threads <threads>    使用指定数量的线程进行并行计算.如果您想自动选择线程数,请使用 -p, --parallel.
 
 multiple patterns options:
     -P, --add-pattern <pattern>  手动向查询添加模式,无需向 --patterns 标志提供文件.
-    -b, --breakdown              与 --patterns 一起使用时,将计算每个模式的不重叠匹配总数,并将此计数写入每个模式的一个附加列中.
+    -b, --breakdown              与 --patterns 一起使用时,将计算每个模式的不重叠匹配总数,
+                                 并将此计数写入每个模式的一个附加列中.
                                  添加的列将以模式作为名称,除非您提供 --name-column 标志.
                                  不会在输出中包含没有匹配项的行,除非使用 --left 标志.
                                  当您的模式本身重叠时,您可能想要将其与 --overlapping 一起使用,否则您可能会对计数感到惊讶.
     -U, --unique-matches <name>  与 --patterns 一起使用时,将添加一个列,其中包含每行的唯一匹配模式列表,由 --sep 字符分隔.
-                                 不会在输出中包含没有匹配项的行,除非使用 --left 标志.模式也可以通过 --name-column 标志指定名称.
+                                 不会在输出中包含没有匹配项的行,除非使用 --left 标志.
+                                 模式也可以通过 --name-column 标志指定名称.
     --sep <char>                 使用 -U/--unique-matches 时用于连接模式匹配的字符.[default: |]
     --patterns <path>            文本文件的路径(使用 "-" 表示 stdin),包含多个模式,每行一个,一次搜索.
     --pattern-column <name>      当给定列名时,--patterns 文件将被视为 CSV,并将从给定列中提取要搜索的模式.

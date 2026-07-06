@@ -40,7 +40,8 @@ frequency options:
                               (`ss`) 算法,或 `heavy-keeper` (`hk`) 算法,后者更适合 zipfian 流(项目分布遵循幂律).
                               [default: heavy-keeper]
     -N, --no-extra            不包括空单元格和剩余计数.
-    -p, --parallel            是否使用并行化来加速计算.将根据核心数自动选择合适的线程数.如果要自己指定线程数,请使用 -t, --threads.
+    -p, --parallel            是否使用并行化来加速计算.将根据核心数自动选择合适的线程数.
+                              如果要自己指定线程数,请使用 -t, --threads.
     -t, --threads <threads>   使用指定数量的线程进行并行计算.如果要自动选择线程数,请使用 -p, --parallel.
 
 Hidden options:

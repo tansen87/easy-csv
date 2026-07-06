@@ -12,7 +12,11 @@
 
     $ xan view -e --color=always file.csv | less -SR
 
-最后,可以通过 "XAN_VIEW_ARGS" 环境变量自定义此命令的默认行为.此变量接受一系列支持的标志:-t/--theme、-p/--pager、-l/--limit、-R/--rainbow、-E/--sanitize-emojis、和 -S/--significance、-I/--hide-index、--color、--repeat-headers、--reveal-whitespace 和 -M/--hide-info.
+最后,可以通过 "XAN_VIEW_ARGS" 环境变量自定义此命令的默认行为.
+此变量接受一系列支持的标志:
+-t/--theme、-p/--pager、-l/--limit、-R/--rainbow、-E/--sanitize-emojis、
+和 -S/--significance、-I/--hide-index、--color、--repeat-headers、
+--reveal-whitespace 和 -M/--hide-info.
 
 要使用 `borderless` 主题,隐藏索引列并限制默认显示的浮点小数位数,以下是通过 "XAN_VIEW_ARGS" 变量完成的方法:
 

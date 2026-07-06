@@ -63,7 +63,8 @@ plot options:
     -R, --regression-line      绘制回归线.仅在绘制具有单一系列的散点图时有效.
     -g, --granularity <g>      使用 -T, --time 时强制指定 x 轴离散化的时间粒度.必须是 "years"、"months"、"days"、
                                "hours"、"minutes" 或 "seconds" 之一.如果省略将自动推断.
-    --cols <num>               图形的宽度(以终端列数为单位,即字符数).默认为使用终端的全部宽度,如果无法找到终端大小(即通过管道输出到文件时),
+    --cols <num>               图形的宽度(以终端列数为单位,即字符数).
+                               默认为使用终端的全部宽度,如果无法找到终端大小(即通过管道输出到文件时),
                                则默认为 80.也可以作为终端宽度的比例或百分比给出,例如 "45%" 或 "0.5".
     --rows <num>               图形的高度(以终端行数为单位,即字符数).默认为使用终端的全部高度减 2,如果无法找到终端大小
                                (即通过管道输出到文件时),则默认为 30.也可以作为终端宽度的比例或百分比给出,例如 "45%" 或 "0.5".
@@ -81,8 +82,12 @@ plot options:
     --x-max <n>                强制设置 x 轴的最大值.
     --y-min <n>                强制设置 y 轴的最小值.
     --y-max <n>                强制设置 y 轴的最大值.
-    --x-scale <scale>          对 x 轴应用缩放.可以是 "lin"、"pow"、"sqrt"、"pow(custom_exponent)"(如 "pow(4.5)")、"log"、"log2"、"log10" 或 "log(custom_base)"(如 "log(2.5)")之一.[default: lin]
-    --y-scale <scale>          对 y 轴应用缩放.可以是 "lin"、"pow"、"sqrt"、"pow(custom_exponent)"(如 "pow(4.5)")、"log"、"log2"、"log10" 或 "log(custom_base)"(如 "log(2.5)")之一.[default: lin]
+    --x-scale <scale>          对 x 轴应用缩放.可以是 "lin"、"pow"、"sqrt"、"pow(custom_exponent)"
+                               (如"pow(4.5)")、"log"、"log2"、"log10" 或 "log(custom_base)"(如 "log(2.5)")之一.
+                               [default: lin]
+    --y-scale <scale>          对 y 轴应用缩放.可以是 "lin"、"pow"、"sqrt"、"pow(custom_exponent)"
+                               (如"pow(4.5)")、"log"、"log2"、"log10" 或 "log(custom_base)"(如 "log(2.5)")之一.
+                               [default: lin]
     -D, --density-gradient <name>
                                用于映射到图中单元格密度的颜色渐变名称.当点非常密集时,这可用于增强可读性,
                                并克服用于在屏幕上绘制它们的盲文字符的粒度.这实际上将图形转换为一种热力图.

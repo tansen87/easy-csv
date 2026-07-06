@@ -298,7 +298,7 @@ export function MainMenuHooks({
 
     try {
       const pipelineData = {
-        version: "0.1.0",
+        version: "0.2.0",
         name: currentTab.name,
         pipeline: currentPipeline.map((step) => ({
           id: step.id,
@@ -316,7 +316,7 @@ export function MainMenuHooks({
 
       const jsonContent = JSON.stringify(pipelineData, null, 2);
       const filePath = await save({
-        filters: [{ name: "Pipeline Files", extensions: ["xanflow"] }],
+        filters: [{ name: "Workflow Files", extensions: ["xanflow"] }],
         defaultPath: `${currentTab.name}.xanflow`,
       });
 
@@ -333,7 +333,7 @@ export function MainMenuHooks({
   const handleImportPipeline = useCallback(async () => {
     const file = await open({
       multiple: false,
-      filters: [{ name: "Pipeline Files", extensions: ["xanflow"] }],
+      filters: [{ name: "Workflow Files", extensions: ["xanflow"] }],
     });
 
     if (!file) return;

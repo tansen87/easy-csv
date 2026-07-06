@@ -67,6 +67,11 @@ export interface Translations {
   nextMatch: string;
   close: string;
 
+  // FlowPanel
+  searchFlow: string;
+  connectionTips: string;
+  headerRename: string;
+
   // LogPanel
   logs: string;
   noLogsYet: string;
@@ -141,6 +146,11 @@ export const translations: Record<Language, Translations> = {
     nextMatch: "↓: Next match",
     close: "ESC: Close",
 
+    // FlowPanel
+    searchFlow: "Search in the workflow",
+    connectionTips: "Release the right-click connection",
+    headerRename: "Search the header to modify",
+
     // LogPanel
     logs: "Logs",
     noLogsYet: "No logs yet",
@@ -212,6 +222,11 @@ export const translations: Record<Language, Translations> = {
     previousMatch: "↑: 上一个匹配",
     nextMatch: "↓: 下一个匹配",
     close: "ESC: 关闭",
+
+    // FlowPanel
+    searchFlow: "在工作流中搜索",
+    connectionTips: "松开右键连接",
+    headerRename: "查询表头以修改",
 
     // LogPanel
     logs: "日志",
