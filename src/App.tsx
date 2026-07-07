@@ -22,7 +22,6 @@ import { xanCommands } from "@/data/commands";
 import { helpDocs, helpDocsZh } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
 import { MainMenuHooks } from "@/hooks/MainMenuHooks";
-import { SplashScreen } from "@/components/menu/SplashScreen";
 import { LanguageProvider, useLanguage } from "@/i18n";
 import {
   PipelineStep,
@@ -55,8 +54,6 @@ function App() {
 function AppContent() {
   const { theme, setTheme } = useTheme();
   const { language } = useLanguage();
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [loadingText, setLoadingText] = useState<string>("Initializing...");
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [tabs, setTabs] = useState<PipelineTab[]>([
     {
@@ -339,16 +336,13 @@ function AppContent() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        setLoadingText("Loading configuration...");
         await invoke("check_xan_installed");
         await loadDefaultDelimiter();
         await loadNoHeaders();
         await loadHistoricalPipelines();
         await loadRecentFiles();
-        setIsLoading(false);
       } catch (error) {
         console.error("Initialization failed:", error);
-        setIsLoading(false);
       }
     };
 
@@ -492,8 +486,6 @@ function AppContent() {
     }
   };
 
-
-
   const removeTab = (tabId: string) => {
     if (tabs.length === 1) return;
 
@@ -583,12 +575,12 @@ function AppContent() {
       prev.map((tab) =>
         tab.id === selectedTabId
           ? {
-              ...tab,
-              data: undefined,
-              headers: undefined,
-              inputFile: undefined,
-              updatedAt: formatDateTime(new Date()),
-            }
+            ...tab,
+            data: undefined,
+            headers: undefined,
+            inputFile: undefined,
+            updatedAt: formatDateTime(new Date()),
+          }
           : tab,
       ),
     );
@@ -648,13 +640,9 @@ function AppContent() {
     }
   };
 
-
-
   const handleClearLogs = () => {
     setLogs([]);
   };
-
-
 
   const handleOpenUrl = async (url: string) => {
     try {
@@ -666,9 +654,7 @@ function AppContent() {
 
   return (
     <>
-      {isLoading ? (
-        <SplashScreen loadingText={loadingText} />
-      ) : (
+      {(
         <div className="h-screen relative overflow-hidden">
           <header ref={headerRef} className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-4 gap-4 z-20" onContextMenu={(e) => e.preventDefault()}>
             {/* Left: Main Menu */}
