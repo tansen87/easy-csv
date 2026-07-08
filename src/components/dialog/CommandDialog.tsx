@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { ExpressionEditor } from "@/components/expression/ExpressionEditor";
 
 export type CommandDialogType =
   | "search"
@@ -77,6 +78,7 @@ interface CommandDialogProps {
   ) => void;
   onStepUpdate?: (stepId: string, parameters: Record<string, any>) => void;
   setCommandDialog: (dialog: CommandDialogState | null) => void;
+  headers?: string[];
 }
 
 export function CommandDialog({
@@ -84,6 +86,7 @@ export function CommandDialog({
   onAddCommand,
   onStepUpdate,
   setCommandDialog,
+  headers = [],
 }: CommandDialogProps) {
   if (!commandDialog) return null;
 
@@ -4042,16 +4045,15 @@ export function CommandDialog({
           <div className="space-y-3">
             <div>
               <label className="text-sm font-medium">expression</label>
-              <input
-                type="text"
+              <ExpressionEditor
                 value={commandDialog.params.expression || ""}
-                onChange={(e) =>
+                onChange={(value) =>
                   setCommandDialog({
                     ...commandDialog,
-                    params: { ...commandDialog.params, expression: e.target.value },
+                    params: { ...commandDialog.params, expression: value },
                   })}
-                placeholder="Expression to evaluate"
-                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                columns={headers}
+                placeholder="Expression to evaluate (e.g., split(name, '.') | first | upper)"
                 autoFocus
               />
             </div>

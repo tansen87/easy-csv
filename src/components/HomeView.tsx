@@ -453,6 +453,7 @@ export function HomeView({
           onAddCommand={onAddCommand}
           onStepUpdate={onStepUpdate}
           setCommandDialog={setCommandDialog}
+          headers={headers}
         />
       )}
 

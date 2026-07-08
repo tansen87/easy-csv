@@ -342,3 +342,70 @@
 .animate-fade-in-delay-3 {
   animation: fade-in 0.6s ease-out 1s both;
 }
+
+/* Expression Editor Syntax Highlighting */
+.expr-keyword {
+  color: #c678dd;
+  font-weight: 500;
+}
+.expr-function {
+  color: #61afef;
+}
+.expr-string {
+  color: #98c379;
+}
+.expr-number {
+  color: #d19a66;
+}
+.expr-operator {
+  color: #56b6c2;
+}
+.expr-column {
+  color: #e5c07b;
+}
+.expr-comment {
+  color: #5c6370;
+  font-style: italic;
+}
+
+.dark .expr-keyword {
+  color: #c678dd;
+}
+.dark .expr-function {
+  color: #61afef;
+}
+.dark .expr-string {
+  color: #98c379;
+}
+.dark .expr-number {
+  color: #d19a66;
+}
+.dark .expr-operator {
+  color: #56b6c2;
+}
+.dark .expr-column {
+  color: #e5c07b;
+}
+.dark .expr-comment {
+  color: #5c6370;
+}
+
+/* Expression Editor textarea scrollbar (matches ScrollArea style) */
+.expr-editor-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.expr-editor-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.expr-editor-scrollbar::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border));
+  border-radius: 9999px;
+}
+.expr-editor-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground));
+}
+.expr-editor-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
