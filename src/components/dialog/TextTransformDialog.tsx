@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
+import { useDraggable } from "@/hooks/useDraggable";
 
 export type TextTransformType = "len" | "lower" | "upper" | "trim" | "ltrim" | "rtrim" | "strip";
 
@@ -49,59 +50,12 @@ export function TextTransformDialog({
     textTransformDialog.transformType || "lower"
   );
   const [search, setSearch] = useState("");
-  const [position, setPosition] = useState({ x: textTransformDialog.x, y: textTransformDialog.y });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
-  const positionRef = useRef(position);
-  const isDraggingRef = useRef(isDragging);
-
-  useEffect(() => {
-    positionRef.current = position;
-  }, [position]);
-
-  useEffect(() => {
-    isDraggingRef.current = isDragging;
-  }, [isDragging]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest(".no-drag")) return;
-
-    e.preventDefault();
-    setIsDragging(true);
-    isDraggingRef.current = true;
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startPosX: positionRef.current.x,
-      startPosY: positionRef.current.y,
-    };
-  }, []);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDraggingRef.current) return;
-
-    const deltaX = e.clientX - dragRef.current.startX;
-    const deltaY = e.clientY - dragRef.current.startY;
-
-    setPosition({
-      x: Math.max(0, Math.min(dragRef.current.startPosX + deltaX, window.innerWidth - 360)),
-      y: Math.max(0, Math.min(dragRef.current.startPosY + deltaY, window.innerHeight - 480)),
-    });
-  }, []);
-
-  const handleMouseUp = useCallback(() => {
-    isDraggingRef.current = false;
-    setIsDragging(false);
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [handleMouseMove, handleMouseUp]);
+  const { position, isDragging, handleMouseDown } = useDraggable({
+    initialX: textTransformDialog.x,
+    initialY: textTransformDialog.y,
+    maxWidth: 360,
+    maxHeight: 480,
+  });
 
   const toggleColumn = (col: string) => {
     setSelectedColumns((prev) =>

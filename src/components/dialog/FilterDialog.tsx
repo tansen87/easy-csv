@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { useDraggable } from "@/hooks/useDraggable";
 
 interface FilterDialogState {
   col: number;
@@ -81,59 +82,12 @@ export function FilterDialog({
   const [numberValue, setNumberValue] = useState("");
   const [caseInsensitive, setCaseInsensitive] = useState(false);
   const [selectedColumn, setSelectedColumn] = useState<string>(headers[filterDialog.col] || "");
-  const [position, setPosition] = useState({ x: filterDialog.x, y: filterDialog.y });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
-  const positionRef = useRef(position);
-  const isDraggingRef = useRef(isDragging);
-
-  useEffect(() => {
-    positionRef.current = position;
-  }, [position]);
-
-  useEffect(() => {
-    isDraggingRef.current = isDragging;
-  }, [isDragging]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest(".no-drag")) return;
-
-    e.preventDefault();
-    setIsDragging(true);
-    isDraggingRef.current = true;
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startPosX: positionRef.current.x,
-      startPosY: positionRef.current.y,
-    };
-  }, []);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDraggingRef.current) return;
-
-    const deltaX = e.clientX - dragRef.current.startX;
-    const deltaY = e.clientY - dragRef.current.startY;
-
-    setPosition({
-      x: Math.max(0, Math.min(dragRef.current.startPosX + deltaX, window.innerWidth - 260)),
-      y: Math.max(0, Math.min(dragRef.current.startPosY + deltaY, window.innerHeight - 400)),
-    });
-  }, []);
-
-  const handleMouseUp = useCallback(() => {
-    isDraggingRef.current = false;
-    setIsDragging(false);
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [handleMouseMove, handleMouseUp]);
+  const { position, isDragging, handleMouseDown } = useDraggable({
+    initialX: filterDialog.x,
+    initialY: filterDialog.y,
+    maxWidth: 260,
+    maxHeight: 400,
+  });
 
   const buildRegexPattern = (
     operator: TextOperator,
