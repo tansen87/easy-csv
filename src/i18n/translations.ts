@@ -13,6 +13,11 @@ export interface Translations {
   execute: string;
   executing: string;
 
+  // ConfirmDialog
+  confirm: string;
+  refreshTitle: string;
+  refreshMessage: string;
+
   // Settings
   preference: string;
   general: string;
@@ -76,6 +81,22 @@ export interface Translations {
   logs: string;
   noLogsYet: string;
   executePipelineHint: string;
+
+  // DataProfile
+  dataProfile: string;
+  searchFields: string;
+  noFieldsMatch: string;
+  analyzingData: string;
+  columns: string;
+  rows: string;
+  count: string;
+  empty: string;
+  min: string;
+  max: string;
+  mean: string;
+  sum: string;
+  minLen: string;
+  maxLen: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -91,6 +112,11 @@ export const translations: Record<Language, Translations> = {
     redo: "Redo",
     execute: "Execute",
     executing: "Executing",
+
+    // ConfirmDialog
+    confirm: "Confirm",
+    refreshTitle: "Refresh Page",
+    refreshMessage: "Are you sure you want to refresh the page? Unsaved changes will be lost.",
 
     // Settings
     preference: "Preference",
@@ -155,6 +181,22 @@ export const translations: Record<Language, Translations> = {
     logs: "Logs",
     noLogsYet: "No logs yet",
     executePipelineHint: "Execute a pipeline to see output",
+
+    // DataProfile
+    dataProfile: "Data Profile",
+    searchFields: "Search fields",
+    noFieldsMatch: "No fields matching",
+    analyzingData: "Analyzing data...",
+    columns: "Columns",
+    rows: "Rows",
+    count: "Count",
+    empty: "Empty",
+    min: "Min",
+    max: "Max",
+    mean: "Mean",
+    sum: "Sum",
+    minLen: "Min Len",
+    maxLen: "Max Len",
   },
   zh: {
     // MainMenu
@@ -168,6 +210,11 @@ export const translations: Record<Language, Translations> = {
     redo: "重做",
     execute: "执行",
     executing: "执行中",
+
+    // ConfirmDialog
+    confirm: "确认",
+    refreshTitle: "刷新页面",
+    refreshMessage: "确定要刷新页面吗？未保存的更改将会丢失。",
 
     // Settings
     preference: "偏好设置",
@@ -232,5 +279,21 @@ export const translations: Record<Language, Translations> = {
     logs: "日志",
     noLogsYet: "暂无日志",
     executePipelineHint: "执行工作流后查看输出",
+
+    // DataProfile
+    dataProfile: "数据概况",
+    searchFields: "搜索字段",
+    noFieldsMatch: "无匹配字段",
+    analyzingData: "分析数据中...",
+    columns: "列数",
+    rows: "行数",
+    count: "计数",
+    empty: "空值",
+    min: "最小值",
+    max: "最大值",
+    mean: "平均值",
+    sum: "求和",
+    minLen: "最小长度",
+    maxLen: "最大长度",
   },
 };

@@ -8,6 +8,12 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 use serde::{Deserialize, Serialize};
+use serde_json::Map;
+use tauri::{
+  Manager, WindowEvent,
+  menu::{Menu, MenuItem},
+  tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
+};
 
 // Embed xan.exe binary at compile time
 const XAN_EXE_BYTES: &[u8] = include_bytes!("../resources/xan.exe");
@@ -84,6 +90,41 @@ async fn read_csv_file(
   }
 
   Ok(CsvData { headers, rows })
+}
+
+#[tauri::command]
+async fn profile_csv(file_path: String, delimiter: String) -> Result<String, String> {
+  let xan_path = find_xan_executable().ok_or("xan executable not found")?;
+
+  let output = tokio::task::spawn_blocking(move || -> Result<std::process::Output, String> {
+    let mut command = Command::new(&xan_path);
+    command
+      .arg("stats")
+      .arg("-t")
+      .arg("4")
+      .arg("--delimiter")
+      .arg(&delimiter)
+      .arg(&file_path);
+
+    #[cfg(target_os = "windows")]
+    {
+      command.creation_flags(0x08000000);
+    }
+
+    command
+      .output()
+      .map_err(|e| format!("Failed to execute xan stats: {}", e))
+  })
+  .await
+  .map_err(|e| format!("Task join error: {}", e))?
+  .map_err(|e| e)?;
+
+  if !output.status.success() {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    return Err(format!("xan stats failed: {}", stderr));
+  }
+
+  Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
 #[tauri::command]
@@ -704,6 +745,117 @@ async fn load_recent_files() -> Result<String, String> {
 }
 
 #[tauri::command]
+async fn load_profile_cache(
+  file_path: String,
+  delimiter: String,
+) -> Result<Option<String>, String> {
+  let resources_dir = get_resources_dir();
+  let cache_path = resources_dir.join("profiles.json");
+
+  if !cache_path.exists() {
+    return Ok(None);
+  }
+
+  let content = std::fs::read_to_string(&cache_path)
+    .map_err(|e| format!("Failed to read profiles cache: {}", e))?;
+  let cache: Map<String, serde_json::Value> =
+    serde_json::from_str(&content).map_err(|e| format!("Failed to parse profiles cache: {}", e))?;
+
+  let key = format!("{}|{}", file_path, delimiter);
+  let entry = match cache.get(&key) {
+    Some(e) => e,
+    None => return Ok(None),
+  };
+
+  // Check if file mtime matches
+  let cached_mtime = entry.get("mtime").and_then(|v| v.as_f64()).unwrap_or(0.0);
+  let file_mtime = std::fs::metadata(&file_path)
+    .ok()
+    .and_then(|m| m.modified().ok())
+    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+    .map(|d| d.as_secs_f64())
+    .unwrap_or(0.0);
+
+  if (cached_mtime - file_mtime).abs() > 1.0 {
+    return Ok(None);
+  }
+
+  let stats = entry
+    .get("stats")
+    .and_then(|v| v.as_str())
+    .map(|s| s.to_string());
+  Ok(stats)
+}
+
+#[tauri::command]
+async fn save_profile_cache(
+  file_path: String,
+  delimiter: String,
+  stats: String,
+) -> Result<(), String> {
+  let resources_dir = get_resources_dir();
+  let cache_path = resources_dir.join("profiles.json");
+
+  if !resources_dir.exists() {
+    std::fs::create_dir_all(&resources_dir)
+      .map_err(|e| format!("Failed to create directory: {}", e))?;
+  }
+
+  // Read existing cache
+  let mut cache: Map<String, serde_json::Value> = if cache_path.exists() {
+    let content = std::fs::read_to_string(&cache_path)
+      .map_err(|e| format!("Failed to read profiles cache: {}", e))?;
+    serde_json::from_str(&content).unwrap_or_default()
+  } else {
+    Map::new()
+  };
+
+  // Get file mtime
+  let file_mtime = std::fs::metadata(&file_path)
+    .ok()
+    .and_then(|m| m.modified().ok())
+    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+    .map(|d| d.as_secs_f64())
+    .unwrap_or(0.0);
+
+  let now = std::time::SystemTime::now()
+    .duration_since(std::time::UNIX_EPOCH)
+    .map(|d| d.as_secs_f64())
+    .unwrap_or(0.0);
+
+  let key = format!("{}|{}", file_path, delimiter);
+  let entry = serde_json::json!({
+    "stats": stats,
+    "mtime": file_mtime,
+    "lastAccess": now,
+  });
+  cache.insert(key, entry);
+
+  // LRU eviction: if > 50 entries, remove oldest by lastAccess
+  if cache.len() > 50 {
+    let mut entries: Vec<(String, f64)> = cache
+      .iter()
+      .map(|(k, v)| {
+        let la = v.get("lastAccess").and_then(|v| v.as_f64()).unwrap_or(0.0);
+        (k.clone(), la)
+      })
+      .collect();
+    entries.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+    let to_remove = entries.len() - 50;
+    for (k, _) in &entries[..to_remove] {
+      cache.remove(k);
+    }
+  }
+
+  let json = serde_json::to_string_pretty(&cache)
+    .map_err(|e| format!("Failed to serialize profiles cache: {}", e))?;
+  std::fs::write(&cache_path, json)
+    .map_err(|e| format!("Failed to write profiles cache: {}", e))?;
+
+  Ok(())
+}
+
+#[tauri::command]
 async fn toggle_devtools(window: tauri::Window) -> Result<(), String> {
   let webviews = window.webviews();
   if let Some(webview) = webviews.first() {
@@ -723,6 +875,8 @@ pub fn run() {
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
     .plugin(tauri_plugin_shell::init())
+    .plugin(tauri_plugin_window_state::Builder::new().build())
+    .plugin(tauri_plugin_notification::init())
     .invoke_handler(tauri::generate_handler![
       execute_xan_pipeline,
       check_xan_installed,
@@ -735,9 +889,66 @@ pub fn run() {
       save_recent_files,
       load_recent_files,
       read_csv_file,
+      profile_csv,
+      load_profile_cache,
+      save_profile_cache,
       set_window_title,
       toggle_devtools
     ])
+    .setup(|app| {
+      // 创建菜单项
+      let show_item = MenuItem::with_id(app, "show", "show", true, None::<&str>)?;
+      let quit_item = MenuItem::with_id(app, "quit", "quit", true, None::<&str>)?;
+      let tray_menu = Menu::with_items(app, &[&show_item, &quit_item])?;
+      let _tray = TrayIconBuilder::new()
+        .icon(app.default_window_icon().unwrap().clone())
+        .menu(&tray_menu)
+        .show_menu_on_left_click(false)
+        .tooltip("Easy Csv")
+        .on_tray_icon_event(|tray, event| match event {
+          TrayIconEvent::Click {
+            button: MouseButton::Left,
+            button_state: tauri::tray::MouseButtonState::Up,
+            ..
+          } => {
+            let app = tray.app_handle();
+            if let Some(window) = app.get_webview_window("main") {
+              window.show().unwrap();
+              window.set_focus().unwrap();
+              window.set_always_on_top(true).unwrap();
+              window.set_always_on_top(false).unwrap();
+            }
+          }
+          TrayIconEvent::Click {
+            button: MouseButton::Right,
+            ..
+          } => {}
+          _ => {}
+        })
+        .on_menu_event(|app, event| match event.id.as_ref() {
+          "show" => {
+            if let Some(window) = app.get_webview_window("main") {
+              window.show().unwrap();
+              window.set_focus().unwrap();
+              window.set_always_on_top(true).unwrap();
+              window.set_always_on_top(false).unwrap();
+            }
+          }
+          "quit" => {
+            app.exit(0);
+          }
+          _ => {}
+        })
+        .build(app)?;
+
+      Ok(())
+    })
+    .on_window_event(|window, event| {
+      if let WindowEvent::CloseRequested { api, .. } = event {
+        api.prevent_close();
+        window.hide().unwrap();
+      }
+    })
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

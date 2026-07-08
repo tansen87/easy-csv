@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { sendNotification } from "@tauri-apps/plugin-notification";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/setting/ThemeProvider";
 import { ToastContainer, ToastType } from "@/components/setting/Toast";
@@ -10,6 +12,7 @@ import {
   ChevronUp,
   ChevronRight,
   FileText,
+  BarChart3,
 } from "lucide-react";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/panel/LogPanel";
@@ -18,6 +21,8 @@ import { HomeView } from "@/components/HomeView";
 import { HelpDialog } from "@/components/help/HelpDialog";
 import { getHelpContent } from "@/components/help/HelpContent";
 import { UpdateDialog } from "@/components/dialog/UpdateDialog";
+import { ConfirmDialog } from "@/components/dialog/ConfirmDialog";
+import { DataProfilePanel } from "@/components/panel/DataProfilePanel";
 import { xanCommands } from "@/data/commands";
 import { helpDocs, helpDocsZh } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
@@ -53,7 +58,7 @@ function App() {
 
 function AppContent() {
   const { theme, setTheme } = useTheme();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [tabs, setTabs] = useState<PipelineTab[]>([
     {
@@ -90,6 +95,8 @@ function AppContent() {
   const [showProgressBar, setShowProgressBar] = useState<boolean>(false);
   const [branchProgress, setBranchProgress] = useState<{ current: number; total: number; name: string; status: "executing" | "completed" | "error" } | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState<boolean>(false);
+  const [showDataProfile, setShowDataProfile] = useState<boolean>(false);
+  const [showRefreshDialog, setShowRefreshDialog] = useState<boolean>(false);
   const [updateInfo, setUpdateInfo] = useState<{
     hasUpdate: boolean;
     latestVersion: string;
@@ -359,13 +366,60 @@ function AppContent() {
           console.error("Failed to toggle DevTools:", error);
         }
       }
+
+      // Intercept F5 to show custom refresh dialog
+      if (event.key === "F5") {
+        event.preventDefault();
+        event.stopPropagation();
+        setShowRefreshDialog(true);
+      }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown, true);
     };
   }, []);
+
+  // Drag-and-drop file opening
+  useEffect(() => {
+    const webview = getCurrentWebview();
+    let unlisten: (() => void) | undefined;
+
+    const setupDragDrop = async () => {
+      unlisten = await webview.onDragDropEvent((event) => {
+        if (event.payload.type === "drop") {
+          const paths = event.payload.paths;
+          if (paths.length > 0) {
+            const filePath = paths[0];
+            const ext = filePath.split(".").pop()?.toLowerCase();
+            if (ext === "xanflow") {
+              handleImportPipelineFromPath(filePath);
+            } else {
+              loadCsvData(selectedTabId, filePath);
+            }
+          }
+        }
+      });
+    };
+
+    setupDragDrop();
+    return () => {
+      unlisten?.();
+    };
+  }, [selectedTabId, loadCsvData]);
+
+  // Send system notification when pipeline execution completes
+  const prevExecutingRef = useRef(isExecuting);
+  useEffect(() => {
+    if (prevExecutingRef.current && !isExecuting) {
+      sendNotification({
+        title: "Easy CSV",
+        body: "Pipeline execution completed",
+      });
+    }
+    prevExecutingRef.current = isExecuting;
+  }, [isExecuting]);
 
   useEffect(() => {
     const updateTitle = async () => {
@@ -652,6 +706,49 @@ function AppContent() {
     }
   };
 
+  const handleImportPipelineFromPath = async (filePath: string) => {
+    try {
+      const { readFile } = await import("@tauri-apps/plugin-fs");
+      const { xanCommands: cmds } = await import("@/data/commands");
+      const fileContent = await readFile(filePath);
+      const jsonContent = new TextDecoder().decode(fileContent);
+      const pipelineData = JSON.parse(jsonContent);
+
+      if (!pipelineData.pipeline || !Array.isArray(pipelineData.pipeline)) {
+        showToastRef.current("Invalid pipeline file format", "error");
+        return;
+      }
+
+      const importedPipeline: PipelineStep[] = pipelineData.pipeline
+        .map((stepData: { id?: string; commandId: string; parameters?: Record<string, any>; alias?: string; position?: { x: number; y: number } }) => {
+          const command = cmds.find((cmd) => cmd.id === stepData.commandId);
+          if (!command) return null;
+          return {
+            id: stepData.id || `${command.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            command,
+            parameters: stepData.parameters || {},
+            alias: stepData.alias,
+            position: stepData.position,
+          };
+        })
+        .filter((step: PipelineStep | null): step is PipelineStep => step !== null);
+
+      if (importedPipeline.length === 0) {
+        showToastRef.current("No valid commands found in pipeline file", "error");
+        return;
+      }
+
+      updateTabPipeline(importedPipeline, undefined, pipelineData.edges, pipelineData.inputPosition);
+      if (pipelineData.inputFile) {
+        loadCsvData(selectedTabId, pipelineData.inputFile, pipelineData.defaultDelimiter);
+      }
+
+      showToastRef.current(`Imported pipeline with ${importedPipeline.length} steps`, "success");
+    } catch (error) {
+      showToastRef.current(`Failed to import pipeline: ${error}`, "error");
+    }
+  };
+
   return (
     <>
       {(
@@ -783,6 +880,19 @@ function AppContent() {
             )}
           </Button>
 
+          {/* Data Profile Panel Toggle Button */}
+          {getCurrentTab()?.inputFile && (
+            <Button
+              onClick={() => setShowDataProfile(!showDataProfile)}
+              onContextMenu={(e) => e.preventDefault()}
+              className="fixed bottom-4 left-28 z-30 h-10 w-10 rounded-full shadow-md"
+              variant="ghost"
+              size="icon"
+            >
+              <BarChart3 className="h-4 w-4" />
+            </Button>
+          )}
+
           {/* Floating Command Panel */}
           <CommandList
             commands={xanCommands}
@@ -867,6 +977,24 @@ function AppContent() {
             onClose={() => setShowUpdateDialog(false)}
             updateInfo={updateInfo}
             currentVersion={currentVersion}
+          />
+
+          <ConfirmDialog
+            isOpen={showRefreshDialog}
+            title={t.refreshTitle}
+            message={t.refreshMessage}
+            onConfirm={() => {
+              setShowRefreshDialog(false);
+              window.location.reload();
+            }}
+            onCancel={() => setShowRefreshDialog(false)}
+          />
+
+          <DataProfilePanel
+            filePath={getCurrentTab()?.inputFile || ""}
+            delimiter={defaultDelimiter}
+            isVisible={showDataProfile}
+            onClose={() => setShowDataProfile(false)}
           />
         </div>
       )}
