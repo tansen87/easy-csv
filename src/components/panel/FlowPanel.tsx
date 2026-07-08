@@ -29,7 +29,6 @@ import { CutVisualization } from "@/components/panel/overlays/CutVisualization";
 import { ConnectionVisualization } from "@/components/panel/overlays/ConnectionVisualization";
 import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "@/components/menu/ContextMenu";
-import { Copy, Trash2 } from "lucide-react";
 import { TextTransformType } from "@/components/dialog/TextTransformDialog";
 import { NumberTransformType } from "@/components/dialog/NumberTransformDialog";
 
@@ -128,9 +127,6 @@ export function FlowPanel({
     setContextMenu(null);
   }, []);
 
-  // Pipeline step copy/paste
-  const [copiedStep, setCopiedStep] = useState<PipelineStep | null>(null);
-
   const handleContextMenu = useCallback((stepId: string, x: number, y: number) => {
     setContextMenu({ x, y, stepId });
   }, []);
@@ -148,37 +144,6 @@ export function FlowPanel({
   const handleTableContextMenu = useCallback((col: number, x: number, y: number) => {
     setTableContextMenu({ x, y, col });
   }, []);
-
-  // Pipeline step copy/paste handlers
-  const handleCopyStep = useCallback((stepId: string) => {
-    const step = steps.find(s => s.id === stepId);
-    if (step) {
-      setCopiedStep({ ...step });
-    }
-    closeContextMenu();
-  }, [steps, closeContextMenu]);
-
-  const handlePasteStep = useCallback(() => {
-    if (!copiedStep) return;
-    const newStep: PipelineStep = {
-      ...copiedStep,
-      id: `${copiedStep.command.id}-${Date.now()}`,
-      parameters: { ...copiedStep.parameters },
-    };
-    onStepsChange([...steps, newStep]);
-  }, [copiedStep, steps, onStepsChange]);
-
-  // Keyboard shortcut for paste
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "v" && copiedStep) {
-        e.preventDefault();
-        handlePasteStep();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [copiedStep, handlePasteStep]);
 
   const handleTableRename = useCallback((col: number, newName: string) => {
     onTableRename(col, newName);
@@ -941,39 +906,6 @@ export function FlowPanel({
           onOpenNumberTransformDialog={onOpenNumberTransformDialog}
           onOpenSortDialog={onOpenSortDialog}
         />
-      )}
-
-      {contextMenu && (
-        <div
-          className="fixed bg-card border rounded-lg shadow-lg z-50 py-1 min-w-[140px]"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="px-3 py-1 text-xs font-semibold text-muted-foreground border-b mb-1">
-            Step Actions
-          </div>
-          <button
-            className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleCopyStep(contextMenu.stepId);
-            }}
-          >
-            <Copy className="h-4 w-4 text-muted-foreground" />
-            Copy Step
-          </button>
-          <button
-            className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
-            onClick={(e) => {
-              e.stopPropagation();
-              onStepRemove(contextMenu.stepId);
-              closeContextMenu();
-            }}
-          >
-            <Trash2 className="h-4 w-4 text-muted-foreground" />
-            Delete Step
-          </button>
-        </div>
       )}
 
       {/* 连接线可视化 */}
