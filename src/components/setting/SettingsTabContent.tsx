@@ -12,6 +12,8 @@ interface SettingsTabContentProps {
   onDefaultDelimiterChange: (delimiter: string) => void;
   noHeaders: boolean;
   onNoHeadersChange: (value: boolean) => void;
+  showExecutionNotification: boolean;
+  onShowExecutionNotificationChange: (value: boolean) => void;
   onSave: () => void;
 }
 
@@ -23,6 +25,8 @@ export function SettingsTabContent({
   onDefaultDelimiterChange,
   noHeaders,
   onNoHeadersChange,
+  showExecutionNotification,
+  onShowExecutionNotificationChange,
   onSave,
 }: SettingsTabContentProps) {
   const [isThemeTransitioning, setIsThemeTransitioning] = useState(false);
@@ -113,6 +117,22 @@ export function SettingsTabContent({
                 </button>
               </div>
             </div>
+
+            {/* Execution Notification */}
+            <div className="max-w-md">
+              <h3 className="text-lg font-semibold mb-4">{t.showExecutionNotification}</h3>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showExecutionNotification}
+                  onChange={(e) => onShowExecutionNotificationChange(e.target.checked)}
+                  className="w-4 h-4 rounded border-input accent-foreground"
+                />
+                <div className="text-left">
+                  <p className="text-sm text-muted-foreground">{t.showExecutionNotificationDesc}</p>
+                </div>
+              </label>
+            </div>
           </div>
         )}
 
@@ -167,6 +187,7 @@ export function SettingsTabContent({
             onThemeChange("light");
             onDefaultDelimiterChange(",");
             onNoHeadersChange(false);
+            onShowExecutionNotificationChange(true);
           }}
         >
           <RotateCcw className="h-4 w-4 mr-2" />

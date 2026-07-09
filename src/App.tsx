@@ -74,6 +74,7 @@ function AppContent() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(",");
   const [noHeaders, setNoHeaders] = useState<boolean>(false);
+  const [showExecutionNotification, setShowExecutionNotification] = useState<boolean>(true);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [showHelp, setShowHelp] = useState<boolean>(false);
   const [helpContent, setHelpContent] = useState<string>("");
@@ -299,6 +300,17 @@ function AppContent() {
     }
   };
 
+  const loadShowExecutionNotification = async () => {
+    try {
+      const saved = await invoke<boolean | null>("get_show_execution_notification");
+      if (saved !== null) {
+        setShowExecutionNotification(saved);
+      }
+    } catch (error) {
+      showToastRef.current(`Failed to load notification setting: ${error}`, 'error');
+    }
+  };
+
   const checkForUpdates = async () => {
     setIsCheckingUpdate(true);
     try {
@@ -346,6 +358,7 @@ function AppContent() {
         await invoke("check_xan_installed");
         await loadDefaultDelimiter();
         await loadNoHeaders();
+        await loadShowExecutionNotification();
         await loadHistoricalPipelines();
         await loadRecentFiles();
       } catch (error) {
@@ -412,14 +425,14 @@ function AppContent() {
   // Send system notification when pipeline execution completes
   const prevExecutingRef = useRef(isExecuting);
   useEffect(() => {
-    if (prevExecutingRef.current && !isExecuting) {
+    if (prevExecutingRef.current && !isExecuting && showExecutionNotification) {
       sendNotification({
         title: "Easy CSV",
         body: "Pipeline execution completed",
       });
     }
     prevExecutingRef.current = isExecuting;
-  }, [isExecuting]);
+  }, [isExecuting, showExecutionNotification]);
 
   useEffect(() => {
     const updateTitle = async () => {
@@ -961,10 +974,13 @@ function AppContent() {
             onDefaultDelimiterChange={setDefaultDelimiter}
             noHeaders={noHeaders}
             onNoHeadersChange={setNoHeaders}
+            showExecutionNotification={showExecutionNotification}
+            onShowExecutionNotificationChange={setShowExecutionNotification}
             onSave={async () => {
               try {
                 await invoke("set_default_delimiter", { delimiter: defaultDelimiter });
                 await invoke("set_no_headers", { noHeaders });
+                await invoke("set_show_execution_notification", { show: showExecutionNotification });
                 showToastRef.current("Settings saved successfully", 'success');
               } catch (error) {
                 showToastRef.current(`Failed to save settings: ${error}`, 'error');

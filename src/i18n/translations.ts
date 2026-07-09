@@ -27,6 +27,8 @@ export interface Translations {
   csvDelimiter: string;
   noHeaders: string;
   noHeadersDesc: string;
+  showExecutionNotification: string;
+  showExecutionNotificationDesc: string;
   resetToDefaults: string;
   saveSettings: string;
   selectDelimiter: string;
@@ -127,6 +129,8 @@ export const translations: Record<Language, Translations> = {
     csvDelimiter: "CSV Delimiter",
     noHeaders: "No Headers",
     noHeadersDesc: "When set, the first row will not be interpreted as headers",
+    showExecutionNotification: "Execution Notification",
+    showExecutionNotificationDesc: "Show system notification when pipeline execution completes",
     resetToDefaults: "Reset to Defaults",
     saveSettings: "Save Settings",
     selectDelimiter: "Select delimiter",
@@ -225,6 +229,8 @@ export const translations: Record<Language, Translations> = {
     csvDelimiter: "CSV 分隔符",
     noHeaders: "无表头",
     noHeadersDesc: "启用后,第一行将不被视为表头",
+    showExecutionNotification: "执行通知",
+    showExecutionNotificationDesc: "管道执行完成后显示系统通知",
     resetToDefaults: "恢复默认",
     saveSettings: "保存设置",
     selectDelimiter: "选择分隔符",

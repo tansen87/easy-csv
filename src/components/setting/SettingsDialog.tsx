@@ -12,6 +12,8 @@ interface SettingsDialogProps {
   onDefaultDelimiterChange: (delimiter: string) => void;
   noHeaders: boolean;
   onNoHeadersChange: (value: boolean) => void;
+  showExecutionNotification: boolean;
+  onShowExecutionNotificationChange: (value: boolean) => void;
   onSave: () => void;
 }
 
@@ -24,6 +26,8 @@ export function SettingsDialog({
   onDefaultDelimiterChange,
   noHeaders,
   onNoHeadersChange,
+  showExecutionNotification,
+  onShowExecutionNotificationChange,
   onSave,
 }: SettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<"preference" | "general">("preference");
@@ -89,6 +93,8 @@ export function SettingsDialog({
             onDefaultDelimiterChange={onDefaultDelimiterChange}
             noHeaders={noHeaders}
             onNoHeadersChange={onNoHeadersChange}
+            showExecutionNotification={showExecutionNotification}
+            onShowExecutionNotificationChange={onShowExecutionNotificationChange}
             onSave={onSave}
           />
         </div>

@@ -227,7 +227,7 @@ export function MainMenu({
               <Play className="h-3.5 w-3.5" />
               {t.execute}
               {currentPipelineLength > 0 && (
-                <span className="ml-0.5">({currentPipelineLength})</span>
+                <span>({currentPipelineLength})</span>
               )}
             </>
           )}

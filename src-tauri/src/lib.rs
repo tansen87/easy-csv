@@ -22,6 +22,7 @@ const XAN_EXE_BYTES: &[u8] = include_bytes!("../resources/xan.exe");
 pub struct AppConfig {
   pub default_delimiter: Option<String>,
   pub no_headers: Option<bool>,
+  pub show_execution_notification: Option<bool>,
 }
 
 impl Default for AppConfig {
@@ -29,6 +30,7 @@ impl Default for AppConfig {
     Self {
       default_delimiter: None,
       no_headers: None,
+      show_execution_notification: None,
     }
   }
 }
@@ -673,6 +675,19 @@ async fn set_no_headers(no_headers: bool) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn get_show_execution_notification() -> Option<bool> {
+  let config = load_config().unwrap_or_default();
+  config.show_execution_notification
+}
+
+#[tauri::command]
+async fn set_show_execution_notification(show: bool) -> Result<(), String> {
+  let mut config = load_config()?;
+  config.show_execution_notification = Some(show);
+  save_config(&config)
+}
+
+#[tauri::command]
 async fn set_window_title(window: tauri::Window, title: String) -> Result<(), String> {
   window
     .set_title(&title)
@@ -884,6 +899,8 @@ pub fn run() {
       set_default_delimiter,
       get_no_headers,
       set_no_headers,
+      get_show_execution_notification,
+      set_show_execution_notification,
       save_history,
       load_history,
       save_recent_files,
