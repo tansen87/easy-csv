@@ -3041,6 +3041,78 @@ export const xanCommands: XanCommand[] = [
       },
     ],
   },
+  {
+    id: "batch-filter",
+    name: "batch-filter",
+    description: "Batch filter: search for multiple values and output separate files",
+    descriptionCn: "批量过滤：搜索多个值并输出单独文件",
+    category: "Search & filter",
+    parameters: [
+      {
+        name: "column",
+        type: "string",
+        description: "Column to filter on",
+        required: true,
+      },
+      {
+        name: "filter-type",
+        type: "string",
+        description: "Filter type: text or number",
+        required: true,
+        options: ["text", "number"],
+        default: "text",
+      },
+      {
+        name: "text-operator",
+        type: "string",
+        description: "Text filter operator",
+        required: false,
+        options: ["equals", "not_equals", "starts_with", "not_starts_with", "ends_with", "not_ends_with", "contains", "not_contains", "regex", "is_null", "is_not_null"],
+        default: "equals",
+      },
+      {
+        name: "number-operator",
+        type: "string",
+        description: "Number filter operator",
+        required: false,
+        options: ["equals", "not_equals", "greater_than", "less_than", "greater_or_equal", "less_or_equal"],
+        default: "equals",
+      },
+      {
+        name: "value-mode",
+        type: "string",
+        description: "Value source: manual input or extract from column",
+        required: true,
+        options: ["manual", "column"],
+        default: "manual",
+      },
+      {
+        name: "manual-values",
+        type: "string",
+        description: "Newline-separated values for manual mode",
+        required: false,
+      },
+      {
+        name: "extract-column",
+        type: "string",
+        description: "Column to extract unique values from (column mode)",
+        required: false,
+      },
+      {
+        name: "case-insensitive",
+        type: "flag",
+        description: "Case insensitive matching",
+        required: false,
+        default: false,
+      },
+      {
+        name: "output-dir",
+        type: "string",
+        description: "Custom output directory (empty = same as source file)",
+        required: false,
+      },
+    ],
+  },
 ];
 
 export const commandCategories = [

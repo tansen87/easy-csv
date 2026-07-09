@@ -46,6 +46,7 @@ interface HomeViewProps {
   onInputPositionChange?: (tabId: string, position: { x: number; y: number }) => void;
   onOpenFile?: () => void;
   onImportPipeline?: () => void;
+  onOpenBatchFilter?: (x: number, y: number) => void;
   onOpenUrl?: (url: string) => void;
   branchProgress?: { current: number; total: number; name: string; status: "executing" | "completed" | "error" } | null;
   showProgressBar?: boolean;
@@ -71,6 +72,7 @@ export function HomeView({
   onInputPositionChange,
   onOpenFile,
   onImportPipeline,
+  onOpenBatchFilter,
   onOpenUrl,
   branchProgress,
   showProgressBar,
@@ -303,6 +305,7 @@ export function HomeView({
           onStepAliasUpdate={onStepAliasUpdate || (() => { })}
           onStepRemove={onStepDelete || (() => { })}
           onOpenFilterDialog={(col, x, y) => setFilterDialog({ col, x, y })}
+          onOpenBatchFilter={(x, y) => onOpenBatchFilter?.(x, y)}
           onOpenPivotDialog={(x, y) => setPivotDialog({ x, y })}
           onOpenDateTransformDialog={(col, x, y) => setDateTransformDialog({ col, x, y })}
           onOpenSliceDialog={(col, x, y, sliceType) => setSplitDialog({ col, x, y, sliceType })}
@@ -435,6 +438,7 @@ export function HomeView({
           contextMenu={contextMenu}
           onClose={closeContextMenu}
           onOpenFilterDialog={(col, x, y) => setFilterDialog({ col, x, y })}
+          onOpenBatchFilter={(x, y) => onOpenBatchFilter?.(x, y)}
           onOpenPivotDialog={(x, y) => setPivotDialog({ x, y })}
           onOpenDateTransformDialog={(col, x, y) => setDateTransformDialog({ col, x, y })}
           onOpenTextTransformDialog={(col, x, y, transformType) => setTextTransformDialog({ col, x, y, transformType })}

@@ -10,6 +10,13 @@
     "fs:allow-write-file",
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
+    "fs:allow-remove",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "**" }
+      ]
+    },
     "core:window:allow-set-title",
     "core:window:allow-set-decorations",
     "core:window:allow-is-maximized",

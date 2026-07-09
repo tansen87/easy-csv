@@ -61,7 +61,8 @@ export type CommandDialogType =
   | "range"
   | "run"
   | "eval"
-  | "output";
+  | "output"
+  | "batch-filter";
 
 export interface CommandDialogState {
   type: CommandDialogType;
@@ -196,6 +197,7 @@ export function CommandDialog({
             {commandDialog.type === "eval" && "Eval"}
             {commandDialog.type === "run" && "Run"}
             {commandDialog.type === "output" && "Output"}
+            {commandDialog.type === "batch-filter" && "Batch Filter"}
           </h3>
           <Button
             variant="ghost"
@@ -8408,6 +8410,223 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
                 disabled={!commandDialog.params.path}
+              >
+                {commandDialog.isUpdate ? "Update" : "Add"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {commandDialog.type === "batch-filter" && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Column</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.column || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, column: e.target.value },
+                    })}
+                  placeholder="Column to filter on"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Filter Type</label>
+                <SearchableSelect
+                  value={commandDialog.params["filter-type"] || "text"}
+                  onChange={(value) => {
+                    const newParams: Record<string, any> = { ...commandDialog.params, "filter-type": value };
+                    // Clear the opposite operator when switching types
+                    if (value === "text") {
+                      delete newParams["number-operator"];
+                      if (!newParams["text-operator"]) {
+                        newParams["text-operator"] = "equals";
+                      }
+                    } else {
+                      delete newParams["text-operator"];
+                      if (!newParams["number-operator"]) {
+                        newParams["number-operator"] = "equals";
+                      }
+                    }
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: newParams,
+                    });
+                  }}
+                  options={[
+                    { label: "Text", value: "text" },
+                    { label: "Number", value: "number" },
+                  ]}
+                  placeholder="Select type..."
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Operator</label>
+                <SearchableSelect
+                  value={commandDialog.params["text-operator"] || commandDialog.params["number-operator"] || "equals"}
+                  onChange={(value) => {
+                    if (commandDialog.params["filter-type"] === "number") {
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: { ...commandDialog.params, "number-operator": value },
+                      });
+                    } else {
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: { ...commandDialog.params, "text-operator": value },
+                      });
+                    }
+                  }}
+                  options={
+                    commandDialog.params["filter-type"] === "number"
+                      ? [
+                          { label: "==", value: "equals" },
+                          { label: "!=", value: "not_equals" },
+                          { label: ">", value: "greater_than" },
+                          { label: ">=", value: "greater_or_equal" },
+                          { label: "<", value: "less_than" },
+                          { label: "<=", value: "less_or_equal" },
+                        ]
+                      : [
+                          { label: "Equals", value: "equals" },
+                          { label: "Not equals", value: "not_equals" },
+                          { label: "Starts with", value: "starts_with" },
+                          { label: "Not starts with", value: "not_starts_with" },
+                          { label: "Ends with", value: "ends_with" },
+                          { label: "Not ends with", value: "not_ends_with" },
+                          { label: "Contains", value: "contains" },
+                          { label: "Not contains", value: "not_contains" },
+                          { label: "Regex", value: "regex" },
+                          { label: "Is null", value: "is_null" },
+                          { label: "Is not null", value: "is_not_null" },
+                        ]
+                  }
+                  placeholder="Select operator..."
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Value Source</label>
+                <SearchableSelect
+                  value={commandDialog.params["value-mode"] || "manual"}
+                  onChange={(value) => {
+                    const newParams: Record<string, any> = { ...commandDialog.params, "value-mode": value };
+                    // Auto-select extract-column to current column when switching to "column" mode
+                    if (value === "column" && !newParams["extract-column"]) {
+                      newParams["extract-column"] = commandDialog.params.column || "";
+                    }
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: newParams,
+                    });
+                  }}
+                  options={[
+                    { label: "Manual Input", value: "manual" },
+                    { label: "From Column", value: "column" },
+                  ]}
+                  placeholder="Select source..."
+                />
+              </div>
+            </div>
+            {commandDialog.params["value-mode"] === "manual" ? (
+              <div>
+                <label className="text-sm font-medium">Values (one per line)</label>
+                <textarea
+                  value={commandDialog.params["manual-values"] || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "manual-values": e.target.value },
+                    })}
+                  placeholder={"value1\nvalue2\nvalue3"}
+                  className="w-full h-24 px-3 text-sm border rounded-md bg-background resize-none font-mono"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="text-sm font-medium">Extract Column</label>
+                <input
+                  type="text"
+                  value={commandDialog.params["extract-column"] || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "extract-column": e.target.value },
+                    })}
+                  placeholder="Column to extract values from"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium">Output Directory (optional)</label>
+              <input
+                type="text"
+                value={commandDialog.params["output-dir"] || ""}
+                onChange={(e) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: { ...commandDialog.params, "output-dir": e.target.value },
+                  })}
+                placeholder="Same as source file"
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={commandDialog.params["case-insensitive"] || false}
+                onChange={(e) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: { ...commandDialog.params, "case-insensitive": e.target.checked },
+                  })}
+                className="h-3.5 w-3.5 accent-foreground"
+              />
+              Case insensitive
+            </label>
+            <div className="flex justify-end gap-2 mt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (
+                    commandDialog.isUpdate &&
+                    commandDialog.stepId &&
+                    onStepUpdate
+                  ) {
+                    onStepUpdate(commandDialog.stepId, commandDialog.params);
+                  } else {
+                    const batchFilterCmd = xanCommands.find((c) => c.id === "batch-filter");
+                    if (batchFilterCmd) {
+                      const params = {
+                        ...batchFilterCmd.parameters.reduce(
+                          (acc, param) => {
+                            acc[param.name] = param.default;
+                            return acc;
+                          },
+                          {} as Record<string, any>,
+                        ),
+                        ...commandDialog.params,
+                      };
+                      onAddCommand(batchFilterCmd, params);
+                    }
+                  }
+                  setCommandDialog(null);
+                }}
+                disabled={!commandDialog.params.column}
               >
                 {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>

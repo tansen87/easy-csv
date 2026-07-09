@@ -26,6 +26,7 @@ import {
   Replace,
   LayoutGrid,
   Eraser,
+  Search,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TextTransformType } from "@/components/dialog/TextTransformDialog";
@@ -42,6 +43,7 @@ interface ContextMenuProps {
   contextMenu: ContextMenuState;
   onClose: () => void;
   onOpenFilterDialog: (col: number, x: number, y: number) => void;
+  onOpenBatchFilter: (x: number, y: number) => void;
   onOpenPivotDialog: (x: number, y: number) => void;
   onOpenDateTransformDialog: (col: number, x: number, y: number) => void;
   onOpenTextTransformDialog: (col: number, x: number, y: number, transformType?: TextTransformType) => void;
@@ -57,6 +59,7 @@ export function ContextMenu({
   contextMenu,
   onClose,
   onOpenFilterDialog,
+  onOpenBatchFilter,
   onOpenPivotDialog,
   onOpenDateTransformDialog,
   onOpenTextTransformDialog,
@@ -177,6 +180,18 @@ export function ContextMenu({
       >
         <Filter className="h-4 w-4 text-muted-foreground" />
         Filter
+      </button>
+
+      <button
+        className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+          onOpenBatchFilter(contextMenu.x, contextMenu.y);
+        }}
+      >
+        <Search className="h-4 w-4 text-muted-foreground" />
+        Batch Filter
       </button>
 
       <button

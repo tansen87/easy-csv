@@ -42,6 +42,7 @@ interface FlowPanelProps {
   onStepAliasUpdate: (stepId: string, alias: string) => void;
   onStepRemove: (stepId: string | string[]) => void;
   onOpenFilterDialog: (col: number, x: number, y: number) => void;
+  onOpenBatchFilter: (x: number, y: number) => void;
   onOpenPivotDialog: (x: number, y: number) => void;
   onOpenDateTransformDialog: (col: number, x: number, y: number) => void;
   onOpenSliceDialog: (col: number, x: number, y: number, sliceType?: string) => void;
@@ -71,6 +72,7 @@ export function FlowPanel({
   onStepAliasUpdate,
   onStepRemove,
   onOpenFilterDialog,
+  onOpenBatchFilter,
   onOpenPivotDialog,
   onOpenDateTransformDialog,
   onOpenSliceDialog,
@@ -896,6 +898,7 @@ export function FlowPanel({
           contextMenu={{ x: tableContextMenu.x, y: tableContextMenu.y, row: null, col: tableContextMenu.col }}
           onClose={closeTableContextMenu}
           onOpenFilterDialog={onOpenFilterDialog}
+          onOpenBatchFilter={(x, y) => onOpenBatchFilter(x, y)}
           onOpenPivotDialog={onOpenPivotDialog}
           onOpenDateTransformDialog={onOpenDateTransformDialog}
           onOpenTextTransformDialog={onOpenTextTransformDialog}
