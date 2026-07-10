@@ -146,6 +146,10 @@ export const commandIconMap: Record<string, LucideIcon> = {
   // Scripting
   run: Terminal,
   eval: Calculator,
+
+  // Batch format conversion
+  "batch-from": FileInput,
+  "batch-to": FileText,
 };
 
 interface CommandListProps {

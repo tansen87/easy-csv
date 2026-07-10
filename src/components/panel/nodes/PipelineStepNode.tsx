@@ -44,6 +44,34 @@ export function PipelineStepNode({
         if (typeof value === "boolean") {
           return [key, null]; // null 表示不显示值
         }
+        // 对于source-path,只显示文件夹路径
+        if (key === "source-path" && typeof value === "string") {
+          const paths = value.split(";").filter((p: string) => p.trim());
+          if (paths.length === 1) {
+            const path = paths[0].trim();
+            // 检查是否是文件（有扩展名）
+            const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+            const lastDot = path.lastIndexOf(".");
+            if (lastDot > lastSlash && lastSlash >= 0) {
+              // 是文件，只显示文件夹部分
+              return [key, path.substring(0, lastSlash)];
+            }
+            return [key, path];
+          }
+          // 多个路径，只显示文件夹
+          const folders = paths.map((p: string) => {
+            const trimmed = p.trim();
+            const lastSlash = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
+            const lastDot = trimmed.lastIndexOf(".");
+            if (lastDot > lastSlash && lastSlash >= 0) {
+              return trimmed.substring(0, lastSlash);
+            }
+            return trimmed;
+          });
+          // 去重
+          const uniqueFolders = [...new Set(folders)];
+          return [key, uniqueFolders.join(";")];
+        }
         return [key, value];
       });
   }, [data.step.parameters]);

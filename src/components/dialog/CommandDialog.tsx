@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
-import { X } from "lucide-react";
+import { X, FolderOpen, File } from "lucide-react";
+import { open } from "@tauri-apps/plugin-dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
@@ -62,7 +63,9 @@ export type CommandDialogType =
   | "run"
   | "eval"
   | "output"
-  | "batch-filter";
+  | "batch-filter"
+  | "batch-from"
+  | "batch-to";
 
 export interface CommandDialogState {
   type: CommandDialogType;
@@ -198,6 +201,8 @@ export function CommandDialog({
             {commandDialog.type === "run" && "Run"}
             {commandDialog.type === "output" && "Output"}
             {commandDialog.type === "batch-filter" && "Batch Filter"}
+            {commandDialog.type === "batch-from" && "Batch From"}
+            {commandDialog.type === "batch-to" && "Batch To"}
           </h3>
           <Button
             variant="ghost"
@@ -8627,6 +8632,565 @@ export function CommandDialog({
                   setCommandDialog(null);
                 }}
                 disabled={!commandDialog.params.column}
+              >
+                {commandDialog.isUpdate ? "Update" : "Add"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {commandDialog.type === "batch-from" && (
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Source Path</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={commandDialog.params["source-path"] || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "source-path": e.target.value },
+                    })}
+                  placeholder="Select files or folder..."
+                  className="flex-1 h-8 px-3 text-sm border rounded-md bg-background"
+                  readOnly
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={async () => {
+                    const selected = await open({
+                      multiple: true,
+                      directory: true,
+                    });
+                    if (selected) {
+                      const files = Array.isArray(selected) ? selected : [selected];
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: { ...commandDialog.params, "source-path": files.join(";") },
+                      });
+                    }
+                  }}
+                  title="Select folder"
+                >
+                  <FolderOpen className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={async () => {
+                    const selected = await open({
+                      multiple: true,
+                      filters: [
+                        { name: "All", extensions: ["*"] },
+                        { name: "CSV", extensions: ["csv", "txt", "tsv"] },
+                        { name: "JSON", extensions: ["json", "jsonl", "ndjson"] },
+                        { name: "Excel", extensions: ["xlsx", "xls", "xlsm", "xlsb"] },
+                        { name: "OpenDocument", extensions: ["ods"] },
+                        { name: "Parquet", extensions: ["parquet"] },
+                        { name: "Markdown", extensions: ["md", "markdown"] },
+                      ],
+                    });
+                    if (selected) {
+                      const files = Array.isArray(selected) ? selected : [selected];
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: { ...commandDialog.params, "source-path": files.join(";") },
+                      });
+                    }
+                  }}
+                  title="Select files"
+                >
+                  <File className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">format (optional)</label>
+                <SearchableSelect
+                  value={commandDialog.params.format || ""}
+                  onChange={(value) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, format: value },
+                    })}
+                  options={[
+                    { label: "CSV", value: "csv" },
+                    { label: "ODS", value: "ods" },
+                    { label: "XLS", value: "xls" },
+                    { label: "XLSB", value: "xlsb" },
+                    { label: "XLSX", value: "xlsx" },
+                    { label: "JSON", value: "json" },
+                    { label: "JSONL", value: "jsonl" },
+                    { label: "NDJSON", value: "ndjson" },
+                    { label: "Text", value: "txt" },
+                    { label: "NPY", value: "npy" },
+                    { label: "TAR", value: "tar" },
+                    { label: "Markdown (.md)", value: "md" },
+                    { label: "Markdown (.markdown)", value: "markdown" },
+                  ]}
+                  placeholder="Auto-infer from extension..."
+                  size="md"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">pattern</label>
+                <input
+                  type="text"
+                  value={commandDialog.params.pattern || "*"}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, pattern: e.target.value },
+                    })}
+                  placeholder="*.xlsx"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={commandDialog.params.recursive || false}
+                onChange={(e) =>
+                  setCommandDialog({
+                    ...commandDialog,
+                    params: { ...commandDialog.params, recursive: e.target.checked },
+                  })}
+                className="h-3.5 w-3.5 accent-foreground"
+              />
+              Search subdirectories
+            </label>
+
+            {(commandDialog.params.format === "ods" ||
+              commandDialog.params.format === "xls" ||
+              commandDialog.params.format === "xlsb" ||
+              commandDialog.params.format === "xlsx") && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">sheet-index</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={commandDialog.params["sheet-index"] || ""}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: { ...commandDialog.params, "sheet-index": e.target.value },
+                          })}
+                        placeholder="0-based index"
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">sheet-name</label>
+                      <input
+                        type="text"
+                        value={commandDialog.params["sheet-name"] || ""}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: { ...commandDialog.params, "sheet-name": e.target.value },
+                          })}
+                        placeholder="Name of the sheet"
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            {(commandDialog.params.format === "json" ||
+              commandDialog.params.format === "jsonl" ||
+              commandDialog.params.format === "ndjson") && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">sample-size</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={commandDialog.params["sample-size"] || ""}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: { ...commandDialog.params, "sample-size": e.target.value },
+                          })}
+                        placeholder="Number of records to sample"
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">key-column</label>
+                      <input
+                        type="text"
+                        value={commandDialog.params["key-column"] || ""}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: { ...commandDialog.params, "key-column": e.target.value },
+                          })}
+                        placeholder="Name for the key column"
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">value-column</label>
+                      <input
+                        type="text"
+                        value={commandDialog.params["value-column"] || ""}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: { ...commandDialog.params, "value-column": e.target.value },
+                          })}
+                        placeholder="Name for the value column"
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={commandDialog.params["sort-keys"] || false}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: { ...commandDialog.params, "sort-keys": e.target.checked },
+                          })}
+                        className="h-3.5 w-3.5 accent-foreground"
+                      />
+                      sort-keys
+                    </label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={commandDialog.params["single-object"] || false}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: { ...commandDialog.params, "single-object": e.target.checked },
+                          })}
+                        className="h-3.5 w-3.5 accent-foreground"
+                      />
+                      single-object
+                    </label>
+                  </div>
+                </div>
+              )}
+
+            {commandDialog.params.format === "txt" && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium">column</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.column || ""}
+                    onChange={(e) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: { ...commandDialog.params, column: e.target.value },
+                      })}
+                    placeholder="Name of the column to create"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                  />
+                </div>
+              </div>
+            )}
+
+            {(commandDialog.params.format === "md" ||
+              commandDialog.params.format === "markdown") && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium">nth-table</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={commandDialog.params["nth-table"] || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: { ...commandDialog.params, "nth-table": e.target.value },
+                        })}
+                      placeholder="Select nth table"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                </div>
+              )}
+
+            <div className="flex justify-end gap-2 mt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (
+                    commandDialog.isUpdate &&
+                    commandDialog.stepId &&
+                    onStepUpdate
+                  ) {
+                    onStepUpdate(commandDialog.stepId, commandDialog.params);
+                  } else {
+                    const batchFromCmd = xanCommands.find((c) => c.id === "batch-from");
+                    if (batchFromCmd) {
+                      const params = {
+                        ...batchFromCmd.parameters.reduce(
+                          (acc, param) => {
+                            acc[param.name] = param.default;
+                            return acc;
+                          },
+                          {} as Record<string, any>,
+                        ),
+                        ...commandDialog.params,
+                      };
+                      onAddCommand(batchFromCmd, params);
+                    }
+                  }
+                  setCommandDialog(null);
+                }}
+                disabled={!commandDialog.params["source-path"]}
+              >
+                {commandDialog.isUpdate ? "Update" : "Add"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {commandDialog.type === "batch-to" && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">format</label>
+                <SearchableSelect
+                  value={commandDialog.params.format || "xlsx"}
+                  onChange={(value) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, format: value },
+                    })}
+                  options={[
+                    { label: "CSV", value: "csv" },
+                    { label: "XLSX", value: "xlsx" },
+                    { label: "HTML", value: "html" },
+                    { label: "JSON", value: "json" },
+                    { label: "JSONL", value: "jsonl" },
+                    { label: "Markdown", value: "md" },
+                    { label: "NDJSON", value: "ndjson" },
+                    { label: "NPY", value: "npy" },
+                    { label: "Text", value: "txt" },
+                  ]}
+                  placeholder="Search or select..."
+                  size="md"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">output-dir (optional)</label>
+                <input
+                  type="text"
+                  value={commandDialog.params["output-dir"] || ""}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "output-dir": e.target.value },
+                    })}
+                  placeholder="Same as source file"
+                  className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                />
+              </div>
+            </div>
+
+            {(commandDialog.params.format === "json" ||
+              commandDialog.params.format === "jsonl" ||
+              commandDialog.params.format === "ndjson") && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">sample-size</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={commandDialog.params["sample-size"] || ""}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: { ...commandDialog.params, "sample-size": e.target.value },
+                          })}
+                        placeholder="Number of rows to sample"
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">strings</label>
+                      <input
+                        type="text"
+                        value={commandDialog.params.strings || ""}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: { ...commandDialog.params, strings: e.target.value },
+                          })}
+                        placeholder="Force as raw strings"
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={commandDialog.params.nulls || false}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: { ...commandDialog.params, nulls: e.target.checked },
+                          })}
+                        className="h-3.5 w-3.5 accent-foreground"
+                      />
+                      nulls
+                    </label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={commandDialog.params.omit || false}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: { ...commandDialog.params, omit: e.target.checked },
+                          })}
+                        className="h-3.5 w-3.5 accent-foreground"
+                      />
+                      omit
+                    </label>
+                  </div>
+                </div>
+              )}
+
+            {commandDialog.params.format === "npy" && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">dtype</label>
+                    <select
+                      value={commandDialog.params.dtype || "f64"}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: { ...commandDialog.params, dtype: e.target.value },
+                        })}
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                    >
+                      <option value="f32">f32</option>
+                      <option value="f64">f64</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">select</label>
+                    <input
+                      type="text"
+                      value={commandDialog.params.select || ""}
+                      onChange={(e) =>
+                        setCommandDialog({
+                          ...commandDialog,
+                          params: { ...commandDialog.params, select: e.target.value },
+                        })}
+                      placeholder="Numerical columns to emit"
+                      className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {commandDialog.params.format === "txt" && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium">select</label>
+                  <input
+                    type="text"
+                    value={commandDialog.params.select || ""}
+                    onChange={(e) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: { ...commandDialog.params, select: e.target.value },
+                      })}
+                    placeholder="Column to emit as text"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                  />
+                </div>
+              </div>
+            )}
+
+            {commandDialog.params.format === "md" && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium">limit</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={commandDialog.params.limit || ""}
+                    onChange={(e) =>
+                      setCommandDialog({
+                        ...commandDialog,
+                        params: { ...commandDialog.params, limit: e.target.value },
+                      })}
+                    placeholder="Maximum number of rows"
+                    className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 mt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCommandDialog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (
+                    commandDialog.isUpdate &&
+                    commandDialog.stepId &&
+                    onStepUpdate
+                  ) {
+                    onStepUpdate(commandDialog.stepId, commandDialog.params);
+                  } else {
+                    const batchToCmd = xanCommands.find((c) => c.id === "batch-to");
+                    if (batchToCmd) {
+                      const params = {
+                        ...batchToCmd.parameters.reduce(
+                          (acc, param) => {
+                            acc[param.name] = param.default;
+                            return acc;
+                          },
+                          {} as Record<string, any>,
+                        ),
+                        ...commandDialog.params,
+                      };
+                      onAddCommand(batchToCmd, params);
+                    }
+                  }
+                  setCommandDialog(null);
+                }}
               >
                 {commandDialog.isUpdate ? "Update" : "Add"}
               </Button>

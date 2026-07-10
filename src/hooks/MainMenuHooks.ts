@@ -12,6 +12,7 @@ import {
 import { xanCommands } from "@/data/commands";
 import { BatchFilterConfig } from "@/components/dialog/BatchFilterDialog";
 import { BatchFilterHooks } from "@/hooks/BatchFilterHooks";
+import { BatchConvertHooks } from "@/hooks/BatchConvertHooks";
 
 interface MainMenuHooksProps {
   tabs: PipelineTab[];
@@ -112,6 +113,13 @@ export function MainMenuHooks({
       setBranchProgress,
       getCurrentTab,
     });
+
+  const { executeBatchConvert } = BatchConvertHooks({
+    defaultDelimiter,
+    addLog,
+    setBranchProgress,
+    getCurrentTab,
+  });
 
   const getCurrentPipeline = useCallback(() => {
     return getCurrentTab().pipeline;
@@ -665,13 +673,56 @@ export function MainMenuHooks({
           status: "executing",
         });
 
-        // Check if branch contains batch-filter step
-        const batchFilterIndex = branchSteps.findIndex(
-          (s) => s.command.id === "batch-filter",
+        // Check if branch contains batch-from and batch-to steps
+        const batchFromIndex = branchSteps.findIndex(
+          (s) => s.command.id === "batch-from",
         );
+        const batchToIndex = branchSteps.findIndex(
+          (s) => s.command.id === "batch-to",
+        );
+
         let result: any;
 
-        if (batchFilterIndex >= 0) {
+        // Validate batch-from and batch-to pairing
+        if (batchFromIndex >= 0 || batchToIndex >= 0) {
+          if (batchFromIndex < 0) {
+            result = { success: false, error: "batch-to requires batch-from" };
+            setBranchProgress({
+              current: i + 1,
+              total: branches.length,
+              name: branchName,
+              status: "error",
+            });
+            pipelineFailed = true;
+            continue;
+          }
+          if (batchToIndex < 0) {
+            result = { success: false, error: "batch-from requires batch-to" };
+            setBranchProgress({
+              current: i + 1,
+              total: branches.length,
+              name: branchName,
+              status: "error",
+            });
+            pipelineFailed = true;
+            continue;
+          }
+          // Execute batch conversion
+          const batchFromStep = branchSteps[batchFromIndex];
+          const batchToStep = branchSteps[batchToIndex];
+          await executeBatchConvert(
+            batchFromStep.parameters,
+            batchToStep.parameters,
+          );
+          result = { success: true, output: "" };
+        } else if (
+          branchSteps.findIndex((s) => s.command.id === "batch-filter") >= 0
+        ) {
+          // Check if branch contains batch-filter step
+          const batchFilterIndex = branchSteps.findIndex(
+            (s) => s.command.id === "batch-filter",
+          );
+
           // Split branch: steps before batch-filter + batch-filter step
           const preBatchSteps = branchSteps.slice(0, batchFilterIndex);
           const batchFilterStep = branchSteps[batchFilterIndex];

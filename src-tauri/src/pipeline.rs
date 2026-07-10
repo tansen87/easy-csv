@@ -123,7 +123,10 @@ pub async fn execute_xan_pipeline(
     if num_commands == 1 {
       // Single command pipeline
       let first_cmd_name = &cmd_args_list[0][0];
-      let needs_file_path = matches!(first_cmd_name.as_str(), "sort" | "dedup" | "shuffle");
+      let needs_file_path = matches!(
+        first_cmd_name.as_str(),
+        "sort" | "dedup" | "shuffle" | "from"
+      );
 
       if needs_file_path {
         // For commands that need file paths, ensure input file is the last argument
