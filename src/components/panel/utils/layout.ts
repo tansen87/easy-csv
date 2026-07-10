@@ -182,8 +182,8 @@ export function getLayoutedElements(
     const step = steps.find((s) => s.id === node.id);
     if (step?.position) {
       node.position = step.position;
-    } else if (node.id === "table-node" && savedInputPosition) {
-      node.position = savedInputPosition;
+    } else if (node.id === "table-node") {
+      node.position = savedInputPosition || { x: -500, y: 0 };
     } else {
       const stepIndex = steps.findIndex((s) => s.id === node.id);
       if (stepIndex === -1) {
