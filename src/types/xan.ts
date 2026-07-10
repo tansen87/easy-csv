@@ -62,7 +62,6 @@ export interface HistoricalPipeline {
   defaultDelimiter: string;
   executedAt: string;
   success: boolean;
-  output?: string;
   edges?: PipelineEdge[];
   inputPosition?: { x: number; y: number };
 }

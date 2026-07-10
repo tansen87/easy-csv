@@ -293,8 +293,30 @@ function AppContent() {
   const loadHistoricalPipelines = async () => {
     try {
       const content = await invoke<string>("load_history");
-      const history = JSON.parse(content);
-      setHistoricalPipelines(history);
+      const history: HistoricalPipeline[] = JSON.parse(content);
+
+      // Reconstruct full PipelineStep from stored minimal format
+      const reconstructed = history.map((item) => ({
+        ...item,
+        pipeline: item.pipeline
+          .map((step: any) => {
+            if (step.command) return step;
+            const command = xanCommands.find(
+              (cmd) => cmd.id === step.commandId,
+            );
+            if (!command) return null;
+            return {
+              id: step.id,
+              command,
+              parameters: step.parameters || {},
+              alias: step.alias,
+              position: step.position,
+            };
+          })
+          .filter(Boolean),
+      }));
+
+      setHistoricalPipelines(reconstructed);
     } catch (error) {
       setHistoricalPipelines([]);
     }

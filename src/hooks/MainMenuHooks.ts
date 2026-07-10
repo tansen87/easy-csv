@@ -824,15 +824,20 @@ export function MainMenuHooks({
             ? historicalPipelines[existingHistoryIndex].id
             : `history-${Date.now()}`,
         name: currentTabName,
-        pipeline: currentPipeline,
+        pipeline: currentPipeline.map(
+          (step) =>
+            ({
+              id: step.id,
+              commandId: step.command.id,
+              parameters: step.parameters,
+              alias: step.alias,
+              position: step.position,
+            }) as any,
+        ),
         inputFile,
         defaultDelimiter,
         executedAt: formatDateTime(new Date()),
         success: allResults.every((r) => r.success),
-        output: allResults
-          .map((r) => r.output)
-          .filter(Boolean)
-          .join("\n---\n"),
         edges: edges,
         inputPosition: currentTab.inputPosition,
       };
