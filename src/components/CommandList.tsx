@@ -61,6 +61,7 @@ import {
   ScanSearch,
   Pickaxe,
   ChartBar,
+  FunnelPlus,
   type LucideIcon,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
@@ -147,7 +148,8 @@ export const commandIconMap: Record<string, LucideIcon> = {
   run: Terminal,
   eval: Calculator,
 
-  // Batch format conversion
+  // Batch method
+  "batch-filter": FunnelPlus,
   "batch-from": FileInput,
   "batch-to": FileText,
 };
