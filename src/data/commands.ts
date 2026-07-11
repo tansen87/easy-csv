@@ -1898,6 +1898,13 @@ export const xanCommands: XanCommand[] = [
         isPositional: true,
       },
       {
+        name: "inputs",
+        type: "string",
+        description: "Input CSV file(s) to concatenate",
+        required: false,
+        isPositional: true,
+      },
+      {
         name: "pad",
         type: "flag",
         description: "When concatenating columns, this flag will cause all records to appear. It will pad each row if other CSV data isn't long enough.",

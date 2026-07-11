@@ -374,7 +374,15 @@ export function MainMenuHooks({
 
             const prefix = param.isPositional ? "" : `--${param.name}`;
             let escapedValue = value;
-            if (typeof value === "string") {
+            if (Array.isArray(value)) {
+              escapedValue = value
+                .map((v: string) =>
+                  v.includes(" ") || v.includes('"')
+                    ? `"${v.replace(/"/g, '\\"')}"`
+                    : v,
+                )
+                .join(" ");
+            } else if (typeof value === "string") {
               if (
                 value.includes(" ") ||
                 value.includes('"') ||
@@ -789,11 +797,18 @@ export function MainMenuHooks({
         } else {
           // Normal pipeline execution (no batch-filter)
           const commands = branchSteps.map((step, index) => {
-            let params = step.command.parameters.map((param) => ({
-              name: param.name,
-              value: String(step.parameters[param.name] || param.default || ""),
-              isPositional: param.isPositional,
-            }));
+            let params = step.command.parameters.map((param) => {
+              const rawValue = step.parameters[param.name] ?? param.default;
+              // For arrays (e.g., multiple file paths), join with | separator
+              const value = Array.isArray(rawValue)
+                ? rawValue.filter(Boolean).join("|")
+                : String(rawValue || "");
+              return {
+                name: param.name,
+                value,
+                isPositional: param.isPositional,
+              };
+            });
 
             if (step.command.name === "run") {
               const mode = step.parameters.mode || "pipeline";

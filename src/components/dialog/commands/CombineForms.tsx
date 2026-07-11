@@ -2,6 +2,7 @@ import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { CommandFormProps } from "@/components/dialog/commands/types";
 import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
+import { open } from "@tauri-apps/plugin-dialog";
 
 export function CatForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
@@ -48,6 +49,47 @@ export function CatForm(props: CommandFormProps) {
             ))}
           </div>
           <div>
+            <label className="text-sm font-medium">Input File(s)</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={
+                  Array.isArray(commandDialog.params.inputs)
+                    ? commandDialog.params.inputs.join(", ")
+                    : commandDialog.params.inputs || ""
+                }
+                onChange={(e) =>
+                  updateParam(
+                    commandDialog,
+                    setCommandDialog,
+                    "inputs",
+                    e.target.value,
+                  )
+                }
+                placeholder="Select CSV files to concatenate"
+                className="flex-1 h-8 px-3 text-sm border rounded-md bg-background"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  const file = await open({
+                    multiple: true,
+                    filters: [
+                      { name: "Csv", extensions: ["csv", "txt", "tsv"] },
+                      { name: "All", extensions: ["*"] },
+                    ],
+                  });
+                  if (file) {
+                    updateParam(commandDialog, setCommandDialog, "inputs", file);
+                  }
+                }}
+                className="h-8 px-2 text-sm border rounded-md bg-background hover:bg-muted"
+              >
+                ...
+              </button>
+            </div>
+          </div>
+          <div>
             <label className="text-sm font-medium">paths</label>
             <input
               type="text"
@@ -60,7 +102,7 @@ export function CatForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder="Text file containing paths to CSV files"
+              placeholder="Text file containing paths to CSV files (one per line)"
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -134,20 +176,40 @@ export function CatForm(props: CommandFormProps) {
           </div>
           <div>
             <label className="text-sm font-medium">run</label>
-            <input
-              type="text"
-              value={commandDialog.params.run || ""}
-              onChange={(e) =>
-                updateParam(
-                  commandDialog,
-                  setCommandDialog,
-                  "run",
-                  e.target.value,
-                )
-              }
-              placeholder="Path to xan script for preprocessing"
-              className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={commandDialog.params.run || ""}
+                onChange={(e) =>
+                  updateParam(
+                    commandDialog,
+                    setCommandDialog,
+                    "run",
+                    e.target.value,
+                  )
+                }
+                placeholder="Path to xan script for preprocessing"
+                className="flex-1 h-8 px-3 text-sm border rounded-md bg-background"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  const file = await open({
+                    multiple: false,
+                    filters: [
+                      { name: "Xan Script", extensions: ["xanscript"] },
+                      { name: "All", extensions: ["*"] },
+                    ],
+                  });
+                  if (file) {
+                    updateParam(commandDialog, setCommandDialog, "run", file);
+                  }
+                }}
+                className="h-8 px-2 text-sm border rounded-md bg-background hover:bg-muted"
+              >
+                ...
+              </button>
+            </div>
           </div>
           <div>
             <label className="text-sm font-medium">shell-preprocess</label>

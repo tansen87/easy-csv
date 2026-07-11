@@ -36,6 +36,10 @@ export function PipelineStepNode({
         if (typeof value === "boolean") {
           return value === true;
         }
+        // 对于数组,过滤掉空数组
+        if (Array.isArray(value)) {
+          return value.length > 0;
+        }
         // 对于其他参数,过滤掉 undefined 和空字符串
         return value !== undefined && value !== "";
       })
@@ -43,6 +47,16 @@ export function PipelineStepNode({
         // 对于布尔值(flag参数),只显示参数名
         if (typeof value === "boolean") {
           return [key, null]; // null 表示不显示值
+        }
+        // 对于数组参数(如inputs),截断显示
+        if (Array.isArray(value)) {
+          const count = value.length;
+          if (count <= 2) {
+            return [key, value.join(", ")];
+          }
+          // 只显示第一个文件名和总数
+          const firstName = String(value[0]).split(/[\\/]/).pop() || value[0];
+          return [key, `${firstName} +${count - 1} files`];
         }
         // 对于source-path,只显示文件夹路径
         if (key === "source-path" && typeof value === "string") {

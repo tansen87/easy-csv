@@ -68,7 +68,14 @@ pub async fn execute_xan_pipeline(
         optional_args.push(format!("--{}", param.name));
       } else if !param.value.is_empty() {
         if param.is_positional.unwrap_or(false) {
-          positional_args.push(param.value.clone());
+          // Split pipe-separated values for positional params (e.g., multiple file paths)
+          // Using | because file names may contain commas
+          for part in param.value.split('|') {
+            let trimmed = part.trim();
+            if !trimmed.is_empty() {
+              positional_args.push(trimmed.to_string());
+            }
+          }
         } else {
           optional_args.push(format!("--{}", param.name));
           optional_args.push(param.value.clone());
