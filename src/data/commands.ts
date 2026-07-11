@@ -99,6 +99,27 @@ export const xanCommands: XanCommand[] = [
     category: "Explore & visualize",
     parameters: [
       {
+        name: "human-readable",
+        type: "flag",
+        description: "Format the count so it is easier to read",
+        required: false,
+        default: false,
+      },
+      {
+        name: "approx",
+        type: "flag",
+        description: "Attempt to approximate row count by sampling",
+        required: false,
+        default: false,
+      },
+      {
+        name: "check-alignment",
+        type: "flag",
+        description: "Use a slower parser validating that given CSV stream yields rows having the same number of columns",
+        required: false,
+        default: false,
+      },
+      {
         name: "parallel",
         type: "flag",
         description: "Use parallelization to speed up counting",
@@ -110,13 +131,6 @@ export const xanCommands: XanCommand[] = [
         type: "number",
         description: "Parellize computations using this many threads",
         required: false,
-      },
-      {
-        name: "approx",
-        type: "flag",
-        description: "Attempt to approximate row count by sampling",
-        required: false,
-        default: false,
       },
     ],
   },
@@ -800,6 +814,13 @@ export const xanCommands: XanCommand[] = [
         required: true,
         isPositional: true,
       },
+      {
+        name: "lines",
+        type: "flag",
+        description: "Indicate that input should be considered as text lines instead of CSV data",
+        required: false,
+        default: false,
+      },
 
     ],
   },
@@ -1193,6 +1214,13 @@ export const xanCommands: XanCommand[] = [
         required: false,
       },
       {
+        name: "sorted",
+        type: "flag",
+        description: "When used with --groupby, indicates that the input is sorted on the group columns so the command can run faster",
+        required: false,
+        default: false,
+      },
+      {
         name: "ties",
         type: "flag",
         description: "Keep all rows tied for last",
@@ -1239,6 +1267,13 @@ export const xanCommands: XanCommand[] = [
         type: "string",
         description: "Return a sample per group",
         required: false,
+      },
+      {
+        name: "sorted",
+        type: "flag",
+        description: "Use with --groupby to indicate that input is sorted on group columns so the command can run faster",
+        required: false,
+        default: false,
       },
       {
         name: "cursed",
@@ -1337,6 +1372,13 @@ export const xanCommands: XanCommand[] = [
         description: "Maximum allowed memory when using external sorting, in megabytes",
         required: false,
         default: 512,
+      },
+      {
+        name: "compress",
+        type: "flag",
+        description: "When using --external, compress temporary chunks on disk",
+        required: false,
+        default: false,
       },
       {
         name: "columns",
@@ -1836,6 +1878,20 @@ export const xanCommands: XanCommand[] = [
         name: "pad",
         type: "flag",
         description: "When concatenating columns, this flag will cause all records to appear. It will pad each row if other CSV data isn't long enough.",
+        required: false,
+        default: false,
+      },
+      {
+        name: "intersection",
+        type: "flag",
+        description: "Compute the intersection of headers of all concatenated files and reorder columns accordingly. Incompatible with --union, preprocessing and --no-headers.",
+        required: false,
+        default: false,
+      },
+      {
+        name: "union",
+        type: "flag",
+        description: "Compute the union of headers of all concatenated files and reorder columns accordingly. Incompatible with --intersection, preprocessing and --no-headers.",
         required: false,
         default: false,
       },
@@ -2734,6 +2790,18 @@ export const xanCommands: XanCommand[] = [
         description: "Use if JSON only represents a single object that you want to map to a single CSV row",
         required: false,
         default: false,
+      },
+      {
+        name: "root",
+        type: "string",
+        description: "Convert nested object found at path instead of root object (JSON/TOML)",
+        required: false,
+      },
+      {
+        name: "model",
+        type: "string",
+        description: "Pass a dummy JSON object as the extraction model to avoid sampling or restrict extracted paths",
+        required: false,
       },
       {
         name: "column",

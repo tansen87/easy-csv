@@ -10,6 +10,8 @@
 按行连接时,所有 CSV 数据必须具有相同的列数.如果需要重新排列列或修复记录长度,请使用 `select` 或 `fixlengths` 命令.
 此外,仅使用*第一个*给定 CSV 数据的标题.后续输入中的标题将被忽略.(可以使用 --no-headers 禁用此行为.)
 
+此外,您可以使用 -I/--intersection 或 -U/--union 重新排列列并填充行.这在处理具有相似但不完全相同模式的多个文件时很有用.
+
 当连接的 CSV 文件数量超过 shell 的命令参数限制时,建议使用 --paths 标志从输入行或包含路径的 CSV 文件中读取要连接的 CSV 文件列表.
 
 喂入 --paths 行:
@@ -41,6 +43,10 @@ cat cols/columns options:
     -p, --pad                   连接列时,此标志将导致所有记录出现.如果其他 CSV 数据不够长,它将填充每一行.
 
 cat rows options:
+    -I, --intersection           计算所有连接文件标题的交集,并相应地重新排列连接文件的列.
+                                 与 -U/--union、预处理和 -n/--no-headers 不兼容.
+    -U, --union                  计算所有连接文件标题的并集,并相应地重新排列连接文件的列.
+                                 与 -I/--intersection、预处理和 -n/--no-headers 不兼容.
     --paths <input>              连接行时,提供一个文本文件(使用 "-" 表示标准输入),其中每行包含一个要连接的 CSV 文件路径.
     --path-column <name>         给定列名时,--paths 将被视为 CSV,要连接的 CSV 文件路径将从选定列中提取.
     --glob <pattern>             使用给定的 glob <pattern> 收集要连接的文件.

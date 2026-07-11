@@ -248,20 +248,33 @@ export function CommandDialog({
                   </div>
                 </div>
                 <div className="grid grid-cols-4 gap-2 mt-2">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={commandDialog.params["invert-match"]}
-                      onChange={(e) =>
-                        setCommandDialog({
-                          ...commandDialog,
-                          params: { ...commandDialog.params, "invert-match": e.target.checked },
-                        })}
-                      className="h-3.5 w-3.5 accent-foreground"
-                    />
-                    invert-match
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.keep}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, keep: e.target.checked },
+                    })}
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                keep
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.lines}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, lines: e.target.checked },
+                    })}
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                lines
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <input
                       type="checkbox"
                       checked={commandDialog.params.exact}
@@ -1072,6 +1085,19 @@ export function CommandDialog({
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
+                  checked={commandDialog.params.compress ?? false}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, compress: e.target.checked },
+                    })}
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                compress
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
                   checked={commandDialog.params.columns ?? false}
                   onChange={(e) =>
                     setCommandDialog({
@@ -1407,6 +1433,45 @@ export function CommandDialog({
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
+                  checked={commandDialog.params["human-readable"]}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "human-readable": e.target.checked },
+                    })}
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                human-readable
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.approx}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, approx: e.target.checked },
+                    })}
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                approx
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params["check-alignment"]}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, "check-alignment": e.target.checked },
+                    })}
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                check-alignment
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
                   checked={commandDialog.params.parallel}
                   onChange={(e) =>
                     setCommandDialog({
@@ -1426,22 +1491,9 @@ export function CommandDialog({
                     ...commandDialog,
                     params: { ...commandDialog.params, threads: e.target.value },
                   })}
-                placeholder="Number of threads"
+                placeholder="Threads"
                 className="h-8 px-3 text-sm border rounded-md bg-background"
               />
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={commandDialog.params.approx}
-                  onChange={(e) =>
-                    setCommandDialog({
-                      ...commandDialog,
-                      params: { ...commandDialog.params, approx: e.target.checked },
-                    })}
-                  className="h-3.5 w-3.5 accent-foreground"
-                />
-                approx
-              </label>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Button
@@ -1761,6 +1813,19 @@ export function CommandDialog({
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commandDialog.params.sorted ?? false}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, sorted: e.target.checked },
+                    })}
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                sorted
+              </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
@@ -4996,6 +5061,19 @@ export function CommandDialog({
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
+                  checked={commandDialog.params.sorted ?? false}
+                  onChange={(e) =>
+                    setCommandDialog({
+                      ...commandDialog,
+                      params: { ...commandDialog.params, sorted: e.target.checked },
+                    })}
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                sorted
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
                   checked={commandDialog.params.ties ?? false}
                   onChange={(e) =>
                     setCommandDialog({
@@ -5073,6 +5151,47 @@ export function CommandDialog({
                 </div>
                 {commandDialog.params.mode === "rows" && (
                   <>
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={commandDialog.params.intersection}
+                          onChange={(e) =>
+                            setCommandDialog({
+                              ...commandDialog,
+                              params: { ...commandDialog.params, intersection: e.target.checked },
+                            })}
+                          className="h-3.5 w-3.5 accent-foreground"
+                        />
+                        intersection
+                      </label>
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={commandDialog.params.union}
+                          onChange={(e) =>
+                            setCommandDialog({
+                              ...commandDialog,
+                              params: { ...commandDialog.params, union: e.target.checked },
+                            })}
+                          className="h-3.5 w-3.5 accent-foreground"
+                        />
+                        union
+                      </label>
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={commandDialog.params.raw}
+                          onChange={(e) =>
+                            setCommandDialog({
+                              ...commandDialog,
+                              params: { ...commandDialog.params, raw: e.target.checked },
+                            })}
+                          className="h-3.5 w-3.5 accent-foreground"
+                        />
+                        raw
+                      </label>
+                    </div>
                     <div>
                       <label className="text-sm font-medium">paths</label>
                       <input
@@ -5170,21 +5289,6 @@ export function CommandDialog({
                         placeholder="Shell commands for preprocessing"
                         className="w-full h-8 px-3 text-sm border rounded-md bg-background"
                       />
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <label className="flex items-center gap-2 text-sm cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={commandDialog.params.raw}
-                          onChange={(e) =>
-                            setCommandDialog({
-                              ...commandDialog,
-                              params: { ...commandDialog.params, raw: e.target.checked },
-                            })}
-                          className="h-3.5 w-3.5 accent-foreground"
-                        />
-                        raw
-                      </label>
                     </div>
                   </>
                 )}
@@ -7370,6 +7474,36 @@ export function CommandDialog({
                       />
                       single-object
                     </label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">root</label>
+                      <input
+                        type="text"
+                        value={commandDialog.params.root || ""}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: { ...commandDialog.params, root: e.target.value },
+                          })}
+                        placeholder='e.g. "data" or "_.nodes[0].metadata"'
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">model</label>
+                      <input
+                        type="text"
+                        value={commandDialog.params.model || ""}
+                        onChange={(e) =>
+                          setCommandDialog({
+                            ...commandDialog,
+                            params: { ...commandDialog.params, model: e.target.value },
+                          })}
+                        placeholder="Dummy JSON object as extraction model"
+                        className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
