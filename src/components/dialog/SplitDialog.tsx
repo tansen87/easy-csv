@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X, Plus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
@@ -55,18 +55,36 @@ export function SplitDialog({
   const [separator, setSeparator] = useState("/");
   const [customSeparator, setCustomSeparator] = useState("");
   const [outputColumnName, setOutputColumnName] = useState("new_col");
-  const [selectedColumn, setSelectedColumn] = useState(headers[splitDialog.col] || "");
+  const [selectedColumn, setSelectedColumn] = useState(
+    headers[splitDialog.col] || "",
+  );
   const [leftLength, setLeftLength] = useState("4");
   const [rightLength, setRightLength] = useState("4");
   const [sliceStart, setSliceStart] = useState("0");
   const [sliceEnd, setSliceEnd] = useState("4");
   const [indices, setIndices] = useState<string[]>(["0"]);
   const [joinWith, setJoinWith] = useState("-");
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [dialogHeight, setDialogHeight] = useState(360);
+  const [dialogWidth, setDialogWidth] = useState(240);
+
+  useEffect(() => {
+    if (dialogRef.current) {
+      setDialogHeight(dialogRef.current.offsetHeight);
+      setDialogWidth(dialogRef.current.offsetWidth);
+    }
+  }, []);
+
+  const maxY = window.innerHeight - dialogHeight;
+  const maxX = window.innerWidth - dialogWidth;
+
   const { position, isDragging, handleMouseDown } = useDraggable({
     initialX: splitDialog.x,
     initialY: splitDialog.y,
-    maxWidth: 360,
-    maxHeight: 540,
+    maxWidth: dialogWidth,
+    maxHeight: dialogHeight,
+    maxX,
+    maxY,
   });
 
   const handleApply = () => {
@@ -91,8 +109,9 @@ export function SplitDialog({
         expression = `col("${selectedColumn}")[${sliceStart}:${sliceEnd}]`;
         break;
       case "split": {
-        const actualSeparator = separator === "custom" ? customSeparator : separator;
-        const validIndices = indices.filter(i => i.trim() !== "");
+        const actualSeparator =
+          separator === "custom" ? customSeparator : separator;
+        const validIndices = indices.filter((i) => i.trim() !== "");
         let splitExpr = `split(col("${selectedColumn}"), "${actualSeparator}")`;
 
         if (validIndices.length > 0) {
@@ -100,7 +119,9 @@ export function SplitDialog({
             expression = `${splitExpr}[${validIndices[0]}]`;
           } else {
             const joinStr = joinWith || "";
-            const indexParts = validIndices.map(i => `${splitExpr}[${i}]`).join(` ++ "${joinStr}" ++ `);
+            const indexParts = validIndices
+              .map((i) => `${splitExpr}[${i}]`)
+              .join(` ++ "${joinStr}" ++ `);
             expression = indexParts;
           }
         } else {
@@ -110,15 +131,18 @@ export function SplitDialog({
       }
     }
 
-    const expressionWithAlias = outputName !== ""
-      ? `${expression} as "${outputName}"`
-      : expression;
+    const expressionWithAlias =
+      outputName !== "" ? `${expression} as "${outputName}"` : expression;
 
-    onAddCommand(mapCommand, {
-      expression: expressionWithAlias,
-      output: "",
-      overwrite: isOverwrite,
-    }, sliceType);
+    onAddCommand(
+      mapCommand,
+      {
+        expression: expressionWithAlias,
+        output: "",
+        overwrite: isOverwrite,
+      },
+      sliceType,
+    );
     onClose();
   };
 
@@ -140,6 +164,7 @@ export function SplitDialog({
 
   return (
     <div
+      ref={dialogRef}
       className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[240px] select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
         left: position.x,
@@ -169,7 +194,10 @@ export function SplitDialog({
             <SearchableSelect
               value={selectedColumn}
               onChange={setSelectedColumn}
-              options={headers.map(header => ({ label: header, value: header }))}
+              options={headers.map((header) => ({
+                label: header,
+                value: header,
+              }))}
               placeholder="Search or select column..."
             />
           </div>
@@ -351,7 +379,12 @@ export function SplitDialog({
           variant="secondary"
           size="sm"
           onClick={handleApply}
-          disabled={!selectedColumn || (sliceType === "split" && separator === "custom" && !customSeparator)}
+          disabled={
+            !selectedColumn ||
+            (sliceType === "split" &&
+              separator === "custom" &&
+              !customSeparator)
+          }
         >
           Apply
         </Button>

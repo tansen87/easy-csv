@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X, ArrowUpAZ, ArrowDownAZ } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -36,16 +36,32 @@ export function SortDialog({
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [sortNumeric, setSortNumeric] = useState(false);
   const [search, setSearch] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [dialogHeight, setDialogHeight] = useState(500);
+  const [dialogWidth, setDialogWidth] = useState(280);
+
+  useEffect(() => {
+    if (dialogRef.current) {
+      setDialogHeight(dialogRef.current.offsetHeight);
+      setDialogWidth(dialogRef.current.offsetWidth);
+    }
+  }, []);
+
+  const maxY = window.innerHeight - dialogHeight;
+  const maxX = window.innerWidth - dialogWidth;
+
   const { position, isDragging, handleMouseDown } = useDraggable({
     initialX: sortDialog.x,
     initialY: sortDialog.y,
-    maxWidth: 360,
-    maxHeight: 500,
+    maxWidth: dialogWidth,
+    maxHeight: dialogHeight,
+    maxX,
+    maxY,
   });
 
   const toggleColumn = (col: string) => {
     setSelectedColumns((prev) =>
-      prev.includes(col) ? prev.filter((c) => c !== col) : [...prev, col]
+      prev.includes(col) ? prev.filter((c) => c !== col) : [...prev, col],
     );
   };
 
@@ -74,6 +90,7 @@ export function SortDialog({
 
   return (
     <div
+      ref={dialogRef}
       className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[280px] flex flex-col select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
         left: position.x,
@@ -115,7 +132,9 @@ export function SortDialog({
           <ScrollArea className="h-[120px] border rounded-md bg-background">
             <div className="p-1.5 space-y-0.5">
               {filteredHeaders.length === 0 ? (
-                <span className="text-xs text-muted-foreground px-2 py-1.5">No matches</span>
+                <span className="text-xs text-muted-foreground px-2 py-1.5">
+                  No matches
+                </span>
               ) : (
                 filteredHeaders.map((header) => {
                   const selected = selectedColumns.includes(header);
@@ -123,17 +142,19 @@ export function SortDialog({
                     <button
                       key={header}
                       onClick={() => toggleColumn(header)}
-                      className={`no-drag w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors ${selected
-                        ? "bg-primary/10 text-primary"
-                        : "hover:bg-accent"
-                        }`}
+                      className={`no-drag w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors ${
+                        selected
+                          ? "bg-primary/10 text-primary"
+                          : "hover:bg-accent"
+                      }`}
                     >
                       <div className="flex items-center gap-2">
                         <div
-                          className={`w-3.5 h-3.5 border rounded-md flex items-center justify-center ${selected
-                            ? "bg-primary border-primary"
-                            : "border-muted-foreground/30"
-                            }`}
+                          className={`w-3.5 h-3.5 border rounded-md flex items-center justify-center ${
+                            selected
+                              ? "bg-primary border-primary"
+                              : "border-muted-foreground/30"
+                          }`}
                         >
                           {selected && (
                             <svg
@@ -162,7 +183,9 @@ export function SortDialog({
         </div>
 
         <div className="space-y-2">
-          <div className="text-xs font-medium text-muted-foreground">Sort Order:</div>
+          <div className="text-xs font-medium text-muted-foreground">
+            Sort Order:
+          </div>
           <ScrollArea className="h-[100px] border rounded-md bg-background p-2">
             <div className="space-y-0.5">
               {selectedColumns.map((col, index) => (
@@ -171,17 +194,24 @@ export function SortDialog({
                   <span className="font-medium">{col}</span>
                   <div className="flex items-center gap-1 ml-auto">
                     <button
-                      onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                      onClick={() =>
+                        setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                      }
                       className="no-drag p-0.5 hover:bg-accent/50 rounded-md text-muted-foreground/60 hover:text-muted-foreground"
                     >
-                      {sortOrder === "asc" ? <ArrowDownAZ className="h-4 w-4" /> : <ArrowUpAZ className="h-4 w-4" />}
+                      {sortOrder === "asc" ? (
+                        <ArrowDownAZ className="h-4 w-4" />
+                      ) : (
+                        <ArrowUpAZ className="h-4 w-4" />
+                      )}
                     </button>
                     <button
                       onClick={() => setSortNumeric(!sortNumeric)}
-                      className={`no-drag px-1.5 py-0.5 text-xs rounded-md transition-colors ${sortNumeric
-                        ? "bg-primary/20 text-primary"
-                        : "bg-muted/50 text-muted-foreground"
-                        }`}
+                      className={`no-drag px-1.5 py-0.5 text-xs rounded-md transition-colors ${
+                        sortNumeric
+                          ? "bg-primary/20 text-primary"
+                          : "bg-muted/50 text-muted-foreground"
+                      }`}
                     >
                       {sortNumeric ? "Num" : "Text"}
                     </button>
@@ -189,7 +219,9 @@ export function SortDialog({
                 </div>
               ))}
               {selectedColumns.length === 0 && (
-                <span className="text-xs text-muted-foreground">No columns selected</span>
+                <span className="text-xs text-muted-foreground">
+                  No columns selected
+                </span>
               )}
             </div>
           </ScrollArea>

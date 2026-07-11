@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
@@ -73,7 +73,11 @@ interface BatchFilterDialogState {
 interface BatchFilterDialogProps {
   state: BatchFilterDialogState;
   headers: string[];
-  onAddCommand: (command: XanCommand, initialParameters?: Record<string, any>, alias?: string) => void;
+  onAddCommand: (
+    command: XanCommand,
+    initialParameters?: Record<string, any>,
+    alias?: string,
+  ) => void;
   onClose: () => void;
 }
 
@@ -85,19 +89,37 @@ export function BatchFilterDialog({
 }: BatchFilterDialogProps) {
   const [filterType, setFilterType] = useState<FilterType>("text");
   const [textOperator, setTextOperator] = useState<TextOperator>("equals");
-  const [numberOperator, setNumberOperator] = useState<NumberOperator>("equals");
-  const [selectedColumn, setSelectedColumn] = useState<string>(headers[0] || "");
+  const [numberOperator, setNumberOperator] =
+    useState<NumberOperator>("equals");
+  const [selectedColumn, setSelectedColumn] = useState<string>(
+    headers[0] || "",
+  );
   const [valueMode, setValueMode] = useState<"manual" | "column">("manual");
   const [manualValues, setManualValues] = useState("");
   const [extractColumn, setExtractColumn] = useState<string>(headers[0] || "");
   const [caseInsensitive, setCaseInsensitive] = useState(false);
   const [outputDir, setOutputDir] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [dialogHeight, setDialogHeight] = useState(600);
+  const [dialogWidth, setDialogWidth] = useState(280);
+
+  useEffect(() => {
+    if (dialogRef.current) {
+      setDialogHeight(dialogRef.current.offsetHeight);
+      setDialogWidth(dialogRef.current.offsetWidth);
+    }
+  }, []);
+
+  const maxY = window.innerHeight - dialogHeight;
+  const maxX = window.innerWidth - dialogWidth;
 
   const { position, isDragging, handleMouseDown } = useDraggable({
     initialX: state.x,
     initialY: state.y,
-    maxWidth: 360,
-    maxHeight: 600,
+    maxWidth: dialogWidth,
+    maxHeight: dialogHeight,
+    maxX,
+    maxY,
   });
 
   // Reset state when dialog opens
@@ -114,10 +136,11 @@ export function BatchFilterDialog({
   }, [headers]);
 
   const handleApply = () => {
-    const needsValue = textOperator !== "is_null" && textOperator !== "is_not_null";
+    const needsValue =
+      textOperator !== "is_null" && textOperator !== "is_not_null";
     if (needsValue && valueMode === "manual" && !manualValues.trim()) return;
 
-    const batchFilterCmd = xanCommands.find(cmd => cmd.id === "batch-filter");
+    const batchFilterCmd = xanCommands.find((cmd) => cmd.id === "batch-filter");
     if (!batchFilterCmd) return;
 
     const parameters: Record<string, any> = {
@@ -152,6 +175,7 @@ export function BatchFilterDialog({
 
   return (
     <div
+      ref={dialogRef}
       className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[280px] select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
         left: position.x,
@@ -175,179 +199,196 @@ export function BatchFilterDialog({
       {/* Content */}
       <ScrollArea className="h-[34vh]">
         <div className="p-3 space-y-3">
-        {/* Column selection */}
-        <div className="no-drag">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Column
-          </label>
-          <SearchableSelect
-            value={selectedColumn}
-            onChange={(v) => setSelectedColumn(v as string)}
-            options={headers.map((header) => ({ value: header, label: header }))}
-            placeholder="Select column..."
-          />
-        </div>
-
-        {/* Filter type toggle */}
-        <div className="no-drag flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
-          <button
-            className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${filterType === "text"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground hover:bg-accent"
-              }`}
-            onClick={() => setFilterType("text")}
-          >
-            Text
-          </button>
-          <button
-            className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${filterType === "number"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground hover:bg-accent"
-              }`}
-            onClick={() => setFilterType("number")}
-          >
-            Number
-          </button>
-        </div>
-
-        {/* Operator selection */}
-        {filterType === "text" ? (
+          {/* Column selection */}
           <div className="no-drag">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
-              Operator
+              Column
             </label>
             <SearchableSelect
-              value={textOperator}
-              onChange={(v) => setTextOperator(v as TextOperator)}
-              options={textOperators}
-              placeholder="Select operator..."
+              value={selectedColumn}
+              onChange={(v) => setSelectedColumn(v as string)}
+              options={headers.map((header) => ({
+                value: header,
+                label: header,
+              }))}
+              placeholder="Select column..."
             />
           </div>
-        ) : (
-          <div className="no-drag">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">
-              Operator
-            </label>
-            <SearchableSelect
-              value={numberOperator}
-              onChange={(v) => setNumberOperator(v as NumberOperator)}
-              options={numberOperators}
-              placeholder="Select operator..."
-            />
-          </div>
-        )}
 
-        {/* Case insensitive */}
-        {filterType === "text" && (
-          <div className="no-drag flex items-center gap-1.5">
-            <input
-              type="checkbox"
-              id="case-insensitive"
-              checked={caseInsensitive}
-              onChange={(e) => setCaseInsensitive(e.target.checked)}
-              className="h-3.5 w-3.5 accent-foreground"
-            />
-            <label htmlFor="case-insensitive" className="text-xs cursor-pointer">
-              Ignore case
-            </label>
+          {/* Filter type toggle */}
+          <div className="no-drag flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+            <button
+              className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                filterType === "text"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+              onClick={() => setFilterType("text")}
+            >
+              Text
+            </button>
+            <button
+              className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                filterType === "number"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+              onClick={() => setFilterType("number")}
+            >
+              Number
+            </button>
           </div>
-        )}
 
-        {/* Value source — hidden for is_null / is_not_null */}
-        {textOperator !== "is_null" && textOperator !== "is_not_null" && (
-          <>
+          {/* Operator selection */}
+          {filterType === "text" ? (
             <div className="no-drag">
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                Value Source
+                Operator
               </label>
-              <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
-                <button
-                  className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${valueMode === "manual"
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                    }`}
-                  onClick={() => setValueMode("manual")}
-                >
-                  Manual Input
-                </button>
-                <button
-                  className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${valueMode === "column"
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                    }`}
-                  onClick={() => {
-                    setExtractColumn(selectedColumn);
-                    setValueMode("column");
-                  }}
-                >
-                  From Column
-                </button>
-              </div>
+              <SearchableSelect
+                value={textOperator}
+                onChange={(v) => setTextOperator(v as TextOperator)}
+                options={textOperators}
+                placeholder="Select operator..."
+              />
             </div>
+          ) : (
+            <div className="no-drag">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                Operator
+              </label>
+              <SearchableSelect
+                value={numberOperator}
+                onChange={(v) => setNumberOperator(v as NumberOperator)}
+                options={numberOperators}
+                placeholder="Select operator..."
+              />
+            </div>
+          )}
 
-            {/* Value input */}
-            {valueMode === "manual" ? (
+          {/* Case insensitive */}
+          {filterType === "text" && (
+            <div className="no-drag flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                id="case-insensitive"
+                checked={caseInsensitive}
+                onChange={(e) => setCaseInsensitive(e.target.checked)}
+                className="h-3.5 w-3.5 accent-foreground"
+              />
+              <label
+                htmlFor="case-insensitive"
+                className="text-xs cursor-pointer"
+              >
+                Ignore case
+              </label>
+            </div>
+          )}
+
+          {/* Value source — hidden for is_null / is_not_null */}
+          {textOperator !== "is_null" && textOperator !== "is_not_null" && (
+            <>
               <div className="no-drag">
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Values (one per line)
+                  Value Source
                 </label>
-                <textarea
-                  value={manualValues}
-                  onChange={(e) => setManualValues(e.target.value)}
-                  placeholder={textOperator === "regex" ? "regex1\nregex2" : "value1\nvalue2\nvalue3"}
-                  className="w-full h-24 px-3 py-2 text-sm border rounded-md bg-background resize-none font-mono"
-                />
+                <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+                  <button
+                    className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                      valueMode === "manual"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                    }`}
+                    onClick={() => setValueMode("manual")}
+                  >
+                    Manual Input
+                  </button>
+                  <button
+                    className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                      valueMode === "column"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                    }`}
+                    onClick={() => {
+                      setExtractColumn(selectedColumn);
+                      setValueMode("column");
+                    }}
+                  >
+                    From Column
+                  </button>
+                </div>
               </div>
-            ) : (
-              <div className="no-drag">
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Extract unique values from column
-                </label>
-                <SearchableSelect
-                  value={extractColumn}
-                  onChange={(v) => setExtractColumn(v as string)}
-                  options={headers.map((header) => ({ value: header, label: header }))}
-                  placeholder="Select column to extract values..."
-                />
-              </div>
-            )}
-          </>
-        )}
 
-        {/* Output path */}
-        <div className="no-drag">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Output Path (optional)
-          </label>
-          <input
-            type="text"
-            value={outputDir}
-            onChange={(e) => setOutputDir(e.target.value)}
-            placeholder="Same as source file"
-            className="w-full h-7 px-3 text-sm border rounded-md bg-background"
-          />
-          <p className="text-[10px] text-muted-foreground mt-1">
-            Leave empty to use source file directory
-          </p>
-        </div>
+              {/* Value input */}
+              {valueMode === "manual" ? (
+                <div className="no-drag">
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                    Values (one per line)
+                  </label>
+                  <textarea
+                    value={manualValues}
+                    onChange={(e) => setManualValues(e.target.value)}
+                    placeholder={
+                      textOperator === "regex"
+                        ? "regex1\nregex2"
+                        : "value1\nvalue2\nvalue3"
+                    }
+                    className="w-full h-24 px-3 py-2 text-sm border rounded-md bg-background resize-none font-mono"
+                  />
+                </div>
+              ) : (
+                <div className="no-drag">
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                    Extract unique values from column
+                  </label>
+                  <SearchableSelect
+                    value={extractColumn}
+                    onChange={(v) => setExtractColumn(v as string)}
+                    options={headers.map((header) => ({
+                      value: header,
+                      label: header,
+                    }))}
+                    placeholder="Select column to extract values..."
+                  />
+                </div>
+              )}
+            </>
+          )}
 
+          {/* Output path */}
+          <div className="no-drag">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">
+              Output Path (optional)
+            </label>
+            <input
+              type="text"
+              value={outputDir}
+              onChange={(e) => setOutputDir(e.target.value)}
+              placeholder="Same as source file"
+              className="w-full h-7 px-3 text-sm border rounded-md bg-background"
+            />
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Leave empty to use source file directory
+            </p>
+          </div>
         </div>
       </ScrollArea>
 
       {/* Footer */}
       <div className="no-drag px-3 py-2 flex gap-2 justify-end">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={onClose}
-        >
+        <Button variant="secondary" size="sm" onClick={onClose}>
           Cancel
         </Button>
         <Button
           variant="secondary"
           size="sm"
           onClick={handleApply}
-          disabled={(textOperator !== "is_null" && textOperator !== "is_not_null") && valueMode === "manual" && !manualValues.trim()}
+          disabled={
+            textOperator !== "is_null" &&
+            textOperator !== "is_not_null" &&
+            valueMode === "manual" &&
+            !manualValues.trim()
+          }
         >
           Add to Pipeline
         </Button>

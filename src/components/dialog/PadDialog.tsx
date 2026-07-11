@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
@@ -36,15 +36,33 @@ export function PadDialog({
   onAddCommand,
   onClose,
 }: PadDialogProps) {
-  const [selectedColumn, setSelectedColumn] = useState(headers[padDialog.col] || "");
+  const [selectedColumn, setSelectedColumn] = useState(
+    headers[padDialog.col] || "",
+  );
   const [padType, setPadType] = useState(padDialog.padType || "pad");
   const [width, setWidth] = useState("10");
   const [char, setChar] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [dialogHeight, setDialogHeight] = useState(360);
+  const [dialogWidth, setDialogWidth] = useState(240);
+
+  useEffect(() => {
+    if (dialogRef.current) {
+      setDialogHeight(dialogRef.current.offsetHeight);
+      setDialogWidth(dialogRef.current.offsetWidth);
+    }
+  }, []);
+
+  const maxY = window.innerHeight - dialogHeight;
+  const maxX = window.innerWidth - dialogWidth;
+
   const { position, isDragging, handleMouseDown } = useDraggable({
     initialX: padDialog.x,
     initialY: padDialog.y,
-    maxWidth: 300,
-    maxHeight: 360,
+    maxWidth: dialogWidth,
+    maxHeight: dialogHeight,
+    maxX,
+    maxY,
   });
 
   const handleApply = () => {
@@ -62,17 +80,22 @@ export function PadDialog({
         expression = `${padType}(col("${columnName}"), ${widthNum}) as "${columnName}"`;
       }
 
-      onAddCommand(mapCommand, {
-        expression,
-        overwrite: true,
-        output: "",
-      }, padType);
+      onAddCommand(
+        mapCommand,
+        {
+          expression,
+          overwrite: true,
+          output: "",
+        },
+        padType,
+      );
     }
     onClose();
   };
 
   return (
     <div
+      ref={dialogRef}
       className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[240px] select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
         left: position.x,
@@ -100,7 +123,10 @@ export function PadDialog({
           <SearchableSelect
             value={selectedColumn}
             onChange={setSelectedColumn}
-            options={headers.map((header) => ({ value: header, label: header }))}
+            options={headers.map((header) => ({
+              value: header,
+              label: header,
+            }))}
             placeholder="Search or select column..."
           />
         </div>

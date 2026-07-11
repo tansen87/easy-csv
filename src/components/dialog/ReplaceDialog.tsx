@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X, Plus, Trash2, ArrowRight } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
@@ -37,15 +37,33 @@ export function ReplaceDialog({
   onAddCommand,
   onClose,
 }: ReplaceDialogProps) {
-  const [selectedColumn, setSelectedColumn] = useState(headers[replaceDialog.col] || "");
+  const [selectedColumn, setSelectedColumn] = useState(
+    headers[replaceDialog.col] || "",
+  );
   const [replacePairs, setReplacePairs] = useState<ReplacePair[]>([
     { pattern: "", replace: "", regex: false, ignoreCase: false },
   ]);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [dialogHeight, setDialogHeight] = useState(420);
+  const [dialogWidth, setDialogWidth] = useState(280);
+
+  useEffect(() => {
+    if (dialogRef.current) {
+      setDialogHeight(dialogRef.current.offsetHeight);
+      setDialogWidth(dialogRef.current.offsetWidth);
+    }
+  }, []);
+
+  const maxY = window.innerHeight - dialogHeight;
+  const maxX = window.innerWidth - dialogWidth;
+
   const { position, isDragging, handleMouseDown } = useDraggable({
     initialX: replaceDialog.x,
     initialY: replaceDialog.y,
-    maxWidth: 300,
-    maxHeight: 400,
+    maxWidth: dialogWidth,
+    maxHeight: dialogHeight,
+    maxX,
+    maxY,
   });
 
   const handleApply = () => {
@@ -57,22 +75,27 @@ export function ReplaceDialog({
     const mapCommand = xanCommands.find((cmd) => cmd.id === "map");
     if (mapCommand) {
       // Nest the replace calls: replace(replace(col, p1, r1), p2, r2)
-      const expression = validPairs.reduce((acc, pair) => {
-        let patternExpr: string;
-        if (pair.regex) {
-          const flags = pair.ignoreCase ? "i" : "";
-          patternExpr = `/${pair.pattern}/${flags}`;
-        } else {
-          patternExpr = `"${pair.pattern}"`;
-        }
-        return `replace(${acc}, ${patternExpr}, "${pair.replace}")`;
-      }, `col("${selectedColumn}")`) + ` as "${selectedColumn}"`;
+      const expression =
+        validPairs.reduce((acc, pair) => {
+          let patternExpr: string;
+          if (pair.regex) {
+            const flags = pair.ignoreCase ? "i" : "";
+            patternExpr = `/${pair.pattern}/${flags}`;
+          } else {
+            patternExpr = `"${pair.pattern}"`;
+          }
+          return `replace(${acc}, ${patternExpr}, "${pair.replace}")`;
+        }, `col("${selectedColumn}")`) + ` as "${selectedColumn}"`;
 
-      onAddCommand(mapCommand, {
-        expression,
-        overwrite: true,
-        output: "",
-      }, "Replace");
+      onAddCommand(
+        mapCommand,
+        {
+          expression,
+          overwrite: true,
+          output: "",
+        },
+        "Replace",
+      );
     }
     onClose();
   };
@@ -94,14 +117,13 @@ export function ReplaceDialog({
     value: string | boolean,
   ) => {
     setReplacePairs((prev) =>
-      prev.map((pair, i) =>
-        i === index ? { ...pair, [field]: value } : pair,
-      ),
+      prev.map((pair, i) => (i === index ? { ...pair, [field]: value } : pair)),
     );
   };
 
   return (
     <div
+      ref={dialogRef}
       className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[280px] h-[420px] flex flex-col select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
         left: position.x,
@@ -149,9 +171,14 @@ export function ReplaceDialog({
           </div>
           <div className="space-y-2">
             {replacePairs.map((pair, index) => (
-              <div key={index} className="p-2 border rounded-md bg-muted/30 space-y-2">
+              <div
+                key={index}
+                className="p-2 border rounded-md bg-muted/30 space-y-2"
+              >
                 <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground font-medium">#{index + 1}</span>
+                  <span className="text-xs text-muted-foreground font-medium">
+                    #{index + 1}
+                  </span>
                   {replacePairs.length > 1 && (
                     <button
                       onClick={() => removeReplacePair(index)}
@@ -165,7 +192,9 @@ export function ReplaceDialog({
                   <input
                     type="text"
                     value={pair.pattern}
-                    onChange={(e) => updateReplacePair(index, "pattern", e.target.value)}
+                    onChange={(e) =>
+                      updateReplacePair(index, "pattern", e.target.value)
+                    }
                     placeholder="Pattern"
                     className="no-drag flex-1 h-8 px-2 text-xs border rounded-md bg-background w-full"
                   />
@@ -173,7 +202,9 @@ export function ReplaceDialog({
                   <input
                     type="text"
                     value={pair.replace}
-                    onChange={(e) => updateReplacePair(index, "replace", e.target.value)}
+                    onChange={(e) =>
+                      updateReplacePair(index, "replace", e.target.value)
+                    }
                     placeholder="Replacement"
                     className="no-drag flex-1 h-8 px-2 text-xs border rounded-md bg-background w-full"
                   />
@@ -183,7 +214,9 @@ export function ReplaceDialog({
                     <input
                       type="checkbox"
                       checked={pair.regex}
-                      onChange={(e) => updateReplacePair(index, "regex", e.target.checked)}
+                      onChange={(e) =>
+                        updateReplacePair(index, "regex", e.target.checked)
+                      }
                       className="h-3 w-3 accent-foreground"
                     />
                     Regex
@@ -192,7 +225,9 @@ export function ReplaceDialog({
                     <input
                       type="checkbox"
                       checked={pair.ignoreCase}
-                      onChange={(e) => updateReplacePair(index, "ignoreCase", e.target.checked)}
+                      onChange={(e) =>
+                        updateReplacePair(index, "ignoreCase", e.target.checked)
+                      }
                       className="h-3 w-3 accent-foreground"
                     />
                     Ignore Case

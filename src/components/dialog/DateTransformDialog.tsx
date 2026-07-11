@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
@@ -78,15 +78,36 @@ export function DateTransformDialog({
   const [inputFormat, setInputFormat] = useState("%Y%m%d");
   const [outputFormat, setOutputFormat] = useState("%d/%m/%Y");
   const [outputColumnName, setOutputColumnName] = useState("new_date");
-  const [selectedColumn, setSelectedColumn] = useState(headers[dateTransformDialog.col] || "");
+  const [selectedColumn, setSelectedColumn] = useState(
+    headers[dateTransformDialog.col] || "",
+  );
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [dialogHeight, setDialogHeight] = useState(500);
+  const [dialogWidth, setDialogWidth] = useState(240);
+
+  useEffect(() => {
+    if (dialogRef.current) {
+      setDialogHeight(dialogRef.current.offsetHeight);
+      setDialogWidth(dialogRef.current.offsetWidth);
+    }
+  }, []);
+
+  const maxY = window.innerHeight - dialogHeight;
+  const maxX = window.innerWidth - dialogWidth;
+
   const { position, isDragging, handleMouseDown } = useDraggable({
     initialX: dateTransformDialog.x,
     initialY: dateTransformDialog.y,
-    maxWidth: 360,
-    maxHeight: 500,
+    maxWidth: dialogWidth,
+    maxHeight: dialogHeight,
+    maxX,
+    maxY,
   });
 
-  const columnOptions = headers.map(header => ({ label: header, value: header }));
+  const columnOptions = headers.map((header) => ({
+    label: header,
+    value: header,
+  }));
 
   const handleApply = () => {
     if (!selectedColumn) return;
@@ -98,20 +119,24 @@ export function DateTransformDialog({
     const isOverwrite = outputName === selectedColumn;
 
     const expression = `strftime(datetime(col("${selectedColumn}"), "${inputFormat}"), "${outputFormat}")`;
-    const expressionWithAlias = outputName !== ""
-      ? `${expression} as "${outputName}"`
-      : expression;
+    const expressionWithAlias =
+      outputName !== "" ? `${expression} as "${outputName}"` : expression;
 
-    onAddCommand(mapCommand, {
-      expression: expressionWithAlias,
-      output: "",
-      overwrite: isOverwrite,
-    }, "Date Transform");
+    onAddCommand(
+      mapCommand,
+      {
+        expression: expressionWithAlias,
+        output: "",
+        overwrite: isOverwrite,
+      },
+      "Date Transform",
+    );
     onClose();
   };
 
   return (
     <div
+      ref={dialogRef}
       className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[240px] select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
         left: position.x,

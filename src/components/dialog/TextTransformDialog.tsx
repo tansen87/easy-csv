@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -6,7 +6,14 @@ import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { useDraggable } from "@/hooks/useDraggable";
 
-export type TextTransformType = "len" | "lower" | "upper" | "trim" | "ltrim" | "rtrim" | "strip";
+export type TextTransformType =
+  | "len"
+  | "lower"
+  | "upper"
+  | "trim"
+  | "ltrim"
+  | "rtrim"
+  | "strip";
 
 interface TextTransformDialogState {
   col: number;
@@ -47,14 +54,30 @@ export function TextTransformDialog({
     return initialColumn ? [initialColumn] : [];
   });
   const [selectedTransform, setSelectedTransform] = useState<TextTransformType>(
-    textTransformDialog.transformType || "lower"
+    textTransformDialog.transformType || "lower",
   );
   const [search, setSearch] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [dialogHeight, setDialogHeight] = useState(480);
+  const [dialogWidth, setDialogWidth] = useState(280);
+
+  useEffect(() => {
+    if (dialogRef.current) {
+      setDialogHeight(dialogRef.current.offsetHeight);
+      setDialogWidth(dialogRef.current.offsetWidth);
+    }
+  }, []);
+
+  const maxY = window.innerHeight - dialogHeight;
+  const maxX = window.innerWidth - dialogWidth;
+
   const { position, isDragging, handleMouseDown } = useDraggable({
     initialX: textTransformDialog.x,
     initialY: textTransformDialog.y,
-    maxWidth: 360,
-    maxHeight: 480,
+    maxWidth: dialogWidth,
+    maxHeight: dialogHeight,
+    maxX,
+    maxY,
   });
 
   const toggleColumn = (col: string) => {
@@ -83,19 +106,28 @@ export function TextTransformDialog({
       strip: (col) => `replace(col("${col}"), /[\r\t\n]/, "") as "${col}"`,
     };
 
-    const expressions = selectedColumns.map((col) => expressionMap[selectedTransform](col)).join(", ");
-    const alias = transformOptions.find(opt => opt.value === selectedTransform)?.label || selectedTransform;
+    const expressions = selectedColumns
+      .map((col) => expressionMap[selectedTransform](col))
+      .join(", ");
+    const alias =
+      transformOptions.find((opt) => opt.value === selectedTransform)?.label ||
+      selectedTransform;
 
-    onAddCommand(mapCommand, {
-      expression: expressions,
-      overwrite: true,
-      output: "",
-    }, alias);
+    onAddCommand(
+      mapCommand,
+      {
+        expression: expressions,
+        overwrite: true,
+        output: "",
+      },
+      alias,
+    );
     onClose();
   };
 
   return (
     <div
+      ref={dialogRef}
       className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[280px] flex flex-col select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
         left: position.x,
@@ -137,23 +169,27 @@ export function TextTransformDialog({
           <ScrollArea className="h-[120px] border rounded-md bg-background">
             <div className="p-1.5">
               {filteredHeaders.length === 0 ? (
-                <span className="text-xs text-muted-foreground px-2 py-0.5">No matches</span>
+                <span className="text-xs text-muted-foreground px-2 py-0.5">
+                  No matches
+                </span>
               ) : (
                 filteredHeaders.map((header) => (
                   <button
                     key={header}
                     onClick={() => toggleColumn(header)}
-                    className={`no-drag w-full text-left px-2 py-1 text-xs rounded transition-colors ${selectedColumns.includes(header)
-                      ? "bg-primary/10 text-primary"
-                      : "hover:bg-accent"
-                      }`}
+                    className={`no-drag w-full text-left px-2 py-1 text-xs rounded transition-colors ${
+                      selectedColumns.includes(header)
+                        ? "bg-primary/10 text-primary"
+                        : "hover:bg-accent"
+                    }`}
                   >
                     <div className="flex items-center gap-2">
                       <div
-                        className={`w-3.5 h-3.5 border rounded-sm flex items-center justify-center ${selectedColumns.includes(header)
-                          ? "bg-primary border-primary"
-                          : "border-muted-foreground/30"
-                          }`}
+                        className={`w-3.5 h-3.5 border rounded-sm flex items-center justify-center ${
+                          selectedColumns.includes(header)
+                            ? "bg-primary border-primary"
+                            : "border-muted-foreground/30"
+                        }`}
                       >
                         {selectedColumns.includes(header) && (
                           <svg
@@ -190,10 +226,11 @@ export function TextTransformDialog({
                 <button
                   key={option.value}
                   onClick={() => setSelectedTransform(option.value)}
-                  className={`no-drag w-1/3 text-center px-1 py-1.5 text-xs rounded transition-colors ${selectedTransform === option.value
-                    ? "bg-primary/10 text-primary"
-                    : "hover:bg-accent"
-                    }`}
+                  className={`no-drag w-1/3 text-center px-1 py-1.5 text-xs rounded transition-colors ${
+                    selectedTransform === option.value
+                      ? "bg-primary/10 text-primary"
+                      : "hover:bg-accent"
+                  }`}
                 >
                   {option.label}
                 </button>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
@@ -77,22 +77,38 @@ export function FilterDialog({
 }: FilterDialogProps) {
   const [filterType, setFilterType] = useState<FilterType>("text");
   const [textOperator, setTextOperator] = useState<TextOperator>("equals");
-  const [numberOperator, setNumberOperator] = useState<NumberOperator>("equals");
+  const [numberOperator, setNumberOperator] =
+    useState<NumberOperator>("equals");
   const [textValue, setTextValue] = useState("");
   const [numberValue, setNumberValue] = useState("");
   const [caseInsensitive, setCaseInsensitive] = useState(false);
-  const [selectedColumn, setSelectedColumn] = useState<string>(headers[filterDialog.col] || "");
+  const [selectedColumn, setSelectedColumn] = useState<string>(
+    headers[filterDialog.col] || "",
+  );
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [dialogHeight, setDialogHeight] = useState(400);
+  const [dialogWidth, setDialogWidth] = useState(240);
+
+  useEffect(() => {
+    if (dialogRef.current) {
+      setDialogHeight(dialogRef.current.offsetHeight);
+      setDialogWidth(dialogRef.current.offsetWidth);
+    }
+  }, []);
+
+  const maxY = window.innerHeight - dialogHeight;
+  const maxX = window.innerWidth - dialogWidth;
+
   const { position, isDragging, handleMouseDown } = useDraggable({
     initialX: filterDialog.x,
     initialY: filterDialog.y,
-    maxWidth: 260,
-    maxHeight: 400,
+    maxWidth: dialogWidth,
+    maxHeight: dialogHeight,
+    maxX,
+    maxY,
   });
 
-  const buildRegexPattern = (
-    operator: TextOperator,
-    value: string,
-  ): string => {
+  const buildRegexPattern = (operator: TextOperator, value: string): string => {
     if (operator === "regex") {
       return value;
     }
@@ -116,34 +132,54 @@ export function FilterDialog({
       const searchCommand = xanCommands.find((cmd) => cmd.id === "search");
       if (searchCommand) {
         if (textOperator === "is_null") {
-          onAddCommand(searchCommand, {
-            select: selectedColumn,
-            empty: true,
-          }, textOperator);
+          onAddCommand(
+            searchCommand,
+            {
+              select: selectedColumn,
+              empty: true,
+            },
+            textOperator,
+          );
         } else if (textOperator === "is_not_null") {
-          onAddCommand(searchCommand, {
-            select: selectedColumn,
-            "non-empty": true,
-          }, textOperator);
+          onAddCommand(
+            searchCommand,
+            {
+              select: selectedColumn,
+              "non-empty": true,
+            },
+            textOperator,
+          );
         } else if (textOperator === "equals" || textOperator === "not_equals") {
           if (!textValue.trim()) return;
-          onAddCommand(searchCommand, {
-            select: selectedColumn,
-            exact: true,
-            pattern: textValue,
-            "ignore-case": caseInsensitive,
-            "invert-match": textOperator === "not_equals",
-          }, textOperator);
+          onAddCommand(
+            searchCommand,
+            {
+              select: selectedColumn,
+              exact: true,
+              pattern: textValue,
+              "ignore-case": caseInsensitive,
+              "invert-match": textOperator === "not_equals",
+            },
+            textOperator,
+          );
         } else {
           if (!textValue.trim()) return;
-          const isNegative = ["not_starts_with", "not_ends_with", "not_contains"].includes(textOperator);
-          onAddCommand(searchCommand, {
-            select: selectedColumn,
-            pattern: buildRegexPattern(textOperator, textValue),
-            regex: true,
-            "ignore-case": caseInsensitive,
-            "invert-match": isNegative,
-          }, textOperator);
+          const isNegative = [
+            "not_starts_with",
+            "not_ends_with",
+            "not_contains",
+          ].includes(textOperator);
+          onAddCommand(
+            searchCommand,
+            {
+              select: selectedColumn,
+              pattern: buildRegexPattern(textOperator, textValue),
+              regex: true,
+              "ignore-case": caseInsensitive,
+              "invert-match": isNegative,
+            },
+            textOperator,
+          );
         }
       }
     } else {
@@ -174,11 +210,15 @@ export function FilterDialog({
             break;
         }
 
-        onAddCommand(filterCommand, {
-          expression,
-          parallel: false,
-          threads: undefined,
-        }, numberOperator);
+        onAddCommand(
+          filterCommand,
+          {
+            expression,
+            parallel: false,
+            threads: undefined,
+          },
+          numberOperator,
+        );
       }
     }
     onClose();
@@ -186,6 +226,7 @@ export function FilterDialog({
 
   return (
     <div
+      ref={dialogRef}
       className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[240px] select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
         left: position.x,
@@ -210,19 +251,21 @@ export function FilterDialog({
       <div className="p-3 space-y-3">
         <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
           <button
-            className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${filterType === "text"
+            className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
+              filterType === "text"
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-accent"
-              }`}
+            }`}
             onClick={() => setFilterType("text")}
           >
             Text
           </button>
           <button
-            className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${filterType === "number"
+            className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
+              filterType === "number"
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-accent"
-              }`}
+            }`}
             onClick={() => setFilterType("number")}
           >
             Number
@@ -236,7 +279,10 @@ export function FilterDialog({
           <SearchableSelect
             value={selectedColumn}
             onChange={(v) => setSelectedColumn(v as string)}
-            options={headers.map((header) => ({ value: header, label: header }))}
+            options={headers.map((header) => ({
+              value: header,
+              label: header,
+            }))}
             placeholder="Select column..."
           />
         </div>
@@ -265,7 +311,11 @@ export function FilterDialog({
                     type="text"
                     value={textValue}
                     onChange={(e) => setTextValue(e.target.value)}
-                    placeholder={textOperator === "regex" ? "Regex pattern..." : "Search text..."}
+                    placeholder={
+                      textOperator === "regex"
+                        ? "Regex pattern..."
+                        : "Search text..."
+                    }
                     className="w-full h-7 px-3 text-sm border rounded-md bg-background"
                   />
                 </div>
@@ -278,7 +328,10 @@ export function FilterDialog({
                     onChange={(e) => setCaseInsensitive(e.target.checked)}
                     className="h-3.5 w-3.5 accent-foreground"
                   />
-                  <label htmlFor="case-insensitive" className="text-xs cursor-pointer">
+                  <label
+                    htmlFor="case-insensitive"
+                    className="text-xs cursor-pointer"
+                  >
                     Ignore case
                   </label>
                 </div>
