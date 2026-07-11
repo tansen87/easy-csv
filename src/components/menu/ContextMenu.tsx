@@ -26,7 +26,7 @@ import {
   Replace,
   LayoutGrid,
   Eraser,
-  Search,
+  FunnelPlus,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TextTransformType } from "@/components/dialog/TextTransformDialog";
@@ -190,7 +190,7 @@ export function ContextMenu({
           onOpenBatchFilter(contextMenu.x, contextMenu.y);
         }}
       >
-        <Search className="h-4 w-4 text-muted-foreground" />
+        <FunnelPlus className="h-4 w-4 text-muted-foreground" />
         Batch Filter
       </button>
 

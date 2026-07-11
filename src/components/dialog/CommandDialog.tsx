@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { COMMAND_FORMS, COMMAND_LABELS } from "./commands";
+import { COMMAND_FORMS, COMMAND_LABELS } from "@/components/dialog/commands";
 
 export type CommandDialogType =
   | "search"
