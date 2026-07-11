@@ -16,12 +16,34 @@ export interface TableNodeData {
   onDelete?: () => void;
 }
 
-export function TableNode({ data, selected }: { data: TableNodeData; selected: boolean }) {
-  const { headers, rows, columnWidths, onContextMenu, onRename, onSave, onDelete } = data;
+export function TableNode({
+  data,
+  selected,
+}: {
+  data: TableNodeData;
+  selected: boolean;
+}) {
+  const {
+    headers,
+    rows,
+    columnWidths,
+    onContextMenu,
+    onRename,
+    onSave,
+    onDelete,
+  } = data;
   const [editingCol, setEditingCol] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
   const [showSaveButton, setShowSaveButton] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const duplicateCounts = headers.reduce<Record<string, number>>((acc, h) => {
+    acc[h] = (acc[h] || 0) + 1;
+    return acc;
+  }, {});
+  const duplicateHeaders = Object.entries(duplicateCounts).filter(
+    ([_, count]) => count > 1,
+  );
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.stopPropagation();
@@ -59,13 +81,18 @@ export function TableNode({ data, selected }: { data: TableNodeData; selected: b
     if (scrollContainerRef.current) {
       const colWidth = columnWidths[colIndex] || 100;
       const containerWidth = scrollContainerRef.current.clientWidth;
-      const targetScroll = colIndex * colWidth - containerWidth / 2 + colWidth / 2;
+      const targetScroll =
+        colIndex * colWidth - containerWidth / 2 + colWidth / 2;
       scrollContainerRef.current.scrollLeft = Math.max(0, targetScroll);
     }
   };
 
   const handleFinishEdit = () => {
-    if (editingCol !== null && editValue.trim() && editValue !== headers[editingCol]) {
+    if (
+      editingCol !== null &&
+      editValue.trim() &&
+      editValue !== headers[editingCol]
+    ) {
       onRename(editingCol, editValue.trim());
     }
     setEditingCol(null);
@@ -85,16 +112,41 @@ export function TableNode({ data, selected }: { data: TableNodeData; selected: b
 
   return (
     <Card
-      className={`w-[500px] overflow-hidden transition-all duration-200 ${selected
-        ? "border-primary/50 shadow-lg ring-2 ring-primary/20"
-        : "border-border/60 hover:border-primary/30"
-        }`}
+      className={`w-[500px] overflow-hidden transition-all duration-200 ${
+        selected
+          ? "border-primary/50 shadow-lg ring-2 ring-primary/20"
+          : "border-border/60 hover:border-primary/30"
+      }`}
     >
       {/* TableNode 的双向 Handle */}
-      <Handle type="source" position={Position.Right} id="table-right-source" className="opacity-0" style={{ opacity: 0, pointerEvents: 'none' }} />
-      <Handle type="target" position={Position.Left} id="table-left-target" className="opacity-0" style={{ opacity: 0, pointerEvents: 'none' }} />
-      <Handle type="source" position={Position.Left} id="table-left-source" className="opacity-0" style={{ opacity: 0, pointerEvents: 'none' }} />
-      <Handle type="target" position={Position.Right} id="table-right-target" className="opacity-0" style={{ opacity: 0, pointerEvents: 'none' }} />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="table-right-source"
+        className="opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="table-left-target"
+        className="opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="table-left-source"
+        className="opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="table-right-target"
+        className="opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
       <div className="table-node-header px-3 py-2 bg-muted/50 border-b border-border/50 flex items-center gap-2">
         <div className="w-6 h-6 bg-gradient-to-br from-green-500/25 to-green-500/10 rounded flex items-center justify-center">
           <Table className="h-3 w-3 text-green-600" />
@@ -136,7 +188,7 @@ export function TableNode({ data, selected }: { data: TableNodeData; selected: b
         </button>
       </div>
       <ScrollArea
-        className="h-[180px]"
+        className="h-[165px]"
         onWheel={handleWheel}
         onMouseDown={handleTableMouseDown}
         onMouseMove={handleTableMouseMove}
@@ -146,7 +198,10 @@ export function TableNode({ data, selected }: { data: TableNodeData; selected: b
           <table className="border-collapse">
             <colgroup>
               {headers.map((_, colIndex) => (
-                <col key={colIndex} style={{ width: columnWidths[colIndex] || 100 }} />
+                <col
+                  key={colIndex}
+                  style={{ width: columnWidths[colIndex] || 100 }}
+                />
               ))}
             </colgroup>
             <thead className="bg-muted/30 sticky top-0">
@@ -201,6 +256,14 @@ export function TableNode({ data, selected }: { data: TableNodeData; selected: b
           </table>
         </div>
       </ScrollArea>
+      {duplicateHeaders.length > 0 && (
+        <div className="px-3 py-1.5 bg-orange-50 border-orange-200 text-xs text-orange-600">
+          duplicate column:{" "}
+          {duplicateHeaders
+            .map(([name, count]) => `${name}(${count})`)
+            .join(", ")}
+        </div>
+      )}
     </Card>
   );
 }
