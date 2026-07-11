@@ -52,7 +52,7 @@ import {
   Grid3x3,
   Table,
   Calculator,
-  Download,
+  FileOutput,
   X,
   History,
   LayersPlus,
@@ -62,6 +62,7 @@ import {
   Pickaxe,
   ChartBar,
   FunnelPlus,
+  ArrowBigDownDash,
   type LucideIcon,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
@@ -71,7 +72,7 @@ import { useLanguage } from "@/i18n";
 
 export const commandIconMap: Record<string, LucideIcon> = {
   // Output
-  output: Download,
+  output: FileOutput,
 
   // Explore & visualize
   view: Eye,
@@ -89,6 +90,7 @@ export const commandIconMap: Record<string, LucideIcon> = {
   enum: ListOrdered,
   fill: PaintBucket,
   complete: CheckCircle,
+  blank: ArrowBigDownDash,
   separate: Columns3,
 
   // Search & filter

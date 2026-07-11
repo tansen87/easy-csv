@@ -45,6 +45,7 @@ export const COMMAND_LABELS: Record<CommandDialogType, string> = {
   enum: "Enum",
   fill: "Fill",
   complete: "Complete",
+  blank: "Blank",
   separate: "Separate",
   top: "Top",
   cat: "Cat",

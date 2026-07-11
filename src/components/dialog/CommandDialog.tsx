@@ -33,6 +33,7 @@ export type CommandDialogType =
   | "enum"
   | "fill"
   | "complete"
+  | "blank"
   | "separate"
   | "top"
   | "cat"

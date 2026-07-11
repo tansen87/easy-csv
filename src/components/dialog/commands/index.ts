@@ -46,6 +46,7 @@ import {
   EnumForm,
   FillForm,
   CompleteForm,
+  BlankForm,
   SeparateForm,
 } from "@/components/dialog/commands/TransformForms";
 import {
@@ -127,6 +128,7 @@ export const COMMAND_FORMS: Record<
   enum: EnumForm,
   fill: FillForm,
   complete: CompleteForm,
+  blank: BlankForm,
   separate: SeparateForm,
 
   // Format, convert & recombobulate

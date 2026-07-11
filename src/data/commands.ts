@@ -825,6 +825,29 @@ export const xanCommands: XanCommand[] = [
     ],
   },
   {
+    id: "blank",
+    name: "blank",
+    description: "Blank down selected columns of a CSV file",
+    descriptionCn: "将选定列中的连续相同单元格清空",
+    category: "Add, transform, drop and move columns",
+    parameters: [
+      {
+        name: "select",
+        type: "string",
+        description: "Selection of columns to blank down",
+        required: true,
+        isPositional: true,
+      },
+      {
+        name: "redact",
+        type: "string",
+        description: "Redact the blanked down values using the provided replacement string",
+        required: false,
+      },
+
+    ],
+  },
+  {
     id: "search",
     name: "search",
     description: "Search for (or replace) patterns in CSV data",
