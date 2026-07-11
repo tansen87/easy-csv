@@ -65,8 +65,12 @@ fn main() {
     })
     .on_window_event(|window, event| {
       if let WindowEvent::CloseRequested { api, .. } = event {
-        api.prevent_close();
-        window.hide().unwrap();
+        let config = easy_csv::config::load_config().unwrap_or_default();
+        let minimize_to_tray = config.minimize_to_tray.unwrap_or(true);
+        if minimize_to_tray {
+          api.prevent_close();
+          window.hide().unwrap();
+        }
       }
     })
     .run(tauri::generate_context!())

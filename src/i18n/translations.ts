@@ -30,6 +30,8 @@ export interface Translations {
   noHeadersDesc: string;
   showExecutionNotification: string;
   showExecutionNotificationDesc: string;
+  minimizeToTray: string;
+  minimizeToTrayDesc: string;
   resetToDefaults: string;
   saveSettings: string;
   selectDelimiter: string;
@@ -134,8 +136,10 @@ export const translations: Record<Language, Translations> = {
     csvDelimiter: "CSV Delimiter",
     noHeaders: "No Headers",
     noHeadersDesc: "When set, the first row will not be interpreted as headers",
-    showExecutionNotification: "Execution Notification",
-    showExecutionNotificationDesc: "Show system notification when pipeline execution completes",
+    showExecutionNotification: "Notification",
+    showExecutionNotificationDesc: "When enabled, Show system notification when pipeline execution completes",
+    minimizeToTray: "Tray",
+    minimizeToTrayDesc: "When enabled, closing the window will minimize to system tray instead of exiting",
     resetToDefaults: "Reset to Defaults",
     saveSettings: "Save Settings",
     selectDelimiter: "Select delimiter",
@@ -238,8 +242,10 @@ export const translations: Record<Language, Translations> = {
     csvDelimiter: "CSV 分隔符",
     noHeaders: "无表头",
     noHeadersDesc: "启用后,第一行将不被视为表头",
-    showExecutionNotification: "执行通知",
-    showExecutionNotificationDesc: "管道执行完成后显示系统通知",
+    showExecutionNotification: "系统通知",
+    showExecutionNotificationDesc: "启用后,管道执行完成后显示系统通知",
+    minimizeToTray: "系统托盘",
+    minimizeToTrayDesc: "启用后,关闭窗口将最小化到系统托盘而非退出应用",
     resetToDefaults: "恢复默认",
     saveSettings: "保存设置",
     selectDelimiter: "选择分隔符",

@@ -10,6 +10,7 @@ pub struct AppConfig {
   pub no_headers: Option<bool>,
   pub show_execution_notification: Option<bool>,
   pub history_limit: Option<u32>,
+  pub minimize_to_tray: Option<bool>,
 }
 
 impl Default for AppConfig {
@@ -19,6 +20,7 @@ impl Default for AppConfig {
       no_headers: None,
       show_execution_notification: None,
       history_limit: None,
+      minimize_to_tray: None,
     }
   }
 }
@@ -124,5 +126,18 @@ pub async fn get_history_limit() -> Option<u32> {
 pub async fn set_history_limit(limit: u32) -> Result<(), String> {
   let mut config = load_config()?;
   config.history_limit = Some(limit);
+  save_config(&config)
+}
+
+#[tauri::command]
+pub async fn get_minimize_to_tray() -> Option<bool> {
+  let config = load_config().unwrap_or_default();
+  config.minimize_to_tray
+}
+
+#[tauri::command]
+pub async fn set_minimize_to_tray(minimize: bool) -> Result<(), String> {
+  let mut config = load_config()?;
+  config.minimize_to_tray = Some(minimize);
   save_config(&config)
 }

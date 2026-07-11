@@ -1,5 +1,15 @@
 import { useState, useCallback, useRef } from "react";
-import { Sun, Moon, Monitor, Save, RotateCcw, Globe } from "lucide-react";
+import {
+  Sun,
+  Moon,
+  Monitor,
+  Save,
+  RotateCcw,
+  Languages,
+  SunMoon,
+  Bell,
+  Minimize2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { useLanguage } from "@/i18n";
@@ -14,6 +24,8 @@ interface SettingsTabContentProps {
   onNoHeadersChange: (value: boolean) => void;
   showExecutionNotification: boolean;
   onShowExecutionNotificationChange: (value: boolean) => void;
+  minimizeToTray: boolean;
+  onMinimizeToTrayChange: (value: boolean) => void;
   historyLimit: number;
   onHistoryLimitChange: (limit: number) => void;
   onSave: () => void;
@@ -29,6 +41,8 @@ export function SettingsTabContent({
   onNoHeadersChange,
   showExecutionNotification,
   onShowExecutionNotificationChange,
+  minimizeToTray,
+  onMinimizeToTrayChange,
   historyLimit,
   onHistoryLimitChange,
   onSave,
@@ -64,7 +78,10 @@ export function SettingsTabContent({
           <div className="space-y-6">
             {/* Language */}
             <div className="max-w-md">
-              <h3 className="text-lg font-semibold mb-4">{t.language}</h3>
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Languages className="h-4 w-4" />
+                {t.language}
+              </h3>
               <div className="grid grid-cols-2 bg-muted/50 rounded-md p-0.5 border border-border/50 relative w-[200px]">
                 <div
                   className={`absolute top-0.5 bottom-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${
@@ -80,7 +97,6 @@ export function SettingsTabContent({
                   }`}
                   onClick={() => setLanguage("en")}
                 >
-                  <Globe className="h-3.5 w-3.5" />
                   English
                 </button>
                 <button
@@ -91,7 +107,6 @@ export function SettingsTabContent({
                   }`}
                   onClick={() => setLanguage("zh")}
                 >
-                  <Globe className="h-3.5 w-3.5" />
                   中文
                 </button>
               </div>
@@ -99,7 +114,10 @@ export function SettingsTabContent({
 
             {/* Theme */}
             <div className="max-w-md">
-              <h3 className="text-lg font-semibold mb-4">{t.theme}</h3>
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <SunMoon className="h-4 w-4" />
+                {t.theme}
+              </h3>
               <div className="grid grid-cols-3 bg-muted/50 rounded-md border border-border/50 relative w-[300px]">
                 <div
                   className={`absolute top-0.5 bottom-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${
@@ -120,7 +138,7 @@ export function SettingsTabContent({
                   onClick={() => handleThemeChange("light")}
                   disabled={isThemeTransitioning}
                 >
-                  <Sun className="h-3.5 w-3.5" />
+                  <Sun className="h-4 w-4" />
                   {t.light}
                 </button>
                 <button
@@ -132,7 +150,7 @@ export function SettingsTabContent({
                   onClick={() => handleThemeChange("dark")}
                   disabled={isThemeTransitioning}
                 >
-                  <Moon className="h-3.5 w-3.5" />
+                  <Moon className="h-4 w-4" />
                   {t.dark}
                 </button>
                 <button
@@ -144,15 +162,16 @@ export function SettingsTabContent({
                   onClick={() => handleThemeChange("system")}
                   disabled={isThemeTransitioning}
                 >
-                  <Monitor className="h-3.5 w-3.5" />
+                  <Monitor className="h-4 w-4" />
                   {t.system}
                 </button>
               </div>
             </div>
 
             {/* Execution Notification */}
-            <div className="max-w-md">
-              <h3 className="text-lg font-semibold mb-4">
+            <div className="max-w-xl">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Bell className="h-4 w-4" />
                 {t.showExecutionNotification}
               </h3>
               <label className="flex items-center gap-3 cursor-pointer">
@@ -171,14 +190,35 @@ export function SettingsTabContent({
                 </div>
               </label>
             </div>
+
+            {/* Minimize to Tray */}
+            <div className="max-w-xl">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Minimize2 className="h-4 w-4" />
+                {t.minimizeToTray}
+              </h3>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={minimizeToTray}
+                  onChange={(e) => onMinimizeToTrayChange(e.target.checked)}
+                  className="w-4 h-4 rounded border-input accent-foreground"
+                />
+                <div className="text-left">
+                  <p className="text-sm text-muted-foreground">
+                    {t.minimizeToTrayDesc}
+                  </p>
+                </div>
+              </label>
+            </div>
           </div>
         )}
 
         {activeTab === "general" && (
           <div className="space-y-6 max-w-md">
             {/* Delimiter */}
-            <div>
-              <label className="block text-sm font-medium mb-2">
+            <div className="w-[220px]">
+              <label className="block text-sm font-medium">
                 {t.csvDelimiter}
               </label>
               <SearchableSelect
@@ -194,15 +234,11 @@ export function SettingsTabContent({
                 placeholder={t.selectDelimiter}
                 size="sm"
               />
-              <p className="text-sm text-muted-foreground mt-2">
-                {t.delimiterDesc}
-              </p>
+              <p className="text-sm text-muted-foreground">{t.delimiterDesc}</p>
             </div>
             {/* No Headers */}
             <div>
-              <label className="block text-sm font-medium mb-2">
-                {t.noHeaders}
-              </label>
+              <label className="block text-sm font-medium">{t.noHeaders}</label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -217,7 +253,7 @@ export function SettingsTabContent({
             </div>
             {/* History Limit */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium">
                 {t.historyLimit}
               </label>
               <div className="flex items-center gap-2">
@@ -243,7 +279,7 @@ export function SettingsTabContent({
                   {t.unlimited}
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="text-sm text-muted-foreground">
                 {t.historyLimitDesc}
               </p>
             </div>
@@ -252,7 +288,7 @@ export function SettingsTabContent({
       </div>
 
       {/* Footer */}
-      <div className="p-4 flex justify-end gap-3 mb-1">
+      <div className="p-4 flex justify-end gap-2">
         <Button
           variant="secondary"
           onClick={() => {
@@ -260,14 +296,15 @@ export function SettingsTabContent({
             onDefaultDelimiterChange(",");
             onNoHeadersChange(false);
             onShowExecutionNotificationChange(true);
+            onMinimizeToTrayChange(true);
             onHistoryLimitChange(100);
           }}
         >
-          <RotateCcw className="h-4 w-4 mr-2" />
+          <RotateCcw className="h-4 w-4" />
           {t.resetToDefaults}
         </Button>
         <Button variant="secondary" onClick={onSave}>
-          <Save className="h-4 w-4 mr-2" />
+          <Save className="h-4 w-4" />
           {t.saveSettings}
         </Button>
       </div>

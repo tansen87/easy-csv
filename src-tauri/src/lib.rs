@@ -14,6 +14,8 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     config::set_show_execution_notification,
     config::get_history_limit,
     config::set_history_limit,
+    config::get_minimize_to_tray,
+    config::set_minimize_to_tray,
     csv::read_csv_file,
     csv::profile_csv,
     pipeline::execute_xan_pipeline,

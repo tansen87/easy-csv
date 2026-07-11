@@ -14,6 +14,8 @@ interface SettingsDialogProps {
   onNoHeadersChange: (value: boolean) => void;
   showExecutionNotification: boolean;
   onShowExecutionNotificationChange: (value: boolean) => void;
+  minimizeToTray: boolean;
+  onMinimizeToTrayChange: (value: boolean) => void;
   historyLimit: number;
   onHistoryLimitChange: (limit: number) => void;
   onSave: () => void;
@@ -30,6 +32,8 @@ export function SettingsDialog({
   onNoHeadersChange,
   showExecutionNotification,
   onShowExecutionNotificationChange,
+  minimizeToTray,
+  onMinimizeToTrayChange,
   historyLimit,
   onHistoryLimitChange,
   onSave,
@@ -103,6 +107,8 @@ export function SettingsDialog({
             onShowExecutionNotificationChange={
               onShowExecutionNotificationChange
             }
+            minimizeToTray={minimizeToTray}
+            onMinimizeToTrayChange={onMinimizeToTrayChange}
             historyLimit={historyLimit}
             onHistoryLimitChange={onHistoryLimitChange}
             onSave={onSave}

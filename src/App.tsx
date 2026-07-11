@@ -80,6 +80,7 @@ function AppContent() {
   const [noHeaders, setNoHeaders] = useState<boolean>(false);
   const [showExecutionNotification, setShowExecutionNotification] =
     useState<boolean>(true);
+  const [minimizeToTray, setMinimizeToTray] = useState<boolean>(true);
   const [historyLimit, setHistoryLimit] = useState<number>(100);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [showHelp, setShowHelp] = useState<boolean>(false);
@@ -408,6 +409,20 @@ function AppContent() {
     }
   };
 
+  const loadMinimizeToTray = async () => {
+    try {
+      const saved = await invoke<boolean | null>("get_minimize_to_tray");
+      if (saved !== null) {
+        setMinimizeToTray(saved);
+      }
+    } catch (error) {
+      showToastRef.current(
+        `Failed to load minimize to tray setting: ${error}`,
+        "error",
+      );
+    }
+  };
+
   const loadHistoryLimit = async () => {
     try {
       const saved = await invoke<number | null>("get_history_limit");
@@ -415,10 +430,7 @@ function AppContent() {
         setHistoryLimit(saved);
       }
     } catch (error) {
-      showToastRef.current(
-        `Failed to load history limit: ${error}`,
-        "error",
-      );
+      showToastRef.current(`Failed to load history limit: ${error}`, "error");
     }
   };
 
@@ -473,6 +485,7 @@ function AppContent() {
         await loadDefaultDelimiter();
         await loadNoHeaders();
         await loadShowExecutionNotification();
+        await loadMinimizeToTray();
         await loadHistoryLimit();
         await loadHistoricalPipelines();
         await loadRecentFiles();
@@ -1187,6 +1200,8 @@ function AppContent() {
             onNoHeadersChange={setNoHeaders}
             showExecutionNotification={showExecutionNotification}
             onShowExecutionNotificationChange={setShowExecutionNotification}
+            minimizeToTray={minimizeToTray}
+            onMinimizeToTrayChange={setMinimizeToTray}
             historyLimit={historyLimit}
             onHistoryLimitChange={setHistoryLimit}
             onSave={async () => {
@@ -1197,6 +1212,9 @@ function AppContent() {
                 await invoke("set_no_headers", { noHeaders });
                 await invoke("set_show_execution_notification", {
                   show: showExecutionNotification,
+                });
+                await invoke("set_minimize_to_tray", {
+                  minimize: minimizeToTray,
                 });
                 await invoke("set_history_limit", { limit: historyLimit });
                 showToastRef.current("Settings saved successfully", "success");
