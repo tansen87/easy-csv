@@ -30,7 +30,9 @@ export function SettingsDialog({
   onShowExecutionNotificationChange,
   onSave,
 }: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<"preference" | "general">("preference");
+  const [activeTab, setActiveTab] = useState<"preference" | "general">(
+    "preference",
+  );
   const { t } = useLanguage();
 
   if (!isOpen) return null;
@@ -42,21 +44,21 @@ export function SettingsDialog({
         onContextMenu={(e) => e.preventDefault()}
       />
       <div
-        className="relative bg-card rounded-lg shadow-xl w-full max-w-2xl h-[48vh] overflow-hidden"
+        className="relative bg-card rounded-lg shadow-xl w-full max-w-4xl h-[64vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/20">
           <div className="flex items-center">
             {/* Tab Switcher with sliding effect */}
-            <div className="inline-flex bg-muted/50 rounded-md p-0.5 border border-border/50 relative h-8">
+            <div className="grid grid-cols-2 bg-muted/50 rounded-md p-0.5 border border-border/50 relative h-8">
               <div
-                className={`absolute top-0.5 bottom-0.5 left-0.5 right-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${
-                  activeTab === "general" ? "translate-x-[calc(100%)]" : "translate-x-0"
+                className={`absolute top-0.5 bottom-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${
+                  activeTab === "general" ? "left-[calc(50%+1px)]" : "left-0.5"
                 }`}
-                style={{ width: "calc(50% + 4px)" }}
+                style={{ width: "calc(50% - 1px)" }}
               />
               <button
-                className={`flex items-center px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
+                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
                   activeTab === "preference"
                     ? "text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground"
@@ -66,7 +68,7 @@ export function SettingsDialog({
                 {t.preference}
               </button>
               <button
-                className={`flex items-center px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
+                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
                   activeTab === "general"
                     ? "text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground"
@@ -94,7 +96,9 @@ export function SettingsDialog({
             noHeaders={noHeaders}
             onNoHeadersChange={onNoHeadersChange}
             showExecutionNotification={showExecutionNotification}
-            onShowExecutionNotificationChange={onShowExecutionNotificationChange}
+            onShowExecutionNotificationChange={
+              onShowExecutionNotificationChange
+            }
             onSave={onSave}
           />
         </div>

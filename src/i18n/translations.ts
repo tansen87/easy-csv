@@ -24,6 +24,7 @@ export interface Translations {
   theme: string;
   light: string;
   dark: string;
+  system: string;
   csvDelimiter: string;
   noHeaders: string;
   noHeadersDesc: string;
@@ -126,6 +127,7 @@ export const translations: Record<Language, Translations> = {
     theme: "Theme",
     light: "Light",
     dark: "Dark",
+    system: "System",
     csvDelimiter: "CSV Delimiter",
     noHeaders: "No Headers",
     noHeadersDesc: "When set, the first row will not be interpreted as headers",
@@ -226,6 +228,7 @@ export const translations: Record<Language, Translations> = {
     theme: "主题",
     light: "浅色",
     dark: "深色",
+    system: "跟随系统",
     csvDelimiter: "CSV 分隔符",
     noHeaders: "无表头",
     noHeadersDesc: "启用后,第一行将不被视为表头",
