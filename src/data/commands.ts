@@ -3112,8 +3112,8 @@ export const xanCommands: XanCommand[] = [
   {
     id: "batch-filter",
     name: "batch-filter",
-    description: "Batch filter: search for multiple values and output separate files",
-    descriptionCn: "批量过滤: 搜索多个值并输出单独文件",
+    description: "search for multiple values and output separate files",
+    descriptionCn: "搜索多个值并输出单独文件",
     category: "Batch method",
     parameters: [
       {
@@ -3184,8 +3184,8 @@ export const xanCommands: XanCommand[] = [
   {
     id: "batch-from",
     name: "batch-from",
-    description: "Batch convert: select multiple source files or folders and input format",
-    descriptionCn: "批量转换: 选择多个源文件或文件夹及输入格式",
+    description: "select multiple source files or folders and input format",
+    descriptionCn: "选择多个源文件或文件夹及输入格式",
     category: "Batch method",
     parameters: [
       {
@@ -3277,8 +3277,8 @@ export const xanCommands: XanCommand[] = [
   {
     id: "batch-to",
     name: "batch-to",
-    description: "Batch convert: select output format and output directory",
-    descriptionCn: "批量转换: 选择输出格式和输出目录",
+    description: "select output format and output directory",
+    descriptionCn: "选择输出格式和输出目录",
     category: "Batch method",
     parameters: [
       {
