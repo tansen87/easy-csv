@@ -35,6 +35,9 @@ export interface Translations {
   selectDelimiter: string;
   delimiterDesc: string;
   language: string;
+  historyLimit: string;
+  historyLimitDesc: string;
+  unlimited: string;
 
   // CommandList
   cmds: string;
@@ -138,6 +141,9 @@ export const translations: Record<Language, Translations> = {
     selectDelimiter: "Select delimiter",
     delimiterDesc: "The field delimiter for reading CSV data",
     language: "Language",
+    historyLimit: "History Limit",
+    historyLimitDesc: "Maximum number of history entries to keep",
+    unlimited: "Unlimited",
 
     // CommandList
     cmds: "Cmds",
@@ -239,6 +245,9 @@ export const translations: Record<Language, Translations> = {
     selectDelimiter: "选择分隔符",
     delimiterDesc: "用于读取 CSV 数据的字段分隔符",
     language: "语言",
+    historyLimit: "历史记录上限",
+    historyLimitDesc: "保留的最大历史记录条数",
+    unlimited: "无限制",
 
     // CommandList
     cmds: "命令",

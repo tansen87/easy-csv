@@ -80,6 +80,7 @@ function AppContent() {
   const [noHeaders, setNoHeaders] = useState<boolean>(false);
   const [showExecutionNotification, setShowExecutionNotification] =
     useState<boolean>(true);
+  const [historyLimit, setHistoryLimit] = useState<number>(100);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [showHelp, setShowHelp] = useState<boolean>(false);
   const [helpContent, setHelpContent] = useState<string>("");
@@ -327,6 +328,7 @@ function AppContent() {
     try {
       await invoke("save_history", {
         history: JSON.stringify(history, null, 2),
+        limit: historyLimit > 0 ? historyLimit : undefined,
       });
     } catch (error) {
       addLog("error", `Failed to save historical pipelines: ${error}`);
@@ -406,6 +408,20 @@ function AppContent() {
     }
   };
 
+  const loadHistoryLimit = async () => {
+    try {
+      const saved = await invoke<number | null>("get_history_limit");
+      if (saved !== null) {
+        setHistoryLimit(saved);
+      }
+    } catch (error) {
+      showToastRef.current(
+        `Failed to load history limit: ${error}`,
+        "error",
+      );
+    }
+  };
+
   const checkForUpdates = async () => {
     setIsCheckingUpdate(true);
     try {
@@ -457,6 +473,7 @@ function AppContent() {
         await loadDefaultDelimiter();
         await loadNoHeaders();
         await loadShowExecutionNotification();
+        await loadHistoryLimit();
         await loadHistoricalPipelines();
         await loadRecentFiles();
       } catch (error) {
@@ -1170,6 +1187,8 @@ function AppContent() {
             onNoHeadersChange={setNoHeaders}
             showExecutionNotification={showExecutionNotification}
             onShowExecutionNotificationChange={setShowExecutionNotification}
+            historyLimit={historyLimit}
+            onHistoryLimitChange={setHistoryLimit}
             onSave={async () => {
               try {
                 await invoke("set_default_delimiter", {
@@ -1179,6 +1198,7 @@ function AppContent() {
                 await invoke("set_show_execution_notification", {
                   show: showExecutionNotification,
                 });
+                await invoke("set_history_limit", { limit: historyLimit });
                 showToastRef.current("Settings saved successfully", "success");
               } catch (error) {
                 showToastRef.current(

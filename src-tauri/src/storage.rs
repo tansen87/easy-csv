@@ -3,7 +3,7 @@ use serde_json::Map;
 use crate::config::get_resources_dir;
 
 #[tauri::command]
-pub async fn save_history(history: String) -> Result<(), String> {
+pub async fn save_history(history: String, limit: Option<u32>) -> Result<(), String> {
   let resources_dir = get_resources_dir();
   let history_path = resources_dir.join("history.json");
 
@@ -13,8 +13,23 @@ pub async fn save_history(history: String) -> Result<(), String> {
       .map_err(|e| format!("Failed to create directory: {}", e))?;
   }
 
+  // Apply limit if specified
+  let history_to_save = if let Some(max_limit) = limit {
+    if max_limit > 0 {
+      let mut items: Vec<serde_json::Value> = serde_json::from_str(&history)
+        .map_err(|e| format!("Failed to parse history: {}", e))?;
+      items.truncate(max_limit as usize);
+      serde_json::to_string(&items).map_err(|e| format!("Failed to serialize history: {}", e))?
+    } else {
+      history
+    }
+  } else {
+    history
+  };
+
   // Save history to file
-  std::fs::write(&history_path, history).map_err(|e| format!("Failed to save history: {}", e))?;
+  std::fs::write(&history_path, history_to_save)
+    .map_err(|e| format!("Failed to save history: {}", e))?;
 
   Ok(())
 }

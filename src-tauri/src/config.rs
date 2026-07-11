@@ -9,6 +9,7 @@ pub struct AppConfig {
   pub default_delimiter: Option<String>,
   pub no_headers: Option<bool>,
   pub show_execution_notification: Option<bool>,
+  pub history_limit: Option<u32>,
 }
 
 impl Default for AppConfig {
@@ -17,6 +18,7 @@ impl Default for AppConfig {
       default_delimiter: None,
       no_headers: None,
       show_execution_notification: None,
+      history_limit: None,
     }
   }
 }
@@ -109,5 +111,18 @@ pub async fn get_show_execution_notification() -> Option<bool> {
 pub async fn set_show_execution_notification(show: bool) -> Result<(), String> {
   let mut config = load_config()?;
   config.show_execution_notification = Some(show);
+  save_config(&config)
+}
+
+#[tauri::command]
+pub async fn get_history_limit() -> Option<u32> {
+  let config = load_config().unwrap_or_default();
+  config.history_limit
+}
+
+#[tauri::command]
+pub async fn set_history_limit(limit: u32) -> Result<(), String> {
+  let mut config = load_config()?;
+  config.history_limit = Some(limit);
   save_config(&config)
 }

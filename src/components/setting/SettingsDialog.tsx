@@ -14,6 +14,8 @@ interface SettingsDialogProps {
   onNoHeadersChange: (value: boolean) => void;
   showExecutionNotification: boolean;
   onShowExecutionNotificationChange: (value: boolean) => void;
+  historyLimit: number;
+  onHistoryLimitChange: (limit: number) => void;
   onSave: () => void;
 }
 
@@ -28,6 +30,8 @@ export function SettingsDialog({
   onNoHeadersChange,
   showExecutionNotification,
   onShowExecutionNotificationChange,
+  historyLimit,
+  onHistoryLimitChange,
   onSave,
 }: SettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<"preference" | "general">(
@@ -99,6 +103,8 @@ export function SettingsDialog({
             onShowExecutionNotificationChange={
               onShowExecutionNotificationChange
             }
+            historyLimit={historyLimit}
+            onHistoryLimitChange={onHistoryLimitChange}
             onSave={onSave}
           />
         </div>
