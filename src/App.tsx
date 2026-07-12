@@ -3,20 +3,13 @@ import { invoke } from "@tauri-apps/api/core";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { sendNotification } from "@tauri-apps/plugin-notification";
-import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/setting/ThemeProvider";
 import { ToastContainer, ToastType } from "@/components/setting/Toast";
 import {
   NotificationPanel,
   NotificationType,
 } from "@/components/setting/PersistentNotification";
-import {
-  Terminal,
-  ChevronUp,
-  ChevronRight,
-  FileText,
-  BarChart3,
-} from "lucide-react";
+
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/panel/LogPanel";
 import { SettingsDialog } from "@/components/setting/SettingsDialog";
@@ -127,7 +120,7 @@ function AppContent() {
   const progressHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-  const currentVersion = "0.2.0";
+  const currentVersion = "0.2.1";
 
   // Undo/Redo history state
   const [undoStack, setUndoStack] = useState<
@@ -985,6 +978,15 @@ function AppContent() {
               isExecuting={isExecuting}
               isCheckingUpdate={isCheckingUpdate}
               currentPipelineLength={getCurrentPipeline().length}
+              showCommandPanel={showCommandPanel}
+              onToggleCommandPanel={() =>
+                setShowCommandPanel(!showCommandPanel)
+              }
+              showLogPanel={showLogPanel}
+              onToggleLogPanel={() => setShowLogPanel(!showLogPanel)}
+              showDataProfile={showDataProfile}
+              onToggleDataProfile={() => setShowDataProfile(!showDataProfile)}
+              hasInputFile={!!getCurrentTab()?.inputFile}
             />
           </header>
 
@@ -1080,49 +1082,6 @@ function AppContent() {
               />
             </div>
           </main>
-
-          {/* Command Panel Toggle Button */}
-          <Button
-            onClick={() => setShowCommandPanel(!showCommandPanel)}
-            onContextMenu={(e) => e.preventDefault()}
-            className="fixed bottom-4 left-4 z-30 h-10 w-10 rounded-full shadow-md"
-            variant="ghost"
-            size="icon"
-          >
-            {showCommandPanel ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <Terminal className="h-4 w-4" />
-            )}
-          </Button>
-
-          {/* Log Panel Toggle Button */}
-          <Button
-            onClick={() => setShowLogPanel(!showLogPanel)}
-            onContextMenu={(e) => e.preventDefault()}
-            className="fixed bottom-4 left-16 z-30 h-10 w-10 rounded-full shadow-md"
-            variant="ghost"
-            size="icon"
-          >
-            {showLogPanel ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <FileText className="h-4 w-4" />
-            )}
-          </Button>
-
-          {/* Data Profile Panel Toggle Button */}
-          {getCurrentTab()?.inputFile && (
-            <Button
-              onClick={() => setShowDataProfile(!showDataProfile)}
-              onContextMenu={(e) => e.preventDefault()}
-              className="fixed bottom-4 left-28 z-30 h-10 w-10 rounded-full shadow-md"
-              variant="ghost"
-              size="icon"
-            >
-              <BarChart3 className="h-4 w-4" />
-            </Button>
-          )}
 
           {/* Floating Command Panel */}
           <CommandList

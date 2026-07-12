@@ -12,6 +12,12 @@ export interface Translations {
   redo: string;
   execute: string;
   executing: string;
+  commandPanel: string;
+  logPanel: string;
+  dataProfilePanel: string;
+  checkUpdate: string;
+  help: string;
+  settings: string;
 
   // ConfirmDialog
   confirm: string;
@@ -120,6 +126,12 @@ export const translations: Record<Language, Translations> = {
     redo: "Redo",
     execute: "Execute",
     executing: "Executing",
+    commandPanel: "Commands",
+    logPanel: "Logs",
+    dataProfilePanel: "Data Profile",
+    checkUpdate: "Check Update",
+    help: "Help",
+    settings: "Settings",
 
     // ConfirmDialog
     confirm: "Confirm",
@@ -226,6 +238,12 @@ export const translations: Record<Language, Translations> = {
     redo: "重做",
     execute: "执行",
     executing: "执行中",
+    commandPanel: "命令",
+    logPanel: "日志",
+    dataProfilePanel: "数据概览",
+    checkUpdate: "检查更新",
+    help: "帮助",
+    settings: "设置",
 
     // ConfirmDialog
     confirm: "确认",

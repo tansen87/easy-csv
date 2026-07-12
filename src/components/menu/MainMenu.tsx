@@ -12,10 +12,13 @@ import {
   RefreshCw,
   Settings,
   MessageCircleQuestionMark,
+  CommandIcon,
+  BarChart3,
 } from "lucide-react";
 import { PipelineStep } from "@/types/xan";
 import { useKeyboardShortcuts } from "@/hooks/KeyboardShortcuts";
 import { useLanguage } from "@/i18n";
+import { Tooltip } from "@/components/ui/tooltip";
 
 interface MainMenuProps {
   activeMenu: "file" | null;
@@ -38,6 +41,13 @@ interface MainMenuProps {
   isExecuting: boolean;
   isCheckingUpdate: boolean;
   currentPipelineLength: number;
+  showCommandPanel: boolean;
+  onToggleCommandPanel: () => void;
+  showLogPanel: boolean;
+  onToggleLogPanel: () => void;
+  showDataProfile: boolean;
+  onToggleDataProfile: () => void;
+  hasInputFile: boolean;
 }
 
 export function MainMenu({
@@ -61,6 +71,13 @@ export function MainMenu({
   isExecuting,
   isCheckingUpdate,
   currentPipelineLength,
+  showCommandPanel,
+  onToggleCommandPanel,
+  showLogPanel,
+  onToggleLogPanel,
+  showDataProfile,
+  onToggleDataProfile,
+  hasInputFile,
 }: MainMenuProps) {
   const { t } = useLanguage();
   useKeyboardShortcuts(
@@ -238,33 +255,78 @@ export function MainMenu({
 
         {/* Right side buttons */}
         <div className="flex items-center rounded-md gap-1">
-          <button
-            onClick={onCheckUpdate}
-            disabled={isCheckingUpdate}
-            className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              isCheckingUpdate
-                ? "text-primary opacity-70"
-                : "text-primary hover:bg-primary/10"
-            }`}
-          >
-            {isCheckingUpdate ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
-            ) : (
-              <CloudDownload className="h-4 w-4" />
-            )}
-          </button>
-          <button
-            onClick={onHelp}
-            className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
-          >
-            <MessageCircleQuestionMark className="h-4 w-4" />
-          </button>
-          <button
-            onClick={onShowSettings}
-            className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
-          >
-            <Settings className="h-4 w-4" />
-          </button>
+          {/* Panel Toggle Buttons */}
+          <Tooltip content={t.commandPanel} side="bottom">
+            <button
+              onClick={onToggleCommandPanel}
+              className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                showCommandPanel
+                  ? "text-primary bg-primary/10"
+                  : "text-primary hover:bg-primary/10"
+              }`}
+            >
+              <CommandIcon className="h-4 w-4" />
+            </button>
+          </Tooltip>
+          <Tooltip content={t.logPanel} side="bottom">
+            <button
+              onClick={onToggleLogPanel}
+              className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                showLogPanel
+                  ? "text-primary bg-primary/10"
+                  : "text-primary hover:bg-primary/10"
+              }`}
+            >
+              <FileText className="h-4 w-4" />
+            </button>
+          </Tooltip>
+          {hasInputFile && (
+            <Tooltip content={t.dataProfilePanel} side="bottom">
+              <button
+                onClick={onToggleDataProfile}
+                className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  showDataProfile
+                    ? "text-primary bg-primary/10"
+                    : "text-primary hover:bg-primary/10"
+                }`}
+              >
+                <BarChart3 className="h-4 w-4" />
+              </button>
+            </Tooltip>
+          )}
+          <Tooltip content={t.checkUpdate} side="bottom">
+            <button
+              onClick={onCheckUpdate}
+              disabled={isCheckingUpdate}
+              className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                isCheckingUpdate
+                  ? "text-primary opacity-70"
+                  : "text-primary hover:bg-primary/10"
+              }`}
+            >
+              {isCheckingUpdate ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <CloudDownload className="h-4 w-4" />
+              )}
+            </button>
+          </Tooltip>
+          <Tooltip content={t.help} side="bottom">
+            <button
+              onClick={onHelp}
+              className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+            >
+              <MessageCircleQuestionMark className="h-4 w-4" />
+            </button>
+          </Tooltip>
+          <Tooltip content={t.settings} side="bottom">
+            <button
+              onClick={onShowSettings}
+              className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+          </Tooltip>
         </div>
       </div>
     </div>
