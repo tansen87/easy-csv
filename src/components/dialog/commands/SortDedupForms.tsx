@@ -1,9 +1,12 @@
 import { CommandFormProps } from "@/components/dialog/commands/types";
 import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
+import { getParameterDescription } from "@/components/dialog/commands/parameterDescriptions";
+import { useLanguage } from "@/i18n";
 
 export function SortForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props} disabled={!commandDialog.params.select}>
       <div className="grid grid-cols-3 gap-4">
@@ -20,7 +23,7 @@ export function SortForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Select columns"
+            placeholder={getParameterDescription("sort", "select", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -37,7 +40,7 @@ export function SortForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Number of times the line was consecutively duplicated"
+            placeholder={getParameterDescription("sort", "count", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -55,7 +58,7 @@ export function SortForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Max memory for external sorting (MB)"
+            placeholder={getParameterDescription("sort", "memory-limit", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -123,7 +126,7 @@ export function SortForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Directory where external sorting chunks will be written"
+          placeholder={getParameterDescription("sort", "tmp-dir", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -133,6 +136,7 @@ export function SortForm(props: CommandFormProps) {
 
 export function DedupForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -148,7 +152,7 @@ export function DedupForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Column(s) to deduplicate on"
+          placeholder={getParameterDescription("dedup", "select", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -191,7 +195,7 @@ export function DedupForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Expression to decide whether to keep a row (current_*, new_*)"
+            placeholder={getParameterDescription("dedup", "choose", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -208,7 +212,7 @@ export function DedupForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Add column with this name to flag duplicates"
+            placeholder={getParameterDescription("dedup", "boolean", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -219,6 +223,7 @@ export function DedupForm(props: CommandFormProps) {
 
 export function ShuffleForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -229,7 +234,7 @@ export function ShuffleForm(props: CommandFormProps) {
           onChange={(e) =>
             updateParam(commandDialog, setCommandDialog, "seed", e.target.value)
           }
-          placeholder="RNG seed"
+          placeholder={getParameterDescription("shuffle", "seed", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           autoFocus
         />

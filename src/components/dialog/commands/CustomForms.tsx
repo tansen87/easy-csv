@@ -5,9 +5,12 @@ import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { Button } from "@/components/ui/button";
+import { getParameterDescription } from "@/components/dialog/commands/parameterDescriptions";
+import { useLanguage } from "@/i18n";
 
 export function OutputForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props} disabled={!commandDialog.params.path}>
       <div>
@@ -18,7 +21,7 @@ export function OutputForm(props: CommandFormProps) {
           onChange={(e) =>
             updateParam(commandDialog, setCommandDialog, "path", e.target.value)
           }
-          placeholder="Enter output file path"
+          placeholder={getParameterDescription("output", "path", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           autoFocus
         />
@@ -287,7 +290,6 @@ export function BatchFromForm(props: CommandFormProps) {
                   });
                 }
               }}
-              title="Select folder"
             >
               <FolderOpen className="h-4 w-4" />
             </Button>
@@ -321,7 +323,6 @@ export function BatchFromForm(props: CommandFormProps) {
                   });
                 }
               }}
-              title="Select files"
             >
               <File className="h-4 w-4" />
             </Button>
@@ -330,7 +331,7 @@ export function BatchFromForm(props: CommandFormProps) {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium">format (optional)</label>
+            <label className="text-sm font-medium">format</label>
             <SearchableSelect
               value={commandDialog.params.format || ""}
               onChange={(value) =>
@@ -354,7 +355,6 @@ export function BatchFromForm(props: CommandFormProps) {
                 { label: "Markdown (.md)", value: "md" },
                 { label: "Markdown (.markdown)", value: "markdown" },
               ]}
-              placeholder="Auto-infer from extension..."
               size="md"
             />
           </div>

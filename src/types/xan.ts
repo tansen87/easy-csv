@@ -11,6 +11,7 @@ export interface XanParameter {
   name: string;
   type: "string" | "number" | "flag" | "select";
   description: string;
+  descriptionCn?: string;
   required: boolean;
   default?: string | number | boolean;
   options?: string[];

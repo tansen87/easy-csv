@@ -1,9 +1,12 @@
 import { CommandFormProps } from "@/components/dialog/commands/types";
 import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
+import { getParameterDescription } from "@/components/dialog/commands/parameterDescriptions";
+import { useLanguage } from "@/i18n";
 
 export function RangeForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div className="grid grid-cols-4 gap-2">
@@ -16,7 +19,7 @@ export function RangeForm(props: CommandFormProps) {
               onChange={(e) =>
                 updateParam(commandDialog, setCommandDialog, n, e.target.value)
               }
-              placeholder={n}
+              placeholder={getParameterDescription("range", n, language)}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -34,7 +37,7 @@ export function RangeForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Name of the column"
+            placeholder={getParameterDescription("range", "column-name", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>

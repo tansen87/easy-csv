@@ -1,7 +1,6 @@
 import { ComponentType } from "react";
 import { CommandFormProps } from "@/components/dialog/commands/types";
 import { CommandDialogType } from "@/components/dialog/CommandDialog";
-
 import {
   CountForm,
   HeadersForm,
@@ -167,5 +166,6 @@ export const COMMAND_FORMS: Record<
   "batch-to": BatchToForm,
 };
 
+export { getParameterDescription } from "@/components/dialog/commands/parameterDescriptions";
 export { COMMAND_LABELS } from "@/components/dialog/commands/types";
 export type { CommandFormProps } from "@/components/dialog/commands/types";

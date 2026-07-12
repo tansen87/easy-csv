@@ -1,9 +1,12 @@
 import { CommandFormProps } from "@/components/dialog/commands/types";
 import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
+import { getParameterDescription } from "@/components/dialog/commands/parameterDescriptions";
+import { useLanguage } from "@/i18n";
 
 export function SplitForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -19,7 +22,7 @@ export function SplitForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Where to write the chunks"
+          placeholder={getParameterDescription("split", "out-dir", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -38,7 +41,7 @@ export function SplitForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Records per chunk"
+            placeholder={getParameterDescription("split", "size", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -56,7 +59,7 @@ export function SplitForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Max number of chunks"
+            placeholder={getParameterDescription("split", "chunks", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -74,7 +77,7 @@ export function SplitForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Filename template"
+          placeholder={getParameterDescription("split", "filename", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -100,6 +103,7 @@ export function SplitForm(props: CommandFormProps) {
 
 export function PartitionForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -115,7 +119,7 @@ export function PartitionForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Column to partition by"
+          placeholder={getParameterDescription("partition", "column", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -132,7 +136,7 @@ export function PartitionForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Where to write the chunks"
+          placeholder={getParameterDescription("partition", "out-dir", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -149,7 +153,7 @@ export function PartitionForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Filename template"
+          placeholder={getParameterDescription("partition", "filename", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -166,7 +170,7 @@ export function PartitionForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Truncate partition column after n bytes"
+          placeholder={getParameterDescription("partition", "prefix-length", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>

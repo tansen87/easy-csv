@@ -1,6 +1,8 @@
 import { CommandFormProps } from "@/components/dialog/commands/types";
 import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
+import { getParameterDescription } from "@/components/dialog/commands/parameterDescriptions";
+import { useLanguage } from "@/i18n";
 
 export function TransposeForm(props: CommandFormProps) {
   return (
@@ -12,6 +14,7 @@ export function TransposeForm(props: CommandFormProps) {
 
 export function PivotForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       {["columns", "expr", "groupby", "column-sep"].map((n) => (
@@ -23,7 +26,7 @@ export function PivotForm(props: CommandFormProps) {
             onChange={(e) =>
               updateParam(commandDialog, setCommandDialog, n, e.target.value)
             }
-            placeholder={n}
+            placeholder={getParameterDescription("pivot", n, language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -34,6 +37,7 @@ export function PivotForm(props: CommandFormProps) {
 
 export function UnpivotForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       {["columns", "name-column", "value-column"].map((n) => (
@@ -45,7 +49,7 @@ export function UnpivotForm(props: CommandFormProps) {
             onChange={(e) =>
               updateParam(commandDialog, setCommandDialog, n, e.target.value)
             }
-            placeholder={n}
+            placeholder={getParameterDescription("unpivot", n, language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>

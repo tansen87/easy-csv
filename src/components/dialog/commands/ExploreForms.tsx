@@ -2,9 +2,12 @@ import { CommandFormProps } from "@/components/dialog/commands/types";
 import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { getParameterDescription } from "@/components/dialog/commands/parameterDescriptions";
+import { useLanguage } from "@/i18n";
 
 export function CountForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div className="flex items-center gap-6">
@@ -84,7 +87,7 @@ export function CountForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Threads"
+          placeholder={getParameterDescription("count", "threads", language)}
           className="h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -136,6 +139,7 @@ export function HeadersForm(props: CommandFormProps) {
 
 export function ViewForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -171,7 +175,7 @@ export function ViewForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Number of rows to display"
+          placeholder={getParameterDescription("view", "limit", language)}
           className="w-full h-8 px-3 text-sm border rounded-md"
         />
       </div>
@@ -188,7 +192,7 @@ export function ViewForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Select the columns to visualize, leave empty to show all columns"
+          placeholder={getParameterDescription("view", "select", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           autoFocus
         />
@@ -262,6 +266,7 @@ export function ViewForm(props: CommandFormProps) {
 
 export function FlattenForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -277,7 +282,7 @@ export function FlattenForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Select the columns to visualize"
+          placeholder={getParameterDescription("flatten", "select", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -296,7 +301,7 @@ export function FlattenForm(props: CommandFormProps) {
                 parseInt(e.target.value) || undefined,
               )
             }
-            placeholder="Maximum number of rows to read"
+            placeholder={getParameterDescription("flatten", "limit", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -313,7 +318,7 @@ export function FlattenForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Separate rows in the output with the given string"
+            placeholder={getParameterDescription("flatten", "row-separator", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -332,7 +337,7 @@ export function FlattenForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Split columns containing multiple values separated by sep"
+            placeholder={getParameterDescription("flatten", "split", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -349,7 +354,7 @@ export function FlattenForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Delimiter separating multiple values in cells split by split"
+            placeholder={getParameterDescription("flatten", "sep", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -391,6 +396,7 @@ export function FlattenForm(props: CommandFormProps) {
 
 export function HistForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -423,7 +429,7 @@ export function HistForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Name of the represented field"
+            placeholder={getParameterDescription("hist", "name", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -440,7 +446,7 @@ export function HistForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Name of the field column"
+            placeholder={getParameterDescription("hist", "field", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -459,7 +465,7 @@ export function HistForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Name of the label column"
+            placeholder={getParameterDescription("hist", "label", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -476,7 +482,7 @@ export function HistForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Name of the count column"
+            placeholder={getParameterDescription("hist", "value", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -510,6 +516,7 @@ export function HistForm(props: CommandFormProps) {
 
 export function PlotForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props} scrollHeight="30vh">
       <div className="grid grid-cols-2 gap-4">
@@ -521,7 +528,7 @@ export function PlotForm(props: CommandFormProps) {
             onChange={(e) =>
               updateParam(commandDialog, setCommandDialog, "x", e.target.value)
             }
-            placeholder="X axis column"
+            placeholder={getParameterDescription("plot", "x", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             autoFocus
           />
@@ -534,7 +541,7 @@ export function PlotForm(props: CommandFormProps) {
             onChange={(e) =>
               updateParam(commandDialog, setCommandDialog, "y", e.target.value)
             }
-            placeholder="Y axis column (optional if --count)"
+            placeholder={getParameterDescription("plot", "y", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -553,7 +560,7 @@ export function PlotForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Categorical column for series"
+            placeholder={getParameterDescription("plot", "category", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -662,7 +669,7 @@ export function PlotForm(props: CommandFormProps) {
               onChange={(e) =>
                 updateParam(commandDialog, setCommandDialog, n, e.target.value)
               }
-              placeholder={`Min/max ${n.charAt(0)} value`}
+              placeholder={getParameterDescription("plot", n, language)}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -682,7 +689,7 @@ export function PlotForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Number of x-axis ticks"
+            placeholder={getParameterDescription("plot", "x-ticks", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -699,7 +706,7 @@ export function PlotForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Number of y-axis ticks"
+            placeholder={getParameterDescription("plot", "y-ticks", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -718,7 +725,7 @@ export function PlotForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Color gradient name"
+            placeholder={getParameterDescription("plot", "density-gradient", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -761,7 +768,7 @@ export function PlotForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Number of grid columns"
+            placeholder={getParameterDescription("plot", "small-multiples", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -778,7 +785,7 @@ export function PlotForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Timezone for time series"
+            placeholder={getParameterDescription("plot", "timezone", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>

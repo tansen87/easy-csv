@@ -1,9 +1,12 @@
 import { CommandFormProps } from "@/components/dialog/commands/types";
 import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
+import { getParameterDescription } from "@/components/dialog/commands/parameterDescriptions";
+import { useLanguage } from "@/i18n";
 
 export function RunForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper
       {...props}
@@ -75,7 +78,7 @@ export function RunForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Pipeline to run"
+            placeholder={getParameterDescription("run", "pipeline", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -94,7 +97,7 @@ export function RunForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Script file path"
+            placeholder={getParameterDescription("run", "file", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -121,6 +124,7 @@ export function RunForm(props: CommandFormProps) {
 
 export function EvalForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -131,7 +135,7 @@ export function EvalForm(props: CommandFormProps) {
           onChange={(e) =>
             updateParam(commandDialog, setCommandDialog, "expr", e.target.value)
           }
-          placeholder="Expression to evaluate (required)"
+          placeholder={getParameterDescription("eval", "expr", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -159,7 +163,7 @@ export function EvalForm(props: CommandFormProps) {
           onChange={(e) =>
             updateParam(commandDialog, setCommandDialog, "row", e.target.value)
           }
-          placeholder="Pretend row with comma-separated cells"
+          placeholder={getParameterDescription("eval", "row", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>

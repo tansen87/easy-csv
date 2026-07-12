@@ -2,9 +2,12 @@ import { CommandFormProps } from "@/components/dialog/commands/types";
 import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
 import { ExpressionEditor } from "@/components/expression/ExpressionEditor";
+import { getParameterDescription } from "@/components/dialog/commands/parameterDescriptions";
+import { useLanguage } from "@/i18n";
 
 export function SelectForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props} disabled={!commandDialog.params.selection}>
       <div>
@@ -20,7 +23,7 @@ export function SelectForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="e.g. column1,column2 or 0:4"
+          placeholder={getParameterDescription("select", "selection", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           autoFocus
         />
@@ -56,7 +59,7 @@ export function SelectForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Read evaluation expression from a file instead"
+          placeholder={getParameterDescription("select", "evaluate-file", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -66,6 +69,7 @@ export function SelectForm(props: CommandFormProps) {
 
 export function DropForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -81,7 +85,7 @@ export function DropForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Columns to drop (comma-separated)"
+          placeholder={getParameterDescription("drop", "selection", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -91,6 +95,7 @@ export function DropForm(props: CommandFormProps) {
 
 export function MapForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog, headers = [] } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -101,7 +106,7 @@ export function MapForm(props: CommandFormProps) {
             updateParam(commandDialog, setCommandDialog, "expression", value)
           }
           columns={headers}
-          placeholder="Expression to evaluate (e.g., split(name, '.') | first | upper)"
+          placeholder={getParameterDescription("map", "expression", language)}
           autoFocus
         />
       </div>
@@ -139,7 +144,7 @@ export function MapForm(props: CommandFormProps) {
               parseInt(e.target.value) || undefined,
             )
           }
-          placeholder="Number of threads"
+          placeholder={getParameterDescription("map", "threads", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -149,6 +154,7 @@ export function MapForm(props: CommandFormProps) {
 
 export function TransformForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div className="grid grid-cols-2 gap-4">
@@ -165,7 +171,7 @@ export function TransformForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Column to transform"
+            placeholder={getParameterDescription("transform", "column", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             autoFocus
           />
@@ -201,7 +207,7 @@ export function TransformForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Expression to evaluate"
+          placeholder={getParameterDescription("transform", "expression", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -254,7 +260,7 @@ export function TransformForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Threads"
+            placeholder={getParameterDescription("transform", "threads", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -265,6 +271,7 @@ export function TransformForm(props: CommandFormProps) {
 
 export function EnumForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div className="grid grid-cols-2 gap-4">
@@ -281,7 +288,7 @@ export function EnumForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Name of the column to prepend"
+            placeholder={getParameterDescription("enum", "column-name", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -298,7 +305,7 @@ export function EnumForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Number to count from"
+            placeholder={getParameterDescription("enum", "start", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -343,6 +350,7 @@ export function EnumForm(props: CommandFormProps) {
 
 export function FillForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -358,7 +366,7 @@ export function FillForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Selection of columns to fill"
+          placeholder={getParameterDescription("fill", "select", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -375,7 +383,7 @@ export function FillForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Fill empty cells using provided value"
+          placeholder={getParameterDescription("fill", "value", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -385,6 +393,7 @@ export function FillForm(props: CommandFormProps) {
 
 export function CompleteForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div className="grid grid-cols-2 gap-4">
@@ -401,7 +410,7 @@ export function CompleteForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Column to complete"
+            placeholder={getParameterDescription("complete", "column", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             autoFocus
           />
@@ -419,7 +428,7 @@ export function CompleteForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Columns to group by"
+            placeholder={getParameterDescription("complete", "groupby", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -461,7 +470,7 @@ export function CompleteForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Minimum value of range"
+            placeholder={getParameterDescription("complete", "min", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -478,7 +487,7 @@ export function CompleteForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Maximum value of range"
+            placeholder={getParameterDescription("complete", "max", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -489,6 +498,7 @@ export function CompleteForm(props: CommandFormProps) {
 
 export function BlankForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props} disabled={!commandDialog.params.select}>
       <div>
@@ -504,7 +514,7 @@ export function BlankForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Selection of columns to blank down"
+          placeholder={getParameterDescription("blank", "select", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           autoFocus
         />
@@ -522,7 +532,7 @@ export function BlankForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Replacement string for blanked values (default: empty)"
+          placeholder={getParameterDescription("blank", "redact", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -532,6 +542,7 @@ export function BlankForm(props: CommandFormProps) {
 
 export function SeparateForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div className="grid grid-cols-2 gap-4">
@@ -548,7 +559,7 @@ export function SeparateForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Column to split"
+            placeholder={getParameterDescription("separate", "column", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             autoFocus
           />
@@ -566,7 +577,7 @@ export function SeparateForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Separator to use"
+            placeholder={getParameterDescription("separate", "separator", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>

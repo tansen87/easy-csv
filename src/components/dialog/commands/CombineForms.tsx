@@ -3,9 +3,12 @@ import { CommandFormProps } from "@/components/dialog/commands/types";
 import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
 import { open } from "@tauri-apps/plugin-dialog";
+import { getParameterDescription } from "@/components/dialog/commands/parameterDescriptions";
+import { useLanguage } from "@/i18n";
 
 export function CatForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props} scrollHeight="28vh">
       <div>
@@ -66,7 +69,7 @@ export function CatForm(props: CommandFormProps) {
                     e.target.value,
                   )
                 }
-                placeholder="Select CSV files to concatenate"
+                placeholder={getParameterDescription("cat", "inputs", language)}
                 className="flex-1 h-8 px-3 text-sm border rounded-md bg-background"
               />
               <button
@@ -102,7 +105,7 @@ export function CatForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder="Text file containing paths to CSV files (one per line)"
+              placeholder={getParameterDescription("cat", "paths", language)}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -119,7 +122,7 @@ export function CatForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder="Extract paths from this column"
+              placeholder={getParameterDescription("cat", "path-column", language)}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -136,7 +139,7 @@ export function CatForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder="Glob pattern to collect files"
+              placeholder={getParameterDescription("cat", "glob", language)}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -153,7 +156,7 @@ export function CatForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder="Name of source file column"
+              placeholder={getParameterDescription("cat", "source-column", language)}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -170,7 +173,7 @@ export function CatForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder="Xan subcommands for preprocessing"
+              placeholder={getParameterDescription("cat", "preprocess", language)}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -188,7 +191,7 @@ export function CatForm(props: CommandFormProps) {
                     e.target.value,
                   )
                 }
-                placeholder="Path to xan script for preprocessing"
+                placeholder={getParameterDescription("cat", "run", language)}
                 className="flex-1 h-8 px-3 text-sm border rounded-md bg-background"
               />
               <button
@@ -224,7 +227,7 @@ export function CatForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder="Shell commands for preprocessing"
+              placeholder={getParameterDescription("cat", "shell-preprocess", language)}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -256,6 +259,7 @@ export function CatForm(props: CommandFormProps) {
 
 export function JoinForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props} scrollHeight="30vh">
       <div className="grid grid-cols-4 gap-4">
@@ -272,7 +276,7 @@ export function JoinForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Columns 1"
+            placeholder={getParameterDescription("join", "columns", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             autoFocus
           />
@@ -290,7 +294,7 @@ export function JoinForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="First input file path"
+            placeholder={getParameterDescription("join", "input1", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -309,7 +313,7 @@ export function JoinForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Columns 2"
+            placeholder={getParameterDescription("join", "columns2", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -326,7 +330,7 @@ export function JoinForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Second input file path"
+            placeholder={getParameterDescription("join", "input2", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -383,7 +387,7 @@ export function JoinForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Prefix for left columns"
+            placeholder={getParameterDescription("join", "prefix-left", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -400,7 +404,7 @@ export function JoinForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder="Prefix for right columns"
+            placeholder={getParameterDescription("join", "prefix-right", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -484,7 +488,7 @@ export function JoinForm(props: CommandFormProps) {
                     e.target.value,
                   )
                 }
-                placeholder="Threads"
+                placeholder={getParameterDescription("join", "threads", language)}
                 className="w-20 h-8 px-2 text-sm border rounded-md bg-background"
               />
             </div>
@@ -497,6 +501,7 @@ export function JoinForm(props: CommandFormProps) {
 
 export function MergeForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props} scrollHeight="30vh">
       <div>
@@ -512,7 +517,7 @@ export function MergeForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Input files to merge"
+            placeholder={getParameterDescription("merge", "inputs", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -529,7 +534,7 @@ export function MergeForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Select a subset of columns to sort"
+            placeholder={getParameterDescription("merge", "select", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -546,7 +551,7 @@ export function MergeForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Text file containing paths"
+            placeholder={getParameterDescription("merge", "paths", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -563,7 +568,7 @@ export function MergeForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Extract paths from this column"
+            placeholder={getParameterDescription("merge", "path-column", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -580,7 +585,7 @@ export function MergeForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Name of source file column"
+            placeholder={getParameterDescription("merge", "source-column", language)}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
