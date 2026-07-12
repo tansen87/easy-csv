@@ -16,12 +16,13 @@ Usage:
     xan count [options] [<input>]
 
 count options:
+    -H, --human-readable     格式化计数以使其更易于阅读.
+    -a, --approx             通过采样前几行来近似 CSV 文件行数.目标必须是可寻址的,这意味着不能在通过 stdin
+                             馈送的流或 gzipped 数据上使用.
+    -c, --check-alignment    使用较慢的解析器,验证给定 CSV 流生成的行具有相同数量的列.
     -p, --parallel           是否使用并行化来加速计数.将根据核心数自动选择合适的线程数.
                              如果要自己指定线程数,请使用 -t, --threads.
     -t, --threads <threads>  使用指定数量的线程进行并行计算.如果要自动选择线程数,请使用 -p, --parallel.
-    -a, --approx             通过采样前几行来近似 CSV 文件行数.目标必须是可寻址的,这意味着不能在通过stdin
-                             馈送的流或 gzipped 数据上使用.
-    -c, --check-alignment    使用较慢的解析器,验证给定 CSV 流生成的行具有相同数量的列.
 
 Common options:
     -h, --help             显示帮助

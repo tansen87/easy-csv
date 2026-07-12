@@ -12,6 +12,17 @@ export interface Translations {
   redo: string;
   execute: string;
   executing: string;
+  commandPanel: string;
+  logPanel: string;
+  dataProfilePanel: string;
+  checkUpdate: string;
+  help: string;
+  settings: string;
+
+  // ConfirmDialog
+  confirm: string;
+  refreshTitle: string;
+  refreshMessage: string;
 
   // Settings
   preference: string;
@@ -19,14 +30,22 @@ export interface Translations {
   theme: string;
   light: string;
   dark: string;
+  system: string;
   csvDelimiter: string;
   noHeaders: string;
   noHeadersDesc: string;
+  showExecutionNotification: string;
+  showExecutionNotificationDesc: string;
+  minimizeToTray: string;
+  minimizeToTrayDesc: string;
   resetToDefaults: string;
   saveSettings: string;
   selectDelimiter: string;
   delimiterDesc: string;
   language: string;
+  historyLimit: string;
+  historyLimitDesc: string;
+  unlimited: string;
 
   // CommandList
   cmds: string;
@@ -76,6 +95,22 @@ export interface Translations {
   logs: string;
   noLogsYet: string;
   executePipelineHint: string;
+
+  // DataProfile
+  dataProfile: string;
+  searchFields: string;
+  noFieldsMatch: string;
+  analyzingData: string;
+  columns: string;
+  rows: string;
+  count: string;
+  empty: string;
+  min: string;
+  max: string;
+  mean: string;
+  sum: string;
+  minLen: string;
+  maxLen: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -91,6 +126,17 @@ export const translations: Record<Language, Translations> = {
     redo: "Redo",
     execute: "Execute",
     executing: "Executing",
+    commandPanel: "Commands",
+    logPanel: "Logs",
+    dataProfilePanel: "Data Profile",
+    checkUpdate: "Check Update",
+    help: "Help",
+    settings: "Settings",
+
+    // ConfirmDialog
+    confirm: "Confirm",
+    refreshTitle: "Refresh Page",
+    refreshMessage: "Are you sure you want to refresh the page? Unsaved changes will be lost.",
 
     // Settings
     preference: "Preference",
@@ -98,14 +144,22 @@ export const translations: Record<Language, Translations> = {
     theme: "Theme",
     light: "Light",
     dark: "Dark",
+    system: "System",
     csvDelimiter: "CSV Delimiter",
     noHeaders: "No Headers",
     noHeadersDesc: "When set, the first row will not be interpreted as headers",
+    showExecutionNotification: "Notification",
+    showExecutionNotificationDesc: "When enabled, Show system notification when pipeline execution completes",
+    minimizeToTray: "Tray",
+    minimizeToTrayDesc: "When enabled, closing the window will minimize to system tray instead of exiting",
     resetToDefaults: "Reset to Defaults",
     saveSettings: "Save Settings",
     selectDelimiter: "Select delimiter",
     delimiterDesc: "The field delimiter for reading CSV data",
     language: "Language",
+    historyLimit: "History Limit",
+    historyLimitDesc: "Maximum number of history entries to keep",
+    unlimited: "Unlimited",
 
     // CommandList
     cmds: "Cmds",
@@ -155,6 +209,22 @@ export const translations: Record<Language, Translations> = {
     logs: "Logs",
     noLogsYet: "No logs yet",
     executePipelineHint: "Execute a pipeline to see output",
+
+    // DataProfile
+    dataProfile: "Data Profile",
+    searchFields: "Search fields",
+    noFieldsMatch: "No fields matching",
+    analyzingData: "Analyzing data...",
+    columns: "Columns",
+    rows: "Rows",
+    count: "Count",
+    empty: "Empty",
+    min: "Min",
+    max: "Max",
+    mean: "Mean",
+    sum: "Sum",
+    minLen: "Min Len",
+    maxLen: "Max Len",
   },
   zh: {
     // MainMenu
@@ -168,6 +238,17 @@ export const translations: Record<Language, Translations> = {
     redo: "重做",
     execute: "执行",
     executing: "执行中",
+    commandPanel: "命令",
+    logPanel: "日志",
+    dataProfilePanel: "数据概览",
+    checkUpdate: "检查更新",
+    help: "帮助",
+    settings: "设置",
+
+    // ConfirmDialog
+    confirm: "确认",
+    refreshTitle: "刷新页面",
+    refreshMessage: "确定要刷新页面吗？未保存的更改将会丢失。",
 
     // Settings
     preference: "偏好设置",
@@ -175,14 +256,22 @@ export const translations: Record<Language, Translations> = {
     theme: "主题",
     light: "浅色",
     dark: "深色",
+    system: "跟随系统",
     csvDelimiter: "CSV 分隔符",
     noHeaders: "无表头",
     noHeadersDesc: "启用后,第一行将不被视为表头",
+    showExecutionNotification: "系统通知",
+    showExecutionNotificationDesc: "启用后,管道执行完成后显示系统通知",
+    minimizeToTray: "系统托盘",
+    minimizeToTrayDesc: "启用后,关闭窗口将最小化到系统托盘而非退出应用",
     resetToDefaults: "恢复默认",
     saveSettings: "保存设置",
     selectDelimiter: "选择分隔符",
     delimiterDesc: "用于读取 CSV 数据的字段分隔符",
     language: "语言",
+    historyLimit: "历史记录上限",
+    historyLimitDesc: "保留的最大历史记录条数",
+    unlimited: "无限制",
 
     // CommandList
     cmds: "命令",
@@ -232,5 +321,21 @@ export const translations: Record<Language, Translations> = {
     logs: "日志",
     noLogsYet: "暂无日志",
     executePipelineHint: "执行工作流后查看输出",
+
+    // DataProfile
+    dataProfile: "数据概况",
+    searchFields: "搜索字段",
+    noFieldsMatch: "无匹配字段",
+    analyzingData: "分析数据中...",
+    columns: "列数",
+    rows: "行数",
+    count: "计数",
+    empty: "空值",
+    min: "最小值",
+    max: "最大值",
+    mean: "平均值",
+    sum: "求和",
+    minLen: "最小长度",
+    maxLen: "最大长度",
   },
 };

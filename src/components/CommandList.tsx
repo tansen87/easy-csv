@@ -38,10 +38,9 @@ import {
   Files,
   GitMerge,
   Merge,
-  Type,
+  Pencil,
   Minus,
   Ruler,
-  FileText,
   MoveRight,
   MoveLeft,
   Repeat,
@@ -51,8 +50,8 @@ import {
   TableRowsSplit,
   Grid3x3,
   Table,
-  Calculator,
-  Download,
+  Bug,
+  FileOutput,
   X,
   History,
   LayersPlus,
@@ -61,6 +60,10 @@ import {
   ScanSearch,
   Pickaxe,
   ChartBar,
+  FunnelPlus,
+  ArrowBigDownDash,
+  BrushCleaning,
+  FileCodeCorner,
   type LucideIcon,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
@@ -70,7 +73,7 @@ import { useLanguage } from "@/i18n";
 
 export const commandIconMap: Record<string, LucideIcon> = {
   // Output
-  output: Download,
+  output: FileOutput,
 
   // Explore & visualize
   view: Eye,
@@ -88,6 +91,7 @@ export const commandIconMap: Record<string, LucideIcon> = {
   enum: ListOrdered,
   fill: PaintBucket,
   complete: CheckCircle,
+  blank: ArrowBigDownDash,
   separate: Columns3,
 
   // Search & filter
@@ -119,11 +123,11 @@ export const commandIconMap: Record<string, LucideIcon> = {
   merge: Merge,
 
   // Format, convert & recombobulate
-  rename: Type,
+  rename: Pencil,
   behead: Minus,
   input: FileInput,
   fixlengths: Ruler,
-  fmt: FileText,
+  fmt: BrushCleaning,
   explode: LayersPlus,
   implode: LayersMinus,
   scrape: Pickaxe,
@@ -144,8 +148,13 @@ export const commandIconMap: Record<string, LucideIcon> = {
   range: Table,
 
   // Scripting
-  run: Terminal,
-  eval: Calculator,
+  run: FileCodeCorner,
+  eval: Bug,
+
+  // Batch method
+  "batch-filter": FunnelPlus,
+  "batch-from": FileInput,
+  "batch-to": FileOutput,
 };
 
 interface CommandListProps {

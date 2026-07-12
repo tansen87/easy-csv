@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X, Plus, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { useDraggable } from "@/hooks/useDraggable";
 
 interface PivotDialogState {
   x: number;
@@ -22,7 +23,14 @@ interface PivotDialogProps {
   onClose: () => void;
 }
 
-type AggregationType = "count" | "sum" | "avg" | "min" | "max" | "first" | "last";
+type AggregationType =
+  | "count"
+  | "sum"
+  | "avg"
+  | "min"
+  | "max"
+  | "first"
+  | "last";
 
 const aggregationTypes: { value: AggregationType; label: string }[] = [
   { value: "count", label: "Count" },
@@ -50,59 +58,28 @@ export function PivotDialog({
   const [valueColumns, setValueColumns] = useState<ValueColumn[]>([]);
   const [columnSep, setColumnSep] = useState("_");
   const [search, setSearch] = useState("");
-  const [position, setPosition] = useState({ x: pivotDialog.x, y: pivotDialog.y });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
-  const positionRef = useRef(position);
-  const isDraggingRef = useRef(isDragging);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [dialogHeight, setDialogHeight] = useState(420);
+  const [dialogWidth, setDialogWidth] = useState(360);
 
   useEffect(() => {
-    positionRef.current = position;
-  }, [position]);
-
-  useEffect(() => {
-    isDraggingRef.current = isDragging;
-  }, [isDragging]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest(".no-drag")) return;
-
-    e.preventDefault();
-    setIsDragging(true);
-    isDraggingRef.current = true;
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startPosX: positionRef.current.x,
-      startPosY: positionRef.current.y,
-    };
+    if (dialogRef.current) {
+      setDialogHeight(dialogRef.current.offsetHeight);
+      setDialogWidth(dialogRef.current.offsetWidth);
+    }
   }, []);
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDraggingRef.current) return;
+  const maxY = window.innerHeight - dialogHeight;
+  const maxX = window.innerWidth - dialogWidth;
 
-    const deltaX = e.clientX - dragRef.current.startX;
-    const deltaY = e.clientY - dragRef.current.startY;
-
-    setPosition({
-      x: Math.max(0, Math.min(dragRef.current.startPosX + deltaX, window.innerWidth - 380)),
-      y: Math.max(0, Math.min(dragRef.current.startPosY + deltaY, window.innerHeight - 540)),
-    });
-  }, []);
-
-  const handleMouseUp = useCallback(() => {
-    isDraggingRef.current = false;
-    setIsDragging(false);
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [handleMouseMove, handleMouseUp]);
+  const { position, isDragging, handleMouseDown } = useDraggable({
+    initialX: pivotDialog.x,
+    initialY: pivotDialog.y,
+    maxWidth: dialogWidth,
+    maxHeight: dialogHeight,
+    maxX,
+    maxY,
+  });
 
   const toggleGroupBy = (col: string) => {
     setSelectedGroupBy((prev) =>
@@ -121,7 +98,10 @@ export function PivotDialog({
   );
 
   const availableForValues = headers.filter(
-    (h) => !selectedColumns.includes(h) && (h.toLowerCase().includes(search.toLowerCase()) || valueColumns.some((vc) => vc.column === h)),
+    (h) =>
+      !selectedColumns.includes(h) &&
+      (h.toLowerCase().includes(search.toLowerCase()) ||
+        valueColumns.some((vc) => vc.column === h)),
   );
 
   const addValueColumn = () => {
@@ -149,10 +129,10 @@ export function PivotDialog({
       prev.map((vc, i) =>
         i === index
           ? {
-            ...vc,
-            [field]:
-              field === "aggregation" ? (value as AggregationType) : value,
-          }
+              ...vc,
+              [field]:
+                field === "aggregation" ? (value as AggregationType) : value,
+            }
           : vc,
       ),
     );
@@ -174,30 +154,45 @@ export function PivotDialog({
     if (selectedColumns.length === 0 && selectedGroupBy.length === 0) {
       const aggCommand = xanCommands.find((cmd) => cmd.id === "agg");
       if (aggCommand) {
-        onAddCommand(aggCommand, {
-          expression: columnsExpr,
-          output: "",
-        }, "Agg");
+        onAddCommand(
+          aggCommand,
+          {
+            expression: columnsExpr,
+            output: "",
+          },
+          "Agg",
+        );
       }
     } else if (selectedColumns.length === 0) {
       const groupbyCommand = xanCommands.find((cmd) => cmd.id === "groupby");
       if (groupbyCommand) {
-        onAddCommand(groupbyCommand, {
-          columns: selectedGroupBy.map((col) => `"${col}"`).join(","),
-          expression: columnsExpr,
-          output: "",
-        }, "Groupby");
+        onAddCommand(
+          groupbyCommand,
+          {
+            columns: selectedGroupBy.map((col) => `"${col}"`).join(","),
+            expression: columnsExpr,
+            output: "",
+          },
+          "Groupby",
+        );
       }
     } else {
       const pivotCommand = xanCommands.find((cmd) => cmd.id === "pivot");
       if (pivotCommand) {
-        onAddCommand(pivotCommand, {
-          columns: selectedColumns.map((col) => `"${col}"`).join(","),
-          expr: columnsExpr,
-          groupby: selectedGroupBy.length > 0 ? selectedGroupBy.map((col) => `"${col}"`).join(",") : undefined,
-          "column-sep": columnSep || "_",
-          output: "",
-        }, "Pivot");
+        onAddCommand(
+          pivotCommand,
+          {
+            columns: selectedColumns.map((col) => `"${col}"`).join(","),
+            expr: columnsExpr,
+            groupby:
+              selectedGroupBy.length > 0
+                ? selectedGroupBy.map((col) => `"${col}"`).join(",")
+                : undefined,
+            "column-sep": columnSep || "_",
+            output: "",
+          },
+          "Pivot",
+        );
       }
     }
     onClose();
@@ -205,6 +200,7 @@ export function PivotDialog({
 
   return (
     <div
+      ref={dialogRef}
       className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[360px] h-[420px] flex flex-col select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
         left: position.x,
@@ -246,16 +242,19 @@ export function PivotDialog({
           <ScrollArea>
             <div className="flex flex-wrap gap-1 p-1.5 border rounded-md bg-background">
               {filteredHeaders.length === 0 ? (
-                <span className="text-xs text-muted-foreground px-2 py-0.5">No matches</span>
+                <span className="text-xs text-muted-foreground px-2 py-0.5">
+                  No matches
+                </span>
               ) : (
                 filteredHeaders.map((header) => (
                   <button
                     key={header}
                     onClick={() => toggleColumn(header)}
-                    className={`px-2 py-0.5 rounded text-xs transition-colors ${selectedColumns.includes(header)
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted hover:bg-accent"
-                      }`}
+                    className={`px-2 py-0.5 rounded text-xs transition-colors ${
+                      selectedColumns.includes(header)
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted hover:bg-accent"
+                    }`}
                   >
                     {header}
                   </button>
@@ -272,16 +271,19 @@ export function PivotDialog({
           <ScrollArea>
             <div className="flex flex-wrap gap-1 p-1.5 border rounded-md bg-background">
               {filteredHeaders.length === 0 ? (
-                <span className="text-xs text-muted-foreground px-2 py-0.5">No matches</span>
+                <span className="text-xs text-muted-foreground px-2 py-0.5">
+                  No matches
+                </span>
               ) : (
                 filteredHeaders.map((header) => (
                   <button
                     key={header}
                     onClick={() => toggleGroupBy(header)}
-                    className={`px-2 py-0.5 rounded text-xs transition-colors ${selectedGroupBy.includes(header)
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted hover:bg-accent"
-                      }`}
+                    className={`px-2 py-0.5 rounded text-xs transition-colors ${
+                      selectedGroupBy.includes(header)
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted hover:bg-accent"
+                    }`}
                   >
                     {header}
                   </button>
@@ -316,14 +318,19 @@ export function PivotDialog({
                     <SearchableSelect
                       value={vc.column}
                       onChange={(v) => updateValueColumn(index, "column", v)}
-                      options={availableForValues.map((h) => ({ label: h, value: h }))}
+                      options={availableForValues.map((h) => ({
+                        label: h,
+                        value: h,
+                      }))}
                       placeholder="Select column..."
                     />
                   </div>
                   <div className="relative w-24 no-drag">
                     <SearchableSelect
                       value={vc.aggregation}
-                      onChange={(v) => updateValueColumn(index, "aggregation", v)}
+                      onChange={(v) =>
+                        updateValueColumn(index, "aggregation", v)
+                      }
                       options={aggregationTypes}
                       placeholder="Agg..."
                     />

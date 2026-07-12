@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X, Plus, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { useDraggable } from "@/hooks/useDraggable";
 
 interface WindowDialogState {
   col: number;
@@ -55,7 +56,8 @@ const WINDOW_EXPRS = [
 const DEFAULT_WINDOW_SIZE = "10";
 
 function buildExpression(entry: WindowEntry): string {
-  const func = WINDOW_EXPRS.find(f => f.value === entry.func) || WINDOW_EXPRS[0];
+  const func =
+    WINDOW_EXPRS.find((f) => f.value === entry.func) || WINDOW_EXPRS[0];
   let expr = "";
 
   if (func.value === "ntile") {
@@ -88,60 +90,43 @@ export function WindowDialog({
       column: headers[windowDialog.col] || "",
       func: WINDOW_EXPRS[0].value,
       alias: "",
-      windowSize: DEFAULT_WINDOW_SIZE
-    }
+      windowSize: DEFAULT_WINDOW_SIZE,
+    },
   ]);
   const [groupby, setGroupby] = useState("");
-  const [position, setPosition] = useState({ x: windowDialog.x, y: windowDialog.y });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest(".no-drag")) return;
-
-    setIsDragging(true);
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startPosX: position.x,
-      startPosY: position.y,
-    };
-  }, [position.x, position.y]);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging) return;
-
-    const deltaX = e.clientX - dragRef.current.startX;
-    const deltaY = e.clientY - dragRef.current.startY;
-
-    setPosition({
-      x: Math.max(0, Math.min(dragRef.current.startPosX + deltaX, window.innerWidth - 380)),
-      y: Math.max(0, Math.min(dragRef.current.startPosY + deltaY, window.innerHeight - 480)),
-    });
-  }, [isDragging]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [dialogHeight, setDialogHeight] = useState(480);
+  const [dialogWidth, setDialogWidth] = useState(360);
 
   useEffect(() => {
-    if (isDragging) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
+    if (dialogRef.current) {
+      setDialogHeight(dialogRef.current.offsetHeight);
+      setDialogWidth(dialogRef.current.offsetWidth);
     }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, []);
+
+  const maxY = window.innerHeight - dialogHeight;
+  const maxX = window.innerWidth - dialogWidth;
+
+  const { position, isDragging, handleMouseDown } = useDraggable({
+    initialX: windowDialog.x,
+    initialY: windowDialog.y,
+    maxWidth: dialogWidth,
+    maxHeight: dialogHeight,
+    maxX,
+    maxY,
+  });
 
   const addEntry = () => {
-    setEntries([...entries, {
-      column: "",
-      func: WINDOW_EXPRS[0].value,
-      alias: "",
-      windowSize: DEFAULT_WINDOW_SIZE
-    }]);
+    setEntries([
+      ...entries,
+      {
+        column: "",
+        func: WINDOW_EXPRS[0].value,
+        alias: "",
+        windowSize: DEFAULT_WINDOW_SIZE,
+      },
+    ]);
   };
 
   const removeEntry = (index: number) => {
@@ -150,32 +135,41 @@ export function WindowDialog({
     }
   };
 
-  const updateEntry = (index: number, field: keyof WindowEntry, value: string) => {
+  const updateEntry = (
+    index: number,
+    field: keyof WindowEntry,
+    value: string,
+  ) => {
     const newEntries = [...entries];
     newEntries[index][field] = value;
     setEntries(newEntries);
   };
 
   const handleApply = () => {
-    const validEntries = entries.filter(e => e.column.trim());
+    const validEntries = entries.filter((e) => e.column.trim());
     if (validEntries.length === 0) return;
 
     const windowCommand = xanCommands.find((cmd) => cmd.id === "window");
     if (!windowCommand) return;
 
-    const expressions = validEntries.map(e => buildExpression(e));
+    const expressions = validEntries.map((e) => buildExpression(e));
     const expression = expressions.join(", ");
 
-    onAddCommand(windowCommand, {
-      expression,
-      groupby: groupby.trim() || undefined,
-      output: "",
-    }, "Window");
+    onAddCommand(
+      windowCommand,
+      {
+        expression,
+        groupby: groupby.trim() || undefined,
+        output: "",
+      },
+      "Window",
+    );
     onClose();
   };
 
   return (
     <div
+      ref={dialogRef}
       className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[360px] select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
         left: position.x,
@@ -227,26 +221,37 @@ export function WindowDialog({
             </div>
 
             {entries.map((entry, index) => {
-              const func = WINDOW_EXPRS.find(f => f.value === entry.func);
+              const func = WINDOW_EXPRS.find((f) => f.value === entry.func);
               return (
-                <div key={index} className="border rounded-md p-2 space-y-2 bg-muted/10">
+                <div
+                  key={index}
+                  className="border rounded-md p-2 space-y-2 bg-muted/10"
+                >
                   <div className="flex gap-2 items-end">
                     <div className="flex-1 space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground">Column</label>
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Column
+                      </label>
                       <input
                         type="text"
                         value={entry.column}
-                        onChange={(e) => updateEntry(index, "column", e.target.value)}
+                        onChange={(e) =>
+                          updateEntry(index, "column", e.target.value)
+                        }
                         placeholder="Column..."
                         className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                       />
                     </div>
                     <div className="flex-1 space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground">Alias</label>
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Alias
+                      </label>
                       <input
                         type="text"
                         value={entry.alias}
-                        onChange={(e) => updateEntry(index, "alias", e.target.value)}
+                        onChange={(e) =>
+                          updateEntry(index, "alias", e.target.value)
+                        }
                         placeholder="Alias (Optional)"
                         className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                       />
@@ -265,21 +270,30 @@ export function WindowDialog({
 
                   <div className="flex gap-2 items-end">
                     <div className="flex-1 space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground">Expression</label>
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Expression
+                      </label>
                       <SearchableSelect
                         value={entry.func}
                         onChange={(value) => updateEntry(index, "func", value)}
-                        options={WINDOW_EXPRS.map(f => ({ value: f.value, label: f.label }))}
+                        options={WINDOW_EXPRS.map((f) => ({
+                          value: f.value,
+                          label: f.label,
+                        }))}
                         placeholder="Select expression..."
                       />
                     </div>
                     {func?.hasWindowSize && (
                       <div className="flex-1 space-y-1">
-                        <label className="text-xs font-medium text-muted-foreground">WinSize</label>
+                        <label className="text-xs font-medium text-muted-foreground">
+                          WinSize
+                        </label>
                         <input
                           type="number"
                           value={entry.windowSize}
-                          onChange={(e) => updateEntry(index, "windowSize", e.target.value)}
+                          onChange={(e) =>
+                            updateEntry(index, "windowSize", e.target.value)
+                          }
                           className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                           min="1"
                         />

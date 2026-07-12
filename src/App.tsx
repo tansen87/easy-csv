@@ -1,16 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
-import { Button } from "@/components/ui/button";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { sendNotification } from "@tauri-apps/plugin-notification";
 import { useTheme } from "@/components/setting/ThemeProvider";
 import { ToastContainer, ToastType } from "@/components/setting/Toast";
-import { NotificationPanel, NotificationType } from "@/components/setting/PersistentNotification";
 import {
-  Terminal,
-  ChevronUp,
-  ChevronRight,
-  FileText,
-} from "lucide-react";
+  NotificationPanel,
+  NotificationType,
+} from "@/components/setting/PersistentNotification";
+
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/panel/LogPanel";
 import { SettingsDialog } from "@/components/setting/SettingsDialog";
@@ -18,6 +17,9 @@ import { HomeView } from "@/components/HomeView";
 import { HelpDialog } from "@/components/help/HelpDialog";
 import { getHelpContent } from "@/components/help/HelpContent";
 import { UpdateDialog } from "@/components/dialog/UpdateDialog";
+import { ConfirmDialog } from "@/components/dialog/ConfirmDialog";
+import { BatchFilterDialog } from "@/components/dialog/BatchFilterDialog";
+import { DataProfilePanel } from "@/components/panel/DataProfilePanel";
 import { xanCommands } from "@/data/commands";
 import { helpDocs, helpDocsZh } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
@@ -53,7 +55,7 @@ function App() {
 
 function AppContent() {
   const { theme, setTheme } = useTheme();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [tabs, setTabs] = useState<PipelineTab[]>([
     {
@@ -69,6 +71,10 @@ function AppContent() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(",");
   const [noHeaders, setNoHeaders] = useState<boolean>(false);
+  const [showExecutionNotification, setShowExecutionNotification] =
+    useState<boolean>(true);
+  const [minimizeToTray, setMinimizeToTray] = useState<boolean>(true);
+  const [historyLimit, setHistoryLimit] = useState<number>(100);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [showHelp, setShowHelp] = useState<boolean>(false);
   const [helpContent, setHelpContent] = useState<string>("");
@@ -82,31 +88,64 @@ function AppContent() {
     "commands" | "history"
   >("commands");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
-  const [notifications, setNotifications] = useState<{ id: string; message: string; type: NotificationType }[]>([]);
+  const [toasts, setToasts] = useState<
+    { id: string; message: string; type: ToastType }[]
+  >([]);
+  const [notifications, setNotifications] = useState<
+    { id: string; message: string; type: NotificationType }[]
+  >([]);
   const [activeMenu, setActiveMenu] = useState<"file" | null>(null);
   const [isMenuActivated, setIsMenuActivated] = useState<boolean>(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState<boolean>(false);
   const [showProgressBar, setShowProgressBar] = useState<boolean>(false);
-  const [branchProgress, setBranchProgress] = useState<{ current: number; total: number; name: string; status: "executing" | "completed" | "error" } | null>(null);
+  const [branchProgress, setBranchProgress] = useState<{
+    current: number;
+    total: number;
+    name: string;
+    status: "executing" | "completed" | "error";
+  } | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState<boolean>(false);
+  const [showDataProfile, setShowDataProfile] = useState<boolean>(false);
+  const [showRefreshDialog, setShowRefreshDialog] = useState<boolean>(false);
+  const [batchFilterDialog, setBatchFilterDialog] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const [updateInfo, setUpdateInfo] = useState<{
     hasUpdate: boolean;
     latestVersion: string;
     changelog: string;
   } | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState<boolean>(false);
-  const progressHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const currentVersion = "0.2.0";
+  const progressHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const currentVersion = "0.2.1";
 
   // Undo/Redo history state
-  const [undoStack, setUndoStack] = useState<Array<{ pipeline: PipelineStep[]; edges: PipelineEdge[]; inputPosition?: { x: number; y: number } }>>([]);
-  const [redoStack, setRedoStack] = useState<Array<{ pipeline: PipelineStep[]; edges: PipelineEdge[]; inputPosition?: { x: number; y: number } }>>([]);
+  const [undoStack, setUndoStack] = useState<
+    Array<{
+      pipeline: PipelineStep[];
+      edges: PipelineEdge[];
+      inputPosition?: { x: number; y: number };
+    }>
+  >([]);
+  const [redoStack, setRedoStack] = useState<
+    Array<{
+      pipeline: PipelineStep[];
+      edges: PipelineEdge[];
+      inputPosition?: { x: number; y: number };
+    }>
+  >([]);
 
-  const showToastRef = useRef<(message: string, type: ToastType) => void>(() => { });
-  const removeToastRef = useRef<(id: string) => void>(() => { });
-  const addNotificationRef = useRef<(message: string, type: NotificationType) => void>(() => { });
-  const removeNotificationRef = useRef<(id: string) => void>(() => { });
+  const showToastRef = useRef<(message: string, type: ToastType) => void>(
+    () => {},
+  );
+  const removeToastRef = useRef<(id: string) => void>(() => {});
+  const addNotificationRef = useRef<
+    (message: string, type: NotificationType) => void
+  >(() => {});
+  const removeNotificationRef = useRef<(id: string) => void>(() => {});
   const headerRef = useRef<HTMLDivElement>(null);
 
   const showToast = useCallback((message: string, type: ToastType = "info") => {
@@ -118,16 +157,19 @@ function AppContent() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
-  const addNotification = useCallback((message: string, type: NotificationType = "info") => {
-    setNotifications((prev) => {
-      // Check if notification with same message already exists
-      if (prev.some(n => n.message === message)) {
-        return prev;
-      }
-      const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-      return [...prev, { id, message, type }];
-    });
-  }, []);
+  const addNotification = useCallback(
+    (message: string, type: NotificationType = "info") => {
+      setNotifications((prev) => {
+        // Check if notification with same message already exists
+        if (prev.some((n) => n.message === message)) {
+          return prev;
+        }
+        const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        return [...prev, { id, message, type }];
+      });
+    },
+    [],
+  );
 
   const removeNotification = useCallback((id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
@@ -145,8 +187,8 @@ function AppContent() {
   }, [showToast, removeToast, addNotification, removeNotification]);
 
   const isCsvFile = (filePath: string): boolean => {
-    const ext = filePath.split('.').pop()?.toLowerCase();
-    return ext ? ['csv', 'txt', 'tsv'].includes(ext) : false;
+    const ext = filePath.split(".").pop()?.toLowerCase();
+    return ext ? ["csv", "txt", "tsv"].includes(ext) : false;
   };
 
   // Load CSV file for a specific tab
@@ -156,7 +198,13 @@ function AppContent() {
         setTabs((prev) =>
           prev.map((tab) =>
             tab.id === tabId
-              ? { ...tab, data: [], headers: [], inputFile: "", updatedAt: formatDateTime(new Date()) }
+              ? {
+                  ...tab,
+                  data: [],
+                  headers: [],
+                  inputFile: "",
+                  updatedAt: formatDateTime(new Date()),
+                }
               : tab,
           ),
         );
@@ -167,7 +215,11 @@ function AppContent() {
       const fileName = filePath.split(/[\\/]/).pop() || filePath;
       setRecentFiles((prev) => {
         const updated = [
-          { path: filePath, name: fileName, openedAt: formatDateTime(new Date()) },
+          {
+            path: filePath,
+            name: fileName,
+            openedAt: formatDateTime(new Date()),
+          },
           ...prev.filter((f) => f.path !== filePath),
         ].slice(0, 10);
         saveRecentFiles(updated);
@@ -175,14 +227,21 @@ function AppContent() {
       });
 
       if (!isCsvFile(filePath)) {
-        const ext = filePath.split('.').pop();
-        addLog("info", `Non-CSV file selected. Use "from" command in Flow panel to convert ${ext} to CSV.`);
+        const ext = filePath.split(".").pop();
+        addLog(
+          "info",
+          `Non-CSV file selected. Use "from" command in Flow panel to convert ${ext} to CSV.`,
+        );
         setShowLogPanel(true);
         // Set the inputFile even for non-CSV files so the UI doesn't show empty state
         setTabs((prev) =>
           prev.map((tab) =>
             tab.id === tabId
-              ? { ...tab, inputFile: filePath, updatedAt: formatDateTime(new Date()) }
+              ? {
+                  ...tab,
+                  inputFile: filePath,
+                  updatedAt: formatDateTime(new Date()),
+                }
               : tab,
           ),
         );
@@ -201,7 +260,13 @@ function AppContent() {
         setTabs((prev) =>
           prev.map((tab) =>
             tab.id === tabId
-              ? { ...tab, data: data.rows, headers: data.headers, inputFile: filePath, updatedAt: formatDateTime(new Date()) }
+              ? {
+                  ...tab,
+                  data: data.rows,
+                  headers: data.headers,
+                  inputFile: filePath,
+                  updatedAt: formatDateTime(new Date()),
+                }
               : tab,
           ),
         );
@@ -214,7 +279,7 @@ function AppContent() {
 
   // 当分割符变化时,自动重新加载当前tab的数据
   useEffect(() => {
-    const currentTab = tabs.find(t => t.id === selectedTabId);
+    const currentTab = tabs.find((t) => t.id === selectedTabId);
     if (currentTab?.inputFile && isCsvFile(currentTab.inputFile)) {
       loadCsvData(selectedTabId, currentTab.inputFile);
     }
@@ -223,8 +288,30 @@ function AppContent() {
   const loadHistoricalPipelines = async () => {
     try {
       const content = await invoke<string>("load_history");
-      const history = JSON.parse(content);
-      setHistoricalPipelines(history);
+      const history: HistoricalPipeline[] = JSON.parse(content);
+
+      // Reconstruct full PipelineStep from stored minimal format
+      const reconstructed = history.map((item) => ({
+        ...item,
+        pipeline: item.pipeline
+          .map((step: any) => {
+            if (step.command) return step;
+            const command = xanCommands.find(
+              (cmd) => cmd.id === step.commandId,
+            );
+            if (!command) return null;
+            return {
+              id: step.id,
+              command,
+              parameters: step.parameters || {},
+              alias: step.alias,
+              position: step.position,
+            };
+          })
+          .filter(Boolean),
+      }));
+
+      setHistoricalPipelines(reconstructed);
     } catch (error) {
       setHistoricalPipelines([]);
     }
@@ -235,6 +322,7 @@ function AppContent() {
     try {
       await invoke("save_history", {
         history: JSON.stringify(history, null, 2),
+        limit: historyLimit > 0 ? historyLimit : undefined,
       });
     } catch (error) {
       addLog("error", `Failed to save historical pipelines: ${error}`);
@@ -277,7 +365,10 @@ function AppContent() {
         setDefaultDelimiter(savedDelimiter);
       }
     } catch (error) {
-      showToastRef.current(`Failed to load default delimiter: ${error}`, 'error');
+      showToastRef.current(
+        `Failed to load default delimiter: ${error}`,
+        "error",
+      );
     }
   };
 
@@ -288,19 +379,65 @@ function AppContent() {
         setNoHeaders(savedNoHeaders);
       }
     } catch (error) {
-      showToastRef.current(`Failed to load no headers setting: ${error}`, 'error');
+      showToastRef.current(
+        `Failed to load no headers setting: ${error}`,
+        "error",
+      );
+    }
+  };
+
+  const loadShowExecutionNotification = async () => {
+    try {
+      const saved = await invoke<boolean | null>(
+        "get_show_execution_notification",
+      );
+      if (saved !== null) {
+        setShowExecutionNotification(saved);
+      }
+    } catch (error) {
+      showToastRef.current(
+        `Failed to load notification setting: ${error}`,
+        "error",
+      );
+    }
+  };
+
+  const loadMinimizeToTray = async () => {
+    try {
+      const saved = await invoke<boolean | null>("get_minimize_to_tray");
+      if (saved !== null) {
+        setMinimizeToTray(saved);
+      }
+    } catch (error) {
+      showToastRef.current(
+        `Failed to load minimize to tray setting: ${error}`,
+        "error",
+      );
+    }
+  };
+
+  const loadHistoryLimit = async () => {
+    try {
+      const saved = await invoke<number | null>("get_history_limit");
+      if (saved !== null) {
+        setHistoryLimit(saved);
+      }
+    } catch (error) {
+      showToastRef.current(`Failed to load history limit: ${error}`, "error");
     }
   };
 
   const checkForUpdates = async () => {
     setIsCheckingUpdate(true);
     try {
-      const response = await fetch("https://api.github.com/repos/tansen87/easy-csv/releases/latest");
+      const response = await fetch(
+        "https://api.github.com/repos/tansen87/easy-csv/releases/latest",
+      );
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
         throw new Error(`Expected JSON response, got: ${contentType}`);
       }
       const data = await response.json();
@@ -308,7 +445,8 @@ function AppContent() {
       const latestVersion = latestVersionRaw.replace(/^v/, "");
       const changelog = data.body || "";
 
-      const hasUpdate = currentVersion && latestVersion && latestVersion !== currentVersion;
+      const hasUpdate =
+        currentVersion && latestVersion && latestVersion !== currentVersion;
 
       setUpdateInfo({
         hasUpdate,
@@ -317,7 +455,7 @@ function AppContent() {
       });
       setShowUpdateDialog(true);
     } catch (error) {
-      showToastRef.current(`Failed to check for updates: ${error}`, 'error');
+      showToastRef.current(`Failed to check for updates: ${error}`, "error");
     } finally {
       setIsCheckingUpdate(false);
     }
@@ -339,6 +477,9 @@ function AppContent() {
         await invoke("check_xan_installed");
         await loadDefaultDelimiter();
         await loadNoHeaders();
+        await loadShowExecutionNotification();
+        await loadMinimizeToTray();
+        await loadHistoryLimit();
         await loadHistoricalPipelines();
         await loadRecentFiles();
       } catch (error) {
@@ -359,13 +500,60 @@ function AppContent() {
           console.error("Failed to toggle DevTools:", error);
         }
       }
+
+      // Intercept F5 to show custom refresh dialog
+      if (event.key === "F5") {
+        event.preventDefault();
+        event.stopPropagation();
+        setShowRefreshDialog(true);
+      }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown, true);
     };
   }, []);
+
+  // Drag-and-drop file opening
+  useEffect(() => {
+    const webview = getCurrentWebview();
+    let unlisten: (() => void) | undefined;
+
+    const setupDragDrop = async () => {
+      unlisten = await webview.onDragDropEvent((event) => {
+        if (event.payload.type === "drop") {
+          const paths = event.payload.paths;
+          if (paths.length > 0) {
+            const filePath = paths[0];
+            const ext = filePath.split(".").pop()?.toLowerCase();
+            if (ext === "xanflow") {
+              handleImportPipelineFromPath(filePath);
+            } else {
+              loadCsvData(selectedTabId, filePath);
+            }
+          }
+        }
+      });
+    };
+
+    setupDragDrop();
+    return () => {
+      unlisten?.();
+    };
+  }, [selectedTabId, loadCsvData]);
+
+  // Send system notification when pipeline execution completes
+  const prevExecutingRef = useRef(isExecuting);
+  useEffect(() => {
+    if (prevExecutingRef.current && !isExecuting && showExecutionNotification) {
+      sendNotification({
+        title: "Easy CSV",
+        body: "Pipeline execution completed",
+      });
+    }
+    prevExecutingRef.current = isExecuting;
+  }, [isExecuting, showExecutionNotification]);
 
   useEffect(() => {
     const updateTitle = async () => {
@@ -375,7 +563,7 @@ function AppContent() {
         const title = inputFile ? `${inputFile} - Easy Csv` : "Easy Csv";
         await invoke("set_window_title", { title });
       } catch (error) {
-        showToastRef.current(`Failed to set window title: ${error}`, 'error');
+        showToastRef.current(`Failed to set window title: ${error}`, "error");
       }
     };
     updateTitle();
@@ -383,7 +571,11 @@ function AppContent() {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (activeMenu && headerRef.current && !headerRef.current.contains(event.target as Node)) {
+      if (
+        activeMenu &&
+        headerRef.current &&
+        !headerRef.current.contains(event.target as Node)
+      ) {
         setActiveMenu(null);
       }
     };
@@ -433,38 +625,57 @@ function AppContent() {
     formatDateTime,
   });
 
-  const updateTabPipeline = (tabIdOrPipeline: string | PipelineStep[], newPipeline?: PipelineStep[], edges?: PipelineEdge[], inputPosition?: { x: number; y: number }) => {
+  const updateTabPipeline = (
+    tabIdOrPipeline: string | PipelineStep[],
+    newPipeline?: PipelineStep[],
+    edges?: PipelineEdge[],
+    inputPosition?: { x: number; y: number },
+  ) => {
     // Capture current state for undo (only if not already capturing for redo)
-    const currentTab = typeof tabIdOrPipeline === 'string'
-      ? tabs.find(t => t.id === tabIdOrPipeline)
-      : tabs.find(t => t.id === selectedTabId);
+    const currentTab =
+      typeof tabIdOrPipeline === "string"
+        ? tabs.find((t) => t.id === tabIdOrPipeline)
+        : tabs.find((t) => t.id === selectedTabId);
 
-    const newPipelineToSet = typeof tabIdOrPipeline === 'string' ? newPipeline! : tabIdOrPipeline as PipelineStep[];
-    const isStateChanged = currentTab &&
-      (JSON.stringify(currentTab.pipeline) !== JSON.stringify(newPipelineToSet) ||
-        JSON.stringify(currentTab.edges) !== JSON.stringify(edges ?? currentTab.edges) ||
-        JSON.stringify(currentTab.inputPosition) !== JSON.stringify(inputPosition ?? currentTab.inputPosition));
+    const newPipelineToSet =
+      typeof tabIdOrPipeline === "string"
+        ? newPipeline!
+        : (tabIdOrPipeline as PipelineStep[]);
+    const isStateChanged =
+      currentTab &&
+      (JSON.stringify(currentTab.pipeline) !==
+        JSON.stringify(newPipelineToSet) ||
+        JSON.stringify(currentTab.edges) !==
+          JSON.stringify(edges ?? currentTab.edges) ||
+        JSON.stringify(currentTab.inputPosition) !==
+          JSON.stringify(inputPosition ?? currentTab.inputPosition));
 
     if (currentTab && isStateChanged) {
-      setUndoStack(prev => [...prev, {
-        pipeline: currentTab.pipeline,
-        edges: currentTab.edges || [],
-        inputPosition: currentTab.inputPosition
-      }]);
+      setUndoStack((prev) => [
+        ...prev,
+        {
+          pipeline: currentTab.pipeline,
+          edges: currentTab.edges || [],
+          inputPosition: currentTab.inputPosition,
+        },
+      ]);
       setRedoStack([]);
     }
 
-    if (typeof tabIdOrPipeline === 'string' && newPipeline) {
+    if (typeof tabIdOrPipeline === "string" && newPipeline) {
       setTabs((prev) =>
         prev.map((tab) =>
           tab.id === tabIdOrPipeline
             ? {
-              ...tab,
-              pipeline: newPipeline,
-              edges: edges !== undefined ? edges : tab.edges,
-              inputPosition: inputPosition !== undefined ? inputPosition : tab.inputPosition,
-              updatedAt: formatDateTime(new Date()),
-            }
+                ...tab,
+                pipeline: newPipeline,
+                edges: edges !== undefined ? edges : tab.edges,
+                inputPosition:
+                  inputPosition !== undefined
+                    ? inputPosition
+                    : tab.inputPosition,
+                updatedAt: formatDateTime(new Date()),
+              }
             : tab,
         ),
       );
@@ -474,12 +685,15 @@ function AppContent() {
         prev.map((tab) =>
           tab.id === selectedTabId
             ? {
-              ...tab,
-              pipeline: pipeline,
-              edges: edges !== undefined ? edges : tab.edges,
-              inputPosition: inputPosition !== undefined ? inputPosition : tab.inputPosition,
-              updatedAt: formatDateTime(new Date()),
-            }
+                ...tab,
+                pipeline: pipeline,
+                edges: edges !== undefined ? edges : tab.edges,
+                inputPosition:
+                  inputPosition !== undefined
+                    ? inputPosition
+                    : tab.inputPosition,
+                updatedAt: formatDateTime(new Date()),
+              }
             : tab,
         ),
       );
@@ -513,9 +727,14 @@ function AppContent() {
   // Validate output step placement
   const validateOutputStepOnAdd = (currentPipeline: PipelineStep[]) => {
     // Build execution branches to check output placement
-    const executableSteps = currentPipeline.filter(step => step.command.id !== "output");
+    const executableSteps = currentPipeline.filter(
+      (step) => step.command.id !== "output",
+    );
     if (executableSteps.length === 0) {
-      addNotificationRef.current("Output requires at least one other step before it", 'warning');
+      addNotificationRef.current(
+        "Output requires at least one other step before it",
+        "warning",
+      );
     }
   };
 
@@ -575,12 +794,12 @@ function AppContent() {
       prev.map((tab) =>
         tab.id === selectedTabId
           ? {
-            ...tab,
-            data: undefined,
-            headers: undefined,
-            inputFile: undefined,
-            updatedAt: formatDateTime(new Date()),
-          }
+              ...tab,
+              data: undefined,
+              headers: undefined,
+              inputFile: undefined,
+              updatedAt: formatDateTime(new Date()),
+            }
           : tab,
       ),
     );
@@ -593,19 +812,21 @@ function AppContent() {
     const currentTab = getCurrentTab();
 
     // 清除被删除步骤的输出相关通知
-    stepIds.forEach(id => {
-      const removedStep = currentPipeline.find(s => s.id === id);
+    stepIds.forEach((id) => {
+      const removedStep = currentPipeline.find((s) => s.id === id);
       if (removedStep?.command.id === "output") {
         setNotifications((prev) =>
-          prev.filter(n => !n.message.startsWith("Output"))
+          prev.filter((n) => !n.message.startsWith("Output")),
         );
       }
     });
 
-    const updatedPipeline = currentPipeline.filter((s) => !stepIds.includes(s.id));
+    const updatedPipeline = currentPipeline.filter(
+      (s) => !stepIds.includes(s.id),
+    );
     // 同时移除与被删除步骤相关的边
     const updatedEdges = (currentTab.edges || []).filter(
-      (e) => !stepIds.includes(e.source) && !stepIds.includes(e.target)
+      (e) => !stepIds.includes(e.source) && !stepIds.includes(e.target),
     );
     updateTabPipeline(updatedPipeline, undefined, updatedEdges);
 
@@ -648,15 +869,89 @@ function AppContent() {
     try {
       await openUrl(url);
     } catch (error) {
-      showToastRef.current(`Failed to open URL: ${error}`, 'error');
+      showToastRef.current(`Failed to open URL: ${error}`, "error");
+    }
+  };
+
+  const handleImportPipelineFromPath = async (filePath: string) => {
+    try {
+      const { readFile } = await import("@tauri-apps/plugin-fs");
+      const { xanCommands: cmds } = await import("@/data/commands");
+      const fileContent = await readFile(filePath);
+      const jsonContent = new TextDecoder().decode(fileContent);
+      const pipelineData = JSON.parse(jsonContent);
+
+      if (!pipelineData.pipeline || !Array.isArray(pipelineData.pipeline)) {
+        showToastRef.current("Invalid pipeline file format", "error");
+        return;
+      }
+
+      const importedPipeline: PipelineStep[] = pipelineData.pipeline
+        .map(
+          (stepData: {
+            id?: string;
+            commandId: string;
+            parameters?: Record<string, any>;
+            alias?: string;
+            position?: { x: number; y: number };
+          }) => {
+            const command = cmds.find((cmd) => cmd.id === stepData.commandId);
+            if (!command) return null;
+            return {
+              id:
+                stepData.id ||
+                `${command.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              command,
+              parameters: stepData.parameters || {},
+              alias: stepData.alias,
+              position: stepData.position,
+            };
+          },
+        )
+        .filter(
+          (step: PipelineStep | null): step is PipelineStep => step !== null,
+        );
+
+      if (importedPipeline.length === 0) {
+        showToastRef.current(
+          "No valid commands found in pipeline file",
+          "error",
+        );
+        return;
+      }
+
+      updateTabPipeline(
+        importedPipeline,
+        undefined,
+        pipelineData.edges,
+        pipelineData.inputPosition,
+      );
+      if (pipelineData.inputFile) {
+        loadCsvData(
+          selectedTabId,
+          pipelineData.inputFile,
+          pipelineData.defaultDelimiter,
+        );
+      }
+
+      showToastRef.current(
+        `Imported pipeline with ${importedPipeline.length} steps`,
+        "success",
+      );
+    } catch (error) {
+      showToastRef.current(`Failed to import pipeline: ${error}`, "error");
     }
   };
 
   return (
     <>
-      {(
+      {
         <div className="h-screen relative overflow-hidden">
-          <header ref={headerRef} className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-4 gap-4 z-20" onContextMenu={(e) => e.preventDefault()}>
+          <header
+            ref={headerRef}
+            className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-4 gap-4 z-20"
+            onContextMenu={(e) => e.preventDefault()}
+          >
             {/* Left: Main Menu */}
             <MainMenu
               activeMenu={activeMenu}
@@ -683,6 +978,15 @@ function AppContent() {
               isExecuting={isExecuting}
               isCheckingUpdate={isCheckingUpdate}
               currentPipelineLength={getCurrentPipeline().length}
+              showCommandPanel={showCommandPanel}
+              onToggleCommandPanel={() =>
+                setShowCommandPanel(!showCommandPanel)
+              }
+              showLogPanel={showLogPanel}
+              onToggleLogPanel={() => setShowLogPanel(!showLogPanel)}
+              showDataProfile={showDataProfile}
+              onToggleDataProfile={() => setShowDataProfile(!showDataProfile)}
+              hasInputFile={!!getCurrentTab()?.inputFile}
             />
           </header>
 
@@ -703,24 +1007,39 @@ function AppContent() {
                 onPipelineReorder={updateTabPipeline}
                 onEdgesChange={(tabId, edges) => {
                   // Validate output connections when edges change
-                  const tab = tabs.find(t => t.id === tabId);
+                  const tab = tabs.find((t) => t.id === tabId);
                   if (tab) {
                     // Remove all output-related notifications first
                     setNotifications((prev) =>
-                      prev.filter(n => !n.message.startsWith("Output"))
+                      prev.filter((n) => !n.message.startsWith("Output")),
                     );
 
-                    const outputSteps = tab.pipeline.filter(s => s.command.id === "output");
-                    outputSteps.forEach(outputStep => {
+                    const outputSteps = tab.pipeline.filter(
+                      (s) => s.command.id === "output",
+                    );
+                    outputSteps.forEach((outputStep) => {
                       // Check if output is connected as source (wrong direction)
-                      const outputAsSource = edges.filter(e => e.source === outputStep.id);
+                      const outputAsSource = edges.filter(
+                        (e) => e.source === outputStep.id,
+                      );
                       if (outputAsSource.length > 0) {
-                        addNotificationRef.current("Output should be at the end of a branch", 'error');
+                        addNotificationRef.current(
+                          "Output should be at the end of a branch",
+                          "error",
+                        );
                       }
                       // Check if output has no incoming connections and no outgoing connections
-                      const outputAsTarget = edges.filter(e => e.target === outputStep.id);
-                      if (outputAsTarget.length === 0 && outputAsSource.length === 0) {
-                        addNotificationRef.current("Output is not connected", 'warning');
+                      const outputAsTarget = edges.filter(
+                        (e) => e.target === outputStep.id,
+                      );
+                      if (
+                        outputAsTarget.length === 0 &&
+                        outputAsSource.length === 0
+                      ) {
+                        addNotificationRef.current(
+                          "Output is not connected",
+                          "warning",
+                        );
                       }
                     });
                   }
@@ -728,7 +1047,11 @@ function AppContent() {
                   setTabs((prev) =>
                     prev.map((tab) =>
                       tab.id === tabId
-                        ? { ...tab, edges, updatedAt: formatDateTime(new Date()) }
+                        ? {
+                            ...tab,
+                            edges,
+                            updatedAt: formatDateTime(new Date()),
+                          }
                         : tab,
                     ),
                   );
@@ -737,51 +1060,28 @@ function AppContent() {
                   setTabs((prev) =>
                     prev.map((tab) =>
                       tab.id === tabId
-                        ? { ...tab, inputPosition: position, updatedAt: formatDateTime(new Date()) }
+                        ? {
+                            ...tab,
+                            inputPosition: position,
+                            updatedAt: formatDateTime(new Date()),
+                          }
                         : tab,
                     ),
                   );
                 }}
                 onOpenFile={handleOpenFile}
                 onImportPipeline={handleImportPipeline}
+                onOpenBatchFilter={(x, y) => setBatchFilterDialog({ x, y })}
                 onOpenUrl={handleOpenUrl}
                 branchProgress={branchProgress}
                 showProgressBar={showProgressBar}
                 recentFiles={recentFiles}
-                onOpenRecentFile={(filePath) => loadCsvData(selectedTabId, filePath)}
+                onOpenRecentFile={(filePath) =>
+                  loadCsvData(selectedTabId, filePath)
+                }
               />
             </div>
           </main>
-
-          {/* Command Panel Toggle Button */}
-          <Button
-            onClick={() => setShowCommandPanel(!showCommandPanel)}
-            onContextMenu={(e) => e.preventDefault()}
-            className="fixed bottom-4 left-4 z-30 h-10 w-10 rounded-full shadow-md"
-            variant="ghost"
-            size="icon"
-          >
-            {showCommandPanel ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <Terminal className="h-4 w-4" />
-            )}
-          </Button>
-
-          {/* Log Panel Toggle Button */}
-          <Button
-            onClick={() => setShowLogPanel(!showLogPanel)}
-            onContextMenu={(e) => e.preventDefault()}
-            className="fixed bottom-4 left-16 z-30 h-10 w-10 rounded-full shadow-md"
-            variant="ghost"
-            size="icon"
-          >
-            {showLogPanel ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <FileText className="h-4 w-4" />
-            )}
-          </Button>
 
           {/* Floating Command Panel */}
           <CommandList
@@ -820,7 +1120,9 @@ function AppContent() {
               }
             }}
             onDeleteHistory={(history) => {
-              const updatedHistory = historicalPipelines.filter((h) => h.id !== history.id);
+              const updatedHistory = historicalPipelines.filter(
+                (h) => h.id !== history.id,
+              );
               updateHistoricalPipelines(updatedHistory);
             }}
           />
@@ -840,7 +1142,11 @@ function AppContent() {
           />
 
           <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
-          <NotificationPanel notifications={notifications} onDismiss={removeNotificationRef.current} onDismissAll={dismissAllNotifications} />
+          <NotificationPanel
+            notifications={notifications}
+            onDismiss={removeNotificationRef.current}
+            onDismissAll={dismissAllNotifications}
+          />
 
           <SettingsDialog
             isOpen={showSettingsDialog}
@@ -851,13 +1157,31 @@ function AppContent() {
             onDefaultDelimiterChange={setDefaultDelimiter}
             noHeaders={noHeaders}
             onNoHeadersChange={setNoHeaders}
+            showExecutionNotification={showExecutionNotification}
+            onShowExecutionNotificationChange={setShowExecutionNotification}
+            minimizeToTray={minimizeToTray}
+            onMinimizeToTrayChange={setMinimizeToTray}
+            historyLimit={historyLimit}
+            onHistoryLimitChange={setHistoryLimit}
             onSave={async () => {
               try {
-                await invoke("set_default_delimiter", { delimiter: defaultDelimiter });
+                await invoke("set_default_delimiter", {
+                  delimiter: defaultDelimiter,
+                });
                 await invoke("set_no_headers", { noHeaders });
-                showToastRef.current("Settings saved successfully", 'success');
+                await invoke("set_show_execution_notification", {
+                  show: showExecutionNotification,
+                });
+                await invoke("set_minimize_to_tray", {
+                  minimize: minimizeToTray,
+                });
+                await invoke("set_history_limit", { limit: historyLimit });
+                showToastRef.current("Settings saved successfully", "success");
               } catch (error) {
-                showToastRef.current(`Failed to save settings: ${error}`, 'error');
+                showToastRef.current(
+                  `Failed to save settings: ${error}`,
+                  "error",
+                );
               }
             }}
           />
@@ -868,8 +1192,35 @@ function AppContent() {
             updateInfo={updateInfo}
             currentVersion={currentVersion}
           />
+
+          <ConfirmDialog
+            isOpen={showRefreshDialog}
+            title={t.refreshTitle}
+            message={t.refreshMessage}
+            onConfirm={() => {
+              setShowRefreshDialog(false);
+              window.location.reload();
+            }}
+            onCancel={() => setShowRefreshDialog(false)}
+          />
+
+          {batchFilterDialog && (
+            <BatchFilterDialog
+              state={batchFilterDialog}
+              headers={getCurrentTab()?.headers || []}
+              onAddCommand={handleCommandClick}
+              onClose={() => setBatchFilterDialog(null)}
+            />
+          )}
+
+          <DataProfilePanel
+            filePath={getCurrentTab()?.inputFile || ""}
+            delimiter={defaultDelimiter}
+            isVisible={showDataProfile}
+            onClose={() => setShowDataProfile(false)}
+          />
         </div>
-      )}
+      }
     </>
   );
 }

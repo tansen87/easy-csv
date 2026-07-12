@@ -1,6 +1,6 @@
 [package]
 name = "easy-csv"
-version = "0.2.0"
+version = "0.2.1"
 description = "Handle CSV data in a modular way"
 authors = ["tansen"]
 edition = "2024"
@@ -18,11 +18,13 @@ codegen-units = 1
 panic = "abort"
 
 [dependencies]
-tauri = { version = "2", features = ["devtools"] }
+tauri = { version = "2", features = ["devtools", "tray-icon"] }
 tauri-plugin-shell = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+tauri-plugin-window-state = "2"
+tauri-plugin-notification = "2"
 dirs = "5"
 csv = "1"
 serde = { version = "1", features = ["derive"] }

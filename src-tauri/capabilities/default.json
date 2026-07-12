@@ -10,7 +10,27 @@
     "fs:allow-write-file",
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
+    "fs:allow-read-dir",
+    "fs:allow-remove",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "**" }
+      ]
+    },
     "core:window:allow-set-title",
-    "shell:allow-open"
+    "core:window:allow-set-decorations",
+    "core:window:allow-is-maximized",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-minimize",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-close",
+    "shell:allow-open",
+    "window-state:default",
+    "notification:default",
+    "notification:allow-notify",
+    "core:tray:default"
   ]
 }

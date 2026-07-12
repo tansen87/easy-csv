@@ -35,7 +35,7 @@
     $ xan separate --into first_name,last_name ' ' data.csv
 
   处理文本行
-    $ xan separate --txt ' ' --into first_name,last_name names.txt
+    $ xan separate --lines ' ' --into first_name,last_name names.txt
 
   使用正则表达式拆分全名
     $ xan separate -r fullname '\s+' data.csv
@@ -62,7 +62,7 @@
     $ xan separate date - --into year,,day dates.csv
 
 Usage:
-    xan separate --txt [options] <separator> [<input>]
+    xan separate --lines [options] <separator> [<input>]
     xan separate [options] <column> <separator> [<input>]
     xan separate --help
 
@@ -77,7 +77,7 @@ separate mode options:
     --offsets           根据指定的字节偏移量拆分单元格(以递增、不重复的整数逗号分隔列表给出).
 
 separate options:
-    -T, --txt              指示输入应被视为文本行而非 CSV 数据.如果使用 -k/--keep,
+    -L, --lines            指示输入应被视为文本行而非 CSV 数据.如果使用 -k/--keep,
                            该行将保留在名为 "line" 的输出列中.
     -M, --max <n>          限制拆分的单元格数量最多为 <n>.默认进行所有可能的拆分.
     --into <column-names>  为拆分创建的新列指定名称.如果未提供,新列将按原始列名命名

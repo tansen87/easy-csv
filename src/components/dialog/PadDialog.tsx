@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { useDraggable } from "@/hooks/useDraggable";
 
 interface PadDialogState {
   col: number;
@@ -35,52 +36,34 @@ export function PadDialog({
   onAddCommand,
   onClose,
 }: PadDialogProps) {
-  const [selectedColumn, setSelectedColumn] = useState(headers[padDialog.col] || "");
+  const [selectedColumn, setSelectedColumn] = useState(
+    headers[padDialog.col] || "",
+  );
   const [padType, setPadType] = useState(padDialog.padType || "pad");
   const [width, setWidth] = useState("10");
   const [char, setChar] = useState("");
-  const [position, setPosition] = useState({ x: padDialog.x, y: padDialog.y });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest(".no-drag")) return;
-
-    setIsDragging(true);
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startPosX: position.x,
-      startPosY: position.y,
-    };
-  }, [position.x, position.y]);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging) return;
-
-    const deltaX = e.clientX - dragRef.current.startX;
-    const deltaY = e.clientY - dragRef.current.startY;
-
-    setPosition({
-      x: Math.max(0, Math.min(dragRef.current.startPosX + deltaX, window.innerWidth - 300)),
-      y: Math.max(0, Math.min(dragRef.current.startPosY + deltaY, window.innerHeight - 360)),
-    });
-  }, [isDragging]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [dialogHeight, setDialogHeight] = useState(360);
+  const [dialogWidth, setDialogWidth] = useState(240);
 
   useEffect(() => {
-    if (isDragging) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
+    if (dialogRef.current) {
+      setDialogHeight(dialogRef.current.offsetHeight);
+      setDialogWidth(dialogRef.current.offsetWidth);
     }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, []);
+
+  const maxY = window.innerHeight - dialogHeight;
+  const maxX = window.innerWidth - dialogWidth;
+
+  const { position, isDragging, handleMouseDown } = useDraggable({
+    initialX: padDialog.x,
+    initialY: padDialog.y,
+    maxWidth: dialogWidth,
+    maxHeight: dialogHeight,
+    maxX,
+    maxY,
+  });
 
   const handleApply = () => {
     if (!selectedColumn || !width) return;
@@ -97,17 +80,22 @@ export function PadDialog({
         expression = `${padType}(col("${columnName}"), ${widthNum}) as "${columnName}"`;
       }
 
-      onAddCommand(mapCommand, {
-        expression,
-        overwrite: true,
-        output: "",
-      }, padType);
+      onAddCommand(
+        mapCommand,
+        {
+          expression,
+          overwrite: true,
+          output: "",
+        },
+        padType,
+      );
     }
     onClose();
   };
 
   return (
     <div
+      ref={dialogRef}
       className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[240px] select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
         left: position.x,
@@ -135,7 +123,10 @@ export function PadDialog({
           <SearchableSelect
             value={selectedColumn}
             onChange={setSelectedColumn}
-            options={headers.map((header) => ({ value: header, label: header }))}
+            options={headers.map((header) => ({
+              value: header,
+              label: header,
+            }))}
             placeholder="Search or select column..."
           />
         </div>

@@ -11,6 +11,7 @@ export interface XanParameter {
   name: string;
   type: "string" | "number" | "flag" | "select";
   description: string;
+  descriptionCn?: string;
   required: boolean;
   default?: string | number | boolean;
   options?: string[];
@@ -62,7 +63,6 @@ export interface HistoricalPipeline {
   defaultDelimiter: string;
   executedAt: string;
   success: boolean;
-  output?: string;
   edges?: PipelineEdge[];
   inputPosition?: { x: number; y: number };
 }

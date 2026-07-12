@@ -1,11 +1,18 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
+import { useDraggable } from "@/hooks/useDraggable";
 
-export type NumberTransformType = "abs" | "floor" | "ceil" | "int" | "float" | "round";
+export type NumberTransformType =
+  | "abs"
+  | "floor"
+  | "ceil"
+  | "int"
+  | "float"
+  | "round";
 
 interface NumberTransformDialogState {
   col: number;
@@ -44,63 +51,31 @@ export function NumberTransformDialog({
     const initialColumn = headers[numberTransformDialog.col];
     return initialColumn ? [initialColumn] : [];
   });
-  const [selectedTransform, setSelectedTransform] = useState<NumberTransformType>(
-    numberTransformDialog.transformType || "abs"
-  );
+  const [selectedTransform, setSelectedTransform] =
+    useState<NumberTransformType>(numberTransformDialog.transformType || "abs");
   const [search, setSearch] = useState("");
-  const [position, setPosition] = useState({ x: numberTransformDialog.x, y: numberTransformDialog.y });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
-  const positionRef = useRef(position);
-  const isDraggingRef = useRef(isDragging);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [dialogHeight, setDialogHeight] = useState(480);
+  const [dialogWidth, setDialogWidth] = useState(280);
 
   useEffect(() => {
-    positionRef.current = position;
-  }, [position]);
-
-  useEffect(() => {
-    isDraggingRef.current = isDragging;
-  }, [isDragging]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest(".no-drag")) return;
-
-    e.preventDefault();
-    setIsDragging(true);
-    isDraggingRef.current = true;
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startPosX: positionRef.current.x,
-      startPosY: positionRef.current.y,
-    };
+    if (dialogRef.current) {
+      setDialogHeight(dialogRef.current.offsetHeight);
+      setDialogWidth(dialogRef.current.offsetWidth);
+    }
   }, []);
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDraggingRef.current) return;
+  const maxY = window.innerHeight - dialogHeight;
+  const maxX = window.innerWidth - dialogWidth;
 
-    const deltaX = e.clientX - dragRef.current.startX;
-    const deltaY = e.clientY - dragRef.current.startY;
-
-    setPosition({
-      x: Math.max(0, Math.min(dragRef.current.startPosX + deltaX, window.innerWidth - 360)),
-      y: Math.max(0, Math.min(dragRef.current.startPosY + deltaY, window.innerHeight - 480)),
-    });
-  }, []);
-
-  const handleMouseUp = useCallback(() => {
-    isDraggingRef.current = false;
-    setIsDragging(false);
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [handleMouseMove, handleMouseUp]);
+  const { position, isDragging, handleMouseDown } = useDraggable({
+    initialX: numberTransformDialog.x,
+    initialY: numberTransformDialog.y,
+    maxWidth: dialogWidth,
+    maxHeight: dialogHeight,
+    maxX,
+    maxY,
+  });
 
   const toggleColumn = (col: string) => {
     setSelectedColumns((prev) =>
@@ -118,28 +93,38 @@ export function NumberTransformDialog({
     const mapCommand = xanCommands.find((cmd) => cmd.id === "map");
     if (!mapCommand) return;
 
-    const expressionMap: Record<NumberTransformType, (col: string) => string> = {
-      abs: (col) => `abs(col("${col}")) as "${col}"`,
-      floor: (col) => `floor(col("${col}")) as "${col}"`,
-      ceil: (col) => `ceil(col("${col}")) as "${col}"`,
-      int: (col) => `trunc(col("${col}")) as "${col}"`,
-      float: (col) => `float(col("${col}")) as "${col}"`,
-      round: (col) => `to_fixed(round(col("${col}"), 0.01), 2) as "${col}"`,
-    };
+    const expressionMap: Record<NumberTransformType, (col: string) => string> =
+      {
+        abs: (col) => `abs(col("${col}")) as "${col}"`,
+        floor: (col) => `floor(col("${col}")) as "${col}"`,
+        ceil: (col) => `ceil(col("${col}")) as "${col}"`,
+        int: (col) => `trunc(col("${col}")) as "${col}"`,
+        float: (col) => `float(col("${col}")) as "${col}"`,
+        round: (col) => `to_fixed(round(col("${col}"), 0.01), 2) as "${col}"`,
+      };
 
-    const expressions = selectedColumns.map((col) => expressionMap[selectedTransform](col)).join(", ");
-    const alias = transformOptions.find(opt => opt.value === selectedTransform)?.label || selectedTransform;
+    const expressions = selectedColumns
+      .map((col) => expressionMap[selectedTransform](col))
+      .join(", ");
+    const alias =
+      transformOptions.find((opt) => opt.value === selectedTransform)?.label ||
+      selectedTransform;
 
-    onAddCommand(mapCommand, {
-      expression: expressions,
-      overwrite: true,
-      output: "",
-    }, alias);
+    onAddCommand(
+      mapCommand,
+      {
+        expression: expressions,
+        overwrite: true,
+        output: "",
+      },
+      alias,
+    );
     onClose();
   };
 
   return (
     <div
+      ref={dialogRef}
       className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[280px] flex flex-col select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
         left: position.x,
@@ -181,23 +166,27 @@ export function NumberTransformDialog({
           <ScrollArea className="h-[120px] border rounded-md bg-background">
             <div className="p-1.5">
               {filteredHeaders.length === 0 ? (
-                <span className="text-xs text-muted-foreground px-2 py-0.5">No matches</span>
+                <span className="text-xs text-muted-foreground px-2 py-0.5">
+                  No matches
+                </span>
               ) : (
                 filteredHeaders.map((header) => (
                   <button
                     key={header}
                     onClick={() => toggleColumn(header)}
-                    className={`no-drag w-full text-left px-2 py-1 text-xs rounded transition-colors ${selectedColumns.includes(header)
-                      ? "bg-primary/10 text-primary"
-                      : "hover:bg-accent"
-                      }`}
+                    className={`no-drag w-full text-left px-2 py-1 text-xs rounded transition-colors ${
+                      selectedColumns.includes(header)
+                        ? "bg-primary/10 text-primary"
+                        : "hover:bg-accent"
+                    }`}
                   >
                     <div className="flex items-center gap-2">
                       <div
-                        className={`w-3.5 h-3.5 border rounded-sm flex items-center justify-center ${selectedColumns.includes(header)
-                          ? "bg-primary border-primary"
-                          : "border-muted-foreground/30"
-                          }`}
+                        className={`w-3.5 h-3.5 border rounded-sm flex items-center justify-center ${
+                          selectedColumns.includes(header)
+                            ? "bg-primary border-primary"
+                            : "border-muted-foreground/30"
+                        }`}
                       >
                         {selectedColumns.includes(header) && (
                           <svg
@@ -234,10 +223,11 @@ export function NumberTransformDialog({
                 <button
                   key={option.value}
                   onClick={() => setSelectedTransform(option.value)}
-                  className={`no-drag w-1/3 text-center px-1 py-1.5 text-xs rounded transition-colors ${selectedTransform === option.value
-                    ? "bg-primary/10 text-primary"
-                    : "hover:bg-accent"
-                    }`}
+                  className={`no-drag w-1/3 text-center px-1 py-1.5 text-xs rounded transition-colors ${
+                    selectedTransform === option.value
+                      ? "bg-primary/10 text-primary"
+                      : "hover:bg-accent"
+                  }`}
                 >
                   {option.label}
                 </button>

@@ -51,8 +51,9 @@ JSON/TOML options:
     --value-column <name>  解析 JSON 映射时值列的名称.
                            [default: value]
     --single-object        如果 JSON 仅表示您想要映射到单个 CSV 行的单个对象,而不是映射到 key,value 列,请使用此选项.
-    --path <path>          转换在路径处找到的嵌套对象,而不是根对象.此路径必须使用表达式语言作为 getter 给出.例如 "data"
+    --root <path>          转换在路径处找到的嵌套对象,而不是根对象.此路径必须使用表达式语言作为 getter 给出.例如 "data"
                            或"_.nodes[0].metadata".
+    --model <json>         传递一个虚拟 JSON 对象,用作提取"模型".可以避免采样的需要和/或限制最终输出中提取的路径.
 
 Text lines & raw options:
     -c, --column <name>    要创建的列的名称.使用 -f=txt 时默认为 "line",使用 -f=raw 时默认为 "value".
