@@ -12,8 +12,8 @@ interface SettingsDialogProps {
   onDefaultDelimiterChange: (delimiter: string) => void;
   noHeaders: boolean;
   onNoHeadersChange: (value: boolean) => void;
-  showExecutionNotification: boolean;
-  onShowExecutionNotificationChange: (value: boolean) => void;
+  systemNotification: boolean;
+  onSystemNotificationChange: (value: boolean) => void;
   minimizeToTray: boolean;
   onMinimizeToTrayChange: (value: boolean) => void;
   historyLimit: number;
@@ -30,8 +30,8 @@ export function SettingsDialog({
   onDefaultDelimiterChange,
   noHeaders,
   onNoHeadersChange,
-  showExecutionNotification,
-  onShowExecutionNotificationChange,
+  systemNotification,
+  onSystemNotificationChange,
   minimizeToTray,
   onMinimizeToTrayChange,
   historyLimit,
@@ -103,10 +103,8 @@ export function SettingsDialog({
             onDefaultDelimiterChange={onDefaultDelimiterChange}
             noHeaders={noHeaders}
             onNoHeadersChange={onNoHeadersChange}
-            showExecutionNotification={showExecutionNotification}
-            onShowExecutionNotificationChange={
-              onShowExecutionNotificationChange
-            }
+            systemNotification={systemNotification}
+            onSystemNotificationChange={onSystemNotificationChange}
             minimizeToTray={minimizeToTray}
             onMinimizeToTrayChange={onMinimizeToTrayChange}
             historyLimit={historyLimit}

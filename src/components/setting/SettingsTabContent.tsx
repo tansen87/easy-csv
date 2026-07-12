@@ -22,8 +22,8 @@ interface SettingsTabContentProps {
   onDefaultDelimiterChange: (delimiter: string) => void;
   noHeaders: boolean;
   onNoHeadersChange: (value: boolean) => void;
-  showExecutionNotification: boolean;
-  onShowExecutionNotificationChange: (value: boolean) => void;
+  systemNotification: boolean;
+  onSystemNotificationChange: (value: boolean) => void;
   minimizeToTray: boolean;
   onMinimizeToTrayChange: (value: boolean) => void;
   historyLimit: number;
@@ -39,8 +39,8 @@ export function SettingsTabContent({
   onDefaultDelimiterChange,
   noHeaders,
   onNoHeadersChange,
-  showExecutionNotification,
-  onShowExecutionNotificationChange,
+  systemNotification,
+  onSystemNotificationChange,
   minimizeToTray,
   onMinimizeToTrayChange,
   historyLimit,
@@ -172,20 +172,20 @@ export function SettingsTabContent({
             <div className="max-w-xl">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Bell className="h-4 w-4" />
-                {t.showExecutionNotification}
+                {t.systemNotification}
               </h3>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={showExecutionNotification}
+                  checked={systemNotification}
                   onChange={(e) =>
-                    onShowExecutionNotificationChange(e.target.checked)
+                    onSystemNotificationChange(e.target.checked)
                   }
                   className="w-4 h-4 rounded border-input accent-foreground"
                 />
                 <div className="text-left">
                   <p className="text-sm text-muted-foreground">
-                    {t.showExecutionNotificationDesc}
+                    {t.systemNotificationDesc}
                   </p>
                 </div>
               </label>
@@ -295,7 +295,7 @@ export function SettingsTabContent({
             onThemeChange("light");
             onDefaultDelimiterChange(",");
             onNoHeadersChange(false);
-            onShowExecutionNotificationChange(true);
+            onSystemNotificationChange(true);
             onMinimizeToTrayChange(true);
             onHistoryLimitChange(100);
           }}

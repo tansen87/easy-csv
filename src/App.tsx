@@ -5,11 +5,6 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { useTheme } from "@/components/setting/ThemeProvider";
 import { ToastContainer, ToastType } from "@/components/setting/Toast";
-import {
-  NotificationPanel,
-  NotificationType,
-} from "@/components/setting/PersistentNotification";
-
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/panel/LogPanel";
 import { SettingsDialog } from "@/components/setting/SettingsDialog";
@@ -71,8 +66,7 @@ function AppContent() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [defaultDelimiter, setDefaultDelimiter] = useState<string>(",");
   const [noHeaders, setNoHeaders] = useState<boolean>(false);
-  const [showExecutionNotification, setShowExecutionNotification] =
-    useState<boolean>(true);
+  const [systemNotification, setSystemNotification] = useState<boolean>(true);
   const [minimizeToTray, setMinimizeToTray] = useState<boolean>(true);
   const [historyLimit, setHistoryLimit] = useState<number>(100);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
@@ -90,9 +84,6 @@ function AppContent() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [toasts, setToasts] = useState<
     { id: string; message: string; type: ToastType }[]
-  >([]);
-  const [notifications, setNotifications] = useState<
-    { id: string; message: string; type: NotificationType }[]
   >([]);
   const [activeMenu, setActiveMenu] = useState<"file" | null>(null);
   const [isMenuActivated, setIsMenuActivated] = useState<boolean>(false);
@@ -142,10 +133,6 @@ function AppContent() {
     () => {},
   );
   const removeToastRef = useRef<(id: string) => void>(() => {});
-  const addNotificationRef = useRef<
-    (message: string, type: NotificationType) => void
-  >(() => {});
-  const removeNotificationRef = useRef<(id: string) => void>(() => {});
   const headerRef = useRef<HTMLDivElement>(null);
 
   const showToast = useCallback((message: string, type: ToastType = "info") => {
@@ -157,34 +144,10 @@ function AppContent() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
-  const addNotification = useCallback(
-    (message: string, type: NotificationType = "info") => {
-      setNotifications((prev) => {
-        // Check if notification with same message already exists
-        if (prev.some((n) => n.message === message)) {
-          return prev;
-        }
-        const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        return [...prev, { id, message, type }];
-      });
-    },
-    [],
-  );
-
-  const removeNotification = useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  }, []);
-
-  const dismissAllNotifications = useCallback(() => {
-    setNotifications([]);
-  }, []);
-
   useEffect(() => {
     showToastRef.current = showToast;
     removeToastRef.current = removeToast;
-    addNotificationRef.current = addNotification;
-    removeNotificationRef.current = removeNotification;
-  }, [showToast, removeToast, addNotification, removeNotification]);
+  }, [showToast, removeToast]);
 
   const isCsvFile = (filePath: string): boolean => {
     const ext = filePath.split(".").pop()?.toLowerCase();
@@ -386,13 +349,13 @@ function AppContent() {
     }
   };
 
-  const loadShowExecutionNotification = async () => {
+  const loadSystemNotification = async () => {
     try {
       const saved = await invoke<boolean | null>(
-        "get_show_execution_notification",
+        "get_system_notification",
       );
       if (saved !== null) {
-        setShowExecutionNotification(saved);
+        setSystemNotification(saved);
       }
     } catch (error) {
       showToastRef.current(
@@ -477,7 +440,7 @@ function AppContent() {
         await invoke("check_xan_installed");
         await loadDefaultDelimiter();
         await loadNoHeaders();
-        await loadShowExecutionNotification();
+        await loadSystemNotification();
         await loadMinimizeToTray();
         await loadHistoryLimit();
         await loadHistoricalPipelines();
@@ -546,14 +509,16 @@ function AppContent() {
   // Send system notification when pipeline execution completes
   const prevExecutingRef = useRef(isExecuting);
   useEffect(() => {
-    if (prevExecutingRef.current && !isExecuting && showExecutionNotification) {
+    if (prevExecutingRef.current && !isExecuting && systemNotification) {
+      const now = new Date();
+      const time = now.toLocaleTimeString();
       sendNotification({
         title: "Easy CSV",
-        body: "Pipeline execution completed",
+        body: `Pipeline execution completed at ${time}`,
       });
     }
     prevExecutingRef.current = isExecuting;
-  }, [isExecuting, showExecutionNotification]);
+  }, [isExecuting, systemNotification]);
 
   useEffect(() => {
     const updateTitle = async () => {
@@ -724,20 +689,6 @@ function AppContent() {
     );
   };
 
-  // Validate output step placement
-  const validateOutputStepOnAdd = (currentPipeline: PipelineStep[]) => {
-    // Build execution branches to check output placement
-    const executableSteps = currentPipeline.filter(
-      (step) => step.command.id !== "output",
-    );
-    if (executableSteps.length === 0) {
-      addNotificationRef.current(
-        "Output requires at least one other step before it",
-        "warning",
-      );
-    }
-  };
-
   const handleCommandClick = (
     command: XanCommand,
     initialParameters?: Record<string, any>,
@@ -761,11 +712,6 @@ function AppContent() {
     }
 
     const currentPipeline = getCurrentPipeline();
-
-    // Validate output step placement
-    if (command.id === "output") {
-      validateOutputStepOnAdd(currentPipeline);
-    }
 
     updateTabPipeline([...currentPipeline, newStep]);
     setSelectedStep(newStep);
@@ -810,17 +756,6 @@ function AppContent() {
     const stepIds = Array.isArray(stepId) ? stepId : [stepId];
     const currentPipeline = getCurrentPipeline();
     const currentTab = getCurrentTab();
-
-    // 清除被删除步骤的输出相关通知
-    stepIds.forEach((id) => {
-      const removedStep = currentPipeline.find((s) => s.id === id);
-      if (removedStep?.command.id === "output") {
-        setNotifications((prev) =>
-          prev.filter((n) => !n.message.startsWith("Output")),
-        );
-      }
-    });
-
     const updatedPipeline = currentPipeline.filter(
       (s) => !stepIds.includes(s.id),
     );
@@ -1006,44 +941,6 @@ function AppContent() {
                 onTableDelete={handleClearInputData}
                 onPipelineReorder={updateTabPipeline}
                 onEdgesChange={(tabId, edges) => {
-                  // Validate output connections when edges change
-                  const tab = tabs.find((t) => t.id === tabId);
-                  if (tab) {
-                    // Remove all output-related notifications first
-                    setNotifications((prev) =>
-                      prev.filter((n) => !n.message.startsWith("Output")),
-                    );
-
-                    const outputSteps = tab.pipeline.filter(
-                      (s) => s.command.id === "output",
-                    );
-                    outputSteps.forEach((outputStep) => {
-                      // Check if output is connected as source (wrong direction)
-                      const outputAsSource = edges.filter(
-                        (e) => e.source === outputStep.id,
-                      );
-                      if (outputAsSource.length > 0) {
-                        addNotificationRef.current(
-                          "Output should be at the end of a branch",
-                          "error",
-                        );
-                      }
-                      // Check if output has no incoming connections and no outgoing connections
-                      const outputAsTarget = edges.filter(
-                        (e) => e.target === outputStep.id,
-                      );
-                      if (
-                        outputAsTarget.length === 0 &&
-                        outputAsSource.length === 0
-                      ) {
-                        addNotificationRef.current(
-                          "Output is not connected",
-                          "warning",
-                        );
-                      }
-                    });
-                  }
-
                   setTabs((prev) =>
                     prev.map((tab) =>
                       tab.id === tabId
@@ -1142,11 +1039,6 @@ function AppContent() {
           />
 
           <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
-          <NotificationPanel
-            notifications={notifications}
-            onDismiss={removeNotificationRef.current}
-            onDismissAll={dismissAllNotifications}
-          />
 
           <SettingsDialog
             isOpen={showSettingsDialog}
@@ -1157,8 +1049,8 @@ function AppContent() {
             onDefaultDelimiterChange={setDefaultDelimiter}
             noHeaders={noHeaders}
             onNoHeadersChange={setNoHeaders}
-            showExecutionNotification={showExecutionNotification}
-            onShowExecutionNotificationChange={setShowExecutionNotification}
+            systemNotification={systemNotification}
+            onSystemNotificationChange={setSystemNotification}
             minimizeToTray={minimizeToTray}
             onMinimizeToTrayChange={setMinimizeToTray}
             historyLimit={historyLimit}
@@ -1169,8 +1061,8 @@ function AppContent() {
                   delimiter: defaultDelimiter,
                 });
                 await invoke("set_no_headers", { noHeaders });
-                await invoke("set_show_execution_notification", {
-                  show: showExecutionNotification,
+                await invoke("set_system_notification", {
+                  show: systemNotification,
                 });
                 await invoke("set_minimize_to_tray", {
                   minimize: minimizeToTray,

@@ -104,13 +104,13 @@ pub async fn set_no_headers(no_headers: bool) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn get_show_execution_notification() -> Option<bool> {
+pub async fn get_system_notification() -> Option<bool> {
   let config = load_config().unwrap_or_default();
   config.show_execution_notification
 }
 
 #[tauri::command]
-pub async fn set_show_execution_notification(show: bool) -> Result<(), String> {
+pub async fn set_system_notification(show: bool) -> Result<(), String> {
   let mut config = load_config()?;
   config.show_execution_notification = Some(show);
   save_config(&config)
