@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { highlightExpression } from "./highlight";
+import { highlightExpression } from "@/components/expression/highlight";
 import {
   getAutocompleteSuggestions,
   insertAutocomplete,
   AutocompleteItem,
-} from "./autocomplete";
+} from "@/components/expression/autocomplete";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getFunctionByName } from "@/data/xan-functions";
+import { getFunctionByName } from "@/data/functions";
 
 interface ExpressionEditorProps {
   value: string;

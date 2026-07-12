@@ -28,7 +28,7 @@ export function CatForm(props: CommandFormProps) {
       </div>
       {commandDialog.params.mode === "rows" && (
         <>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-16">
             {["intersection", "union", "raw"].map((n) => (
               <label
                 key={n}
@@ -409,7 +409,7 @@ export function JoinForm(props: CommandFormProps) {
           />
         </div>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-12">
         {["ignore-case", "nulls", "sorted", "reverse", "numeric"].map((n) => (
           <label
             key={n}

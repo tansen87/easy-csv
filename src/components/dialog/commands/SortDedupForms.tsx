@@ -63,7 +63,7 @@ export function SortForm(props: CommandFormProps) {
           />
         </div>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="grid grid-cols-5 gap-4">
         {[
           "reverse",
           "numeric",
@@ -73,6 +73,7 @@ export function SortForm(props: CommandFormProps) {
           "external",
           "compress",
           "columns",
+          "cells",
         ].map((n) => (
           <label
             key={n}
@@ -94,24 +95,6 @@ export function SortForm(props: CommandFormProps) {
             {n}
           </label>
         ))}
-      </div>
-      <div className="flex items-center gap-4">
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={commandDialog.params.cells ?? false}
-            onChange={(e) =>
-              updateParam(
-                commandDialog,
-                setCommandDialog,
-                "cells",
-                e.target.checked,
-              )
-            }
-            className="h-3.5 w-3.5 accent-foreground"
-          />
-          cells
-        </label>
       </div>
       <div>
         <label className="text-sm font-medium">tmp-dir</label>

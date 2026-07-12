@@ -47,16 +47,22 @@ export function SearchForm(props: CommandFormProps) {
 
   return (
     <CommandFormWrapper {...props} scrollHeight="28vh">
-      <div className="grid grid-cols-2 gap-4">
-        <TextField name="select" placeholder={getParameterDescription("search", "select", language)} />
-        <TextField name="pattern" placeholder={getParameterDescription("search", "pattern", language)} />
+      <div className="grid grid-cols-2 gap-2">
+        <TextField
+          name="select"
+          placeholder={getParameterDescription("search", "select", language)}
+        />
+        <TextField
+          name="pattern"
+          placeholder={getParameterDescription("search", "pattern", language)}
+        />
       </div>
-      <div className="grid grid-cols-4 gap-2 mt-2">
+      <div className="grid grid-cols-5 gap-2">
         {["keep", "lines", "exact", "regex", "url-prefix"].map((n) => (
           <Checkbox key={n} name={n} />
         ))}
       </div>
-      <div className="grid grid-cols-4 gap-2 mt-2">
+      <div className="grid grid-cols-5 gap-2">
         {[
           "non-empty",
           "empty",
@@ -71,7 +77,7 @@ export function SearchForm(props: CommandFormProps) {
           <Checkbox key={n} name={n} />
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-4 mt-1">
+      <div className="grid grid-cols-2 gap-2">
         <TextField
           name="flag"
           placeholder={getParameterDescription("search", "boolean", language)}
@@ -81,7 +87,7 @@ export function SearchForm(props: CommandFormProps) {
           placeholder={getParameterDescription("search", "count", language)}
         />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-2">
         <TextField
           name="limit"
           type="number"
@@ -93,38 +99,80 @@ export function SearchForm(props: CommandFormProps) {
           placeholder={getParameterDescription("search", "threads", language)}
         />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-2">
         <TextField
           name="levenshtein"
           type="number"
-          placeholder={getParameterDescription("search", "levenshtein", language)}
+          placeholder={getParameterDescription(
+            "search",
+            "levenshtein",
+            language,
+          )}
         />
         <TextField
           name="damerau-levenshtein"
           type="number"
-          placeholder={getParameterDescription("search", "damerau-levenshtein", language)}
+          placeholder={getParameterDescription(
+            "search",
+            "damerau-levenshtein",
+            language,
+          )}
         />
       </div>
-      <div className="grid grid-cols-2 gap-4 mt-1">
-        <TextField name="replace" placeholder={getParameterDescription("search", "replace", language)} />
-        <TextField name="add-pattern" placeholder={getParameterDescription("search", "add-pattern", language)} />
+      <div className="grid grid-cols-2 gap-2">
+        <TextField
+          name="replace"
+          placeholder={getParameterDescription("search", "replace", language)}
+        />
+        <TextField
+          name="add-pattern"
+          placeholder={getParameterDescription(
+            "search",
+            "add-pattern",
+            language,
+          )}
+        />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-2">
         <TextField
           name="unique-matches"
-          placeholder={getParameterDescription("search", "unique-matches", language)}
+          placeholder={getParameterDescription(
+            "search",
+            "unique-matches",
+            language,
+          )}
         />
-        <TextField name="sep" placeholder={getParameterDescription("search", "sep", language)} />
+        <TextField
+          name="sep"
+          placeholder={getParameterDescription("search", "sep", language)}
+        />
       </div>
-      <TextField name="patterns" placeholder={getParameterDescription("search", "patterns", language)} />
-      <div className="grid grid-cols-2 gap-4">
-        <TextField name="pattern-column" placeholder={getParameterDescription("search", "pattern-column", language)} />
+      <TextField
+        name="patterns"
+        placeholder={getParameterDescription("search", "patterns", language)}
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <TextField
+          name="pattern-column"
+          placeholder={getParameterDescription(
+            "search",
+            "pattern-column",
+            language,
+          )}
+        />
         <TextField
           name="replacement-column"
-          placeholder={getParameterDescription("search", "replacement-column", language)}
+          placeholder={getParameterDescription(
+            "search",
+            "replacement-column",
+            language,
+          )}
         />
       </div>
-      <TextField name="name-column" placeholder={getParameterDescription("search", "name-column", language)} />
+      <TextField
+        name="name-column"
+        placeholder={getParameterDescription("search", "name-column", language)}
+      />
     </CommandFormWrapper>
   );
 }
@@ -147,11 +195,15 @@ export function FilterForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("filter", "expression", language)}
+          placeholder={getParameterDescription(
+            "filter",
+            "expression",
+            language,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex gap-3">
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
             type="checkbox"
@@ -195,7 +247,7 @@ export function FilterForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder="Threads"
+          placeholder={getParameterDescription("filter", "threads", language)}
           className="h-8 px-1 text-sm border rounded-md bg-background"
         />
         <input
@@ -210,7 +262,7 @@ export function FilterForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("filter", "limit", language) || getParameterDescription("head", "limit", language)}
+          placeholder={getParameterDescription("filter", "limit", language)}
           className="h-8 px-1 text-sm border rounded-md bg-background"
         />
       </div>
@@ -277,7 +329,7 @@ export function SliceForm(props: CommandFormProps) {
   const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="text-sm font-medium">start</label>
           <input
@@ -292,6 +344,23 @@ export function SliceForm(props: CommandFormProps) {
               )
             }
             placeholder={getParameterDescription("slice", "start", language)}
+            className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">skip</label>
+          <input
+            type="number"
+            value={commandDialog.params.skip || ""}
+            onChange={(e) =>
+              updateParam(
+                commandDialog,
+                setCommandDialog,
+                "skip",
+                e.target.value,
+              )
+            }
+            placeholder={getParameterDescription("slice", "skip", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -331,40 +400,58 @@ export function SliceForm(props: CommandFormProps) {
           />
         </div>
         <div>
-          <label className="text-sm font-medium">end</label>
+          <label className="text-sm font-medium">index</label>
           <input
             type="number"
-            value={commandDialog.params.end || ""}
+            value={commandDialog.params.index || ""}
             onChange={(e) =>
               updateParam(
                 commandDialog,
                 setCommandDialog,
-                "end",
+                "index",
                 e.target.value,
               )
             }
-            placeholder="End index"
+            placeholder={getParameterDescription("slice", "index", language)}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
-      <div>
-        <label className="text-sm font-medium">limit</label>
-        <input
-          type="number"
-          min={1}
-          value={commandDialog.params.limit || ""}
-          onChange={(e) =>
-            updateParam(
-              commandDialog,
-              setCommandDialog,
-              "limit",
-              e.target.value,
-            )
-          }
-          placeholder={getParameterDescription("tail", "limit", language)}
-          className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-        />
-      </div>
+        <div>
+          <label className="text-sm font-medium">indices</label>
+          <input
+            type="number"
+            min={1}
+            value={commandDialog.params.indices || ""}
+            onChange={(e) =>
+              updateParam(
+                commandDialog,
+                setCommandDialog,
+                "indices",
+                e.target.value,
+              )
+            }
+            placeholder={getParameterDescription("slice", "indices", language)}
+            className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">last</label>
+          <input
+            type="number"
+            min={1}
+            value={commandDialog.params.last || ""}
+            onChange={(e) =>
+              updateParam(
+                commandDialog,
+                setCommandDialog,
+                "last",
+                e.target.value,
+              )
+            }
+            placeholder={getParameterDescription("slice", "last", language)}
+            className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+          />
+        </div>
       </div>
     </CommandFormWrapper>
   );
@@ -495,7 +582,11 @@ export function SampleForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("sample", "sample-size", language)}
+            placeholder={getParameterDescription(
+              "sample",
+              "sample-size",
+              language,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             autoFocus
           />
@@ -625,7 +716,7 @@ export function BisectForm(props: CommandFormProps) {
           />
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="flex gap-16">
         {["search", "reverse", "numeric", "exclude", "verbose"].map((n) => (
           <label
             key={n}

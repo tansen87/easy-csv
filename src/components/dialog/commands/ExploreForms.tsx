@@ -10,7 +10,7 @@ export function CountForm(props: CommandFormProps) {
   const { language } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
-      <div className="flex items-center gap-6">
+      <div className="flex gap-16">
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
             type="checkbox"
@@ -75,7 +75,8 @@ export function CountForm(props: CommandFormProps) {
           />
           parallel
         </label>
-        <input
+      </div>
+      <input
           type="number"
           min={0}
           value={commandDialog.params.threads}
@@ -88,9 +89,8 @@ export function CountForm(props: CommandFormProps) {
             )
           }
           placeholder={getParameterDescription("count", "threads", language)}
-          className="h-8 px-3 text-sm border rounded-md bg-background"
+          className="h-8 px-3 w-full text-sm border rounded-md bg-background"
         />
-      </div>
     </CommandFormWrapper>
   );
 }
@@ -359,7 +359,7 @@ export function FlattenForm(props: CommandFormProps) {
           />
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         {[
           "condense",
           "wrap",

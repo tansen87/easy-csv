@@ -23,7 +23,11 @@ export function FrequencyForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("frequency", "select", language)}
+            placeholder={getParameterDescription(
+              "frequency",
+              "select",
+              language,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -59,7 +63,11 @@ export function FrequencyForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("frequency", "groupby", language)}
+            placeholder={getParameterDescription(
+              "frequency",
+              "groupby",
+              language,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -77,12 +85,16 @@ export function FrequencyForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("frequency", "limit", language)}
+            placeholder={getParameterDescription(
+              "frequency",
+              "limit",
+              language,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
       </div>
-      <div className="grid grid-cols-5 gap-0">
+      <div className="flex gap-30">
         {["all", "approx", "no-extra", "parallel"].map((n) => (
           <label
             key={n}
@@ -104,24 +116,22 @@ export function FrequencyForm(props: CommandFormProps) {
             {n}
           </label>
         ))}
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            min={0}
-            value={commandDialog.params.threads || ""}
-            onChange={(e) =>
-              updateParam(
-                commandDialog,
-                setCommandDialog,
-                "threads",
-                e.target.value,
-              )
-            }
-            placeholder={getParameterDescription("frequency", "threads", language)}
-            className="w-32 h-8 px-2 text-sm border rounded-md bg-background"
-          />
-        </div>
       </div>
+      <input
+        type="number"
+        min={0}
+        value={commandDialog.params.threads || ""}
+        onChange={(e) =>
+          updateParam(
+            commandDialog,
+            setCommandDialog,
+            "threads",
+            e.target.value,
+          )
+        }
+        placeholder={getParameterDescription("frequency", "threads", language)}
+        className="w-full h-8 px-2 text-sm border rounded-md bg-background"
+      />
     </CommandFormWrapper>
   );
 }
@@ -161,7 +171,11 @@ export function GroupbyForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("groupby", "expression", language)}
+          placeholder={getParameterDescription(
+            "groupby",
+            "expression",
+            language,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -215,7 +229,11 @@ export function GroupbyForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("groupby", "along-cols", language)}
+            placeholder={getParameterDescription(
+              "groupby",
+              "along-cols",
+              language,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -232,12 +250,16 @@ export function GroupbyForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("groupby", "along-matrix", language)}
+            placeholder={getParameterDescription(
+              "groupby",
+              "along-matrix",
+              language,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="flex gap-35">
         <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
           <input
             type="checkbox"
@@ -283,7 +305,11 @@ export function GroupbyForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("groupby", "threads", language)}
+            placeholder={getParameterDescription(
+              "groupby",
+              "threads",
+              language,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -333,7 +359,7 @@ export function StatsForm(props: CommandFormProps) {
           />
         </div>
       </div>
-      <div className="grid grid-cols-6 gap-0">
+      <div className="flex gap-11">
         {["all", "cardinality", "quartiles", "approx", "nulls", "parallel"].map(
           (n) => (
             <label
@@ -710,7 +736,11 @@ export function WindowForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("window", "expression", language)}
+          placeholder={getParameterDescription(
+            "window",
+            "expression",
+            language,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           autoFocus
         />
@@ -728,7 +758,11 @@ export function WindowForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("window", "along-columns", language)}
+          placeholder={getParameterDescription(
+            "window",
+            "along-columns",
+            language,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>

@@ -1,4 +1,4 @@
-import { xanKeywords } from "@/data/xan-functions";
+import { xanKeywords } from "@/data/functions";
 
 export type TokenType =
   | "keyword"

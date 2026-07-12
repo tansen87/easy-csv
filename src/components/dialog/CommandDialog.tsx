@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { COMMAND_FORMS, COMMAND_LABELS } from "@/components/dialog/commands";
@@ -122,6 +122,16 @@ export function CommandDialog({
   };
 
   const FormComponent = COMMAND_FORMS[commandDialog.type];
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setCommandDialog(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [setCommandDialog]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">

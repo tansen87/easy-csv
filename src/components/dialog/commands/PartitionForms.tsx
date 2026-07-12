@@ -26,43 +26,36 @@ export function SplitForm(props: CommandFormProps) {
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="text-sm font-medium">size</label>
-          <input
-            type="number"
-            min={1}
-            value={commandDialog.params.size || ""}
-            onChange={(e) =>
-              updateParam(
-                commandDialog,
-                setCommandDialog,
-                "size",
-                e.target.value,
-              )
-            }
-            placeholder={getParameterDescription("split", "size", language)}
-            className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">chunks</label>
-          <input
-            type="number"
-            min={1}
-            value={commandDialog.params.chunks || ""}
-            onChange={(e) =>
-              updateParam(
-                commandDialog,
-                setCommandDialog,
-                "chunks",
-                e.target.value,
-              )
-            }
-            placeholder={getParameterDescription("split", "chunks", language)}
-            className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-          />
-        </div>
+      <div>
+        <label className="text-sm font-medium">size</label>
+        <input
+          type="number"
+          min={1}
+          value={commandDialog.params.size || ""}
+          onChange={(e) =>
+            updateParam(commandDialog, setCommandDialog, "size", e.target.value)
+          }
+          placeholder={getParameterDescription("split", "size", language)}
+          className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+        />
+      </div>
+      <div>
+        <label className="text-sm font-medium">chunks</label>
+        <input
+          type="number"
+          min={1}
+          value={commandDialog.params.chunks || ""}
+          onChange={(e) =>
+            updateParam(
+              commandDialog,
+              setCommandDialog,
+              "chunks",
+              e.target.value,
+            )
+          }
+          placeholder={getParameterDescription("split", "chunks", language)}
+          className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+        />
       </div>
       <div>
         <label className="text-sm font-medium">filename</label>
@@ -136,7 +129,11 @@ export function PartitionForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("partition", "out-dir", language)}
+          placeholder={getParameterDescription(
+            "partition",
+            "out-dir",
+            language,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -153,7 +150,11 @@ export function PartitionForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("partition", "filename", language)}
+          placeholder={getParameterDescription(
+            "partition",
+            "filename",
+            language,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -170,7 +171,11 @@ export function PartitionForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("partition", "prefix-length", language)}
+          placeholder={getParameterDescription(
+            "partition",
+            "prefix-length",
+            language,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>

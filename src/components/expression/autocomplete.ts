@@ -1,4 +1,4 @@
-import { xanFunctions, XanFunction } from "@/data/xan-functions";
+import { xanFunctions, XanFunction } from "@/data/functions";
 
 export interface AutocompleteItem {
   label: string;

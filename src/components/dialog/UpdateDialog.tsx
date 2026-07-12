@@ -38,7 +38,7 @@ export function UpdateDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/20 backdrop-blur-none"
+        className="absolute inset-0 bg-black/20 backdrop-blur-xs"
         onContextMenu={(e) => e.preventDefault()}
       />
       <div
