@@ -8,6 +8,7 @@ import { useDraggable } from "@/hooks/useDraggable";
 
 export type NumberTransformType =
   | "abs"
+  | "neg"
   | "floor"
   | "ceil"
   | "int"
@@ -34,6 +35,7 @@ interface NumberTransformDialogProps {
 
 const transformOptions: { value: NumberTransformType; label: string }[] = [
   { value: "abs", label: "Abs" },
+  { value: "neg", label: "Negate" },
   { value: "floor", label: "Floor" },
   { value: "ceil", label: "Ceil" },
   { value: "int", label: "Integer" },
@@ -96,6 +98,7 @@ export function NumberTransformDialog({
     const expressionMap: Record<NumberTransformType, (col: string) => string> =
       {
         abs: (col) => `abs(col("${col}")) as "${col}"`,
+        neg: (col) => `neg(col("${col}")) as "${col}"`,
         floor: (col) => `floor(col("${col}")) as "${col}"`,
         ceil: (col) => `ceil(col("${col}")) as "${col}"`,
         int: (col) => `trunc(col("${col}")) as "${col}"`,

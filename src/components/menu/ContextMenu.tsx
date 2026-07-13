@@ -20,13 +20,14 @@ import {
   AlignCenter,
   DecimalsArrowLeft,
   DecimalsArrowRight,
-  Ruler,
   RulerDimensionLine,
   Infinity,
   Replace,
   LayoutGrid,
   Eraser,
   FunnelPlus,
+  Plus,
+  Minus,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TextTransformType } from "@/components/dialog/TextTransformDialog";
@@ -46,12 +47,27 @@ interface ContextMenuProps {
   onOpenBatchFilter: (x: number, y: number) => void;
   onOpenPivotDialog: (x: number, y: number) => void;
   onOpenDateTransformDialog: (col: number, x: number, y: number) => void;
-  onOpenTextTransformDialog: (col: number, x: number, y: number, transformType?: TextTransformType) => void;
-  onOpenSliceDialog: (col: number, x: number, y: number, sliceType?: string) => void;
+  onOpenTextTransformDialog: (
+    col: number,
+    x: number,
+    y: number,
+    transformType?: TextTransformType,
+  ) => void;
+  onOpenSliceDialog: (
+    col: number,
+    x: number,
+    y: number,
+    sliceType?: string,
+  ) => void;
   onOpenReplaceDialog: (col: number, x: number, y: number) => void;
   onOpenWindowDialog: (col: number, x: number, y: number) => void;
   onOpenPadDialog: (col: number, x: number, y: number, padType: string) => void;
-  onOpenNumberTransformDialog: (col: number, x: number, y: number, transformType?: NumberTransformType) => void;
+  onOpenNumberTransformDialog: (
+    col: number,
+    x: number,
+    y: number,
+    transformType?: NumberTransformType,
+  ) => void;
   onOpenSortDialog: (col: number, x: number, y: number) => void;
 }
 
@@ -71,7 +87,10 @@ export function ContextMenu({
   onOpenSortDialog,
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ x: contextMenu.x, y: contextMenu.y });
+  const [position, setPosition] = useState({
+    x: contextMenu.x,
+    y: contextMenu.y,
+  });
 
   useEffect(() => {
     const updatePosition = () => {
@@ -136,13 +155,41 @@ export function ContextMenu({
   };
 
   const textTransformOptions = [
-    { label: "Len", icon: RulerDimensionLine, transformType: "len" as TextTransformType },
-    { label: "Lowercase", icon: CaseLower, transformType: "lower" as TextTransformType },
-    { label: "Uppercase", icon: CaseUpper, transformType: "upper" as TextTransformType },
-    { label: "Trim", icon: AlignCenter, transformType: "trim" as TextTransformType },
-    { label: "LTrim", icon: AlignLeft, transformType: "ltrim" as TextTransformType },
-    { label: "RTrim", icon: AlignRight, transformType: "rtrim" as TextTransformType },
-    { label: "Strip", icon: Eraser, transformType: "strip" as TextTransformType },
+    {
+      label: "Len",
+      icon: RulerDimensionLine,
+      transformType: "len" as TextTransformType,
+    },
+    {
+      label: "Lowercase",
+      icon: CaseLower,
+      transformType: "lower" as TextTransformType,
+    },
+    {
+      label: "Uppercase",
+      icon: CaseUpper,
+      transformType: "upper" as TextTransformType,
+    },
+    {
+      label: "Trim",
+      icon: AlignCenter,
+      transformType: "trim" as TextTransformType,
+    },
+    {
+      label: "LTrim",
+      icon: AlignLeft,
+      transformType: "ltrim" as TextTransformType,
+    },
+    {
+      label: "RTrim",
+      icon: AlignRight,
+      transformType: "rtrim" as TextTransformType,
+    },
+    {
+      label: "Strip",
+      icon: Eraser,
+      transformType: "strip" as TextTransformType,
+    },
     { label: "Left", icon: ArrowLeftFromLine, transformType: "splitLeft" },
     { label: "Right", icon: ArrowRightFromLine, transformType: "splitRight" },
     { label: "Slice", icon: Slice, transformType: "slice" },
@@ -151,7 +198,8 @@ export function ContextMenu({
   ];
 
   const numberTransformOptions = [
-    { label: "Abs", icon: Ruler, transformType: "abs" },
+    { label: "Abs", icon: Plus, transformType: "abs" },
+    { label: "Neg", icon: Minus, transformType: "neg" },
     { label: "Floor", icon: ArrowDown, transformType: "floor" },
     { label: "Ceil", icon: ArrowUp, transformType: "ceil" },
     { label: "Integer", icon: DecimalsArrowLeft, transformType: "int" },
@@ -223,7 +271,11 @@ export function ContextMenu({
         onClick={(e) => {
           e.stopPropagation();
           onClose();
-          onOpenDateTransformDialog(contextMenu.col, contextMenu.x, contextMenu.y);
+          onOpenDateTransformDialog(
+            contextMenu.col,
+            contextMenu.x,
+            contextMenu.y,
+          );
         }}
       >
         <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -278,16 +330,36 @@ export function ContextMenu({
                     onClick={(e) => {
                       e.stopPropagation();
                       onClose();
-                      if (option.transformType.startsWith("split") || option.transformType === "slice") {
+                      if (
+                        option.transformType.startsWith("split") ||
+                        option.transformType === "slice"
+                      ) {
                         let sliceType = option.transformType;
                         if (sliceType.startsWith("split")) {
-                          sliceType = sliceType.replace("split", "").toLowerCase();
+                          sliceType = sliceType
+                            .replace("split", "")
+                            .toLowerCase();
                         }
-                        onOpenSliceDialog(contextMenu.col, contextMenu.x, contextMenu.y, sliceType);
+                        onOpenSliceDialog(
+                          contextMenu.col,
+                          contextMenu.x,
+                          contextMenu.y,
+                          sliceType,
+                        );
                       } else if (option.transformType === "pad") {
-                        onOpenPadDialog(contextMenu.col, contextMenu.x, contextMenu.y, "pad");
+                        onOpenPadDialog(
+                          contextMenu.col,
+                          contextMenu.x,
+                          contextMenu.y,
+                          "pad",
+                        );
                       } else {
-                        onOpenTextTransformDialog(contextMenu.col, contextMenu.x, contextMenu.y, option.transformType as TextTransformType);
+                        onOpenTextTransformDialog(
+                          contextMenu.col,
+                          contextMenu.x,
+                          contextMenu.y,
+                          option.transformType as TextTransformType,
+                        );
                       }
                     }}
                   >
@@ -336,7 +408,12 @@ export function ContextMenu({
                   onClick={(e) => {
                     e.stopPropagation();
                     onClose();
-                    onOpenNumberTransformDialog(contextMenu.col, contextMenu.x, contextMenu.y, option.transformType as NumberTransformType);
+                    onOpenNumberTransformDialog(
+                      contextMenu.col,
+                      contextMenu.x,
+                      contextMenu.y,
+                      option.transformType as NumberTransformType,
+                    );
                   }}
                 >
                   <Icon className="h-4 w-4 text-muted-foreground" />

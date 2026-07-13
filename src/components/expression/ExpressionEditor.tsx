@@ -178,8 +178,8 @@ export function ExpressionEditor({
         aria-hidden="true"
         dangerouslySetInnerHTML={{ __html: highlighted + "\n" }}
         style={{
-          minHeight: "38px",
-          maxHeight: "150px",
+          minHeight: "120px",
+          maxHeight: "120px",
         }}
       />
 
@@ -195,7 +195,7 @@ export function ExpressionEditor({
         placeholder={placeholder}
         autoFocus={autoFocus}
         className={cn(
-          "relative z-10 w-full min-h-[38px] max-h-[150px] p-2 font-mono text-sm",
+          "relative z-10 w-full min-h-[120px] max-h-[120px] p-2 font-mono text-sm",
           "bg-transparent border border-transparent rounded-md resize-none",
           "focus:outline-none focus:ring-2 focus:ring-ring",
           "text-transparent caret-black dark:caret-white",
@@ -207,9 +207,9 @@ export function ExpressionEditor({
       {showAutocomplete && autocompleteItems.length > 0 && (
         <div
           ref={autocompleteRef}
-          className="absolute z-50 mt-1 w-full bg-popover border rounded-md shadow-md"
+          className="absolute z-50 mt-3 w-full bg-popover border rounded-md shadow-md"
         >
-          <ScrollArea className="h-60">
+          <ScrollArea className="h-42">
             <div className="p-1">
               {autocompleteItems.map((item, index) => (
                 <div
@@ -253,13 +253,14 @@ export function ExpressionEditor({
 
       {/* Parameter hint bar */}
       {functionContext && (
-        <div className="mt-1 px-2 py-1 text-xs font-mono bg-muted rounded-md flex items-center gap-2">
+        <div className={`px-2 py-1 text-xs font-mono bg-muted rounded-md flex items-center ${showAutocomplete ? "relative z-[60]" : ""}`}>
           <span className="text-muted-foreground">{functionContext.funcName}(</span>
           {functionContext.params.map((param, i) => (
             <span key={i}>
               <span className={cn(
+                "px-1 py-0.5 rounded",
                 i === functionContext.paramIndex
-                  ? "text-foreground font-bold underline"
+                  ? "bg-primary text-primary-foreground font-bold"
                   : "text-muted-foreground"
               )}>
                 {param}
