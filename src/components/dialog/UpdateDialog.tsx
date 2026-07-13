@@ -42,7 +42,7 @@ export function UpdateDialog({
         onContextMenu={(e) => e.preventDefault()}
       />
       <div
-        className="relative bg-card rounded-lg shadow-xl w-full max-w-md overflow-hidden"
+        className="relative bg-card rounded-lg shadow-xl w-full max-w-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
       >
@@ -55,7 +55,7 @@ export function UpdateDialog({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <ScrollArea className="p-4 h-[28vh]">
+        <ScrollArea className="p-4 h-[40vh]">
           {updateInfo ? (
             updateInfo.hasUpdate ? (
               <div>

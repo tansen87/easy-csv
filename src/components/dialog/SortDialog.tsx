@@ -112,19 +112,19 @@ export function SortDialog({
         </button>
       </div>
 
-      <div className="px-3 py-2 shrink-0">
+      <div className="px-3 py-2 shrink-0 no-drag">
         <div className="flex items-center gap-2">
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search columns..."
-            className="no-drag flex-1 h-7 px-2 text-xs border rounded-md bg-background"
+            className="flex-1 h-7 px-2 text-xs border rounded-md bg-background"
           />
         </div>
       </div>
 
-      <ScrollArea className="flex-1 p-3">
+      <ScrollArea className="flex-1 p-3 no-drag">
         <div className="mb-3">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Columns ({selectedColumns.length} selected)
@@ -142,7 +142,7 @@ export function SortDialog({
                     <button
                       key={header}
                       onClick={() => toggleColumn(header)}
-                      className={`no-drag w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors ${
+                      className={`w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors ${
                         selected
                           ? "bg-primary/10 text-primary"
                           : "hover:bg-accent"
@@ -197,7 +197,7 @@ export function SortDialog({
                       onClick={() =>
                         setSortOrder(sortOrder === "asc" ? "desc" : "asc")
                       }
-                      className="no-drag p-0.5 hover:bg-accent/50 rounded-md text-muted-foreground/60 hover:text-muted-foreground"
+                      className="p-0.5 hover:bg-accent/50 rounded-md text-muted-foreground/60 hover:text-muted-foreground"
                     >
                       {sortOrder === "asc" ? (
                         <ArrowDownAZ className="h-4 w-4" />
@@ -207,7 +207,7 @@ export function SortDialog({
                     </button>
                     <button
                       onClick={() => setSortNumeric(!sortNumeric)}
-                      className={`no-drag px-1.5 py-0.5 text-xs rounded-md transition-colors ${
+                      className={`px-1.5 py-0.5 text-xs rounded-md transition-colors ${
                         sortNumeric
                           ? "bg-primary/20 text-primary"
                           : "bg-muted/50 text-muted-foreground"
@@ -228,7 +228,7 @@ export function SortDialog({
         </div>
       </ScrollArea>
 
-      <div className="px-3 pb-3 flex gap-2 shrink-0">
+      <div className="px-3 pb-3 flex gap-2 shrink-0 no-drag">
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
           variant="secondary"

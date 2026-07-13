@@ -248,7 +248,7 @@ export function FilterDialog({
         </button>
       </div>
 
-      <div className="p-3 space-y-3">
+      <div className="p-3 space-y-3 no-drag">
         <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
           <button
             className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
@@ -272,7 +272,7 @@ export function FilterDialog({
           </button>
         </div>
 
-        <div className="no-drag">
+        <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Column
           </label>
@@ -289,7 +289,7 @@ export function FilterDialog({
 
         {filterType === "text" && (
           <>
-            <div className="no-drag">
+            <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
                 Operator
               </label>
@@ -303,7 +303,7 @@ export function FilterDialog({
 
             {textOperator !== "is_null" && textOperator !== "is_not_null" && (
               <>
-                <div className="no-drag">
+                <div>
                   <label className="text-xs font-medium text-muted-foreground">
                     {textOperator === "regex" ? "Pattern" : "Value"}
                   </label>
@@ -342,7 +342,7 @@ export function FilterDialog({
 
         {filterType === "number" && (
           <>
-            <div className="no-drag">
+            <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
                 Operator
               </label>
@@ -354,7 +354,7 @@ export function FilterDialog({
               />
             </div>
 
-            <div className="no-drag">
+            <div>
               <label className="text-xs font-medium text-muted-foreground">
                 Value
               </label>
@@ -370,7 +370,7 @@ export function FilterDialog({
         )}
       </div>
 
-      <div className="px-3 pb-2 flex gap-2">
+      <div className="px-3 pb-2 flex gap-2 no-drag">
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
           variant="secondary"

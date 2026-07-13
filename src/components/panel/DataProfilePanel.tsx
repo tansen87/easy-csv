@@ -158,7 +158,7 @@ export function DataProfilePanel({ filePath, delimiter, isVisible, onClose }: Da
   if (!isVisible) return null;
 
   return (
-    <div className="fixed right-4 top-14 w-[340px] h-[calc(100vh-80px)] bg-background border border-border/50 rounded-lg shadow-xl z-40 flex flex-col">
+    <div className="fixed right-2 top-19 w-[340px] h-[calc(100vh-86px)] bg-background border border-border/50 rounded-lg shadow-xl z-40 flex flex-col">
       <div className="p-3 border-b bg-card/80 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BarChart3 className="h-4 w-4 text-muted-foreground" />

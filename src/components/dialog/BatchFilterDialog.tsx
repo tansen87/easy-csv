@@ -197,10 +197,10 @@ export function BatchFilterDialog({
       </div>
 
       {/* Content */}
-      <ScrollArea className="h-[34vh]">
+      <ScrollArea className="h-[34vh] no-drag">
         <div className="p-3 space-y-3">
           {/* Column selection */}
-          <div className="no-drag">
+          <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
               Column
             </label>
@@ -216,7 +216,7 @@ export function BatchFilterDialog({
           </div>
 
           {/* Filter type toggle */}
-          <div className="no-drag flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
+          <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
             <button
               className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
                 filterType === "text"
@@ -241,7 +241,7 @@ export function BatchFilterDialog({
 
           {/* Operator selection */}
           {filterType === "text" ? (
-            <div className="no-drag">
+            <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
                 Operator
               </label>
@@ -253,7 +253,7 @@ export function BatchFilterDialog({
               />
             </div>
           ) : (
-            <div className="no-drag">
+            <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
                 Operator
               </label>
@@ -268,7 +268,7 @@ export function BatchFilterDialog({
 
           {/* Case insensitive */}
           {filterType === "text" && (
-            <div className="no-drag flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5">
               <input
                 type="checkbox"
                 id="case-insensitive"
@@ -288,7 +288,7 @@ export function BatchFilterDialog({
           {/* Value source — hidden for is_null / is_not_null */}
           {textOperator !== "is_null" && textOperator !== "is_not_null" && (
             <>
-              <div className="no-drag">
+              <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
                   Value Source
                 </label>
@@ -321,7 +321,7 @@ export function BatchFilterDialog({
 
               {/* Value input */}
               {valueMode === "manual" ? (
-                <div className="no-drag">
+                <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">
                     Values (one per line)
                   </label>
@@ -337,7 +337,7 @@ export function BatchFilterDialog({
                   />
                 </div>
               ) : (
-                <div className="no-drag">
+                <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">
                     Extract unique values from column
                   </label>
@@ -356,7 +356,7 @@ export function BatchFilterDialog({
           )}
 
           {/* Output path */}
-          <div className="no-drag">
+          <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
               Output Path (optional)
             </label>
@@ -390,7 +390,7 @@ export function BatchFilterDialog({
             !manualValues.trim()
           }
         >
-          Add to Pipeline
+          Apply
         </Button>
       </div>
     </div>
