@@ -335,15 +335,15 @@ export function HomeView({
       </div>
 
       <div className="absolute top-11 ml-2 z-10" onContextMenu={(e) => e.preventDefault()}>
-        <div className="h-[48px] px-4 flex items-center">
+        <div className="h-9 px-3 flex items-center">
           <ScrollArea className="h-full flex-1">
-            <div className="flex items-center gap-2 pr-4">
+            <div className="flex items-center gap-1 pr-4">
               {tabs.map((tab) => (
                 <div
                   key={tab.id}
-                  className={`flex items-center gap-2 px-1.5 py-1 rounded-md text-xs transition-colors shrink-0 ${selectedTabId === tab.id
+                  className={`group flex items-center gap-1 px-2 py-0.5 rounded-md text-xs transition-all duration-150 shrink-0 cursor-default ${selectedTabId === tab.id
                     ? 'bg-primary/10 text-primary border border-primary/20'
-                    : 'hover:bg-accent/50 border border-transparent'}`}
+                    : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground border border-transparent'}`}
                   onContextMenu={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -372,28 +372,28 @@ export function HomeView({
                           setEditingTabId(null);
                         }
                       }}
-                      className="w-24 px-2 py-0.5 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary h-6"
-                      style={{ lineHeight: '1.2' }}
+                      className="w-20 min-w-[3rem] max-w-[120px] px-1 border rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 h-[18px] leading-[18px] bg-background"
                       autoFocus
                     />
                   ) : (
                     <button
                       onClick={() => onTabChange(tab.id)}
-                      className="text-left truncate max-w-[120px]"
+                      className="text-left truncate max-w-[120px] text-xs leading-[18px] h-[18px]"
                     >
                       {tab.name}
                     </button>
                   )}
-                  <div className="flex items-center gap-1">
-                    {tabs.length > 1 && (
-                      <button
-                        onClick={() => onRemoveTab(tab.id)}
-                        className="p-1 rounded hover:bg-muted hover:text-foreground transition-colors text-muted-foreground/70 dark:text-muted-foreground/80"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
-                  </div>
+                  {tabs.length > 1 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveTab(tab.id);
+                      }}
+                      className="p-0. rounded opacity-0 group-hover:opacity-100 hover:bg-muted/80 transition-all duration-150 text-muted-foreground/50 hover:text-foreground"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

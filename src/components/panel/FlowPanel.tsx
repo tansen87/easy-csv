@@ -715,8 +715,8 @@ export function FlowPanel({
             ...edge.style,
             strokeDasharray: isCut ? '10' : undefined,
             animation: isCut ? 'cut-edge-animation 0.2s ease-out forwards' : undefined,
-            stroke: isPending && !isCut ? '#f97316' : edge.style?.stroke,
-            filter: isPending && !isCut ? 'drop-shadow(0 0 6px rgba(249, 115, 22, 0.7))' : undefined,
+            stroke: isPending && !isCut ? '#9a9aa6' : edge.style?.stroke,
+            filter: isPending && !isCut ? 'drop-shadow(0 0 6px rgba(154, 154, 166, 0.7))' : undefined,
           },
         };
       }));

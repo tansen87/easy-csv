@@ -278,7 +278,6 @@ export function BatchConvertHooks({
         });
 
         if (result.success) {
-          addLog("success", `${displayName} completed`);
           successCount++;
         } else {
           addLog("error", `${displayName} failed: ${result.error}`);
