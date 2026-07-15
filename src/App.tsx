@@ -351,9 +351,7 @@ function AppContent() {
 
   const loadSystemNotification = async () => {
     try {
-      const saved = await invoke<boolean | null>(
-        "get_system_notification",
-      );
+      const saved = await invoke<boolean | null>("get_system_notification");
       if (saved !== null) {
         setSystemNotification(saved);
       }
@@ -910,6 +908,9 @@ function AppContent() {
               }}
               onCheckUpdate={checkForUpdates}
               onShowSettings={() => setShowSettingsDialog(true)}
+              onCommands={() => setShowCommandPanel(!showCommandPanel)}
+              onLogs={() => setShowLogPanel(!showLogPanel)}
+              onDataProfile={() => setShowDataProfile(!showDataProfile)}
               isExecuting={isExecuting}
               isCheckingUpdate={isCheckingUpdate}
               currentPipelineLength={getCurrentPipeline().length}
@@ -974,11 +975,15 @@ function AppContent() {
                 showProgressBar={showProgressBar}
                 recentFiles={recentFiles}
                 onOpenRecentFile={async (filePath) => {
-                  const fileExists = await invoke<boolean>("file_exists", { filePath });
+                  const fileExists = await invoke<boolean>("file_exists", {
+                    filePath,
+                  });
                   if (fileExists) {
                     loadCsvData(selectedTabId, filePath);
                   } else {
-                    const updated = recentFiles.filter((f) => f.path !== filePath);
+                    const updated = recentFiles.filter(
+                      (f) => f.path !== filePath,
+                    );
                     setRecentFiles(updated);
                     saveRecentFiles(updated);
                     showToastRef.current("File does not exist", "info");

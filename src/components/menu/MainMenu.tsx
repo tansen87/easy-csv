@@ -38,6 +38,9 @@ interface MainMenuProps {
   onHelp: () => void;
   onCheckUpdate: () => void;
   onShowSettings: () => void;
+  onCommands: () => void;
+  onLogs: () => void;
+  onDataProfile: () => void;
   isExecuting: boolean;
   isCheckingUpdate: boolean;
   currentPipelineLength: number;
@@ -68,6 +71,9 @@ export function MainMenu({
   onHelp,
   onCheckUpdate,
   onShowSettings,
+  onCommands,
+  onLogs,
+  onDataProfile,
   isExecuting,
   isCheckingUpdate,
   currentPipelineLength,
@@ -93,6 +99,9 @@ export function MainMenu({
       onHelp,
       onCheckUpdate,
       onShowSettings,
+      onCommands,
+      onLogs,
+      onDataProfile,
     },
     {
       undoStackLength: undoStack.length,

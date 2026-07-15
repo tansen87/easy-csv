@@ -4,10 +4,13 @@ export const getHelpContent = (lang: "en" | "zh") => lang === "zh" ? helpContent
 
 export const helpContentEn = `
 ### Basic Operations
-1. **Add Commands**: Click on commands in the left panel to add them to the pipeline
-2. **Configure Steps**: Click on a setting icon in the pipeline to configure its parameters
-3. **Connect Steps**: Drag lines to connect steps in the pipeline
-4. **Execute**: Click the "Run" button to execute the pipeline
+1. **Add Commands**: Click the command button in the menu bar to expand the command dialog, then click any command to add it to the canvas
+2. **Set Parameters**: Click the settings icon in a command to set or modify its parameters
+3. **Connect Steps**: Right-click on a node and drag to another node to create a connection
+4. **Move View**: Left-click and drag on the canvas to pan the view
+5. **Delete Connection**: Right-click on an empty area and drag across a connection line to delete it
+6. **Zoom**: Scroll the mouse wheel to zoom in/out on the canvas
+7. **Execute**: Click the "Execute" button to execute the pipeline
 
 ---
 
@@ -22,9 +25,12 @@ export const helpContentEn = `
 | \`Ctrl\` + \`Z\` | Undo |
 | \`Ctrl\` + \`Y\` | Redo |
 | \`Ctrl\` + \`R\` | Execute |
-| \`Shift\` + \`H\` | Show help |
-| \`Shift\` + \`C\` | Check for updates |
-| \`Shift\` + \`S\` | Open settings |
+| \`Shift\` + \`h\` | Show help |
+| \`Shift\` + \`c\` | Check for updates |
+| \`Shift\` + \`s\` | Open settings |
+| \`Alt\` + \`C\` | Commands |
+| \`Alt\` + \`Q\` | Logs |
+| \`Alt\` + \`D\` | Data Profile |
 | \`F5\` | Refresh |
 
 ---

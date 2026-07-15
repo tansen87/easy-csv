@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from "react";
 
 interface KeyboardShortcutCallbacks {
   onOpenFile: () => void;
@@ -12,6 +12,9 @@ interface KeyboardShortcutCallbacks {
   onHelp: () => void;
   onCheckUpdate: () => void;
   onShowSettings: () => void;
+  onCommands: () => void;
+  onLogs: () => void;
+  onDataProfile: () => void;
 }
 
 interface KeyboardShortcutState {
@@ -23,55 +26,80 @@ interface KeyboardShortcutState {
 
 export function useKeyboardShortcuts(
   callbacks: KeyboardShortcutCallbacks,
-  state: KeyboardShortcutState
+  state: KeyboardShortcutState,
 ) {
+  const callbacksRef = useRef(callbacks);
+  const stateRef = useRef(state);
+
+  callbacksRef.current = callbacks;
+  stateRef.current = state;
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check if user is typing in an input/textarea
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
         return;
       }
 
       const ctrl = e.ctrlKey || e.metaKey;
       const shift = e.shiftKey;
+      const alt = e.altKey;
+      const key = e.key.toLowerCase();
 
-      if (ctrl && e.key === 'o') {
+      if (ctrl && key === "o") {
         e.preventDefault();
-        callbacks.onOpenFile();
-      } else if (ctrl && e.key === 'n') {
+        callbacksRef.current.onOpenFile();
+      } else if (ctrl && key === "n") {
         e.preventDefault();
-        callbacks.onOpenNewTabWithFile();
-      } else if (ctrl && e.key === 's') {
+        callbacksRef.current.onOpenNewTabWithFile();
+      } else if (ctrl && key === "s") {
         e.preventDefault();
-        if (state.currentPipelineLength > 0) callbacks.onSavePipeline();
-      } else if (ctrl && e.key === 'i') {
+        if (stateRef.current.currentPipelineLength > 0)
+          callbacksRef.current.onSavePipeline();
+      } else if (ctrl && key === "i") {
         e.preventDefault();
-        callbacks.onImportPipeline();
-      } else if (ctrl && e.key === 'e') {
+        callbacksRef.current.onImportPipeline();
+      } else if (ctrl && key === "e") {
         e.preventDefault();
-        if (state.currentPipelineLength > 0) callbacks.onExportPipeline();
-      } else if (ctrl && e.key === 'z') {
+        if (stateRef.current.currentPipelineLength > 0)
+          callbacksRef.current.onExportPipeline();
+      } else if (ctrl && key === "z") {
         e.preventDefault();
-        if (state.undoStackLength > 0) callbacks.onUndo();
-      } else if (ctrl && e.key === 'y') {
+        if (stateRef.current.undoStackLength > 0) callbacksRef.current.onUndo();
+      } else if (ctrl && key === "y") {
         e.preventDefault();
-        if (state.redoStackLength > 0) callbacks.onRedo();
-      } else if (ctrl && e.key === 'r') {
+        if (stateRef.current.redoStackLength > 0) callbacksRef.current.onRedo();
+      } else if (ctrl && key === "r") {
         e.preventDefault();
-        if (state.currentPipelineLength > 0 && !state.isExecuting) callbacks.onExecute();
-      } else if (shift && e.key === 'H') {
+        if (
+          stateRef.current.currentPipelineLength > 0 &&
+          !stateRef.current.isExecuting
+        )
+          callbacksRef.current.onExecute();
+      } else if (shift && e.key === "h") {
         e.preventDefault();
-        callbacks.onHelp();
-      } else if (shift && e.key === 'C') {
+        callbacksRef.current.onHelp();
+      } else if (shift && e.key === "c") {
         e.preventDefault();
-        callbacks.onCheckUpdate();
-      } else if (shift && e.key === 'S') {
+        callbacksRef.current.onCheckUpdate();
+      } else if (shift && e.key === "s") {
         e.preventDefault();
-        callbacks.onShowSettings();
+        callbacksRef.current.onShowSettings();
+      } else if (alt && key === "c") {
+        e.preventDefault();
+        callbacksRef.current.onCommands();
+      } else if (alt && key === "q") {
+        e.preventDefault();
+        callbacksRef.current.onLogs();
+      } else if (alt && key === "d") {
+        e.preventDefault();
+        callbacksRef.current.onDataProfile();
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [callbacks, state]);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 }
