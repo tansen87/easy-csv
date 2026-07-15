@@ -973,9 +973,17 @@ function AppContent() {
                 branchProgress={branchProgress}
                 showProgressBar={showProgressBar}
                 recentFiles={recentFiles}
-                onOpenRecentFile={(filePath) =>
-                  loadCsvData(selectedTabId, filePath)
-                }
+                onOpenRecentFile={async (filePath) => {
+                  const fileExists = await invoke<boolean>("file_exists", { filePath });
+                  if (fileExists) {
+                    loadCsvData(selectedTabId, filePath);
+                  } else {
+                    const updated = recentFiles.filter((f) => f.path !== filePath);
+                    setRecentFiles(updated);
+                    saveRecentFiles(updated);
+                    showToastRef.current("File does not exist", "info");
+                  }
+                }}
               />
             </div>
           </main>

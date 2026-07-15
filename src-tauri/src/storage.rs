@@ -201,6 +201,11 @@ pub async fn set_window_title(window: tauri::Window, title: String) -> Result<()
 }
 
 #[tauri::command]
+pub async fn file_exists(file_path: String) -> Result<bool, String> {
+  Ok(std::path::Path::new(&file_path).exists())
+}
+
+#[tauri::command]
 pub async fn toggle_devtools(window: tauri::Window) -> Result<(), String> {
   let webviews = window.webviews();
   if let Some(webview) = webviews.first() {
