@@ -74,6 +74,7 @@ interface HomeViewProps {
   showProgressBar?: boolean;
   recentFiles?: RecentFile[];
   onOpenRecentFile?: (filePath: string) => void;
+  reactFlowInstanceRef?: React.RefObject<any>;
 }
 
 export function HomeView({
@@ -100,6 +101,7 @@ export function HomeView({
   showProgressBar,
   recentFiles = [],
   onOpenRecentFile,
+  reactFlowInstanceRef,
 }: HomeViewProps) {
   const { t } = useLanguage();
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
@@ -486,6 +488,7 @@ export function HomeView({
           selectedStepId={selectedStepId}
           savedEdges={edges}
           savedInputPosition={inputPosition}
+          reactFlowInstanceRef={reactFlowInstanceRef}
           onEdgesChange={(edges) => {
             if (onEdgesChange && selectedTabId) {
               onEdgesChange(selectedTabId, edges);

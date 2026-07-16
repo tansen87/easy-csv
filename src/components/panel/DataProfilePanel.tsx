@@ -27,7 +27,10 @@ interface DataProfilePanelProps {
   onClose: () => void;
 }
 
-const typeColors: Record<string, { bg: string; text: string; icon: typeof Hash }> = {
+const typeColors: Record<
+  string,
+  { bg: string; text: string; icon: typeof Hash }
+> = {
   Float: { bg: "bg-purple-500/10", text: "text-purple-600", icon: Hash },
   Integer: { bg: "bg-blue-500/10", text: "text-blue-600", icon: Hash },
   Text: { bg: "bg-green-500/10", text: "text-green-600", icon: Type },
@@ -102,7 +105,12 @@ function fmtNum(val: string | undefined, decimals = 2): string {
   });
 }
 
-export function DataProfilePanel({ filePath, delimiter, isVisible, onClose }: DataProfilePanelProps) {
+export function DataProfilePanel({
+  filePath,
+  delimiter,
+  isVisible,
+  onClose,
+}: DataProfilePanelProps) {
   const { t } = useLanguage();
   const [columns, setColumns] = useState<ColumnStat[]>([]);
   const [search, setSearch] = useState("");
@@ -110,7 +118,9 @@ export function DataProfilePanel({ filePath, delimiter, isVisible, onClose }: Da
   const [error, setError] = useState<string | null>(null);
 
   const filteredColumns = search
-    ? columns.filter((c) => c.field.toLowerCase().includes(search.toLowerCase()))
+    ? columns.filter((c) =>
+        c.field.toLowerCase().includes(search.toLowerCase()),
+      )
     : columns;
 
   useEffect(() => {
@@ -164,7 +174,12 @@ export function DataProfilePanel({ filePath, delimiter, isVisible, onClose }: Da
           <BarChart3 className="h-4 w-4 text-muted-foreground" />
           <span className="font-semibold text-sm">{t.dataProfile}</span>
         </div>
-        <Button variant="ghost" size="sm" onClick={onClose} className="h-6 px-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClose}
+          className="h-6 px-2"
+        >
           <X className="h-3 w-3" />
         </Button>
       </div>
@@ -187,7 +202,9 @@ export function DataProfilePanel({ filePath, delimiter, isVisible, onClose }: Da
           {loading && (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-              <p className="text-xs text-muted-foreground mt-2">{t.analyzingData}</p>
+              <p className="text-xs text-muted-foreground mt-2">
+                {t.analyzingData}
+              </p>
             </div>
           )}
 
@@ -206,7 +223,9 @@ export function DataProfilePanel({ filePath, delimiter, isVisible, onClose }: Da
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
                   <span className="text-muted-foreground">{t.rows}</span>
-                  <span className="font-semibold">{fmt(columns[0]?.count)}</span>
+                  <span className="font-semibold">
+                    {fmt(columns[0]?.count)}
+                  </span>
                 </div>
               </div>
 
@@ -220,12 +239,18 @@ export function DataProfilePanel({ filePath, delimiter, isVisible, onClose }: Da
                     <Card key={col.field} className="p-3 bg-card/80">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <div className={`w-5 h-5 rounded flex items-center justify-center ${typeStyle.bg}`}>
+                          <div
+                            className={`w-5 h-5 rounded flex items-center justify-center ${typeStyle.bg}`}
+                          >
                             <TypeIcon className={`h-3 w-3 ${typeStyle.text}`} />
                           </div>
-                          <span className="font-semibold text-xs truncate">{col.field}</span>
+                          <span className="font-semibold text-xs truncate">
+                            {col.field}
+                          </span>
                         </div>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${typeStyle.bg} ${typeStyle.text}`}>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded ${typeStyle.bg} ${typeStyle.text}`}
+                        >
                           {col.types}
                         </span>
                       </div>
@@ -234,49 +259,81 @@ export function DataProfilePanel({ filePath, delimiter, isVisible, onClose }: Da
                         {emptyCount > 0 && (
                           <>
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">{t.count}</span>
-                              <span className="font-medium">{fmt(col.count)}</span>
+                              <span className="text-muted-foreground">
+                                {t.count}
+                              </span>
+                              <span className="font-medium">
+                                {fmt(col.count)}
+                              </span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">{t.empty}</span>
-                              <span className="font-medium text-orange-500">{emptyCount.toLocaleString()}</span>
+                              <span className="text-muted-foreground">
+                                {t.empty}
+                              </span>
+                              <span className="font-medium text-orange-500">
+                                {emptyCount.toLocaleString()}
+                              </span>
                             </div>
                           </>
                         )}
                         {col.min && (
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">{t.min}</span>
-                            <span className="font-medium truncate ml-2">{fmt(col.min)}</span>
+                            <span className="text-muted-foreground">
+                              {t.min}
+                            </span>
+                            <span className="font-medium truncate ml-2">
+                              {fmt(col.min)}
+                            </span>
                           </div>
                         )}
                         {col.max && (
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">{t.max}</span>
-                            <span className="font-medium truncate ml-2">{fmt(col.max)}</span>
+                            <span className="text-muted-foreground">
+                              {t.max}
+                            </span>
+                            <span className="font-medium truncate ml-2">
+                              {fmt(col.max)}
+                            </span>
                           </div>
                         )}
                         {col.mean && (
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">{t.mean}</span>
-                            <span className="font-medium">{fmtNum(col.mean)}</span>
+                            <span className="text-muted-foreground">
+                              {t.mean}
+                            </span>
+                            <span className="font-medium">
+                              {fmtNum(col.mean)}
+                            </span>
                           </div>
                         )}
                         {col.sum && (
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">{t.sum}</span>
-                            <span className="font-medium">{fmtNum(col.sum, 4)}</span>
+                            <span className="text-muted-foreground">
+                              {t.sum}
+                            </span>
+                            <span className="font-medium">
+                              {fmtNum(col.sum, 4)}
+                            </span>
                           </div>
                         )}
                         {col.min_length && (
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">{t.minLen}</span>
-                            <span className="font-medium">{fmt(col.min_length)}</span>
+                            <span className="text-muted-foreground">
+                              {t.minLen}
+                            </span>
+                            <span className="font-medium">
+                              {fmt(col.min_length)}
+                            </span>
                           </div>
                         )}
                         {col.max_length && (
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">{t.maxLen}</span>
-                            <span className="font-medium">{fmt(col.max_length)}</span>
+                            <span className="text-muted-foreground">
+                              {t.maxLen}
+                            </span>
+                            <span className="font-medium">
+                              {fmt(col.max_length)}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -285,7 +342,9 @@ export function DataProfilePanel({ filePath, delimiter, isVisible, onClose }: Da
                 })}
                 {filteredColumns.length === 0 && search && (
                   <div className="text-center py-6">
-                    <p className="text-xs text-muted-foreground">{t.noFieldsMatch} "{search}"</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t.noFieldsMatch} "{search}"
+                    </p>
                   </div>
                 )}
               </div>

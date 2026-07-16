@@ -1,4 +1,10 @@
-import React, { useCallback, useMemo, useState, useRef, useEffect } from "react";
+import React, {
+  useCallback,
+  useMemo,
+  useState,
+  useRef,
+  useEffect,
+} from "react";
 import ReactFlow, {
   Node,
   Edge,
@@ -14,7 +20,10 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import { nodeTypes } from "@/components/panel/nodes";
 import { CoordinateGrid } from "@/components/panel/CoordinateGrid";
-import { getLayoutedElements, createEdgeConfig } from "@/components/panel/utils/layout";
+import {
+  getLayoutedElements,
+  createEdgeConfig,
+} from "@/components/panel/utils/layout";
 import {
   getCutIntersectionPoints,
   generateCutClipPaths,
@@ -45,13 +54,28 @@ interface FlowPanelProps {
   onOpenBatchFilter: (x: number, y: number) => void;
   onOpenPivotDialog: (x: number, y: number) => void;
   onOpenDateTransformDialog: (col: number, x: number, y: number) => void;
-  onOpenSliceDialog: (col: number, x: number, y: number, sliceType?: string) => void;
+  onOpenSliceDialog: (
+    col: number,
+    x: number,
+    y: number,
+    sliceType?: string,
+  ) => void;
   onOpenReplaceDialog: (col: number, x: number, y: number) => void;
   onOpenWindowDialog: (col: number, x: number, y: number) => void;
   onOpenPadDialog: (col: number, x: number, y: number, padType: string) => void;
   onOpenSortDialog: (col: number, x: number, y: number) => void;
-  onOpenTextTransformDialog: (col: number, x: number, y: number, transformType?: TextTransformType) => void;
-  onOpenNumberTransformDialog: (col: number, x: number, y: number, transformType?: NumberTransformType) => void;
+  onOpenTextTransformDialog: (
+    col: number,
+    x: number,
+    y: number,
+    transformType?: TextTransformType,
+  ) => void;
+  onOpenNumberTransformDialog: (
+    col: number,
+    x: number,
+    y: number,
+    transformType?: NumberTransformType,
+  ) => void;
   onTableRename: (col: number, newName: string) => void;
   onSave: () => void;
   onTableDelete?: () => void;
@@ -60,6 +84,7 @@ interface FlowPanelProps {
   onInputPositionChange?: (position: { x: number; y: number }) => void;
   savedEdges?: PipelineEdge[];
   savedInputPosition?: { x: number; y: number };
+  reactFlowInstanceRef?: React.RefObject<any>;
 }
 
 export function FlowPanel({
@@ -90,34 +115,64 @@ export function FlowPanel({
   onInputPositionChange,
   savedEdges,
   savedInputPosition,
+  reactFlowInstanceRef,
 }: FlowPanelProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+
+  // Store callbacks in refs to avoid unnecessary re-layout
+  const onStepClickRef = useRef(onStepClick);
+  onStepClickRef.current = onStepClick;
+  const onStepRemoveRef = useRef(onStepRemove);
+  onStepRemoveRef.current = onStepRemove;
+  const onStepAliasUpdateRef = useRef(onStepAliasUpdate);
+  onStepAliasUpdateRef.current = onStepAliasUpdate;
+  const onSaveRef = useRef(onSave);
+  onSaveRef.current = onSave;
+  const onTableRenameRef = useRef(onTableRename);
+  onTableRenameRef.current = onTableRename;
+  const onTableDeleteRef = useRef(onTableDelete);
+  onTableDeleteRef.current = onTableDelete;
 
   // 切水果功能状态
   const [cutPath, setCutPath] = useState<{ x: number; y: number }[]>([]);
   const [isCutting, setIsCutting] = useState(false);
   const [isClosingCut, setIsClosingCut] = useState(false);
-  const [cutStartPoint, setCutStartPoint] = useState<{ x: number; y: number } | null>(null);
+  const [cutStartPoint, setCutStartPoint] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   // 被切元素的动画状态
   const [cutNodes, setCutNodes] = useState<Set<string>>(new Set());
   const [cutEdges, setCutEdges] = useState<Set<string>>(new Set());
   // 切割部分信息(用于自由坠落动画)
   const [cutParts, setCutParts] = useState<CutPartInfo[]>([]);
   // 实时高亮状态 - 用于显示即将被删除的元素
-  const [pendingDeleteNodes, setPendingDeleteNodes] = useState<Set<string>>(new Set());
-  const [pendingDeleteEdges, setPendingDeleteEdges] = useState<Set<string>>(new Set());
+  const [pendingDeleteNodes, setPendingDeleteNodes] = useState<Set<string>>(
+    new Set(),
+  );
+  const [pendingDeleteEdges, setPendingDeleteEdges] = useState<Set<string>>(
+    new Set(),
+  );
 
   // 画布搜索状态
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
+  const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(
+    null,
+  );
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // 右键连接功能状态
   const [isConnecting, setIsConnecting] = useState(false);
-  const [connectSourceNode, setConnectSourceNode] = useState<string | null>(null);
-  const [connectPath, setConnectPath] = useState<{ x: number; y: number }[]>([]);
-  const [connectTargetNode, setConnectTargetNode] = useState<string | null>(null);
+  const [connectSourceNode, setConnectSourceNode] = useState<string | null>(
+    null,
+  );
+  const [connectPath, setConnectPath] = useState<{ x: number; y: number }[]>(
+    [],
+  );
+  const [connectTargetNode, setConnectTargetNode] = useState<string | null>(
+    null,
+  );
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -129,9 +184,12 @@ export function FlowPanel({
     setContextMenu(null);
   }, []);
 
-  const handleContextMenu = useCallback((stepId: string, x: number, y: number) => {
-    setContextMenu({ x, y, stepId });
-  }, []);
+  const handleContextMenu = useCallback(
+    (stepId: string, x: number, y: number) => {
+      setContextMenu({ x, y, stepId });
+    },
+    [],
+  );
 
   const [tableContextMenu, setTableContextMenu] = useState<{
     x: number;
@@ -143,13 +201,21 @@ export function FlowPanel({
     setTableContextMenu(null);
   }, []);
 
-  const handleTableContextMenu = useCallback((col: number, x: number, y: number) => {
-    setTableContextMenu({ x, y, col });
-  }, []);
+  const handleTableContextMenu = useCallback(
+    (col: number, x: number, y: number) => {
+      setTableContextMenu({ x, y, col });
+    },
+    [],
+  );
 
-  const handleTableRename = useCallback((col: number, newName: string) => {
-    onTableRename(col, newName);
-  }, [onTableRename]);
+  const handleTableRename = useCallback(
+    (col: number, newName: string) => {
+      onTableRename(col, newName);
+    },
+    [onTableRename],
+  );
+  const handleTableRenameRef = useRef(handleTableRename);
+  handleTableRenameRef.current = handleTableRename;
 
   // Ctrl+F 全局快捷键(HelpDialog 打开时由 HelpDialog 处理)
   useEffect(() => {
@@ -178,42 +244,72 @@ export function FlowPanel({
 
   const hasTable = headers.length > 0 && rows.length > 0;
 
-  const { nodes: initialNodes, edges: initialEdges } = useMemo(
-    () =>
-      getLayoutedElements(
-        hasTable,
-        steps,
-        headers,
-        rows,
-        columnWidths,
-        onStepClick,
-        onStepRemove,
-        onStepAliasUpdate,
-        handleContextMenu,
-        handleTableContextMenu,
-        handleTableRename,
-        onSave,
-        selectedStepId,
-        savedEdges,
-        savedInputPosition,
-        highlightedNodeId,
-        onTableDelete
-      ),
-    [hasTable, steps, headers, rows, columnWidths, selectedStepId, handleContextMenu, handleTableContextMenu, handleTableRename, onSave, savedEdges, savedInputPosition, highlightedNodeId, onTableDelete]
-  );
+  const [nodes, setNodes] = useNodesState([]);
+  const [edges, setEdges] = useEdgesState([]);
 
-  const [nodes, setNodes] = useNodesState(initialNodes);
-  const [edges, setEdges] = useEdgesState(initialEdges);
+  // Re-compute layout when data changes (not callbacks)
+  useEffect(() => {
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+      hasTable,
+      steps,
+      headers,
+      rows,
+      columnWidths,
+      onStepClickRef.current,
+      onStepRemoveRef.current,
+      onStepAliasUpdateRef.current,
+      handleContextMenu,
+      handleTableContextMenu,
+      handleTableRenameRef.current,
+      onSaveRef.current,
+      selectedStepId,
+      savedEdges,
+      savedInputPosition,
+      highlightedNodeId,
+      onTableDeleteRef.current,
+    );
+
+    const updatedNodes = layoutedNodes.map((newNode) => {
+      const existingNode = nodes.find((n) => n.id === newNode.id);
+      if (existingNode && existingNode.position) {
+        return { ...newNode, position: existingNode.position };
+      }
+      return newNode;
+    });
+
+    setNodes(updatedNodes);
+    setEdges(layoutedEdges);
+  }, [
+    hasTable,
+    steps,
+    headers,
+    rows,
+    columnWidths,
+    selectedStepId,
+    savedEdges,
+    savedInputPosition,
+    highlightedNodeId,
+  ]);
 
   // 搜索结果:匹配命令名称或 alias
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
-    const results: { step: PipelineStep | null; displayName: string; secondaryName: string | null; isTableNode?: boolean }[] = [];
+    const results: {
+      step: PipelineStep | null;
+      displayName: string;
+      secondaryName: string | null;
+      isTableNode?: boolean;
+    }[] = [];
 
     // 搜索 "Input Data" 节点(不搜索其列名)
     if ("input data".includes(query) || "input".includes(query)) {
-      results.push({ step: null, displayName: "Input Data", secondaryName: null, isTableNode: true });
+      results.push({
+        step: null,
+        displayName: "Input Data",
+        secondaryName: null,
+        isTableNode: true,
+      });
     }
 
     // 搜索 pipeline 步骤
@@ -235,40 +331,48 @@ export function FlowPanel({
   // 点击搜索结果:跳转到节点并高亮
   const reactFlowInstance = useRef<any>(null);
 
-  const handleSearchResultClick = useCallback((step: PipelineStep | null, isTable?: boolean) => {
-    const nodeId = isTable ? "table-node" : step!.id;
-    const node = nodes.find((n) => n.id === nodeId);
-    if (!node || !reactFlowInstance.current) return;
+  const handleSearchResultClick = useCallback(
+    (step: PipelineStep | null, isTable?: boolean) => {
+      const nodeId = isTable ? "table-node" : step!.id;
+      const node = nodes.find((n) => n.id === nodeId);
+      if (!node || !reactFlowInstance.current) return;
 
-    // 使用 setCenter 跳转到节点位置(居中显示)
-    const w = node.type === "tableNode" ? 260 : 110;
-    const h = node.type === "tableNode" ? 130 : 45;
-    reactFlowInstance.current.setCenter(
-      node.position.x + w,
-      node.position.y + h,
-      {
-        zoom: Math.max(reactFlowInstance.current.getZoom(), 0.8),
-        duration: 400,
-      }
-    );
+      // 使用 setCenter 跳转到节点位置(居中显示)
+      const w = node.type === "tableNode" ? 260 : 110;
+      const h = node.type === "tableNode" ? 130 : 45;
+      reactFlowInstance.current.setCenter(
+        node.position.x + w,
+        node.position.y + h,
+        {
+          zoom: Math.max(reactFlowInstance.current.getZoom(), 0.8),
+          duration: 400,
+        },
+      );
 
-    // 设置高亮节点(触发动画)
-    setHighlightedNodeId(nodeId);
-    setTimeout(() => setHighlightedNodeId(null), 1500);
+      // 设置高亮节点(触发动画)
+      setHighlightedNodeId(nodeId);
+      setTimeout(() => setHighlightedNodeId(null), 1500);
 
-    // 关闭搜索框
-    setIsSearchOpen(false);
-    setSearchQuery("");
-  }, [nodes]);
+      // 关闭搜索框
+      setIsSearchOpen(false);
+      setSearchQuery("");
+    },
+    [nodes],
+  );
 
   // 当savedEdges变化时(如从history导入),更新本地edges状态
   useEffect(() => {
     if (savedEdges && savedEdges.length > 0) {
       const newEdges: Edge[] = savedEdges.map((edge) => {
-        const sourceNode = nodes.find(n => n.id === edge.source);
-        const targetNode = nodes.find(n => n.id === edge.target);
+        const sourceNode = nodes.find((n) => n.id === edge.source);
+        const targetNode = nodes.find((n) => n.id === edge.target);
 
-        const config = createEdgeConfig(edge.source, edge.target, sourceNode, targetNode);
+        const config = createEdgeConfig(
+          edge.source,
+          edge.target,
+          sourceNode,
+          targetNode,
+        );
         return { ...config, id: edge.id } as Edge;
       });
       setEdges(newEdges);
@@ -276,450 +380,544 @@ export function FlowPanel({
   }, [savedEdges, nodes]);
 
   // 碰撞检测函数
-  const detectAndDeleteElements = useCallback((path: { x: number; y: number }[]) => {
-    if (path.length < 2 || !reactFlowWrapper.current) return;
+  const detectAndDeleteElements = useCallback(
+    (path: { x: number; y: number }[]) => {
+      if (path.length < 2 || !reactFlowWrapper.current) return;
 
-    // 将切水果路径转换为 ReactFlow 画布坐标
-    const rect = reactFlowWrapper.current.getBoundingClientRect();
-    const flowPath = path.map(p => {
-      return reactFlowInstance.current?.screenToFlowPosition({
-        x: p.x + rect.left,
-        y: p.y + rect.top
-      }) || { x: 0, y: 0 };
-    });
-
-    // 构建节点位置映射
-    const nodePositions = new Map<string, { x: number; y: number; width: number; height: number }>();
-    nodes.forEach(node => {
-      const nodeData = node as any;
-      nodePositions.set(node.id, {
-        x: node.position.x,
-        y: node.position.y,
-        width: nodeData.measured?.width || 200,
-        height: nodeData.measured?.height || 80,
+      // 将切水果路径转换为 ReactFlow 画布坐标
+      const rect = reactFlowWrapper.current.getBoundingClientRect();
+      const flowPath = path.map((p) => {
+        return (
+          reactFlowInstance.current?.screenToFlowPosition({
+            x: p.x + rect.left,
+            y: p.y + rect.top,
+          }) || { x: 0, y: 0 }
+        );
       });
-    });
 
-    // 检测连线碰撞
-    const edgesToDelete: string[] = [];
-    const edgeTargets = new Set<string>();
+      // 构建节点位置映射
+      const nodePositions = new Map<
+        string,
+        { x: number; y: number; width: number; height: number }
+      >();
+      nodes.forEach((node) => {
+        const nodeData = node as any;
+        nodePositions.set(node.id, {
+          x: node.position.x,
+          y: node.position.y,
+          width: nodeData.measured?.width || 200,
+          height: nodeData.measured?.height || 80,
+        });
+      });
 
-    edges.forEach(edge => {
-      const sourcePos = nodePositions.get(edge.source);
-      const targetPos = nodePositions.get(edge.target);
+      // 检测连线碰撞
+      const edgesToDelete: string[] = [];
+      const edgeTargets = new Set<string>();
 
-      if (!sourcePos || !targetPos) return;
+      edges.forEach((edge) => {
+        const sourcePos = nodePositions.get(edge.source);
+        const targetPos = nodePositions.get(edge.target);
 
-      const edgeStart = {
-        x: sourcePos.x + sourcePos.width,
-        y: sourcePos.y + sourcePos.height / 2,
-      };
-      const edgeEnd = {
-        x: targetPos.x,
-        y: targetPos.y + targetPos.height / 2,
-      };
+        if (!sourcePos || !targetPos) return;
 
-      for (let i = 0; i < flowPath.length - 1; i++) {
-        const p1 = flowPath[i];
-        const p2 = flowPath[i + 1];
+        const edgeStart = {
+          x: sourcePos.x + sourcePos.width,
+          y: sourcePos.y + sourcePos.height / 2,
+        };
+        const edgeEnd = {
+          x: targetPos.x,
+          y: targetPos.y + targetPos.height / 2,
+        };
 
-        if (linesIntersect(
-          p1.x, p1.y, p2.x, p2.y,
-          edgeStart.x, edgeStart.y, edgeEnd.x, edgeEnd.y
-        )) {
-          edgesToDelete.push(edge.id);
-          edgeTargets.add(edge.target);
-          break;
-        }
+        for (let i = 0; i < flowPath.length - 1; i++) {
+          const p1 = flowPath[i];
+          const p2 = flowPath[i + 1];
 
-        const dist1 = pointToLineDistance(p1, edgeStart, edgeEnd);
-        const dist2 = pointToLineDistance(p2, edgeStart, edgeEnd);
-        if (dist1 < 20 || dist2 < 20) {
-          if (!edgesToDelete.includes(edge.id)) {
+          if (
+            linesIntersect(
+              p1.x,
+              p1.y,
+              p2.x,
+              p2.y,
+              edgeStart.x,
+              edgeStart.y,
+              edgeEnd.x,
+              edgeEnd.y,
+            )
+          ) {
             edgesToDelete.push(edge.id);
             edgeTargets.add(edge.target);
+            break;
           }
-        }
-      }
-    });
 
-    // 检测节点碰撞
-    const nodesToDelete: string[] = [];
-
-    nodes.forEach(node => {
-      if (node.id === 'table-node') return;
-      if (edgeTargets.has(node.id)) return;
-
-      const nodePos = nodePositions.get(node.id);
-      if (!nodePos) return;
-
-      const nodeRect = {
-        left: nodePos.x,
-        right: nodePos.x + nodePos.width,
-        top: nodePos.y,
-        bottom: nodePos.y + nodePos.height,
-      };
-
-      for (let i = 0; i < flowPath.length - 1; i++) {
-        const p1 = flowPath[i];
-        const p2 = flowPath[i + 1];
-
-        if (lineIntersectsRect(p1, p2, nodeRect as DOMRect)) {
-          nodesToDelete.push(node.id);
-          break;
-        }
-      }
-    });
-
-    // 添加切水果动画效果
-    if (edgesToDelete.length > 0 || nodesToDelete.length > 0) {
-      const newCutEdges = new Set(cutEdges);
-      edgesToDelete.forEach(id => newCutEdges.add(id));
-      setCutEdges(newCutEdges);
-
-      const newCutNodes = new Set(cutNodes);
-      nodesToDelete.forEach(id => newCutNodes.add(id));
-      setCutNodes(newCutNodes);
-
-      // 为被切节点计算切割部分(自由坠落动画)
-      const fallVec = calculateFallVector(path);
-      const newCutParts: CutPartInfo[] = [];
-
-      nodesToDelete.forEach(nodeId => {
-        const nodePos = nodePositions.get(nodeId);
-        if (!nodePos) return;
-
-        const localStart = { x: flowPath[0].x - nodePos.x, y: flowPath[0].y - nodePos.y };
-        const localEnd = { x: flowPath[flowPath.length - 1].x - nodePos.x, y: flowPath[flowPath.length - 1].y - nodePos.y };
-
-        const rect = { x: 0, y: 0, width: nodePos.width, height: nodePos.height };
-        const intersection = getCutIntersectionPoints(localStart, localEnd, rect);
-
-        if (intersection) {
-          const { partA, partB } = generateCutClipPaths(intersection.p1, intersection.p2, rect);
-
-          newCutParts.push({
-            nodeId,
-            partIndex: 0,
-            clipPath: partA,
-            fallDx: fallVec.dx,
-            fallDy: fallVec.dy,
-            fallRotation: fallVec.rotation,
-          });
-          newCutParts.push({
-            nodeId,
-            partIndex: 1,
-            clipPath: partB,
-            fallDx: -fallVec.dx * 0.6,
-            fallDy: fallVec.dy * 1.2,
-            fallRotation: -fallVec.rotation,
-          });
+          const dist1 = pointToLineDistance(p1, edgeStart, edgeEnd);
+          const dist2 = pointToLineDistance(p2, edgeStart, edgeEnd);
+          if (dist1 < 20 || dist2 < 20) {
+            if (!edgesToDelete.includes(edge.id)) {
+              edgesToDelete.push(edge.id);
+              edgeTargets.add(edge.target);
+            }
+          }
         }
       });
 
-      setCutParts(newCutParts);
+      // 检测节点碰撞
+      const nodesToDelete: string[] = [];
 
-      // 动画完成后删除元素
-      setTimeout(() => {
-        if (edgesToDelete.length > 0) {
-          const updatedEdges = edges.filter(edge => !edgesToDelete.includes(edge.id));
-          setEdges(updatedEdges);
-          if (onEdgesChange) {
-            const pipelineEdges = updatedEdges
-              .filter((e) => e.source && e.target)
-              .map((e) => ({ id: e.id, source: e.source, target: e.target }));
-            onEdgesChange(pipelineEdges);
+      nodes.forEach((node) => {
+        if (node.id === "table-node") return;
+        if (edgeTargets.has(node.id)) return;
+
+        const nodePos = nodePositions.get(node.id);
+        if (!nodePos) return;
+
+        const nodeRect = {
+          left: nodePos.x,
+          right: nodePos.x + nodePos.width,
+          top: nodePos.y,
+          bottom: nodePos.y + nodePos.height,
+        };
+
+        for (let i = 0; i < flowPath.length - 1; i++) {
+          const p1 = flowPath[i];
+          const p2 = flowPath[i + 1];
+
+          if (lineIntersectsRect(p1, p2, nodeRect as DOMRect)) {
+            nodesToDelete.push(node.id);
+            break;
           }
         }
+      });
 
-        if (nodesToDelete.length > 0) {
-          onStepRemove(nodesToDelete);
-        }
+      // 添加切水果动画效果
+      if (edgesToDelete.length > 0 || nodesToDelete.length > 0) {
+        const newCutEdges = new Set(cutEdges);
+        edgesToDelete.forEach((id) => newCutEdges.add(id));
+        setCutEdges(newCutEdges);
 
-        setCutEdges(new Set());
-        setCutNodes(new Set());
-        setCutParts([]);
-      }, 700);
-    }
-  }, [edges, nodes, setEdges, onStepRemove, onEdgesChange, cutEdges, cutNodes]);
+        const newCutNodes = new Set(cutNodes);
+        nodesToDelete.forEach((id) => newCutNodes.add(id));
+        setCutNodes(newCutNodes);
 
-  // 判断点击位置是否在节点上
-  const getNodeAtPosition = useCallback((clientX: number, clientY: number): string | null => {
-    if (!reactFlowWrapper.current || !reactFlowInstance.current) return null;
+        // 为被切节点计算切割部分(自由坠落动画)
+        const fallVec = calculateFallVector(path);
+        const newCutParts: CutPartInfo[] = [];
 
-    const flowPos = reactFlowInstance.current.screenToFlowPosition({ x: clientX, y: clientY });
-
-    for (const node of nodes) {
-      const nodeData = node as any;
-      const width = nodeData.measured?.width || 200;
-      const height = nodeData.measured?.height || 80;
-
-      if (
-        flowPos.x >= node.position.x &&
-        flowPos.x <= node.position.x + width &&
-        flowPos.y >= node.position.y &&
-        flowPos.y <= node.position.y + height
-      ) {
-        return node.id;
-      }
-    }
-    return null;
-  }, [nodes]);
-
-  // 右键按下 - 开始连接或切水果
-  const handleCutStart = useCallback((e: React.MouseEvent) => {
-    if (e.button === 2) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const clickedNode = getNodeAtPosition(e.clientX, e.clientY);
-
-      if (clickedNode && clickedNode !== 'table-node') {
-        setIsConnecting(true);
-        setConnectSourceNode(clickedNode);
-        if (reactFlowWrapper.current) {
-          const rect = reactFlowWrapper.current.getBoundingClientRect();
-          setConnectPath([{ x: e.clientX - rect.left, y: e.clientY - rect.top }]);
-        }
-      } else {
-        setIsCutting(true);
-        setIsClosingCut(false);
-        if (reactFlowWrapper.current) {
-          const rect = reactFlowWrapper.current.getBoundingClientRect();
-          const startPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-          setCutStartPoint(startPoint);
-          setCutPath([startPoint]);
-        }
-      }
-    }
-  }, [getNodeAtPosition]);
-
-  // 右键移动 - 连接模式或切水果模式
-  const handleCutMove = useCallback((e: React.MouseEvent) => {
-    if (isConnecting && reactFlowWrapper.current) {
-      const rect = reactFlowWrapper.current.getBoundingClientRect();
-      setConnectPath(prev => [...prev.slice(-20), { x: e.clientX - rect.left, y: e.clientY - rect.top }]);
-
-      const hoveredNode = getNodeAtPosition(e.clientX, e.clientY);
-      if (hoveredNode && hoveredNode !== connectSourceNode) {
-        setConnectTargetNode(hoveredNode);
-      } else {
-        setConnectTargetNode(null);
-      }
-    } else if (isCutting && !isClosingCut && reactFlowWrapper.current) {
-      const rect = reactFlowWrapper.current.getBoundingClientRect();
-      const newPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      if (cutStartPoint) {
-        setCutPath([cutStartPoint, newPoint]);
-      }
-
-      // 实时碰撞检测 - 更新待删除元素高亮
-      if (cutPath.length >= 2 && reactFlowInstance.current) {
-        const flowPath = cutPath.map(p => reactFlowInstance.current!.screenToFlowPosition({
-          x: p.x + rect.left,
-          y: p.y + rect.top
-        }));
-
-        const nodePositions = new Map<string, { x: number; y: number; width: number; height: number }>();
-        nodes.forEach(node => {
-          const nodeData = node as any;
-          nodePositions.set(node.id, {
-            x: node.position.x,
-            y: node.position.y,
-            width: nodeData.measured?.width || 200,
-            height: nodeData.measured?.height || 80,
-          });
-        });
-
-        // 检测连线碰撞
-        const pendingEdges = new Set<string>();
-        const edgeTargets = new Set<string>();
-
-        edges.forEach(edge => {
-          const sourcePos = nodePositions.get(edge.source);
-          const targetPos = nodePositions.get(edge.target);
-          if (!sourcePos || !targetPos) return;
-
-          const edgeStart = { x: sourcePos.x + sourcePos.width, y: sourcePos.y + sourcePos.height / 2 };
-          const edgeEnd = { x: targetPos.x, y: targetPos.y + targetPos.height / 2 };
-
-          for (let i = 0; i < flowPath.length - 1; i++) {
-            const p1 = flowPath[i];
-            const p2 = flowPath[i + 1];
-
-            if (linesIntersect(p1.x, p1.y, p2.x, p2.y, edgeStart.x, edgeStart.y, edgeEnd.x, edgeEnd.y)) {
-              pendingEdges.add(edge.id);
-              edgeTargets.add(edge.target);
-              break;
-            }
-
-            const dist1 = pointToLineDistance(p1, edgeStart, edgeEnd);
-            const dist2 = pointToLineDistance(p2, edgeStart, edgeEnd);
-            if (dist1 < 20 || dist2 < 20) {
-              pendingEdges.add(edge.id);
-              edgeTargets.add(edge.target);
-              break;
-            }
-          }
-        });
-
-        // 检测节点碰撞
-        const pendingNodes = new Set<string>();
-        nodes.forEach(node => {
-          if (node.id === 'table-node' || edgeTargets.has(node.id)) return;
-
-          const nodePos = nodePositions.get(node.id);
+        nodesToDelete.forEach((nodeId) => {
+          const nodePos = nodePositions.get(nodeId);
           if (!nodePos) return;
 
-          const nodeRect = {
-            left: nodePos.x,
-            right: nodePos.x + nodePos.width,
-            top: nodePos.y,
-            bottom: nodePos.y + nodePos.height,
+          const localStart = {
+            x: flowPath[0].x - nodePos.x,
+            y: flowPath[0].y - nodePos.y,
+          };
+          const localEnd = {
+            x: flowPath[flowPath.length - 1].x - nodePos.x,
+            y: flowPath[flowPath.length - 1].y - nodePos.y,
           };
 
-          for (let i = 0; i < flowPath.length - 1; i++) {
-            if (lineIntersectsRect(flowPath[i], flowPath[i + 1], nodeRect as DOMRect)) {
-              pendingNodes.add(node.id);
-              break;
-            }
+          const rect = {
+            x: 0,
+            y: 0,
+            width: nodePos.width,
+            height: nodePos.height,
+          };
+          const intersection = getCutIntersectionPoints(
+            localStart,
+            localEnd,
+            rect,
+          );
+
+          if (intersection) {
+            const { partA, partB } = generateCutClipPaths(
+              intersection.p1,
+              intersection.p2,
+              rect,
+            );
+
+            newCutParts.push({
+              nodeId,
+              partIndex: 0,
+              clipPath: partA,
+              fallDx: fallVec.dx,
+              fallDy: fallVec.dy,
+              fallRotation: fallVec.rotation,
+            });
+            newCutParts.push({
+              nodeId,
+              partIndex: 1,
+              clipPath: partB,
+              fallDx: -fallVec.dx * 0.6,
+              fallDy: fallVec.dy * 1.2,
+              fallRotation: -fallVec.rotation,
+            });
           }
         });
 
-        setPendingDeleteEdges(pendingEdges);
-        setPendingDeleteNodes(pendingNodes);
+        setCutParts(newCutParts);
+
+        // 动画完成后删除元素
+        setTimeout(() => {
+          if (edgesToDelete.length > 0) {
+            const updatedEdges = edges.filter(
+              (edge) => !edgesToDelete.includes(edge.id),
+            );
+            setEdges(updatedEdges);
+            if (onEdgesChange) {
+              const pipelineEdges = updatedEdges
+                .filter((e) => e.source && e.target)
+                .map((e) => ({ id: e.id, source: e.source, target: e.target }));
+              onEdgesChange(pipelineEdges);
+            }
+          }
+
+          if (nodesToDelete.length > 0) {
+            onStepRemove(nodesToDelete);
+          }
+
+          setCutEdges(new Set());
+          setCutNodes(new Set());
+          setCutParts([]);
+        }, 700);
       }
-    }
-  }, [isCutting, isConnecting, getNodeAtPosition, connectSourceNode, cutPath, nodes, edges, cutStartPoint, isClosingCut]);
+    },
+    [edges, nodes, setEdges, onStepRemove, onEdgesChange, cutEdges, cutNodes],
+  );
+
+  // 判断点击位置是否在节点上
+  const getNodeAtPosition = useCallback(
+    (clientX: number, clientY: number): string | null => {
+      if (!reactFlowWrapper.current || !reactFlowInstance.current) return null;
+
+      const flowPos = reactFlowInstance.current.screenToFlowPosition({
+        x: clientX,
+        y: clientY,
+      });
+
+      for (const node of nodes) {
+        const nodeData = node as any;
+        const width = nodeData.measured?.width || 200;
+        const height = nodeData.measured?.height || 80;
+
+        if (
+          flowPos.x >= node.position.x &&
+          flowPos.x <= node.position.x + width &&
+          flowPos.y >= node.position.y &&
+          flowPos.y <= node.position.y + height
+        ) {
+          return node.id;
+        }
+      }
+      return null;
+    },
+    [nodes],
+  );
+
+  // 右键按下 - 开始连接或切水果
+  const handleCutStart = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button === 2) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const clickedNode = getNodeAtPosition(e.clientX, e.clientY);
+
+        if (clickedNode && clickedNode !== "table-node") {
+          setIsConnecting(true);
+          setConnectSourceNode(clickedNode);
+          if (reactFlowWrapper.current) {
+            const rect = reactFlowWrapper.current.getBoundingClientRect();
+            setConnectPath([
+              { x: e.clientX - rect.left, y: e.clientY - rect.top },
+            ]);
+          }
+        } else {
+          setIsCutting(true);
+          setIsClosingCut(false);
+          if (reactFlowWrapper.current) {
+            const rect = reactFlowWrapper.current.getBoundingClientRect();
+            const startPoint = {
+              x: e.clientX - rect.left,
+              y: e.clientY - rect.top,
+            };
+            setCutStartPoint(startPoint);
+            setCutPath([startPoint]);
+          }
+        }
+      }
+    },
+    [getNodeAtPosition],
+  );
+
+  // 右键移动 - 连接模式或切水果模式
+  const handleCutMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (isConnecting && reactFlowWrapper.current) {
+        const rect = reactFlowWrapper.current.getBoundingClientRect();
+        setConnectPath((prev) => [
+          ...prev.slice(-20),
+          { x: e.clientX - rect.left, y: e.clientY - rect.top },
+        ]);
+
+        const hoveredNode = getNodeAtPosition(e.clientX, e.clientY);
+        if (hoveredNode && hoveredNode !== connectSourceNode) {
+          setConnectTargetNode(hoveredNode);
+        } else {
+          setConnectTargetNode(null);
+        }
+      } else if (isCutting && !isClosingCut && reactFlowWrapper.current) {
+        const rect = reactFlowWrapper.current.getBoundingClientRect();
+        const newPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        if (cutStartPoint) {
+          setCutPath([cutStartPoint, newPoint]);
+        }
+
+        // 实时碰撞检测 - 更新待删除元素高亮
+        if (cutPath.length >= 2 && reactFlowInstance.current) {
+          const flowPath = cutPath.map((p) =>
+            reactFlowInstance.current!.screenToFlowPosition({
+              x: p.x + rect.left,
+              y: p.y + rect.top,
+            }),
+          );
+
+          const nodePositions = new Map<
+            string,
+            { x: number; y: number; width: number; height: number }
+          >();
+          nodes.forEach((node) => {
+            const nodeData = node as any;
+            nodePositions.set(node.id, {
+              x: node.position.x,
+              y: node.position.y,
+              width: nodeData.measured?.width || 200,
+              height: nodeData.measured?.height || 80,
+            });
+          });
+
+          // 检测连线碰撞
+          const pendingEdges = new Set<string>();
+          const edgeTargets = new Set<string>();
+
+          edges.forEach((edge) => {
+            const sourcePos = nodePositions.get(edge.source);
+            const targetPos = nodePositions.get(edge.target);
+            if (!sourcePos || !targetPos) return;
+
+            const edgeStart = {
+              x: sourcePos.x + sourcePos.width,
+              y: sourcePos.y + sourcePos.height / 2,
+            };
+            const edgeEnd = {
+              x: targetPos.x,
+              y: targetPos.y + targetPos.height / 2,
+            };
+
+            for (let i = 0; i < flowPath.length - 1; i++) {
+              const p1 = flowPath[i];
+              const p2 = flowPath[i + 1];
+
+              if (
+                linesIntersect(
+                  p1.x,
+                  p1.y,
+                  p2.x,
+                  p2.y,
+                  edgeStart.x,
+                  edgeStart.y,
+                  edgeEnd.x,
+                  edgeEnd.y,
+                )
+              ) {
+                pendingEdges.add(edge.id);
+                edgeTargets.add(edge.target);
+                break;
+              }
+
+              const dist1 = pointToLineDistance(p1, edgeStart, edgeEnd);
+              const dist2 = pointToLineDistance(p2, edgeStart, edgeEnd);
+              if (dist1 < 20 || dist2 < 20) {
+                pendingEdges.add(edge.id);
+                edgeTargets.add(edge.target);
+                break;
+              }
+            }
+          });
+
+          // 检测节点碰撞
+          const pendingNodes = new Set<string>();
+          nodes.forEach((node) => {
+            if (node.id === "table-node" || edgeTargets.has(node.id)) return;
+
+            const nodePos = nodePositions.get(node.id);
+            if (!nodePos) return;
+
+            const nodeRect = {
+              left: nodePos.x,
+              right: nodePos.x + nodePos.width,
+              top: nodePos.y,
+              bottom: nodePos.y + nodePos.height,
+            };
+
+            for (let i = 0; i < flowPath.length - 1; i++) {
+              if (
+                lineIntersectsRect(
+                  flowPath[i],
+                  flowPath[i + 1],
+                  nodeRect as DOMRect,
+                )
+              ) {
+                pendingNodes.add(node.id);
+                break;
+              }
+            }
+          });
+
+          setPendingDeleteEdges(pendingEdges);
+          setPendingDeleteNodes(pendingNodes);
+        }
+      }
+    },
+    [
+      isCutting,
+      isConnecting,
+      getNodeAtPosition,
+      connectSourceNode,
+      cutPath,
+      nodes,
+      edges,
+      cutStartPoint,
+      isClosingCut,
+    ],
+  );
 
   // 创建连线
-  const createEdge = useCallback((sourceId: string, targetId: string) => {
-    const sourceNode = nodes.find(n => n.id === sourceId);
-    const targetNode = nodes.find(n => n.id === targetId);
+  const createEdge = useCallback(
+    (sourceId: string, targetId: string) => {
+      const sourceNode = nodes.find((n) => n.id === sourceId);
+      const targetNode = nodes.find((n) => n.id === targetId);
 
-    const config = createEdgeConfig(sourceId, targetId, sourceNode, targetNode);
+      const config = createEdgeConfig(
+        sourceId,
+        targetId,
+        sourceNode,
+        targetNode,
+      );
 
-    setEdges((eds) => {
-      const existingEdge = eds.find(e => e.source === sourceId && e.target === targetId);
-      if (existingEdge) return eds;
+      setEdges((eds) => {
+        const existingEdge = eds.find(
+          (e) => e.source === sourceId && e.target === targetId,
+        );
+        if (existingEdge) return eds;
 
-      const newEdge: Edge = config;
-      const newEdges = [...eds, newEdge];
+        const newEdge: Edge = config;
+        const newEdges = [...eds, newEdge];
 
-      if (onEdgesChange) {
-        const pipelineEdges: PipelineEdge[] = newEdges
-          .filter((e) => e.source && e.target)
-          .map((e) => ({ id: e.id, source: e.source, target: e.target }));
-        onEdgesChange(pipelineEdges);
-      }
+        if (onEdgesChange) {
+          const pipelineEdges: PipelineEdge[] = newEdges
+            .filter((e) => e.source && e.target)
+            .map((e) => ({ id: e.id, source: e.source, target: e.target }));
+          onEdgesChange(pipelineEdges);
+        }
 
-      return newEdges;
-    });
-  }, [setEdges, onEdgesChange, nodes]);
+        return newEdges;
+      });
+    },
+    [setEdges, onEdgesChange, nodes],
+  );
 
   // 右键松开 - 完成连接或切水果
-  const handleCutEnd = useCallback((e: React.MouseEvent) => {
-    if (isConnecting) {
-      e.preventDefault();
-      e.stopPropagation();
+  const handleCutEnd = useCallback(
+    (e: React.MouseEvent) => {
+      if (isConnecting) {
+        e.preventDefault();
+        e.stopPropagation();
 
-      if (connectSourceNode && connectTargetNode && connectPath.length > 1) {
-        createEdge(connectSourceNode, connectTargetNode);
+        if (connectSourceNode && connectTargetNode && connectPath.length > 1) {
+          createEdge(connectSourceNode, connectTargetNode);
+        }
+
+        setIsConnecting(false);
+        setConnectSourceNode(null);
+        setConnectTargetNode(null);
+        setConnectPath([]);
+      } else if (isCutting) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (cutPath.length > 1) {
+          const currentPath = [...cutPath];
+          detectAndDeleteElements(currentPath);
+        }
+
+        setIsClosingCut(true);
+        setIsCutting(false);
+
+        setTimeout(() => {
+          setIsClosingCut(false);
+          setCutPath([]);
+          setCutStartPoint(null);
+          setPendingDeleteNodes(new Set());
+          setPendingDeleteEdges(new Set());
+        }, 150);
       }
-
-      setIsConnecting(false);
-      setConnectSourceNode(null);
-      setConnectTargetNode(null);
-      setConnectPath([]);
-    } else if (isCutting) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (cutPath.length > 1) {
-        const currentPath = [...cutPath];
-        detectAndDeleteElements(currentPath);
-      }
-
-      setIsClosingCut(true);
-      setIsCutting(false);
-
-      setTimeout(() => {
-        setIsClosingCut(false);
-        setCutPath([]);
-        setCutStartPoint(null);
-        setPendingDeleteNodes(new Set());
-        setPendingDeleteEdges(new Set());
-      }, 150);
-    }
-  }, [isCutting, isConnecting, cutPath, detectAndDeleteElements, connectSourceNode, connectTargetNode, connectPath, createEdge]);
+    },
+    [
+      isCutting,
+      isConnecting,
+      cutPath,
+      detectAndDeleteElements,
+      connectSourceNode,
+      connectTargetNode,
+      connectPath,
+      createEdge,
+    ],
+  );
 
   // 屏蔽默认右键菜单
   const handlePanelContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
   }, []);
 
-  useEffect(() => {
-    const { nodes: layoutedNodes } = getLayoutedElements(
-      hasTable,
-      steps,
-      headers,
-      rows,
-      columnWidths,
-      onStepClick,
-      onStepRemove,
-      onStepAliasUpdate,
-      handleContextMenu,
-      handleTableContextMenu,
-      handleTableRename,
-      onSave,
-      selectedStepId,
-      savedEdges,
-      savedInputPosition,
-      undefined,
-      onTableDelete
-    );
-
-    const updatedNodes = layoutedNodes.map((newNode) => {
-      const existingNode = nodes.find((n) => n.id === newNode.id);
-      if (existingNode && existingNode.position) {
-        return { ...newNode, position: existingNode.position };
-      }
-      return newNode;
-    });
-
-    setNodes(updatedNodes);
-  }, [hasTable, steps, headers, rows, columnWidths, selectedStepId, onStepClick, onStepRemove, onStepAliasUpdate, handleContextMenu, handleTableContextMenu, handleTableRename, onSave, setNodes, savedEdges, savedInputPosition, onTableDelete]);
-
   // 更新节点的 isCutting 属性、待删除高亮效果和切割部分
   useEffect(() => {
-    setNodes(prevNodes => prevNodes.map(node => ({
-      ...node,
-      data: {
-        ...node.data,
-        isCutting: cutNodes.has(node.id),
-        isPendingDelete: pendingDeleteNodes.has(node.id),
-        cutParts: cutParts.filter(p => p.nodeId === node.id),
-      },
-    })));
+    setNodes((prevNodes) =>
+      prevNodes.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          isCutting: cutNodes.has(node.id),
+          isPendingDelete: pendingDeleteNodes.has(node.id),
+          cutParts: cutParts.filter((p) => p.nodeId === node.id),
+        },
+      })),
+    );
   }, [cutNodes, pendingDeleteNodes, cutParts]);
 
   // 更新连线的切断效果和待删除高亮效果
   useEffect(() => {
     const rafId = requestAnimationFrame(() => {
-      setEdges(prevEdges => prevEdges.map(edge => {
-        const isCut = cutEdges.has(edge.id);
-        const isPending = pendingDeleteEdges.has(edge.id);
-        return {
-          ...edge,
-          style: {
-            ...edge.style,
-            strokeDasharray: isCut ? '10' : undefined,
-            animation: isCut ? 'cut-edge-animation 0.2s ease-out forwards' : undefined,
-            stroke: isPending && !isCut ? '#9a9aa6' : edge.style?.stroke,
-            filter: isPending && !isCut ? 'drop-shadow(0 0 6px rgba(154, 154, 166, 0.7))' : undefined,
-          },
-        };
-      }));
+      setEdges((prevEdges) =>
+        prevEdges.map((edge) => {
+          const isCut = cutEdges.has(edge.id);
+          const isPending = pendingDeleteEdges.has(edge.id);
+          return {
+            ...edge,
+            style: {
+              ...edge.style,
+              strokeDasharray: isCut ? "10" : undefined,
+              animation: isCut
+                ? "cut-edge-animation 0.2s ease-out forwards"
+                : undefined,
+              stroke: isPending && !isCut ? "#9a9aa6" : edge.style?.stroke,
+              filter:
+                isPending && !isCut
+                  ? "drop-shadow(0 0 6px rgba(154, 154, 166, 0.7))"
+                  : undefined,
+            },
+          };
+        }),
+      );
     });
     return () => cancelAnimationFrame(rafId);
   }, [cutEdges, pendingDeleteEdges]);
@@ -739,7 +937,7 @@ export function FlowPanel({
     (changes: NodeChange[]) => {
       setNodes((nds) => applyNodeChanges(changes, nds));
     },
-    [setNodes]
+    [setNodes],
   );
 
   const onNodeDragStop = useCallback(
@@ -764,7 +962,7 @@ export function FlowPanel({
         onInputPositionChange(inputPos);
       }
     },
-    [steps, onStepsChange, onInputPositionChange]
+    [steps, onStepsChange, onInputPositionChange],
   );
 
   const handleEdgesChange = useCallback(
@@ -780,17 +978,22 @@ export function FlowPanel({
         return updatedEdges;
       });
     },
-    [setEdges, onEdgesChange]
+    [setEdges, onEdgesChange],
   );
 
   const onConnect = useCallback(
     (connection: Connection) => {
       if (!connection.source || !connection.target) return;
 
-      const sourceNode = nodes.find(n => n.id === connection.source);
-      const targetNode = nodes.find(n => n.id === connection.target);
+      const sourceNode = nodes.find((n) => n.id === connection.source);
+      const targetNode = nodes.find((n) => n.id === connection.target);
 
-      const config = createEdgeConfig(connection.source, connection.target, sourceNode, targetNode);
+      const config = createEdgeConfig(
+        connection.source,
+        connection.target,
+        sourceNode,
+        targetNode,
+      );
 
       const newEdge: Edge = config;
 
@@ -827,7 +1030,9 @@ export function FlowPanel({
           .filter((s): s is PipelineStep => s !== undefined);
 
         if (reorderedSteps.length === steps.length) {
-          const orderChanged = reorderedSteps.some((s, i) => s.id !== steps[i].id);
+          const orderChanged = reorderedSteps.some(
+            (s, i) => s.id !== steps[i].id,
+          );
           if (orderChanged) {
             onStepsChange(reorderedSteps);
           }
@@ -843,7 +1048,7 @@ export function FlowPanel({
         return newEdges;
       });
     },
-    [steps, onStepsChange, setEdges, onEdgesChange, nodes]
+    [steps, onStepsChange, setEdges, onEdgesChange, nodes],
   );
 
   return (
@@ -873,7 +1078,10 @@ export function FlowPanel({
           style: { stroke: "var(--flow-line-color)", strokeWidth: 1.5 },
         }}
         proOptions={{ hideAttribution: true }}
-        onInit={(instance) => { reactFlowInstance.current = instance; }}
+        onInit={(instance) => {
+          reactFlowInstance.current = instance;
+          if (reactFlowInstanceRef) reactFlowInstanceRef.current = instance;
+        }}
       >
         <CoordinateGrid />
       </ReactFlow>
@@ -883,19 +1091,37 @@ export function FlowPanel({
         isOpen={isSearchOpen}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
-        onClose={() => { setIsSearchOpen(false); setSearchQuery(""); }}
-        onEnter={() => { if (searchResults.length > 0) handleSearchResultClick(searchResults[0].step, searchResults[0].isTableNode); }}
+        onClose={() => {
+          setIsSearchOpen(false);
+          setSearchQuery("");
+        }}
+        onEnter={() => {
+          if (searchResults.length > 0)
+            handleSearchResultClick(
+              searchResults[0].step,
+              searchResults[0].isTableNode,
+            );
+        }}
         searchResults={searchResults}
         onResultClick={handleSearchResultClick}
         searchInputRef={searchInputRef as React.RefObject<HTMLInputElement>}
       />
 
       {/* 切水果轨迹线 */}
-      <CutVisualization isCutting={isCutting} isClosingCut={isClosingCut} cutPath={cutPath} />
+      <CutVisualization
+        isCutting={isCutting}
+        isClosingCut={isClosingCut}
+        cutPath={cutPath}
+      />
 
       {tableContextMenu && (
         <ContextMenu
-          contextMenu={{ x: tableContextMenu.x, y: tableContextMenu.y, row: null, col: tableContextMenu.col }}
+          contextMenu={{
+            x: tableContextMenu.x,
+            y: tableContextMenu.y,
+            row: null,
+            col: tableContextMenu.col,
+          }}
           onClose={closeTableContextMenu}
           onOpenFilterDialog={onOpenFilterDialog}
           onOpenBatchFilter={(x, y) => onOpenBatchFilter(x, y)}

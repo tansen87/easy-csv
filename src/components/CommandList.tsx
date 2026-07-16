@@ -66,7 +66,7 @@ import {
   FileCodeCorner,
   type LucideIcon,
 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { XanCommand } from "@/types/xan";
 import { commandCategories } from "@/data/commands";
 import { useLanguage } from "@/i18n";
@@ -187,11 +187,16 @@ export function CommandList({
   onNewTabFromHistory,
   onDeleteHistory,
 }: CommandListProps) {
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>(
-    commandCategories.reduce((acc, category) => {
-      acc[category] = true;
-      return acc;
-    }, {} as Record<string, boolean>)
+  const [expandedCategories, setExpandedCategories] = useState<
+    Record<string, boolean>
+  >(
+    commandCategories.reduce(
+      (acc, category) => {
+        acc[category] = true;
+        return acc;
+      },
+      {} as Record<string, boolean>,
+    ),
   );
   const [isDragging, setIsDragging] = useState(false);
   const dragStateRef = useRef({
@@ -203,25 +208,42 @@ export function CommandList({
   const panelRef = useRef<HTMLDivElement>(null);
   const { language, t } = useLanguage();
 
-  const filteredCommands = commands.filter((command) => {
-    const query = searchQuery.toLowerCase();
-    const desc = language === "zh" ? command.descriptionCn : command.description;
-    return (
-      command.name.toLowerCase().includes(query) ||
-      desc.toLowerCase().includes(query) ||
-      command.category.toLowerCase().includes(query)
-    );
-  });
+  // Debounce search input 150ms
+  const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 150);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const groupedCommands = commandCategories.reduce((acc, category) => {
-    acc[category] = filteredCommands.filter((cmd) => cmd.category === category);
-    return acc;
-  }, {} as Record<string, XanCommand[]>);
+  const filteredCommands = useMemo(() => {
+    const query = debouncedQuery.toLowerCase();
+    return commands.filter((command) => {
+      const desc =
+        language === "zh" ? command.descriptionCn : command.description;
+      return (
+        command.name.toLowerCase().includes(query) ||
+        desc.toLowerCase().includes(query) ||
+        command.category.toLowerCase().includes(query)
+      );
+    });
+  }, [commands, debouncedQuery, language]);
+
+  const groupedCommands = useMemo(() => {
+    return commandCategories.reduce(
+      (acc, category) => {
+        acc[category] = filteredCommands.filter(
+          (cmd) => cmd.category === category,
+        );
+        return acc;
+      },
+      {} as Record<string, XanCommand[]>,
+    );
+  }, [filteredCommands]);
 
   const toggleCategory = (category: string) => {
-    setExpandedCategories(prev => ({
+    setExpandedCategories((prev) => ({
       ...prev,
-      [category]: !prev[category]
+      [category]: !prev[category],
     }));
   };
 
@@ -255,7 +277,10 @@ export function CommandList({
       let newY = dragStateRef.current.offsetY + deltaY;
 
       newX = Math.max(0, Math.min(window.innerWidth - panelWidth, newX));
-      newY = Math.max(toolbarHeight, Math.min(window.innerHeight - panelHeight, newY));
+      newY = Math.max(
+        toolbarHeight,
+        Math.min(window.innerHeight - panelHeight, newY),
+      );
 
       panelRef.current.style.left = `${newX}px`;
       panelRef.current.style.top = `${newY}px`;
@@ -285,7 +310,13 @@ export function CommandList({
       const rect = panelRef.current.getBoundingClientRect();
       const newX = Math.min(rect.left, window.innerWidth - 280);
       const panelHeight = panelRef.current.offsetHeight;
-      const newY = Math.max(100, Math.min(window.innerHeight - panelHeight, (window.innerHeight - panelHeight) / 2));
+      const newY = Math.max(
+        100,
+        Math.min(
+          window.innerHeight - panelHeight,
+          (window.innerHeight - panelHeight) / 2,
+        ),
+      );
       panelRef.current.style.left = `${newX}px`;
       panelRef.current.style.top = `${newY}px`;
       panelRef.current.style.transform = "none";
@@ -294,11 +325,8 @@ export function CommandList({
 
   if (!isVisible) return null;
 
-  const filteredHistory = historicalPipelines.filter(
-    (history) =>
-      history.name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()),
+  const filteredHistory = historicalPipelines.filter((history) =>
+    history.name.toLowerCase().includes(debouncedQuery.toLowerCase()),
   );
 
   return (
@@ -307,9 +335,9 @@ export function CommandList({
       style={{
         left: 0,
         top: "50%",
-        transform: "translateY(-50%)"
+        transform: "translateY(-50%)",
       }}
-      className={`fixed w-[280px] h-[500px] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isDragging ? "shadow-2xl" : ""}`}
+      className={`fixed w-[min(280px,calc(100vw-16px))] h-[min(500px,calc(100vh-80px))] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isDragging ? "shadow-2xl" : ""}`}
       onContextMenu={(e) => e.preventDefault()}
     >
       <div
@@ -319,20 +347,22 @@ export function CommandList({
         <div className="flex items-center gap-2">
           <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
             <button
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all ${activePanel === "commands"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                activePanel === "commands"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
               onClick={() => onActivePanelChange("commands")}
             >
               <Terminal className="h-3.5 w-3.5" />
               {t.cmds}
             </button>
             <button
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all ${activePanel === "history"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                activePanel === "history"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
               onClick={() => onActivePanelChange("history")}
             >
               <History className="h-3.5 w-3.5" />
@@ -355,9 +385,7 @@ export function CommandList({
           <input
             type="text"
             placeholder={
-              activePanel === "commands"
-                ? t.searchCommand
-                : t.searchHistory
+              activePanel === "commands" ? t.searchCommand : t.searchHistory
             }
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -393,7 +421,8 @@ export function CommandList({
                   {expandedCategories[category] && (
                     <div className="mt-2 space-y-1.5 px-1">
                       {categoryCommands.map((command) => {
-                        const CommandIcon = commandIconMap[command.name] || Terminal;
+                        const CommandIcon =
+                          commandIconMap[command.name] || Terminal;
                         return (
                           <Card
                             key={command.id}
@@ -401,13 +430,20 @@ export function CommandList({
                           >
                             <div className="p-3">
                               <div className="flex items-center justify-between gap-3">
-                                <div className="flex-1 min-w-0" onClick={() => onCommandClick(command)}>
+                                <div
+                                  className="flex-1 min-w-0"
+                                  onClick={() => onCommandClick(command)}
+                                >
                                   <div className="flex items-center gap-2">
                                     <CommandIcon className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
-                                    <span className="font-semibold text-sm">{command.name}</span>
+                                    <span className="font-semibold text-sm">
+                                      {command.name}
+                                    </span>
                                   </div>
                                   <div className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2 mt-1">
-                                    {language === "zh" ? command.descriptionCn : command.description}
+                                    {language === "zh"
+                                      ? command.descriptionCn
+                                      : command.description}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -440,7 +476,9 @@ export function CommandList({
                   <div className="w-12 h-12 mx-auto mb-3 bg-muted/50 rounded-xl flex items-center justify-center">
                     <Sparkles className="h-6 w-6 text-muted-foreground/50" />
                   </div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">{t.noHistoryFound}</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    {t.noHistoryFound}
+                  </p>
                   <p className="text-xs text-muted-foreground/70">
                     {searchQuery
                       ? t.tryDifferentSearch
@@ -499,7 +537,9 @@ export function CommandList({
               <div className="w-12 h-12 mx-auto mb-3 bg-muted/50 rounded-xl flex items-center justify-center">
                 <Sparkles className="h-6 w-6 text-muted-foreground/50" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">{t.noCommandsFound}</p>
+              <p className="text-sm font-medium text-muted-foreground mb-1">
+                {t.noCommandsFound}
+              </p>
               <p className="text-xs text-muted-foreground/70">
                 {t.tryDifferentSearch}
               </p>

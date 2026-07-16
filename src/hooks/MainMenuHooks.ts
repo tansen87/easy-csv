@@ -67,7 +67,7 @@ interface MainMenuHooksProps {
       status: "executing" | "completed" | "error";
     } | null>
   >;
-  progressHideTimerRef: React.MutableRefObject<ReturnType<
+  progressHideTimerRef: React.RefObject<ReturnType<
     typeof setTimeout
   > | null>;
   loadCsvData: (
@@ -645,6 +645,30 @@ export function MainMenuHooks({
       if (executableSteps.length === 0) {
         showToast(
           "No executable steps found in pipeline - add other commands before output",
+          "warning",
+        );
+        setIsExecuting(false);
+        return;
+      }
+
+      // Validate required parameters before execution
+      const missingParams: string[] = [];
+      for (const step of executableSteps) {
+        for (const param of step.command.parameters) {
+          if (
+            param.required &&
+            (step.parameters[param.name] === undefined ||
+              step.parameters[param.name] === "")
+          ) {
+            missingParams.push(
+              `${step.alias || step.command.name} → ${param.name}`,
+            );
+          }
+        }
+      }
+      if (missingParams.length > 0) {
+        showToast(
+          `Missing required parameters: ${missingParams.join(", ")}`,
           "warning",
         );
         setIsExecuting(false);

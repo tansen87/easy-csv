@@ -1,4 +1,15 @@
-import { Trash2, Info, CheckCircle, AlertCircle, XCircle, TextQuote, FileText, Copy, Check, X } from "lucide-react";
+import {
+  Trash2,
+  Info,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+  TextQuote,
+  FileText,
+  Copy,
+  Check,
+  X,
+} from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -87,7 +98,7 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
     }
 
     const toolbarHeight = 56;
-    const panelWidth = 600;
+    const panelWidth = panelRef.current?.offsetWidth || 600;
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDraggingRef.current || !panelRef.current) return;
@@ -99,7 +110,10 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
       let newY = dragStateRef.current.offsetY + deltaY;
 
       newX = Math.max(0, Math.min(window.innerWidth - panelWidth, newX));
-      newY = Math.max(toolbarHeight, Math.min(window.innerHeight - height, newY));
+      newY = Math.max(
+        toolbarHeight,
+        Math.min(window.innerHeight - height, newY),
+      );
 
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
@@ -130,8 +144,8 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
 
   useEffect(() => {
     if (isVisible && panelRef.current) {
-      const panelWidth = 600;
-      const newX = window.innerWidth - panelWidth;
+      const panelWidth = panelRef.current.offsetWidth || 600;
+      const newX = window.innerWidth - panelWidth - 16;
       panelRef.current.style.left = `${newX}px`;
       panelRef.current.style.top = `100px`;
     }
@@ -143,11 +157,11 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
     <div
       ref={panelRef}
       style={{
-        left: window.innerWidth - 600,
+        left: window.innerWidth - 616,
         top: 100,
-        height: height
+        height: height,
       }}
-      className={`fixed w-[600px] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isDraggingRef ? "shadow-2xl" : ""}`}
+      className={`fixed w-[min(600px,calc(100vw-32px))] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isDraggingRef ? "shadow-2xl" : ""}`}
       onContextMenu={(e) => e.preventDefault()}
     >
       <div
@@ -187,7 +201,9 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
               <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
                 <TextQuote className="h-8 w-8 text-muted-foreground/50" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">{t.noLogsYet}</p>
+              <p className="text-sm font-medium text-muted-foreground mb-1">
+                {t.noLogsYet}
+              </p>
               <p className="text-xs text-muted-foreground/70">
                 {t.executePipelineHint}
               </p>
@@ -200,10 +216,14 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
                   className={`p-3 border group ${getLogBgColor(log.type)} hover:shadow-sm transition-all duration-200`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex-shrink-0">{getLogIcon(log.type)}</div>
+                    <div className="mt-0.5 flex-shrink-0">
+                      {getLogIcon(log.type)}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5">
-                        <span className={`text-xs font-bold uppercase tracking-wider ${getLogColor(log.type)}`}>
+                        <span
+                          className={`text-xs font-bold uppercase tracking-wider ${getLogColor(log.type)}`}
+                        >
                           {log.type}
                         </span>
                         <span className="text-xs text-muted-foreground/70">

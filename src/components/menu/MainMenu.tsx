@@ -16,7 +16,6 @@ import {
   BarChart3,
 } from "lucide-react";
 import { PipelineStep } from "@/types/xan";
-import { useKeyboardShortcuts } from "@/hooks/KeyboardShortcuts";
 import { useLanguage } from "@/i18n";
 import { Tooltip } from "@/components/ui/tooltip";
 
@@ -38,9 +37,6 @@ interface MainMenuProps {
   onHelp: () => void;
   onCheckUpdate: () => void;
   onShowSettings: () => void;
-  onCommands: () => void;
-  onLogs: () => void;
-  onDataProfile: () => void;
   isExecuting: boolean;
   isCheckingUpdate: boolean;
   currentPipelineLength: number;
@@ -71,9 +67,6 @@ export function MainMenu({
   onHelp,
   onCheckUpdate,
   onShowSettings,
-  onCommands,
-  onLogs,
-  onDataProfile,
   isExecuting,
   isCheckingUpdate,
   currentPipelineLength,
@@ -86,30 +79,6 @@ export function MainMenu({
   hasInputFile,
 }: MainMenuProps) {
   const { t } = useLanguage();
-  useKeyboardShortcuts(
-    {
-      onOpenFile,
-      onOpenNewTabWithFile,
-      onSavePipeline,
-      onImportPipeline,
-      onExportPipeline,
-      onUndo,
-      onRedo,
-      onExecute,
-      onHelp,
-      onCheckUpdate,
-      onShowSettings,
-      onCommands,
-      onLogs,
-      onDataProfile,
-    },
-    {
-      undoStackLength: undoStack.length,
-      redoStackLength: redoStack.length,
-      currentPipelineLength,
-      isExecuting,
-    },
-  );
 
   return (
     <div className="relative w-full">
@@ -270,6 +239,7 @@ export function MainMenu({
           <Tooltip content={t.commandPanel} side="bottom">
             <button
               onClick={onToggleCommandPanel}
+              aria-label={t.commandPanel}
               className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 showCommandPanel
                   ? "text-primary bg-primary/10"
@@ -282,6 +252,7 @@ export function MainMenu({
           <Tooltip content={t.logPanel} side="bottom">
             <button
               onClick={onToggleLogPanel}
+              aria-label={t.logPanel}
               className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 showLogPanel
                   ? "text-primary bg-primary/10"
@@ -295,6 +266,7 @@ export function MainMenu({
             <Tooltip content={t.dataProfilePanel} side="bottom">
               <button
                 onClick={onToggleDataProfile}
+                aria-label={t.dataProfilePanel}
                 className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
                   showDataProfile
                     ? "text-primary bg-primary/10"
@@ -309,6 +281,7 @@ export function MainMenu({
             <button
               onClick={onCheckUpdate}
               disabled={isCheckingUpdate}
+              aria-label={t.checkUpdate}
               className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 isCheckingUpdate
                   ? "text-primary opacity-70"
@@ -325,6 +298,7 @@ export function MainMenu({
           <Tooltip content={t.help} side="bottom">
             <button
               onClick={onHelp}
+              aria-label={t.help}
               className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
             >
               <MessageCircleQuestionMark className="h-4 w-4" />
@@ -333,6 +307,7 @@ export function MainMenu({
           <Tooltip content={t.settings} side="bottom">
             <button
               onClick={onShowSettings}
+              aria-label={t.settings}
               className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
             >
               <Settings className="h-4 w-4" />
