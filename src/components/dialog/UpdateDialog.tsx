@@ -1,3 +1,4 @@
+import { useEffect, useRef, useCallback } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -24,6 +25,41 @@ export function UpdateDialog({
   currentVersion,
 }: UpdateDialogProps) {
   const { t } = useLanguage();
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    },
+    [onClose],
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      dialogRef.current?.focus();
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, handleKeyDown]);
+
   if (!isOpen) return null;
 
   const handleOpenRelease = () => {
@@ -31,26 +67,28 @@ export function UpdateDialog({
     onClose();
   };
 
-  const handleClose = () => {
-    onClose();
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
         className="absolute inset-0 bg-black/20 backdrop-blur-xs"
+        onClick={onClose}
         onContextMenu={(e) => e.preventDefault()}
       />
       <div
-        className="relative bg-card rounded-lg shadow-xl w-full max-w-2xl overflow-hidden"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+        className="relative bg-card rounded-lg shadow-xl w-full max-w-2xl overflow-hidden outline-none"
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
       >
         <div className="flex items-center justify-between px-4 py-3 bg-muted/20">
           <h3 className="text-sm font-semibold text-foreground">{t.checkForUpdates}</h3>
           <button
-            onClick={handleClose}
+            onClick={onClose}
             className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+            aria-label="Close"
           >
             <X className="h-4 w-4" />
           </button>
@@ -125,7 +163,7 @@ export function UpdateDialog({
           <Button
             variant="secondary"
             size="sm"
-            onClick={handleClose}
+            onClick={onClose}
           >
             {t.cancel}
           </Button>

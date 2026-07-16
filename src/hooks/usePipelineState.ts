@@ -2,17 +2,24 @@ import { useState, useCallback } from "react";
 import { PipelineStep, PipelineEdge, PipelineTab } from "@/types/xan";
 import { formatDateTime } from "@/utils/format";
 
-function shallowEqual(a: any, b: any): boolean {
+function shallowEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
   if (Array.isArray(a) && Array.isArray(b)) {
     if (a.length !== b.length) return false;
     return a.every((item, i) => item === b[i]);
   }
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) return false;
-  return keysA.every((key) => a[key] === b[key]);
+  if (typeof a === "object" && typeof b === "object") {
+    const keysA = Object.keys(a as Record<string, unknown>);
+    const keysB = Object.keys(b as Record<string, unknown>);
+    if (keysA.length !== keysB.length) return false;
+    return keysA.every(
+      (key) =>
+        (a as Record<string, unknown>)[key] ===
+        (b as Record<string, unknown>)[key],
+    );
+  }
+  return false;
 }
 
 interface UndoEntry {

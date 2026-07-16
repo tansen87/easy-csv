@@ -1,3 +1,4 @@
+import React from "react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -173,7 +174,7 @@ interface CommandListProps {
   onDeleteHistory: (history: any) => void;
 }
 
-export function CommandList({
+export const CommandList = React.memo(function CommandList({
   commands,
   onCommandClick,
   onHelpClick,
@@ -549,4 +550,4 @@ export function CommandList({
       </ScrollArea>
     </div>
   );
-}
+});

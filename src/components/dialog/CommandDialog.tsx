@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { COMMAND_FORMS, COMMAND_LABELS } from "@/components/dialog/commands";
@@ -93,6 +93,7 @@ export function CommandDialog({
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     isDragging.current = true;
@@ -123,24 +124,49 @@ export function CommandDialog({
 
   const FormComponent = COMMAND_FORMS[commandDialog.type];
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setCommandDialog(null);
       }
-    };
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    },
+    [setCommandDialog],
+  );
+
+  useEffect(() => {
+    dialogRef.current?.focus();
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [setCommandDialog]);
+  }, [handleKeyDown]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
         className="absolute inset-0 bg-black/20 backdrop-blur-none"
+        onClick={() => setCommandDialog(null)}
         onContextMenu={(e) => e.preventDefault()}
       />
       <div
-        className="absolute bg-card border rounded-xl shadow-xl w-full max-w-2xl p-4"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+        className="absolute bg-card border rounded-xl shadow-xl w-full max-w-2xl p-4 outline-none"
         style={{
           left: `calc(50% + ${offset.x}px)`,
           top: `calc(50% + ${offset.y}px)`,
@@ -160,6 +186,7 @@ export function CommandDialog({
             variant="ghost"
             size="icon"
             onClick={() => setCommandDialog(null)}
+            aria-label="Close"
           >
             <X className="h-4 w-4 accent-foreground" />
           </Button>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { BarChart3, Hash, Search, Type, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -105,7 +105,7 @@ function fmtNum(val: string | undefined, decimals = 2): string {
   });
 }
 
-export function DataProfilePanel({
+export const DataProfilePanel = React.memo(function DataProfilePanel({
   filePath,
   delimiter,
   isVisible,
@@ -354,4 +354,4 @@ export function DataProfilePanel({
       </ScrollArea>
     </div>
   );
-}
+});

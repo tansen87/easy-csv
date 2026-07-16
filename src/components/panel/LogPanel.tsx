@@ -10,7 +10,7 @@ import {
   Check,
   X,
 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ interface LogPanelProps {
   onClose: () => void;
 }
 
-export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
+export const LogPanel = React.memo(function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
   const { t } = useLanguage();
   const [height, setHeight] = useState<number>(300);
   const [copiedLogId, setCopiedLogId] = useState<string | null>(null);
@@ -269,4 +269,4 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
       />
     </div>
   );
-}
+});

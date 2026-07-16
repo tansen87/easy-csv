@@ -19,7 +19,7 @@ import { xanCommands } from "@/data/commands";
 import { helpDocs, helpDocsZh } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
 import { MainMenuHooks } from "@/hooks/MainMenuHooks";
-import { LanguageProvider, useLanguage } from "@/i18n";
+import { useLanguage } from "@/i18n";
 import { useToast } from "@/hooks/useToast";
 import { useLogs } from "@/hooks/useLogs";
 import { useUIState } from "@/hooks/useUIState";
@@ -36,11 +36,7 @@ import {
 } from "@/types/xan";
 
 function App() {
-  return (
-    <LanguageProvider>
-      <AppContent />
-    </LanguageProvider>
-  );
+  return <AppContent />;
 }
 
 function AppContent() {
@@ -499,8 +495,6 @@ function AppContent() {
 
   // MainMenuHooks
   const {
-    undo,
-    redo,
     handleOpenFile,
     handleOpenNewTabWithFile,
     handleSavePipeline,
@@ -510,8 +504,6 @@ function AppContent() {
   } = MainMenuHooks({
     tabs: tabsHook.tabs,
     selectedTabId: tabsHook.selectedTabId,
-    undoStack: pipeline.undoStack,
-    redoStack: pipeline.redoStack,
     historicalPipelines,
     defaultDelimiter: settings.defaultDelimiter,
     setDefaultDelimiter: settings.setDefaultDelimiter,
@@ -540,8 +532,8 @@ function AppContent() {
       onSavePipeline: handleSavePipeline,
       onImportPipeline: handleImportPipeline,
       onExportPipeline: handleExportPipeline,
-      onUndo: undo,
-      onRedo: redo,
+      onUndo: () => { pipeline.undo(); setSelectedStep(null); },
+      onRedo: () => { pipeline.redo(); setSelectedStep(null); },
       onExecute: handleExecute,
       onHelp: () => {
         ui.setHelpCommandName(language === "zh" ? "帮助" : "Help");
@@ -706,8 +698,8 @@ function AppContent() {
               setIsMenuActivated={ui.setIsMenuActivated}
               undoStack={pipeline.undoStack}
               redoStack={pipeline.redoStack}
-              onUndo={undo}
-              onRedo={redo}
+              onUndo={() => { pipeline.undo(); setSelectedStep(null); }}
+              onRedo={() => { pipeline.redo(); setSelectedStep(null); }}
               onExecute={handleExecute}
               onOpenFile={handleOpenFile}
               onOpenNewTabWithFile={handleOpenNewTabWithFile}

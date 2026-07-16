@@ -1,3 +1,4 @@
+import React from "react";
 import {
   File,
   Undo2,
@@ -49,7 +50,7 @@ interface MainMenuProps {
   hasInputFile: boolean;
 }
 
-export function MainMenu({
+export const MainMenu = React.memo(function MainMenu({
   activeMenu,
   setActiveMenu,
   isMenuActivated,
@@ -317,4 +318,4 @@ export function MainMenu({
       </div>
     </div>
   );
-}
+});

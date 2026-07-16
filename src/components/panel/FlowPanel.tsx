@@ -285,11 +285,23 @@ export function FlowPanel({
     headers,
     rows,
     columnWidths,
-    selectedStepId,
     savedEdges,
     savedInputPosition,
-    highlightedNodeId,
   ]);
+
+  // Apply selection/highlight as visual-only properties (no layout recompute)
+  useEffect(() => {
+    setNodes((prevNodes) =>
+      prevNodes.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          isSelected: node.id === selectedStepId,
+          isHighlighted: node.id === highlightedNodeId,
+        },
+      })),
+    );
+  }, [selectedStepId, highlightedNodeId]);
 
   // 搜索结果:匹配命令名称或 alias
   const searchResults = useMemo(() => {

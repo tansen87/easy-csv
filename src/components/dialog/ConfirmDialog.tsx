@@ -1,3 +1,4 @@
+import { useEffect, useRef, useCallback } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n";
@@ -22,16 +23,60 @@ export function ConfirmDialog({
   cancelLabel,
 }: ConfirmDialogProps) {
   const { t } = useLanguage();
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onCancel();
+        return;
+      }
+      if (e.key === "Enter") {
+        onConfirm();
+        return;
+      }
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    },
+    [onCancel, onConfirm],
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      dialogRef.current?.focus();
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, handleKeyDown]);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
         className="absolute inset-0 bg-black/20 backdrop-blur-none"
+        onClick={onCancel}
         onContextMenu={(e) => e.preventDefault()}
       />
       <div
-        className="relative bg-card rounded-lg shadow-xl w-full max-w-sm overflow-hidden"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+        className="relative bg-card rounded-lg shadow-xl w-full max-w-sm overflow-hidden outline-none"
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
       >
@@ -40,6 +85,7 @@ export function ConfirmDialog({
           <button
             onClick={onCancel}
             className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+            aria-label="Close"
           >
             <X className="h-4 w-4" />
           </button>

@@ -17,16 +17,6 @@ import { BatchConvertHooks } from "@/hooks/BatchConvertHooks";
 interface MainMenuHooksProps {
   tabs: PipelineTab[];
   selectedTabId: string;
-  undoStack: Array<{
-    pipeline: PipelineStep[];
-    edges: PipelineEdge[];
-    inputPosition?: { x: number; y: number };
-  }>;
-  redoStack: Array<{
-    pipeline: PipelineStep[];
-    edges: PipelineEdge[];
-    inputPosition?: { x: number; y: number };
-  }>;
   historicalPipelines: HistoricalPipeline[];
   defaultDelimiter: string;
   setDefaultDelimiter: React.Dispatch<React.SetStateAction<string>>;
@@ -82,8 +72,6 @@ interface MainMenuHooksProps {
 export function MainMenuHooks({
   tabs,
   selectedTabId,
-  undoStack,
-  redoStack,
   historicalPipelines,
   defaultDelimiter,
   showToast,
@@ -216,94 +204,6 @@ export function MainMenuHooks({
     setSelectedStep(null);
     return newTabId;
   }, [tabs.length, setTabs, setSelectedTabId, setSelectedStep, formatDateTime]);
-
-  const undo = useCallback(() => {
-    if (undoStack.length === 0) return;
-
-    const currentTab = tabs.find((t) => t.id === selectedTabId);
-    if (!currentTab) return;
-
-    setRedoStack((prev) => [
-      ...prev,
-      {
-        pipeline: currentTab.pipeline,
-        edges: currentTab.edges || [],
-        inputPosition: currentTab.inputPosition,
-      },
-    ]);
-
-    const previousState = undoStack[undoStack.length - 1];
-    setUndoStack((prev) => prev.slice(0, -1));
-
-    setTabs((prev) =>
-      prev.map((tab) =>
-        tab.id === selectedTabId
-          ? {
-              ...tab,
-              pipeline: previousState.pipeline,
-              edges: previousState.edges,
-              inputPosition: previousState.inputPosition,
-              updatedAt: formatDateTime(new Date()),
-            }
-          : tab,
-      ),
-    );
-
-    setSelectedStep(null);
-  }, [
-    undoStack,
-    selectedTabId,
-    tabs,
-    setRedoStack,
-    setUndoStack,
-    setTabs,
-    setSelectedStep,
-    formatDateTime,
-  ]);
-
-  const redo = useCallback(() => {
-    if (redoStack.length === 0) return;
-
-    const currentTab = tabs.find((t) => t.id === selectedTabId);
-    if (!currentTab) return;
-
-    setUndoStack((prev) => [
-      ...prev,
-      {
-        pipeline: currentTab.pipeline,
-        edges: currentTab.edges || [],
-        inputPosition: currentTab.inputPosition,
-      },
-    ]);
-
-    const nextState = redoStack[redoStack.length - 1];
-    setRedoStack((prev) => prev.slice(0, -1));
-
-    setTabs((prev) =>
-      prev.map((tab) =>
-        tab.id === selectedTabId
-          ? {
-              ...tab,
-              pipeline: nextState.pipeline,
-              edges: nextState.edges,
-              inputPosition: nextState.inputPosition,
-              updatedAt: formatDateTime(new Date()),
-            }
-          : tab,
-      ),
-    );
-
-    setSelectedStep(null);
-  }, [
-    redoStack,
-    selectedTabId,
-    tabs,
-    setUndoStack,
-    setRedoStack,
-    setTabs,
-    setSelectedStep,
-    formatDateTime,
-  ]);
 
   const handleOpenFile = useCallback(async () => {
     const file = await open({
@@ -981,8 +881,6 @@ export function MainMenuHooks({
   ]);
 
   return {
-    undo,
-    redo,
     handleOpenFile,
     handleOpenNewTabWithFile,
     handleSavePipeline,

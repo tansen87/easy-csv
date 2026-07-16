@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { X, FolderOpen, FileUp, Star, Clock, File } from "lucide-react";
 import {
@@ -77,7 +77,7 @@ interface HomeViewProps {
   reactFlowInstanceRef?: React.RefObject<any>;
 }
 
-export function HomeView({
+export const HomeView = React.memo(function HomeView({
   tabs,
   selectedTabId,
   onTabChange,
@@ -760,4 +760,4 @@ export function HomeView({
       )}
     </div>
   );
-}
+});
