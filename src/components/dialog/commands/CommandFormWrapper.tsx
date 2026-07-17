@@ -56,7 +56,7 @@ export function CommandFormWrapper({
   if (scrollHeight) {
     return (
       <>
-        <ScrollArea className={`h-[${scrollHeight}]`}>{content}</ScrollArea>
+        <ScrollArea style={{ height: scrollHeight }}>{content}</ScrollArea>
         {buttons}
       </>
     );
