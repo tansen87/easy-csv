@@ -72,6 +72,11 @@ export function SettingsDialog({
   useEffect(() => {
     if (isOpen) {
       dialogRef.current?.focus();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
       window.addEventListener("keydown", handleKeyDown);
     }
     return () => window.removeEventListener("keydown", handleKeyDown);

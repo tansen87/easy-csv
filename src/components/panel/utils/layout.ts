@@ -139,9 +139,6 @@ export function getLayoutedElements(
         dagreGraph.setEdge(edge.source, edge.target);
       }
     });
-  } else if (hasTable && steps.length > 0) {
-    edges.push(createEdge("table-node", steps[0].id));
-    dagreGraph.setEdge("table-node", steps[0].id);
   }
 
   dagre.layout(dagreGraph);

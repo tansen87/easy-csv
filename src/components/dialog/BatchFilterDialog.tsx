@@ -364,12 +364,9 @@ export function BatchFilterDialog({
               type="text"
               value={outputDir}
               onChange={(e) => setOutputDir(e.target.value)}
-              placeholder="Same as source file"
+              placeholder="leave empty to use source file dir"
               className="w-full h-7 px-3 text-sm border rounded-md bg-background"
             />
-            <p className="text-[10px] text-muted-foreground mt-1">
-              Leave empty to use source file directory
-            </p>
           </div>
         </div>
       </ScrollArea>

@@ -355,9 +355,9 @@ export function PivotDialog({
             type="text"
             value={columnSep}
             onChange={(e) => setColumnSep(e.target.value)}
-            placeholder="_"
+            placeholder="Characters for connecting columns (eg _)"
             className="w-full h-7 px-2 text-xs border rounded-md bg-background"
-            maxLength={5}
+            maxLength={1}
           />
         </div>
       </ScrollArea>
