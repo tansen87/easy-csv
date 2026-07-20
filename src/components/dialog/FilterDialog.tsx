@@ -169,11 +169,18 @@ export function FilterDialog({
             "not_ends_with",
             "not_contains",
           ].includes(textOperator);
+          let pattern = buildRegexPattern(textOperator, textValue);
+          if (
+            (textOperator === "contains" || textOperator === "not_contains") &&
+            pattern.startsWith("-")
+          ) {
+            pattern = "\\" + pattern;
+          }
           onAddCommand(
             searchCommand,
             {
               select: selectedColumn,
-              pattern: buildRegexPattern(textOperator, textValue),
+              pattern,
               regex: true,
               "ignore-case": caseInsensitive,
               "invert-match": isNegative,
