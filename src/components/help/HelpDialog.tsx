@@ -25,6 +25,7 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const hasFocusedRef = useRef(false);
   const { t } = useLanguage();
 
   const escapeRegExp = (string: string) => {
@@ -101,10 +102,17 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      dialogRef.current?.focus();
+      // Only focus the dialog container on initial open, not on every re-render
+      if (!hasFocusedRef.current) {
+        dialogRef.current?.focus();
+        hasFocusedRef.current = true;
+      }
       window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    } else {
+      // Reset focus state when dialog closes
+      hasFocusedRef.current = false;
     }
-    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, handleKeyDown]);
 
   useEffect(() => {
