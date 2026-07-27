@@ -15,10 +15,6 @@ function stripStepCommand(step: PipelineStep): StoredPipelineStep {
     parameters: step.parameters,
     alias: step.alias,
     position: step.position,
-    isConditional: step.isConditional,
-    conditionalExpression: step.conditionalExpression,
-    trueBranchStepIds: step.trueBranchStepIds,
-    falseBranchStepIds: step.falseBranchStepIds,
   };
 }
 
@@ -32,10 +28,6 @@ function reconstructStep(step: StoredPipelineStep | any): PipelineStep | null {
     parameters: step.parameters || {},
     alias: step.alias,
     position: step.position,
-    isConditional: step.isConditional,
-    conditionalExpression: step.conditionalExpression,
-    trueBranchStepIds: step.trueBranchStepIds,
-    falseBranchStepIds: step.falseBranchStepIds,
   };
 }
 

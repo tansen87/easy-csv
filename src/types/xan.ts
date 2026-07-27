@@ -25,10 +25,6 @@ export interface PipelineStep {
   parameters: Record<string, any>;
   alias?: string;
   position?: { x: number; y: number };
-  isConditional?: boolean;
-  conditionalExpression?: ConditionalExpression;
-  trueBranchStepIds?: string[];
-  falseBranchStepIds?: string[];
 }
 
 export interface StoredPipelineStep {
@@ -37,17 +33,12 @@ export interface StoredPipelineStep {
   parameters: Record<string, any>;
   alias?: string;
   position?: { x: number; y: number };
-  isConditional?: boolean;
-  conditionalExpression?: ConditionalExpression;
-  trueBranchStepIds?: string[];
-  falseBranchStepIds?: string[];
 }
 
 export interface PipelineEdge {
   id: string;
   source: string;
   target: string;
-  condition?: "true" | "false";
 }
 
 export interface LogEntry {
@@ -98,21 +89,6 @@ export interface PipelineVersion {
   message?: string;
   createdAt: string;
   tags?: string[];
-}
-
-export interface ConditionalExpression {
-  column: string;
-  operator: ">" | "<" | ">=" | "<=" | "==" | "!=" | "contains" | "not_contains" | "starts_with" | "ends_with" | "matches";
-  value: string;
-}
-
-export interface ConditionalStep {
-  id: string;
-  expression: ConditionalExpression;
-  trueBranch: string[];
-  falseBranch: string[];
-  position?: { x: number; y: number };
-  alias?: string;
 }
 
 export interface ColumnSchema {

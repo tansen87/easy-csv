@@ -468,13 +468,13 @@ export function MainMenuHooks({
       steps.forEach((step) => stepMap.set(step.id, step));
 
       const executableStepIds = new Set(steps.map((step) => step.id));
-      const adjacency = new Map<string, { target: string; condition?: "true" | "false" }[]>();
+      const adjacency = new Map<string, string[]>();
       edges.forEach((edge) => {
         if (executableStepIds.has(edge.target)) {
           if (!adjacency.has(edge.source)) {
             adjacency.set(edge.source, []);
           }
-          adjacency.get(edge.source)!.push({ target: edge.target, condition: edge.condition });
+          adjacency.get(edge.source)!.push(edge.target);
         }
       });
 
@@ -485,55 +485,16 @@ export function MainMenuHooks({
         if (!currentStep) return;
 
         const newPath = [...path, currentStep];
+        const nextEdges = adjacency.get(currentId) || [];
 
-        if (currentStep.isConditional && currentStep.conditionalExpression) {
-          const trueBranch = currentStep.trueBranchStepIds || [];
-          const falseBranch = currentStep.falseBranchStepIds || [];
-
-          if (trueBranch.length > 0) {
-            trueBranch.forEach((nextId: string) => {
-              dfs(nextId, newPath);
-            });
-          } else {
-            const trueEdges = (adjacency.get(currentId) || []).filter(
-              (e) => e.condition === "true"
-            );
-            trueEdges.forEach((edge) => {
-              dfs(edge.target, newPath);
-            });
-          }
-
-          if (falseBranch.length > 0) {
-            falseBranch.forEach((nextId: string) => {
-              dfs(nextId, newPath);
-            });
-          } else {
-            const falseEdges = (adjacency.get(currentId) || []).filter(
-              (e) => e.condition === "false"
-            );
-            falseEdges.forEach((edge) => {
-              dfs(edge.target, newPath);
-            });
-          }
-
-          if (trueBranch.length === 0 && falseBranch.length === 0) {
-            const allEdges = adjacency.get(currentId) || [];
-            if (allEdges.length === 0) {
-              branches.push(newPath);
-            }
-          }
-        } else {
-          const nextEdges = adjacency.get(currentId) || [];
-
-          if (nextEdges.length === 0) {
-            branches.push(newPath);
-            return;
-          }
-
-          nextEdges.forEach((edge) => {
-            dfs(edge.target, newPath);
-          });
+        if (nextEdges.length === 0) {
+          branches.push(newPath);
+          return;
         }
+
+        nextEdges.forEach((nextId) => {
+          dfs(nextId, newPath);
+        });
       };
 
       const targetIds = new Set(edges.map((e) => e.target));
@@ -545,7 +506,7 @@ export function MainMenuHooks({
         const tableEdges = adjacency.get("table-node") || [];
         if (tableEdges.length > 0) {
           tableEdges.forEach((edge) => {
-            dfs(edge.target, []);
+            dfs(edge, []);
           });
           return branches;
         }

@@ -40,7 +40,6 @@ import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "@/components/menu/ContextMenu";
 import { TextTransformType } from "@/components/dialog/TextTransformDialog";
 import { NumberTransformType } from "@/components/dialog/NumberTransformDialog";
-import { ConditionalExpression } from "@/types/xan";
 
 interface FlowPanelProps {
   steps: PipelineStep[];
@@ -86,7 +85,6 @@ interface FlowPanelProps {
   savedEdges?: PipelineEdge[];
   savedInputPosition?: { x: number; y: number };
   reactFlowInstanceRef?: React.RefObject<any>;
-  onConditionalExpressionUpdate?: (stepId: string, expression: ConditionalExpression) => void;
 }
 
 export function FlowPanel({
@@ -118,7 +116,6 @@ export function FlowPanel({
   savedEdges,
   savedInputPosition,
   reactFlowInstanceRef,
-  onConditionalExpressionUpdate,
 }: FlowPanelProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
@@ -270,7 +267,6 @@ export function FlowPanel({
       savedInputPosition,
       highlightedNodeId,
       onTableDeleteRef.current,
-      onConditionalExpressionUpdate,
     );
 
     const updatedNodes = layoutedNodes.map((newNode) => {
@@ -291,7 +287,6 @@ export function FlowPanel({
     columnWidths,
     savedEdges,
     savedInputPosition,
-    onConditionalExpressionUpdate,
   ]);
 
   // Apply selection/highlight as visual-only properties (no layout recompute)
@@ -1005,21 +1000,11 @@ export function FlowPanel({
       const sourceNode = nodes.find((n) => n.id === connection.source);
       const targetNode = nodes.find((n) => n.id === connection.target);
 
-      let condition: "true" | "false" | undefined;
-      if (sourceNode?.type === "conditional") {
-        if (connection.sourceHandle === "right-source-true") {
-          condition = "true";
-        } else if (connection.sourceHandle === "bottom-source-false") {
-          condition = "false";
-        }
-      }
-
       const config = createEdgeConfig(
         connection.source,
         connection.target,
         sourceNode,
         targetNode,
-        condition,
       );
 
       const newEdge: Edge = config;
@@ -1072,7 +1057,6 @@ export function FlowPanel({
               id: e.id,
               source: e.source,
               target: e.target,
-              condition: e.data?.condition,
             }));
           onEdgesChange(pipelineEdges);
         }

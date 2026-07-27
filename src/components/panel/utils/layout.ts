@@ -1,6 +1,6 @@
 import { Node, Edge, MarkerType } from "reactflow";
 import dagre from "dagre";
-import { PipelineStep, PipelineEdge, ConditionalExpression } from "@/types/xan";
+import { PipelineStep, PipelineEdge } from "@/types/xan";
 
 export function getLayoutedElements(
   hasTable: boolean,
@@ -20,7 +20,6 @@ export function getLayoutedElements(
   savedInputPosition?: { x: number; y: number },
   highlightedNodeId?: string | null,
   onTableDelete?: () => void,
-  onConditionalExpressionUpdate?: (stepId: string, expression: ConditionalExpression) => void,
 ): { nodes: Node[]; edges: Edge[] } {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -49,48 +48,27 @@ export function getLayoutedElements(
   }
 
   steps.forEach((step) => {
-    const isConditional = step.isConditional;
-    dagreGraph.setNode(step.id, { width: isConditional ? 260 : 240, height: isConditional ? 120 : 90 });
-    
-    if (isConditional && step.conditionalExpression) {
-      nodes.push({
-        id: step.id,
-        type: "conditional",
-        position: step.position || { x: 0, y: 0 },
-        data: {
-          step,
-          expression: step.conditionalExpression,
-          onExpressionUpdate: onConditionalExpressionUpdate || (() => {}),
-          onStepAliasUpdate,
-          onContextMenu,
-          isSelected: selectedStepId === step.id,
-          isHighlighted: highlightedNodeId === step.id,
-        },
-        selected: selectedStepId === step.id,
-      });
-    } else {
-      nodes.push({
-        id: step.id,
-        type: "pipelineStep",
-        position: step.position || { x: 0, y: 0 },
-        data: {
-          step,
-          onStepClick,
-          onStepRemove,
-          onStepAliasUpdate,
-          onContextMenu,
-          isSelected: selectedStepId === step.id,
-          isHighlighted: highlightedNodeId === step.id,
-        },
-        selected: selectedStepId === step.id,
-      });
-    }
+    dagreGraph.setNode(step.id, { width: 240, height: 90 });
+    nodes.push({
+      id: step.id,
+      type: "pipelineStep",
+      position: step.position || { x: 0, y: 0 },
+      data: {
+        step,
+        onStepClick,
+        onStepRemove,
+        onStepAliasUpdate,
+        onContextMenu,
+        isSelected: selectedStepId === step.id,
+        isHighlighted: highlightedNodeId === step.id,
+      },
+      selected: selectedStepId === step.id,
+    });
   });
 
   const edges: Edge[] = [];
 
-  // 辅助函数: 创建连线
-  const createEdge = (sourceId: string, targetId: string, condition?: "true" | "false") => {
+  const createEdge = (sourceId: string, targetId: string) => {
     const sourceNode = nodes.find(n => n.id === sourceId);
     const targetNode = nodes.find(n => n.id === targetId);
 
@@ -102,85 +80,37 @@ export function getLayoutedElements(
       const targetX = targetNode.position.x;
 
       if (sourceX <= targetX) {
-        // 源在左,目标在右
-        if (sourceId === 'table-node') {
-          sourceHandle = 'table-right-source';
-        } else if (sourceNode.type === 'conditional' && condition === 'true') {
-          sourceHandle = 'right-source-true';
-        } else if (sourceNode.type === 'conditional' && condition === 'false') {
-          sourceHandle = 'bottom-source-false';
-        } else {
-          sourceHandle = 'right-source';
-        }
-
-        if (targetId === 'table-node') {
-          targetHandle = 'table-left-target';
-        } else if (targetNode.type === 'conditional' && condition === 'true') {
-          targetHandle = 'right-target-true';
-        } else if (targetNode.type === 'conditional' && condition === 'false') {
-          targetHandle = 'bottom-target-false';
-        } else {
-          targetHandle = 'left-target';
-        }
+        sourceHandle = sourceId === 'table-node' ? 'table-right-source' : 'right-source';
+        targetHandle = targetId === 'table-node' ? 'table-left-target' : 'left-target';
       } else {
-        // 源在右,目标在左
-        if (sourceId === 'table-node') {
-          sourceHandle = 'table-left-source';
-        } else if (sourceNode.type === 'conditional' && condition === 'true') {
-          sourceHandle = 'left-source';
-        } else if (sourceNode.type === 'conditional' && condition === 'false') {
-          sourceHandle = 'bottom-source-false';
-        } else {
-          sourceHandle = 'left-source';
-        }
-
-        if (targetId === 'table-node') {
-          targetHandle = 'table-right-target';
-        } else if (targetNode.type === 'conditional' && condition === 'true') {
-          targetHandle = 'left-target';
-        } else if (targetNode.type === 'conditional' && condition === 'false') {
-          targetHandle = 'bottom-target-false';
-        } else {
-          targetHandle = 'right-target';
-        }
+        sourceHandle = sourceId === 'table-node' ? 'table-left-source' : 'left-source';
+        targetHandle = targetId === 'table-node' ? 'table-right-target' : 'right-target';
       }
     } else {
-      // 默认值
       sourceHandle = sourceId === 'table-node' ? 'table-right-source' : 'right-source';
       targetHandle = targetId === 'table-node' ? 'table-left-target' : 'left-target';
     }
 
-    const conditionLabel = condition === 'true' ? 'Yes' : condition === 'false' ? 'No' : undefined;
-    const edgeColor = condition === 'true' ? '#22c55e' : condition === 'false' ? '#ef4444' : "var(--flow-line-color)";
-
-    const edgeConfig: any = {
+    return {
       id: `e-${sourceId}-${targetId}`,
       source: sourceId,
       target: targetId,
       sourceHandle,
       targetHandle,
       type: "default",
-      data: { curvature: 0.5, condition },
+      data: { curvature: 0.5 },
       animated: sourceId === "table-node",
-      style: { stroke: edgeColor, strokeWidth: 1.5 },
+      style: { stroke: "var(--flow-line-color)", strokeWidth: 1.5 },
       markerEnd: {
         type: MarkerType.ArrowClosed,
-        color: edgeColor,
+        color: "var(--flow-line-color)",
       },
-    };
-
-    if (conditionLabel) {
-      edgeConfig.label = conditionLabel;
-      edgeConfig.labelStyle = { fill: edgeColor, fontWeight: 600, fontSize: 10 };
-      edgeConfig.labelBgStyle = { fill: 'white', fillOpacity: 0.8 };
-    }
-
-    return edgeConfig as Edge;
+    } as Edge;
   };
 
   if (savedEdges && savedEdges.length > 0) {
     savedEdges.forEach((edge) => {
-      edges.push(createEdge(edge.source, edge.target, edge.condition));
+      edges.push(createEdge(edge.source, edge.target));
       if (edge.source !== "table-node" && edge.target !== "table-node") {
         dagreGraph.setEdge(edge.source, edge.target);
       }
@@ -249,13 +179,11 @@ export function getLayoutedElements(
   return { nodes, edges };
 }
 
-// 根据源和目标位置创建 edge 配置（供 FlowPanel 内部使用）
 export function createEdgeConfig(
   sourceId: string,
   targetId: string,
   sourceNode?: { position: { x: number }; type?: string },
   targetNode?: { position: { x: number }; type?: string },
-  condition?: "true" | "false",
 ): any {
   let sourceHandle: string;
   let targetHandle: string;
@@ -265,55 +193,18 @@ export function createEdgeConfig(
     const targetX = targetNode.position.x;
 
     if (sourceX <= targetX) {
-      if (sourceId === 'table-node') {
-        sourceHandle = 'table-right-source';
-      } else if (sourceNode.type === 'conditional' && condition === 'true') {
-        sourceHandle = 'right-source-true';
-      } else if (sourceNode.type === 'conditional' && condition === 'false') {
-        sourceHandle = 'bottom-source-false';
-      } else {
-        sourceHandle = 'right-source';
-      }
-
-      if (targetId === 'table-node') {
-        targetHandle = 'table-left-target';
-      } else if (targetNode.type === 'conditional' && condition === 'true') {
-        targetHandle = 'right-target-true';
-      } else if (targetNode.type === 'conditional' && condition === 'false') {
-        targetHandle = 'bottom-target-false';
-      } else {
-        targetHandle = 'left-target';
-      }
+      sourceHandle = sourceId === 'table-node' ? 'table-right-source' : 'right-source';
+      targetHandle = targetId === 'table-node' ? 'table-left-target' : 'left-target';
     } else {
-      if (sourceId === 'table-node') {
-        sourceHandle = 'table-left-source';
-      } else if (sourceNode.type === 'conditional' && condition === 'true') {
-        sourceHandle = 'left-source';
-      } else if (sourceNode.type === 'conditional' && condition === 'false') {
-        sourceHandle = 'bottom-source-false';
-      } else {
-        sourceHandle = 'left-source';
-      }
-
-      if (targetId === 'table-node') {
-        targetHandle = 'table-right-target';
-      } else if (targetNode.type === 'conditional' && condition === 'true') {
-        targetHandle = 'left-target';
-      } else if (targetNode.type === 'conditional' && condition === 'false') {
-        targetHandle = 'bottom-target-false';
-      } else {
-        targetHandle = 'right-target';
-      }
+      sourceHandle = sourceId === 'table-node' ? 'table-left-source' : 'left-source';
+      targetHandle = targetId === 'table-node' ? 'table-right-target' : 'right-target';
     }
   } else {
     sourceHandle = sourceId === 'table-node' ? 'table-right-source' : 'right-source';
     targetHandle = targetId === 'table-node' ? 'table-left-target' : 'left-target';
   }
 
-  const conditionLabel = condition === 'true' ? 'Yes' : condition === 'false' ? 'No' : undefined;
-  const edgeColor = condition === 'true' ? '#22c55e' : condition === 'false' ? '#ef4444' : 'var(--flow-line-color)';
-
-  const edgeConfig: any = {
+  return {
     id: `e-${sourceId}-${targetId}`,
     source: sourceId,
     target: targetId,
@@ -321,19 +212,11 @@ export function createEdgeConfig(
     targetHandle,
     type: 'default',
     animated: false,
-    data: { curvature: 0.5, condition },
-    style: { stroke: edgeColor, strokeWidth: 1.5 },
+    data: { curvature: 0.5 },
+    style: { stroke: 'var(--flow-line-color)', strokeWidth: 1.5 },
     markerEnd: {
       type: MarkerType.ArrowClosed,
-      color: edgeColor,
+      color: 'var(--flow-line-color)',
     },
   };
-
-  if (conditionLabel) {
-    edgeConfig.label = conditionLabel;
-    edgeConfig.labelStyle = { fill: edgeColor, fontWeight: 600, fontSize: 10 };
-    edgeConfig.labelBgStyle = { fill: 'white', fillOpacity: 0.8 };
-  }
-
-  return edgeConfig;
 }

@@ -6,7 +6,6 @@ import {
   PipelineEdge,
   XanCommand,
   PipelineTab,
-  ConditionalExpression,
   PipelineVersion,
   StepLineage,
 } from "@/types/xan";
@@ -93,7 +92,6 @@ interface HomeViewProps {
   onToggleLineageMode?: (enabled: boolean) => void;
   onGetLineageForColumn?: (columnName: string) => StepLineage[];
   onSaveLineage?: () => void;
-  onConditionalExpressionUpdate?: (stepId: string, expression: ConditionalExpression) => void;
   showVersionPanel?: boolean;
   showLineagePanel?: boolean;
   onToggleVersionPanel?: () => void;
@@ -138,7 +136,6 @@ export const HomeView = React.memo(function HomeView({
   onToggleLineageMode,
   onGetLineageForColumn,
   onSaveLineage,
-  onConditionalExpressionUpdate,
   showVersionPanel = false,
   showLineagePanel = false,
   onToggleVersionPanel,
@@ -540,7 +537,6 @@ export const HomeView = React.memo(function HomeView({
               onInputPositionChange(selectedTabId, position);
             }
           }}
-          onConditionalExpressionUpdate={onConditionalExpressionUpdate}
         />
       </div>
 
