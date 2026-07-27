@@ -15,6 +15,8 @@ import {
   MessageCircleQuestionMark,
   CommandIcon,
   BarChart3,
+  GitBranch,
+  GitMerge,
 } from "lucide-react";
 import { PipelineStep } from "@/types/xan";
 import { useLanguage } from "@/i18n";
@@ -48,6 +50,10 @@ interface MainMenuProps {
   showDataProfile: boolean;
   onToggleDataProfile: () => void;
   hasInputFile: boolean;
+  showVersionPanel: boolean;
+  onToggleVersionPanel: () => void;
+  showLineagePanel: boolean;
+  onToggleLineagePanel: () => void;
 }
 
 export const MainMenu = React.memo(function MainMenu({
@@ -78,6 +84,10 @@ export const MainMenu = React.memo(function MainMenu({
   showDataProfile,
   onToggleDataProfile,
   hasInputFile,
+  showVersionPanel,
+  onToggleVersionPanel,
+  showLineagePanel,
+  onToggleLineagePanel,
 }: MainMenuProps) {
   const { t } = useLanguage();
 
@@ -264,10 +274,10 @@ export const MainMenu = React.memo(function MainMenu({
             </button>
           </Tooltip>
           {hasInputFile && (
-            <Tooltip content={t.dataProfilePanel} side="bottom">
+            <Tooltip content={t.dataProfile} side="bottom">
               <button
                 onClick={onToggleDataProfile}
-                aria-label={t.dataProfilePanel}
+                aria-label={t.dataProfile}
                 className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
                   showDataProfile
                     ? "text-primary bg-primary/10"
@@ -278,6 +288,32 @@ export const MainMenu = React.memo(function MainMenu({
               </button>
             </Tooltip>
           )}
+          <Tooltip content={t.versionHistory} side="bottom">
+            <button
+              onClick={onToggleVersionPanel}
+              aria-label={t.versionHistory}
+              className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                showVersionPanel
+                  ? "text-primary bg-primary/10"
+                  : "text-primary hover:bg-primary/10"
+              }`}
+            >
+              <GitBranch className="h-4 w-4" />
+            </button>
+          </Tooltip>
+          <Tooltip content={t.dataLineage} side="bottom">
+            <button
+              onClick={onToggleLineagePanel}
+              aria-label={t.dataLineage}
+              className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                showLineagePanel
+                  ? "text-primary bg-primary/10"
+                  : "text-primary hover:bg-primary/10"
+              }`}
+            >
+              <GitMerge className="h-4 w-4" />
+            </button>
+          </Tooltip>
           <Tooltip content={t.checkUpdate} side="bottom">
             <button
               onClick={onCheckUpdate}

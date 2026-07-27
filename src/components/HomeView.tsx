@@ -6,6 +6,9 @@ import {
   PipelineEdge,
   XanCommand,
   PipelineTab,
+  ConditionalExpression,
+  PipelineVersion,
+  StepLineage,
 } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 import { useLanguage } from "@/i18n";
@@ -31,6 +34,8 @@ import { PadDialog } from "@/components/dialog/PadDialog";
 import { ReplaceDialog } from "@/components/dialog/ReplaceDialog";
 import { WindowDialog } from "@/components/dialog/WindowDialog";
 import { FlowPanel } from "@/components/panel/FlowPanel";
+import { VersionControlPanel } from "@/components/panel/VersionControlPanel";
+import { DataLineagePanel } from "@/components/panel/DataLineagePanel";
 
 interface RecentFile {
   path: string;
@@ -75,6 +80,24 @@ interface HomeViewProps {
   recentFiles?: RecentFile[];
   onOpenRecentFile?: (filePath: string) => void;
   reactFlowInstanceRef?: React.RefObject<any>;
+  versions?: PipelineVersion[];
+  currentVersionId?: string;
+  onSaveVersion?: (message?: string, tags?: string[]) => Promise<PipelineVersion | undefined>;
+  onRestoreVersion?: (versionId: string) => void;
+  onDeleteVersion?: (versionId: string) => void;
+  onAddTag?: (versionId: string, tag: string) => void;
+  onRemoveTag?: (versionId: string, tag: string) => void;
+  isSavingVersion?: boolean;
+  lineageData?: StepLineage[];
+  isLineageMode?: boolean;
+  onToggleLineageMode?: (enabled: boolean) => void;
+  onGetLineageForColumn?: (columnName: string) => StepLineage[];
+  onSaveLineage?: () => void;
+  onConditionalExpressionUpdate?: (stepId: string, expression: ConditionalExpression) => void;
+  showVersionPanel?: boolean;
+  showLineagePanel?: boolean;
+  onToggleVersionPanel?: () => void;
+  onToggleLineagePanel?: () => void;
 }
 
 export const HomeView = React.memo(function HomeView({
@@ -102,6 +125,24 @@ export const HomeView = React.memo(function HomeView({
   recentFiles = [],
   onOpenRecentFile,
   reactFlowInstanceRef,
+  versions = [],
+  currentVersionId,
+  onSaveVersion,
+  onRestoreVersion,
+  onDeleteVersion,
+  onAddTag,
+  onRemoveTag,
+  isSavingVersion = false,
+  lineageData = [],
+  isLineageMode = false,
+  onToggleLineageMode,
+  onGetLineageForColumn,
+  onSaveLineage,
+  onConditionalExpressionUpdate,
+  showVersionPanel = false,
+  showLineagePanel = false,
+  onToggleVersionPanel,
+  onToggleLineagePanel,
 }: HomeViewProps) {
   const { t } = useLanguage();
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
@@ -499,7 +540,51 @@ export const HomeView = React.memo(function HomeView({
               onInputPositionChange(selectedTabId, position);
             }
           }}
+          onConditionalExpressionUpdate={onConditionalExpressionUpdate}
         />
+      </div>
+
+      {/* Version Control Panel */}
+      <div
+        className={`absolute top-0 right-0 h-full z-20 transition-all duration-300 ${
+          showVersionPanel ? "w-80" : "w-0"
+        }`}
+      >
+        {showVersionPanel && (
+          <div className="h-full bg-card border-l border-border/50 shadow-lg">
+            <VersionControlPanel
+              versions={versions}
+              currentVersionId={currentVersionId}
+              onSaveVersion={onSaveVersion || (async () => undefined)}
+              onRestoreVersion={onRestoreVersion || (() => {})}
+              onDeleteVersion={onDeleteVersion || (() => {})}
+              onAddTag={onAddTag || (() => {})}
+              onRemoveTag={onRemoveTag || (() => {})}
+              isSaving={isSavingVersion}
+              onClose={onToggleVersionPanel || (() => {})}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Data Lineage Panel */}
+      <div
+        className={`absolute top-0 right-0 h-full z-20 transition-all duration-300 ${
+          showLineagePanel ? "w-80" : "w-0"
+        } ${showVersionPanel ? "right-80" : ""}`}
+      >
+        {showLineagePanel && (
+          <div className="h-full bg-card border-l border-border/50 shadow-lg">
+            <DataLineagePanel
+              lineageData={lineageData}
+              onGetLineageForColumn={onGetLineageForColumn || (() => [])}
+              isLineageMode={isLineageMode}
+              onToggleLineageMode={onToggleLineageMode || (() => {})}
+              onSaveLineage={onSaveLineage || (() => {})}
+              onClose={onToggleLineagePanel || (() => {})}
+            />
+          </div>
+        )}
       </div>
 
       <div

@@ -33,6 +33,8 @@ export function useUIState() {
     changelog: string;
   } | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [showVersionPanel, setShowVersionPanel] = useState(false);
+  const [showLineagePanel, setShowLineagePanel] = useState(false);
 
   return {
     showHelp,
@@ -71,5 +73,9 @@ export function useUIState() {
     setUpdateInfo,
     isCheckingUpdate,
     setIsCheckingUpdate,
+    showVersionPanel,
+    setShowVersionPanel,
+    showLineagePanel,
+    setShowLineagePanel,
   };
 }

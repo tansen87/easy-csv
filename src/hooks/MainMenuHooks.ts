@@ -8,6 +8,7 @@ import {
   PipelineEdge,
   LogEntry,
   HistoricalPipeline,
+  StepLineage,
 } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 import { BatchFilterConfig } from "@/components/dialog/BatchFilterDialog";
@@ -67,6 +68,13 @@ interface MainMenuHooksProps {
   ) => Promise<void>;
   updateHistoricalPipelines: (history: HistoricalPipeline[]) => void;
   formatDateTime: (date: Date) => string;
+  trackLineage?: (
+    steps: PipelineStep[],
+    edges: PipelineEdge[],
+    inputHeaders: string[],
+    inputRows: string[][],
+  ) => StepLineage[];
+  isLineageMode?: boolean;
 }
 
 export function MainMenuHooks({
@@ -89,6 +97,8 @@ export function MainMenuHooks({
   loadCsvData,
   updateHistoricalPipelines,
   formatDateTime,
+  trackLineage,
+  isLineageMode,
 }: MainMenuHooksProps) {
   const getCurrentTab = useCallback(() => {
     return tabs.find((tab) => tab.id === selectedTabId) || tabs[0];
@@ -458,13 +468,13 @@ export function MainMenuHooks({
       steps.forEach((step) => stepMap.set(step.id, step));
 
       const executableStepIds = new Set(steps.map((step) => step.id));
-      const adjacency = new Map<string, string[]>();
+      const adjacency = new Map<string, { target: string; condition?: "true" | "false" }[]>();
       edges.forEach((edge) => {
         if (executableStepIds.has(edge.target)) {
           if (!adjacency.has(edge.source)) {
             adjacency.set(edge.source, []);
           }
-          adjacency.get(edge.source)!.push(edge.target);
+          adjacency.get(edge.source)!.push({ target: edge.target, condition: edge.condition });
         }
       });
 
@@ -475,16 +485,55 @@ export function MainMenuHooks({
         if (!currentStep) return;
 
         const newPath = [...path, currentStep];
-        const nextNodes = adjacency.get(currentId) || [];
 
-        if (nextNodes.length === 0) {
-          branches.push(newPath);
-          return;
+        if (currentStep.isConditional && currentStep.conditionalExpression) {
+          const trueBranch = currentStep.trueBranchStepIds || [];
+          const falseBranch = currentStep.falseBranchStepIds || [];
+
+          if (trueBranch.length > 0) {
+            trueBranch.forEach((nextId: string) => {
+              dfs(nextId, newPath);
+            });
+          } else {
+            const trueEdges = (adjacency.get(currentId) || []).filter(
+              (e) => e.condition === "true"
+            );
+            trueEdges.forEach((edge) => {
+              dfs(edge.target, newPath);
+            });
+          }
+
+          if (falseBranch.length > 0) {
+            falseBranch.forEach((nextId: string) => {
+              dfs(nextId, newPath);
+            });
+          } else {
+            const falseEdges = (adjacency.get(currentId) || []).filter(
+              (e) => e.condition === "false"
+            );
+            falseEdges.forEach((edge) => {
+              dfs(edge.target, newPath);
+            });
+          }
+
+          if (trueBranch.length === 0 && falseBranch.length === 0) {
+            const allEdges = adjacency.get(currentId) || [];
+            if (allEdges.length === 0) {
+              branches.push(newPath);
+            }
+          }
+        } else {
+          const nextEdges = adjacency.get(currentId) || [];
+
+          if (nextEdges.length === 0) {
+            branches.push(newPath);
+            return;
+          }
+
+          nextEdges.forEach((edge) => {
+            dfs(edge.target, newPath);
+          });
         }
-
-        nextNodes.forEach((nextId: string) => {
-          dfs(nextId, newPath);
-        });
       };
 
       const targetIds = new Set(edges.map((e) => e.target));
@@ -495,8 +544,8 @@ export function MainMenuHooks({
       if (startNodes.length === 0) {
         const tableEdges = adjacency.get("table-node") || [];
         if (tableEdges.length > 0) {
-          tableEdges.forEach((startId) => {
-            dfs(startId, []);
+          tableEdges.forEach((edge) => {
+            dfs(edge.target, []);
           });
           return branches;
         }
@@ -847,6 +896,13 @@ export function MainMenuHooks({
 
       updateHistoricalPipelines(updatedHistory);
 
+      if (isLineageMode && trackLineage) {
+        const headers = currentTab.headers || [];
+        const rows = currentTab.data || [];
+        trackLineage(currentPipeline, edges, headers, rows);
+        addLog("info", "Data lineage tracked for this execution");
+      }
+
       const successCount = allResults.filter((r) => r.success).length;
       if (successCount === branches.length) {
         addLog(
@@ -878,6 +934,8 @@ export function MainMenuHooks({
     buildExecutionBranches,
     updateHistoricalPipelines,
     formatDateTime,
+    trackLineage,
+    isLineageMode,
   ]);
 
   return {

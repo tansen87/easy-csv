@@ -26,6 +26,8 @@ import { useUIState } from "@/hooks/useUIState";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useTabs } from "@/hooks/useTabs";
 import { usePipelineState } from "@/hooks/usePipelineState";
+import { usePipelineVersions } from "@/hooks/usePipelineVersions";
+import { useDataLineage } from "@/hooks/useDataLineage";
 import { useKeyboardShortcuts } from "@/hooks/KeyboardShortcuts";
 import { formatDateTime } from "@/utils/format";
 import {
@@ -60,6 +62,20 @@ function AppContent() {
 
   // Pipeline state (undo/redo + updateTabPipeline)
   const pipeline = usePipelineState(
+    tabsHook.tabs,
+    tabsHook.setTabs,
+    tabsHook.selectedTabId,
+  );
+
+  // Version control
+  const versionsHook = usePipelineVersions(
+    tabsHook.tabs,
+    tabsHook.setTabs,
+    tabsHook.selectedTabId,
+  );
+
+  // Data lineage
+  const lineageHook = useDataLineage(
     tabsHook.tabs,
     tabsHook.setTabs,
     tabsHook.selectedTabId,
@@ -522,6 +538,8 @@ function AppContent() {
     loadCsvData: tabsHook.loadCsvData,
     updateHistoricalPipelines,
     formatDateTime,
+    trackLineage: lineageHook.trackLineage,
+    isLineageMode: lineageHook.isLineageMode,
   });
 
   // Keyboard shortcuts (O-3: moved to App level)
@@ -719,6 +737,10 @@ function AppContent() {
               showDataProfile={ui.showDataProfile}
               onToggleDataProfile={onToggleDataProfile}
               hasInputFile={!!tabsHook.getCurrentTab()?.inputFile}
+              showVersionPanel={ui.showVersionPanel}
+              onToggleVersionPanel={() => ui.setShowVersionPanel(!ui.showVersionPanel)}
+              showLineagePanel={ui.showLineagePanel}
+              onToggleLineagePanel={() => ui.setShowLineagePanel(!ui.showLineagePanel)}
             />
           </header>
 
@@ -748,6 +770,23 @@ function AppContent() {
                 recentFiles={tabsHook.recentFiles}
                 onOpenRecentFile={onOpenRecentFile}
                 reactFlowInstanceRef={reactFlowInstanceRef}
+                showVersionPanel={ui.showVersionPanel}
+                showLineagePanel={ui.showLineagePanel}
+                onToggleVersionPanel={() => ui.setShowVersionPanel(!ui.showVersionPanel)}
+                onToggleLineagePanel={() => ui.setShowLineagePanel(!ui.showLineagePanel)}
+                versions={versionsHook.getCurrentVersions()}
+                currentVersionId={tabsHook.getCurrentTab()?.currentVersionId}
+                onSaveVersion={versionsHook.saveVersion}
+                onRestoreVersion={versionsHook.restoreVersion}
+                onDeleteVersion={versionsHook.deleteVersion}
+                onAddTag={versionsHook.addTag}
+                onRemoveTag={versionsHook.removeTag}
+                isSavingVersion={versionsHook.isSavingVersion}
+                lineageData={lineageHook.lineageData}
+                isLineageMode={lineageHook.isLineageMode}
+                onToggleLineageMode={lineageHook.setIsLineageMode}
+                onGetLineageForColumn={lineageHook.getLineageForColumn}
+                onSaveLineage={lineageHook.saveLineage}
               />
             </div>
           </main>

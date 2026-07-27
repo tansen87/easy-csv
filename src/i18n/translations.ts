@@ -14,10 +14,11 @@ export interface Translations {
   executing: string;
   commandPanel: string;
   logPanel: string;
-  dataProfilePanel: string;
   checkUpdate: string;
   help: string;
   settings: string;
+  versionHistory: string;
+  dataLineage: string;
 
   // ConfirmDialog
   confirm: string;
@@ -128,10 +129,12 @@ export const translations: Record<Language, Translations> = {
     executing: "Executing",
     commandPanel: "Commands",
     logPanel: "Logs",
-    dataProfilePanel: "Data Profile",
+    dataProfile: "Data Profile",
     checkUpdate: "Check Update",
     help: "Help",
     settings: "Settings",
+    versionHistory: "Version History",
+    dataLineage: "Data Lineage",
 
     // ConfirmDialog
     confirm: "Confirm",
@@ -211,7 +214,6 @@ export const translations: Record<Language, Translations> = {
     executePipelineHint: "Execute a pipeline to see output",
 
     // DataProfile
-    dataProfile: "Data Profile",
     searchFields: "Search fields",
     noFieldsMatch: "No fields matching",
     analyzingData: "Analyzing data...",
@@ -240,10 +242,12 @@ export const translations: Record<Language, Translations> = {
     executing: "执行中",
     commandPanel: "命令",
     logPanel: "日志",
-    dataProfilePanel: "数据概览",
+    dataProfile: "数据概览",
     checkUpdate: "检查更新",
     help: "帮助",
     settings: "设置",
+    versionHistory: "管道版本",
+    dataLineage: "数据血缘",
 
     // ConfirmDialog
     confirm: "确认",
@@ -323,7 +327,6 @@ export const translations: Record<Language, Translations> = {
     executePipelineHint: "执行工作流后查看输出",
 
     // DataProfile
-    dataProfile: "数据概况",
     searchFields: "搜索字段",
     noFieldsMatch: "无匹配字段",
     analyzingData: "分析数据中...",
