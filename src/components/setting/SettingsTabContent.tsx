@@ -9,6 +9,7 @@ import {
   SunMoon,
   Bell,
   Minimize2,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
@@ -49,6 +50,10 @@ export function SettingsTabContent({
 }: SettingsTabContentProps) {
   const [isThemeTransitioning, setIsThemeTransitioning] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isSaveClicked, setIsSaveClicked] = useState(false);
+  const [isResetClicked, setIsResetClicked] = useState(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { language, setLanguage, t } = useLanguage();
 
   const handleThemeChange = useCallback(
@@ -298,13 +303,24 @@ export function SettingsTabContent({
             onSystemNotificationChange(true);
             onMinimizeToTrayChange(true);
             onHistoryLimitChange(100);
+            setIsResetClicked(true);
+            if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
+            resetTimeoutRef.current = setTimeout(() => setIsResetClicked(false), 3000);
           }}
         >
-          <RotateCcw className="h-4 w-4" />
+          {isResetClicked ? <Check className="h-4 w-4" /> : <RotateCcw className="h-4 w-4" />}
           {t.resetToDefaults}
         </Button>
-        <Button variant="secondary" onClick={onSave}>
-          <Save className="h-4 w-4" />
+        <Button
+          variant="secondary"
+          onClick={() => {
+            onSave();
+            setIsSaveClicked(true);
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = setTimeout(() => setIsSaveClicked(false), 3000);
+          }}
+        >
+          {isSaveClicked ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
           {t.saveSettings}
         </Button>
       </div>

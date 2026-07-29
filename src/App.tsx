@@ -656,7 +656,6 @@ function AppContent() {
         minimize: settings.minimizeToTray,
       });
       await invoke("set_history_limit", { limit: settings.historyLimit });
-      showToastRef.current("Settings saved successfully", "success");
     } catch (error) {
       showToastRef.current(`Failed to save settings: ${error}`, "error");
     }
