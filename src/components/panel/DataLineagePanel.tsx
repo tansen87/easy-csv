@@ -16,6 +16,7 @@ import {
   Check,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { StepLineage } from "@/types/xan";
 import { useLanguage } from "@/i18n";
 
@@ -156,7 +157,7 @@ export function DataLineagePanel({
             className="w-full h-8 pl-7 pr-2 text-xs border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
           />
         </div>
-        <div className="mt-2 max-h-32 overflow-auto">
+        <ScrollArea className="h-[120px]">
           {filteredColumns.map((col) => (
             <button
               key={col}
@@ -173,116 +174,125 @@ export function DataLineagePanel({
               {col}
             </button>
           ))}
-        </div>
+        </ScrollArea>
       </div>
 
-      <div className="flex-1 overflow-auto p-3">
-        {lineageData.length === 0 ? (
-          <div className="text-center text-muted-foreground text-xs py-8">
-            No lineage data available.
-            <br />
-            Enable tracking and execute a pipeline to see data flow.
-          </div>
-        ) : selectedColumn ? (
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground mb-2">
-              Lineage for column: <span className="text-primary">{selectedColumn}</span>
+      <ScrollArea className="flex-1 h-[120px]">
+        <div className="p-3">
+          {lineageData.length === 0 ? (
+            <div className="text-center text-muted-foreground text-xs py-8">
+              No lineage data available.
+              <br />
+              Enable tracking and execute a pipeline to see data flow.
             </div>
-            {columnLineage.map((step, index) => (
-              <Card key={step.stepId} className="p-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground">#{index + 1}</span>
-                  <span className="text-xs font-medium">{step.commandName}</span>
-                </div>
-                <div className="mt-1 text-[10px] text-muted-foreground">
-                  Rows: {step.inputRowCount} → {step.outputRowCount}
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {lineageData.map((step) => (
-              <Card
-                key={step.stepId}
-                className="p-3 cursor-pointer transition-all hover:bg-accent/30"
-                onClick={() => toggleStep(step.stepId)}
-              >
-                <div className="flex items-center gap-2">
-                  {expandedSteps.has(step.stepId) ? (
-                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                  )}
-                  <span className="text-xs font-medium">{step.commandName}</span>
-                  <span className="text-[10px] text-muted-foreground ml-auto">
-                    {step.inputRowCount} → {step.outputRowCount} rows
-                  </span>
-                </div>
+          ) : selectedColumn ? (
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-muted-foreground mb-2">
+                Lineage for column:{" "}
+                <span className="text-primary">{selectedColumn}</span>
+              </div>
+              {columnLineage.map((step, index) => (
+                <Card key={step.stepId} className="p-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-muted-foreground">
+                      #{index + 1}
+                    </span>
+                    <span className="text-xs font-medium">
+                      {step.commandName}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[10px] text-muted-foreground">
+                    Rows: {step.inputRowCount} → {step.outputRowCount}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {lineageData.map((step) => (
+                <Card
+                  key={step.stepId}
+                  className="p-3 cursor-pointer transition-all hover:bg-accent/30"
+                  onClick={() => toggleStep(step.stepId)}
+                >
+                  <div className="flex items-center gap-2">
+                    {expandedSteps.has(step.stepId) ? (
+                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                    )}
+                    <span className="text-xs font-medium">
+                      {step.commandName}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground ml-auto">
+                      {step.inputRowCount} → {step.outputRowCount} rows
+                    </span>
+                  </div>
 
-                {expandedSteps.has(step.stepId) && (
-                  <div className="mt-2 space-y-2">
-                    <div>
-                      <div className="text-[10px] font-medium text-muted-foreground mb-1">
-                        Input Columns
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {step.inputSchema.map((col) => (
-                          <span
-                            key={col.name}
-                            className={`inline-flex items-center px-1.5 py-0.5 text-[10px] rounded ${TYPE_COLORS[col.type]}`}
-                          >
-                            {col.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-center">
-                      <ArrowDown className="h-3 w-3 text-muted-foreground" />
-                    </div>
-
-                    <div>
-                      <div className="text-[10px] font-medium text-muted-foreground mb-1">
-                        Output Columns
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {step.outputSchema.map((col) => (
-                          <span
-                            key={col.name}
-                            className={`inline-flex items-center px-1.5 py-0.5 text-[10px] rounded ${TYPE_COLORS[col.type]}`}
-                          >
-                            {col.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    {step.transformations.length > 0 && (
+                  {expandedSteps.has(step.stepId) && (
+                    <div className="mt-2 space-y-2">
                       <div>
                         <div className="text-[10px] font-medium text-muted-foreground mb-1">
-                          Transformations
+                          Input Columns
                         </div>
-                        <div className="space-y-1">
-                          {step.transformations.map((t, i) => (
-                            <div
-                              key={i}
-                              className="flex items-center gap-1 text-[10px] text-muted-foreground"
+                        <div className="flex flex-wrap gap-1">
+                          {step.inputSchema.map((col) => (
+                            <span
+                              key={col.name}
+                              className={`inline-flex items-center px-1.5 py-0.5 text-[10px] rounded ${TYPE_COLORS[col.type]}`}
                             >
-                              {TRANSFORMATION_ICONS[t.type]}
-                              <span>{t.description}</span>
-                            </div>
+                              {col.name}
+                            </span>
                           ))}
                         </div>
                       </div>
-                    )}
-                  </div>
-                )}
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+
+                      <div className="flex items-center justify-center">
+                        <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                      </div>
+
+                      <div>
+                        <div className="text-[10px] font-medium text-muted-foreground mb-1">
+                          Output Columns
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {step.outputSchema.map((col) => (
+                            <span
+                              key={col.name}
+                              className={`inline-flex items-center px-1.5 py-0.5 text-[10px] rounded ${TYPE_COLORS[col.type]}`}
+                            >
+                              {col.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {step.transformations.length > 0 && (
+                        <div>
+                          <div className="text-[10px] font-medium text-muted-foreground mb-1">
+                            Transformations
+                          </div>
+                          <div className="space-y-1">
+                            {step.transformations.map((t, i) => (
+                              <div
+                                key={i}
+                                className="flex items-center gap-1 text-[10px] text-muted-foreground"
+                              >
+                                {TRANSFORMATION_ICONS[t.type]}
+                                <span>{t.description}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </ScrollArea>
     </div>
   );
 }

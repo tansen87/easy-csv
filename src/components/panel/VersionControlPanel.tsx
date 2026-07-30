@@ -1,13 +1,25 @@
 import { useState } from "react";
-import { Tag, Clock, GitBranch, Trash2, RotateCcw, Plus, X } from "lucide-react";
+import {
+  Tag,
+  Clock,
+  GitBranch,
+  Trash2,
+  RotateCcw,
+  Plus,
+  X,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { PipelineVersion } from "@/types/xan";
 import { useLanguage } from "@/i18n";
 
 interface VersionControlPanelProps {
   versions: PipelineVersion[];
   currentVersionId?: string;
-  onSaveVersion: (message?: string, tags?: string[]) => Promise<PipelineVersion | undefined>;
+  onSaveVersion: (
+    message?: string,
+    tags?: string[],
+  ) => Promise<PipelineVersion | undefined>;
   onRestoreVersion: (versionId: string) => void;
   onDeleteVersion: (versionId: string) => void;
   onAddTag: (versionId: string, tag: string) => void;
@@ -30,12 +42,20 @@ export function VersionControlPanel({
   const [isCreating, setIsCreating] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [newTag, setNewTag] = useState("");
-  const [editingTagVersionId, setEditingTagVersionId] = useState<string | null>(null);
+  const [editingTagVersionId, setEditingTagVersionId] = useState<string | null>(
+    null,
+  );
   const { t } = useLanguage();
 
   const handleSave = async () => {
     if (!newMessage.trim()) return;
-    await onSaveVersion(newMessage.trim(), newTag.split(",").map((t) => t.trim()).filter(Boolean));
+    await onSaveVersion(
+      newMessage.trim(),
+      newTag
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+    );
     setNewMessage("");
     setNewTag("");
     setIsCreating(false);
@@ -115,118 +135,122 @@ export function VersionControlPanel({
         </div>
       )}
 
-      <div className="flex-1 overflow-auto p-3 space-y-2">
-        {versions.length === 0 ? (
-          <div className="text-center text-muted-foreground text-xs py-8">
-            No versions saved yet
-          </div>
-        ) : (
-          [...versions].reverse().map((version) => (
-            <Card
-              key={version.id}
-              className={`p-3 cursor-pointer transition-all hover:bg-accent/30 ${
-                currentVersionId === version.id
-                  ? "border-primary/50 bg-primary/5"
-                  : "border-border/50"
-              }`}
-              onClick={() => onRestoreVersion(version.id)}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium truncate">
-                    {version.message || "Untitled version"}
-                  </div>
-                  <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {new Date(version.createdAt).toLocaleString()}
-                  </div>
-                  {version.tags && version.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {version.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] bg-primary/10 text-primary rounded"
-                        >
-                          <Tag className="h-2.5 w-2.5" />
-                          {tag}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onRemoveTag(version.id, tag);
-                            }}
-                            className="hover:text-destructive"
-                          >
-                            x
-                          </button>
-                        </span>
-                      ))}
+      <ScrollArea className="flex-1 h-[120px]">
+        <div className="p-3 space-y-2">
+          {versions.length === 0 ? (
+            <div className="text-center text-muted-foreground text-xs py-8">
+              No versions saved yet
+            </div>
+          ) : (
+            [...versions].reverse().map((version) => (
+              <Card
+                key={version.id}
+                className={`p-3 cursor-pointer transition-all hover:bg-accent/30 ${
+                  currentVersionId === version.id
+                    ? "border-primary/50 bg-primary/5"
+                    : "border-border/50"
+                }`}
+                onClick={() => onRestoreVersion(version.id)}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium truncate">
+                      {version.message || "Untitled version"}
                     </div>
-                  )}
+                    <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      {new Date(version.createdAt).toLocaleString()}
+                    </div>
+                    {version.tags && version.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {version.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] bg-primary/10 text-primary rounded"
+                          >
+                            <Tag className="h-2.5 w-2.5" />
+                            {tag}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onRemoveTag(version.id, tag);
+                              }}
+                              className="hover:text-destructive"
+                            >
+                              x
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 ml-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingTagVersionId(
+                          editingTagVersionId === version.id
+                            ? null
+                            : version.id,
+                        );
+                      }}
+                      className="h-5 w-5 flex items-center justify-center hover:bg-muted rounded transition-colors"
+                    >
+                      <Tag className="h-3 w-3" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRestoreVersion(version.id);
+                      }}
+                      className="h-5 w-5 flex items-center justify-center hover:bg-muted rounded transition-colors"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteVersion(version.id);
+                      }}
+                      className="h-5 w-5 flex items-center justify-center hover:bg-destructive/10 text-destructive rounded transition-colors"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 ml-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingTagVersionId(
-                        editingTagVersionId === version.id ? null : version.id,
-                      );
-                    }}
-                    className="h-5 w-5 flex items-center justify-center hover:bg-muted rounded transition-colors"
-                  >
-                    <Tag className="h-3 w-3" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRestoreVersion(version.id);
-                    }}
-                    className="h-5 w-5 flex items-center justify-center hover:bg-muted rounded transition-colors"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteVersion(version.id);
-                    }}
-                    className="h-5 w-5 flex items-center justify-center hover:bg-destructive/10 text-destructive rounded transition-colors"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
 
-              {editingTagVersionId === version.id && (
-                <div className="mt-2 flex gap-1">
-                  <input
-                    type="text"
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    placeholder="Add tag..."
-                    className="flex-1 h-6 px-2 text-[10px] border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
-                    autoFocus
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
+                {editingTagVersionId === version.id && (
+                  <div className="mt-2 flex gap-1">
+                    <input
+                      type="text"
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      placeholder="Add tag..."
+                      className="flex-1 h-6 px-2 text-[10px] border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleAddTag(version.id);
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
                         handleAddTag(version.id);
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAddTag(version.id);
-                    }}
-                    className="h-6 px-2 text-[10px] bg-primary/10 hover:bg-primary/20 rounded transition-colors"
-                  >
-                    Add
-                  </button>
-                </div>
-              )}
-            </Card>
-          ))
-        )}
-      </div>
+                      }}
+                      className="h-6 px-2 text-[10px] bg-primary/10 hover:bg-primary/20 rounded transition-colors"
+                    >
+                      Add
+                    </button>
+                  </div>
+                )}
+              </Card>
+            ))
+          )}
+        </div>
+      </ScrollArea>
     </div>
   );
 }
