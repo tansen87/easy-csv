@@ -25,12 +25,13 @@ export const helpContentEn = `
 | \`Ctrl\` + \`Z\` | Undo |
 | \`Ctrl\` + \`Y\` | Redo |
 | \`Ctrl\` + \`R\` | Execute |
-| \`Shift\` + \`h\` | Show help |
-| \`Shift\` + \`c\` | Check for updates |
-| \`Shift\` + \`s\` | Open settings |
+| \`Shift\` + \`H\` | Show help |
+| \`Shift\` + \`C\` | Check for updates |
+| \`Shift\` + \`S\` | Open settings |
 | \`Alt\` + \`C\` | Commands |
 | \`Alt\` + \`Q\` | Logs |
 | \`Alt\` + \`D\` | Data Profile |
+| \`Alt\` + \`A\` | AI Assistant |
 | \`F5\` | Refresh |
 
 ---
@@ -52,7 +53,7 @@ export const helpContentEn = `
 ---
 
 ### Log Panel
-View execution logs and debug information by clicking the log icon in the bottom-left corner.
+View execution logs and debug information by clicking the log icon in the top-right corner.
 
 ---
 

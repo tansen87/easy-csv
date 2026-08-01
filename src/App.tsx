@@ -614,6 +614,7 @@ function AppContent() {
       onCommands: () => ui.setShowCommandPanel(!ui.showCommandPanel),
       onLogs: () => ui.setShowLogPanel(!ui.showLogPanel),
       onDataProfile: () => ui.setShowDataProfile(!ui.showDataProfile),
+      onAI: () => ui.setShowAIPanel(!ui.showAIPanel),
     },
     {
       undoStackLength: pipeline.undoStack.length,
