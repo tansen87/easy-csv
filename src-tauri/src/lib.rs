@@ -1,3 +1,4 @@
+pub mod ai;
 pub mod config;
 pub mod csv;
 pub mod pipeline;
@@ -6,6 +7,7 @@ pub mod xan;
 
 pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync> {
   Box::new(tauri::generate_handler![
+    ai::call_ai,
     config::get_default_delimiter,
     config::set_default_delimiter,
     config::get_no_headers,
@@ -16,6 +18,8 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     config::set_history_limit,
     config::get_minimize_to_tray,
     config::set_minimize_to_tray,
+    config::get_ai_config,
+    config::set_ai_config,
     csv::read_csv_file,
     csv::profile_csv,
     pipeline::execute_xan_pipeline,

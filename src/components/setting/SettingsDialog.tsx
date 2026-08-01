@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { X } from "lucide-react";
 import { SettingsTabContent } from "@/components/setting/SettingsTabContent";
 import { useLanguage } from "@/i18n";
+import { AIConfig } from "@/services/ai/types";
 
 interface SettingsDialogProps {
   isOpen: boolean;
@@ -19,6 +20,8 @@ interface SettingsDialogProps {
   historyLimit: number;
   onHistoryLimitChange: (limit: number) => void;
   onSave: () => void;
+  aiConfig: AIConfig;
+  onAIConfigChange: (config: AIConfig) => void;
 }
 
 export function SettingsDialog({
@@ -37,8 +40,10 @@ export function SettingsDialog({
   historyLimit,
   onHistoryLimitChange,
   onSave,
+  aiConfig,
+  onAIConfigChange,
 }: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<"preference" | "general">(
+  const [activeTab, setActiveTab] = useState<"preference" | "general" | "ai">(
     "preference",
   );
   const { t } = useLanguage();
@@ -96,17 +101,21 @@ export function SettingsDialog({
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
-        className="relative bg-card rounded-lg shadow-xl w-full max-w-4xl h-[64vh] overflow-hidden outline-none"
+        className="relative bg-card rounded-lg shadow-xl w-full max-w-4xl h-[64vh] overflow-hidden outline-none flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/20">
           <div className="flex items-center">
-            <div className="grid grid-cols-2 bg-muted/50 rounded-md p-0.5 border border-border/50 relative h-8">
+            <div className="grid grid-cols-3 bg-muted/50 rounded-md p-0.5 border border-border/50 relative h-8">
               <div
                 className={`absolute top-0.5 bottom-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${
-                  activeTab === "general" ? "left-[calc(50%+1px)]" : "left-0.5"
+                  activeTab === "general"
+                    ? "left-[calc(33.333%+1px)]"
+                    : activeTab === "ai"
+                      ? "left-[calc(66.666%+1px)]"
+                      : "left-0.5"
                 }`}
-                style={{ width: "calc(50% - 1px)" }}
+                style={{ width: "calc(33.333% - 1px)" }}
               />
               <button
                 className={`flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
@@ -128,6 +137,16 @@ export function SettingsDialog({
               >
                 {t.general}
               </button>
+              <button
+                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
+                  activeTab === "ai"
+                    ? "text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => setActiveTab("ai")}
+              >
+                {t.ai}
+              </button>
             </div>
           </div>
           <button
@@ -138,7 +157,7 @@ export function SettingsDialog({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="h-[calc(100%-48px)]">
+        <div className="flex-1 min-h-0">
           <SettingsTabContent
             activeTab={activeTab}
             theme={theme}
@@ -154,6 +173,8 @@ export function SettingsDialog({
             historyLimit={historyLimit}
             onHistoryLimitChange={onHistoryLimitChange}
             onSave={onSave}
+            aiConfig={aiConfig}
+            onAIConfigChange={onAIConfigChange}
           />
         </div>
       </div>

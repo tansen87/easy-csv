@@ -17,6 +17,7 @@ import {
   BarChart3,
   GitBranch,
   GitMerge,
+  Sparkles,
 } from "lucide-react";
 import { PipelineStep } from "@/types/xan";
 import { useLanguage } from "@/i18n";
@@ -54,6 +55,8 @@ interface MainMenuProps {
   onToggleVersionPanel: () => void;
   showLineagePanel: boolean;
   onToggleLineagePanel: () => void;
+  showAIPanel: boolean;
+  onToggleAIPanel: () => void;
 }
 
 export const MainMenu = React.memo(function MainMenu({
@@ -88,6 +91,8 @@ export const MainMenu = React.memo(function MainMenu({
   onToggleVersionPanel,
   showLineagePanel,
   onToggleLineagePanel,
+  showAIPanel,
+  onToggleAIPanel,
 }: MainMenuProps) {
   const { t } = useLanguage();
 
@@ -312,6 +317,19 @@ export const MainMenu = React.memo(function MainMenu({
               }`}
             >
               <GitMerge className="h-4 w-4" />
+            </button>
+          </Tooltip>
+          <Tooltip content={t.aiPanel} side="bottom">
+            <button
+              onClick={onToggleAIPanel}
+              aria-label={t.aiPanel}
+              className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                showAIPanel
+                  ? "text-primary bg-primary/10"
+                  : "text-primary hover:bg-primary/10"
+              }`}
+            >
+              <Sparkles className="h-4 w-4" />
             </button>
           </Tooltip>
           <Tooltip content={t.checkUpdate} side="bottom">

@@ -33,7 +33,11 @@ pub fn get_resources_dir() -> std::path::PathBuf {
 }
 
 fn get_config_file_path() -> std::path::PathBuf {
-  get_resources_dir().join("config.json")
+  get_resources_dir().join("config").join("config.json")
+}
+
+fn get_ai_config_file_path() -> std::path::PathBuf {
+  get_resources_dir().join("config").join("aiconfig.json")
 }
 
 pub fn load_config() -> Result<AppConfig, String> {
@@ -140,4 +144,33 @@ pub async fn set_minimize_to_tray(minimize: bool) -> Result<(), String> {
   let mut config = load_config()?;
   config.minimize_to_tray = Some(minimize);
   save_config(&config)
+}
+
+#[tauri::command]
+pub async fn get_ai_config() -> Result<String, String> {
+  let config_path = get_ai_config_file_path();
+
+  if config_path.exists() {
+    std::fs::read_to_string(&config_path)
+      .map_err(|e| format!("Failed to read AI config file: {}", e))
+  } else {
+    Ok("{}".to_string())
+  }
+}
+
+#[tauri::command]
+pub async fn set_ai_config(config: String) -> Result<(), String> {
+  let config_path = get_ai_config_file_path();
+
+  if let Some(parent) = config_path.parent() {
+    if !parent.exists() {
+      std::fs::create_dir_all(parent)
+        .map_err(|e| format!("Failed to create AI config directory: {}", e))?;
+    }
+  }
+
+  std::fs::write(&config_path, config)
+    .map_err(|e| format!("Failed to write AI config file: {}", e))?;
+
+  Ok(())
 }

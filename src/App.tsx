@@ -15,6 +15,7 @@ import { UpdateDialog } from "@/components/dialog/UpdateDialog";
 import { ConfirmDialog } from "@/components/dialog/ConfirmDialog";
 import { BatchFilterDialog } from "@/components/dialog/BatchFilterDialog";
 import { DataProfilePanel } from "@/components/panel/DataProfilePanel";
+import { AIPanel } from "@/components/panel/AIPanel";
 import { xanCommands } from "@/data/commands";
 import { helpDocs, helpDocsZh } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
@@ -36,6 +37,8 @@ import {
   HistoricalPipeline,
   PipelineEdge,
 } from "@/types/xan";
+import { AIConfig, DEFAULT_AI_CONFIG } from "@/services/ai/types";
+import { loadAIConfig, saveAIConfig, setAIConfig } from "@/services/ai/index";
 
 function App() {
   return <AppContent />;
@@ -98,6 +101,27 @@ function AppContent() {
 
   // Executing state
   const [isExecuting, setIsExecuting] = useState(false);
+
+  // AI Config
+  const [aiConfig, setAIConfigState] = useState<AIConfig>({
+    ...DEFAULT_AI_CONFIG,
+  });
+
+  useEffect(() => {
+    loadAIConfig().then((config) => {
+      setAIConfigState(config);
+      setAIConfig(config);
+    });
+  }, []);
+
+  const handleAIConfigChange = useCallback(
+    async (config: AIConfig) => {
+      setAIConfigState(config);
+      await saveAIConfig(config);
+      setAIConfig(config);
+    },
+    [],
+  );
 
   // Load historical pipelines
   const loadHistoricalPipelines = useCallback(async () => {
@@ -207,7 +231,32 @@ function AppContent() {
       }
 
       const currentPipeline = tabsHook.getCurrentPipeline();
-      pipeline.updateTabPipeline([...currentPipeline, newStep]);
+      const currentTab = tabsHook.getCurrentTab();
+      const currentEdges = currentTab?.edges || [];
+
+      const sourceId =
+        currentPipeline.length > 0
+          ? currentPipeline[currentPipeline.length - 1].id
+          : "table-node";
+
+      const newEdges = [...currentEdges];
+      if (
+        !newEdges.some(
+          (e) => e.source === sourceId && e.target === newStep.id,
+        )
+      ) {
+        newEdges.push({
+          id: `e-${sourceId}-${newStep.id}`,
+          source: sourceId,
+          target: newStep.id,
+        });
+      }
+
+      pipeline.updateTabPipeline(
+        [...currentPipeline, newStep],
+        undefined,
+        newEdges,
+      );
       setSelectedStep(newStep);
     },
     [tabsHook, pipeline],
@@ -740,6 +789,8 @@ function AppContent() {
               onToggleVersionPanel={() => ui.setShowVersionPanel(!ui.showVersionPanel)}
               showLineagePanel={ui.showLineagePanel}
               onToggleLineagePanel={() => ui.setShowLineagePanel(!ui.showLineagePanel)}
+              showAIPanel={ui.showAIPanel}
+              onToggleAIPanel={() => ui.setShowAIPanel(!ui.showAIPanel)}
             />
           </header>
 
@@ -838,6 +889,8 @@ function AppContent() {
             historyLimit={settings.historyLimit}
             onHistoryLimitChange={settings.setHistoryLimit}
             onSave={handleSaveSettings}
+            aiConfig={aiConfig}
+            onAIConfigChange={handleAIConfigChange}
           />
 
           <UpdateDialog
@@ -872,6 +925,17 @@ function AppContent() {
             delimiter={settings.defaultDelimiter}
             isVisible={ui.showDataProfile}
             onClose={() => ui.setShowDataProfile(false)}
+          />
+
+          <AIPanel
+            isVisible={ui.showAIPanel}
+            onClose={() => ui.setShowAIPanel(false)}
+            context={{
+              headers: tabsHook.getCurrentTab()?.headers || [],
+              pipelineSteps: tabsHook.getCurrentPipeline().length,
+              inputFile: tabsHook.getCurrentTab()?.inputFile,
+            }}
+            onAddCommand={handleCommandClick}
           />
         </div>
       }

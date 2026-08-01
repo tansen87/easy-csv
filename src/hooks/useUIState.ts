@@ -35,6 +35,7 @@ export function useUIState() {
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [showVersionPanel, setShowVersionPanel] = useState(false);
   const [showLineagePanel, setShowLineagePanel] = useState(false);
+  const [showAIPanel, setShowAIPanel] = useState(false);
 
   return {
     showHelp,
@@ -77,5 +78,7 @@ export function useUIState() {
     setShowVersionPanel,
     showLineagePanel,
     setShowLineagePanel,
+    showAIPanel,
+    setShowAIPanel,
   };
 }

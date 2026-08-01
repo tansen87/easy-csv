@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "generate-help": "node scripts/generate-help-docs.js",
+    "generate-ai-usage": "tsx scripts/generate-ai-usage-docs.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -24,6 +25,7 @@
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-dialog": "^2.6.0",
     "@tauri-apps/plugin-fs": "^2.4.5",
+    "@tauri-apps/plugin-http": "^2.5.9",
     "@tauri-apps/plugin-notification": "^2.3.0",
     "@tauri-apps/plugin-os": "^2.3.2",
     "@tauri-apps/plugin-shell": "^2.3.5",
