@@ -17,12 +17,13 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 ```
 ┌─────────────────────────────────────────────────────┐
 │              Frontend (React + TypeScript)          │
-│  src/App.tsx · components/ · hooks/ · data/         │
+│  src/App.tsx · components/ · hooks/ · services/     │
 │  可视化管道编辑器 (ReactFlow) · CSV 预览表              │
 │  命令配置 UI (shadcn) · i18n (中/英)                  │
 │  表达式编辑器 (语法高亮 + 自动补全)                     │
+│  AI 助手 (自然语言 → xan 命令, RAG 检索)              │
+│  管道版本控制 · 数据血缘追踪                           │
 │  系统托盘 · 拖拽打开 · 数据概况 · 管道步骤复制粘贴      │
-│  历史记录上限管理 · 系统主题跟随                          │
 │  通过 @tauri-apps/api invoke() 与后端通信             │
 └────────────────────┬───────────────────────────────┘
                      │  IPC (Tauri v2 commands)
@@ -30,17 +31,17 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 │               Backend (Rust / Tauri)                │
 │  src-tauri/src/                                     │
 │  main.rs (入口) · lib.rs (模块声明)                   │
-│  config.rs · xan.rs · pipeline.rs                   │
-│  csv.rs · storage.rs                                │
-│  18 个 Tauri 命令处理器                               │
+│  config.rs · xan.rs · pipeline.rs · csv.rs          │
+│  storage.rs · ai.rs                                 │
+│  30 个 Tauri 命令处理器                               │
 │  CSV 读取 (csv crate) · 管道执行 (进程管理)            │
-│  配置/历史/最近文件 持久化 · 数据概况缓存               │
-│  内嵌 xan.exe 解压 · 系统托盘 · 窗口状态保存           │
+│  AI 代理 (DeepSeek/HF/Qwen) · 配置/历史持久化         │
+│  数据概况缓存 · 版本/血缘存储 · 系统托盘               │
 └────────────────────┬────────────────────────────────┘
                      │  子进程 (stdin/stdout 管道)
 ┌────────────────────▼────────────────────────────────┐
 │              xan.exe (内嵌 CLI 二进制)                │
-│  50+ CSV 操作命令 (filter, sort, join, ...)          │
+│  58 CSV 操作命令 (filter, sort, join, output, ...)   │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -48,17 +49,18 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 ## Rust 后端 (`src-tauri/src/`)
 
-后端按职责拆分为 6 个模块: 
+后端按职责拆分为 7 个模块:
 
 | 文件 | 职责 |
 |------|------|
 | `main.rs` | 二进制入口,注册插件/命令,系统托盘,窗口事件处理 |
 | `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册所有命令) |
-| `config.rs` | `AppConfig` 类型、配置文件读写、配置相关命令 |
+| `config.rs` | `AppConfig` 类型、配置文件读写、配置相关命令、AI 配置读写 |
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
 | `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令 |
 | `csv.rs` | `CsvData` 类型、`read_csv_file`/`profile_csv` 命令 |
-| `storage.rs` | 历史记录、最近文件、数据概况缓存、窗口标题、开发者工具命令 |
+| `storage.rs` | 历史记录、最近文件、数据概况缓存、版本/血缘存储、窗口标题、开发者工具命令 |
+| `ai.rs` | AI 对话代理: `call_ai` 命令,转发到 DeepSeek / Hugging Face / Qwen |
 | `build.rs` | Tauri 构建脚本,生成平台特定代码 |
 
 ### 各模块职责详解
@@ -67,13 +69,15 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | 内容 | 说明 |
 |------|------|
-| `AppConfig` 结构体 | `default_delimiter`, `no_headers`, `show_execution_notification`, `history_limit` |
+| `AppConfig` 结构体 | `default_delimiter`, `no_headers`, `show_execution_notification`, `history_limit`, `minimize_to_tray` |
 | `load_config()` / `save_config()` | JSON 配置文件读写 |
 | `get_resources_dir()` | 资源目录路径(可执行文件旁) |
 | `get/set_default_delimiter` | 默认分隔符配置命令 |
 | `get/set_no_headers` | 无表头配置命令 |
 | `get/set_show_execution_notification` | 执行通知配置命令 |
 | `get/set_history_limit` | 历史记录条数上限配置命令 |
+| `get/set_minimize_to_tray` | 最小化到托盘配置命令 |
+| `get_ai_config()` / `set_ai_config()` | AI 配置读写(config/aiconfig.json: provider、model、apiKey) |
 
 #### xan.rs — xan 可执行文件管理
 
@@ -107,8 +111,19 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_history` / `load_history` | 管道执行历史 |
 | `save_recent_files` / `load_recent_files` | 最近文件列表 |
 | `load_profile_cache` / `save_profile_cache` | 数据概况缓存(LRU 淘汰,上限50条) |
+| `save_pipeline_versions` / `load_pipeline_versions` | 管道版本持久化 |
+| `save_lineage_data` / `load_lineage_data` | 数据血缘持久化 |
+| `file_exists` | 文件存在性检查 |
 | `set_window_title` | 设置窗口标题 |
 | `toggle_devtools` | 切换开发者工具 |
+
+#### ai.rs — AI 对话代理
+
+| 内容 | 说明 |
+|------|------|
+| `call_ai` | 核心命令,按 provider 路由到 DeepSeek/Qwen/Hugging Face |
+| `call_deepseek` / `call_qwen` | OpenAI 兼容 Chat Completions 调用 |
+| `call_hugging_face` | Hugging Face Inference API,含模型加载重试(最多3次) |
 
 ### Tauri 命令清单(前端可调用)
 
@@ -123,9 +138,15 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `get/set_no_headers` | config | 读写无表头配置 |
 | `get/set_show_execution_notification` | config | 读写执行通知配置 |
 | `get/set_history_limit` | config | 读写历史记录条数上限配置 |
+| `get/set_minimize_to_tray` | config | 读写最小化到托盘配置 |
+| `get/set_ai_config` | config | 读写 AI 配置(provider/model/apiKey) |
+| `call_ai` | ai | 调用 AI 大模型代理(DeepSeek/HF/Qwen) |
 | `set_window_title` | storage | 设置窗口标题 |
 | `save_history` / `load_history` | storage | 管道执行历史持久化 |
 | `save_recent_files` / `load_recent_files` | storage | 最近文件列表持久化 |
+| `save_pipeline_versions` / `load_pipeline_versions` | storage | 管道版本持久化 |
+| `save_lineage_data` / `load_lineage_data` | storage | 数据血缘持久化 |
+| `file_exists` | storage | 检查文件是否存在 |
 | `toggle_devtools` | storage | 切换开发者工具面板 |
 
 ---
@@ -146,9 +167,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | 文件 | 职责 | 测试数 |
 |------|------|--------|
 | `commands.test.ts` | **核心测试**: 覆盖全部 58 个 xan 命令的参数构建正确性(命令名、参数名、值、isPositional、默认值) | ~76 |
-| `invoke.test.ts` | App.tsx 中所有 invoke 调用模式验证(read_csv_file、配置读写、历史记录、错误处理、历史重建) | ~24 |
-| `BatchFilterHooks.test.ts` | Batch Filter 执行逻辑: 文件名清理、正则构建、文本/数值筛选 invoke 形状、频率提取、多值批处理 | ~30 |
-| `BatchConvertHooks.test.ts` | 批量格式转换: globToRegex、getBaseName、getOutputDir、CSV↔XLSX↔JSON 转换 invoke 模式 | ~17 |
+| `invoke.test.ts` | App.tsx 中所有 invoke 调用模式验证(read_csv_file、配置读写、历史记录、错误处理、历史重建) | ~25 |
+| `BatchFilterHooks.test.ts` | Batch Filter 执行逻辑: 文件名清理、正则构建、文本/数值筛选 invoke 形状、频率提取、多值批处理 | ~31 |
+| `BatchConvertHooks.test.ts` | 批量格式转换: globToRegex、getBaseName、getOutputDir、CSV↔XLSX↔JSON 转换 invoke 模式 | ~23 |
 
 ---
 
@@ -159,34 +180,56 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | 文件 | 职责 |
 |------|------|
 | `main.tsx` | 应用入口,包裹 ThemeProvider 和 LanguageProvider |
-| `App.tsx` | **根组件** 管理所有状态: 标签页、管道、撤销/重做、日志、配置、历史记录、更新检查、拖拽打开、数据概况、历史记录上限 |
+| `App.tsx` | **根组件**(948行) 管理所有状态: 标签页、管道、撤销/重做、日志、配置、历史记录、更新检查、拖拽打开、数据概况、历史记录上限、AI 面板、版本控制、数据血缘 |
 | `index.css` | 全局 CSS,定义亮色/暗色主题变量、动画关键帧 |
 
-### 数据与类型 (`data/` · `types/`)
+### 数据与类型 (`data/` · `types/` · `utils/`)
 
 | 文件 | 职责 |
 |------|------|
-| `data/commands.ts` | **所有 xan 命令定义**(3059行),~51个命令,含参数、分类、中英文描述 |
-| `data/functions.ts` | xan 表达式函数定义(200+),含分类(string/number/array/date/aggregation/window/web/fuzzy/io/hashing)、关键字、运算符,供表达式编辑器补全和高亮使用 |
-| `types/xan.ts` | 核心类型: `XanCommand`, `XanParameter`, `PipelineStep`, `PipelineEdge`, `LogEntry`, `PipelineTab`, `HistoricalPipeline` |
+| `data/commands.ts` | **所有 xan 命令定义**(3794行),58个命令,含参数、分类、中英文描述 |
+| `data/functions.ts` | xan 表达式函数定义(200+,321行),含分类(string/number/array/date/aggregation/window/web/fuzzy/io/hashing)、关键字、运算符,供表达式编辑器补全和高亮使用 |
+| `types/xan.ts` | 核心类型: `XanCommand`, `XanParameter`, `PipelineStep`, `PipelineEdge`, `LogEntry`, `PipelineTab`, `HistoricalPipeline`, `PipelineVersion`, `StepLineage`, `ColumnSchema`, `Transformation`, `StoredPipelineStep` |
 | `generated/help-docs.ts` | 自动生成的命令帮助文档(中英文),由 `scripts/generate-help-docs.js` 生成 |
+| `utils/format.ts` | `formatDateTime()` 时间格式化工具 |
+
+### 服务层 (`services/ai/`)
+
+AI 助手前端逻辑,RAG 检索与提示词构建:
+
+| 文件 | 职责 |
+|------|------|
+| `services/ai/index.ts` | `sendAIMessage()` 入口: 校验 API Key、构建消息、调用 `callAI` |
+| `services/ai/context.ts` | **提示词工程核心**(508行): 意图路由、命令索引、RAG 检索(按需加载 `docs/AI_usage/*.md`,上限6个)、Moonblade 函数参考注入、count 筛选两步骤规则 |
+| `services/ai/huggingface.ts` | `callAI()` 各 provider 调用(解析 AIResponse) |
+| `services/ai/types.ts` | `AIConfig`/`AIMessage`/`AIResponse`/`AICommand` 类型 + provider/模型常量 |
 
 ### Hooks (`hooks/`)
 
+状态管理已从 App.tsx 拆分为多个 hook:
+
 | 文件 | 职责 |
 |------|------|
-| `MainMenuHooks.ts` | 主菜单业务逻辑(887行): 文件打开、保存、导入/导出管道、撤销/重做、执行管道(DFS 构建分支) |
-| `BatchFilterHooks.ts` | Batch Filter 执行逻辑: 文件名清理、正则构建、批量筛选执行(直接/带数据) |
-| `BatchConvertHooks.ts` | 批量格式转换: globToRegex、getBaseName、getOutputDir、CSV↔XLSX↔JSON 转换 invoke 调用 |
-| `useDraggable.ts` | 通用拖拽 hook: 管理拖拽位置、边界约束,用于命令面板和日志面板 |
-| `KeyboardShortcuts.ts` | 全局快捷键注册: Ctrl+O/N/S/I/E/Z/Y/R, Shift+H/C/S |
+| `MainMenuHooks.ts` | 主菜单业务逻辑(911行): 文件打开、保存、导入/导出管道、撤销/重做、执行管道(DFS 构建分支) |
+| `useTabs.ts` | 标签页管理(219行): 标签增删改、当前标签、管道状态读写(`getCurrentPipeline`/`getCurrentTab`/`setTabs`) |
+| `usePipelineState.ts` | 管道状态(194行): `updateTabPipeline` 单点更新管道+edges,撤销/重做状态管理 |
+| `usePipelineVersions.ts` | 管道版本控制(260行): 保存/恢复/删除版本、标签管理、步骤序列化与重建 |
+| `useDataLineage.ts` | 数据血缘(467行): 列类型推断、变换分析、血缘图数据构建与持久化 |
+| `useAppSettings.ts` | 应用配置(101行): 分隔符、无表头、通知、历史上限、托盘设置 |
+| `useToast.ts` | Toast 通知(29行) |
+| `useLogs.ts` | 执行日志(22行) |
+| `useUIState.ts` | UI 状态(84行): 对话框/面板开关 |
+| `BatchFilterHooks.ts` | Batch Filter 执行逻辑(621行): 文件名清理、正则构建、批量筛选执行(直接/带数据) |
+| `BatchConvertHooks.ts` | 批量格式转换(305行): globToRegex、getBaseName、getOutputDir、CSV↔XLSX↔JSON 转换 invoke 调用 |
+| `useDraggable.ts` | 通用拖拽 hook(91行): 管理拖拽位置、边界约束,用于命令面板和日志面板 |
+| `KeyboardShortcuts.ts` | 全局快捷键注册(105行): Ctrl+O/N/S/I/E/Z/Y/R, Shift+H/C/S |
 
 ### 国际化 (`i18n/`)
 
 | 文件 | 职责 |
 |------|------|
 | `i18n/index.tsx` | 语言上下文 Provider,持久化到 localStorage |
-| `i18n/translations.ts` | 中英文翻译字符串(~80个 key) |
+| `i18n/translations.ts` | 中英文翻译字符串(413行,含 AI 面板、版本控制、血缘相关 key) |
 
 ### 工具函数 (`lib/`)
 
@@ -198,19 +241,22 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | 文件 | 职责 |
 |------|------|
-| `components/HomeView.tsx` | **主工作区**(550行),管理所有对话框状态、标签页、右键菜单、表格列重命名 |
-| `components/CommandList.tsx` | **命令面板**(503行),可拖拽浮动面板,按分类展示命令,支持搜索和历史记录 |
+| `components/HomeView.tsx` | **主工作区**(844行),管理所有对话框状态、标签页、右键菜单、表格列重命名 |
+| `components/CommandList.tsx` | **命令面板**(553行),可拖拽浮动面板,按分类展示命令,支持搜索和历史记录 |
 
 ### 组件 — 管道编辑 (`panel/`)
 
 | 文件 | 职责 |
 |------|------|
-| `panel/FlowPanel.tsx` | **可视化管道编辑器主组件**,组合子组件,管理状态和事件处理 |
+| `panel/FlowPanel.tsx` | **可视化管道编辑器主组件**(1164行),组合子组件,管理状态和事件处理 |
+| `panel/AIPanel.tsx` | **AI 助手面板**(282行): 聊天 UI、命令生成、一键插入管道、仅发送当前输入(不发送历史) |
+| `panel/VersionControlPanel.tsx` | 管道版本控制面板(256行): 版本列表、保存/恢复/删除、标签管理 |
+| `panel/DataLineagePanel.tsx` | 数据血缘面板(298行): 列级血缘追踪、变换类型图标、保存血缘 |
 | `panel/nodes/TableNode.tsx` | 输入数据表格节点,支持表头重命名和右键菜单 |
 | `panel/nodes/PipelineStepNode.tsx` | 管道步骤节点,支持别名编辑、参数展示、切割动画 |
 | `panel/nodes/index.ts` | 节点类型注册表(nodeTypes) |
 | `panel/utils/cutGeometry.ts` | 切割几何计算:交点检测、clip-path 生成、坠落方向 |
-| `panel/utils/layout.ts` | dagre 自动布局算法 + 节点/边生成 |
+| `panel/utils/layout.ts` | dagre 自动布局算法 + 节点/边生成(`getLayoutedElements`/`createEdgeConfig`) |
 | `panel/overlays/SearchOverlay.tsx` | 画布搜索框 UI(Ctrl+F) |
 | `panel/overlays/CutVisualization.tsx` | 切水果轨迹 SVG 渲染 |
 | `panel/overlays/ConnectionVisualization.tsx` | 右键连接线 SVG 渲染 |
@@ -245,7 +291,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | 文件 | 职责 | 包含的命令 |
 |------|------|-----------|
-| `types.ts` | `CommandFormProps` 接口定义 + `COMMAND_LABELS` 标签映射(59个命令) |  |
+| `types.ts` | `CommandFormProps` 接口定义 + `COMMAND_LABELS` 标签映射(58个命令) |  |
 | `index.ts` | `COMMAND_FORMS` 映射表(命令类型→表单组件),统一导出 | 全部命令 |
 | `CommandFormWrapper.tsx` | 可复用表单包装器: ScrollArea + Cancel/Add/Update 按钮 + `handleCommandSubmit` 调用 |  |
 | `helpers.ts` | `handleCommandSubmit()` 提交处理 + `updateParam()` 参数更新工具函数 |  |
@@ -287,7 +333,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 |------|------|
 | `ThemeProvider.tsx` | 主题上下文,管理 dark/light/system 模式 |
 | `SettingsDialog.tsx` | 设置对话框容器 |
-| `SettingsTabContent.tsx` | 设置内容: 语言、主题、分隔符、无表头选项、执行通知开关、历史记录条数上限 |
+| `SettingsTabContent.tsx` | 设置内容: 语言、主题、分隔符、无表头选项、执行通知开关、历史记录条数上限、AI 配置(provider/model/apiKey) |
 | `Toast.tsx` | Toast 通知系统 |
 
 
@@ -337,12 +383,20 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | 修改历史记录上限 | `src-tauri/src/config.rs` + `src-tauri/src/storage.rs` + `src/components/setting/SettingsTabContent.tsx` |
 | 修改 Batch Filter 功能 | `src/hooks/BatchFilterHooks.ts` + `src/components/dialog/BatchFilterDialog.tsx` + `src/data/commands.ts` |
 | 修改 Batch Convert 功能 | `src/hooks/BatchConvertHooks.ts` + `src/hooks/MainMenuHooks.ts` |
+| 修改 AI 面板 UI/交互 | `src/components/panel/AIPanel.tsx` |
+| 修改 AI 提示词/意图路由 | `src/services/ai/context.ts`(`INTENT_ROUTES`/`retrieveRelevantCommands`/`buildSystemPrompt`) |
+| 修改 AI 大模型调用/代理 | `src-tauri/src/ai.rs`(后端代理) + `src/services/ai/huggingface.ts`(前端调用) |
+| 修改 AI 配置(provider/model/key) | `src/services/ai/types.ts`(常量) + `src/components/setting/SettingsTabContent.tsx`(UI) + `src-tauri/src/config.rs`(持久化) |
+| 修改命令使用文档 | `docs/AI_usage/*.md`(生成源: `scripts/generate-ai-usage-docs.ts`) / 合并版: `docs/AI/USAGE.md` |
+| 修改管道版本控制 | `src/hooks/usePipelineVersions.ts` + `src/components/panel/VersionControlPanel.tsx` + `src-tauri/src/storage.rs` |
+| 修改数据血缘 | `src/hooks/useDataLineage.ts` + `src/components/panel/DataLineagePanel.tsx` + `src-tauri/src/storage.rs` |
 | 修改帮助内容 | `src/components/help/HelpContent.ts` (英文) / `HelpContentCn.ts` (中文) |
 | 修改命令帮助文档 | 运行 `node scripts/generate-help-docs.js` 重新生成 |
 | 修改 Tauri 插件/权限 | `src-tauri/tauri.conf.json` + `src-tauri/capabilities/default.json` |
 | 修改系统托盘/窗口行为 | `src-tauri/src/main.rs` 中的 `setup()` 和 `on_window_event` |
 | 修改数据概况功能 | `src/components/panel/DataProfilePanel.tsx` + `src-tauri/src/csv.rs` 中的 `profile_csv` + `src-tauri/src/storage.rs` 中的缓存函数 |
 | 管道步骤复制粘贴 | `src/components/panel/FlowPanel.tsx` 中的 `handleCopyStep`/`handlePasteStep` |
+| 管道步骤自动连线 | `src/App.tsx` 中的 `handleCommandClick`(仅 AI 添加时 `autoConnect=true` 自动连线) |
 | 修改表达式编辑器 | `src/components/expression/` 目录: `ExpressionEditor.tsx`(主组件) + `highlight.ts`(高亮) + `autocomplete.ts`(补全) |
 | 修改函数定义/补全列表 | `src/data/functions.ts`(200+函数定义) |
 | 修改拖拽交互行为 | `src/components/panel/FlowPanel.tsx`(管道节点拖拽) + `src/components/CommandList.tsx`(命令面板拖拽) + `src/hooks/useDraggable.ts`(通用拖拽逻辑) |

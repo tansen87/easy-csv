@@ -29,6 +29,7 @@ interface AIPanelProps {
     command: XanCommand,
     initialParameters?: Record<string, any>,
     alias?: string,
+    autoConnect?: boolean,
   ) => void;
 }
 
@@ -80,7 +81,7 @@ export const AIPanel = React.memo(function AIPanel({
       const response = await sendAIMessage(
         userMessage.content,
         context,
-        messages,
+        [],
       );
 
       const commandsText = response.commands
@@ -113,7 +114,7 @@ export const AIPanel = React.memo(function AIPanel({
         response.commands.forEach((cmd) => {
           const xanCommand = findXanCommand(cmd.command);
           if (xanCommand) {
-            onAddCommand(xanCommand, cmd.parameters);
+            onAddCommand(xanCommand, cmd.parameters, undefined, true);
           }
         });
       }
@@ -178,16 +179,21 @@ export const AIPanel = React.memo(function AIPanel({
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[min(600px,calc(100vw-32px))] z-40">
+    <div className="fixed bottom-2 left-1/2 -translate-x-1/2 w-[min(600px,calc(100vw-32px))] z-40">
       <div className="flex flex-col bg-background border border-border/50 rounded-lg shadow-xl overflow-hidden">
-        <div className="p-2 border-b bg-card/80 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="p-2 border-b bg-card/80 flex items-center">
+          <div className="flex items-center gap-2 flex-1">
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-primary text-primary-foreground shadow-sm">
               <Sparkles className="h-3.5 w-3.5" />
               {t.aiPanel}
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          {isExpanded && (
+            <span className="flex-1 text-center text-xs text-muted-foreground">
+              {t.aiCurrentOnlyHint}
+            </span>
+          )}
+          <div className="flex items-center gap-1 justify-end flex-1">
             {isExpanded && (
               <Button
                 variant="ghost"
@@ -224,7 +230,7 @@ export const AIPanel = React.memo(function AIPanel({
         </div>
 
         {isExpanded && (
-          <ScrollArea className="h-60">
+          <ScrollArea className="h-45">
             <div className="p-2">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">

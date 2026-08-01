@@ -442,7 +442,7 @@ export const HomeView = React.memo(function HomeView({
                   {t.recentFiles}
                 </p>
               </div>
-              <ScrollArea className="max-h-[26vh]">
+              <ScrollArea className="h-[26vh]">
                 <div className="space-y-0.5 pr-4">
                   {recentFiles.map((file) => (
                     <button

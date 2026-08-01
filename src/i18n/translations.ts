@@ -121,6 +121,7 @@ export interface Translations {
   aiAddToPipeline: string;
   aiCommandPreview: string;
   aiClear: string;
+  aiCurrentOnlyHint: string;
   aiConfigureApiKey: string;
 
   // AI Settings
@@ -258,6 +259,7 @@ export const translations: Record<Language, Translations> = {
     aiAddToPipeline: "Add to Pipeline",
     aiCommandPreview: "Command Preview",
     aiClear: "Clear",
+    aiCurrentOnlyHint: "Only current message is used",
     aiConfigureApiKey: "Please configure API Key in settings",
 
     // AI Settings
@@ -393,6 +395,7 @@ export const translations: Record<Language, Translations> = {
     aiAddToPipeline: "添加到管道",
     aiCommandPreview: "命令预览",
     aiClear: "清空",
+    aiCurrentOnlyHint: "仅使用当前输入",
     aiConfigureApiKey: "请先在设置中配置 API Key",
 
     // AI Settings

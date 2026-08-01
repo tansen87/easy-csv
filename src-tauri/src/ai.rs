@@ -126,7 +126,7 @@ async fn call_qwen(request: AIRequest) -> Result<AIResponse, String> {
     .map_err(|e| format!("Failed to read response: {}", e))?;
 
   eprintln!("[AI] Status: {}", status);
-  eprintln!("[AI] Raw response: {}", text);
+  // eprintln!("[AI] Raw response: {}", text);
 
   if !status.is_success() {
     return Ok(AIResponse {

@@ -212,6 +212,7 @@ function AppContent() {
       command: XanCommand,
       initialParameters?: Record<string, any>,
       alias?: string,
+      autoConnect = false,
     ) => {
       const newStep: PipelineStep = {
         id: `${command.id}-${Date.now()}`,
@@ -241,6 +242,7 @@ function AppContent() {
 
       const newEdges = [...currentEdges];
       if (
+        autoConnect &&
         !newEdges.some(
           (e) => e.source === sourceId && e.target === newStep.id,
         )
