@@ -7,7 +7,7 @@ import {
   DEFAULT_AI_CONFIG,
 } from "./types";
 import { buildFullPrompt } from "./context";
-import { callAI } from "./huggingface";
+import { callAI } from "./api";
 
 let currentConfig: AIConfig = { ...DEFAULT_AI_CONFIG };
 
@@ -44,7 +44,6 @@ export async function saveAIConfig(config: AIConfig): Promise<void> {
 export async function sendAIMessage(
   userMessage: string,
   context: AIContext,
-  history: AIMessage[] = [],
 ): Promise<AIResponse> {
   if (!currentConfig.apiKey) {
     return {
@@ -53,24 +52,15 @@ export async function sendAIMessage(
     };
   }
 
-  const systemAndUserMessages = await buildFullPrompt(userMessage, context);
+  const messages = await buildFullPrompt(userMessage, context);
 
-  const allMessages: AIMessage[] = [
-    ...history.map((m) => ({
-      role: m.role as "system" | "user" | "assistant",
-      content: m.content,
-      timestamp: m.timestamp,
-    })),
-    ...systemAndUserMessages.map((m) => ({
-      role: m.role as "system" | "user" | "assistant",
-      content: m.content,
-      timestamp: Date.now(),
-    })),
-  ];
+  const allMessages = messages.map((m) => ({
+    role: m.role as "system" | "user" | "assistant",
+    content: m.content,
+    timestamp: Date.now(),
+  }));
 
-  const response = await callAI(allMessages, currentConfig);
-
-  return response;
+  return await callAI(allMessages, currentConfig);
 }
 
 export function isAIConfigured(): boolean {

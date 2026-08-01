@@ -81,7 +81,6 @@ export const AIPanel = React.memo(function AIPanel({
       const response = await sendAIMessage(
         userMessage.content,
         context,
-        [],
       );
 
       const commandsText = response.commands

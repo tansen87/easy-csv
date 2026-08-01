@@ -327,48 +327,48 @@ export const HomeView = React.memo(function HomeView({
                 <path
                   d="M4 10H2.365A0.98675 0.98675 0 0 0 1.5 9.5a1 1 0 0 0 0 2 0.98675 0.98675 0 0 0 0.865 -0.5H4Z"
                   fill="#89A4A8"
-                  stroke-width="0.5"
+                  strokeWidth="0.5"
                 ></path>
                 <path
                   d="M14.5 4.5a0.98675 0.98675 0 0 0 -0.865 0.5H12v1h1.635A0.99955 0.99955 0 1 0 14.5 4.5Z"
                   fill="#89A4A8"
-                  stroke-width="0.5"
+                  strokeWidth="0.5"
                 ></path>
                 <path
                   d="M12.70705 2.5 10.5 0.29295 8.29295 2.5 10 4.20705V9h1V4.20705ZM10.5 1.70705 11.29295 2.5 10.5 3.29295 9.70705 2.5Z"
                   fill="#89A4A8"
-                  stroke-width="0.5"
+                  strokeWidth="0.5"
                 ></path>
                 <path
                   d="M6 11.79295V7h-1v4.79295L3.29295 13.5 5.5 15.70705 7.70705 13.5ZM4.70705 13.5 5.5 12.70705 6.29295 13.5 5.5 14.29295Z"
                   fill="#89A4A8"
-                  stroke-width="0.5"
+                  strokeWidth="0.5"
                 ></path>
                 <path
                   d="M9 5H4.20705L2.5 3.29295 0.29295 5.5 2.5 7.70705 4.20705 6H9ZM2.5 6.29295 1.70705 5.5 2.5 4.70705 3.29295 5.5Z"
                   fill="#89A4A8"
-                  stroke-width="0.5"
+                  strokeWidth="0.5"
                 ></path>
                 <path
                   d="M6.5 1.5a1 1 0 0 0 -2 0 0.98665 0.98665 0 0 0 0.5 0.865V4h1V2.365A0.98665 0.98665 0 0 0 6.5 1.5Z"
                   fill="#89A4A8"
-                  stroke-width="0.5"
+                  strokeWidth="0.5"
                 ></path>
                 <path
                   d="M11 13.63525V12h-1v1.635a1 1 0 1 0 1 0Z"
                   fill="#89A4A8"
-                  stroke-width="0.5"
+                  strokeWidth="0.5"
                 ></path>
                 <path
                   d="M15.70705 10.5 13.5 8.29295 11.79295 10H7v1h4.79295L13.5 12.70705ZM13.5 9.70705 14.29295 10.5 13.5 11.29295 12.70705 10.5Z"
                   fill="#89A4A8"
-                  stroke-width="0.5"
+                  strokeWidth="0.5"
                 ></path>
                 <path
                   id="_Transparent_Rectangle_"
                   d="M0 0h16v16H0Z"
                   fill="none"
-                  stroke-width="0.5"
+                  strokeWidth="0.5"
                 ></path>
               </svg>
             </div>

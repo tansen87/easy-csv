@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { AIConfig, AIMessage, AIResponse } from "./types";
+import { AICommand, AIConfig, AIMessage, AIResponse } from "./types";
 
 interface BackendAIRequest {
   messages: { role: string; content: string }[];
@@ -44,34 +44,40 @@ export async function callAI(
 }
 
 function parseAIResponse(content: string): AIResponse {
-  const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
-  if (jsonMatch) {
+  const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/g;
+  const commands: AICommand[] = [];
+  let lastIndex = 0;
+
+  let match;
+  while ((match = jsonBlockRegex.exec(content)) !== null) {
     try {
-      const parsed = JSON.parse(jsonMatch[1]);
+      const parsed = JSON.parse(match[1]);
       if (Array.isArray(parsed)) {
-        return {
-          content: content.replace(/```json\s*[\s\S]*?\s*```/, "").trim(),
-          commands: parsed.map((item) => ({
-            command: item.command,
-            parameters: item.parameters || {},
-            explanation: item.explanation,
-          })),
-        };
+        parsed.forEach((item) => {
+          if (item.command) {
+            commands.push({
+              command: item.command,
+              parameters: item.parameters || {},
+              explanation: item.explanation,
+            });
+          }
+        });
       } else if (parsed.command) {
-        return {
-          content: content.replace(/```json\s*[\s\S]*?\s*```/, "").trim(),
-          commands: [
-            {
-              command: parsed.command,
-              parameters: parsed.parameters || {},
-              explanation: parsed.explanation,
-            },
-          ],
-        };
+        commands.push({
+          command: parsed.command,
+          parameters: parsed.parameters || {},
+          explanation: parsed.explanation,
+        });
       }
     } catch (e) {
-      console.warn("Failed to parse JSON from AI response:", e);
+      console.warn("Failed to parse JSON block from AI response:", e);
     }
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (commands.length > 0) {
+    const remaining = content.slice(lastIndex).trim();
+    return { content: remaining, commands };
   }
 
   return { content, commands: [] };
