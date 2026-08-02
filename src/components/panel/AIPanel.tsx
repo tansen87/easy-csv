@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useLanguage } from "@/i18n";
 import { AIMessage, AIContext, TokenUsage } from "@/services/ai/types";
 import { sendAIMessage, isAIConfigured } from "@/services/ai/index";
@@ -28,6 +28,9 @@ interface AIPanelProps {
     alias?: string,
     autoConnect?: boolean,
   ) => void;
+  onAddCommands?: (
+    commands: { command: XanCommand; parameters?: Record<string, any> }[],
+  ) => void;
 }
 
 export const AIPanel = React.memo(function AIPanel({
@@ -35,6 +38,7 @@ export const AIPanel = React.memo(function AIPanel({
   onClose,
   context,
   onAddCommand,
+  onAddCommands,
 }: AIPanelProps) {
   const { t } = useLanguage();
   const [messages, setMessages] = useState<AIMessage[]>([]);
@@ -47,7 +51,19 @@ export const AIPanel = React.memo(function AIPanel({
     total_tokens: 0,
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoResizeTextarea = useCallback(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    const scrollHeight = textarea.scrollHeight;
+    textarea.style.height = Math.min(scrollHeight + 2, 96) + "px";
+  }, []);
+
+  useEffect(() => {
+    autoResizeTextarea();
+  }, [inputValue, autoResizeTextarea]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -119,12 +135,29 @@ export const AIPanel = React.memo(function AIPanel({
       setMessages((prev) => [...prev, assistantMessage]);
 
       if (response.commands && response.commands.length > 0) {
-        response.commands.forEach((cmd) => {
-          const xanCommand = findXanCommand(cmd.command);
-          if (xanCommand) {
-            onAddCommand(xanCommand, cmd.parameters, undefined, true);
+        if (onAddCommands) {
+          // Batch add all commands at once
+          const commandsToAdd = response.commands
+            .map((cmd) => {
+              const xanCommand = findXanCommand(cmd.command);
+              if (xanCommand) {
+                return { command: xanCommand, parameters: cmd.parameters };
+              }
+              return null;
+            })
+            .filter(Boolean) as { command: XanCommand; parameters?: Record<string, any> }[];
+          if (commandsToAdd.length > 0) {
+            onAddCommands(commandsToAdd);
           }
-        });
+        } else {
+          // Fallback: add one by one (may have issues with stale state)
+          response.commands.forEach((cmd, _index) => {
+            const xanCommand = findXanCommand(cmd.command);
+            if (xanCommand) {
+              onAddCommand(xanCommand, cmd.parameters, undefined, true);
+            }
+          });
+        }
       }
     } catch (error) {
       const errorMessage: AIMessage = {
@@ -147,7 +180,7 @@ export const AIPanel = React.memo(function AIPanel({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && e.ctrlKey) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -258,21 +291,26 @@ export const AIPanel = React.memo(function AIPanel({
               {t.aiConfigureApiKey}
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <Input
+            <div className="relative">
+              <Textarea
                 ref={inputRef}
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={(e) => {
+                  setInputValue(e.target.value);
+                  autoResizeTextarea();
+                }}
                 onKeyDown={handleKeyDown}
                 onFocus={() => setIsExpanded(true)}
                 placeholder={t.aiPlaceholder}
                 disabled={isLoading}
-                className="flex-1 h-7"
+                className="w-full h-auto min-h-[36px] max-h-[96px] resize-none overflow-y-auto py-2 pr-10 text-sm leading-5 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent"
+                rows={1}
               />
               <Button
                 onClick={handleSendMessage}
                 disabled={!inputValue.trim() || isLoading}
                 size="sm"
+                className="absolute bottom-1 right-3 h-7 w-7 p-0"
               >
                 {isLoading ? <Loader2 className="animate-spin" /> : <Send />}
               </Button>

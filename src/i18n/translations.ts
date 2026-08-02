@@ -254,7 +254,7 @@ export const translations: Record<Language, Translations> = {
 
     // AIPanel
     aiPanel: "AI Assistant",
-    aiPlaceholder: "Describe the operation you want to perform...",
+    aiPlaceholder: "Describe operations (Ctrl+Enter to send)...",
     aiWelcomeMessage: "Easy CSV AI Assistant",
     aiThinking: "Thinking...",
     aiAddToPipeline: "Add to Pipeline",
@@ -391,7 +391,7 @@ export const translations: Record<Language, Translations> = {
 
     // AIPanel
     aiPanel: "AI 助手",
-    aiPlaceholder: "描述你想执行的操作...",
+    aiPlaceholder: "描述操作 (Ctrl+Enter 发送)...",
     aiWelcomeMessage: "Easy CSV AI助手",
     aiThinking: "思考中...",
     aiAddToPipeline: "添加到管道",

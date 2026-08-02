@@ -264,6 +264,61 @@ function AppContent() {
     [tabsHook, pipeline],
   );
 
+  // Multiple commands click handler (batch add)
+  const handleCommandsClick = useCallback(
+    (
+      commands: { command: XanCommand; parameters?: Record<string, any> }[],
+    ) => {
+      const currentPipeline = tabsHook.getCurrentPipeline();
+      const currentTab = tabsHook.getCurrentTab();
+      const currentEdges = currentTab?.edges || [];
+
+      let newSteps: PipelineStep[] = [];
+      let newEdges = [...currentEdges];
+      let lastSourceId =
+        currentPipeline.length > 0
+          ? currentPipeline[currentPipeline.length - 1].id
+          : "table-node";
+
+      commands.forEach(({ command, parameters }) => {
+        const newStep: PipelineStep = {
+          id: `${command.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          command,
+          parameters: {},
+        };
+
+        command.parameters.forEach((param) => {
+          if (param.default !== undefined) {
+            newStep.parameters[param.name] = param.default;
+          }
+        });
+
+        if (parameters) {
+          newStep.parameters = { ...newStep.parameters, ...parameters };
+        }
+
+        newEdges.push({
+          id: `e-${lastSourceId}-${newStep.id}`,
+          source: lastSourceId,
+          target: newStep.id,
+        });
+
+        lastSourceId = newStep.id;
+        newSteps.push(newStep);
+      });
+
+      if (newSteps.length > 0) {
+        pipeline.updateTabPipeline(
+          [...currentPipeline, ...newSteps],
+          undefined,
+          newEdges,
+        );
+        setSelectedStep(newSteps[newSteps.length - 1]);
+      }
+    },
+    [tabsHook, pipeline],
+  );
+
   // Help click
   const handleHelpClick = useCallback(
     (command: XanCommand) => {
@@ -939,6 +994,7 @@ function AppContent() {
               inputFile: tabsHook.getCurrentTab()?.inputFile,
             }}
             onAddCommand={handleCommandClick}
+            onAddCommands={handleCommandsClick}
           />
         </div>
       }

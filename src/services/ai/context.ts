@@ -431,27 +431,23 @@ export async function buildSystemPrompt(
   sections.push(`
     ## 核心规则(必须遵守)
     - count 只能统计整个文件行数,没有筛选能力.需求含"筛选/查找/包含/开头/结尾/匹配/过滤"时,即使同时要求"统计/行数/计数",第一步必须是 search,第二步才是 count.严禁只输出 count.
-    - 需求含筛选+统计 → 两步数组 [search, count].
+    - 需求含筛选+统计 → 两步编号:
       示例: 用户"筛选idx以1结尾的行并统计行数"
-      正确: [{"command":"search","parameters":{"select":"idx","regex":true,"pattern":"1$"},"explanation":"筛选"},{"command":"count","parameters":{},"explanation":"统计行数"}]
-      错误: [{"command":"count","parameters":{},"explanation":"统计行数"}]
+      正确:
+      1. {"command":"search","parameters":{"select":"idx","regex":true,"pattern":"1$"},"explanation":"筛选"}
+      2. {"command":"count","parameters":{},"explanation":"统计行数"}
+      错误: {"command":"count","parameters":{},"explanation":"统计行数"}
 
     ## 模糊需求处理
     当用户提示词模糊或可能有歧义时,输出格式必须为:
-    {
-      "suggestion": "建议的提示词",
-      "commands": [...]
-    }
+    {"suggestion":"建议的提示词","commands":[编号步骤]}
     - suggestion 字段: 给出更清晰的提示词建议
     - commands 字段: 基于合理理解执行的默认操作
 
     示例: 用户说"拆分date"
-    输出: {
-      "suggestion": "'将date列按-拆分取第2个'",
-      "commands": [{"command":"map","parameters":{"expression":"col(\"date\").split(\"-\")"},"explanation":"按-拆分date列"}]
-    }
+    输出: {"suggestion":"'将date列按-拆分取第2个'","commands":[{"command":"map","parameters":{"expression":"col(\\"date\\").split(\\"-\\")"},"explanation":"按-拆分date列"}]}
 
-    当需求明确时,直接输出 commands 数组,不需要 suggestion 字段.
+    当需求明确时,直接输出编号步骤,不需要 suggestion 字段.
 
     ## search vs filter 选择规则
     优先使用 search,仅在需要数值比较时才用 filter:
@@ -473,9 +469,9 @@ export async function buildSystemPrompt(
 
     filter 仅用于数值比较(>、<、>=、<=):
     - 示例: 用户"筛选年龄大于30"
-      正确: [{"command":"filter","parameters":{"expression":"col(\\"age\\") > 30"}}]
+      正确: {"command":"filter","parameters":{"expression":"col(\\"age\\") > 30"}}
     - 示例: 用户"筛选金额在100到500之间"
-      正确: [{"command":"filter","parameters":{"expression":"col(\\"amount\\") >= 100 && col(\\"amount\\") <= 500"}}]
+      正确: {"command":"filter","parameters":{"expression":"col(\\"amount\\") >= 100 && col(\\"amount\\") <= 500"}}
 
     search 参数说明:
     - -s / select: 要搜索的列名
@@ -508,32 +504,26 @@ export async function buildSystemPrompt(
 
   sections.push(`
     ## 响应格式
-    返回JSON. 多步骤返回数组,单步骤返回对象:
+    返回JSON,必须用数字编号区分每个步骤:
+
+    多步骤(必须编号):
     \`\`\`json
-    [
-      { "command": "命令1", "parameters": {...}, "explanation": "..." },
-      { "command": "命令2", "parameters": {...}, "explanation": "..." }
-    ]
+    1. {"command":"命令1","parameters":{...},"explanation":"..."}
+    2. {"command":"命令2","parameters":{...},"explanation":"..."}
+    3. {"command":"命令3","parameters":{...},"explanation":"..."}
     \`\`\`
 
     单步骤:
     \`\`\`json
-    {
-      "command": "命令名",
-      "parameters": { "参数名": "值" },
-      "explanation": "解释说明"
-    }
+    {"command":"命令名","parameters":{...},"explanation":"..."}
     \`\`\`
 
-    模糊需求返回对象:
+    模糊需求:
     \`\`\`json
-    {
-      "suggestion": "建议的提示词",
-      "commands": [单步骤或多步骤命令]
-    }
+    {"suggestion":"建议的提示词","commands":[编号步骤]}
     \`\`\`
 
-    非CSV问题可自然语言回答,但优先引导到CSV处理.`);
+    重要: 多步骤时每个命令前必须有数字编号(1. 2. 3.),编号与命令同行,不要把编号放在单独一行.非CSV问题可自然语言回答,但优先引导到CSV处理.`);
 
   sections.push(`
     ## 其他规则
