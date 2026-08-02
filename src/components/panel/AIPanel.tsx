@@ -223,7 +223,7 @@ export const AIPanel = React.memo(function AIPanel({
   return (
     <div className="fixed bottom-2 left-1/2 -translate-x-1/2 w-[min(600px,calc(100vw-32px))] z-40">
       <div className="flex flex-col bg-background border border-border/50 rounded-lg shadow-xl overflow-hidden">
-        <div className="p-2 border-b bg-card/80 flex items-center">
+        <div className="p-2 bg-card/80 flex items-center">
           <div className="flex items-center gap-2 flex-1">
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-primary text-primary-foreground shadow-sm">
               <Sparkles className="h-3.5 w-3.5" />

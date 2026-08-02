@@ -40,7 +40,6 @@ export async function callAI(
 
     return parseAIResponse(response.content, response.usage);
   } catch (error) {
-    console.error("AI API call failed:", error);
     return {
       content: "",
       error: `network error: ${error instanceof Error ? error.message : "Unknown error"}`,

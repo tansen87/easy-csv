@@ -70,7 +70,7 @@ function buildCompactMoonbladeReference(fullDoc: string): string {
   return kept.join("\n").trim();
 }
 
-const EXPRESSION_COMMANDS = new Set(["map", "transform"]);
+const EXPRESSION_COMMANDS = new Set(["map"]);
 
 interface IntentRoute {
   intent: string;
@@ -430,13 +430,10 @@ export async function buildSystemPrompt(
 
   sections.push(`
     ## 核心规则(必须遵守)
-    - count 只能统计整个文件行数,没有筛选能力.需求含"筛选/查找/包含/开头/结尾/匹配/过滤"时,即使同时要求"统计/行数/计数",第一步必须是 search,第二步才是 count.严禁只输出 count.
-    - 需求含筛选+统计 → 两步编号:
-      示例: 用户"筛选idx以1结尾的行并统计行数"
-      正确:
-      1. {"command":"search","parameters":{"select":"idx","regex":true,"pattern":"1$"},"explanation":"筛选"}
-      2. {"command":"count","parameters":{},"explanation":"统计行数"}
-      错误: {"command":"count","parameters":{},"explanation":"统计行数"}
+    - 筛选某列=某值(等于/不等于)必须用search + exact匹配,严禁用filter.即使列是数字(如idx=1001)也一样.示例: 用户"筛选idx=1001" → {"command":"search","parameters":{"select":"idx","exact":true,"pattern":"1001"},"explanation":"筛选idx等于1001"}.filter仅用于数值大小比较(>、<、>=、<=).
+    - 需求含"导出/保存/转换为非CSV格式"(如json、xlsx/excel、html、md、txt、jsonl等)时,必须用to命令,format参数指定输出格式.output只负责把CSV写入文件,不转换格式.
+    - 参数名用短横线形式(如 select → -s);-r(regex)、-e(exact) 是flag类型参数,后面不接值,模式内容始终放在pattern(-p)中.
+    - 需求"合并/拼接某目录下所有CSV文件为1个CSV"时,用cat命令:mode=rows(按行拼接),勾选union(合并各文件列头),glob填目录通配符(如D:\test\*.csv).不要用join、merge或output.示例: 用户"合并D:\test所有的csv文件为1个csv" → {"command":"cat","parameters":{"mode":"rows","union":true,"glob":"D:\\\\test\\\\*.csv"},"explanation":"合并D:\\test下所有csv文件为1个csv"}
 
     ## 模糊需求处理
     当用户提示词模糊或可能有歧义时,输出格式必须为:
@@ -447,13 +444,13 @@ export async function buildSystemPrompt(
     示例: 用户说"拆分date"
     输出: {"suggestion":"'将date列按-拆分取第2个'","commands":[{"command":"map","parameters":{"expression":"col(\\"date\\").split(\\"-\\")"},"explanation":"按-拆分date列"}]}
 
-    当需求明确时,直接输出编号步骤,不需要 suggestion 字段.
+    当需求明确时,直接输出编号步骤,不需要suggestion字段.
 
     ## search vs filter 选择规则
-    优先使用 search,仅在需要数值比较时才用 filter:
+    优先使用search,仅在需要数值比较时才用filter.
 
-    search 用于所有文本类操作:
-    - 等于/不等于 → search + exact 参数(精确匹配)
+    search 用于所有筛选场景:
+    - 等于/不等于 → search + exact 参数
       示例: search -s 列名 -e -p '值'        (等于)
       示例: search -s 列名 -e -p '值' -i     (不区分大小写等于)
       示例: search -s 列名 -e -p '值' -v     (不等于)
@@ -473,16 +470,17 @@ export async function buildSystemPrompt(
     - 示例: 用户"筛选金额在100到500之间"
       正确: {"command":"filter","parameters":{"expression":"col(\\"amount\\") >= 100 && col(\\"amount\\") <= 500"}}
 
+    "查询/查找/筛选数据"用search,不是view;"查看数据/预览"才用view.
+
     search 参数说明:
     - -s / select: 要搜索的列名
     - -p / pattern: 搜索模式(正则表达式或文本)
-    - -e / exact: 精确匹配标志(不带值,配合 pattern 使用)
-    - -r / regex: 正则表达式标志(不带值,配合 pattern 使用)
+    - -e / exact: 精确匹配标志(不带值,配合pattern使用)
+    - -r / regex: 正则表达式标志(不带值,配合pattern使用)
     - -i / ignore-case: 不区分大小写标志
     - -v / invert-match: 反向匹配标志
     - --empty: 查找空单元格
-    - --non-empty: 查找非空单元格
-    重要: -r 和 -e 是 flag 类型参数,后面不接值.模式内容始终放在 pattern(-p) 参数中.`);
+    - --non-empty: 查找非空单元格`);
 
   sections.push(`
     ## 意图路由
@@ -496,7 +494,7 @@ export async function buildSystemPrompt(
 
   sections.push(`
     ## 本次查询相关命令参数
-    ${relevantDocs || "(无可检索到的详细文档)"}`);
+    ${relevantDocs}`);
 
   sections.push(`
     ## 当前状态
@@ -524,17 +522,6 @@ export async function buildSystemPrompt(
     \`\`\`
 
     重要: 多步骤时每个命令前必须有数字编号(1. 2. 3.),编号与命令同行,不要把编号放在单独一行.非CSV问题可自然语言回答,但优先引导到CSV处理.`);
-
-  sections.push(`
-    ## 其他规则
-    1. "查询/查找/筛选数据" 优先用 search,不是 view
-    2. "查看数据/预览" 才用 view
-    3. 文本类筛选优先用 search,数值比较才用 filter
-    4. 多步骤时确保命令顺序正确
-    5. -r(regex)和 -e(exact)是 flag,后面不接值.正则模式放在 -p(pattern) 中
-    6. "以某文本结尾" → search -s 列名 -r -p '文本$'; "以某文本开头" → search -s 列名 -r -p '^文本'
-    7. "等于/不等于" → search -s 列名 -e -p '值' (-v 反向, -i 不区分大小写)
-    8. 参数名用短横线形式(如 select → -s)`);
 
   if (needsExpressionDoc) {
     sections.push(`
