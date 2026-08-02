@@ -1,4 +1,4 @@
-import { AIContext } from "./types";
+﻿import { AIContext } from "./types";
 import { xanCommands } from "@/data/commands";
 
 const cmdDocs = import.meta.glob<{
@@ -7,11 +7,19 @@ const cmdDocs = import.meta.glob<{
 
 const moonbladeDocs = import.meta.glob<{
   default: string;
-}>("/public/docs/moonblade/*.md", { query: "?raw", import: "default", eager: true });
+}>("/public/docs/moonblade/*.md", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+});
 
 const aiUsageDocs = import.meta.glob<{
   default: string;
-}>("/public/docs/AI_usage/*.md", { query: "?raw", import: "default", eager: true });
+}>("/public/docs/AI_usage/*.md", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+});
 
 function buildDocMap(
   globModules: Record<string, { default: string }>,
@@ -258,9 +266,7 @@ const COLUMN_COMMANDS = new Set([
 
 const MAX_RAG_DOCS = 6;
 
-const COMMAND_BY_NAME = new Map(
-  xanCommands.map((c) => [c.name, c] as const),
-);
+const COMMAND_BY_NAME = new Map(xanCommands.map((c) => [c.name, c] as const));
 
 function buildCompactCommandDoc(commandName: string): string {
   const cmd = COMMAND_BY_NAME.get(commandName);
@@ -268,7 +274,10 @@ function buildCompactCommandDoc(commandName: string): string {
     return "";
   }
 
-  const lines: string[] = [`### ${cmd.name}`, `${cmd.descriptionCn || cmd.description}`];
+  const lines: string[] = [
+    `### ${cmd.name}`,
+    `${cmd.descriptionCn || cmd.description}`,
+  ];
   if (cmd.parameters.length > 0) {
     lines.push("parameter:");
     cmd.parameters.forEach((p) => {
@@ -415,60 +424,131 @@ export async function buildSystemPrompt(
 
   const sections: string[] = [];
 
-  sections.push(`你是Easy CSV的AI助手.
-你的职责: 理解用户的自然语言需求,转换为xan命令,以JSON格式返回.需要多步骤时,按正确顺序返回命令数组.`);
+  sections.push(`
+    你是Easy CSV的AI助手.
+    你的职责: 理解用户的自然语言需求,转换为xan命令,以JSON格式返回.需要多步骤时,按正确顺序返回命令数组.`);
 
-  sections.push(`## 核心规则(必须遵守)
-- count 只能统计整个文件行数,没有筛选能力.需求含"筛选/查找/包含/开头/结尾/匹配/过滤"时,即使同时要求"统计/行数/计数",第一步必须是 search 或 filter,第二步才是 count.严禁只输出 count.
-- 需求含筛选+统计 → 两步数组 [筛选命令, count].
-  示例: 用户"筛选idx以1结尾的行并统计行数"
-  正确: [{"command":"search","parameters":{"select":"idx","regex":"1$"},"explanation":"筛选"},{"command":"count","parameters":{},"explanation":"统计行数"}]
-  错误: [{"command":"count","parameters":{},"explanation":"统计行数"}]`);
+  sections.push(`
+    ## 核心规则(必须遵守)
+    - count 只能统计整个文件行数,没有筛选能力.需求含"筛选/查找/包含/开头/结尾/匹配/过滤"时,即使同时要求"统计/行数/计数",第一步必须是 search,第二步才是 count.严禁只输出 count.
+    - 需求含筛选+统计 → 两步数组 [search, count].
+      示例: 用户"筛选idx以1结尾的行并统计行数"
+      正确: [{"command":"search","parameters":{"select":"idx","regex":true,"pattern":"1$"},"explanation":"筛选"},{"command":"count","parameters":{},"explanation":"统计行数"}]
+      错误: [{"command":"count","parameters":{},"explanation":"统计行数"}]
 
-  sections.push(`## 意图路由
-${routingHints}`);
+    ## 模糊需求处理
+    当用户提示词模糊或可能有歧义时,输出格式必须为:
+    {
+      "suggestion": "建议的提示词",
+      "commands": [...]
+    }
+    - suggestion 字段: 给出更清晰的提示词建议
+    - commands 字段: 基于合理理解执行的默认操作
+
+    示例: 用户说"拆分date"
+    输出: {
+      "suggestion": "'将date列按-拆分取第2个'",
+      "commands": [{"command":"map","parameters":{"expression":"col(\"date\").split(\"-\")"},"explanation":"按-拆分date列"}]
+    }
+
+    当需求明确时,直接输出 commands 数组,不需要 suggestion 字段.
+
+    ## search vs filter 选择规则
+    优先使用 search,仅在需要数值比较时才用 filter:
+
+    search 用于所有文本类操作:
+    - 等于/不等于 → search + exact 参数(精确匹配)
+      示例: search -s 列名 -e -p '值'        (等于)
+      示例: search -s 列名 -e -p '值' -i     (不区分大小写等于)
+      示例: search -s 列名 -e -p '值' -v     (不等于)
+    - 包含/不包含 → search + regex 参数
+      示例: search -s 列名 -r -p '值'
+      示例: search -s 列名 -r -p '值' -v     (不包含)
+    - 开头/结尾 → search + regex 参数
+      示例: search -s 列名 -r -p '^文本'     (开头)
+      示例: search -s 列名 -r -p '文本$'     (结尾)
+    - 空值/非空 → search + empty/non-empty
+      示例: search -s 列名 --empty            (空值)
+      示例: search -s 列名 --non-empty        (非空)
+
+    filter 仅用于数值比较(>、<、>=、<=):
+    - 示例: 用户"筛选年龄大于30"
+      正确: [{"command":"filter","parameters":{"expression":"col(\\"age\\") > 30"}}]
+    - 示例: 用户"筛选金额在100到500之间"
+      正确: [{"command":"filter","parameters":{"expression":"col(\\"amount\\") >= 100 && col(\\"amount\\") <= 500"}}]
+
+    search 参数说明:
+    - -s / select: 要搜索的列名
+    - -p / pattern: 搜索模式(正则表达式或文本)
+    - -e / exact: 精确匹配标志(不带值,配合 pattern 使用)
+    - -r / regex: 正则表达式标志(不带值,配合 pattern 使用)
+    - -i / ignore-case: 不区分大小写标志
+    - -v / invert-match: 反向匹配标志
+    - --empty: 查找空单元格
+    - --non-empty: 查找非空单元格
+    重要: -r 和 -e 是 flag 类型参数,后面不接值.模式内容始终放在 pattern(-p) 参数中.`);
+
+  sections.push(`
+    ## 意图路由
+    ${routingHints}`);
 
   if (showFullIndex) {
-    sections.push(`## 命令索引(全量)
-${getCommandIndex()}`);
+    sections.push(`
+      ## 命令索引(全量)
+      ${getCommandIndex()}`);
   }
 
-  sections.push(`## 本次查询相关命令参数
-${relevantDocs || "(无可检索到的详细文档)"}`);
+  sections.push(`
+    ## 本次查询相关命令参数
+    ${relevantDocs || "(无可检索到的详细文档)"}`);
 
-  sections.push(`## 当前状态
-${contextParts.length > 0 ? contextParts.join("\n") : "未打开文件"}`);
+  sections.push(`
+    ## 当前状态
+    ${contextParts.length > 0 ? contextParts.join("\n") : "未打开文件"}`);
 
-  sections.push(`## 响应格式
-返回JSON. 多步骤返回数组,单步骤返回对象:
-\`\`\`json
-[
-  { "command": "命令1", "parameters": {...}, "explanation": "..." },
-  { "command": "命令2", "parameters": {...}, "explanation": "..." }
-]
-\`\`\`
+  sections.push(`
+    ## 响应格式
+    返回JSON. 多步骤返回数组,单步骤返回对象:
+    \`\`\`json
+    [
+      { "command": "命令1", "parameters": {...}, "explanation": "..." },
+      { "command": "命令2", "parameters": {...}, "explanation": "..." }
+    ]
+    \`\`\`
 
-单步骤:
-\`\`\`json
-{
-  "command": "命令名",
-  "parameters": { "参数名": "值" },
-  "explanation": "解释说明"
-}
-\`\`\`
+    单步骤:
+    \`\`\`json
+    {
+      "command": "命令名",
+      "parameters": { "参数名": "值" },
+      "explanation": "解释说明"
+    }
+    \`\`\`
 
-非CSV问题可自然语言回答,但优先引导到CSV处理.`);
+    模糊需求返回对象:
+    \`\`\`json
+    {
+      "suggestion": "建议的提示词",
+      "commands": [单步骤或多步骤命令]
+    }
+    \`\`\`
 
-  sections.push(`## 其他规则
-1. "查询/查找/筛选数据" 用 search 或 filter,不是 view
-2. "查看数据/预览" 才用 view
-3. filter 用于复杂条件,search 用于简单文本匹配
-4. 多步骤时确保命令顺序正确
-5. "以某文本结尾" → search -s 列名 -r '文本$'; "以某文本开头" → search -s 列名 -r '^文本'
-6. 参数名用短横线形式(如 select → -s)`);
+    非CSV问题可自然语言回答,但优先引导到CSV处理.`);
+
+  sections.push(`
+    ## 其他规则
+    1. "查询/查找/筛选数据" 优先用 search,不是 view
+    2. "查看数据/预览" 才用 view
+    3. 文本类筛选优先用 search,数值比较才用 filter
+    4. 多步骤时确保命令顺序正确
+    5. -r(regex)和 -e(exact)是 flag,后面不接值.正则模式放在 -p(pattern) 中
+    6. "以某文本结尾" → search -s 列名 -r -p '文本$'; "以某文本开头" → search -s 列名 -r -p '^文本'
+    7. "等于/不等于" → search -s 列名 -e -p '值' (-v 反向, -i 不区分大小写)
+    8. 参数名用短横线形式(如 select → -s)`);
 
   if (needsExpressionDoc) {
-    sections.push(`## Moonblade表达式语法
+    sections.push(`
+      ## Moonblade表达式语法
       filter、map等命令使用Moonblade表达式:
       - 比较: ==, !=, >, <, >=, <=
       - 逻辑: &&, ||, !
@@ -477,7 +557,23 @@ ${contextParts.length > 0 ? contextParts.join("\n") : "未打开文件"}`);
       - 列引用: 直接使用列名
       - 示例: 'age > 30 && name.contains("张")'
       - 以某文本结尾 → 列名.ends_with("文本")
-      - 以某文本开头 → 列名.starts_with("文本")`);
+      - 以某文本开头 → 列名.starts_with("文本")
+
+      ## 数组索引规则(非常重要)
+      Moonblade 数组索引从 0 开始,取第N个元素用 [N-1]:
+      - 第1个元素 → [0]
+      - 第2个元素 → [1]
+      - 第3个元素 → [2]
+      - 最后一个元素 → [-1]
+      - 倒数第二个 → [-2]
+
+      示例: "对date列按-拆分取第2个"
+      正确: col("date").split("-")[1]
+      错误: col("date").split("-")[-1]
+
+      示例: "对name列按/拆分取第1个"
+      正确: col("name").split("/")[0]
+      错误: col("name").split("/")[1]`);
   }
 
   return sections.join("\n\n");

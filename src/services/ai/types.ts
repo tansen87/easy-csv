@@ -13,11 +13,19 @@ export interface AICommand {
 export interface AIResponse {
   content: string;
   commands?: AICommand[];
+  suggestion?: string;
   error?: string;
+  usage?: TokenUsage;
+}
+
+export interface TokenUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
 }
 
 export interface AIConfig {
-  provider: "huggingface" | "deepseek" | "qwen";
+  provider: "deepseek" | "qwen" | "glm";
   apiKey: string;
   model: string;
 }
@@ -36,8 +44,8 @@ export const DEFAULT_AI_CONFIG: AIConfig = {
 
 export const PROVIDERS = [
   { id: "deepseek" as const, name: "DeepSeek" },
-  { id: "huggingface" as const, name: "Hugging Face" },
   { id: "qwen" as const, name: "Qwen" },
+  { id: "glm" as const, name: "GLM" },
 ];
 
 export const AVAILABLE_MODELS = {
@@ -45,16 +53,23 @@ export const AVAILABLE_MODELS = {
     { id: "deepseek-v4-flash", name: "DeepSeek V4 Flash" },
     { id: "deepseek-v4-pro", name: "DeepSeek V4 Pro" },
   ],
-  huggingface: [
-    { id: "TinyLlama/TinyLlama-1.1B-Chat-v1.0", name: "TinyLlama 1.1B" },
-    { id: "Qwen/Qwen2.5-3B-Instruct", name: "Qwen 2.5 3B" },
-    { id: "microsoft/Phi-3.5-mini-instruct", name: "Phi-3.5 Mini" },
-  ],
   qwen: [
+    { id: "deepseek-v4-flash-0731", name: "DeepSeek v4 flash 0731" },
+    { id: "deepseek-v4-flash", name: "DeepSeek v4 flash" },
+    { id: "deepseek-v4-pro", name: "DeepSeek v4 pro" },
     { id: "qwen-turbo", name: "Qwen Turbo" },
     { id: "qwen-max", name: "Qwen Max" },
-    { id: "qwen3.7-plus", name: "Qwen3.7-plus" },
-    { id: "qwen3.6-plus", name: "Qwen3.6-plus" },
-    { id: "qwen3.6-flash", name: "Qwen3.6-flash" }
+    { id: "qwen3.7-plus", name: "Qwen3.7 plus" },
+    { id: "qwen3.6-plus", name: "Qwen3.6 plus" },
+    { id: "qwen3.6-flash", name: "Qwen3.6 flash" },
+    { id: "qwen3-8b", name: "Qwen3 8b" },
+    { id: "glm-5", name: "GLM 5" },
+    { id: "glm-5.1", name: "GLM 5.1" },
+    { id: "glm-5.2", name: "GLM 5.2" },
+  ],
+  glm: [
+    { id: "glm-4.7-flash", name: "GLM4.7 Flash" },
+    { id: "glm-4-flash-250414", name: "GLM4 Flash 250414" },
+    { id: "glm-4-flash", name: "GLM4 Flash" },
   ],
 };

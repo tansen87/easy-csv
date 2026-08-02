@@ -35,7 +35,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 │  storage.rs · ai.rs                                 │
 │  30 个 Tauri 命令处理器                               │
 │  CSV 读取 (csv crate) · 管道执行 (进程管理)            │
-│  AI 代理 (DeepSeek/HF/Qwen) · 配置/历史持久化         │
+│  AI 代理 (DeepSeek/Qwen/GLM) · 配置/历史持久化         │
 │  数据概况缓存 · 版本/血缘存储 · 系统托盘               │
 └────────────────────┬────────────────────────────────┘
                      │  子进程 (stdin/stdout 管道)
@@ -60,7 +60,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令 |
 | `csv.rs` | `CsvData` 类型、`read_csv_file`/`profile_csv` 命令 |
 | `storage.rs` | 历史记录、最近文件、数据概况缓存、版本/血缘存储、窗口标题、开发者工具命令 |
-| `ai.rs` | AI 对话代理: `call_ai` 命令,转发到 DeepSeek / Hugging Face / Qwen |
+| `ai.rs` | AI 对话代理: `call_ai` 命令,转发到 DeepSeek / Qwen / GLM |
 | `build.rs` | Tauri 构建脚本,生成平台特定代码 |
 
 ### 各模块职责详解
@@ -121,9 +121,8 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | 内容 | 说明 |
 |------|------|
-| `call_ai` | 核心命令,按 provider 路由到 DeepSeek/Qwen/Hugging Face |
+| `call_ai` | 核心命令,按 provider 路由到 DeepSeek/Qwen/GLM |
 | `call_deepseek` / `call_qwen` | OpenAI 兼容 Chat Completions 调用 |
-| `call_hugging_face` | Hugging Face Inference API,含模型加载重试(最多3次) |
 
 ### Tauri 命令清单(前端可调用)
 
@@ -140,7 +139,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `get/set_history_limit` | config | 读写历史记录条数上限配置 |
 | `get/set_minimize_to_tray` | config | 读写最小化到托盘配置 |
 | `get/set_ai_config` | config | 读写 AI 配置(provider/model/apiKey) |
-| `call_ai` | ai | 调用 AI 大模型代理(DeepSeek/HF/Qwen) |
+| `call_ai` | ai | 调用 AI 大模型代理(DeepSeek/Qwen/GLM) |
 | `set_window_title` | storage | 设置窗口标题 |
 | `save_history` / `load_history` | storage | 管道执行历史持久化 |
 | `save_recent_files` / `load_recent_files` | storage | 最近文件列表持久化 |
@@ -201,7 +200,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 |------|------|
 | `services/ai/index.ts` | `sendAIMessage()` 入口: 校验 API Key、构建消息、调用 `callAI` |
 | `services/ai/context.ts` | **提示词工程核心**(508行): 意图路由、命令索引、RAG 检索(按需加载 `docs/AI_usage/*.md`,上限6个)、Moonblade 函数参考注入、count 筛选两步骤规则 |
-| `services/ai/huggingface.ts` | `callAI()` 各 provider 调用(解析 AIResponse) |
+| `services/ai/api.ts` | `callAI()` 各 provider 调用(解析 AIResponse) |
 | `services/ai/types.ts` | `AIConfig`/`AIMessage`/`AIResponse`/`AICommand` 类型 + provider/模型常量 |
 
 ### Hooks (`hooks/`)
@@ -385,7 +384,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改 Batch Convert 功能 | `src/hooks/BatchConvertHooks.ts` + `src/hooks/MainMenuHooks.ts` |
 | 修改 AI 面板 UI/交互 | `src/components/panel/AIPanel.tsx` |
 | 修改 AI 提示词/意图路由 | `src/services/ai/context.ts`(`INTENT_ROUTES`/`retrieveRelevantCommands`/`buildSystemPrompt`) |
-| 修改 AI 大模型调用/代理 | `src-tauri/src/ai.rs`(后端代理) + `src/services/ai/huggingface.ts`(前端调用) |
+| 修改 AI 大模型调用/代理 | `src-tauri/src/ai.rs`(后端代理) + `src/services/ai/api.ts`(前端调用) |
 | 修改 AI 配置(provider/model/key) | `src/services/ai/types.ts`(常量) + `src/components/setting/SettingsTabContent.tsx`(UI) + `src-tauri/src/config.rs`(持久化) |
 | 修改命令使用文档 | `docs/AI_usage/*.md`(生成源: `scripts/generate-ai-usage-docs.ts`) / 合并版: `docs/AI/USAGE.md` |
 | 修改管道版本控制 | `src/hooks/usePipelineVersions.ts` + `src/components/panel/VersionControlPanel.tsx` + `src-tauri/src/storage.rs` |

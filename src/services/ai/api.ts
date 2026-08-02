@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { AICommand, AIConfig, AIMessage, AIResponse } from "./types";
+import { AICommand, AIConfig, AIMessage, AIResponse, TokenUsage } from "./types";
 
 interface BackendAIRequest {
   messages: { role: string; content: string }[];
@@ -11,6 +11,11 @@ interface BackendAIRequest {
 interface BackendAIResponse {
   content: string;
   error: string | null;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
 }
 
 export async function callAI(
@@ -30,10 +35,10 @@ export async function callAI(
     });
 
     if (response.error) {
-      return { content: "", error: response.error };
+      return { content: "", error: response.error, usage: response.usage };
     }
 
-    return parseAIResponse(response.content);
+    return parseAIResponse(response.content, response.usage);
   } catch (error) {
     console.error("AI API call failed:", error);
     return {
@@ -43,16 +48,29 @@ export async function callAI(
   }
 }
 
-function parseAIResponse(content: string): AIResponse {
+function parseAIResponse(content: string, usage?: TokenUsage): AIResponse {
   const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/g;
   const commands: AICommand[] = [];
   let lastIndex = 0;
+  let suggestion: string | undefined;
 
   let match;
   while ((match = jsonBlockRegex.exec(content)) !== null) {
     try {
       const parsed = JSON.parse(match[1]);
-      if (Array.isArray(parsed)) {
+      if (parsed.suggestion && parsed.commands) {
+        suggestion = parsed.suggestion;
+        const cmds = Array.isArray(parsed.commands) ? parsed.commands : [parsed.commands];
+        cmds.forEach((item: any) => {
+          if (item.command) {
+            commands.push({
+              command: item.command,
+              parameters: item.parameters || {},
+              explanation: item.explanation,
+            });
+          }
+        });
+      } else if (Array.isArray(parsed)) {
         parsed.forEach((item) => {
           if (item.command) {
             commands.push({
@@ -77,8 +95,8 @@ function parseAIResponse(content: string): AIResponse {
 
   if (commands.length > 0) {
     const remaining = content.slice(lastIndex).trim();
-    return { content: remaining, commands };
+    return { content: remaining, commands, suggestion, usage };
   }
 
-  return { content, commands: [] };
+  return { content, commands: [], suggestion, usage };
 }

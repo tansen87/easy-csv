@@ -13,10 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/i18n";
-import {
-  AIMessage,
-  AIContext,
-} from "@/services/ai/types";
+import { AIMessage, AIContext, TokenUsage } from "@/services/ai/types";
 import { sendAIMessage, isAIConfigured } from "@/services/ai/index";
 import { XanCommand } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
@@ -44,6 +41,11 @@ export const AIPanel = React.memo(function AIPanel({
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [cumulativeUsage, setCumulativeUsage] = useState<TokenUsage>({
+    prompt_tokens: 0,
+    completion_tokens: 0,
+    total_tokens: 0,
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -78,10 +80,16 @@ export const AIPanel = React.memo(function AIPanel({
     setIsExpanded(true);
 
     try {
-      const response = await sendAIMessage(
-        userMessage.content,
-        context,
-      );
+      const response = await sendAIMessage(userMessage.content, context);
+
+      if (response.usage) {
+        setCumulativeUsage((prev) => ({
+          prompt_tokens: prev.prompt_tokens + response.usage!.prompt_tokens,
+          completion_tokens:
+            prev.completion_tokens + response.usage!.completion_tokens,
+          total_tokens: prev.total_tokens + response.usage!.total_tokens,
+        }));
+      }
 
       const commandsText = response.commands
         ? response.commands
@@ -100,10 +108,11 @@ export const AIPanel = React.memo(function AIPanel({
       const assistantMessage: AIMessage = {
         role: "assistant",
         content:
-          response.content ||
-          commandsText ||
-          response.error ||
-          "Sorry, I didn't understand your request.",
+          (response.suggestion ? `💡suggestion: ${response.suggestion}\n\n` : "") +
+          (response.content ||
+            commandsText ||
+            response.error ||
+            "Sorry, I didn't understand your request."),
         timestamp: Date.now(),
       };
 
@@ -132,8 +141,7 @@ export const AIPanel = React.memo(function AIPanel({
   const findXanCommand = (commandName: string): XanCommand | null => {
     return (
       xanCommands.find(
-        (cmd) =>
-          cmd.name === commandName || cmd.id === commandName,
+        (cmd) => cmd.name === commandName || cmd.id === commandName,
       ) || null
     );
   };
@@ -164,7 +172,9 @@ export const AIPanel = React.memo(function AIPanel({
               : "bg-muted text-muted-foreground"
           }`}
         >
-          <div className="whitespace-pre-wrap break-words">{message.content}</div>
+          <div className="whitespace-pre-wrap break-words">
+            {message.content}
+          </div>
         </div>
         {isUser && (
           <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
@@ -187,11 +197,9 @@ export const AIPanel = React.memo(function AIPanel({
               {t.aiPanel}
             </div>
           </div>
-          {isExpanded && (
-            <span className="flex-1 text-center text-xs text-muted-foreground">
-              {t.aiCurrentOnlyHint}
-            </span>
-          )}
+          <span className="text-xs text-muted-foreground whitespace-nowrap px-2 flex-shrink-0">
+            {t.aiTokenUsed} {cumulativeUsage.total_tokens.toLocaleString()}
+          </span>
           <div className="flex items-center gap-1 justify-end flex-1">
             {isExpanded && (
               <Button
@@ -266,11 +274,7 @@ export const AIPanel = React.memo(function AIPanel({
                 disabled={!inputValue.trim() || isLoading}
                 size="sm"
               >
-                {isLoading ? (
-                  <Loader2 className="animate-spin" />
-                ) : (
-                  <Send />
-                )}
+                {isLoading ? <Loader2 className="animate-spin" /> : <Send />}
               </Button>
             </div>
           )}

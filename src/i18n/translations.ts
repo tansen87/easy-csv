@@ -121,7 +121,7 @@ export interface Translations {
   aiAddToPipeline: string;
   aiCommandPreview: string;
   aiClear: string;
-  aiCurrentOnlyHint: string;
+  aiTokenUsed: string;
   aiConfigureApiKey: string;
 
   // AI Settings
@@ -132,6 +132,7 @@ export interface Translations {
   aiApiKey: string;
   aiApiKeyDesc: string;
   aiGetToken: string;
+  aiCheckBalance: string;
   aiModel: string;
   aiModelDesc: string;
   aiSelectModel: string;
@@ -254,12 +255,12 @@ export const translations: Record<Language, Translations> = {
     // AIPanel
     aiPanel: "AI Assistant",
     aiPlaceholder: "Describe the operation you want to perform...",
-    aiWelcomeMessage: "Welcome to Easy CSV AI Assistant",
+    aiWelcomeMessage: "Easy CSV AI Assistant",
     aiThinking: "Thinking...",
     aiAddToPipeline: "Add to Pipeline",
     aiCommandPreview: "Command Preview",
     aiClear: "Clear",
-    aiCurrentOnlyHint: "Only current message is used",
+    aiTokenUsed: "Used",
     aiConfigureApiKey: "Please configure API Key in settings",
 
     // AI Settings
@@ -270,6 +271,7 @@ export const translations: Record<Language, Translations> = {
     aiApiKey: "API Key",
     aiApiKeyDesc: "Your API token for accessing AI models",
     aiGetToken: "Get API Token",
+    aiCheckBalance: "Check Balance",
     aiModel: "Model",
     aiModelDesc: "Select the AI model to use for generating commands",
     aiSelectModel: "Select a model",
@@ -390,12 +392,12 @@ export const translations: Record<Language, Translations> = {
     // AIPanel
     aiPanel: "AI 助手",
     aiPlaceholder: "描述你想执行的操作...",
-    aiWelcomeMessage: "欢迎使用 Easy CSV AI 助手",
+    aiWelcomeMessage: "Easy CSV AI助手",
     aiThinking: "思考中...",
     aiAddToPipeline: "添加到管道",
     aiCommandPreview: "命令预览",
     aiClear: "清空",
-    aiCurrentOnlyHint: "仅使用当前输入",
+    aiTokenUsed: "已用",
     aiConfigureApiKey: "请先在设置中配置 API Key",
 
     // AI Settings
@@ -406,6 +408,7 @@ export const translations: Record<Language, Translations> = {
     aiApiKey: "API Key",
     aiApiKeyDesc: "用于访问AI模型的API令牌",
     aiGetToken: "获取API令牌",
+    aiCheckBalance: "查询余额",
     aiModel: "模型",
     aiModelDesc: "选择用于生成命令的AI模型",
     aiSelectModel: "选择模型",

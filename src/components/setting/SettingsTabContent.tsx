@@ -323,7 +323,7 @@ export function SettingsTabContent({
                   onChange={(provider) =>
                     onAIConfigChange({
                       ...aiConfig,
-                      provider: provider as "deepseek" | "huggingface" | "qwen",
+                      provider: provider as "deepseek" | "qwen" | "glm",
                       model:
                         AVAILABLE_MODELS[
                           provider as keyof typeof AVAILABLE_MODELS
@@ -377,14 +377,10 @@ export function SettingsTabContent({
                   onChange={(e) =>
                     onAIConfigChange({ ...aiConfig, apiKey: e.target.value })
                   }
-                  placeholder={
-                    aiConfig.provider === "huggingface"
-                      ? "hf_xxxxxxxxxxxxxxxxxxxx"
-                      : "sk-xxxxxxxxxxxxxxxxxxxxxxxx"
-                  }
+                  placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
                   className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                 />
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-xs text-muted-foreground mt-2 flex items-center gap-3">
                   <button
                     type="button"
                     onClick={() =>
@@ -393,7 +389,7 @@ export function SettingsTabContent({
                           ? "https://platform.deepseek.com/api_keys"
                           : aiConfig.provider === "qwen"
                             ? "https://bailian.console.aliyun.com/?apiKey=1"
-                            : "https://huggingface.co/settings/tokens",
+                            : "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
                       )
                     }
                     className="text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
@@ -401,6 +397,24 @@ export function SettingsTabContent({
                     {t.aiGetToken}
                     <ExternalLink className="h-3 w-3" />
                   </button>
+                    {(aiConfig.provider === "deepseek" || aiConfig.provider === "qwen" || aiConfig.provider === "glm") && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        open(
+                          aiConfig.provider === "deepseek"
+                            ? "https://platform.deepseek.com/account_topup"
+                            : aiConfig.provider === "qwen"
+                              ? "https://bailian.console.aliyun.com/"
+                              : "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
+                      )
+                    }
+                      className="text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      {t.aiCheckBalance}
+                      <ExternalLink className="h-3 w-3" />
+                    </button>
+                  )}
                 </p>
               </div>
             </div>

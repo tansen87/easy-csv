@@ -14,7 +14,7 @@ Built with [Tauri](https://tauri.app/) v2 + React 19 + React Flow, and powered b
 
 - **Visual pipeline editor** — drag, connect and configure xan commands on a node canvas (dagre auto-layout, cut/fall animations, undo/redo, copy/paste)
 - **58 built-in xan commands** — from basic `sort` / `filter` / `select` to `pivot`, `window`, `join`, `stats`, `split`, `partition`, `to` / `from` conversion and more, each with a dedicated configuration dialog
-- **AI assistant** — describe what you want in natural language (Chinese/English), and the assistant generates ready-to-insert pipeline steps via DeepSeek / Qwen / Hugging Face, with RAG over per-command docs
+- **AI assistant** — describe what you want in natural language (Chinese/English), and the assistant generates ready-to-insert pipeline steps via DeepSeek / Qwen, with RAG over per-command docs
 - **Expression editor** — syntax highlighting and autocomplete for 200+ [Moonblade](https://github.com/medialab/xan) functions
 - **Batch operations** — batch filter (split one CSV into many files by column value) and batch format conversion (CSV ↔ XLSX ↔ JSON)
 - **Data profiling** — one-click column statistics (count, nulls, min/max/mean, etc.) via `xan stats`
@@ -87,7 +87,6 @@ Supported providers:
 |----------|----------------|
 | DeepSeek | `deepseek-v4-flash`, `deepseek-v4-pro` |
 | Qwen | `qwen-turbo`, `qwen-max`, `qwen3.7-plus` |
-| Hugging Face | `TinyLlama-1.1B`, `Qwen2.5-3B`, `Phi-3.5-Mini` |
 
 The assistant only uses your current message (not conversation history), and commands it generates are automatically connected to the last step in your pipeline.
 
