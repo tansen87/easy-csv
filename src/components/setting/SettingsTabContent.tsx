@@ -10,7 +10,7 @@ import {
   Bell,
   Minimize2,
   Check,
-  Sparkles,
+  Bot,
   Key,
   Brain,
   ExternalLink,
@@ -312,7 +312,7 @@ export function SettingsTabContent({
               {/* Provider Selection */}
               <div>
                 <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
+                  <Bot className="h-4 w-4" />
                   {t.aiProvider}
                 </h3>
                 <p className="text-sm text-muted-foreground mb-3">
@@ -397,7 +397,9 @@ export function SettingsTabContent({
                     {t.aiGetToken}
                     <ExternalLink className="h-3 w-3" />
                   </button>
-                    {(aiConfig.provider === "deepseek" || aiConfig.provider === "qwen" || aiConfig.provider === "glm") && (
+                  {(aiConfig.provider === "deepseek" ||
+                    aiConfig.provider === "qwen" ||
+                    aiConfig.provider === "glm") && (
                     <button
                       type="button"
                       onClick={() =>
@@ -407,8 +409,8 @@ export function SettingsTabContent({
                             : aiConfig.provider === "qwen"
                               ? "https://bailian.console.aliyun.com/"
                               : "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
-                      )
-                    }
+                        )
+                      }
                       className="text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
                     >
                       {t.aiCheckBalance}

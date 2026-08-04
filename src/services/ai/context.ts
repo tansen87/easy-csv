@@ -90,9 +90,8 @@ const INTENT_ROUTES: IntentRoute[] = [
       "第几行",
       "看下",
       "看看",
-      "view",
     ],
-    commands: ["view", "head", "tail", "slice"],
+    commands: ["head", "tail", "slice"],
   },
   {
     intent: "搜索/查找/筛选",
@@ -163,11 +162,11 @@ const INTENT_ROUTES: IntentRoute[] = [
       "最小",
       "汇总",
     ],
-    commands: ["agg", "count", "stats", "frequency"],
+    commands: ["agg", "count"],
   },
   {
     intent: "分组聚合",
-    keywords: ["分组", "按某列", "group"],
+    keywords: ["分组", "按某列", "group", "groupby"],
     commands: ["groupby"],
   },
   {
@@ -362,7 +361,7 @@ function retrieveRelevantCommands(
   const picked = ranked.slice(0, MAX_RAG_DOCS).map(([name]) => name);
 
   if (picked.length === 0) {
-    return ["view", "search", "filter", "sort", "select", "agg", "count"];
+    return ["search", "filter", "sort", "select", "agg", "count"];
   }
 
   return picked;
@@ -430,7 +429,7 @@ export async function buildSystemPrompt(
 
   sections.push(`
     ## 核心规则(必须遵守)
-    - 筛选某列=某值(等于/不等于)必须用search + exact匹配,严禁用filter.即使列是数字(如idx=1001)也一样.示例: 用户"筛选idx=1001" → {"command":"search","parameters":{"select":"idx","exact":true,"pattern":"1001"},"explanation":"筛选idx等于1001"}.filter仅用于数值大小比较(>、<、>=、<=).
+    - 筛选/搜索某列=某值(等于/不等于)必须用search + exact匹配,严禁用filter.即使列是数字(如idx=1001)也一样.示例: 用户"筛选idx=1001"或"搜索idx=123" → {"command":"search","parameters":{"select":"idx","exact":true,"pattern":"1001"},"explanation":"筛选idx等于1001"}.filter仅用于数值大小比较(>、<、>=、<=).
     - 需求含"导出/保存/转换为非CSV格式"(如json、xlsx/excel、html、md、txt、jsonl等)时,必须用to命令,format参数指定输出格式.output只负责把CSV写入文件,不转换格式.
     - 参数名用短横线形式(如 select → -s);-r(regex)、-e(exact) 是flag类型参数,后面不接值,模式内容始终放在pattern(-p)中.
     - 需求"合并/拼接某目录下所有CSV文件为1个CSV"时,用cat命令:mode=rows(按行拼接),勾选union(合并各文件列头),glob填目录通配符(如D:\test\*.csv).不要用join、merge或output.示例: 用户"合并D:\test所有的csv文件为1个csv" → {"command":"cat","parameters":{"mode":"rows","union":true,"glob":"D:\\\\test\\\\*.csv"},"explanation":"合并D:\\test下所有csv文件为1个csv"}
@@ -449,7 +448,7 @@ export async function buildSystemPrompt(
     ## search vs filter 选择规则
     优先使用search,仅在需要数值比较时才用filter.
 
-    search 用于所有筛选场景:
+    search 用于所有筛选/搜索场景:
     - 等于/不等于 → search + exact 参数
       示例: search -s 列名 -e -p '值'        (等于)
       示例: search -s 列名 -e -p '值' -i     (不区分大小写等于)
@@ -469,8 +468,6 @@ export async function buildSystemPrompt(
       正确: {"command":"filter","parameters":{"expression":"col(\\"age\\") > 30"}}
     - 示例: 用户"筛选金额在100到500之间"
       正确: {"command":"filter","parameters":{"expression":"col(\\"amount\\") >= 100 && col(\\"amount\\") <= 500"}}
-
-    "查询/查找/筛选数据"用search,不是view;"查看数据/预览"才用view.
 
     search 参数说明:
     - -s / select: 要搜索的列名
@@ -502,24 +499,40 @@ export async function buildSystemPrompt(
 
   sections.push(`
     ## 响应格式
-    返回JSON,必须用数字编号区分每个步骤:
+    返回JSON,必须用数字编号区分每个步骤,每个字段单独一行.
 
     多步骤(必须编号):
-    \`\`\`json
-    1. {"command":"命令1","parameters":{...},"explanation":"..."}
-    2. {"command":"命令2","parameters":{...},"explanation":"..."}
-    3. {"command":"命令3","parameters":{...},"explanation":"..."}
-    \`\`\`
+    1. {
+      "command": "命令1",
+      "parameters": {
+        "参数1": "值1",
+        "参数2": "值2"
+      },
+      "explanation": "..."
+    }
+    2. {
+      "command": "命令2",
+      "parameters": {
+        "参数1": "值1"
+      },
+      "explanation": "..."
+    }
 
     单步骤:
-    \`\`\`json
-    {"command":"命令名","parameters":{...},"explanation":"..."}
-    \`\`\`
+    {
+      "command": "命令名",
+      "parameters": {
+        "参数1": "值1",
+        "参数2": "值2"
+      },
+      "explanation": "..."
+    }
 
     模糊需求:
-    \`\`\`json
-    {"suggestion":"建议的提示词","commands":[编号步骤]}
-    \`\`\`
+    {
+      "suggestion": "建议的提示词",
+      "commands": [编号步骤]
+    }
 
     重要: 多步骤时每个命令前必须有数字编号(1. 2. 3.),编号与命令同行,不要把编号放在单独一行.非CSV问题可自然语言回答,但优先引导到CSV处理.`);
 

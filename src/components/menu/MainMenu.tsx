@@ -17,7 +17,7 @@ import {
   BarChart3,
   GitBranch,
   GitMerge,
-  Sparkles,
+  Bot,
 } from "lucide-react";
 import { PipelineStep } from "@/types/xan";
 import { useLanguage } from "@/i18n";
@@ -329,7 +329,7 @@ export const MainMenu = React.memo(function MainMenu({
                   : "text-primary hover:bg-primary/10"
               }`}
             >
-              <Sparkles className="h-4 w-4" />
+              <Bot className="h-4 w-4" />
             </button>
           </Tooltip>
           <Tooltip content={t.checkUpdate} side="bottom">

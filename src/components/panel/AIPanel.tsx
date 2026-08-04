@@ -5,9 +5,10 @@ import {
   Bot,
   User,
   Loader2,
-  Sparkles,
   ChevronUp,
   ChevronDown,
+  Copy,
+  Check,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,7 @@ export const AIPanel = React.memo(function AIPanel({
     completion_tokens: 0,
     total_tokens: 0,
   });
+  const [copiedId, setCopiedId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -124,7 +126,9 @@ export const AIPanel = React.memo(function AIPanel({
       const assistantMessage: AIMessage = {
         role: "assistant",
         content:
-          (response.suggestion ? `💡suggestion: ${response.suggestion}\n\n` : "") +
+          (response.suggestion
+            ? `💡suggestion: ${response.suggestion}\n\n`
+            : "") +
           (response.content ||
             commandsText ||
             response.error ||
@@ -145,7 +149,10 @@ export const AIPanel = React.memo(function AIPanel({
               }
               return null;
             })
-            .filter(Boolean) as { command: XanCommand; parameters?: Record<string, any> }[];
+            .filter(Boolean) as {
+            command: XanCommand;
+            parameters?: Record<string, any>;
+          }[];
           if (commandsToAdd.length > 0) {
             onAddCommands(commandsToAdd);
           }
@@ -186,6 +193,12 @@ export const AIPanel = React.memo(function AIPanel({
     }
   };
 
+  const handleCopy = (text: string, id: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   const renderMessage = (message: AIMessage) => {
     const isUser = message.role === "user";
     return (
@@ -199,15 +212,21 @@ export const AIPanel = React.memo(function AIPanel({
           </div>
         )}
         <div
-          className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-            isUser
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground"
-          }`}
+          className={`max-w-[80%] rounded-lg px-3 py-2 text-sm relative group bg-muted text-muted-foreground`}
         >
-          <div className="whitespace-pre-wrap break-words">
+          <div className="whitespace-pre-wrap break-words pr-6">
             {message.content}
           </div>
+          <button
+            onClick={() => handleCopy(message.content, message.timestamp)}
+            className={`absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-black/10 text-muted-foreground`}
+          >
+            {copiedId === message.timestamp ? (
+              <Check className="h-3.5 w-3.5" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
+          </button>
         </div>
         {isUser && (
           <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
@@ -221,12 +240,12 @@ export const AIPanel = React.memo(function AIPanel({
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-2 left-1/2 -translate-x-1/2 w-[min(600px,calc(100vw-32px))] z-40">
-      <div className="flex flex-col bg-background border border-border/50 rounded-lg shadow-xl overflow-hidden">
-        <div className="p-2 bg-card/80 flex items-center">
+    <div className="fixed bottom-2 left-1/2 -translate-x-1/2 w-[min(700px,calc(100vw-32px))] z-40">
+      <div className="flex flex-col bg-transparent border border-border/50 rounded-lg shadow-xl overflow-hidden">
+        <div className="p-2 bg-transparent flex items-center">
           <div className="flex items-center gap-2 flex-1">
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-primary text-primary-foreground shadow-sm">
-              <Sparkles className="h-3.5 w-3.5" />
+              <Bot className="h-3.5 w-3.5" />
               {t.aiPanel}
             </div>
           </div>
@@ -270,11 +289,11 @@ export const AIPanel = React.memo(function AIPanel({
         </div>
 
         {isExpanded && (
-          <ScrollArea className="h-45">
+          <ScrollArea className="h-[36vh]">
             <div className="p-2">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                  <Sparkles className="h-8 w-8 mb-2 opacity-50" />
+                  <Bot className="h-8 w-8 mb-2 opacity-50" />
                   <p className="text-sm">{t.aiWelcomeMessage}</p>
                 </div>
               ) : (
