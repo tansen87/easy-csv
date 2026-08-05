@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   GitMerge,
   Search,
@@ -9,22 +9,24 @@ import {
   Minus,
   RefreshCw,
   BarChart3,
-  Columns,
   X,
   ArrowDown,
   Save,
   Check,
+  LayoutGrid,
+  List,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StepLineage } from "@/types/xan";
 import { useLanguage } from "@/i18n";
+import { LineageGraph } from "@/components/panel/LineageGraph";
+import { Tooltip } from "@/components/ui/tooltip";
 
 interface DataLineagePanelProps {
   lineageData: StepLineage[];
   onGetLineageForColumn: (columnName: string) => StepLineage[];
-  isLineageMode: boolean;
-  onToggleLineageMode: (enabled: boolean) => void;
   onSaveLineage: () => void;
   onClose: () => void;
 }
@@ -50,11 +52,11 @@ const TYPE_COLORS: Record<string, string> = {
   boolean: "bg-amber-100 text-amber-800",
 };
 
+type ViewMode = "graph" | "timeline";
+
 export function DataLineagePanel({
   lineageData,
   onGetLineageForColumn,
-  isLineageMode,
-  onToggleLineageMode,
   onSaveLineage,
   onClose,
 }: DataLineagePanelProps) {
@@ -62,8 +64,19 @@ export function DataLineagePanel({
   const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
   const [columnSearch, setColumnSearch] = useState("");
   const [saved, setSaved] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("graph");
+  const [isGraphExpanded, setIsGraphExpanded] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { t } = useLanguage();
+
+  useEffect(() => {
+    if (!isGraphExpanded) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsGraphExpanded(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isGraphExpanded]);
 
   const handleSave = useCallback(() => {
     onSaveLineage();
@@ -88,10 +101,9 @@ export function DataLineagePanel({
     );
   }, [allColumns, columnSearch]);
 
-  const columnLineage = React.useMemo(() => {
-    if (!selectedColumn) return [];
-    return onGetLineageForColumn(selectedColumn);
-  }, [selectedColumn, onGetLineageForColumn]);
+  const handleColumnClick = useCallback((columnName: string) => {
+    setSelectedColumn((prev) => (prev === columnName ? null : columnName));
+  }, []);
 
   const toggleStep = (stepId: string) => {
     setExpandedSteps((prev) => {
@@ -105,36 +117,135 @@ export function DataLineagePanel({
     });
   };
 
-  return (
-    <div className="h-full flex flex-col">
-      <div className="p-3 border-b border-border/50">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold flex items-center gap-2">
-            <GitMerge className="h-4 w-4" />
-            {t.dataLineage}
-          </h3>
+  if (isGraphExpanded) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background flex flex-col">
+        <div className="h-12 border-b border-border/50 flex items-center justify-between px-4 bg-card shrink-0">
+          <div className="flex items-center gap-3">
+            <GitMerge className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold">{t.dataLineage}</span>
+            <span className="text-xs text-muted-foreground">
+              {lineageData.length} {t.rowsCount}
+            </span>
+          </div>
           <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 cursor-pointer">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
               <input
-                type="checkbox"
-                checked={isLineageMode}
-                onChange={(e) => onToggleLineageMode(e.target.checked)}
-                className="w-4 h-4 rounded border-input accent-foreground"
+                type="text"
+                value={columnSearch}
+                onChange={(e) => setColumnSearch(e.target.value)}
+                placeholder={t.searchColumns}
+                className="h-8 w-48 pl-7 pr-2 text-xs border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
-              <span className="text-xs">Track</span>
-            </label>
+            </div>
+            <ScrollArea className="h-8 max-w-[400px]">
+              <div className="flex items-center gap-1 px-1">
+                {filteredColumns.map((col) => (
+                  <button
+                    key={col}
+                    onClick={() => handleColumnClick(col)}
+                    className={`shrink-0 px-2 py-0.5 text-[10px] rounded transition-colors whitespace-nowrap ${
+                      selectedColumn === col
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted hover:bg-muted/80"
+                    }`}
+                  >
+                    {col}
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
             {lineageData.length > 0 && (
               <button
                 onClick={handleSave}
-                className="h-6 w-6 flex items-center justify-center hover:bg-muted rounded transition-colors"
-                title={saved ? "Saved!" : "Save lineage"}
+                className="h-8 px-2 flex items-center gap-1 text-xs hover:bg-muted rounded transition-colors"
               >
                 {saved ? (
                   <Check className="h-3.5 w-3.5 text-green-600" />
                 ) : (
                   <Save className="h-3.5 w-3.5" />
                 )}
+                {saved ? "Saved" : "Save"}
               </button>
+            )}
+            <Tooltip content={t.exitFullscreen}>
+              <button
+                onClick={() => setIsGraphExpanded(false)}
+                className="h-8 w-8 flex items-center justify-center hover:bg-muted rounded transition-colors"
+              >
+                <Minimize2 className="h-4 w-4" />
+              </button>
+            </Tooltip>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 bg-white dark:bg-slate-50">
+          <LineageGraph
+            lineageData={lineageData}
+            highlightedColumn={selectedColumn}
+            onColumnClick={handleColumnClick}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="px-3 py-2 border-b border-border/50 shrink-0">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <GitMerge className="h-4 w-4" />
+            {t.dataLineage}
+          </h3>
+          <div className="flex items-center gap-1">
+            <Tooltip content={t.dagView}>
+              <button
+                onClick={() => setViewMode("graph")}
+                className={`h-6 w-6 flex items-center justify-center rounded transition-colors ${
+                  viewMode === "graph"
+                    ? "bg-primary/10 text-primary"
+                    : "hover:bg-muted"
+                }`}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </button>
+            </Tooltip>
+            <Tooltip content={t.timelineView}>
+              <button
+                onClick={() => setViewMode("timeline")}
+                className={`h-6 w-6 flex items-center justify-center rounded transition-colors ${
+                  viewMode === "timeline"
+                    ? "bg-primary/10 text-primary"
+                    : "hover:bg-muted"
+                }`}
+              >
+                <List className="h-3.5 w-3.5" />
+              </button>
+            </Tooltip>
+            {viewMode === "graph" && (
+              <Tooltip content={t.fullscreen}>
+                <button
+                  onClick={() => setIsGraphExpanded(true)}
+                  className="h-6 w-6 flex items-center justify-center hover:bg-muted rounded transition-colors"
+                >
+                  <Maximize2 className="h-3.5 w-3.5" />
+                </button>
+              </Tooltip>
+            )}
+            {lineageData.length > 0 && (
+              <Tooltip content={saved ? "Saved!" : "Save lineage"}>
+                <button
+                  onClick={handleSave}
+                  className="h-6 w-6 flex items-center justify-center hover:bg-muted rounded transition-colors"
+                >
+                  {saved ? (
+                    <Check className="h-3.5 w-3.5 text-green-600" />
+                  ) : (
+                    <Save className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </Tooltip>
             )}
             <button
               onClick={onClose}
@@ -146,73 +257,63 @@ export function DataLineagePanel({
         </div>
       </div>
 
-      <div className="p-3 border-b border-border/50">
+      <div className="px-3 py-2 border-b border-border/50 shrink-0">
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
           <input
             type="text"
             value={columnSearch}
             onChange={(e) => setColumnSearch(e.target.value)}
-            placeholder="Search columns..."
+            placeholder={t.searchColumns}
             className="w-full h-8 pl-7 pr-2 text-xs border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
           />
         </div>
-        <ScrollArea className="h-[120px]">
+        <ScrollArea className="h-[120px] mt-2">
           {filteredColumns.map((col) => (
             <button
               key={col}
-              onClick={() =>
-                setSelectedColumn(selectedColumn === col ? null : col)
-              }
+              onClick={() => handleColumnClick(col)}
               className={`w-full text-left px-2 py-1 text-xs rounded transition-colors ${
                 selectedColumn === col
                   ? "bg-primary/10 text-primary"
                   : "hover:bg-muted"
               }`}
             >
-              <Columns className="inline h-3 w-3 mr-1" />
               {col}
             </button>
           ))}
         </ScrollArea>
       </div>
 
-      <ScrollArea className="flex-1 h-[120px]">
-        <div className="p-3">
-          {lineageData.length === 0 ? (
-            <div className="text-center text-muted-foreground text-xs py-8">
-              No lineage data available.
-              <br />
-              Enable tracking and execute a pipeline to see data flow.
-            </div>
-          ) : selectedColumn ? (
-            <div className="space-y-2">
-              <div className="text-xs font-medium text-muted-foreground mb-2">
-                Lineage for column:{" "}
-                <span className="text-primary">{selectedColumn}</span>
-              </div>
-              {columnLineage.map((step, index) => (
-                <Card key={step.stepId} className="p-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-muted-foreground">
-                      #{index + 1}
-                    </span>
-                    <span className="text-xs font-medium">
-                      {step.commandName}
-                    </span>
-                  </div>
-                  <div className="mt-1 text-[10px] text-muted-foreground">
-                    Rows: {step.inputRowCount} → {step.outputRowCount}
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {lineageData.map((step) => (
-                <Card
+      <div className="flex-1 min-h-0">
+        {lineageData.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
+            {t.noLineageData}
+          </div>
+        ) : viewMode === "graph" ? (
+          <div className="h-full bg-white dark:bg-slate-50">
+            <LineageGraph
+              lineageData={lineageData}
+              highlightedColumn={selectedColumn}
+              onColumnClick={handleColumnClick}
+            />
+          </div>
+        ) : (
+          <ScrollArea className="h-full">
+            <div className="p-3 space-y-2">
+              {selectedColumn && (
+                <div className="text-xs font-medium text-muted-foreground mb-2">
+                  {t.lineageForColumn}{" "}
+                  <span className="text-primary">{selectedColumn}</span>
+                </div>
+              )}
+              {(selectedColumn
+                ? onGetLineageForColumn(selectedColumn)
+                : lineageData
+              ).map((step) => (
+                <div
                   key={step.stepId}
-                  className="p-3 cursor-pointer transition-all hover:bg-accent/30"
+                  className="p-3 border rounded-md cursor-pointer transition-all hover:bg-accent/30"
                   onClick={() => toggleStep(step.stepId)}
                 >
                   <div className="flex items-center gap-2">
@@ -225,7 +326,7 @@ export function DataLineagePanel({
                       {step.commandName}
                     </span>
                     <span className="text-[10px] text-muted-foreground ml-auto">
-                      {step.inputRowCount} → {step.outputRowCount} rows
+                      {step.inputRowCount} → {step.outputRowCount} {t.rowsCount}
                     </span>
                   </div>
 
@@ -233,16 +334,24 @@ export function DataLineagePanel({
                     <div className="mt-2 space-y-2">
                       <div>
                         <div className="text-[10px] font-medium text-muted-foreground mb-1">
-                          Input Columns
+                          {t.inputColumns}
                         </div>
                         <div className="flex flex-wrap gap-1">
                           {step.inputSchema.map((col) => (
-                            <span
+                            <button
                               key={col.name}
-                              className={`inline-flex items-center px-1.5 py-0.5 text-[10px] rounded ${TYPE_COLORS[col.type]}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleColumnClick(col.name);
+                              }}
+                              className={`inline-flex items-center px-1.5 py-0.5 text-[10px] rounded cursor-pointer transition-colors hover:opacity-80 ${
+                                selectedColumn === col.name
+                                  ? "ring-1 ring-primary"
+                                  : ""
+                              } ${TYPE_COLORS[col.type]}`}
                             >
                               {col.name}
-                            </span>
+                            </button>
                           ))}
                         </div>
                       </div>
@@ -253,16 +362,24 @@ export function DataLineagePanel({
 
                       <div>
                         <div className="text-[10px] font-medium text-muted-foreground mb-1">
-                          Output Columns
+                          {t.outputColumns}
                         </div>
                         <div className="flex flex-wrap gap-1">
                           {step.outputSchema.map((col) => (
-                            <span
+                            <button
                               key={col.name}
-                              className={`inline-flex items-center px-1.5 py-0.5 text-[10px] rounded ${TYPE_COLORS[col.type]}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleColumnClick(col.name);
+                              }}
+                              className={`inline-flex items-center px-1.5 py-0.5 text-[10px] rounded cursor-pointer transition-colors hover:opacity-80 ${
+                                selectedColumn === col.name
+                                  ? "ring-1 ring-primary"
+                                  : ""
+                              } ${TYPE_COLORS[col.type]}`}
                             >
                               {col.name}
-                            </span>
+                            </button>
                           ))}
                         </div>
                       </div>
@@ -270,16 +387,16 @@ export function DataLineagePanel({
                       {step.transformations.length > 0 && (
                         <div>
                           <div className="text-[10px] font-medium text-muted-foreground mb-1">
-                            Transformations
+                            {t.lineageTransformations}
                           </div>
                           <div className="space-y-1">
-                            {step.transformations.map((t, i) => (
+                            {step.transformations.map((tr, i) => (
                               <div
                                 key={i}
                                 className="flex items-center gap-1 text-[10px] text-muted-foreground"
                               >
-                                {TRANSFORMATION_ICONS[t.type]}
-                                <span>{t.description}</span>
+                                {TRANSFORMATION_ICONS[tr.type]}
+                                <span>{tr.description}</span>
                               </div>
                             ))}
                           </div>
@@ -287,12 +404,12 @@ export function DataLineagePanel({
                       )}
                     </div>
                   )}
-                </Card>
+                </div>
               ))}
             </div>
-          )}
-        </div>
-      </ScrollArea>
+          </ScrollArea>
+        )}
+      </div>
     </div>
   );
 }

@@ -19,6 +19,20 @@ export interface Translations {
   settings: string;
   versionHistory: string;
   dataLineage: string;
+  columnLineage: string;
+  dagView: string;
+  fullscreen: string;
+  exitFullscreen: string;
+  timelineView: string;
+  inputColumns: string;
+  outputColumns: string;
+  lineageTransformations: string;
+  rowsCount: string;
+  lineagePath: string;
+  sourceStep: string;
+  noLineageData: string;
+  searchColumns: string;
+  lineageForColumn: string;
 
   // ConfirmDialog
   confirm: string;
@@ -159,11 +173,26 @@ export const translations: Record<Language, Translations> = {
     settings: "Settings",
     versionHistory: "Version History",
     dataLineage: "Data Lineage",
+    columnLineage: "Column Lineage",
+    dagView: "Graph",
+    timelineView: "Timeline",
+    fullscreen: "Fullscreen",
+    exitFullscreen: "Exit Fullscreen (ESC)",
+    inputColumns: "Input Columns",
+    outputColumns: "Output Columns",
+    lineageTransformations: "Transformations",
+    rowsCount: "Rows",
+    lineagePath: "Lineage Path",
+    sourceStep: "Source",
+    noLineageData: "Execute a pipeline to see data lineage",
+    searchColumns: "Search columns...",
+    lineageForColumn: "Lineage for column:",
 
     // ConfirmDialog
     confirm: "Confirm",
     refreshTitle: "Refresh Page",
-    refreshMessage: "Are you sure you want to refresh the page? Unsaved changes will be lost.",
+    refreshMessage:
+      "Are you sure you want to refresh the page? Unsaved changes will be lost.",
 
     // Settings
     preference: "Preference",
@@ -176,9 +205,11 @@ export const translations: Record<Language, Translations> = {
     noHeaders: "No Headers",
     noHeadersDesc: "When set, the first row will not be interpreted as headers",
     systemNotification: "Notification",
-    systemNotificationDesc: "When enabled, Show system notification when pipeline execution completes",
+    systemNotificationDesc:
+      "When enabled, Show system notification when pipeline execution completes",
     minimizeToTray: "Tray",
-    minimizeToTrayDesc: "When enabled, closing the window will minimize to system tray instead of exiting",
+    minimizeToTrayDesc:
+      "When enabled, closing the window will minimize to system tray instead of exiting",
     resetToDefaults: "Reset to Defaults",
     saveSettings: "Save Settings",
     selectDelimiter: "Select delimiter",
@@ -296,6 +327,20 @@ export const translations: Record<Language, Translations> = {
     settings: "设置",
     versionHistory: "管道版本",
     dataLineage: "数据血缘",
+    columnLineage: "列级血缘",
+    dagView: "图形",
+    fullscreen: "全屏",
+    exitFullscreen: "退出全屏(ESC)",
+    timelineView: "时间线",
+    inputColumns: "输入列",
+    outputColumns: "输出列",
+    lineageTransformations: "变换",
+    rowsCount: "行数",
+    lineagePath: "血缘路径",
+    sourceStep: "来源",
+    noLineageData: "执行后可查看数据血缘",
+    searchColumns: "搜索列...",
+    lineageForColumn: "列的血缘：",
 
     // ConfirmDialog
     confirm: "确认",

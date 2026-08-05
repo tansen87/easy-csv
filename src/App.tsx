@@ -114,14 +114,11 @@ function AppContent() {
     });
   }, []);
 
-  const handleAIConfigChange = useCallback(
-    async (config: AIConfig) => {
-      setAIConfigState(config);
-      await saveAIConfig(config);
-      setAIConfig(config);
-    },
-    [],
-  );
+  const handleAIConfigChange = useCallback(async (config: AIConfig) => {
+    setAIConfigState(config);
+    await saveAIConfig(config);
+    setAIConfig(config);
+  }, []);
 
   // Load historical pipelines
   const loadHistoricalPipelines = useCallback(async () => {
@@ -243,9 +240,7 @@ function AppContent() {
       const newEdges = [...currentEdges];
       if (
         autoConnect &&
-        !newEdges.some(
-          (e) => e.source === sourceId && e.target === newStep.id,
-        )
+        !newEdges.some((e) => e.source === sourceId && e.target === newStep.id)
       ) {
         newEdges.push({
           id: `e-${sourceId}-${newStep.id}`,
@@ -266,9 +261,7 @@ function AppContent() {
 
   // Multiple commands click handler (batch add)
   const handleCommandsClick = useCallback(
-    (
-      commands: { command: XanCommand; parameters?: Record<string, any> }[],
-    ) => {
+    (commands: { command: XanCommand; parameters?: Record<string, any> }[]) => {
       const currentPipeline = tabsHook.getCurrentPipeline();
       const currentTab = tabsHook.getCurrentTab();
       const currentEdges = currentTab?.edges || [];
@@ -645,7 +638,6 @@ function AppContent() {
     updateHistoricalPipelines,
     formatDateTime,
     trackLineage: lineageHook.trackLineage,
-    isLineageMode: lineageHook.isLineageMode,
   });
 
   // Keyboard shortcuts (O-3: moved to App level)
@@ -656,8 +648,14 @@ function AppContent() {
       onSavePipeline: handleSavePipeline,
       onImportPipeline: handleImportPipeline,
       onExportPipeline: handleExportPipeline,
-      onUndo: () => { pipeline.undo(); setSelectedStep(null); },
-      onRedo: () => { pipeline.redo(); setSelectedStep(null); },
+      onUndo: () => {
+        pipeline.undo();
+        setSelectedStep(null);
+      },
+      onRedo: () => {
+        pipeline.redo();
+        setSelectedStep(null);
+      },
       onExecute: handleExecute,
       onHelp: () => {
         ui.setHelpCommandName(language === "zh" ? "帮助" : "Help");
@@ -822,8 +820,14 @@ function AppContent() {
               setIsMenuActivated={ui.setIsMenuActivated}
               undoStack={pipeline.undoStack}
               redoStack={pipeline.redoStack}
-              onUndo={() => { pipeline.undo(); setSelectedStep(null); }}
-              onRedo={() => { pipeline.redo(); setSelectedStep(null); }}
+              onUndo={() => {
+                pipeline.undo();
+                setSelectedStep(null);
+              }}
+              onRedo={() => {
+                pipeline.redo();
+                setSelectedStep(null);
+              }}
               onExecute={handleExecute}
               onOpenFile={handleOpenFile}
               onOpenNewTabWithFile={handleOpenNewTabWithFile}
@@ -844,9 +848,13 @@ function AppContent() {
               onToggleDataProfile={onToggleDataProfile}
               hasInputFile={!!tabsHook.getCurrentTab()?.inputFile}
               showVersionPanel={ui.showVersionPanel}
-              onToggleVersionPanel={() => ui.setShowVersionPanel(!ui.showVersionPanel)}
+              onToggleVersionPanel={() =>
+                ui.setShowVersionPanel(!ui.showVersionPanel)
+              }
               showLineagePanel={ui.showLineagePanel}
-              onToggleLineagePanel={() => ui.setShowLineagePanel(!ui.showLineagePanel)}
+              onToggleLineagePanel={() =>
+                ui.setShowLineagePanel(!ui.showLineagePanel)
+              }
               showAIPanel={ui.showAIPanel}
               onToggleAIPanel={() => ui.setShowAIPanel(!ui.showAIPanel)}
             />
@@ -880,8 +888,12 @@ function AppContent() {
                 reactFlowInstanceRef={reactFlowInstanceRef}
                 showVersionPanel={ui.showVersionPanel}
                 showLineagePanel={ui.showLineagePanel}
-                onToggleVersionPanel={() => ui.setShowVersionPanel(!ui.showVersionPanel)}
-                onToggleLineagePanel={() => ui.setShowLineagePanel(!ui.showLineagePanel)}
+                onToggleVersionPanel={() =>
+                  ui.setShowVersionPanel(!ui.showVersionPanel)
+                }
+                onToggleLineagePanel={() =>
+                  ui.setShowLineagePanel(!ui.showLineagePanel)
+                }
                 versions={versionsHook.getCurrentVersions()}
                 currentVersionId={tabsHook.getCurrentTab()?.currentVersionId}
                 onSaveVersion={versionsHook.saveVersion}
@@ -891,8 +903,6 @@ function AppContent() {
                 onRemoveTag={versionsHook.removeTag}
                 isSavingVersion={versionsHook.isSavingVersion}
                 lineageData={lineageHook.lineageData}
-                isLineageMode={lineageHook.isLineageMode}
-                onToggleLineageMode={lineageHook.setIsLineageMode}
                 onGetLineageForColumn={lineageHook.getLineageForColumn}
                 onSaveLineage={lineageHook.saveLineage}
               />

@@ -81,15 +81,16 @@ interface HomeViewProps {
   reactFlowInstanceRef?: React.RefObject<any>;
   versions?: PipelineVersion[];
   currentVersionId?: string;
-  onSaveVersion?: (message?: string, tags?: string[]) => Promise<PipelineVersion | undefined>;
+  onSaveVersion?: (
+    message?: string,
+    tags?: string[],
+  ) => Promise<PipelineVersion | undefined>;
   onRestoreVersion?: (versionId: string) => void;
   onDeleteVersion?: (versionId: string) => void;
   onAddTag?: (versionId: string, tag: string) => void;
   onRemoveTag?: (versionId: string, tag: string) => void;
   isSavingVersion?: boolean;
   lineageData?: StepLineage[];
-  isLineageMode?: boolean;
-  onToggleLineageMode?: (enabled: boolean) => void;
   onGetLineageForColumn?: (columnName: string) => StepLineage[];
   onSaveLineage?: () => void;
   showVersionPanel?: boolean;
@@ -132,8 +133,6 @@ export const HomeView = React.memo(function HomeView({
   onRemoveTag,
   isSavingVersion = false,
   lineageData = [],
-  isLineageMode = false,
-  onToggleLineageMode,
   onGetLineageForColumn,
   onSaveLineage,
   showVersionPanel = false,
@@ -574,8 +573,6 @@ export const HomeView = React.memo(function HomeView({
             <DataLineagePanel
               lineageData={lineageData}
               onGetLineageForColumn={onGetLineageForColumn || (() => [])}
-              isLineageMode={isLineageMode}
-              onToggleLineageMode={onToggleLineageMode || (() => {})}
               onSaveLineage={onSaveLineage || (() => {})}
               onClose={onToggleLineagePanel || (() => {})}
             />

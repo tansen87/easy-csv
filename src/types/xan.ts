@@ -94,13 +94,36 @@ export interface PipelineVersion {
 export interface ColumnSchema {
   name: string;
   type: "string" | "number" | "date" | "boolean";
-  source?: { stepId: string; columnName: string };
+  sourceStepId?: string;
+  sourceColumnName?: string;
 }
 
 export interface Transformation {
-  type: "filter" | "rename" | "add" | "remove" | "cast" | "aggregate" | "sort" | "group" | "pivot" | "flatten" | "other";
+  type:
+    | "filter"
+    | "rename"
+    | "add"
+    | "remove"
+    | "cast"
+    | "aggregate"
+    | "sort"
+    | "group"
+    | "pivot"
+    | "flatten"
+    | "other";
   description: string;
   affectedColumns: string[];
+}
+
+export interface ColumnLineagePath {
+  columnName: string;
+  path: Array<{
+    stepId: string;
+    stepName: string;
+    inputColumnName?: string;
+    outputColumnName: string;
+    transformation?: string;
+  }>;
 }
 
 export interface StepLineage {

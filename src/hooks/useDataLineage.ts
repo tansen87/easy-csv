@@ -1,15 +1,29 @@
 import { useState, useCallback } from "react";
-import { PipelineStep, PipelineEdge, StepLineage, ColumnSchema, Transformation, PipelineTab } from "@/types/xan";
+import {
+  PipelineStep,
+  PipelineEdge,
+  StepLineage,
+  ColumnSchema,
+  Transformation,
+  PipelineTab,
+  ColumnLineagePath,
+} from "@/types/xan";
 import { invoke } from "@tauri-apps/api/core";
 
-function inferColumnType(value: string): "string" | "number" | "date" | "boolean" {
+function inferColumnType(
+  value: string,
+): "string" | "number" | "date" | "boolean" {
   if (value === "true" || value === "false") return "boolean";
   if (!isNaN(Number(value)) && value !== "") return "number";
   if (/^\d{4}-\d{2}-\d{2}/.test(value)) return "date";
   return "string";
 }
 
-function inferSchemaFromData(headers: string[], rows: string[][]): ColumnSchema[] {
+function inferSchemaFromData(
+  headers: string[],
+  rows: string[][],
+  sourceStepId?: string,
+): ColumnSchema[] {
   return headers.map((name, colIndex) => {
     const sampleValues = rows.slice(0, 10).map((row) => row[colIndex] || "");
     const types = sampleValues.map(inferColumnType);
@@ -25,8 +39,22 @@ function inferSchemaFromData(headers: string[], rows: string[][]): ColumnSchema[
       a[1] > b[1] ? a : b,
     )[0] as "string" | "number" | "date" | "boolean";
 
-    return { name, type: dominantType };
+    return {
+      name,
+      type: dominantType,
+      sourceStepId: sourceStepId || undefined,
+      sourceColumnName: name,
+    };
   });
+}
+
+function makeCol(
+  name: string,
+  type: ColumnSchema["type"],
+  sourceStepId?: string,
+  sourceColumnName?: string,
+): ColumnSchema {
+  return { name, type, sourceStepId, sourceColumnName };
 }
 
 function analyzeTransformations(
@@ -73,7 +101,18 @@ function analyzeTransformations(
     });
   }
 
-  if (["filter", "search", "head", "tail", "slice", "top", "sample", "bisect"].includes(commandName)) {
+  if (
+    [
+      "filter",
+      "search",
+      "head",
+      "tail",
+      "slice",
+      "top",
+      "sample",
+      "bisect",
+    ].includes(commandName)
+  ) {
     transformations.push({
       type: "filter",
       description: `Filtered rows using ${commandName}`,
@@ -89,7 +128,11 @@ function analyzeTransformations(
     });
   }
 
-  if (["groupby", "frequency", "stats", "agg", "bins", "window"].includes(commandName)) {
+  if (
+    ["groupby", "frequency", "stats", "agg", "bins", "window"].includes(
+      commandName,
+    )
+  ) {
     transformations.push({
       type: "aggregate",
       description: `Aggregated data using ${commandName}`,
@@ -140,7 +183,6 @@ export function useDataLineage(
   setTabs: React.Dispatch<React.SetStateAction<PipelineTab[]>>,
   selectedTabId: string,
 ) {
-  const [isLineageMode, setIsLineageMode] = useState(false);
   const [lineageData, setLineageData] = useState<StepLineage[]>([]);
 
   const computeLineage = useCallback(
@@ -149,6 +191,7 @@ export function useDataLineage(
       edges: PipelineEdge[],
       inputHeaders: string[],
       inputRows: string[][],
+      actualOutputRowCount?: number,
     ): StepLineage[] => {
       const lineage: StepLineage[] = [];
 
@@ -167,7 +210,10 @@ export function useDataLineage(
       const schemaCache = new Map<string, ColumnSchema[]>();
       const rowCountsCache = new Map<string, number>();
 
-      schemaCache.set("table-node", inferSchemaFromData(inputHeaders, inputRows));
+      schemaCache.set(
+        "table-node",
+        inferSchemaFromData(inputHeaders, inputRows, "table-node"),
+      );
       rowCountsCache.set("table-node", inputRows.length);
 
       const processNode = (nodeId: string) => {
@@ -201,7 +247,14 @@ export function useDataLineage(
         );
 
         const outputSchema = computeOutputSchema(step, uniqueInputCols);
-        const outputRowCount = computeOutputRowCount(step, totalInputRows);
+        let outputRowCount = computeOutputRowCount(step, totalInputRows);
+
+        if (
+          isLastStep(step.id, steps, edges) &&
+          actualOutputRowCount !== undefined
+        ) {
+          outputRowCount = actualOutputRowCount;
+        }
 
         const transformations = analyzeTransformations(
           step,
@@ -249,6 +302,7 @@ export function useDataLineage(
     inputSchema: ColumnSchema[],
   ): ColumnSchema[] => {
     const commandName = step.command.name;
+    const sid = step.id;
 
     switch (commandName) {
       case "select": {
@@ -258,10 +312,15 @@ export function useDataLineage(
           return selectedCols
             .map((name: string) => name.trim())
             .filter(Boolean)
-            .map((name: string) => ({
-              name,
-              type: inputSchema.find((c) => c.name === name)?.type || "string",
-            }));
+            .map((name: string) => {
+              const src = inputSchema.find((c) => c.name === name);
+              return makeCol(
+                name,
+                src?.type || "string",
+                src?.sourceStepId || sid,
+                src?.sourceColumnName || name,
+              );
+            });
         }
         return inputSchema;
       }
@@ -286,8 +345,17 @@ export function useDataLineage(
             return { from, to };
           });
           return inputSchema.map((col) => {
-            const rename = renames.find((r: { from: string; to: string }) => r.from === col.name);
-            return rename ? { ...col, name: rename.to } : col;
+            const rename = renames.find(
+              (r: { from: string; to: string }) => r.from === col.name,
+            );
+            return rename
+              ? makeCol(
+                  rename.to,
+                  col.type,
+                  col.sourceStepId,
+                  col.sourceColumnName,
+                )
+              : col;
           });
         }
         return inputSchema;
@@ -298,46 +366,125 @@ export function useDataLineage(
         if (newCol) {
           return [
             ...inputSchema,
-            { name: newCol, type: "string" },
+            makeCol(
+              newCol,
+              "string",
+              sid,
+              step.parameters.expression || newCol,
+            ),
+          ];
+        }
+        return inputSchema.map((col) =>
+          makeCol(col.name, col.type, col.sourceStepId, col.sourceColumnName),
+        );
+      }
+
+      case "transform": {
+        const expr = step.parameters.expression || "";
+        const newCol = step.parameters["new-column"];
+        if (newCol) {
+          return [...inputSchema, makeCol(newCol, "string", sid, expr)];
+        }
+        return inputSchema;
+      }
+
+      case "window": {
+        const newCol = step.parameters["new-column"] || "window_result";
+        return [
+          ...inputSchema,
+          makeCol(
+            newCol,
+            "number",
+            sid,
+            `${commandName}(${step.parameters.function || ""})`,
+          ),
+        ];
+      }
+
+      case "fill": {
+        const col = step.parameters.column;
+        if (col) {
+          return inputSchema.map((c) =>
+            c.name === col
+              ? makeCol(c.name, c.type, sid, c.sourceColumnName)
+              : c,
+          );
+        }
+        return inputSchema;
+      }
+
+      case "separate": {
+        const col = step.parameters.column;
+        const newColumns = (step.parameters["new-columns"] || "")
+          .split(/[|,]/)
+          .filter(Boolean);
+        if (col && newColumns.length > 0) {
+          const src = inputSchema.find((c) => c.name === col);
+          const kept = inputSchema.filter((c) => c.name !== col);
+          return [
+            ...kept,
+            ...newColumns.map((name: string) =>
+              makeCol(name.trim(), "string", sid, src?.sourceColumnName || col),
+            ),
           ];
         }
         return inputSchema;
       }
 
+      case "enum": {
+        const col = step.parameters.column;
+        if (col) {
+          const src = inputSchema.find((c) => c.name === col);
+          return inputSchema.map((c) =>
+            c.name === col
+              ? makeCol(c.name, "number", sid, src?.sourceColumnName || col)
+              : c,
+          );
+        }
+        return inputSchema;
+      }
+
       case "pivot": {
+        const valueCol = step.parameters.column || "column";
         return [
-          { name: step.parameters.column || "column", type: "string" },
-          { name: "value", type: "string" },
+          makeCol(valueCol, "string", sid, valueCol),
+          makeCol("value", "string", sid),
         ];
       }
 
       case "unpivot": {
         return [
-          { name: "variable", type: "string" },
-          { name: "value", type: "string" },
+          makeCol("variable", "string", sid),
+          makeCol("value", "string", sid),
         ];
       }
 
       case "transpose": {
         return [
-          { name: "column", type: "string" },
-          { name: "value", type: "string" },
+          makeCol("column", "string", sid),
+          makeCol("value", "string", sid),
         ];
       }
 
       case "flatten": {
-        return inputSchema.map((col) => ({
-          ...col,
-          type: "string" as const,
-        }));
+        return inputSchema.map((col) =>
+          makeCol(col.name, "string", sid, col.sourceColumnName),
+        );
       }
 
       case "explode": {
         return inputSchema;
       }
 
-      default:
+      case "join":
+      case "merge": {
         return inputSchema;
+      }
+
+      default:
+        return inputSchema.map((col) =>
+          makeCol(col.name, col.type, col.sourceStepId, col.sourceColumnName),
+        );
     }
   };
 
@@ -352,40 +499,89 @@ export function useDataLineage(
         const n = parseInt(step.parameters.n || "10", 10);
         return Math.min(n, inputRowCount);
       }
-
       case "tail": {
         const n = parseInt(step.parameters.n || "10", 10);
         return Math.min(n, inputRowCount);
       }
-
       case "sample": {
         const n = parseInt(step.parameters.n || "10", 10);
         return Math.min(n, inputRowCount);
       }
-
-      case "dedup": {
+      case "dedup":
         return Math.floor(inputRowCount * 0.8);
-      }
-
       case "sort":
       case "shuffle":
       case "reverse":
         return inputRowCount;
-
       case "filter":
       case "search":
         return Math.floor(inputRowCount * 0.5);
-
       case "groupby":
         return Math.floor(inputRowCount * 0.3);
-
       case "bins":
         return parseInt(step.parameters.n || "10", 10);
-
       default:
         return inputRowCount;
     }
   };
+
+  const buildColumnLineagePaths = useCallback(
+    (lineage: StepLineage[]): ColumnLineagePath[] => {
+      const allColumns = new Set<string>();
+      lineage.forEach((step) => {
+        step.outputSchema.forEach((col) => allColumns.add(col.name));
+      });
+
+      const paths: ColumnLineagePath[] = [];
+
+      allColumns.forEach((columnName) => {
+        const path: ColumnLineagePath["path"] = [];
+        let currentCol = columnName;
+
+        for (let i = lineage.length - 1; i >= 0; i--) {
+          const step = lineage[i];
+          const outputCol = step.outputSchema.find(
+            (c) => c.name === currentCol,
+          );
+          const inputCol = step.inputSchema.find(
+            (c) => c.name === (outputCol?.sourceColumnName || currentCol),
+          );
+
+          if (outputCol) {
+            path.unshift({
+              stepId: step.stepId,
+              stepName: step.commandName,
+              inputColumnName: inputCol?.name,
+              outputColumnName: outputCol.name,
+              transformation:
+                step.transformations.map((t) => t.description).join("; ") ||
+                undefined,
+            });
+
+            if (
+              outputCol.sourceColumnName &&
+              outputCol.sourceColumnName !== currentCol
+            ) {
+              currentCol = outputCol.sourceColumnName;
+            } else if (inputCol) {
+              currentCol = inputCol.sourceColumnName || inputCol.name;
+            } else {
+              break;
+            }
+          } else {
+            break;
+          }
+        }
+
+        if (path.length > 0) {
+          paths.push({ columnName, path });
+        }
+      });
+
+      return paths;
+    },
+    [],
+  );
 
   const trackLineage = useCallback(
     (
@@ -393,8 +589,15 @@ export function useDataLineage(
       edges: PipelineEdge[],
       inputHeaders: string[],
       inputRows: string[][],
+      actualOutputRowCount?: number,
     ) => {
-      const lineage = computeLineage(steps, edges, inputHeaders, inputRows);
+      const lineage = computeLineage(
+        steps,
+        edges,
+        inputHeaders,
+        inputRows,
+        actualOutputRowCount,
+      );
       setLineageData(lineage);
 
       setTabs((prev) =>
@@ -408,19 +611,16 @@ export function useDataLineage(
     [computeLineage, selectedTabId, setTabs],
   );
 
-  const saveLineage = useCallback(
-    async () => {
-      try {
-        await invoke("save_lineage_data", {
-          pipelineId: selectedTabId,
-          lineage: JSON.stringify(lineageData),
-        });
-      } catch (error) {
-        console.error("Failed to save lineage:", error);
-      }
-    },
-    [selectedTabId, lineageData],
-  );
+  const saveLineage = useCallback(async () => {
+    try {
+      await invoke("save_lineage_data", {
+        pipelineId: selectedTabId,
+        lineage: JSON.stringify(lineageData),
+      });
+    } catch (error) {
+      console.error("Failed to save lineage:", error);
+    }
+  }, [selectedTabId, lineageData]);
 
   const loadLineage = useCallback(async () => {
     try {
@@ -455,13 +655,23 @@ export function useDataLineage(
   );
 
   return {
-    isLineageMode,
-    setIsLineageMode,
     lineageData,
     trackLineage,
     saveLineage,
     loadLineage,
     getLineageForStep,
     getLineageForColumn,
+    buildColumnLineagePaths,
   };
+}
+
+function isLastStep(
+  stepId: string,
+  steps: PipelineStep[],
+  edges: PipelineEdge[],
+): boolean {
+  if (edges.length === 0)
+    return steps.length > 0 && steps[steps.length - 1].id === stepId;
+  const targetIds = new Set(edges.map((e) => e.target));
+  return !targetIds.has(stepId) || !edges.some((e) => e.source === stepId);
 }

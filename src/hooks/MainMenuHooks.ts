@@ -58,9 +58,7 @@ interface MainMenuHooksProps {
       status: "executing" | "completed" | "error";
     } | null>
   >;
-  progressHideTimerRef: React.RefObject<ReturnType<
-    typeof setTimeout
-  > | null>;
+  progressHideTimerRef: React.RefObject<ReturnType<typeof setTimeout> | null>;
   loadCsvData: (
     tabId: string,
     filePath: string,
@@ -73,8 +71,8 @@ interface MainMenuHooksProps {
     edges: PipelineEdge[],
     inputHeaders: string[],
     inputRows: string[][],
+    actualOutputRowCount?: number,
   ) => StepLineage[];
-  isLineageMode?: boolean;
 }
 
 export function MainMenuHooks({
@@ -98,7 +96,6 @@ export function MainMenuHooks({
   updateHistoricalPipelines,
   formatDateTime,
   trackLineage,
-  isLineageMode,
 }: MainMenuHooksProps) {
   const getCurrentTab = useCallback(() => {
     return tabs.find((tab) => tab.id === selectedTabId) || tabs[0];
@@ -857,7 +854,7 @@ export function MainMenuHooks({
 
       updateHistoricalPipelines(updatedHistory);
 
-      if (isLineageMode && trackLineage) {
+      if (trackLineage) {
         const headers = currentTab.headers || [];
         const rows = currentTab.data || [];
         trackLineage(currentPipeline, edges, headers, rows);
@@ -896,7 +893,6 @@ export function MainMenuHooks({
     updateHistoricalPipelines,
     formatDateTime,
     trackLineage,
-    isLineageMode,
   ]);
 
   return {
