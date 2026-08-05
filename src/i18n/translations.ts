@@ -34,6 +34,17 @@ export interface Translations {
   searchColumns: string;
   lineageForColumn: string;
 
+  // VersionControl
+  save: string;
+  saving: string;
+  saveVersion: string;
+  untitledVersion: string;
+  noVersionsSaved: string;
+  addTag: string;
+  versionMessagePlaceholder: string;
+  tagsPlaceholder: string;
+  confirmDeleteVersion: string;
+
   // ConfirmDialog
   confirm: string;
   refreshTitle: string;
@@ -188,6 +199,17 @@ export const translations: Record<Language, Translations> = {
     searchColumns: "Search columns...",
     lineageForColumn: "Lineage for column:",
 
+    // VersionControl
+    save: "Save",
+    saving: "Saving...",
+    saveVersion: "Save Version",
+    untitledVersion: "Untitled version",
+    noVersionsSaved: "No versions saved yet",
+    addTag: "Add tag...",
+    versionMessagePlaceholder: "Version message...",
+    tagsPlaceholder: "Tags (comma separated)...",
+    confirmDeleteVersion: "Are you sure you want to delete this version?",
+
     // ConfirmDialog
     confirm: "Confirm",
     refreshTitle: "Refresh Page",
@@ -325,7 +347,7 @@ export const translations: Record<Language, Translations> = {
     checkUpdate: "检查更新",
     help: "帮助",
     settings: "设置",
-    versionHistory: "管道版本",
+    versionHistory: "版本控制",
     dataLineage: "数据血缘",
     columnLineage: "列级血缘",
     dagView: "图形",
@@ -341,6 +363,17 @@ export const translations: Record<Language, Translations> = {
     noLineageData: "执行后可查看数据血缘",
     searchColumns: "搜索列...",
     lineageForColumn: "列的血缘：",
+
+    // VersionControl
+    save: "保存",
+    saving: "保存中...",
+    saveVersion: "保存版本",
+    untitledVersion: "未命名版本",
+    noVersionsSaved: "暂无版本记录",
+    addTag: "添加标签...",
+    versionMessagePlaceholder: "版本描述...",
+    tagsPlaceholder: "标签（逗号分隔）...",
+    confirmDeleteVersion: "确定要删除此版本吗？",
 
     // ConfirmDialog
     confirm: "确认",

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   Tag,
   Clock,
@@ -41,32 +41,52 @@ export function VersionControlPanel({
 }: VersionControlPanelProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [newMessage, setNewMessage] = useState("");
-  const [newTag, setNewTag] = useState("");
+  const [creatingTag, setCreatingTag] = useState("");
   const [editingTagVersionId, setEditingTagVersionId] = useState<string | null>(
+    null,
+  );
+  const [editingTag, setEditingTag] = useState("");
+  const [deletingVersionId, setDeletingVersionId] = useState<string | null>(
     null,
   );
   const { t } = useLanguage();
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!newMessage.trim()) return;
     await onSaveVersion(
       newMessage.trim(),
-      newTag
+      creatingTag
         .split(",")
-        .map((t) => t.trim())
+        .map((s) => s.trim())
         .filter(Boolean),
     );
     setNewMessage("");
-    setNewTag("");
+    setCreatingTag("");
     setIsCreating(false);
-  };
+  }, [newMessage, creatingTag, onSaveVersion]);
 
-  const handleAddTag = async (versionId: string) => {
-    if (!newTag.trim()) return;
-    await onAddTag(versionId, newTag.trim());
-    setNewTag("");
-    setEditingTagVersionId(null);
-  };
+  const handleAddTag = useCallback(
+    async (versionId: string) => {
+      if (!editingTag.trim()) return;
+      await onAddTag(versionId, editingTag.trim());
+      setEditingTag("");
+      setEditingTagVersionId(null);
+    },
+    [editingTag, onAddTag],
+  );
+
+  const handleStartEditTag = useCallback(
+    (versionId: string) => {
+      if (editingTagVersionId === versionId) {
+        setEditingTagVersionId(null);
+        setEditingTag("");
+      } else {
+        setEditingTagVersionId(versionId);
+        setEditingTag("");
+      }
+    },
+    [editingTagVersionId],
+  );
 
   return (
     <div className="h-full flex flex-col">
@@ -82,7 +102,7 @@ export function VersionControlPanel({
               className="h-6 px-2 text-xs bg-primary/10 hover:bg-primary/20 rounded flex items-center gap-1 transition-colors"
             >
               <Plus className="h-3 w-3" />
-              Save
+              {t.save}
             </button>
             <button
               onClick={onClose}
@@ -100,16 +120,16 @@ export function VersionControlPanel({
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Version message..."
+            placeholder={t.versionMessagePlaceholder}
             className="w-full h-8 px-2 text-xs border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50 mb-2"
             autoFocus
             onKeyDown={(e) => e.key === "Enter" && handleSave()}
           />
           <input
             type="text"
-            value={newTag}
-            onChange={(e) => setNewTag(e.target.value)}
-            placeholder="Tags (comma separated)..."
+            value={creatingTag}
+            onChange={(e) => setCreatingTag(e.target.value)}
+            placeholder={t.tagsPlaceholder}
             className="w-full h-8 px-2 text-xs border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50 mb-2"
             onKeyDown={(e) => e.key === "Enter" && handleSave()}
           />
@@ -119,43 +139,42 @@ export function VersionControlPanel({
               disabled={!newMessage.trim() || isSaving}
               className="h-6 px-3 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded transition-colors disabled:opacity-50"
             >
-              {isSaving ? "Saving..." : "Save Version"}
+              {isSaving ? t.saving : t.saveVersion}
             </button>
             <button
               onClick={() => {
                 setIsCreating(false);
                 setNewMessage("");
-                setNewTag("");
+                setCreatingTag("");
               }}
               className="h-6 px-3 text-xs bg-muted hover:bg-muted/80 rounded transition-colors"
             >
-              Cancel
+              {t.cancel}
             </button>
           </div>
         </div>
       )}
 
-      <ScrollArea className="flex-1 h-[120px]">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-3 space-y-2">
           {versions.length === 0 ? (
             <div className="text-center text-muted-foreground text-xs py-8">
-              No versions saved yet
+              {t.noVersionsSaved}
             </div>
           ) : (
             [...versions].reverse().map((version) => (
               <Card
                 key={version.id}
-                className={`p-3 cursor-pointer transition-all hover:bg-accent/30 ${
+                className={`p-3 transition-all ${
                   currentVersionId === version.id
                     ? "border-primary/50 bg-primary/5"
                     : "border-border/50"
                 }`}
-                onClick={() => onRestoreVersion(version.id)}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-medium truncate">
-                      {version.message || "Untitled version"}
+                      {version.message || t.untitledVersion}
                     </div>
                     <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
                       <Clock className="h-3 w-3" />
@@ -188,11 +207,7 @@ export function VersionControlPanel({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setEditingTagVersionId(
-                          editingTagVersionId === version.id
-                            ? null
-                            : version.id,
-                        );
+                        handleStartEditTag(version.id);
                       }}
                       className="h-5 w-5 flex items-center justify-center hover:bg-muted rounded transition-colors"
                     >
@@ -210,7 +225,7 @@ export function VersionControlPanel({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onDeleteVersion(version.id);
+                        setDeletingVersionId(version.id);
                       }}
                       className="h-5 w-5 flex items-center justify-center hover:bg-destructive/10 text-destructive rounded transition-colors"
                     >
@@ -223,9 +238,9 @@ export function VersionControlPanel({
                   <div className="mt-2 flex gap-1">
                     <input
                       type="text"
-                      value={newTag}
-                      onChange={(e) => setNewTag(e.target.value)}
-                      placeholder="Add tag..."
+                      value={editingTag}
+                      onChange={(e) => setEditingTag(e.target.value)}
+                      placeholder={t.addTag}
                       className="flex-1 h-6 px-2 text-[10px] border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
                       autoFocus
                       onClick={(e) => e.stopPropagation()}
@@ -242,7 +257,7 @@ export function VersionControlPanel({
                       }}
                       className="h-6 px-2 text-[10px] bg-primary/10 hover:bg-primary/20 rounded transition-colors"
                     >
-                      Add
+                      {t.save}
                     </button>
                   </div>
                 )}
@@ -251,6 +266,31 @@ export function VersionControlPanel({
           )}
         </div>
       </ScrollArea>
+
+      {deletingVersionId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background border border-border rounded-lg p-4 shadow-lg w-[280px]">
+            <p className="text-sm mb-4">{t.confirmDeleteVersion}</p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeletingVersionId(null)}
+                className="h-7 px-3 text-xs bg-muted hover:bg-muted/80 rounded transition-colors"
+              >
+                {t.cancel}
+              </button>
+              <button
+                onClick={() => {
+                  onDeleteVersion(deletingVersionId);
+                  setDeletingVersionId(null);
+                }}
+                className="h-7 px-3 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded transition-colors"
+              >
+                {t.confirm}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
