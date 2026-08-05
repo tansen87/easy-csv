@@ -3,11 +3,11 @@ import { xanCommands } from "@/data/commands";
 
 const cmdDocs = import.meta.glob<{
   default: string;
-}>("/public/docs/cmd/*.md", { query: "?raw", import: "default", eager: true });
+}>("/src/docs/cmd/*.md", { query: "?raw", import: "default", eager: true });
 
 const moonbladeDocs = import.meta.glob<{
   default: string;
-}>("/public/docs/moonblade/*.md", {
+}>("/src/docs/moonblade/*.md", {
   query: "?raw",
   import: "default",
   eager: true,
@@ -15,7 +15,7 @@ const moonbladeDocs = import.meta.glob<{
 
 const aiUsageDocs = import.meta.glob<{
   default: string;
-}>("/public/docs/AI_usage/*.md", {
+}>("/src/docs/AI_usage/*.md", {
   query: "?raw",
   import: "default",
   eager: true,
