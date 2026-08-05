@@ -89,7 +89,10 @@ export function VersionControlPanel({
   );
 
   return (
-    <div className="h-full flex flex-col">
+    <div
+      className="h-full flex flex-col"
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div className="p-3 border-b border-border/50">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold flex items-center gap-2">

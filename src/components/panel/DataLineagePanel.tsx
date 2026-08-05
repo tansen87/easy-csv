@@ -119,7 +119,10 @@ export function DataLineagePanel({
 
   if (isGraphExpanded) {
     return (
-      <div className="fixed inset-0 z-50 bg-background flex flex-col">
+      <div
+        className="fixed inset-0 z-50 bg-background flex flex-col"
+        onContextMenu={(e) => e.preventDefault()}
+      >
         <div className="h-12 border-b border-border/50 flex items-center justify-between px-4 bg-card shrink-0">
           <div className="flex items-center gap-3">
             <GitMerge className="h-4 w-4 text-primary" />
@@ -191,7 +194,10 @@ export function DataLineagePanel({
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div
+      className="h-full flex flex-col"
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div className="px-3 py-2 border-b border-border/50 shrink-0">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold flex items-center gap-2">

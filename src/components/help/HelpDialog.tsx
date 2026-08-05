@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -29,7 +35,7 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
   const { t } = useLanguage();
 
   const escapeRegExp = (string: string) => {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   };
 
   const matches = useMemo(() => {
@@ -62,16 +68,24 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
         e.preventDefault();
         searchInputRef.current?.focus();
       }
-      if (e.key === "ArrowDown" && document.activeElement === searchInputRef.current) {
+      if (
+        e.key === "ArrowDown" &&
+        document.activeElement === searchInputRef.current
+      ) {
         e.preventDefault();
         if (matches.length > 0) {
           setCurrentMatchIndex((prev) => (prev + 1) % matches.length);
         }
       }
-      if (e.key === "ArrowUp" && document.activeElement === searchInputRef.current) {
+      if (
+        e.key === "ArrowUp" &&
+        document.activeElement === searchInputRef.current
+      ) {
         e.preventDefault();
         if (matches.length > 0) {
-          setCurrentMatchIndex((prev) => (prev - 1 + matches.length) % matches.length);
+          setCurrentMatchIndex(
+            (prev) => (prev - 1 + matches.length) % matches.length,
+          );
         }
       }
       if (e.key === "Escape") {
@@ -119,7 +133,9 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
     if (matches.length === 0 || !scrollAreaRef.current) return;
 
     const currentMatchPosition = matches[currentMatchIndex];
-    const scrollArea = scrollAreaRef.current.querySelector("[data-radix-scroll-area-viewport]");
+    const scrollArea = scrollAreaRef.current.querySelector(
+      "[data-radix-scroll-area-viewport]",
+    );
 
     if (scrollArea) {
       const totalLength = content.length;
@@ -137,14 +153,19 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
 
   const handlePreviousMatch = () => {
     if (matches.length > 0) {
-      setCurrentMatchIndex((prev) => (prev - 1 + matches.length) % matches.length);
+      setCurrentMatchIndex(
+        (prev) => (prev - 1 + matches.length) % matches.length,
+      );
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-foreground/20 backdrop-blur-xs flex items-center justify-center z-50">
+    <div
+      className="fixed inset-0 bg-foreground/20 backdrop-blur-xs flex items-center justify-center z-50"
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div
         className="bg-card border rounded-lg shadow-xl p-4 w-full max-w-5xl h-[75vh] flex flex-col"
         role="dialog"
@@ -174,7 +195,9 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
             {searchQuery && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground min-w-[60px]">
-                  {matchCount > 0 ? `${currentMatchIndex + 1}/${matchCount}` : "0/0"}
+                  {matchCount > 0
+                    ? `${currentMatchIndex + 1}/${matchCount}`
+                    : "0/0"}
                 </span>
                 <Button
                   variant="ghost"
@@ -212,10 +235,7 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
 
         <ScrollArea ref={scrollAreaRef} className="flex-1 h-0">
           <div className="text-sm font-mono pr-2">
-            <HelpMarkdown
-              content={content}
-              searchQuery={searchQuery}
-            />
+            <HelpMarkdown content={content} searchQuery={searchQuery} />
           </div>
         </ScrollArea>
 

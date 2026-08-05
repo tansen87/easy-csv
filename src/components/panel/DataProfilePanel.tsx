@@ -168,7 +168,10 @@ export const DataProfilePanel = React.memo(function DataProfilePanel({
   if (!isVisible) return null;
 
   return (
-    <div className="fixed right-2 top-19 w-[340px] h-[calc(100vh-86px)] bg-background border border-border/50 rounded-lg shadow-xl z-40 flex flex-col">
+    <div
+      className="fixed right-2 top-19 w-[340px] h-[calc(100vh-86px)] bg-background border border-border/50 rounded-lg shadow-xl z-40 flex flex-col"
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div className="p-3 border-b bg-card/80 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BarChart3 className="h-4 w-4 text-muted-foreground" />

@@ -240,7 +240,10 @@ export const AIPanel = React.memo(function AIPanel({
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-2 left-1/2 -translate-x-1/2 w-[min(700px,calc(100vw-32px))] z-40">
+    <div
+      className="fixed bottom-2 left-1/2 -translate-x-1/2 w-[min(700px,calc(100vw-32px))] z-40"
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div className="flex flex-col bg-transparent border border-border/50 rounded-lg shadow-xl overflow-hidden">
         <div className="p-2 bg-transparent flex items-center">
           <div className="flex items-center gap-2 flex-1">
