@@ -148,6 +148,18 @@ export interface Translations {
   aiClear: string;
   aiTokenUsed: string;
   aiConfigureApiKey: string;
+  aiFeedbackPositive: string;
+  aiFeedbackNegative: string;
+  aiFeedbackPlaceholder: string;
+  aiClarificationConfirm: string;
+  aiClarificationModify: string;
+  aiClearData: string;
+  aiClearDataDesc: string;
+  aiClearConversations: string;
+  aiClearFeedback: string;
+  aiClearCorrections: string;
+  aiClearConfirmTitle: string;
+  aiClearConfirmDesc: string;
 
   // AI Settings
   ai: string;
@@ -315,6 +327,18 @@ export const translations: Record<Language, Translations> = {
     aiClear: "Clear",
     aiTokenUsed: "Used",
     aiConfigureApiKey: "Please configure API Key in settings",
+    aiFeedbackPositive: "Helpful",
+    aiFeedbackNegative: "Not helpful",
+    aiFeedbackPlaceholder: "Please describe what's wrong or how to improve...",
+    aiClarificationConfirm: "Confirm",
+    aiClarificationModify: "Modify",
+    aiClearData: "Clear AI Learning Data",
+    aiClearDataDesc: "Delete all AI conversation history, feedback, and correction rules",
+    aiClearConversations: "Clear Conversations",
+    aiClearFeedback: "Clear Feedback",
+    aiClearCorrections: "Clear Corrections",
+    aiClearConfirmTitle: "Confirm Delete",
+    aiClearConfirmDesc: "This action cannot be undone. Are you sure?",
 
     // AI Settings
     ai: "AI",
@@ -477,6 +501,18 @@ export const translations: Record<Language, Translations> = {
     aiClear: "清空",
     aiTokenUsed: "已用",
     aiConfigureApiKey: "请先在设置中配置 API Key",
+    aiFeedbackPositive: "有帮助",
+    aiFeedbackNegative: "没帮助",
+    aiFeedbackPlaceholder: "请描述哪里不对或如何改进...",
+    aiClarificationConfirm: "确认",
+    aiClarificationModify: "修改",
+    aiClearData: "清除AI学习数据",
+    aiClearDataDesc: "删除所有AI对话历史、反馈记录和纠正规则",
+    aiClearConversations: "清除对话历史",
+    aiClearFeedback: "清除反馈记录",
+    aiClearCorrections: "清除纠正规则",
+    aiClearConfirmTitle: "确认删除",
+    aiClearConfirmDesc: "此操作不可撤销，确定要继续吗？",
 
     // AI Settings
     ai: "AI",

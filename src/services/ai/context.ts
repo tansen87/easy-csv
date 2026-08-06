@@ -75,6 +75,7 @@ const EXPRESSION_COMMANDS = new Set(["map"]);
 interface IntentRoute {
   intent: string;
   keywords: string[];
+  synonyms?: string[];
   commands: string[];
 }
 
@@ -91,6 +92,7 @@ const INTENT_ROUTES: IntentRoute[] = [
       "看下",
       "看看",
     ],
+    synonyms: ["展示", "浏览", "检查", "look", "view", "show", "preview"],
     commands: ["head", "tail", "slice"],
   },
   {
@@ -110,11 +112,21 @@ const INTENT_ROUTES: IntentRoute[] = [
       "非空",
       "过滤",
     ],
+    synonyms: [
+      "search",
+      "find",
+      "filter",
+      "select",
+      "query",
+      "locate",
+      "检索",
+    ],
     commands: ["search", "filter"],
   },
   {
     intent: "排序",
     keywords: ["排序", "升序", "降序", "顺序", "order"],
+    synonyms: ["sort", "排列", "整理", "arrange", "rank"],
     commands: ["sort"],
   },
   {
@@ -128,6 +140,15 @@ const INTENT_ROUTES: IntentRoute[] = [
       "前缀",
       "后缀",
       "表头",
+    ],
+    synonyms: [
+      "column",
+      "字段",
+      "选择列",
+      "移除列",
+      "rename",
+      "select",
+      "drop",
     ],
     commands: ["select", "drop", "rename", "behead"],
   },
@@ -143,6 +164,15 @@ const INTENT_ROUTES: IntentRoute[] = [
       "相加",
       "相减",
       "转换列",
+    ],
+    synonyms: [
+      "add",
+      "calculate",
+      "compute",
+      "transform",
+      "map",
+      "衍生",
+      "生成",
     ],
     commands: ["map", "transform", "enum"],
   },
@@ -162,46 +192,83 @@ const INTENT_ROUTES: IntentRoute[] = [
       "最小",
       "汇总",
     ],
+    synonyms: [
+      "aggregate",
+      "sum",
+      "count",
+      "average",
+      "mean",
+      "max",
+      "min",
+      "stats",
+      "total",
+    ],
     commands: ["agg", "count"],
   },
   {
     intent: "分组聚合",
     keywords: ["分组", "按某列", "group", "groupby"],
+    synonyms: ["groupby", "group", "分类", "归类", "categorize"],
     commands: ["groupby"],
   },
   {
     intent: "数据透视/重塑",
     keywords: ["透视", "宽表", "长表", "转置", "重塑"],
+    synonyms: ["pivot", "unpivot", "transpose", "reshape", "宽转长", "长转宽"],
     commands: ["pivot", "unpivot", "transpose"],
   },
   {
     intent: "去重",
     keywords: ["去重", "重复", "唯一", "distinct"],
+    synonyms: ["dedup", "unique", "distinct", "重复移除", "唯一值"],
     commands: ["dedup"],
   },
   {
     intent: "清洗/空值",
     keywords: ["清洗", "空值", "填充", "缺失", "补齐", "修复"],
+    synonyms: [
+      "clean",
+      "fill",
+      "null",
+      "empty",
+      "missing",
+      "补全",
+      "清理",
+      "数据清洗",
+    ],
     commands: ["fill", "blank", "search", "fixlengths"],
   },
   {
     intent: "合并/连接",
     keywords: ["合并", "连接", "追加", "关联", "拼接", "两个文件"],
+    synonyms: [
+      "join",
+      "merge",
+      "cat",
+      "concat",
+      "combine",
+      "拼合",
+      "联合",
+      "合并文件",
+    ],
     commands: ["join", "cat", "merge"],
   },
   {
     intent: "导出",
     keywords: ["导出", "保存", "输出", "写出"],
+    synonyms: ["export", "save", "output", "write", "转换格式", "另存为"],
     commands: ["output", "to"],
   },
   {
     intent: "采样/随机",
     keywords: ["采样", "随机", "抽样", "随机取"],
+    synonyms: ["sample", "shuffle", "random", "抽签", "随机排序"],
     commands: ["sample", "shuffle"],
   },
   {
     intent: "可视化",
     keywords: ["图", "绘图", "图表", "直方图", "热力图", "分布图"],
+    synonyms: ["plot", "chart", "graph", "visualization", "画图", "作图"],
     commands: [
       "plot",
       "hist",
@@ -215,31 +282,52 @@ const INTENT_ROUTES: IntentRoute[] = [
   {
     intent: "拆分/合并单元格",
     keywords: ["拆分", "分割", "展开", "合并", "单元格"],
+    synonyms: ["split", "explode", "implode", "separate", "分列", "合并单元格"],
     commands: ["split", "explode", "implode", "separate"],
   },
   {
     intent: "窗口/滚动",
     keywords: ["窗口", "滚动", "滑动", "移动平均"],
+    synonyms: ["window", "rolling", "滑窗", "移动窗口", "moving"],
     commands: ["window"],
   },
   {
     intent: "批量处理",
     keywords: ["批量", "多文件", "批次"],
+    synonyms: ["batch", "multi", "批量处理", "批处理", "多个文件"],
     commands: ["batch-filter", "batch-from", "batch-to"],
   },
   {
     intent: "抽取/爬取",
     keywords: ["爬取", "抓取", "网页", "网络"],
+    synonyms: ["scrape", "crawl", "fetch", "网页抓取", "数据抓取"],
     commands: ["scrape", "network"],
   },
   {
-    intent: "格式/编码/分隔符",
-    keywords: ["格式", "分隔符", "编码", "转换格式", "制表符"],
+    intent: "格式/分隔符",
+    keywords: ["格式", "分隔符", "转换格式", "制表符"],
+    synonyms: [
+      "format",
+      "delimiter",
+      "tab",
+      "制表符",
+      "分隔",
+    ],
     commands: ["fmt", "from", "to", "input"],
   },
   {
     intent: "行操作",
     keywords: ["行号", "行范围", "区间", "分段", "倒序", "倒置", "插入"],
+    synonyms: [
+      "range",
+      "enum",
+      "reverse",
+      "partition",
+      "行号",
+      "倒序",
+      "反转",
+      "添加行号",
+    ],
     commands: ["range", "enum", "reverse", "partition", "split"],
   },
 ];
@@ -313,8 +401,65 @@ function getCommandIndex(): string {
 
 function getRoutingHints(): string {
   return INTENT_ROUTES.map(
-    (route) => `- ${route.intent} → ${route.commands.join(", ")}`,
+    (route) =>
+      `- ${route.intent} → ${route.commands.join(", ")}${route.synonyms ? ` (同义词: ${route.synonyms.slice(0, 3).join(", ")})` : ""}`,
   ).join("\n");
+}
+
+// Fuzzy matching function with pinyin-like support
+function fuzzyMatch(query: string, text: string): number {
+  const queryLower = query.toLowerCase();
+  const textLower = text.toLowerCase();
+
+  // Exact match
+  if (textLower.includes(queryLower)) {
+    return 10;
+  }
+
+  // Partial match
+  let score = 0;
+  let queryIdx = 0;
+  for (let i = 0; i < textLower.length && queryIdx < queryLower.length; i++) {
+    if (textLower[i] === queryLower[queryIdx]) {
+      score += 1;
+      queryIdx++;
+    }
+  }
+
+  // If all query chars found
+  if (queryIdx === queryLower.length) {
+    return score / queryLower.length;
+  }
+
+  return 0;
+}
+
+// Synonym expansion function
+function expandWithSynonyms(query: string): string[] {
+  const expanded: string[] = [query];
+  const queryLower = query.toLowerCase();
+
+  INTENT_ROUTES.forEach((route) => {
+    // Check if query matches any keyword
+    const matchesKeyword = route.keywords.some((k) =>
+      queryLower.includes(k.toLowerCase()),
+    );
+    if (matchesKeyword && route.synonyms) {
+      expanded.push(...route.synonyms.slice(0, 2));
+    }
+
+    // Check if query matches any synonym
+    if (route.synonyms) {
+      const matchesSynonym = route.synonyms.some((s) =>
+        queryLower.includes(s.toLowerCase()),
+      );
+      if (matchesSynonym) {
+        expanded.push(...route.keywords.slice(0, 2));
+      }
+    }
+  });
+
+  return [...new Set(expanded)];
 }
 
 function retrieveRelevantCommands(
@@ -324,15 +469,46 @@ function retrieveRelevantCommands(
   const query = userMessage.toLowerCase();
   const scores = new Map<string, number>();
 
+  // 1. Expand query with synonyms
+  const expandedQueries = expandWithSynonyms(userMessage);
+
+  // 2. Intent route matching with synonyms
   INTENT_ROUTES.forEach((route) => {
-    const hit = route.keywords.some((k) => query.includes(k.toLowerCase()));
-    if (hit) {
+    // Check original keywords
+    const hitOriginal = route.keywords.some((k) =>
+      query.includes(k.toLowerCase()),
+    );
+    // Check synonyms
+    const hitSynonym = route.synonyms?.some((s) =>
+      query.includes(s.toLowerCase()),
+    );
+
+    if (hitOriginal) {
       route.commands.forEach((cmd) =>
         scores.set(cmd, (scores.get(cmd) || 0) + 3),
       );
+    } else if (hitSynonym) {
+      route.commands.forEach((cmd) =>
+        scores.set(cmd, (scores.get(cmd) || 0) + 2),
+      );
     }
+
+    // Check expanded queries against route keywords
+    expandedQueries.forEach((expanded) => {
+      if (expanded !== userMessage) {
+        const hitExpanded = route.keywords.some((k) =>
+          expanded.toLowerCase().includes(k.toLowerCase()),
+        );
+        if (hitExpanded) {
+          route.commands.forEach((cmd) =>
+            scores.set(cmd, (scores.get(cmd) || 0) + 1),
+          );
+        }
+      }
+    });
   });
 
+  // 3. Column name matching
   context.headers.forEach((header) => {
     if (query.includes(header.toLowerCase())) {
       COLUMN_COMMANDS.forEach((cmd) =>
@@ -341,6 +517,7 @@ function retrieveRelevantCommands(
     }
   });
 
+  // 4. Command name and description matching with fuzzy
   xanCommands.forEach((cmd) => {
     const haystack =
       `${cmd.name} ${cmd.description} ${cmd.descriptionCn} ${cmd.category} ${cmd.parameters
@@ -351,8 +528,29 @@ function retrieveRelevantCommands(
       if (haystack.includes(token)) {
         scores.set(cmd.name, (scores.get(cmd.name) || 0) + 1);
       }
+      // Fuzzy match
+      const fuzzyScore = fuzzyMatch(token, cmd.name);
+      if (fuzzyScore > 0.5) {
+        scores.set(cmd.name, (scores.get(cmd.name) || 0) + fuzzyScore);
+      }
     });
   });
+
+  // 5. Correction rules matching (from user feedback)
+  if (context.correctionRules && context.correctionRules.length > 0) {
+    context.correctionRules.forEach((rule) => {
+      if (query.includes(rule.pattern.toLowerCase())) {
+        // Boost the correct command
+        const currentScore = scores.get(rule.correctCommand) || 0;
+        scores.set(rule.correctCommand, currentScore + 5);
+        // Penalize the wrong command
+        const wrongScore = scores.get(rule.wrongCommand) || 0;
+        if (wrongScore > 0) {
+          scores.set(rule.wrongCommand, Math.max(0, wrongScore - 3));
+        }
+      }
+    });
+  }
 
   const ranked = [...scores.entries()]
     .filter(([, score]) => score > 0)
@@ -398,6 +596,80 @@ async function loadRelevantDocs(commandNames: string[]): Promise<string> {
   return filtered.length > 0 ? filtered.join("\n\n") : "";
 }
 
+// Clarification detection patterns
+interface ClarificationPattern {
+  pattern: RegExp;
+  question: string;
+  options: string[];
+}
+
+const CLARIFICATION_PATTERNS: ClarificationPattern[] = [
+  {
+    pattern: /拆分.+/i,
+    question: "您是想按行拆分,还是按条件拆分为多个文件?",
+    options: ["按行拆分为多个文件(split)", "按条件拆分为多个文件(batch-filter)"],
+  },
+  {
+    pattern: /转换.+(?:格式|excel|json|html)/i,
+    question: "您想转换成什么格式?",
+    options: ["Excel (.xlsx)", "JSON", "HTML", "Markdown", "TSV"],
+  },
+  {
+    pattern: /合并.+(?:文件|多个)/i,
+    question: "您想如何合并文件?",
+    options: ["按行拼接(上下合并)", "按列拼接(左右合并)", "按关键列关联(类似SQL JOIN)"],
+  },
+  {
+    pattern: /排序.+(?:多列|多个)/i,
+    question: "多列排序的优先级是?",
+    options: ["第一列优先", "最后一列优先", "自定义顺序"],
+  },
+  {
+    pattern: /新增.+(?:列|计算)/i,
+    question: "您想如何新增列?",
+    options: ["基于现有列计算", "添加固定值列", "添加行号列"],
+  },
+  {
+    pattern: /统计|聚合|汇总/i,
+    question: "您想统计什么?",
+    options: ["计数", "求和", "平均值", "最大/最小值", "自定义聚合"],
+  },
+  {
+    pattern: /导出|保存|输出/i,
+    question: "您想导出成什么格式?",
+    options: ["CSV(默认)", "Excel (.xlsx)", "JSON", "TSV"],
+  },
+];
+
+function detectClarificationNeed(
+  userMessage: string,
+  context: AIContext,
+): { needed: boolean; question?: string; options?: string[] } {
+  // Skip if already in clarification round
+  if (context.clarificationRound && context.clarificationRound >= 2) {
+    return { needed: false };
+  }
+
+  // Skip if this is a clarification response
+  if (context.pendingClarification) {
+    return { needed: false };
+  }
+
+  const query = userMessage.toLowerCase();
+
+  for (const pattern of CLARIFICATION_PATTERNS) {
+    if (pattern.pattern.test(query)) {
+      return {
+        needed: true,
+        question: pattern.question,
+        options: pattern.options,
+      };
+    }
+  }
+
+  return { needed: false };
+}
+
 export async function buildSystemPrompt(
   context: AIContext,
   userMessage: string,
@@ -421,19 +693,40 @@ export async function buildSystemPrompt(
     contextParts.push(`当前输入文件: ${context.inputFile}`);
   }
 
+  // Add conversation history context
+  if (context.conversationHistory && context.conversationHistory.length > 0) {
+    const recentHistory = context.conversationHistory.slice(-6);
+    const historyText = recentHistory
+      .map(
+        (msg) =>
+          `${msg.role === "user" ? "用户" : "AI"}: ${msg.content.substring(0, 100)}${msg.content.length > 100 ? "..." : ""}`,
+      )
+      .join("\n");
+    contextParts.push(`最近对话历史:\n${historyText}`);
+  }
+
   const sections: string[] = [];
 
   sections.push(`
     你是Easy CSV的AI助手.
     你的职责: 理解用户的自然语言需求,转换为xan命令,以JSON格式返回.需要多步骤时,按正确顺序返回命令数组.`);
 
+  // Correction rules section
+  if (context.correctionRules && context.correctionRules.length > 0) {
+    sections.push(`
+    ## 已知纠正规则(必须遵守)
+    以下规则来自用户之前的纠正,请务必遵守:
+    ${context.correctionRules.map((r) => `- 当用户说"${r.pattern}"时,不要用${r.wrongCommand},必须用${r.correctCommand}`).join("\n")}`);
+  }
+
   sections.push(`
     ## 核心规则(必须遵守)
     - 筛选/搜索某列=某值(等于/不等于)必须用search + exact匹配,严禁用filter.即使列是数字(如idx=1001)也一样.示例: 用户"筛选idx=1001"或"搜索idx=123" → {"command":"search","parameters":{"select":"idx","exact":true,"pattern":"1001"},"explanation":"筛选idx等于1001"}.filter仅用于数值大小比较(>、<、>=、<=).
     - 需求含"导出/保存/转换为非CSV格式"(如json、xlsx/excel、html、md、txt、jsonl等)时,必须用to命令,format参数指定输出格式.output只负责把CSV写入文件,不转换格式.
     - 参数名用短横线形式(如 select → -s);-r(regex)、-e(exact) 是flag类型参数,后面不接值,模式内容始终放在pattern(-p)中.
-    - 需求"合并/拼接某目录下所有CSV文件为1个CSV"时,用cat命令:mode=rows(按行拼接),勾选union(合并各文件列头),glob填目录通配符(如D:\test\*.csv).不要用join、merge或output.示例: 用户"合并D:\test所有的csv文件为1个csv" → {"command":"cat","parameters":{"mode":"rows","union":true,"glob":"D:\\\\test\\\\*.csv"},"explanation":"合并D:\\test下所有csv文件为1个csv"}
+    - 需求"合并/拼接某目录下所有CSV文件为1个CSV"时,用cat命令:mode=rows(按行拼接),勾选union(合并各文件列头),glob填目录通配符(如D:\test\*.csv).不要用join、merge或output.示例: 用户"合并D:\test所有的csv文件为1个csv" → {"command":"cat","parameters":{"mode":"rows","union":true,"glob":"D:\\\\test\\\\*.csv"},"explanation":"合并D:\\test下所有csv文件为1个csv"}`);
 
+  sections.push(`
     ## 模糊需求处理
     当用户提示词模糊或可能有歧义时,输出格式必须为:
     {"suggestion":"建议的提示词","commands":[编号步骤]}
@@ -534,6 +827,12 @@ export async function buildSystemPrompt(
       "commands": [编号步骤]
     }
 
+    意图澄清(当需求模糊需要确认时):
+    {
+      "clarification": "澄清问题",
+      "clarificationOptions": ["选项1", "选项2"]
+    }
+
     重要: 多步骤时每个命令前必须有数字编号(1. 2. 3.),编号与命令同行,不要把编号放在单独一行.非CSV问题可自然语言回答,但优先引导到CSV处理.`);
 
   if (needsExpressionDoc) {
@@ -572,13 +871,36 @@ export async function buildSystemPrompt(
 export async function buildFullPrompt(
   userMessage: string,
   context: AIContext,
-): Promise<{ role: "system" | "user"; content: string }[]> {
+): Promise<{ role: "system" | "user" | "assistant"; content: string }[]> {
   const systemPrompt = await buildSystemPrompt(context, userMessage);
 
-  return [
+  const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
     { role: "system" as const, content: systemPrompt },
-    { role: "user" as const, content: userMessage },
   ];
+
+  // Add conversation history if available
+  if (context.conversationHistory && context.conversationHistory.length > 0) {
+    const recentHistory = context.conversationHistory.slice(-6);
+    recentHistory.forEach((msg) => {
+      if (msg.role === "user" || msg.role === "assistant") {
+        messages.push({
+          role: msg.role as "user" | "assistant",
+          content: msg.content,
+        });
+      }
+    });
+  }
+
+  // Add current user message
+  messages.push({ role: "user" as const, content: userMessage });
+
+  return messages;
 }
 
-export { loadCommandDoc, getCommandIndex, getRoutingHints };
+export {
+  loadCommandDoc,
+  getCommandIndex,
+  getRoutingHints,
+  detectClarificationNeed,
+  CLARIFICATION_PATTERNS,
+};

@@ -47,6 +47,49 @@ export async function callAI(
   }
 }
 
+function parseJSONBlock(text: string): { parsed: any[]; endIndex: number } | null {
+  const parsed: any[] = [];
+  let lastIndex = 0;
+  let pos = 0;
+
+  while (pos < text.length) {
+    const numMatch = text.slice(pos).match(/^(\d+)\.\s*\{/m);
+    if (!numMatch) break;
+
+    const startIdx = pos + numMatch.index! + numMatch[0].length - 1;
+    let depth = 0;
+    let endIdx = startIdx;
+    let found = false;
+
+    for (let i = startIdx; i < text.length; i++) {
+      if (text[i] === "{") depth++;
+      else if (text[i] === "}") {
+        depth--;
+        if (depth === 0) {
+          endIdx = i + 1;
+          found = true;
+          break;
+        }
+      }
+    }
+
+    if (!found) break;
+
+    const jsonStr = text.slice(startIdx, endIdx);
+    try {
+      const item = JSON.parse(jsonStr);
+      parsed.push(item);
+      lastIndex = endIdx;
+    } catch {
+      // skip unparseable block
+    }
+
+    pos = endIdx;
+  }
+
+  return parsed.length > 0 ? { parsed, endIndex: lastIndex } : null;
+}
+
 function parseAIResponse(content: string, usage?: TokenUsage): AIResponse {
   const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/g;
   const commands: AICommand[] = [];
@@ -87,23 +130,18 @@ function parseAIResponse(content: string, usage?: TokenUsage): AIResponse {
         });
       }
     } catch (e) {
-      // JSON.parse failed, try parsing numbered lines inside the code block
       const blockContent = match[1];
-      const numberedLineRegex = /^\d+\.\s*(\{.*\})\s*$/gm;
-      let numberedMatch;
-      while ((numberedMatch = numberedLineRegex.exec(blockContent)) !== null) {
-        try {
-          const parsedItem = JSON.parse(numberedMatch[1]);
-          if (parsedItem.command) {
+      const result = parseJSONBlock(blockContent);
+      if (result) {
+        result.parsed.forEach((item) => {
+          if (item.command) {
             commands.push({
-              command: parsedItem.command,
-              parameters: parsedItem.parameters || {},
-              explanation: parsedItem.explanation,
+              command: item.command,
+              parameters: item.parameters || {},
+              explanation: item.explanation,
             });
           }
-        } catch (e2) {
-          console.warn("Failed to parse numbered line in code block:", e2);
-        }
+        });
       }
     }
     lastIndex = match.index + match[0].length;
@@ -114,24 +152,12 @@ function parseAIResponse(content: string, usage?: TokenUsage): AIResponse {
     return { content: remaining, commands, suggestion, usage };
   }
 
-  // Parse numbered format outside code blocks: 1. {"command":...}
-  const numberedLineRegex = /^\d+\.\s*(\{.*\})\s*$/gm;
-  let numberedMatch;
-  let lastNumberedMatch: RegExpExecArray | null = null;
+  // Parse numbered format outside code blocks
   const numberedContent = content.slice(lastIndex);
-  const parsedNumbered: any[] = [];
+  const result = parseJSONBlock(numberedContent);
 
-  while ((numberedMatch = numberedLineRegex.exec(numberedContent)) !== null) {
-    lastNumberedMatch = numberedMatch;
-    try {
-      parsedNumbered.push(JSON.parse(numberedMatch[1]));
-    } catch (e) {
-      console.warn("Failed to parse numbered line:", e);
-    }
-  }
-
-  if (parsedNumbered.length > 0 && lastNumberedMatch) {
-    parsedNumbered.forEach((item) => {
+  if (result) {
+    result.parsed.forEach((item) => {
       if (item.command) {
         commands.push({
           command: item.command,
@@ -141,7 +167,7 @@ function parseAIResponse(content: string, usage?: TokenUsage): AIResponse {
       }
     });
     if (commands.length > 0) {
-      const remaining = numberedContent.slice(lastNumberedMatch.index + lastNumberedMatch[0].length).trim();
+      const remaining = numberedContent.slice(result.endIndex).trim();
       return { content: remaining, commands, suggestion, usage };
     }
   }

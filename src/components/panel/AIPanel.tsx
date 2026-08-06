@@ -9,13 +9,27 @@ import {
   ChevronDown,
   Copy,
   Check,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useLanguage } from "@/i18n";
-import { AIMessage, AIContext, TokenUsage } from "@/services/ai/types";
-import { sendAIMessage, isAIConfigured } from "@/services/ai/index";
+import {
+  AIMessage,
+  AIContext,
+  TokenUsage,
+  AIFeedback,
+} from "@/services/ai/types";
+import {
+  sendAIMessage,
+  isAIConfigured,
+  loadConversationHistory,
+  saveConversationHistory,
+  saveFeedback,
+  saveCorrection,
+} from "@/services/ai/index";
 import { XanCommand } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 
@@ -32,6 +46,16 @@ interface AIPanelProps {
   onAddCommands?: (
     commands: { command: XanCommand; parameters?: Record<string, any> }[],
   ) => void;
+}
+
+interface FeedbackState {
+  [messageIndex: number]: "positive" | "negative" | null;
+}
+
+interface ClarificationState {
+  question: string;
+  options: string[];
+  originalQuery: string;
 }
 
 export const AIPanel = React.memo(function AIPanel({
@@ -52,6 +76,17 @@ export const AIPanel = React.memo(function AIPanel({
     total_tokens: 0,
   });
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [feedbackState, setFeedbackState] = useState<FeedbackState>({});
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState<{
+    messageIndex: number;
+    message: AIMessage;
+  } | null>(null);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [clarificationState, setClarificationState] =
+    useState<ClarificationState | null>(null);
+  const [conversationHistory, setConversationHistory] = useState<AIMessage[]>(
+    [],
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -83,12 +118,28 @@ export const AIPanel = React.memo(function AIPanel({
     }
   }, [isVisible]);
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
+  // Load conversation history on mount
+  useEffect(() => {
+    if (isVisible) {
+      loadConversationHistory().then((history) => {
+        setConversationHistory(history);
+        if (history.length > 0) {
+          setMessages(history.slice(-20)); // Show last 20 messages
+        }
+      });
+    }
+  }, [isVisible]);
+
+  const handleSendMessage = async (
+    overrideContext?: Partial<AIContext>,
+    directMessage?: string,
+  ) => {
+    const messageToSend = directMessage || inputValue.trim();
+    if (!messageToSend || isLoading) return;
 
     const userMessage: AIMessage = {
       role: "user",
-      content: inputValue.trim(),
+      content: messageToSend,
       timestamp: Date.now(),
     };
 
@@ -97,8 +148,22 @@ export const AIPanel = React.memo(function AIPanel({
     setIsLoading(true);
     setIsExpanded(true);
 
+    // Add to conversation history
+    const updatedHistory = [...conversationHistory, userMessage];
+    setConversationHistory(updatedHistory);
+
+    // Merge context with override (for clarification responses)
+    const messageContext: AIContext = {
+      ...context,
+      ...overrideContext,
+    };
+
     try {
-      const response = await sendAIMessage(userMessage.content, context);
+      const response = await sendAIMessage(
+        userMessage.content,
+        messageContext,
+        conversationHistory,
+      );
 
       if (response.usage) {
         setCumulativeUsage((prev) => ({
@@ -107,6 +172,24 @@ export const AIPanel = React.memo(function AIPanel({
             prev.completion_tokens + response.usage!.completion_tokens,
           total_tokens: prev.total_tokens + response.usage!.total_tokens,
         }));
+      }
+
+      // Handle clarification response
+      if (response.clarification && response.clarificationOptions) {
+        setClarificationState({
+          question: response.clarification,
+          options: response.clarificationOptions,
+          originalQuery: userMessage.content,
+        });
+
+        const assistantMessage: AIMessage = {
+          role: "assistant",
+          content: response.clarification,
+          timestamp: Date.now(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+        setConversationHistory((prev) => [...prev, assistantMessage]);
+        return;
       }
 
       const commandsText = response.commands
@@ -137,6 +220,10 @@ export const AIPanel = React.memo(function AIPanel({
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+      setConversationHistory((prev) => [...prev, assistantMessage]);
+
+      // Save conversation history
+      saveConversationHistory([...updatedHistory, assistantMessage]);
 
       if (response.commands && response.commands.length > 0) {
         if (onAddCommands) {
@@ -173,9 +260,20 @@ export const AIPanel = React.memo(function AIPanel({
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, errorMessage]);
+      setConversationHistory((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleClarificationResponse = async (selectedOption: string) => {
+    if (!clarificationState) return;
+
+    const combinedQuery = `${clarificationState.originalQuery} - ${selectedOption}`;
+    setClarificationState(null);
+
+    // Directly send the combined query
+    await handleSendMessage({ pendingClarification: true }, combinedQuery);
   };
 
   const findXanCommand = (commandName: string): XanCommand | null => {
@@ -199,12 +297,80 @@ export const AIPanel = React.memo(function AIPanel({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const renderMessage = (message: AIMessage) => {
+  const handleFeedback = async (
+    messageIndex: number,
+    type: "positive" | "negative",
+    correction?: string,
+  ) => {
+    const message = messages[messageIndex];
+    if (!message || message.role !== "assistant") return;
+
+    // Toggle off if same feedback type
+    if (feedbackState[messageIndex] === type) {
+      setFeedbackState((prev) => {
+        const next = { ...prev };
+        delete next[messageIndex];
+        return next;
+      });
+      return;
+    }
+
+    // Find the previous user message
+    const userMessage = messages
+      .slice(0, messageIndex)
+      .reverse()
+      .find((m) => m.role === "user");
+
+    const feedback: AIFeedback = {
+      userQuery: userMessage?.content || "",
+      aiResponse: message.content,
+      feedbackType: type,
+      correction,
+      timestamp: Date.now(),
+    };
+
+    await saveFeedback(feedback);
+
+    setFeedbackState((prev) => ({
+      ...prev,
+      [messageIndex]: type,
+    }));
+
+    if (type === "negative" && correction) {
+      // Save correction rule
+      await saveCorrection(
+        userMessage?.content || "",
+        message.content.substring(0, 100),
+        correction,
+      );
+    }
+  };
+
+  const openFeedbackDialog = (messageIndex: number, message: AIMessage) => {
+    setShowFeedbackDialog({ messageIndex, message });
+    setFeedbackText("");
+  };
+
+  const submitNegativeFeedback = async () => {
+    if (!showFeedbackDialog) return;
+
+    await handleFeedback(
+      showFeedbackDialog.messageIndex,
+      "negative",
+      feedbackText,
+    );
+    setShowFeedbackDialog(null);
+    setFeedbackText("");
+  };
+
+  const renderMessage = (message: AIMessage, index: number) => {
     const isUser = message.role === "user";
+    const feedback = feedbackState[index];
+
     return (
       <div
         key={message.timestamp}
-        className={`flex gap-2 mb-3 ${isUser ? "justify-end" : "justify-start"}`}
+        className={`flex gap-2 mb-3 group ${isUser ? "justify-end" : "justify-start"}`}
       >
         {!isUser && (
           <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -212,9 +378,9 @@ export const AIPanel = React.memo(function AIPanel({
           </div>
         )}
         <div
-          className={`max-w-[80%] rounded-lg px-3 py-2 text-sm relative group bg-muted text-muted-foreground`}
+          className={`w-[80%] rounded-lg px-3 py-2 text-sm relative bg-muted text-muted-foreground`}
         >
-          <div className="whitespace-pre-wrap break-words pr-6">
+          <div className="whitespace-pre-wrap break-words">
             {message.content}
           </div>
           <button
@@ -233,6 +399,51 @@ export const AIPanel = React.memo(function AIPanel({
             <User className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
         )}
+        {!isUser && (
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`h-6 w-6 p-0 ${feedback === "positive" ? "text-green-500 opacity-100" : ""}`}
+              onClick={() => handleFeedback(index, "positive")}
+            >
+              <ThumbsUp className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`h-6 w-6 p-0 ${feedback === "negative" ? "text-red-500 opacity-100" : ""}`}
+              onClick={() => feedback === "negative" ? handleFeedback(index, "negative") : openFeedbackDialog(index, message)}
+            >
+              <ThumbsDown className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderClarification = () => {
+    if (!clarificationState) return null;
+
+    return (
+      <div className="flex flex-col gap-2 mb-3 ml-8">
+        <div className="text-sm text-muted-foreground">
+          {clarificationState.question}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {clarificationState.options.map((option, idx) => (
+            <Button
+              key={idx}
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => handleClarificationResponse(option)}
+            >
+              {option}
+            </Button>
+          ))}
+        </div>
       </div>
     );
   };
@@ -300,7 +511,14 @@ export const AIPanel = React.memo(function AIPanel({
                   <p className="text-sm">{t.aiWelcomeMessage}</p>
                 </div>
               ) : (
-                messages.map(renderMessage)
+                <>
+                  {messages.map((msg, idx) => (
+                    <React.Fragment key={msg.timestamp}>
+                      {renderMessage(msg, idx)}
+                    </React.Fragment>
+                  ))}
+                  {renderClarification()}
+                </>
               )}
               <div ref={messagesEndRef} />
             </div>
@@ -329,7 +547,7 @@ export const AIPanel = React.memo(function AIPanel({
                 rows={1}
               />
               <Button
-                onClick={handleSendMessage}
+                onClick={() => handleSendMessage()}
                 disabled={!inputValue.trim() || isLoading}
                 size="sm"
                 className="absolute bottom-1 right-3 h-7 w-7 p-0"
@@ -340,6 +558,33 @@ export const AIPanel = React.memo(function AIPanel({
           )}
         </div>
       </div>
+
+      {/* Feedback Dialog */}
+      {showFeedbackDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg p-4 w-[min(400px,calc(100vw-32px))]">
+            <h3 className="text-lg font-medium mb-2">{t.aiFeedbackNegative}</h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              {t.aiFeedbackPlaceholder}
+            </p>
+            <Textarea
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              placeholder={t.aiFeedbackPlaceholder}
+              className="w-full h-24 resize-none"
+            />
+            <div className="flex justify-end gap-2 mt-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowFeedbackDialog(null)}
+              >
+                {t.cancel}
+              </Button>
+              <Button onClick={submitNegativeFeedback}>{t.confirm}</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 });

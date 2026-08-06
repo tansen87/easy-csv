@@ -159,7 +159,6 @@ Parameters:
 Purpose: Count rows in file
 
 Parameters:
-- human-readable: Format the count so it is easier to read
 - check-alignment: Use a slower parser validating that given CSV stream yields rows having the same number of columns
 
 Examples:

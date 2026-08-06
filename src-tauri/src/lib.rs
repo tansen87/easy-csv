@@ -1,4 +1,5 @@
 pub mod ai;
+pub mod ai_memory;
 pub mod config;
 pub mod csv;
 pub mod pipeline;
@@ -8,6 +9,14 @@ pub mod xan;
 pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync> {
   Box::new(tauri::generate_handler![
     ai::call_ai,
+    ai_memory::save_conversation,
+    ai_memory::load_conversation_history,
+    ai_memory::save_feedback,
+    ai_memory::load_feedback_rules,
+    ai_memory::save_correction,
+    ai_memory::clear_conversations,
+    ai_memory::clear_feedback,
+    ai_memory::clear_corrections,
     config::get_default_delimiter,
     config::set_default_delimiter,
     config::get_no_headers,

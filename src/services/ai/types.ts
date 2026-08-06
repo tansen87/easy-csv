@@ -14,6 +14,8 @@ export interface AIResponse {
   content: string;
   commands?: AICommand[];
   suggestion?: string;
+  clarification?: string;
+  clarificationOptions?: string[];
   error?: string;
   usage?: TokenUsage;
 }
@@ -34,6 +36,26 @@ export interface AIContext {
   headers: string[];
   pipelineSteps: number;
   inputFile?: string;
+  conversationHistory?: AIMessage[];
+  correctionRules?: CorrectionRule[];
+  clarificationRound?: number;
+  pendingClarification?: boolean;
+  originalQuery?: string;
+}
+
+export interface CorrectionRule {
+  pattern: string;
+  wrongCommand: string;
+  correctCommand: string;
+}
+
+export interface AIFeedback {
+  userQuery: string;
+  aiResponse: string;
+  generatedCommand?: string;
+  feedbackType: "positive" | "negative";
+  correction?: string;
+  timestamp: number;
 }
 
 export const DEFAULT_AI_CONFIG: AIConfig = {

@@ -14,8 +14,11 @@ import {
   Key,
   Brain,
   ExternalLink,
+  Trash2,
+  Database,
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-shell";
+import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
@@ -66,6 +69,28 @@ export function SettingsTabContent({
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { language, setLanguage, t } = useLanguage();
+  const [clearTarget, setClearTarget] = useState<
+    "conversations" | "feedback" | "corrections" | null
+  >(null);
+  const [clearing, setClearing] = useState(false);
+
+  const handleClearData = useCallback(async () => {
+    if (!clearTarget) return;
+    setClearing(true);
+    try {
+      const cmdMap = {
+        conversations: "clear_conversations",
+        feedback: "clear_feedback",
+        corrections: "clear_corrections",
+      };
+      await invoke(cmdMap[clearTarget]);
+    } catch (error) {
+      console.error("Failed to clear data:", error);
+    } finally {
+      setClearing(false);
+      setClearTarget(null);
+    }
+  }, [clearTarget]);
 
   const handleThemeChange = useCallback(
     (newTheme: "dark" | "light" | "system") => {
@@ -419,6 +444,46 @@ export function SettingsTabContent({
                   )}
                 </p>
               </div>
+
+              {/* AI Learning Data */}
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Database className="h-4 w-4" />
+                  {t.aiClearData}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-1">
+                  {t.aiClearDataDesc}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setClearTarget("conversations")}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {t.aiClearConversations}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setClearTarget("feedback")}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {t.aiClearFeedback}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setClearTarget("corrections")}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {t.aiClearCorrections}
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -470,6 +535,36 @@ export function SettingsTabContent({
           {t.saveSettings}
         </Button>
       </div>
+
+      {/* Clear Data Confirmation Dialog */}
+      {clearTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg p-4 w-[min(400px,calc(100vw-32px))]">
+            <h3 className="text-lg font-medium mb-2">
+              {t.aiClearConfirmTitle}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              {t.aiClearConfirmDesc}
+            </p>
+            <div className="flex justify-end gap-2 mt-3">
+              <Button
+                variant="secondary"
+                onClick={() => setClearTarget(null)}
+                disabled={clearing}
+              >
+                {t.cancel}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleClearData}
+                disabled={clearing}
+              >
+                {clearing ? "..." : t.confirm}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
