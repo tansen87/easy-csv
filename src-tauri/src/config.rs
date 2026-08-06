@@ -4,7 +4,7 @@ use aes_gcm::{
   Aes256Gcm, Nonce,
   aead::{Aead, KeyInit},
 };
-use rand_core::RngCore;
+use rand::Rng;
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -42,41 +42,40 @@ struct DbState {
 
 static DB_STATE: std::sync::OnceLock<DbState> = std::sync::OnceLock::new();
 
-fn get_db() -> &'static DbState {
-  DB_STATE.get_or_init(|| {
+fn get_db() -> Option<&'static DbState> {
+  DB_STATE.get().or_else(|| {
     let resources_dir = get_resources_dir();
     let db_dir = resources_dir.join("db");
-    if !db_dir.exists() {
-      std::fs::create_dir_all(&db_dir).ok();
-    }
+    std::fs::create_dir_all(&db_dir).ok()?;
     let db_path = db_dir.join("config.db");
-    let conn = Connection::open(db_path).expect("Failed to open config database");
+    let conn = Connection::open(db_path).ok()?;
 
-    conn
-      .execute_batch(
-        r#"
-        CREATE TABLE IF NOT EXISTS app_config (
-          key TEXT PRIMARY KEY,
-          value TEXT NOT NULL
-        );
+    conn.execute_batch(
+      r#"
+      CREATE TABLE IF NOT EXISTS app_config (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
 
-        CREATE TABLE IF NOT EXISTS ai_config (
-          id INTEGER PRIMARY KEY CHECK (id = 1),
-          provider TEXT NOT NULL DEFAULT 'deepseek',
-          model TEXT NOT NULL DEFAULT 'deepseek-v4-flash'
-        );
+      CREATE TABLE IF NOT EXISTS ai_config (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        provider TEXT NOT NULL DEFAULT 'deepseek',
+        model TEXT NOT NULL DEFAULT 'deepseek-v4-flash'
+      );
 
-        CREATE TABLE IF NOT EXISTS ai_api_keys (
-          provider TEXT PRIMARY KEY,
-          encrypted_key TEXT NOT NULL
-        );
-        "#,
-      )
-      .expect("Failed to create config tables");
+      CREATE TABLE IF NOT EXISTS ai_api_keys (
+        provider TEXT PRIMARY KEY,
+        encrypted_key TEXT NOT NULL
+      );
+      "#,
+    )
+    .ok()?;
 
-    DbState {
+    let state = DbState {
       conn: Mutex::new(conn),
-    }
+    };
+    DB_STATE.set(state).ok()?;
+    DB_STATE.get()
   })
 }
 
@@ -87,7 +86,7 @@ fn derive_key() -> [u8; 32] {
     .map(|h| h.to_string_lossy().to_string())
     .unwrap_or_else(|_| "unknown".to_string());
 
-  let username = whoami::username();
+  let username = whoami::username().unwrap_or_else(|_| "<unknown>".to_string());
 
   let mut hasher = Sha256::new();
   hasher.update(hostname.as_bytes());
@@ -102,11 +101,12 @@ fn encrypt_api_key(plaintext: &str) -> Result<String, String> {
     Aes256Gcm::new_from_slice(&key_bytes).map_err(|e| format!("Failed to create cipher: {}", e))?;
 
   let mut nonce_bytes = [0u8; 12];
-  rand_core::OsRng.fill_bytes(&mut nonce_bytes);
-  let nonce = Nonce::from_slice(&nonce_bytes);
+  rand::thread_rng().fill(&mut nonce_bytes);
+  let nonce =
+    Nonce::try_from(nonce_bytes.as_slice()).map_err(|_| "Invalid nonce length".to_string())?;
 
   let ciphertext = cipher
-    .encrypt(nonce, plaintext.as_bytes())
+    .encrypt(&nonce, plaintext.as_bytes())
     .map_err(|e| format!("Encryption failed: {}", e))?;
 
   // Format: hex(nonce):hex(ciphertext)
@@ -130,17 +130,18 @@ fn decrypt_api_key(encrypted: &str) -> Result<String, String> {
   let cipher =
     Aes256Gcm::new_from_slice(&key_bytes).map_err(|e| format!("Failed to create cipher: {}", e))?;
 
-  let nonce = Nonce::from_slice(&nonce_bytes);
+  let nonce =
+    Nonce::try_from(nonce_bytes.as_slice()).map_err(|_| "Invalid nonce length".to_string())?;
 
   let plaintext = cipher
-    .decrypt(nonce, ciphertext.as_ref())
+    .decrypt(&nonce, ciphertext.as_ref())
     .map_err(|e| format!("Decryption failed: {}", e))?;
 
   String::from_utf8(plaintext).map_err(|e| format!("Invalid UTF-8: {}", e))
 }
 
 fn get_config_string(key: &str) -> Option<String> {
-  let db = get_db();
+  let db = get_db()?;
   let conn = db.conn.lock().ok()?;
   conn
     .query_row(
@@ -152,7 +153,7 @@ fn get_config_string(key: &str) -> Option<String> {
 }
 
 fn set_config_string(key: &str, value: &str) -> Result<(), String> {
-  let db = get_db();
+  let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
   conn
     .execute(
@@ -203,7 +204,7 @@ pub fn save_config(config: &AppConfig) -> Result<(), String> {
 }
 
 pub fn load_ai_config() -> Result<(String, String), String> {
-  let db = get_db();
+  let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   let result = conn.query_row(
@@ -219,7 +220,7 @@ pub fn load_ai_config() -> Result<(String, String), String> {
 }
 
 pub fn save_ai_config(provider: &str, model: &str) -> Result<(), String> {
-  let db = get_db();
+  let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   conn
@@ -237,7 +238,7 @@ pub fn save_ai_config(provider: &str, model: &str) -> Result<(), String> {
 pub async fn save_api_key(provider: String, api_key: String) -> Result<(), String> {
   let encrypted = encrypt_api_key(&api_key)?;
 
-  let db = get_db();
+  let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   conn
@@ -253,7 +254,7 @@ pub async fn save_api_key(provider: String, api_key: String) -> Result<(), Strin
 
 #[tauri::command]
 pub async fn load_api_key(provider: String) -> Result<String, String> {
-  let db = get_db();
+  let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   let result = conn.query_row(
@@ -270,7 +271,7 @@ pub async fn load_api_key(provider: String) -> Result<String, String> {
 
 #[tauri::command]
 pub async fn delete_api_key(provider: String) -> Result<(), String> {
-  let db = get_db();
+  let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   conn
@@ -285,7 +286,7 @@ pub async fn delete_api_key(provider: String) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn has_api_key(provider: String) -> Result<bool, String> {
-  let db = get_db();
+  let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   let count: i64 = conn

@@ -15,15 +15,13 @@ struct DbState {
 
 static DB_STATE: std::sync::OnceLock<DbState> = std::sync::OnceLock::new();
 
-fn get_db() -> &'static DbState {
-  DB_STATE.get_or_init(|| {
+fn get_db() -> Option<&'static DbState> {
+  DB_STATE.get().or_else(|| {
     let resources_dir = crate::config::get_resources_dir();
     let db_dir = resources_dir.join("db");
-    if !db_dir.exists() {
-      std::fs::create_dir_all(&db_dir).ok();
-    }
+    std::fs::create_dir_all(&db_dir).ok()?;
     let db_path = db_dir.join("ai_memory.db");
-    let conn = Connection::open(db_path).expect("Failed to open database");
+    let conn = Connection::open(db_path).ok()?;
 
     conn
       .execute_batch(
@@ -56,17 +54,19 @@ fn get_db() -> &'static DbState {
         );
         "#,
       )
-      .expect("Failed to create tables");
+      .ok()?;
 
-    DbState {
+    let state = DbState {
       conn: Mutex::new(conn),
-    }
+    };
+    DB_STATE.set(state).ok()?;
+    DB_STATE.get()
   })
 }
 
 #[tauri::command]
 pub async fn save_conversation(session_id: String, messages: String) -> Result<(), String> {
-  let db = get_db();
+  let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   conn
@@ -99,7 +99,7 @@ pub async fn load_conversation_history(
   session_id: String,
   limit: Option<u32>,
 ) -> Result<String, String> {
-  let db = get_db();
+  let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   let max_limit = limit.unwrap_or(10).max(1);
@@ -136,7 +136,7 @@ pub async fn load_conversation_history(
 
 #[tauri::command]
 pub async fn save_feedback(feedback: String) -> Result<(), String> {
-  let db = get_db();
+  let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   let entry: serde_json::Value =
@@ -177,7 +177,7 @@ pub async fn save_feedback(feedback: String) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn load_feedback_rules() -> Result<String, String> {
-  let db = get_db();
+  let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   let mut stmt = conn
@@ -211,7 +211,7 @@ pub async fn load_feedback_rules() -> Result<String, String> {
 
 #[tauri::command]
 pub async fn save_correction(correction: String) -> Result<(), String> {
-  let db = get_db();
+  let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   let entry: CorrectionRule =
@@ -229,7 +229,7 @@ pub async fn save_correction(correction: String) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn clear_conversations() -> Result<(), String> {
-  let db = get_db();
+  let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   conn
@@ -241,7 +241,7 @@ pub async fn clear_conversations() -> Result<(), String> {
 
 #[tauri::command]
 pub async fn clear_feedback() -> Result<(), String> {
-  let db = get_db();
+  let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   conn
@@ -253,7 +253,7 @@ pub async fn clear_feedback() -> Result<(), String> {
 
 #[tauri::command]
 pub async fn clear_corrections() -> Result<(), String> {
-  let db = get_db();
+  let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   conn
