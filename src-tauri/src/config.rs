@@ -1,8 +1,13 @@
-use std::fs::File;
-use std::io::{Read, Write};
-use std::path::Path;
+use std::sync::Mutex;
 
+use aes_gcm::{
+  Aes256Gcm, Nonce,
+  aead::{Aead, KeyInit},
+};
+use rand_core::RngCore;
+use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -25,66 +30,278 @@ impl Default for AppConfig {
   }
 }
 
-/// Get the resources directory path (next to the executable)
 pub fn get_resources_dir() -> std::path::PathBuf {
   let exe_path = std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("."));
-  let exe_dir = exe_path.parent().unwrap_or(Path::new("."));
+  let exe_dir = exe_path.parent().unwrap_or(std::path::Path::new("."));
   exe_dir.join("easy-csv_resources")
 }
 
-fn get_config_file_path() -> std::path::PathBuf {
-  get_resources_dir().join("config").join("config.json")
+struct DbState {
+  conn: Mutex<Connection>,
 }
 
-fn get_ai_config_file_path() -> std::path::PathBuf {
-  get_resources_dir().join("config").join("aiconfig.json")
+static DB_STATE: std::sync::OnceLock<DbState> = std::sync::OnceLock::new();
+
+fn get_db() -> &'static DbState {
+  DB_STATE.get_or_init(|| {
+    let resources_dir = get_resources_dir();
+    let db_dir = resources_dir.join("db");
+    if !db_dir.exists() {
+      std::fs::create_dir_all(&db_dir).ok();
+    }
+    let db_path = db_dir.join("config.db");
+    let conn = Connection::open(db_path).expect("Failed to open config database");
+
+    conn
+      .execute_batch(
+        r#"
+        CREATE TABLE IF NOT EXISTS app_config (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS ai_config (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          provider TEXT NOT NULL DEFAULT 'deepseek',
+          model TEXT NOT NULL DEFAULT 'deepseek-v4-flash'
+        );
+
+        CREATE TABLE IF NOT EXISTS ai_api_keys (
+          provider TEXT PRIMARY KEY,
+          encrypted_key TEXT NOT NULL
+        );
+        "#,
+      )
+      .expect("Failed to create config tables");
+
+    DbState {
+      conn: Mutex::new(conn),
+    }
+  })
+}
+
+const PEPPER: &str = "easy-csv-ai-key-2024";
+
+fn derive_key() -> [u8; 32] {
+  let hostname = hostname::get()
+    .map(|h| h.to_string_lossy().to_string())
+    .unwrap_or_else(|_| "unknown".to_string());
+
+  let username = whoami::username();
+
+  let mut hasher = Sha256::new();
+  hasher.update(hostname.as_bytes());
+  hasher.update(username.as_bytes());
+  hasher.update(PEPPER.as_bytes());
+  hasher.finalize().into()
+}
+
+fn encrypt_api_key(plaintext: &str) -> Result<String, String> {
+  let key_bytes = derive_key();
+  let cipher =
+    Aes256Gcm::new_from_slice(&key_bytes).map_err(|e| format!("Failed to create cipher: {}", e))?;
+
+  let mut nonce_bytes = [0u8; 12];
+  rand_core::OsRng.fill_bytes(&mut nonce_bytes);
+  let nonce = Nonce::from_slice(&nonce_bytes);
+
+  let ciphertext = cipher
+    .encrypt(nonce, plaintext.as_bytes())
+    .map_err(|e| format!("Encryption failed: {}", e))?;
+
+  // Format: hex(nonce):hex(ciphertext)
+  Ok(format!(
+    "{}:{}",
+    hex::encode(nonce_bytes),
+    hex::encode(ciphertext)
+  ))
+}
+
+fn decrypt_api_key(encrypted: &str) -> Result<String, String> {
+  let parts: Vec<&str> = encrypted.splitn(2, ':').collect();
+  if parts.len() != 2 {
+    return Err("Invalid encrypted key format".to_string());
+  }
+
+  let nonce_bytes = hex::decode(parts[0]).map_err(|e| format!("Invalid nonce hex: {}", e))?;
+  let ciphertext = hex::decode(parts[1]).map_err(|e| format!("Invalid ciphertext hex: {}", e))?;
+
+  let key_bytes = derive_key();
+  let cipher =
+    Aes256Gcm::new_from_slice(&key_bytes).map_err(|e| format!("Failed to create cipher: {}", e))?;
+
+  let nonce = Nonce::from_slice(&nonce_bytes);
+
+  let plaintext = cipher
+    .decrypt(nonce, ciphertext.as_ref())
+    .map_err(|e| format!("Decryption failed: {}", e))?;
+
+  String::from_utf8(plaintext).map_err(|e| format!("Invalid UTF-8: {}", e))
+}
+
+fn get_config_string(key: &str) -> Option<String> {
+  let db = get_db();
+  let conn = db.conn.lock().ok()?;
+  conn
+    .query_row(
+      "SELECT value FROM app_config WHERE key = ?1",
+      params![key],
+      |row| row.get::<_, String>(0),
+    )
+    .ok()
+}
+
+fn set_config_string(key: &str, value: &str) -> Result<(), String> {
+  let db = get_db();
+  let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+  conn
+    .execute(
+      "INSERT INTO app_config (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = ?2",
+      params![key, value],
+    )
+    .map_err(|e| format!("Failed to set config value: {}", e))?;
+  Ok(())
 }
 
 pub fn load_config() -> Result<AppConfig, String> {
-  let config_path = get_config_file_path();
+  let default = AppConfig::default();
 
-  if config_path.exists() {
-    let mut file =
-      File::open(&config_path).map_err(|e| format!("Failed to open config file: {}", e))?;
+  let default_delimiter = get_config_string("default_delimiter");
+  let no_headers = get_config_string("no_headers").and_then(|v| v.parse().ok());
+  let show_execution_notification =
+    get_config_string("show_execution_notification").and_then(|v| v.parse().ok());
+  let history_limit = get_config_string("history_limit").and_then(|v| v.parse().ok());
+  let minimize_to_tray = get_config_string("minimize_to_tray").and_then(|v| v.parse().ok());
 
-    let mut contents = String::new();
-    file
-      .read_to_string(&mut contents)
-      .map_err(|e| format!("Failed to read config file: {}", e))?;
-
-    serde_json::from_str(&contents).map_err(|e| format!("Failed to parse config file: {}", e))
-  } else {
-    Ok(AppConfig::default())
-  }
+  Ok(AppConfig {
+    default_delimiter: default_delimiter.or(default.default_delimiter),
+    no_headers: no_headers.or(default.no_headers),
+    show_execution_notification: show_execution_notification
+      .or(default.show_execution_notification),
+    history_limit: history_limit.or(default.history_limit),
+    minimize_to_tray: minimize_to_tray.or(default.minimize_to_tray),
+  })
 }
 
 pub fn save_config(config: &AppConfig) -> Result<(), String> {
-  let config_path = get_config_file_path();
-
-  if let Some(parent) = config_path.parent() {
-    if !parent.exists() {
-      std::fs::create_dir_all(parent)
-        .map_err(|e| format!("Failed to create config directory: {}", e))?;
-    }
+  if let Some(ref v) = config.default_delimiter {
+    set_config_string("default_delimiter", v)?;
   }
+  if let Some(v) = config.no_headers {
+    set_config_string("no_headers", &v.to_string())?;
+  }
+  if let Some(v) = config.show_execution_notification {
+    set_config_string("show_execution_notification", &v.to_string())?;
+  }
+  if let Some(v) = config.history_limit {
+    set_config_string("history_limit", &v.to_string())?;
+  }
+  if let Some(v) = config.minimize_to_tray {
+    set_config_string("minimize_to_tray", &v.to_string())?;
+  }
+  Ok(())
+}
 
-  let contents = serde_json::to_string_pretty(config)
-    .map_err(|e| format!("Failed to serialize config: {}", e))?;
+pub fn load_ai_config() -> Result<(String, String), String> {
+  let db = get_db();
+  let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
-  let mut file =
-    File::create(&config_path).map_err(|e| format!("Failed to create config file: {}", e))?;
+  let result = conn.query_row(
+    "SELECT provider, model FROM ai_config WHERE id = 1",
+    [],
+    |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+  );
 
-  file
-    .write_all(contents.as_bytes())
-    .map_err(|e| format!("Failed to write config file: {}", e))?;
+  match result {
+    Ok((provider, model)) => Ok((provider, model)),
+    Err(_) => Ok(("deepseek".to_string(), "deepseek-v4-flash".to_string())),
+  }
+}
+
+pub fn save_ai_config(provider: &str, model: &str) -> Result<(), String> {
+  let db = get_db();
+  let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+  conn
+    .execute(
+      "INSERT INTO ai_config (id, provider, model) VALUES (1, ?1, ?2) \
+       ON CONFLICT(id) DO UPDATE SET provider = ?1, model = ?2",
+      params![provider, model],
+    )
+    .map_err(|e| format!("Failed to save AI config: {}", e))?;
 
   Ok(())
 }
 
 #[tauri::command]
+pub async fn save_api_key(provider: String, api_key: String) -> Result<(), String> {
+  let encrypted = encrypt_api_key(&api_key)?;
+
+  let db = get_db();
+  let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+  conn
+    .execute(
+      "INSERT INTO ai_api_keys (provider, encrypted_key) VALUES (?1, ?2) \
+       ON CONFLICT(provider) DO UPDATE SET encrypted_key = ?2",
+      params![provider, encrypted],
+    )
+    .map_err(|e| format!("Failed to save API key: {}", e))?;
+
+  Ok(())
+}
+
+#[tauri::command]
+pub async fn load_api_key(provider: String) -> Result<String, String> {
+  let db = get_db();
+  let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+  let result = conn.query_row(
+    "SELECT encrypted_key FROM ai_api_keys WHERE provider = ?1",
+    params![provider],
+    |row| row.get::<_, String>(0),
+  );
+
+  match result {
+    Ok(encrypted) => decrypt_api_key(&encrypted),
+    Err(_) => Ok(String::new()),
+  }
+}
+
+#[tauri::command]
+pub async fn delete_api_key(provider: String) -> Result<(), String> {
+  let db = get_db();
+  let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+  conn
+    .execute(
+      "DELETE FROM ai_api_keys WHERE provider = ?1",
+      params![provider],
+    )
+    .map_err(|e| format!("Failed to delete API key: {}", e))?;
+
+  Ok(())
+}
+
+#[tauri::command]
+pub async fn has_api_key(provider: String) -> Result<bool, String> {
+  let db = get_db();
+  let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+  let count: i64 = conn
+    .query_row(
+      "SELECT COUNT(*) FROM ai_api_keys WHERE provider = ?1",
+      params![provider],
+      |row| row.get(0),
+    )
+    .map_err(|e| format!("Failed to check API key: {}", e))?;
+
+  Ok(count > 0)
+}
+
+#[tauri::command]
 pub async fn get_default_delimiter() -> Option<String> {
-  let config = load_config().unwrap_or_default();
-  config.default_delimiter
+  load_config().unwrap_or_default().default_delimiter
 }
 
 #[tauri::command]
@@ -96,8 +313,7 @@ pub async fn set_default_delimiter(delimiter: String) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn get_no_headers() -> Option<bool> {
-  let config = load_config().unwrap_or_default();
-  config.no_headers
+  load_config().unwrap_or_default().no_headers
 }
 
 #[tauri::command]
@@ -109,8 +325,9 @@ pub async fn set_no_headers(no_headers: bool) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn get_system_notification() -> Option<bool> {
-  let config = load_config().unwrap_or_default();
-  config.show_execution_notification
+  load_config()
+    .unwrap_or_default()
+    .show_execution_notification
 }
 
 #[tauri::command]
@@ -122,8 +339,7 @@ pub async fn set_system_notification(show: bool) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn get_history_limit() -> Option<u32> {
-  let config = load_config().unwrap_or_default();
-  config.history_limit
+  load_config().unwrap_or_default().history_limit
 }
 
 #[tauri::command]
@@ -135,8 +351,7 @@ pub async fn set_history_limit(limit: u32) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn get_minimize_to_tray() -> Option<bool> {
-  let config = load_config().unwrap_or_default();
-  config.minimize_to_tray
+  load_config().unwrap_or_default().minimize_to_tray
 }
 
 #[tauri::command]
@@ -148,29 +363,23 @@ pub async fn set_minimize_to_tray(minimize: bool) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn get_ai_config() -> Result<String, String> {
-  let config_path = get_ai_config_file_path();
-
-  if config_path.exists() {
-    std::fs::read_to_string(&config_path)
-      .map_err(|e| format!("Failed to read AI config file: {}", e))
-  } else {
-    Ok("{}".to_string())
-  }
+  let (provider, model) = load_ai_config()?;
+  Ok(serde_json::json!({ "provider": provider, "model": model }).to_string())
 }
 
 #[tauri::command]
 pub async fn set_ai_config(config: String) -> Result<(), String> {
-  let config_path = get_ai_config_file_path();
+  let parsed: serde_json::Value =
+    serde_json::from_str(&config).map_err(|e| format!("Invalid JSON: {}", e))?;
 
-  if let Some(parent) = config_path.parent() {
-    if !parent.exists() {
-      std::fs::create_dir_all(parent)
-        .map_err(|e| format!("Failed to create AI config directory: {}", e))?;
-    }
-  }
+  let provider = parsed
+    .get("provider")
+    .and_then(|v| v.as_str())
+    .unwrap_or("deepseek");
+  let model = parsed
+    .get("model")
+    .and_then(|v| v.as_str())
+    .unwrap_or("deepseek-v4-flash");
 
-  std::fs::write(&config_path, config)
-    .map_err(|e| format!("Failed to write AI config file: {}", e))?;
-
-  Ok(())
+  save_ai_config(provider, model)
 }

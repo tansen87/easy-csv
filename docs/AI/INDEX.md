@@ -32,11 +32,13 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 │  src-tauri/src/                                     │
 │  main.rs (入口) · lib.rs (模块声明)                   │
 │  config.rs · xan.rs · pipeline.rs · csv.rs          │
-│  storage.rs · ai.rs                                 │
-│  30 个 Tauri 命令处理器                               │
+│  storage.rs · ai.rs · ai_memory.rs                   │
+│  AI 对话持久化 (ai_memory.db) · AI 配置 (config.db)     │
+│  API Key 加密存储 (AES-256-GCM) · 35+ 个 Tauri 命令    │
 │  CSV 读取 (csv crate) · 管道执行 (进程管理)            │
-│  AI 代理 (DeepSeek/Qwen/GLM) · 配置/历史持久化         │
-│  数据概况缓存 · 版本/血缘存储 · 系统托盘               │
+│  AI 代理 (DeepSeek/Qwen/GLM) · AI 记忆持久化          │
+│  配置/历史持久化 · 数据概况缓存 · 版本/血缘存储         │
+│  系统托盘                                             │
 └────────────────────┬────────────────────────────────┘
                      │  子进程 (stdin/stdout 管道)
 ┌────────────────────▼────────────────────────────────┐
@@ -49,18 +51,19 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 ## Rust 后端 (`src-tauri/src/`)
 
-后端按职责拆分为 7 个模块:
+后端按职责拆分为 8 个模块:
 
 | 文件 | 职责 |
 |------|------|
 | `main.rs` | 二进制入口,注册插件/命令,系统托盘,窗口事件处理 |
 | `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册所有命令) |
-| `config.rs` | `AppConfig` 类型、配置文件读写、配置相关命令、AI 配置读写 |
+| `config.rs` | `AppConfig` 类型、SQLite 持久化(app_config/ai_config 表)、AES-256-GCM 加密存储 API Key、per-provider API Key 管理、配置相关命令 |
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
 | `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令 |
 | `csv.rs` | `CsvData` 类型、`read_csv_file`/`profile_csv` 命令 |
 | `storage.rs` | 历史记录、最近文件、数据概况缓存、版本/血缘存储、窗口标题、开发者工具命令 |
 | `ai.rs` | AI 对话代理: `call_ai` 命令,转发到 DeepSeek / Qwen / GLM |
+| `ai_memory.rs` | AI 记忆持久化(SQLite): 对话历史、反馈记录、纠正规则的 CRUD + 清除 |
 | `build.rs` | Tauri 构建脚本,生成平台特定代码 |
 
 ### 各模块职责详解
@@ -77,7 +80,8 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `get/set_show_execution_notification` | 执行通知配置命令 |
 | `get/set_history_limit` | 历史记录条数上限配置命令 |
 | `get/set_minimize_to_tray` | 最小化到托盘配置命令 |
-| `get_ai_config()` / `set_ai_config()` | AI 配置读写(config/aiconfig.json: provider、model、apiKey) |
+| `get_ai_config()` / `set_ai_config()` | AI 配置读写(provider、model) |
+| `save_api_key()` / `load_api_key()` / `delete_api_key()` / `has_api_key()` | Per-provider API Key 加密存储(AES-256-GCM) |
 
 #### xan.rs — xan 可执行文件管理
 
@@ -124,6 +128,19 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `call_ai` | 核心命令,按 provider 路由到 DeepSeek/Qwen/GLM |
 | `call_deepseek` / `call_qwen` | OpenAI 兼容 Chat Completions 调用 |
 
+#### ai_memory.rs — AI 记忆持久化 (SQLite)
+
+| 内容 | 说明 |
+|------|------|
+| `ai_conversations` 表 | 对话历史(session_id, role, content) |
+| `ai_feedback` 表 | 反馈记录(user_query, ai_response, feedback_type, correction) |
+| `ai_corrections` 表 | 纠正规则(pattern, wrong_command, correct_command) |
+| `save_conversation` / `load_conversation_history` | 对话历史读写 |
+| `save_feedback` | 保存用户反馈(自动清理旧数据,保留最近1000条) |
+| `load_feedback_rules` | 从反馈中提取纠正规则 |
+| `save_correction` | 保存纠正规则 |
+| `clear_conversations` / `clear_feedback` / `clear_corrections` | 清除对应表全部数据 |
+
 ### Tauri 命令清单(前端可调用)
 
 | 命令 | 模块 | 功能 |
@@ -138,8 +155,17 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `get/set_show_execution_notification` | config | 读写执行通知配置 |
 | `get/set_history_limit` | config | 读写历史记录条数上限配置 |
 | `get/set_minimize_to_tray` | config | 读写最小化到托盘配置 |
-| `get/set_ai_config` | config | 读写 AI 配置(provider/model/apiKey) |
+| `get/set_ai_config` | config | 读写 AI 配置(provider/model) |
+| `save/load/delete/has_api_key` | config | Per-provider API Key 加密存储(AES-256-GCM) |
 | `call_ai` | ai | 调用 AI 大模型代理(DeepSeek/Qwen/GLM) |
+| `save_conversation` | ai_memory | 保存对话历史 |
+| `load_conversation_history` | ai_memory | 加载对话历史 |
+| `save_feedback` | ai_memory | 保存用户反馈 |
+| `load_feedback_rules` | ai_memory | 加载纠正规则 |
+| `save_correction` | ai_memory | 保存纠正规则 |
+| `clear_conversations` | ai_memory | 清除全部对话历史 |
+| `clear_feedback` | ai_memory | 清除全部反馈记录 |
+| `clear_corrections` | ai_memory | 清除全部纠正规则 |
 | `set_window_title` | storage | 设置窗口标题 |
 | `save_history` / `load_history` | storage | 管道执行历史持久化 |
 | `save_recent_files` / `load_recent_files` | storage | 最近文件列表持久化 |
@@ -198,10 +224,10 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 
 | 文件 | 职责 |
 |------|------|
-| `services/ai/index.ts` | `sendAIMessage()` 入口: 校验 API Key、构建消息、调用 `callAI` |
-| `services/ai/context.ts` | **提示词工程核心**(508行): 意图路由、命令索引、RAG 检索(按需加载 `docs/AI_usage/*.md`,上限6个)、Moonblade 函数参考注入、count 筛选两步骤规则 |
-| `services/ai/api.ts` | `callAI()` 各 provider 调用(解析 AIResponse) |
-| `services/ai/types.ts` | `AIConfig`/`AIMessage`/`AIResponse`/`AICommand` 类型 + provider/模型常量 |
+| `services/ai/index.ts` | `sendAIMessage()` 入口: 校验 API Key、加载纠正规则、澄清检测、构建消息、调用 `callAI`; 对话历史/反馈/纠正规则 CRUD; Per-provider API Key 管理 |
+| `services/ai/context.ts` | **提示词工程核心**(800+行): 意图路由(含同义词)、命令索引、RAG 检索、模糊匹配、纠正规则加权、意图澄清检测、对话历史上下文注入 |
+| `services/ai/api.ts` | `callAI()` 各 provider 调用 + `parseJSONBlock()` 多行编号JSON解析器 |
+| `services/ai/types.ts` | `AIConfig`/`AIMessage`/`AIResponse`/`AICommand`/`AIFeedback`/`CorrectionRule` 类型 + provider/模型常量 |
 
 ### Hooks (`hooks/`)
 
@@ -228,7 +254,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 文件 | 职责 |
 |------|------|
 | `i18n/index.tsx` | 语言上下文 Provider,持久化到 localStorage |
-| `i18n/translations.ts` | 中英文翻译字符串(413行,含 AI 面板、版本控制、血缘相关 key) |
+| `i18n/translations.ts` | 中英文翻译字符串(520+行,含 AI 面板、反馈、澄清、版本控制、血缘相关 key) |
 
 ### 工具函数 (`lib/`)
 
@@ -248,7 +274,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 文件 | 职责 |
 |------|------|
 | `panel/FlowPanel.tsx` | **可视化管道编辑器主组件**(1164行),组合子组件,管理状态和事件处理 |
-| `panel/AIPanel.tsx` | **AI 助手面板**(282行): 聊天 UI、命令生成、一键插入管道、仅发送当前输入(不发送历史) |
+| `panel/AIPanel.tsx` | **AI 助手面板**(600+行): 聊天 UI、命令生成、一键插入管道、👍/👎反馈(可切换)、意图澄清对话框、对话历史加载 |
 | `panel/VersionControlPanel.tsx` | 管道版本控制面板(256行): 版本列表、保存/恢复/删除、标签管理 |
 | `panel/DataLineagePanel.tsx` | 数据血缘面板(298行): 列级血缘追踪、变换类型图标、保存血缘 |
 | `panel/nodes/TableNode.tsx` | 输入数据表格节点,支持表头重命名和右键菜单 |
@@ -332,7 +358,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 |------|------|
 | `ThemeProvider.tsx` | 主题上下文,管理 dark/light/system 模式 |
 | `SettingsDialog.tsx` | 设置对话框容器 |
-| `SettingsTabContent.tsx` | 设置内容: 语言、主题、分隔符、无表头选项、执行通知开关、历史记录条数上限、AI 配置(provider/model/apiKey) |
+| `SettingsTabContent.tsx` | 设置内容: 语言、主题、分隔符、无表头选项、执行通知开关、历史记录条数上限、AI 配置(provider/model/apiKey)、AI 学习数据管理(清除对话/反馈/纠正规则) |
 | `Toast.tsx` | Toast 通知系统 |
 
 
@@ -383,9 +409,16 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改 Batch Filter 功能 | `src/hooks/BatchFilterHooks.ts` + `src/components/dialog/BatchFilterDialog.tsx` + `src/data/commands.ts` |
 | 修改 Batch Convert 功能 | `src/hooks/BatchConvertHooks.ts` + `src/hooks/MainMenuHooks.ts` |
 | 修改 AI 面板 UI/交互 | `src/components/panel/AIPanel.tsx` |
+| 修改 AI 反馈/澄清逻辑 | `src/components/panel/AIPanel.tsx` + `src/services/ai/index.ts` |
 | 修改 AI 提示词/意图路由 | `src/services/ai/context.ts`(`INTENT_ROUTES`/`retrieveRelevantCommands`/`buildSystemPrompt`) |
+| 修改 AI 模糊匹配/同义词 | `src/services/ai/context.ts`(`fuzzyMatch`/`expandWithSynonyms`) |
+| 修改 AI 纠正规则逻辑 | `src/services/ai/context.ts` + `src/services/ai/index.ts` + `src-tauri/src/ai_memory.rs` |
+| 修改 AI 意图澄清逻辑 | `src/services/ai/context.ts`(`detectClarificationNeed`/`CLARIFICATION_PATTERNS`) |
 | 修改 AI 大模型调用/代理 | `src-tauri/src/ai.rs`(后端代理) + `src/services/ai/api.ts`(前端调用) |
+| 修改 AI 多行JSON解析 | `src/services/ai/api.ts`(`parseJSONBlock`) |
+| 修改 AI 记忆持久化 | `src-tauri/src/ai_memory.rs` + `src/services/ai/index.ts` |
 | 修改 AI 配置(provider/model/key) | `src/services/ai/types.ts`(常量) + `src/components/setting/SettingsTabContent.tsx`(UI) + `src-tauri/src/config.rs`(持久化) |
+| 修改 AI 学习数据管理 | `src/components/setting/SettingsTabContent.tsx` + `src-tauri/src/ai_memory.rs` |
 | 修改命令使用文档 | `docs/AI_usage/*.md`(生成源: `scripts/generate-ai-usage-docs.ts`) / 合并版: `docs/AI/USAGE.md` |
 | 修改管道版本控制 | `src/hooks/usePipelineVersions.ts` + `src/components/panel/VersionControlPanel.tsx` + `src-tauri/src/storage.rs` |
 | 修改数据血缘 | `src/hooks/useDataLineage.ts` + `src/components/panel/DataLineagePanel.tsx` + `src-tauri/src/storage.rs` |

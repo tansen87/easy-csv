@@ -24,6 +24,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { useLanguage } from "@/i18n";
 import { AIConfig, PROVIDERS, AVAILABLE_MODELS } from "@/services/ai/types";
+import { loadProviderApiKey } from "@/services/ai";
 
 interface SettingsTabContentProps {
   activeTab: "preference" | "general" | "ai";
@@ -345,16 +346,22 @@ export function SettingsTabContent({
                 </p>
                 <SearchableSelect
                   value={aiConfig.provider}
-                  onChange={(provider) =>
+                  onChange={async (provider) => {
+                    const typedProvider = provider as
+                      | "deepseek"
+                      | "qwen"
+                      | "glm";
+                    const newKey = await loadProviderApiKey(typedProvider);
                     onAIConfigChange({
                       ...aiConfig,
-                      provider: provider as "deepseek" | "qwen" | "glm",
+                      provider: typedProvider,
                       model:
                         AVAILABLE_MODELS[
                           provider as keyof typeof AVAILABLE_MODELS
                         ]?.[0]?.id || "",
-                    })
-                  }
+                      apiKey: newKey,
+                    });
+                  }}
                   options={PROVIDERS.map((p) => ({
                     label: p.name,
                     value: p.id,

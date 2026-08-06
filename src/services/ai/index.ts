@@ -29,20 +29,69 @@ export async function loadAIConfig(): Promise<AIConfig> {
     const saved = await invoke<string>("get_ai_config");
     if (saved) {
       const parsed = JSON.parse(saved);
-      currentConfig = { ...DEFAULT_AI_CONFIG, ...parsed };
+      currentConfig = {
+        ...DEFAULT_AI_CONFIG,
+        provider: parsed.provider || DEFAULT_AI_CONFIG.provider,
+        model: parsed.model || DEFAULT_AI_CONFIG.model,
+        apiKey: "",
+      };
     }
   } catch (error) {
     console.warn("Failed to load AI config:", error);
   }
+
+  // Load API key for the current provider
+  try {
+    const key = await invoke<string>("load_api_key", {
+      provider: currentConfig.provider,
+    });
+    currentConfig.apiKey = key;
+  } catch (error) {
+    console.warn("Failed to load API key:", error);
+  }
+
   return { ...currentConfig };
 }
 
 export async function saveAIConfig(config: AIConfig): Promise<void> {
   currentConfig = config;
   try {
-    await invoke("set_ai_config", { config: JSON.stringify(config) });
+    // Save provider + model (no key)
+    await invoke("set_ai_config", {
+      config: JSON.stringify({
+        provider: config.provider,
+        model: config.model,
+      }),
+    });
+    // Save encrypted API key per provider
+    if (config.apiKey) {
+      await invoke("save_api_key", {
+        provider: config.provider,
+        apiKey: config.apiKey,
+      });
+    }
   } catch (error) {
     console.warn("Failed to save AI config:", error);
+  }
+}
+
+export async function loadProviderApiKey(provider: string): Promise<string> {
+  try {
+    return await invoke<string>("load_api_key", { provider });
+  } catch (error) {
+    console.warn("Failed to load API key:", error);
+    return "";
+  }
+}
+
+export async function saveProviderApiKey(
+  provider: string,
+  apiKey: string,
+): Promise<void> {
+  try {
+    await invoke("save_api_key", { provider, apiKey });
+  } catch (error) {
+    console.warn("Failed to save API key:", error);
   }
 }
 
@@ -136,8 +185,14 @@ export async function sendAIMessage(
   };
 
   // Check if clarification is needed (only for new queries, not clarification responses)
-  if (!context.pendingClarification && (!context.clarificationRound || context.clarificationRound === 0)) {
-    const clarificationCheck = detectClarificationNeed(userMessage, enhancedContext);
+  if (
+    !context.pendingClarification &&
+    (!context.clarificationRound || context.clarificationRound === 0)
+  ) {
+    const clarificationCheck = detectClarificationNeed(
+      userMessage,
+      enhancedContext,
+    );
     if (clarificationCheck.needed && clarificationCheck.question) {
       return {
         content: clarificationCheck.question,
@@ -162,4 +217,11 @@ export function isAIConfigured(): boolean {
   return !!currentConfig.apiKey;
 }
 
-export type { AIConfig, AIMessage, AIResponse, AIContext, AIFeedback, CorrectionRule };
+export type {
+  AIConfig,
+  AIMessage,
+  AIResponse,
+  AIContext,
+  AIFeedback,
+  CorrectionRule,
+};
