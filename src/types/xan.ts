@@ -135,3 +135,29 @@ export interface StepLineage {
   outputRowCount: number;
   transformations: Transformation[];
 }
+
+export type ChartType = "line" | "scatter" | "bar" | "histogram";
+
+export interface ChartConfig {
+  chartType: ChartType;
+  x: string;
+  y?: string;
+  category?: string;
+  title?: string;
+  xLabel?: string;
+  yLabel?: string;
+  bins?: number;
+  color?: string;
+  width?: number;
+  height?: number;
+}
+
+export interface ChartDataPoint {
+  [key: string]: string | number;
+}
+
+export interface ChartSeries {
+  name: string;
+  data: ChartDataPoint[];
+  color: string;
+}

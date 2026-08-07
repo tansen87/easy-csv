@@ -9,6 +9,9 @@ import {
   LogEntry,
   HistoricalPipeline,
   StepLineage,
+  ChartConfig,
+  ChartSeries,
+  ChartDataPoint,
 } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 import { BatchFilterConfig } from "@/components/dialog/BatchFilterDialog";
@@ -73,6 +76,10 @@ interface MainMenuHooksProps {
     inputRows: string[][],
     actualOutputRowCount?: number,
   ) => StepLineage[];
+  setShowChartPanel: React.Dispatch<React.SetStateAction<boolean>>;
+  setChartConfig: React.Dispatch<React.SetStateAction<ChartConfig | null>>;
+  setChartSeries: React.Dispatch<React.SetStateAction<ChartSeries[]>>;
+  setChartHeaders: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 export function MainMenuHooks({
@@ -96,6 +103,10 @@ export function MainMenuHooks({
   updateHistoricalPipelines,
   formatDateTime,
   trackLineage,
+  setShowChartPanel,
+  setChartConfig,
+  setChartSeries,
+  setChartHeaders,
 }: MainMenuHooksProps) {
   const getCurrentTab = useCallback(() => {
     return tabs.find((tab) => tab.id === selectedTabId) || tabs[0];
@@ -725,6 +736,110 @@ export function MainMenuHooks({
             }
             result = { success: true, output: "" };
           }
+        } else if (
+          branchSteps.findIndex((s) => s.command.id === "chart") >= 0
+        ) {
+          // Handle chart command - render in frontend with recharts
+          const chartStep = branchSteps.find((s) => s.command.id === "chart");
+          if (chartStep) {
+            const chartParams = chartStep.parameters;
+            const chartConfig: ChartConfig = {
+              chartType: chartParams["chart-type"] || "line",
+              x: chartParams.x,
+              y: chartParams.y,
+              category: chartParams.category,
+              title: chartParams.title,
+              xLabel: chartParams["x-label"],
+              yLabel: chartParams["y-label"],
+              bins: chartParams.bins || 10,
+              color: chartParams.color || "#8884d8",
+              width: chartParams.width || 600,
+              height: chartParams.height || 400,
+            };
+
+            // Execute preceding commands to get data
+            const precedingSteps = branchSteps.filter(
+              (s) => s.command.id !== "chart",
+            );
+            let headers = currentTab.headers || [];
+            let data = currentTab.data || [];
+
+            if (precedingSteps.length > 0) {
+              const preCommands = precedingSteps.map((step) => {
+                let params = step.command.parameters.map((param) => ({
+                  name: param.name,
+                  value: String(
+                    step.parameters[param.name] || param.default || "",
+                  ),
+                  isPositional: param.isPositional,
+                }));
+                return { name: step.command.name, parameters: params };
+              });
+
+              const preResult = await invoke<any>("execute_xan_pipeline", {
+                commands: preCommands,
+                inputFile,
+                defaultDelimiter,
+              });
+
+              if (preResult.success && preResult.output) {
+                // Parse CSV output
+                const lines = (preResult.output as string).trim().split("\n");
+                if (lines.length > 0) {
+                  const delimiter = defaultDelimiter || ",";
+                  headers = lines[0]
+                    .split(delimiter)
+                    .map((h: string) => h.trim().replace(/^"|"$/g, ""));
+                  data = lines
+                    .slice(1)
+                    .map((line: string) =>
+                      line
+                        .split(delimiter)
+                        .map((cell: string) =>
+                          cell.trim().replace(/^"|"$/g, ""),
+                        ),
+                    );
+                }
+              }
+            } else {
+              // Use raw CSV data
+              if (inputFile) {
+                const csvContent = await readFile(inputFile);
+                const text = new TextDecoder().decode(csvContent);
+                const lines = text.trim().split("\n");
+                if (lines.length > 0) {
+                  const delimiter = defaultDelimiter || ",";
+                  headers = lines[0]
+                    .split(delimiter)
+                    .map((h: string) => h.trim().replace(/^"|"$/g, ""));
+                  data = lines
+                    .slice(1)
+                    .map((line: string) =>
+                      line
+                        .split(delimiter)
+                        .map((cell: string) =>
+                          cell.trim().replace(/^"|"$/g, ""),
+                        ),
+                    );
+                }
+              }
+            }
+
+            // Process data for chart
+            const chartSeries = processChartData(headers, data, chartConfig);
+
+            setChartConfig(chartConfig);
+            setChartSeries(chartSeries);
+            setChartHeaders(headers);
+            setShowChartPanel(true);
+
+            result = {
+              success: true,
+              output: `Chart generated: ${chartConfig.chartType} (${chartConfig.x}${chartConfig.y ? ` vs ${chartConfig.y}` : ""})`,
+            };
+          } else {
+            result = { success: false, error: "Chart step not found" };
+          }
         } else {
           // Normal pipeline execution (no batch-filter)
           const commands = branchSteps.map((step, index) => {
@@ -893,7 +1008,112 @@ export function MainMenuHooks({
     updateHistoricalPipelines,
     formatDateTime,
     trackLineage,
+    setShowChartPanel,
+    setChartConfig,
+    setChartSeries,
+    setChartHeaders,
   ]);
+
+  const processChartData = useCallback(
+    (
+      headers: string[],
+      data: string[][],
+      config: ChartConfig,
+    ): ChartSeries[] => {
+      const xIndex = headers.indexOf(config.x);
+      if (xIndex === -1) return [];
+
+      const categoryIndex = config.category
+        ? headers.indexOf(config.category)
+        : -1;
+      const yIndex = config.y ? headers.indexOf(config.y) : -1;
+
+      if (config.chartType === "histogram") {
+        // For histogram, we need numeric values from x column
+        const values = data
+          .map((row) => parseFloat(row[xIndex]))
+          .filter((v) => !isNaN(v));
+
+        const bins = config.bins || 10;
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const binWidth = (max - min) / bins;
+
+        const histogramData: ChartDataPoint[] = [];
+        for (let i = 0; i < bins; i++) {
+          const binStart = min + i * binWidth;
+          const binEnd = binStart + binWidth;
+          const count = values.filter(
+            (v) => v >= binStart && (i === bins - 1 ? v <= binEnd : v < binEnd),
+          ).length;
+          histogramData.push({
+            range: `${binStart.toFixed(1)}-${binEnd.toFixed(1)}`,
+            count,
+          });
+        }
+
+        return [
+          {
+            name: config.x,
+            data: histogramData,
+            color: config.color || "#8884d8",
+          },
+        ];
+      }
+
+      if (categoryIndex >= 0) {
+        // Group by category
+        const categories = new Map<string, ChartDataPoint[]>();
+        data.forEach((row) => {
+          const cat = row[categoryIndex] || "Unknown";
+          if (!categories.has(cat)) {
+            categories.set(cat, []);
+          }
+          const point: ChartDataPoint = { [config.x]: row[xIndex] };
+          if (yIndex >= 0) {
+            point[config.y!] = parseFloat(row[yIndex]) || 0;
+          }
+          categories.get(cat)!.push(point);
+        });
+
+        const colors = [
+          "#8884d8",
+          "#82ca9d",
+          "#ffc658",
+          "#ff7300",
+          "#0088fe",
+          "#00C49F",
+          "#FFBB28",
+          "#FF8042",
+        ];
+        let colorIndex = 0;
+
+        return Array.from(categories.entries()).map(([cat, points]) => ({
+          name: cat,
+          data: points,
+          color: colors[colorIndex++ % colors.length],
+        }));
+      }
+
+      // Simple series
+      const points: ChartDataPoint[] = data.map((row) => {
+        const point: ChartDataPoint = { [config.x]: row[xIndex] };
+        if (yIndex >= 0) {
+          point[config.y!] = parseFloat(row[yIndex]) || 0;
+        }
+        return point;
+      });
+
+      return [
+        {
+          name: config.y || config.x,
+          data: points,
+          color: config.color || "#8884d8",
+        },
+      ];
+    },
+    [],
+  );
 
   return {
     handleOpenFile,
@@ -903,5 +1123,6 @@ export function MainMenuHooks({
     handleImportPipeline,
     handleExecute,
     getCurrentPipeline,
+    processChartData,
   };
 }

@@ -27,6 +27,7 @@ export type CommandDialogType =
   | "flatten"
   | "hist"
   | "plot"
+  | "chart"
   | "drop"
   | "map"
   | "transform"

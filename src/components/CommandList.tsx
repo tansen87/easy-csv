@@ -61,6 +61,7 @@ import {
   ScanSearch,
   Pickaxe,
   ChartBar,
+  ChartLine,
   FunnelPlus,
   ArrowBigDownDash,
   BrushCleaning,
@@ -83,6 +84,7 @@ export const commandIconMap: Record<string, LucideIcon> = {
   flatten: Minus,
   hist: BarChart3,
   plot: ChartBar,
+  chart: ChartLine,
 
   // Add, transform, drop and move columns
   select: CheckCheck,

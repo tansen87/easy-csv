@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChartConfig, ChartSeries } from "@/types/xan";
 
 export function useUIState() {
   const [showHelp, setShowHelp] = useState(false);
@@ -36,6 +37,10 @@ export function useUIState() {
   const [showVersionPanel, setShowVersionPanel] = useState(false);
   const [showLineagePanel, setShowLineagePanel] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
+  const [showChartPanel, setShowChartPanel] = useState(false);
+  const [chartConfig, setChartConfig] = useState<ChartConfig | null>(null);
+  const [chartSeries, setChartSeries] = useState<ChartSeries[]>([]);
+  const [chartHeaders, setChartHeaders] = useState<string[]>([]);
 
   return {
     showHelp,
@@ -80,5 +85,13 @@ export function useUIState() {
     setShowLineagePanel,
     showAIPanel,
     setShowAIPanel,
+    showChartPanel,
+    setShowChartPanel,
+    chartConfig,
+    setChartConfig,
+    chartSeries,
+    setChartSeries,
+    chartHeaders,
+    setChartHeaders,
   };
 }

@@ -7,6 +7,7 @@ import { useTheme } from "@/components/setting/ThemeProvider";
 import { ToastContainer } from "@/components/setting/Toast";
 import { CommandList } from "@/components/CommandList";
 import { LogPanel } from "@/components/panel/LogPanel";
+import { ChartPanel } from "@/components/panel/ChartPanel";
 import { SettingsDialog } from "@/components/setting/SettingsDialog";
 import { HomeView } from "@/components/HomeView";
 import { HelpDialog } from "@/components/help/HelpDialog";
@@ -638,6 +639,10 @@ function AppContent() {
     updateHistoricalPipelines,
     formatDateTime,
     trackLineage: lineageHook.trackLineage,
+    setShowChartPanel: ui.setShowChartPanel,
+    setChartConfig: ui.setChartConfig,
+    setChartSeries: ui.setChartSeries,
+    setChartHeaders: ui.setChartHeaders,
   });
 
   // Keyboard shortcuts (O-3: moved to App level)
@@ -930,6 +935,13 @@ function AppContent() {
             onClear={clearLogs}
             isVisible={ui.showLogPanel}
             onClose={() => ui.setShowLogPanel(false)}
+          />
+
+          <ChartPanel
+            config={ui.chartConfig!}
+            series={ui.chartSeries}
+            isVisible={ui.showChartPanel}
+            onClose={() => ui.setShowChartPanel(false)}
           />
 
           <HelpDialog

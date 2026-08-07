@@ -124,6 +124,16 @@ export interface Translations {
   restore: string,
   maximize: string,
 
+  // ChartPanel
+  chart: string;
+  chartType: string;
+  xAxis: string;
+  yAxis: string;
+  category: string;
+  title: string;
+  noData: string;
+  download: string;
+
   // DataProfile
   dataProfile: string;
   searchFields: string;
@@ -306,6 +316,16 @@ export const translations: Record<Language, Translations> = {
     restore: "Restore",
     maximize: "Maximize",
 
+    // ChartPanel
+    chart: "Chart",
+    chartType: "Chart Type",
+    xAxis: "X Axis",
+    yAxis: "Y Axis",
+    category: "Category",
+    title: "Title",
+    noData: "No data to display",
+    download: "Download",
+
     // DataProfile
     searchFields: "Search fields",
     noFieldsMatch: "No fields matching",
@@ -481,6 +501,16 @@ export const translations: Record<Language, Translations> = {
     executePipelineHint: "执行工作流后查看输出",
     restore: "恢复",
     maximize: "最大化",
+
+    // ChartPanel
+    chart: "图表",
+    chartType: "图表类型",
+    xAxis: "X轴",
+    yAxis: "Y轴",
+    category: "分类",
+    title: "标题",
+    noData: "无数据可显示",
+    download: "下载",
 
     // DataProfile
     searchFields: "搜索字段",

@@ -22,6 +22,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 │  命令配置 UI (shadcn) · i18n (中/英)                  │
 │  表达式编辑器 (语法高亮 + 自动补全)                     │
 │  AI 助手 (自然语言 → xan 命令, RAG 检索)              │
+│  图表可视化 (recharts: 折线/散点/柱状/直方图)          │
 │  管道版本控制 · 数据血缘追踪                           │
 │  系统托盘 · 拖拽打开 · 数据概况 · 管道步骤复制粘贴      │
 │  通过 @tauri-apps/api invoke() 与后端通信             │
@@ -214,7 +215,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 |------|------|
 | `data/commands.ts` | **所有 xan 命令定义**(3794行),58个命令,含参数、分类、中英文描述 |
 | `data/functions.ts` | xan 表达式函数定义(200+,321行),含分类(string/number/array/date/aggregation/window/web/fuzzy/io/hashing)、关键字、运算符,供表达式编辑器补全和高亮使用 |
-| `types/xan.ts` | 核心类型: `XanCommand`, `XanParameter`, `PipelineStep`, `PipelineEdge`, `LogEntry`, `PipelineTab`, `HistoricalPipeline`, `PipelineVersion`, `StepLineage`, `ColumnSchema`, `Transformation`, `StoredPipelineStep` |
+| `types/xan.ts` | 核心类型: `XanCommand`, `XanParameter`, `PipelineStep`, `PipelineEdge`, `LogEntry`, `PipelineTab`, `HistoricalPipeline`, `PipelineVersion`, `StepLineage`, `ColumnSchema`, `Transformation`, `StoredPipelineStep`, `ChartType`, `ChartConfig`, `ChartDataPoint`, `ChartSeries` |
 | `generated/help-docs.ts` | 自动生成的命令帮助文档(中英文),由 `scripts/generate-help-docs.js` 生成 |
 | `utils/format.ts` | `formatDateTime()` 时间格式化工具 |
 
@@ -288,6 +289,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | `panel/CoordinateGrid.tsx` | ReactFlow 画布的坐标网格背景 |
 | `panel/LogPanel.tsx` | 浮动日志面板,显示执行结果,支持拖拽和复制 |
 | `panel/DataProfilePanel.tsx` | 数据概况面板,展示字段统计(计数/空值/极值/均值等),支持搜索 |
+| `panel/ChartPanel.tsx` | 图表面板(recharts),支持折线/散点/柱状/直方图,支持拖拽、最大化/还原、SVG导出、dark mode |
 
 ### 组件 — 对话框 (`dialog/`)
 
@@ -321,7 +323,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | `CommandFormWrapper.tsx` | 可复用表单包装器: ScrollArea + Cancel/Add/Update 按钮 + `handleCommandSubmit` 调用 |  |
 | `helpers.ts` | `handleCommandSubmit()` 提交处理 + `updateParam()` 参数更新工具函数 |  |
 | `parameterDescriptions.ts` | `getParameterDescription()` 参数描述查询,支持中英文 |  |
-| `ExploreForms.tsx` | 数据探索表单 | `count`, `headers`, `view`, `flatten`, `hist`, `plot` |
+| `ExploreForms.tsx` | 数据探索表单 | `count`, `headers`, `view`, `flatten`, `hist`, `plot`, `chart` |
 | `SearchFilterForms.tsx` | 搜索筛选表单 | `search`, `filter`, `head`, `tail`, `slice`, `top`, `sample`, `bisect` |
 | `SortDedupForms.tsx` | 排序去重表单 | `sort`, `dedup`, `shuffle` |
 | `AggregateForms.tsx` | 聚合统计表单 | `frequency`, `groupby`, `stats`, `agg`, `bins`, `window` |
@@ -427,6 +429,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改 Tauri 插件/权限 | `src-tauri/tauri.conf.json` + `src-tauri/capabilities/default.json` |
 | 修改系统托盘/窗口行为 | `src-tauri/src/main.rs` 中的 `setup()` 和 `on_window_event` |
 | 修改数据概况功能 | `src/components/panel/DataProfilePanel.tsx` + `src-tauri/src/csv.rs` 中的 `profile_csv` + `src-tauri/src/storage.rs` 中的缓存函数 |
+| 修改图表功能 | `src/components/panel/ChartPanel.tsx`(图表渲染+拖拽+导出) + `src/components/dialog/commands/ExploreForms.tsx`(ChartForm) + `src/hooks/MainMenuHooks.ts`(chart执行逻辑) + `src/types/xan.ts`(ChartConfig等类型) |
 | 管道步骤复制粘贴 | `src/components/panel/FlowPanel.tsx` 中的 `handleCopyStep`/`handlePasteStep` |
 | 管道步骤自动连线 | `src/App.tsx` 中的 `handleCommandClick`(仅 AI 添加时 `autoConnect=true` 自动连线) |
 | 修改表达式编辑器 | `src/components/expression/` 目录: `ExpressionEditor.tsx`(主组件) + `highlight.ts`(高亮) + `autocomplete.ts`(补全) |
