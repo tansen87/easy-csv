@@ -121,6 +121,8 @@ export interface Translations {
   logs: string;
   noLogsYet: string;
   executePipelineHint: string;
+  restore: string,
+  maximize: string,
 
   // DataProfile
   dataProfile: string;
@@ -290,7 +292,7 @@ export const translations: Record<Language, Translations> = {
     searchShortcut: "Ctrl+F: Search",
     previousMatch: "↑: Previous match",
     nextMatch: "↓: Next match",
-    close: "ESC: Close",
+    close: "Close",
 
     // FlowPanel
     searchFlow: "Search in the workflow",
@@ -301,6 +303,8 @@ export const translations: Record<Language, Translations> = {
     logs: "Logs",
     noLogsYet: "No logs yet",
     executePipelineHint: "Execute a pipeline to see output",
+    restore: "Restore",
+    maximize: "Maximize",
 
     // DataProfile
     searchFields: "Search fields",
@@ -464,7 +468,7 @@ export const translations: Record<Language, Translations> = {
     searchShortcut: "Ctrl+F: 搜索",
     previousMatch: "↑: 上一个匹配",
     nextMatch: "↓: 下一个匹配",
-    close: "ESC: 关闭",
+    close: "关闭",
 
     // FlowPanel
     searchFlow: "在工作流中搜索",
@@ -475,6 +479,8 @@ export const translations: Record<Language, Translations> = {
     logs: "日志",
     noLogsYet: "暂无日志",
     executePipelineHint: "执行工作流后查看输出",
+    restore: "恢复",
+    maximize: "最大化",
 
     // DataProfile
     searchFields: "搜索字段",
