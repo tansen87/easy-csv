@@ -37,6 +37,19 @@ import { AIConfig, DEFAULT_AI_CONFIG } from "@/services/ai/types";
 import { loadAIConfig, saveAIConfig, setAIConfig } from "@/services/ai/index";
 import pkg from "../package.json";
 
+function compareVersions(a: string, b: string): number {
+  const aParts = a.split(".").map(Number);
+  const bParts = b.split(".").map(Number);
+  const len = Math.max(aParts.length, bParts.length);
+  for (let i = 0; i < len; i++) {
+    const aNum = aParts[i] || 0;
+    const bNum = bParts[i] || 0;
+    if (aNum > bNum) return 1;
+    if (aNum < bNum) return -1;
+  }
+  return 0;
+}
+
 function App() {
   return <AppContent />;
 }
@@ -130,7 +143,9 @@ function AppContent() {
       const latestVersion = latestVersionRaw.replace(/^v/, "");
       const changelog = data.body || "";
       const hasUpdate =
-        currentVersion && latestVersion && latestVersion !== currentVersion;
+        currentVersion &&
+        latestVersion &&
+        compareVersions(latestVersion, currentVersion) > 0;
 
       ui.setUpdateInfo({ hasUpdate, latestVersion, changelog });
       ui.setShowUpdateDialog(true);
