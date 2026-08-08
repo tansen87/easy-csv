@@ -724,6 +724,8 @@ export async function buildSystemPrompt(
     - 筛选/搜索某列=某值(等于/不等于)必须用search + exact匹配,严禁用filter.即使列是数字(如idx=1001)也一样.示例: 用户"筛选idx=1001"或"搜索idx=123" → {"command":"search","parameters":{"select":"idx","exact":true,"pattern":"1001"},"explanation":"筛选idx等于1001"}.filter仅用于数值大小比较(>、<、>=、<=).
     - 需求含"导出/保存/转换为非CSV格式"(如json、xlsx/excel、html、md、txt、jsonl等)时,必须用to命令,format参数指定输出格式.output只负责把CSV写入文件,不转换格式.
     - 参数名用短横线形式(如 select → -s);-r(regex)、-e(exact) 是flag类型参数,后面不接值,模式内容始终放在pattern(-p)中.
+    - 创建新列时必须使用as指定列名(如map、groupby、agg命令).示例: 用户"根据debit-credit得到amount" → {"command":"map","parameters":{"expression":"col(\\"debit\\") - col(\\"credit\\") as amount"},"explanation":"计算debit减去credit得到amount列"}.严禁省略as.
+    - groupby/agg的expression参数必须包含as子句.示例: 用户"按地区汇总销售额" → {"command":"groupby","parameters":{"columns":"region","expression":"sum(sales) as sales"},"explanation":"按地区汇总销售额"}.严禁写成'sum(sales)'而缺少'as sales'.
     - 需求"合并/拼接某目录下所有CSV文件为1个CSV"时,用cat命令:mode=rows(按行拼接),勾选union(合并各文件列头),glob填目录通配符(如D:\test\*.csv).不要用join、merge或output.示例: 用户"合并D:\test所有的csv文件为1个csv" → {"command":"cat","parameters":{"mode":"rows","union":true,"glob":"D:\\\\test\\\\*.csv"},"explanation":"合并D:\\test下所有csv文件为1个csv"}`);
 
   sections.push(`
@@ -792,9 +794,10 @@ export async function buildSystemPrompt(
 
   sections.push(`
     ## 响应格式
-    返回JSON,必须用数字编号区分每个步骤,每个字段单独一行.
+    返回JSON,必须用数字编号区分每个步骤,每个字段单独一行.必须用\`\`\`json代码块包裹.
 
     多步骤(必须编号):
+    \`\`\`json
     1. {
       "command": "命令1",
       "parameters": {
@@ -810,8 +813,10 @@ export async function buildSystemPrompt(
       },
       "explanation": "..."
     }
+    \`\`\`
 
     单步骤:
+    \`\`\`json
     {
       "command": "命令名",
       "parameters": {
@@ -820,18 +825,23 @@ export async function buildSystemPrompt(
       },
       "explanation": "..."
     }
+    \`\`\`
 
     模糊需求:
+    \`\`\`json
     {
       "suggestion": "建议的提示词",
       "commands": [编号步骤]
     }
+    \`\`\`
 
     意图澄清(当需求模糊需要确认时):
+    \`\`\`json
     {
       "clarification": "澄清问题",
       "clarificationOptions": ["选项1", "选项2"]
     }
+    \`\`\`
 
     重要: 多步骤时每个命令前必须有数字编号(1. 2. 3.),编号与命令同行,不要把编号放在单独一行.非CSV问题可自然语言回答,但优先引导到CSV处理.`);
 
@@ -843,8 +853,10 @@ export async function buildSystemPrompt(
       - 逻辑: &&, ||, !
       - 正则: .matches("pattern")
       - 数学: +, -, *, /
-      - 列引用: 直接使用列名
+      - 列引用: 直接使用列名或col("列名")
+      - 创建新列必须用as: 表达式 as 列名
       - 示例: 'age > 30 && name.contains("张")'
+      - 示例: 'col("debit") - col("credit") as amount'
       - 以某文本结尾 → 列名.ends_with("文本")
       - 以某文本开头 → 列名.starts_with("文本")
 

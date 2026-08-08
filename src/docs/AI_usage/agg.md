@@ -9,4 +9,6 @@ Parameters:
 - along-matrix: Aggregate all values found in the given selection of columns
 
 Examples:
-- Sum all sales: agg 'sales.sum()'
+- Sum all sales with alias: agg 'sum(sales) as sales'
+- Multiple aggregations: agg 'sum(sales) as sales, mean(sales) as sales_avg, max(sales) as sales_max'
+- Aggregate with expression: agg 'sum(price * quantity) as revenue'

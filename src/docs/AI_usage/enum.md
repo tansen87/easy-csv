@@ -8,3 +8,6 @@ Parameters:
 
 Examples:
 - Add index column: enum
+- Add custom named index column: enum -c row_id
+- Add index starting from 1: enum -s 1
+- Add byte offset column: enum -B
