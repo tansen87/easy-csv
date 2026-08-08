@@ -422,6 +422,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改 AI 配置(provider/model/key) | `src/services/ai/types.ts`(常量) + `src/components/setting/SettingsTabContent.tsx`(UI) + `src-tauri/src/config.rs`(持久化) |
 | 修改 AI 学习数据管理 | `src/components/setting/SettingsTabContent.tsx` + `src-tauri/src/ai_memory.rs` |
 | 修改命令使用文档 | `docs/AI_usage/*.md`(生成源: `scripts/generate-ai-usage-docs.ts`) / 合并版: `docs/AI/USAGE.md` |
+| 修改命令帮助文档(英文) | `src/docs/cmd/*.md` |
+| 修改命令帮助文档(中文) | `docs/cmd_zh/*.md` |
 | 修改管道版本控制 | `src/hooks/usePipelineVersions.ts` + `src/components/panel/VersionControlPanel.tsx` + `src-tauri/src/storage.rs` |
 | 修改数据血缘 | `src/hooks/useDataLineage.ts` + `src/components/panel/DataLineagePanel.tsx` + `src-tauri/src/storage.rs` |
 | 修改帮助内容 | `src/components/help/HelpContent.ts` (英文) / `HelpContentCn.ts` (中文) |
@@ -430,6 +432,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改系统托盘/窗口行为 | `src-tauri/src/main.rs` 中的 `setup()` 和 `on_window_event` |
 | 修改数据概况功能 | `src/components/panel/DataProfilePanel.tsx` + `src-tauri/src/csv.rs` 中的 `profile_csv` + `src-tauri/src/storage.rs` 中的缓存函数 |
 | 修改图表功能 | `src/components/panel/ChartPanel.tsx`(图表渲染+拖拽+导出) + `src/components/dialog/commands/ExploreForms.tsx`(ChartForm) + `src/hooks/MainMenuHooks.ts`(chart执行逻辑) + `src/types/xan.ts`(ChartConfig等类型) |
+| 修改图表命令文档 | `src/docs/cmd/chart.md`(英文) / `docs/cmd_zh/chart.md`(中文) |
 | 管道步骤复制粘贴 | `src/components/panel/FlowPanel.tsx` 中的 `handleCopyStep`/`handlePasteStep` |
 | 管道步骤自动连线 | `src/App.tsx` 中的 `handleCommandClick`(仅 AI 添加时 `autoConnect=true` 自动连线) |
 | 修改表达式编辑器 | `src/components/expression/` 目录: `ExpressionEditor.tsx`(主组件) + `highlight.ts`(高亮) + `autocomplete.ts`(补全) |
