@@ -7,7 +7,10 @@ import {
   PipelineTab,
   PipelineEdge,
   LogEntry,
-  HistoricalPipeline,
+  StepLineage,
+  ChartConfig,
+  ChartSeries,
+  ChartDataPoint,
 } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 import { BatchFilterConfig } from "@/components/dialog/BatchFilterDialog";
@@ -17,17 +20,6 @@ import { BatchConvertHooks } from "@/hooks/BatchConvertHooks";
 interface MainMenuHooksProps {
   tabs: PipelineTab[];
   selectedTabId: string;
-  undoStack: Array<{
-    pipeline: PipelineStep[];
-    edges: PipelineEdge[];
-    inputPosition?: { x: number; y: number };
-  }>;
-  redoStack: Array<{
-    pipeline: PipelineStep[];
-    edges: PipelineEdge[];
-    inputPosition?: { x: number; y: number };
-  }>;
-  historicalPipelines: HistoricalPipeline[];
   defaultDelimiter: string;
   setDefaultDelimiter: React.Dispatch<React.SetStateAction<string>>;
   showToast: (
@@ -67,24 +59,30 @@ interface MainMenuHooksProps {
       status: "executing" | "completed" | "error";
     } | null>
   >;
-  progressHideTimerRef: React.MutableRefObject<ReturnType<
-    typeof setTimeout
-  > | null>;
+  progressHideTimerRef: React.RefObject<ReturnType<typeof setTimeout> | null>;
   loadCsvData: (
     tabId: string,
     filePath: string,
     customDelimiter?: string,
   ) => Promise<void>;
-  updateHistoricalPipelines: (history: HistoricalPipeline[]) => void;
   formatDateTime: (date: Date) => string;
+  trackLineage?: (
+    steps: PipelineStep[],
+    edges: PipelineEdge[],
+    inputHeaders: string[],
+    inputRows: string[][],
+    actualOutputRowCount?: number,
+  ) => StepLineage[];
+  setShowChartPanel: React.Dispatch<React.SetStateAction<boolean>>;
+  setChartConfig: React.Dispatch<React.SetStateAction<ChartConfig | null>>;
+  setChartSeries: React.Dispatch<React.SetStateAction<ChartSeries[]>>;
+  setChartHeaders: React.Dispatch<React.SetStateAction<string[]>>;
+  saveVersion: (message?: string, tags?: string[]) => Promise<any>;
 }
 
 export function MainMenuHooks({
   tabs,
   selectedTabId,
-  undoStack,
-  redoStack,
-  historicalPipelines,
   defaultDelimiter,
   showToast,
   addLog,
@@ -99,8 +97,13 @@ export function MainMenuHooks({
   setBranchProgress,
   progressHideTimerRef,
   loadCsvData,
-  updateHistoricalPipelines,
   formatDateTime,
+  trackLineage,
+  setShowChartPanel,
+  setChartConfig,
+  setChartSeries,
+  setChartHeaders,
+  saveVersion,
 }: MainMenuHooksProps) {
   const getCurrentTab = useCallback(() => {
     return tabs.find((tab) => tab.id === selectedTabId) || tabs[0];
@@ -216,94 +219,6 @@ export function MainMenuHooks({
     setSelectedStep(null);
     return newTabId;
   }, [tabs.length, setTabs, setSelectedTabId, setSelectedStep, formatDateTime]);
-
-  const undo = useCallback(() => {
-    if (undoStack.length === 0) return;
-
-    const currentTab = tabs.find((t) => t.id === selectedTabId);
-    if (!currentTab) return;
-
-    setRedoStack((prev) => [
-      ...prev,
-      {
-        pipeline: currentTab.pipeline,
-        edges: currentTab.edges || [],
-        inputPosition: currentTab.inputPosition,
-      },
-    ]);
-
-    const previousState = undoStack[undoStack.length - 1];
-    setUndoStack((prev) => prev.slice(0, -1));
-
-    setTabs((prev) =>
-      prev.map((tab) =>
-        tab.id === selectedTabId
-          ? {
-              ...tab,
-              pipeline: previousState.pipeline,
-              edges: previousState.edges,
-              inputPosition: previousState.inputPosition,
-              updatedAt: formatDateTime(new Date()),
-            }
-          : tab,
-      ),
-    );
-
-    setSelectedStep(null);
-  }, [
-    undoStack,
-    selectedTabId,
-    tabs,
-    setRedoStack,
-    setUndoStack,
-    setTabs,
-    setSelectedStep,
-    formatDateTime,
-  ]);
-
-  const redo = useCallback(() => {
-    if (redoStack.length === 0) return;
-
-    const currentTab = tabs.find((t) => t.id === selectedTabId);
-    if (!currentTab) return;
-
-    setUndoStack((prev) => [
-      ...prev,
-      {
-        pipeline: currentTab.pipeline,
-        edges: currentTab.edges || [],
-        inputPosition: currentTab.inputPosition,
-      },
-    ]);
-
-    const nextState = redoStack[redoStack.length - 1];
-    setRedoStack((prev) => prev.slice(0, -1));
-
-    setTabs((prev) =>
-      prev.map((tab) =>
-        tab.id === selectedTabId
-          ? {
-              ...tab,
-              pipeline: nextState.pipeline,
-              edges: nextState.edges,
-              inputPosition: nextState.inputPosition,
-              updatedAt: formatDateTime(new Date()),
-            }
-          : tab,
-      ),
-    );
-
-    setSelectedStep(null);
-  }, [
-    redoStack,
-    selectedTabId,
-    tabs,
-    setUndoStack,
-    setRedoStack,
-    setTabs,
-    setSelectedStep,
-    formatDateTime,
-  ]);
 
   const handleOpenFile = useCallback(async () => {
     const file = await open({
@@ -575,14 +490,14 @@ export function MainMenuHooks({
         if (!currentStep) return;
 
         const newPath = [...path, currentStep];
-        const nextNodes = adjacency.get(currentId) || [];
+        const nextEdges = adjacency.get(currentId) || [];
 
-        if (nextNodes.length === 0) {
+        if (nextEdges.length === 0) {
           branches.push(newPath);
           return;
         }
 
-        nextNodes.forEach((nextId: string) => {
+        nextEdges.forEach((nextId) => {
           dfs(nextId, newPath);
         });
       };
@@ -595,8 +510,8 @@ export function MainMenuHooks({
       if (startNodes.length === 0) {
         const tableEdges = adjacency.get("table-node") || [];
         if (tableEdges.length > 0) {
-          tableEdges.forEach((startId) => {
-            dfs(startId, []);
+          tableEdges.forEach((edge) => {
+            dfs(edge, []);
           });
           return branches;
         }
@@ -645,6 +560,30 @@ export function MainMenuHooks({
       if (executableSteps.length === 0) {
         showToast(
           "No executable steps found in pipeline - add other commands before output",
+          "warning",
+        );
+        setIsExecuting(false);
+        return;
+      }
+
+      // Validate required parameters before execution
+      const missingParams: string[] = [];
+      for (const step of executableSteps) {
+        for (const param of step.command.parameters) {
+          if (
+            param.required &&
+            (step.parameters[param.name] === undefined ||
+              step.parameters[param.name] === "")
+          ) {
+            missingParams.push(
+              `${step.alias || step.command.name} → ${param.name}`,
+            );
+          }
+        }
+      }
+      if (missingParams.length > 0) {
+        showToast(
+          `Missing required parameters: ${missingParams.join(", ")}`,
           "warning",
         );
         setIsExecuting(false);
@@ -794,6 +733,110 @@ export function MainMenuHooks({
             }
             result = { success: true, output: "" };
           }
+        } else if (
+          branchSteps.findIndex((s) => s.command.id === "chart") >= 0
+        ) {
+          // Handle chart command - render in frontend with recharts
+          const chartStep = branchSteps.find((s) => s.command.id === "chart");
+          if (chartStep) {
+            const chartParams = chartStep.parameters;
+            const chartConfig: ChartConfig = {
+              chartType: chartParams["chart-type"] || "line",
+              x: chartParams.x,
+              y: chartParams.y,
+              category: chartParams.category,
+              title: chartParams.title,
+              xLabel: chartParams["x-label"],
+              yLabel: chartParams["y-label"],
+              bins: chartParams.bins || 10,
+              color: chartParams.color || "#8884d8",
+              width: chartParams.width || 600,
+              height: chartParams.height || 400,
+            };
+
+            // Execute preceding commands to get data
+            const precedingSteps = branchSteps.filter(
+              (s) => s.command.id !== "chart",
+            );
+            let headers = currentTab.headers || [];
+            let data = currentTab.data || [];
+
+            if (precedingSteps.length > 0) {
+              const preCommands = precedingSteps.map((step) => {
+                let params = step.command.parameters.map((param) => ({
+                  name: param.name,
+                  value: String(
+                    step.parameters[param.name] || param.default || "",
+                  ),
+                  isPositional: param.isPositional,
+                }));
+                return { name: step.command.name, parameters: params };
+              });
+
+              const preResult = await invoke<any>("execute_xan_pipeline", {
+                commands: preCommands,
+                inputFile,
+                defaultDelimiter,
+              });
+
+              if (preResult.success && preResult.output) {
+                // Parse CSV output
+                const lines = (preResult.output as string).trim().split("\n");
+                if (lines.length > 0) {
+                  const delimiter = defaultDelimiter || ",";
+                  headers = lines[0]
+                    .split(delimiter)
+                    .map((h: string) => h.trim().replace(/^"|"$/g, ""));
+                  data = lines
+                    .slice(1)
+                    .map((line: string) =>
+                      line
+                        .split(delimiter)
+                        .map((cell: string) =>
+                          cell.trim().replace(/^"|"$/g, ""),
+                        ),
+                    );
+                }
+              }
+            } else {
+              // Use raw CSV data
+              if (inputFile) {
+                const csvContent = await readFile(inputFile);
+                const text = new TextDecoder().decode(csvContent);
+                const lines = text.trim().split("\n");
+                if (lines.length > 0) {
+                  const delimiter = defaultDelimiter || ",";
+                  headers = lines[0]
+                    .split(delimiter)
+                    .map((h: string) => h.trim().replace(/^"|"$/g, ""));
+                  data = lines
+                    .slice(1)
+                    .map((line: string) =>
+                      line
+                        .split(delimiter)
+                        .map((cell: string) =>
+                          cell.trim().replace(/^"|"$/g, ""),
+                        ),
+                    );
+                }
+              }
+            }
+
+            // Process data for chart
+            const chartSeries = processChartData(headers, data, chartConfig);
+
+            setChartConfig(chartConfig);
+            setChartSeries(chartSeries);
+            setChartHeaders(headers);
+            setShowChartPanel(true);
+
+            result = {
+              success: true,
+              output: `Chart generated: ${chartConfig.chartType} (${chartConfig.x}${chartConfig.y ? ` vs ${chartConfig.y}` : ""})`,
+            };
+          } else {
+            result = { success: false, error: "Chart step not found" };
+          }
         } else {
           // Normal pipeline execution (no batch-filter)
           const commands = branchSteps.map((step, index) => {
@@ -879,49 +922,12 @@ export function MainMenuHooks({
         }
       }
 
-      const currentTabName = currentTab.name;
-      const existingHistoryIndex = historicalPipelines.findIndex(
-        (h) => h.name === currentTabName,
-      );
-
-      const historicalPipeline: HistoricalPipeline = {
-        id:
-          existingHistoryIndex >= 0
-            ? historicalPipelines[existingHistoryIndex].id
-            : `history-${Date.now()}`,
-        name: currentTabName,
-        pipeline: currentPipeline.map(
-          (step) =>
-            ({
-              id: step.id,
-              commandId: step.command.id,
-              parameters: step.parameters,
-              alias: step.alias,
-              position: step.position,
-            }) as any,
-        ),
-        inputFile,
-        defaultDelimiter,
-        executedAt: formatDateTime(new Date()),
-        success: allResults.every((r) => r.success),
-        edges: edges,
-        inputPosition: currentTab.inputPosition,
-      };
-
-      let updatedHistory: HistoricalPipeline[];
-      if (existingHistoryIndex >= 0) {
-        updatedHistory = [...historicalPipelines];
-        updatedHistory[existingHistoryIndex] = historicalPipeline;
-        updatedHistory.splice(existingHistoryIndex, 1);
-        updatedHistory.unshift(historicalPipeline);
-      } else {
-        updatedHistory = [historicalPipeline, ...historicalPipelines].slice(
-          0,
-          50,
-        );
+      if (trackLineage) {
+        const headers = currentTab.headers || [];
+        const rows = currentTab.data || [];
+        trackLineage(currentPipeline, edges, headers, rows);
+        addLog("info", "Data lineage tracked for this execution");
       }
-
-      updateHistoricalPipelines(updatedHistory);
 
       const successCount = allResults.filter((r) => r.success).length;
       if (successCount === branches.length) {
@@ -929,6 +935,12 @@ export function MainMenuHooks({
           "success",
           `All ${branches.length} branch(es) executed successfully`,
         );
+        // Auto-save version on successful execution
+        try {
+          await saveVersion(`auto-generated`);
+        } catch (versionError) {
+          addLog("warning", `Failed to auto-save version: ${versionError}`);
+        }
       }
     } catch (error) {
       addLog("error", `${error}`);
@@ -943,7 +955,6 @@ export function MainMenuHooks({
     getCurrentPipeline,
     getCurrentTab,
     defaultDelimiter,
-    historicalPipelines,
     showToast,
     addLog,
     setIsExecuting,
@@ -952,13 +963,248 @@ export function MainMenuHooks({
     setBranchProgress,
     progressHideTimerRef,
     buildExecutionBranches,
-    updateHistoricalPipelines,
     formatDateTime,
+    trackLineage,
+    setShowChartPanel,
+    setChartConfig,
+    setChartSeries,
+    setChartHeaders,
+    saveVersion,
   ]);
 
+  const processChartData = useCallback(
+    (
+      headers: string[],
+      data: string[][],
+      config: ChartConfig,
+    ): ChartSeries[] => {
+      const xIndex = headers.indexOf(config.x);
+      if (xIndex === -1) return [];
+
+      const categoryIndex = config.category
+        ? headers.indexOf(config.category)
+        : -1;
+      const yIndex = config.y ? headers.indexOf(config.y) : -1;
+
+      if (config.chartType === "histogram") {
+        // For histogram, we need numeric values from x column
+        const values = data
+          .map((row) => parseFloat(row[xIndex]))
+          .filter((v) => !isNaN(v));
+
+        const bins = config.bins || 10;
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const binWidth = (max - min) / bins;
+
+        const histogramData: ChartDataPoint[] = [];
+        for (let i = 0; i < bins; i++) {
+          const binStart = min + i * binWidth;
+          const binEnd = binStart + binWidth;
+          const count = values.filter(
+            (v) => v >= binStart && (i === bins - 1 ? v <= binEnd : v < binEnd),
+          ).length;
+          histogramData.push({
+            range: `${binStart.toFixed(1)}-${binEnd.toFixed(1)}`,
+            count,
+          });
+        }
+
+        return [
+          {
+            name: config.x,
+            data: histogramData,
+            color: config.color || "#8884d8",
+          },
+        ];
+      }
+
+      if (config.chartType === "pie") {
+        if (categoryIndex >= 0) {
+          const categories = new Map<string, ChartDataPoint[]>();
+          data.forEach((row) => {
+            const cat = row[categoryIndex] || "Unknown";
+            if (!categories.has(cat)) {
+              categories.set(cat, []);
+            }
+            const point: ChartDataPoint = { [config.x]: row[xIndex] };
+            point[config.y || "count"] =
+              yIndex >= 0 ? parseFloat(row[yIndex]) || 0 : 1;
+            categories.get(cat)!.push(point);
+          });
+
+          const colors = [
+            "#8884d8",
+            "#82ca9d",
+            "#ffc658",
+            "#ff7300",
+            "#0088fe",
+            "#00C49F",
+            "#FFBB28",
+            "#FF8042",
+          ];
+          let colorIndex = 0;
+
+          return Array.from(categories.entries()).map(([cat, points]) => ({
+            name: cat,
+            data: points,
+            color: colors[colorIndex++ % colors.length],
+          }));
+        }
+
+        const valueKey = config.y || "count";
+        const points: ChartDataPoint[] = data.map((row) => {
+          const point: ChartDataPoint = { [config.x]: row[xIndex] };
+          point[valueKey] = yIndex >= 0 ? parseFloat(row[yIndex]) || 0 : 1;
+          return point;
+        });
+
+        return [
+          {
+            name: config.x,
+            data: points,
+            color: config.color || "#8884d8",
+          },
+        ];
+      }
+
+      if (config.chartType === "wordcloud") {
+        const wordCounts = new Map<string, number>();
+
+        data.forEach((row) => {
+          const text = row[xIndex] || "";
+          const words = text.toLowerCase().split(/\s+/).filter(Boolean);
+          const weight = yIndex >= 0 ? parseFloat(row[yIndex]) || 1 : 1;
+
+          words.forEach((word) => {
+            const cleanWord = word.replace(/[^a-z0-9\u4e00-\u9fff]/g, "");
+            if (cleanWord) {
+              wordCounts.set(
+                cleanWord,
+                (wordCounts.get(cleanWord) || 0) + weight,
+              );
+            }
+          });
+        });
+
+        const maxCount = Math.max(...Array.from(wordCounts.values()), 1);
+        const wordData: ChartDataPoint[] = Array.from(wordCounts.entries())
+          .map(([word, count]) => ({
+            text: word,
+            value: count,
+            normalizedValue: count / maxCount,
+          }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 200);
+
+        return [
+          {
+            name: config.x,
+            data: wordData,
+            color: config.color || "#8884d8",
+          },
+        ];
+      }
+
+      if (config.chartType === "heatmap") {
+        const yCol = yIndex >= 0 ? headers[yIndex] : "count";
+        const xValues = new Set<string>();
+        const yValues = new Set<string>();
+        const valueMap = new Map<string, number>();
+
+        data.forEach((row) => {
+          const xVal = String(row[xIndex] || "");
+          const yVal = yIndex >= 0 ? String(row[yIndex] || "") : "";
+
+          xValues.add(xVal);
+          yValues.add(yVal);
+
+          const key = `${xVal}|${yVal}`;
+          valueMap.set(key, (valueMap.get(key) || 0) + 1);
+        });
+
+        const xArray = Array.from(xValues);
+        const yArray = Array.from(yValues);
+        const maxValue = Math.max(...Array.from(valueMap.values()), 1);
+
+        const heatData: ChartDataPoint[] = [];
+        xArray.forEach((xVal) => {
+          yArray.forEach((yVal) => {
+            const key = `${xVal}|${yVal}`;
+            const value = valueMap.get(key) || 0;
+            heatData.push({
+              [config.x]: xVal,
+              [yCol]: yVal,
+              value,
+              normalizedValue: value / maxValue,
+            });
+          });
+        });
+
+        return [
+          {
+            name: `${config.x} vs ${yCol}`,
+            data: heatData,
+            color: config.color || "#8884d8",
+          },
+        ];
+      }
+
+      if (categoryIndex >= 0) {
+        // Group by category
+        const categories = new Map<string, ChartDataPoint[]>();
+        data.forEach((row) => {
+          const cat = row[categoryIndex] || "Unknown";
+          if (!categories.has(cat)) {
+            categories.set(cat, []);
+          }
+          const point: ChartDataPoint = { [config.x]: row[xIndex] };
+          if (yIndex >= 0) {
+            point[config.y!] = parseFloat(row[yIndex]) || 0;
+          }
+          categories.get(cat)!.push(point);
+        });
+
+        const colors = [
+          "#8884d8",
+          "#82ca9d",
+          "#ffc658",
+          "#ff7300",
+          "#0088fe",
+          "#00C49F",
+          "#FFBB28",
+          "#FF8042",
+        ];
+        let colorIndex = 0;
+
+        return Array.from(categories.entries()).map(([cat, points]) => ({
+          name: cat,
+          data: points,
+          color: colors[colorIndex++ % colors.length],
+        }));
+      }
+
+      // Simple series
+      const points: ChartDataPoint[] = data.map((row) => {
+        const point: ChartDataPoint = { [config.x]: row[xIndex] };
+        if (yIndex >= 0) {
+          point[config.y!] = parseFloat(row[yIndex]) || 0;
+        }
+        return point;
+      });
+
+      return [
+        {
+          name: config.y || config.x,
+          data: points,
+          color: config.color || "#8884d8",
+        },
+      ];
+    },
+    [],
+  );
+
   return {
-    undo,
-    redo,
     handleOpenFile,
     handleOpenNewTabWithFile,
     handleSavePipeline,
@@ -966,5 +1212,6 @@ export function MainMenuHooks({
     handleImportPipeline,
     handleExecute,
     getCurrentPipeline,
+    processChartData,
   };
 }

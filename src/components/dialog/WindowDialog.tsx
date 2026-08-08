@@ -191,7 +191,7 @@ export function WindowDialog({
         </button>
       </div>
 
-      <ScrollArea className="h-[270px]">
+      <ScrollArea className="h-[270px] no-drag">
         <div className="p-3 space-y-3">
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
@@ -308,7 +308,7 @@ export function WindowDialog({
         </div>
       </ScrollArea>
 
-      <div className="px-3 pb-2 flex gap-2">
+      <div className="px-3 pb-2 flex gap-2 no-drag">
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
           variant="secondary"

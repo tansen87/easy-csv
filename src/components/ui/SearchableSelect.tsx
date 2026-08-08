@@ -138,7 +138,7 @@ export function SearchableSelect({
           role="listbox"
           className="absolute z-50 w-full border rounded-md bg-background shadow-lg mt-1"
         >
-          <ScrollArea className="h-40 pr-2">
+          <ScrollArea className="h-40 px-2">
             <div className="p-1" ref={listRef}>
               {filteredOptions.length > 0 ? (
                 filteredOptions.map((opt, index) => (

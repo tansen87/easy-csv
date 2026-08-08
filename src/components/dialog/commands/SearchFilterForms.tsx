@@ -2,13 +2,19 @@ import { CommandFormProps } from "@/components/dialog/commands/types";
 import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
 import { getParameterDescription } from "@/components/dialog/commands/parameterDescriptions";
+import { CommandDialogState } from "@/components/dialog/CommandDialog";
 import { useLanguage } from "@/i18n";
 
-export function SearchForm(props: CommandFormProps) {
-  const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
-
-  const Checkbox = ({ name }: { name: string }) => (
+function Checkbox({
+  name,
+  commandDialog,
+  setCommandDialog,
+}: {
+  name: string;
+  commandDialog: CommandDialogState;
+  setCommandDialog: (d: CommandDialogState | null) => void;
+}) {
+  return (
     <label className="flex items-center gap-2 text-sm cursor-pointer">
       <input
         type="checkbox"
@@ -21,16 +27,22 @@ export function SearchForm(props: CommandFormProps) {
       {name}
     </label>
   );
+}
 
-  const TextField = ({
-    name,
-    placeholder,
-    type = "text",
-  }: {
-    name: string;
-    placeholder?: string;
-    type?: string;
-  }) => (
+function TextField({
+  name,
+  placeholder,
+  type = "text",
+  commandDialog,
+  setCommandDialog,
+}: {
+  name: string;
+  placeholder?: string;
+  type?: string;
+  commandDialog: CommandDialogState;
+  setCommandDialog: (d: CommandDialogState | null) => void;
+}) {
+  return (
     <div>
       <label className="text-sm font-medium">{name}</label>
       <input
@@ -44,6 +56,11 @@ export function SearchForm(props: CommandFormProps) {
       />
     </div>
   );
+}
+
+export function SearchForm(props: CommandFormProps) {
+  const { commandDialog, setCommandDialog } = props;
+  const { language } = useLanguage();
 
   return (
     <CommandFormWrapper {...props} scrollHeight="28vh">
@@ -51,15 +68,24 @@ export function SearchForm(props: CommandFormProps) {
         <TextField
           name="select"
           placeholder={getParameterDescription("search", "select", language)}
+          commandDialog={commandDialog}
+          setCommandDialog={setCommandDialog}
         />
         <TextField
           name="pattern"
           placeholder={getParameterDescription("search", "pattern", language)}
+          commandDialog={commandDialog}
+          setCommandDialog={setCommandDialog}
         />
       </div>
       <div className="grid grid-cols-5 gap-2">
         {["keep", "lines", "exact", "regex", "url-prefix"].map((n) => (
-          <Checkbox key={n} name={n} />
+          <Checkbox
+            key={n}
+            name={n}
+            commandDialog={commandDialog}
+            setCommandDialog={setCommandDialog}
+          />
         ))}
       </div>
       <div className="grid grid-cols-5 gap-2">
@@ -74,17 +100,26 @@ export function SearchForm(props: CommandFormProps) {
           "left",
           "breakdown",
         ].map((n) => (
-          <Checkbox key={n} name={n} />
+          <Checkbox
+            key={n}
+            name={n}
+            commandDialog={commandDialog}
+            setCommandDialog={setCommandDialog}
+          />
         ))}
       </div>
       <div className="grid grid-cols-2 gap-2">
         <TextField
           name="flag"
           placeholder={getParameterDescription("search", "boolean", language)}
+          commandDialog={commandDialog}
+          setCommandDialog={setCommandDialog}
         />
         <TextField
           name="count"
           placeholder={getParameterDescription("search", "count", language)}
+          commandDialog={commandDialog}
+          setCommandDialog={setCommandDialog}
         />
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -92,11 +127,15 @@ export function SearchForm(props: CommandFormProps) {
           name="limit"
           type="number"
           placeholder={getParameterDescription("search", "limit", language)}
+          commandDialog={commandDialog}
+          setCommandDialog={setCommandDialog}
         />
         <TextField
           name="threads"
           type="number"
           placeholder={getParameterDescription("search", "threads", language)}
+          commandDialog={commandDialog}
+          setCommandDialog={setCommandDialog}
         />
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -108,6 +147,8 @@ export function SearchForm(props: CommandFormProps) {
             "levenshtein",
             language,
           )}
+          commandDialog={commandDialog}
+          setCommandDialog={setCommandDialog}
         />
         <TextField
           name="damerau-levenshtein"
@@ -117,12 +158,16 @@ export function SearchForm(props: CommandFormProps) {
             "damerau-levenshtein",
             language,
           )}
+          commandDialog={commandDialog}
+          setCommandDialog={setCommandDialog}
         />
       </div>
       <div className="grid grid-cols-2 gap-2">
         <TextField
           name="replace"
           placeholder={getParameterDescription("search", "replace", language)}
+          commandDialog={commandDialog}
+          setCommandDialog={setCommandDialog}
         />
         <TextField
           name="add-pattern"
@@ -131,6 +176,8 @@ export function SearchForm(props: CommandFormProps) {
             "add-pattern",
             language,
           )}
+          commandDialog={commandDialog}
+          setCommandDialog={setCommandDialog}
         />
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -141,15 +188,21 @@ export function SearchForm(props: CommandFormProps) {
             "unique-matches",
             language,
           )}
+          commandDialog={commandDialog}
+          setCommandDialog={setCommandDialog}
         />
         <TextField
           name="sep"
           placeholder={getParameterDescription("search", "sep", language)}
+          commandDialog={commandDialog}
+          setCommandDialog={setCommandDialog}
         />
       </div>
       <TextField
         name="patterns"
         placeholder={getParameterDescription("search", "patterns", language)}
+        commandDialog={commandDialog}
+        setCommandDialog={setCommandDialog}
       />
       <div className="grid grid-cols-2 gap-2">
         <TextField
@@ -159,6 +212,8 @@ export function SearchForm(props: CommandFormProps) {
             "pattern-column",
             language,
           )}
+          commandDialog={commandDialog}
+          setCommandDialog={setCommandDialog}
         />
         <TextField
           name="replacement-column"
@@ -167,11 +222,15 @@ export function SearchForm(props: CommandFormProps) {
             "replacement-column",
             language,
           )}
+          commandDialog={commandDialog}
+          setCommandDialog={setCommandDialog}
         />
       </div>
       <TextField
         name="name-column"
         placeholder={getParameterDescription("search", "name-column", language)}
+        commandDialog={commandDialog}
+        setCommandDialog={setCommandDialog}
       />
     </CommandFormWrapper>
   );

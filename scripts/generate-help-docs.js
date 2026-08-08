@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const docsDir = path.join(__dirname, '..', 'docs', 'cmd');
+const docsDir = path.join(__dirname, '..', 'src/docs', 'cmd');
 const docsZhDir = path.join(__dirname, '..', 'docs', 'cmd_zh');
 const outputPath = path.join(__dirname, '..', 'src', 'generated', 'help-docs.ts');
 
@@ -42,7 +42,7 @@ files.forEach(file => {
   const filePath = path.join(docsDir, file);
   helpDocs[commandName] = processDocFile(filePath);
   
-  // 读取对应的中文文件（如果存在）
+  // 读取中文md文件
   const zhFilePath = path.join(docsZhDir, file);
   if (fs.existsSync(zhFilePath)) {
     helpDocsZh[commandName] = processDocFile(zhFilePath);

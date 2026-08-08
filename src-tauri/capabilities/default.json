@@ -31,6 +31,7 @@
     "window-state:default",
     "notification:default",
     "notification:allow-notify",
-    "core:tray:default"
+    "core:tray:default",
+    "http:default"
   ]
 }

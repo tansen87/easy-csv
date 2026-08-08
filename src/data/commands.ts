@@ -54,7 +54,14 @@ export const xanCommands: XanCommand[] = [
         description: "Theme for the table display",
         descriptionCn: "表格显示主题",
         required: false,
-        options: ["table", "borderless", "compact", "rounded", "slim", "striped"],
+        options: [
+          "table",
+          "borderless",
+          "compact",
+          "rounded",
+          "slim",
+          "striped",
+        ],
         default: "borderless",
       },
       {
@@ -92,7 +99,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "csv",
         type: "flag",
-        description: "Return headers as a CSV file, with file path as column names",
+        description:
+          "Return headers as a CSV file, with file path as column names",
         required: false,
         default: false,
       },
@@ -124,7 +132,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "check-alignment",
         type: "flag",
-        description: "Use a slower parser validating that given CSV stream yields rows having the same number of columns",
+        description:
+          "Use a slower parser validating that given CSV stream yields rows having the same number of columns",
         descriptionCn: "使用较慢的解析器验证CSV流的行具有相同的列数",
         required: false,
         default: false,
@@ -170,7 +179,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "condense",
         type: "flag",
-        description: "Don't wrap cell values on new lines but truncate them with ellipsis instead",
+        description:
+          "Don't wrap cell values on new lines but truncate them with ellipsis instead",
         descriptionCn: "不换行显示单元格值,而是用省略号截断",
         required: false,
         default: false,
@@ -186,7 +196,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "flatter",
         type: "flag",
-        description: "Even flatter representation alternating column name and content on different lines in the output",
+        description:
+          "Even flatter representation alternating column name and content on different lines in the output",
         descriptionCn: "更扁平的表示,交替显示列名和内容在不同行",
         required: false,
         default: false,
@@ -194,14 +205,16 @@ export const xanCommands: XanCommand[] = [
       {
         name: "row-separator",
         type: "string",
-        description: "Separate rows in the output with the given string, instead of displaying a header with row index. If an empty string is given, will not separate rows at all",
+        description:
+          "Separate rows in the output with the given string, instead of displaying a header with row index. If an empty string is given, will not separate rows at all",
         descriptionCn: "用给定字符串分隔输出中的行,而不是显示带有行索引的表头",
         required: false,
       },
       {
         name: "csv",
         type: "flag",
-        description: "Write the result as a CSV file with the row,field,value columns instead",
+        description:
+          "Write the result as a CSV file with the row,field,value columns instead",
         descriptionCn: "将结果写为包含row,field,value列的CSV文件",
         required: false,
         default: false,
@@ -216,7 +229,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "rainbow",
         type: "flag",
-        description: "Alternating colors for cells, rather than color by value type",
+        description:
+          "Alternating colors for cells, rather than color by value type",
         descriptionCn: "单元格交替颜色,而不是按值类型着色",
         required: false,
         default: false,
@@ -224,14 +238,16 @@ export const xanCommands: XanCommand[] = [
       {
         name: "split",
         type: "string",
-        description: "Split columns containing multiple values separated by --sep to be displayed as a list",
+        description:
+          "Split columns containing multiple values separated by --sep to be displayed as a list",
         descriptionCn: "拆分包含多个值的列,使用--sep分隔符显示为列表",
         required: false,
       },
       {
         name: "sep",
         type: "string",
-        description: "Delimiter separating multiple values in cells split by -S/--split",
+        description:
+          "Delimiter separating multiple values in cells split by -S/--split",
         descriptionCn: "分隔多个值的分隔符,用于-S/--split",
         required: false,
         default: "|",
@@ -239,14 +255,16 @@ export const xanCommands: XanCommand[] = [
       {
         name: "highlight",
         type: "string",
-        description: "Highlight in red parts of text cells matching given regex pattern",
+        description:
+          "Highlight in red parts of text cells matching given regex pattern",
         descriptionCn: "用红色高亮显示匹配给定正则表达式的文本",
         required: false,
       },
       {
         name: "ignore-case",
         type: "flag",
-        description: "If given, pattern given to -H/--highlight will be case-insensitive",
+        description:
+          "If given, pattern given to -H/--highlight will be case-insensitive",
         descriptionCn: "如果提供,-H/--highlight的模式将不区分大小写",
         required: false,
         default: false,
@@ -271,7 +289,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "name",
         type: "string",
-        description: "Name of the represented field when no field column is present",
+        description:
+          "Name of the represented field when no field column is present",
         descriptionCn: "当没有field列时,表示字段的名称",
         required: false,
       },
@@ -299,8 +318,9 @@ export const xanCommands: XanCommand[] = [
       {
         name: "bar-size",
         type: "string",
-        description: "Size of the bar characters between \"small\", \"medium\" and \"large\"",
-        descriptionCn: "条形字符大小,可选\"small\"、\"medium\"和\"large\"",
+        description:
+          'Size of the bar characters between "small", "medium" and "large"',
+        descriptionCn: '条形字符大小,可选"small"、"medium"和"large"',
         required: false,
         default: "medium",
       },
@@ -322,15 +342,18 @@ export const xanCommands: XanCommand[] = [
       {
         name: "domain-max",
         type: "string",
-        description: "If \"max\" max bar length will be scaled to the max bar value. If \"sum\", max bar length will be scaled to the sum of bar values",
-        descriptionCn: "如果为\"max\",最大条形长度将缩放到最大条形值；如果为\"sum\",将缩放到条形值的总和",
+        description:
+          'If "max" max bar length will be scaled to the max bar value. If "sum", max bar length will be scaled to the sum of bar values',
+        descriptionCn:
+          '如果为"max",最大条形长度将缩放到最大条形值;如果为"sum",将缩放到条形值的总和',
         required: false,
         default: "max",
       },
       {
         name: "category",
         type: "string",
-        description: "Name of the categorical column that will be used to assign distinct colors per category",
+        description:
+          "Name of the categorical column that will be used to assign distinct colors per category",
         descriptionCn: "分类列的名称,用于为每个类别分配不同的颜色",
         required: false,
       },
@@ -360,7 +383,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "compress-gaps",
         type: "number",
-        description: "If given, will compress gaps of minimum <n> consecutive entries set to 0 and replace it with an ellipsis",
+        description:
+          "If given, will compress gaps of minimum <n> consecutive entries set to 0 and replace it with an ellipsis",
         descriptionCn: "如果提供,将压缩至少<n>个连续为0的条目,并用省略号替换",
         required: false,
       },
@@ -393,7 +417,7 @@ export const xanCommands: XanCommand[] = [
         name: "y",
         type: "string",
         description: "Y axis column (optional if --count is used)",
-        descriptionCn: "Y轴列（如果使用--count则可选）",
+        descriptionCn: "Y轴列(如果使用--count则可选)",
         required: false,
         isPositional: true,
       },
@@ -424,14 +448,16 @@ export const xanCommands: XanCommand[] = [
       {
         name: "aggregate",
         type: "string",
-        description: "How to aggregate values when discretizing the x axis. Can be \"sum\" or \"mean\"",
-        descriptionCn: "离散化X轴时如何聚合值,可以是\"sum\"或\"mean\"",
+        description:
+          'How to aggregate values when discretizing the x axis. Can be "sum" or "mean"',
+        descriptionCn: '离散化X轴时如何聚合值,可以是"sum"或"mean"',
         required: false,
       },
       {
         name: "category",
         type: "string",
-        description: "Name of the categorical column to draw distinct series per category",
+        description:
+          "Name of the categorical column to draw distinct series per category",
         descriptionCn: "分类列的名称,用于为每个类别绘制不同的系列",
         required: false,
       },
@@ -446,37 +472,44 @@ export const xanCommands: XanCommand[] = [
       {
         name: "granularity",
         type: "string",
-        description: "Force temporal granularity for x axis. Can be \"years\", \"months\", \"days\", \"hours\", \"minutes\" or \"seconds\"",
-        descriptionCn: "强制X轴的时间粒度,可以是\"years\"、\"months\"、\"days\"、\"hours\"、\"minutes\"或\"seconds\"",
+        description:
+          'Force temporal granularity for x axis. Can be "years", "months", "days", "hours", "minutes" or "seconds"',
+        descriptionCn:
+          '强制X轴的时间粒度,可以是"years"、"months"、"days"、"hours"、"minutes"或"seconds"',
         required: false,
       },
       {
         name: "small-multiples",
         type: "number",
-        description: "Display small multiples using the provided number of grid columns",
+        description:
+          "Display small multiples using the provided number of grid columns",
         descriptionCn: "使用提供的网格列数显示小多图",
         required: false,
       },
       {
         name: "share-x-scale",
         type: "string",
-        description: "Share x scale for all plots when drawing small multiples. Can be \"yes\" or \"no\"",
-        descriptionCn: "绘制小多图时共享X轴刻度,可以是\"yes\"或\"no\"",
+        description:
+          'Share x scale for all plots when drawing small multiples. Can be "yes" or "no"',
+        descriptionCn: '绘制小多图时共享X轴刻度,可以是"yes"或"no"',
         required: false,
         default: "yes",
       },
       {
         name: "share-y-scale",
         type: "string",
-        description: "Share y scale for all plots when drawing small multiples. Can be \"yes\" or \"no\"",
-        descriptionCn: "绘制小多图时共享Y轴刻度,可以是\"yes\"或\"no\"",
+        description:
+          'Share y scale for all plots when drawing small multiples. Can be "yes" or "no"',
+        descriptionCn: '绘制小多图时共享Y轴刻度,可以是"yes"或"no"',
         required: false,
       },
       {
         name: "marker",
         type: "string",
-        description: "Marker to use. Can be \"braille\", \"dot\", \"halfblock\", \"bar\" or \"block\"",
-        descriptionCn: "使用的标记,可以是\"braille\"、\"dot\"、\"halfblock\"、\"bar\"或\"block\"",
+        description:
+          'Marker to use. Can be "braille", "dot", "halfblock", "bar" or "block"',
+        descriptionCn:
+          '使用的标记,可以是"braille"、"dot"、"halfblock"、"bar"或"block"',
         required: false,
         default: "braille",
       },
@@ -533,16 +566,20 @@ export const xanCommands: XanCommand[] = [
       {
         name: "x-scale",
         type: "string",
-        description: "Apply a scale to the x axis. Can be \"lin\", \"pow\", \"sqrt\", \"log\", \"log2\", \"log10\"",
-        descriptionCn: "对X轴应用缩放,可以是\"lin\"、\"pow\"、\"sqrt\"、\"log\"、\"log2\"、\"log10\"",
+        description:
+          'Apply a scale to the x axis. Can be "lin", "pow", "sqrt", "log", "log2", "log10"',
+        descriptionCn:
+          '对X轴应用缩放,可以是"lin"、"pow"、"sqrt"、"log"、"log2"、"log10"',
         required: false,
         default: "lin",
       },
       {
         name: "y-scale",
         type: "string",
-        description: "Apply a scale to the y axis. Can be \"lin\", \"pow\", \"sqrt\", \"log\", \"log2\", \"log10\"",
-        descriptionCn: "对Y轴应用缩放,可以是\"lin\"、\"pow\"、\"sqrt\"、\"log\"、\"log2\"、\"log10\"",
+        description:
+          'Apply a scale to the y axis. Can be "lin", "pow", "sqrt", "log", "log2", "log10"',
+        descriptionCn:
+          '对Y轴应用缩放,可以是"lin"、"pow"、"sqrt"、"log"、"log2"、"log10"',
         required: false,
         default: "lin",
       },
@@ -556,8 +593,10 @@ export const xanCommands: XanCommand[] = [
       {
         name: "density-scale",
         type: "string",
-        description: "Apply a scale to the density gradient. Can be \"lin\", \"pow\", \"sqrt\", \"log\", \"log2\", \"log10\"",
-        descriptionCn: "对密度渐变应用缩放,可以是\"lin\"、\"pow\"、\"sqrt\"、\"log\"、\"log2\"、\"log10\"",
+        description:
+          'Apply a scale to the density gradient. Can be "lin", "pow", "sqrt", "log", "log2", "log10"',
+        descriptionCn:
+          '对密度渐变应用缩放,可以是"lin"、"pow"、"sqrt"、"log"、"log2"、"log10"',
         required: false,
         default: "log",
       },
@@ -611,10 +650,107 @@ export const xanCommands: XanCommand[] = [
       {
         name: "hide-all",
         type: "flag",
-        description: "Shorthand for --hide-legend, --hide-x-axis, --hide-y-axis",
+        description:
+          "Shorthand for --hide-legend, --hide-x-axis, --hide-y-axis",
         descriptionCn: "--hide-legend、--hide-x-axis、--hide-y-axis的简写",
         required: false,
         default: false,
+      },
+    ],
+  },
+  {
+    id: "chart",
+    name: "chart",
+    description: "Create interactive charts using recharts",
+    descriptionCn: "使用recharts创建交互式图表",
+    category: "Explore & visualize",
+    parameters: [
+      {
+        name: "chart-type",
+        type: "string",
+        description:
+          'Type of chart to create. Can be "line", "scatter", "bar", "histogram", "pie", "wordcloud", "heatmap"',
+        descriptionCn:
+          '要创建的图表类型,可以是 "line"、"scatter"、"bar", "histogram", "pie", "wordcloud", "heatmap"',
+        required: true,
+        default: "line",
+      },
+      {
+        name: "x",
+        type: "string",
+        description: "Column name for X axis",
+        descriptionCn: "X轴的列名",
+        required: true,
+        isPositional: true,
+      },
+      {
+        name: "y",
+        type: "string",
+        description:
+          "(required for line, scatter, bar; optional for histogram)",
+        descriptionCn: "(折线图、散点图、柱状图必填;直方图可选)",
+        required: false,
+        isPositional: true,
+      },
+      {
+        name: "category",
+        type: "string",
+        description: "Column name for grouping data into series",
+        descriptionCn: "用于将数据分组为不同系列的列名",
+        required: false,
+      },
+      {
+        name: "title",
+        type: "string",
+        description: "Chart title",
+        descriptionCn: "图表标题",
+        required: false,
+      },
+      {
+        name: "x-label",
+        type: "string",
+        description: "Label for X axis",
+        descriptionCn: "X轴标签",
+        required: false,
+      },
+      {
+        name: "y-label",
+        type: "string",
+        description: "Label for Y axis",
+        descriptionCn: "Y轴标签",
+        required: false,
+      },
+      {
+        name: "bins",
+        type: "number",
+        description: "Number of bins for histogram (default: 10)",
+        descriptionCn: "直方图的分箱数量(默认：10)",
+        required: false,
+        default: 10,
+      },
+      {
+        name: "color",
+        type: "string",
+        description: "Primary color for the chart",
+        descriptionCn: "图表的主色调",
+        required: false,
+        default: "#8884d8",
+      },
+      {
+        name: "width",
+        type: "number",
+        description: "Chart width in pixels (default: 600)",
+        descriptionCn: "图表宽度(像素,默认：600)",
+        required: false,
+        default: 600,
+      },
+      {
+        name: "height",
+        type: "number",
+        description: "Chart height in pixels (default: 400)",
+        descriptionCn: "图表高度(像素,默认：400)",
+        required: false,
+        default: 400,
       },
     ],
   },
@@ -636,7 +772,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "evaluate",
         type: "flag",
-        description: "Toggle expression evaluation rather than using the shorthand selection notation",
+        description:
+          "Toggle expression evaluation rather than using the shorthand selection notation",
         descriptionCn: "切换表达式评估而不是使用简写选择符号",
         required: false,
         default: false,
@@ -692,15 +829,18 @@ export const xanCommands: XanCommand[] = [
       {
         name: "overwrite",
         type: "flag",
-        description: "If set, expressions named with a column already existing in the file will be overwritten with the result of the expression instead of adding a new column at the end",
-        descriptionCn: "如果设置,与文件中已存在列同名的表达式将被覆盖,而不是在末尾添加新列",
+        description:
+          "If set, expressions named with a column already existing in the file will be overwritten with the result of the expression instead of adding a new column at the end",
+        descriptionCn:
+          "如果设置,与文件中已存在列同名的表达式将被覆盖,而不是在末尾添加新列",
         required: false,
         default: false,
       },
       {
         name: "filter",
         type: "flag",
-        description: "If given, will not write rows in the output if all results of evaluated expression are falsey",
+        description:
+          "If given, will not write rows in the output if all results of evaluated expression are falsey",
         descriptionCn: "如果提供,当评估表达式的所有结果为假值时,将不写入输出行",
         required: false,
         default: false,
@@ -764,8 +904,10 @@ export const xanCommands: XanCommand[] = [
       {
         name: "column-name",
         type: "string",
-        description: "Name of the column to prepend. Will default to 'index', or 'byte_offset' when -B, --byte-offset is given",
-        descriptionCn: "要添加的列名,默认为'index',或使用-B/--byte-offset时为'byte_offset'",
+        description:
+          "Name of the column to prepend. Will default to 'index', or 'byte_offset' when -B, --byte-offset is given",
+        descriptionCn:
+          "要添加的列名,默认为'index',或使用-B/--byte-offset时为'byte_offset'",
         required: false,
       },
       {
@@ -779,7 +921,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "byte-offset",
         type: "flag",
-        description: "Whether to indicate the byte offset of the row in the file instead",
+        description:
+          "Whether to indicate the byte offset of the row in the file instead",
         descriptionCn: "是否改为指示行在文件中的字节偏移量",
         required: false,
         default: false,
@@ -787,8 +930,10 @@ export const xanCommands: XanCommand[] = [
       {
         name: "accumulate",
         type: "flag",
-        description: "Similar to -B/--byte-offset but will accumulate the written offset size in bytes",
-        descriptionCn: "类似于-B/--byte-offset,但将累加写入的偏移量大小(以字节为单位)",
+        description:
+          "Similar to -B/--byte-offset but will accumulate the written offset size in bytes",
+        descriptionCn:
+          "类似于-B/--byte-offset,但将累加写入的偏移量大小(以字节为单位)",
         required: false,
         default: false,
       },
@@ -811,7 +956,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "value",
         type: "string",
-        description: "Fill empty cells using provided value instead of using last non-empty value",
+        description:
+          "Fill empty cells using provided value instead of using last non-empty value",
         descriptionCn: "使用提供的值填充空单元格,而不是使用最后一个非空值",
         required: false,
       },
@@ -913,7 +1059,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "lines",
         type: "flag",
-        description: "Indicate that input should be considered as text lines instead of CSV data",
+        description:
+          "Indicate that input should be considered as text lines instead of CSV data",
         descriptionCn: "指示输入应被视为文本行而不是CSV数据",
         required: false,
         default: false,
@@ -938,7 +1085,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "redact",
         type: "string",
-        description: "Redact the blanked down values using the provided replacement string",
+        description:
+          "Redact the blanked down values using the provided replacement string",
         descriptionCn: "使用提供的替换字符串编辑清空的值",
         required: false,
       },
@@ -1002,7 +1150,7 @@ export const xanCommands: XanCommand[] = [
         name: "non-empty",
         type: "flag",
         description: "Find non-empty cells (no pattern needed)",
-        descriptionCn: "查找非空单元格（不需要模式）",
+        descriptionCn: "查找非空单元格(不需要模式)",
         required: false,
         default: false,
       },
@@ -1010,7 +1158,7 @@ export const xanCommands: XanCommand[] = [
         name: "empty",
         type: "flag",
         description: "Find empty cells (no pattern needed)",
-        descriptionCn: "查找空单元格（不需要模式）",
+        descriptionCn: "查找空单元格(不需要模式)",
         required: false,
         default: false,
       },
@@ -1105,7 +1253,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "breakdown",
         type: "flag",
-        description: "Count total number of non-overlapping matches per pattern",
+        description:
+          "Count total number of non-overlapping matches per pattern",
         descriptionCn: "计算每个模式的非重叠匹配总数",
         required: false,
         default: false,
@@ -1163,11 +1312,12 @@ export const xanCommands: XanCommand[] = [
       {
         name: "--every-column",
         type: "flag",
-        description: "Only output a row when every selected column matches a pattern",
+        description:
+          "Only output a row when every selected column matches a pattern",
         descriptionCn: "仅当每个选定列都匹配模式时才输出行",
         required: false,
         default: false,
-      }
+      },
     ],
   },
   {
@@ -1196,7 +1346,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "search",
         type: "flag",
-        description: "Perform an exact search and only emit rows matching the query",
+        description:
+          "Perform an exact search and only emit rows matching the query",
         descriptionCn: "执行精确搜索,仅输出匹配查询的行",
         required: false,
         default: false,
@@ -1212,7 +1363,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "numeric",
         type: "flag",
-        description: "Indicate that searched values are numbers and order is numerical",
+        description:
+          "Indicate that searched values are numbers and order is numerical",
         descriptionCn: "指示搜索的值是数字,顺序是数值顺序",
         required: false,
         default: false,
@@ -1408,7 +1560,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "lexicographic",
         type: "flag",
-        description: "Rank values lexicographically instead of considering them as numbers",
+        description:
+          "Rank values lexicographically instead of considering them as numbers",
         descriptionCn: "按字典顺序排序值,而不是将其视为数字",
         required: false,
         default: false,
@@ -1416,15 +1569,18 @@ export const xanCommands: XanCommand[] = [
       {
         name: "groupby",
         type: "string",
-        description: "Return top n values per group, represented by the values in given columns",
+        description:
+          "Return top n values per group, represented by the values in given columns",
         descriptionCn: "返回每个组的前n个值,由给定列中的值表示",
         required: false,
       },
       {
         name: "sorted",
         type: "flag",
-        description: "When used with --groupby, indicates that the input is sorted on the group columns so the command can run faster",
-        descriptionCn: "与--groupby一起使用时,指示输入已按分组列排序,以便命令可以更快运行",
+        description:
+          "When used with --groupby, indicates that the input is sorted on the group columns so the command can run faster",
+        descriptionCn:
+          "与--groupby一起使用时,指示输入已按分组列排序,以便命令可以更快运行",
         required: false,
         default: false,
       },
@@ -1484,15 +1640,18 @@ export const xanCommands: XanCommand[] = [
       {
         name: "sorted",
         type: "flag",
-        description: "Use with --groupby to indicate that input is sorted on group columns so the command can run faster",
-        descriptionCn: "与--groupby一起使用,指示输入已按分组列排序,以便命令可以更快运行",
+        description:
+          "Use with --groupby to indicate that input is sorted on group columns so the command can run faster",
+        descriptionCn:
+          "与--groupby一起使用,指示输入已按分组列排序,以便命令可以更快运行",
         required: false,
         default: false,
       },
       {
         name: "cursed",
         type: "flag",
-        description: "Return a cursed sample from a Lovecraftian kinda-uniform distribution",
+        description:
+          "Return a cursed sample from a Lovecraftian kinda-uniform distribution",
         descriptionCn: "从洛夫克拉夫特式的均匀分布中返回一个被诅咒的样本",
         required: false,
         default: false,
@@ -1579,7 +1738,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "external",
         type: "flag",
-        description: "Whether to use external sorting if you cannot fit the whole file in memory",
+        description:
+          "Whether to use external sorting if you cannot fit the whole file in memory",
         descriptionCn: "如果无法将整个文件放入内存,是否使用外部排序",
         required: false,
         default: false,
@@ -1594,8 +1754,9 @@ export const xanCommands: XanCommand[] = [
       {
         name: "memory-limit",
         type: "number",
-        description: "Maximum allowed memory when using external sorting, in megabytes",
-        descriptionCn: "使用外部排序时允许的最大内存（以MB为单位）",
+        description:
+          "Maximum allowed memory when using external sorting, in megabytes",
+        descriptionCn: "使用外部排序时允许的最大内存(以MB为单位)",
         required: false,
         default: 512,
       },
@@ -1650,7 +1811,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "sorted",
         type: "flag",
-        description: "Use if you know your file is already sorted on the deduplication selection",
+        description:
+          "Use if you know your file is already sorted on the deduplication selection",
         descriptionCn: "如果您知道文件已按去重选择排序,请使用此选项",
         required: false,
         default: false,
@@ -1658,7 +1820,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "keep-last",
         type: "flag",
-        description: "Keep the last row having a specific identity, rather than the first one",
+        description:
+          "Keep the last row having a specific identity, rather than the first one",
         descriptionCn: "保留具有特定身份的最后一行,而不是第一行",
         required: false,
         default: false,
@@ -1666,7 +1829,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "external",
         type: "flag",
-        description: "Use an external btree index to keep the index on disk and avoid overflowing RAM",
+        description:
+          "Use an external btree index to keep the index on disk and avoid overflowing RAM",
         descriptionCn: "使用外部B树索引将索引保留在磁盘上,避免内存溢出",
         required: false,
         default: false,
@@ -1682,14 +1846,17 @@ export const xanCommands: XanCommand[] = [
       {
         name: "choose",
         type: "string",
-        description: "Evaluate an expression to decide whether to keep a newly seen row. Column names are prefixed with current_ and new_",
-        descriptionCn: "评估表达式以决定是否保留新看到的行。列名以current_和new_为前缀",
+        description:
+          "Evaluate an expression to decide whether to keep a newly seen row. Column names are prefixed with current_ and new_",
+        descriptionCn:
+          "评估表达式以决定是否保留新看到的行。列名以current_和new_为前缀",
         required: false,
       },
       {
         name: "boolean",
         type: "string",
-        description: "Add a column with given name indicating whether a row is duplicated",
+        description:
+          "Add a column with given name indicating whether a row is duplicated",
         descriptionCn: "添加一个给定名称的列,指示行是否重复",
         required: false,
       },
@@ -1712,8 +1879,10 @@ export const xanCommands: XanCommand[] = [
       {
         name: "external",
         type: "flag",
-        description: "Shuffle the file without buffering it into memory. Only works if target is seekable (no stdin etc.)",
-        descriptionCn: "在不将文件缓冲到内存的情况下打乱文件。仅在目标可寻址时有效（不支持stdin等）",
+        description:
+          "Shuffle the file without buffering it into memory. Only works if target is seekable (no stdin etc.)",
+        descriptionCn:
+          "在不将文件缓冲到内存的情况下打乱文件。仅在目标可寻址时有效(不支持stdin等)",
         required: false,
         default: false,
       },
@@ -1736,14 +1905,16 @@ export const xanCommands: XanCommand[] = [
       {
         name: "sep",
         type: "string",
-        description: "Split the cell into multiple values to count using the provided separator",
+        description:
+          "Split the cell into multiple values to count using the provided separator",
         descriptionCn: "使用提供的分隔符将单元格拆分为多个值进行计数",
         required: false,
       },
       {
         name: "groupby",
         type: "string",
-        description: "If given, will compute frequency tables per group as defined by the given columns",
+        description:
+          "If given, will compute frequency tables per group as defined by the given columns",
         descriptionCn: "如果提供,将按给定列定义的每个组计算频率表",
         required: false,
       },
@@ -1766,7 +1937,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "approx",
         type: "flag",
-        description: "If set, return the items most likely having the top counts",
+        description:
+          "If set, return the items most likely having the top counts",
         descriptionCn: "如果设置,返回最有可能具有最高计数的项目",
         required: false,
         default: false,
@@ -1822,35 +1994,42 @@ export const xanCommands: XanCommand[] = [
       {
         name: "keep",
         type: "string",
-        description: "Keep this selection of columns, in addition to the ones representing groups, in the output",
+        description:
+          "Keep this selection of columns, in addition to the ones representing groups, in the output",
         descriptionCn: "在输出中保留此列选择,以及表示组的列",
         required: false,
       },
       {
         name: "along-cols",
         type: "string",
-        description: "Perform a single aggregation over all of selected columns and create a column per group with the result in the output",
-        descriptionCn: "对所有选定列执行单个聚合,并为每个组创建一列,结果在输出中",
+        description:
+          "Perform a single aggregation over all of selected columns and create a column per group with the result in the output",
+        descriptionCn:
+          "对所有选定列执行单个聚合,并为每个组创建一列,结果在输出中",
         required: false,
       },
       {
         name: "along-matrix",
         type: "string",
-        description: "Aggregate all values found in the given selection of columns",
+        description:
+          "Aggregate all values found in the given selection of columns",
         descriptionCn: "聚合给定列选择中找到的所有值",
         required: false,
       },
       {
         name: "total",
         type: "string",
-        description: "Run an aggregation over the whole file in the same pass over the data and add the resulting columns at the end of each group's result",
-        descriptionCn: "在数据的同一次遍历中对整个文件运行聚合,并将结果列添加到每个组结果的末尾",
+        description:
+          "Run an aggregation over the whole file in the same pass over the data and add the resulting columns at the end of each group's result",
+        descriptionCn:
+          "在数据的同一次遍历中对整个文件运行聚合,并将结果列添加到每个组结果的末尾",
         required: false,
       },
       {
         name: "sorted",
         type: "flag",
-        description: "Use this flag to indicate that the file is already sorted on the group columns",
+        description:
+          "Use this flag to indicate that the file is already sorted on the group columns",
         descriptionCn: "使用此标志指示文件已按分组列排序",
         required: false,
         default: false,
@@ -1889,7 +2068,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "groupby",
         type: "string",
-        description: "If given, will compute stats per group as defined by the given column selection",
+        description:
+          "If given, will compute stats per group as defined by the given column selection",
         descriptionCn: "如果提供,将按给定列选择定义的每个组计算统计信息",
         required: false,
       },
@@ -1928,7 +2108,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "nulls",
         type: "flag",
-        description: "Include empty values in the population size for computing mean and standard deviation",
+        description:
+          "Include empty values in the population size for computing mean and standard deviation",
         descriptionCn: "在计算均值和标准差时将空值包括在总体大小中",
         required: false,
         default: false,
@@ -1968,21 +2149,24 @@ export const xanCommands: XanCommand[] = [
       {
         name: "along-rows",
         type: "string",
-        description: "Aggregate a selection of columns for each row instead of the whole file",
+        description:
+          "Aggregate a selection of columns for each row instead of the whole file",
         descriptionCn: "为每行聚合选定的列,而不是整个文件",
         required: false,
       },
       {
         name: "along-cols",
         type: "string",
-        description: "Aggregate a selection of columns the same way and return an aggregated column with same name in the output",
+        description:
+          "Aggregate a selection of columns the same way and return an aggregated column with same name in the output",
         descriptionCn: "以相同方式聚合选定的列,并在输出中返回同名的聚合列",
         required: false,
       },
       {
         name: "along-matrix",
         type: "string",
-        description: "Aggregate all values found in the given selection of columns",
+        description:
+          "Aggregate all values found in the given selection of columns",
         descriptionCn: "聚合给定列选择中找到的所有值",
         required: false,
       },
@@ -2036,7 +2220,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "heuristic",
         type: "select",
-        description: "Heuristic to use to automatically find an adequate number of bins",
+        description:
+          "Heuristic to use to automatically find an adequate number of bins",
         descriptionCn: "用于自动找到合适箱数的启发式方法",
         required: false,
         options: ["freedman-diaconis", "sqrt", "sturges"],
@@ -2051,7 +2236,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "exact",
         type: "flag",
-        description: "Whether to make sure to return the exact number of bins provided to -b/--bins",
+        description:
+          "Whether to make sure to return the exact number of bins provided to -b/--bins",
         descriptionCn: "是否确保返回提供给-b/--bins的确切箱数",
         required: false,
         default: false,
@@ -2082,7 +2268,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "no-extra",
         type: "flag",
-        description: "Don't include, empty cells, nans and out of bounds counts",
+        description:
+          "Don't include, empty cells, nans and out of bounds counts",
         descriptionCn: "不包括空单元格、NaN和超出范围的计数",
         required: false,
         default: false,
@@ -2107,7 +2294,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "groupby",
         type: "string",
-        description: "If given, runs the aggregation per group symbolized by given column selection.",
+        description:
+          "If given, runs the aggregation per group symbolized by given column selection.",
         descriptionCn: "如果提供,将按给定列选择表示的每个组运行聚合",
         required: false,
       },
@@ -2130,7 +2318,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "along-columns",
         type: "string",
-        description: "Repeat same expression over a selection of columns at once",
+        description:
+          "Repeat same expression over a selection of columns at once",
         descriptionCn: "一次对列选择重复相同的表达式",
         required: false,
       },
@@ -2164,39 +2353,49 @@ export const xanCommands: XanCommand[] = [
       {
         name: "pad",
         type: "flag",
-        description: "When concatenating columns, this flag will cause all records to appear. It will pad each row if other CSV data isn't long enough.",
-        descriptionCn: "拼接列时,此标志将使所有记录出现。如果其他CSV数据不够长,将填充每行",
+        description:
+          "When concatenating columns, this flag will cause all records to appear. It will pad each row if other CSV data isn't long enough.",
+        descriptionCn:
+          "拼接列时,此标志将使所有记录出现。如果其他CSV数据不够长,将填充每行",
         required: false,
         default: false,
       },
       {
         name: "intersection",
         type: "flag",
-        description: "Compute the intersection of headers of all concatenated files and reorder columns accordingly. Incompatible with --union, preprocessing and --no-headers.",
-        descriptionCn: "计算所有拼接文件头的交集并相应地重新排列列。与--union、preprocessing和--no-headers不兼容",
+        description:
+          "Compute the intersection of headers of all concatenated files and reorder columns accordingly. Incompatible with --union, preprocessing and --no-headers.",
+        descriptionCn:
+          "计算所有拼接文件头的交集并相应地重新排列列。与--union、preprocessing和--no-headers不兼容",
         required: false,
         default: false,
       },
       {
         name: "union",
         type: "flag",
-        description: "Compute the union of headers of all concatenated files and reorder columns accordingly. Incompatible with --intersection, preprocessing and --no-headers.",
-        descriptionCn: "计算所有拼接文件头的并集并相应地重新排列列。与--intersection、preprocessing和--no-headers不兼容",
+        description:
+          "Compute the union of headers of all concatenated files and reorder columns accordingly. Incompatible with --intersection, preprocessing and --no-headers.",
+        descriptionCn:
+          "计算所有拼接文件头的并集并相应地重新排列列。与--intersection、preprocessing和--no-headers不兼容",
         required: false,
         default: false,
       },
       {
         name: "paths",
         type: "string",
-        description: "When concatenating rows, give a text file (use \"-\" for stdin) containing one path of CSV file to concatenate per line",
-        descriptionCn: "拼接行时,提供一个文本文件（使用\"-\"表示stdin）,每行包含一个要拼接的CSV文件路径",
+        description:
+          'When concatenating rows, give a text file (use "-" for stdin) containing one path of CSV file to concatenate per line',
+        descriptionCn:
+          '拼接行时,提供一个文本文件(使用"-"表示stdin),每行包含一个要拼接的CSV文件路径',
         required: false,
       },
       {
         name: "path-column",
         type: "string",
-        description: "When given a column name, --paths will be considered as CSV, and paths to CSV files to concatenate will be extracted from the selected column",
-        descriptionCn: "给定列名时,--paths将被视为CSV,要拼接的CSV文件路径将从选定的列中提取",
+        description:
+          "When given a column name, --paths will be considered as CSV, and paths to CSV files to concatenate will be extracted from the selected column",
+        descriptionCn:
+          "给定列名时,--paths将被视为CSV,要拼接的CSV文件路径将从选定的列中提取",
         required: false,
       },
       {
@@ -2209,36 +2408,45 @@ export const xanCommands: XanCommand[] = [
       {
         name: "source-column",
         type: "string",
-        description: "Name of a column to prepend in the output of 'cat rows' indicating the path to source file",
+        description:
+          "Name of a column to prepend in the output of 'cat rows' indicating the path to source file",
         descriptionCn: "在'cat rows'输出中添加的列名,指示源文件路径",
         required: false,
       },
       {
         name: "preprocess",
         type: "string",
-        description: "Preprocessing using only xan subcommands. See xan parallel -h for more information about preprocessing.",
-        descriptionCn: "仅使用xan子命令进行预处理。有关预处理的更多信息,请参阅xan parallel -h",
+        description:
+          "Preprocessing using only xan subcommands. See xan parallel -h for more information about preprocessing.",
+        descriptionCn:
+          "仅使用xan子命令进行预处理。有关预处理的更多信息,请参阅xan parallel -h",
         required: false,
       },
       {
         name: "run",
         type: "string",
-        description: "Run xan script at given path as preprocessing. See xan run -h for more information.",
-        descriptionCn: "运行给定路径的xan脚本作为预处理。有关更多信息,请参阅xan run -h",
+        description:
+          "Run xan script at given path as preprocessing. See xan run -h for more information.",
+        descriptionCn:
+          "运行给定路径的xan脚本作为预处理。有关更多信息,请参阅xan run -h",
         required: false,
       },
       {
         name: "shell-preprocess",
         type: "string",
-        description: "Preprocessing commands that will run directly in your own shell using the -c flag. See xan parallel -h for more information about preprocessing.",
-        descriptionCn: "将直接在您的shell中使用-c标志运行的预处理命令。有关预处理的更多信息,请参阅xan parallel -h",
+        description:
+          "Preprocessing commands that will run directly in your own shell using the -c flag. See xan parallel -h for more information about preprocessing.",
+        descriptionCn:
+          "将直接在您的shell中使用-c标志运行的预处理命令。有关预处理的更多信息,请参阅xan parallel -h",
         required: false,
       },
       {
         name: "raw",
         type: "flag",
-        description: "Concatenate files as fast as possible, while skipping subsequent files' headers. Will not normalize the CSV stream at all while doing so, nor verify columns alignment. Only use for performance, and if you know what you are doing.",
-        descriptionCn: "尽可能快地拼接文件,同时跳过后续文件的头。这样做时不会规范化CSV流,也不会验证列对齐。仅用于性能,且如果您知道自己在做什么",
+        description:
+          "Concatenate files as fast as possible, while skipping subsequent files' headers. Will not normalize the CSV stream at all while doing so, nor verify columns alignment. Only use for performance, and if you know what you are doing.",
+        descriptionCn:
+          "尽可能快地拼接文件,同时跳过后续文件的头。这样做时不会规范化CSV流,也不会验证列对齐。仅用于性能,且如果您知道自己在做什么",
         required: false,
         default: false,
       },
@@ -2254,8 +2462,9 @@ export const xanCommands: XanCommand[] = [
       {
         name: "columns",
         type: "string",
-        description: "Columns to join on (for single column set) or left columns (for two column sets)",
-        descriptionCn: "连接的列（单列集）或左列（双列集）",
+        description:
+          "Columns to join on (for single column set) or left columns (for two column sets)",
+        descriptionCn: "连接的列(单列集)或左列(双列集)",
         required: false,
         isPositional: true,
       },
@@ -2270,8 +2479,9 @@ export const xanCommands: XanCommand[] = [
       {
         name: "columns2",
         type: "string",
-        description: "Right columns to join on (if different from left columns)",
-        descriptionCn: "右列用于连接（如果与左列不同）",
+        description:
+          "Right columns to join on (if different from left columns)",
+        descriptionCn: "右列用于连接(如果与左列不同)",
         required: false,
         isPositional: true,
       },
@@ -2290,13 +2500,22 @@ export const xanCommands: XanCommand[] = [
         descriptionCn: "连接类型",
         required: false,
         default: "inner",
-        options: ["inner", "left", "right", "full", "semi", "anti", "cross", "fuzzy"],
+        options: [
+          "inner",
+          "left",
+          "right",
+          "full",
+          "semi",
+          "anti",
+          "cross",
+          "fuzzy",
+        ],
       },
       {
         name: "contains",
         type: "flag",
         description: "Join by matching substrings (fuzzy join)",
-        descriptionCn: "通过匹配子字符串连接（模糊连接）",
+        descriptionCn: "通过匹配子字符串连接(模糊连接)",
         required: false,
         default: false,
       },
@@ -2304,7 +2523,7 @@ export const xanCommands: XanCommand[] = [
         name: "regex",
         type: "flag",
         description: "Join by regex patterns (fuzzy join)",
-        descriptionCn: "通过正则表达式模式连接（模糊连接）",
+        descriptionCn: "通过正则表达式模式连接(模糊连接)",
         required: false,
         default: false,
       },
@@ -2312,7 +2531,7 @@ export const xanCommands: XanCommand[] = [
         name: "url-prefix",
         type: "flag",
         description: "Join by url prefix (fuzzy join)",
-        descriptionCn: "通过URL前缀连接（模糊连接）",
+        descriptionCn: "通过URL前缀连接(模糊连接)",
         required: false,
         default: false,
       },
@@ -2335,7 +2554,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "drop-key",
         type: "select",
-        description: "Indicate whether to drop columns representing the join key",
+        description:
+          "Indicate whether to drop columns representing the join key",
         descriptionCn: "指示是否删除表示连接键的列",
         required: false,
         options: ["left", "right", "none", "both"],
@@ -2343,21 +2563,24 @@ export const xanCommands: XanCommand[] = [
       {
         name: "prefix-left",
         type: "string",
-        description: "Add a prefix to the names of the columns in the first dataset",
+        description:
+          "Add a prefix to the names of the columns in the first dataset",
         descriptionCn: "为第一个数据集中的列名添加前缀",
         required: false,
       },
       {
         name: "prefix-right",
         type: "string",
-        description: "Add a prefix to the names of the columns in the second dataset",
+        description:
+          "Add a prefix to the names of the columns in the second dataset",
         descriptionCn: "为第二个数据集中的列名添加前缀",
         required: false,
       },
       {
         name: "sorted",
         type: "flag",
-        description: "Use this flag to indicate both inputs are sorted to speed up computation",
+        description:
+          "Use this flag to indicate both inputs are sorted to speed up computation",
         descriptionCn: "使用此标志指示两个输入都已排序以加速计算",
         required: false,
         default: false,
@@ -2365,7 +2588,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "reverse",
         type: "flag",
-        description: "Reverse sort order for sorted inputs, i.e. descending order",
+        description:
+          "Reverse sort order for sorted inputs, i.e. descending order",
         descriptionCn: "反转已排序输入的排序顺序,即降序",
         required: false,
         default: false,
@@ -2373,7 +2597,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "numeric",
         type: "flag",
-        description: "Compare keys according to their numerical values instead of the default lexicographic order",
+        description:
+          "Compare keys according to their numerical values instead of the default lexicographic order",
         descriptionCn: "根据键的数值而不是默认的字典顺序进行比较",
         required: false,
         default: false,
@@ -2381,7 +2606,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "simplified-urls",
         type: "flag",
-        description: "When using --url-prefix, drop irrelevant parts of the urls to facilitate matches",
+        description:
+          "When using --url-prefix, drop irrelevant parts of the urls to facilitate matches",
         descriptionCn: "使用--url-prefix时,删除URL的不相关部分以方便匹配",
         required: false,
         default: false,
@@ -2444,7 +2670,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "uniq",
         type: "flag",
-        description: "When set, identical consecutive lines will be dropped to keep only one line per sorted value",
+        description:
+          "When set, identical consecutive lines will be dropped to keep only one line per sorted value",
         descriptionCn: "设置时,将删除相同的连续行,仅保留每个排序值的一行",
         required: false,
         default: false,
@@ -2452,22 +2679,26 @@ export const xanCommands: XanCommand[] = [
       {
         name: "source-column",
         type: "string",
-        description: "Name of a column to prepend in the output of the command indicating the path to source file",
+        description:
+          "Name of a column to prepend in the output of the command indicating the path to source file",
         descriptionCn: "在命令输出中添加的列名,指示源文件路径",
         required: false,
       },
       {
         name: "paths",
         type: "string",
-        description: "Give a text file containing one path of CSV file to concatenate per line",
+        description:
+          "Give a text file containing one path of CSV file to concatenate per line",
         descriptionCn: "提供一个文本文件,每行包含一个要拼接的CSV文件路径",
         required: false,
       },
       {
         name: "path-column",
         type: "string",
-        description: "When given a column name, --paths will be considered as CSV, and paths to CSV files to merge will be extracted from the selected column",
-        descriptionCn: "给定列名时,--paths将被视为CSV,要合并的CSV文件路径将从选定的列中提取",
+        description:
+          "When given a column name, --paths will be considered as CSV, and paths to CSV files to merge will be extracted from the selected column",
+        descriptionCn:
+          "给定列名时,--paths将被视为CSV,要合并的CSV文件路径将从选定的列中提取",
         required: false,
       },
     ],
@@ -2489,7 +2720,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "columns",
         type: "string",
-        description: "Column mappings or pattern and replacement when using --replace",
+        description:
+          "Column mappings or pattern and replacement when using --replace",
         descriptionCn: "列映射,或使用--replace时的模式和替换",
         required: false,
         isPositional: true,
@@ -2511,7 +2743,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "slugify",
         type: "flag",
-        description: "Transform the column name so that they are safe to be used as identifiers",
+        description:
+          "Transform the column name so that they are safe to be used as identifiers",
         descriptionCn: "转换列名,使其可安全用作标识符",
         required: false,
         default: false,
@@ -2519,7 +2752,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "replace",
         type: "flag",
-        description: "Replace matches of a pattern by given replacement in column names",
+        description:
+          "Replace matches of a pattern by given replacement in column names",
         descriptionCn: "在列名中用给定的替换替换模式的匹配项",
         required: false,
         default: false,
@@ -2544,7 +2778,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "append",
         type: "flag",
-        description: "Only drop headers if output already exists and is not empty",
+        description:
+          "Only drop headers if output already exists and is not empty",
         descriptionCn: "仅在输出已存在且不为空时删除表头",
         required: false,
         default: false,
@@ -2568,7 +2803,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "trust-header",
         type: "flag",
-        description: "Trust that the first row indicates the correct number of columns of the file",
+        description:
+          "Trust that the first row indicates the correct number of columns of the file",
         descriptionCn: "信任第一行指示文件的正确列数",
         required: false,
         default: false,
@@ -2601,7 +2837,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "evaluate",
         type: "string",
-        description: "Evaluate an expression to split cells instead of using a simple separator",
+        description:
+          "Evaluate an expression to split cells instead of using a simple separator",
         descriptionCn: "评估表达式以拆分单元格,而不是使用简单的分隔符",
         required: false,
       },
@@ -2615,15 +2852,17 @@ export const xanCommands: XanCommand[] = [
       {
         name: "singularize",
         type: "flag",
-        description: "Singularize (supporting only very simple English-centric cases) the exploded column names",
-        descriptionCn: "单数化展开的列名（仅支持非常简单的以英语为中心的情况）",
+        description:
+          "Singularize (supporting only very simple English-centric cases) the exploded column names",
+        descriptionCn: "单数化展开的列名(仅支持非常简单的以英语为中心的情况)",
         required: false,
         default: false,
       },
       {
         name: "rename",
         type: "string",
-        description: "New names for the exploded columns. Must be written in CSV format if exploding multiple columns",
+        description:
+          "New names for the exploded columns. Must be written in CSV format if exploding multiple columns",
         descriptionCn: "展开列的新名称。如果展开多列,必须以CSV格式写入",
         required: false,
       },
@@ -2646,7 +2885,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "pad",
         type: "flag",
-        description: "When exploding multiple columns at once, pad shorter splits to align them with the longest one instead of erroring",
+        description:
+          "When exploding multiple columns at once, pad shorter splits to align them with the longest one instead of erroring",
         descriptionCn: "一次展开多列时,填充较短的拆分以与最长的对齐,而不是报错",
         required: false,
         default: false,
@@ -2656,7 +2896,8 @@ export const xanCommands: XanCommand[] = [
   {
     id: "implode",
     name: "implode",
-    description: "Collapse consecutive identical rows based on a diverging column",
+    description:
+      "Collapse consecutive identical rows based on a diverging column",
     descriptionCn: "根据差异列合并连续相同的行",
     category: "Format, convert & recombobulate",
     parameters: [
@@ -2679,22 +2920,26 @@ export const xanCommands: XanCommand[] = [
       {
         name: "pluralize",
         type: "flag",
-        description: "Pluralize (supporting only very simple English-centric cases) the imploded column names. Does not work with -r, --rename.",
-        descriptionCn: "复数化合并的列名（仅支持非常简单的以英语为中心的情况）。不适用于-r, --rename",
+        description:
+          "Pluralize (supporting only very simple English-centric cases) the imploded column names. Does not work with -r, --rename.",
+        descriptionCn:
+          "复数化合并的列名(仅支持非常简单的以英语为中心的情况)。不适用于-r, --rename",
         required: false,
         default: false,
       },
       {
         name: "rename",
         type: "string",
-        description: "New name for the diverging column. Does not work with -P, --pluralize.",
+        description:
+          "New name for the diverging column. Does not work with -P, --pluralize.",
         descriptionCn: "差异列的新名称。不适用于-P, --pluralize",
         required: false,
       },
       {
         name: "cmp",
         type: "string",
-        description: "Restrict the columns to compare to assert whether consecutive rows must be merged",
+        description:
+          "Restrict the columns to compare to assert whether consecutive rows must be merged",
         descriptionCn: "限制要比较的列以确定是否必须合并连续行",
         required: false,
       },
@@ -2721,7 +2966,7 @@ export const xanCommands: XanCommand[] = [
         description: "The quote character to use",
         descriptionCn: "要使用的引号字符",
         required: false,
-        default: "\"",
+        default: '"',
       },
       {
         name: "escape",
@@ -2872,28 +3117,32 @@ export const xanCommands: XanCommand[] = [
       {
         name: "paths",
         type: "string",
-        description: "Read input and consider it as containing one document path per line",
+        description:
+          "Read input and consider it as containing one document path per line",
         descriptionCn: "读取输入并将其视为每行包含一个文档路径",
         required: false,
       },
       {
         name: "path-column",
         type: "string",
-        description: "Consider input as CSV file and read document paths from selected column",
+        description:
+          "Consider input as CSV file and read document paths from selected column",
         descriptionCn: "将输入视为CSV文件并从选定列读取文档路径",
         required: false,
       },
       {
         name: "docs",
         type: "string",
-        description: "Read input as CSV file with a column containing inline documents",
+        description:
+          "Read input as CSV file with a column containing inline documents",
         descriptionCn: "将输入读取为包含内联文档列的CSV文件",
         required: false,
       },
       {
         name: "doc-column",
         type: "string",
-        description: "Selects column containing inline documents given through --docs",
+        description:
+          "Selects column containing inline documents given through --docs",
         descriptionCn: "选择包含通过--docs提供的内联文档的列",
         required: false,
       },
@@ -2908,7 +3157,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "glob",
         type: "string",
-        description: "Collect document paths to process by applying the given glob pattern",
+        description:
+          "Collect document paths to process by applying the given glob pattern",
         descriptionCn: "通过应用给定的glob模式收集要处理的文档路径",
         required: false,
       },
@@ -2923,14 +3173,16 @@ export const xanCommands: XanCommand[] = [
       {
         name: "keep",
         type: "string",
-        description: "Selection of columns from the input to keep in the output",
+        description:
+          "Selection of columns from the input to keep in the output",
         descriptionCn: "要保留在输出中的输入列选择",
         required: false,
       },
       {
         name: "input-dir",
         type: "string",
-        description: "Processed paths will be read relative to the given base path",
+        description:
+          "Processed paths will be read relative to the given base path",
         descriptionCn: "处理后的路径将相对于给定的基础路径读取",
         required: false,
       },
@@ -2975,7 +3227,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "in-place",
         type: "flag",
-        description: "Write the result in a temporary file and replace input file with it when finished",
+        description:
+          "Write the result in a temporary file and replace input file with it when finished",
         descriptionCn: "将结果写入临时文件,完成后用其替换输入文件",
         required: false,
         default: false,
@@ -3019,7 +3272,7 @@ export const xanCommands: XanCommand[] = [
         description: "The quote character to use",
         descriptionCn: "要使用的引号字符",
         required: false,
-        default: "\"",
+        default: '"',
       },
       {
         name: "quote-always",
@@ -3060,7 +3313,16 @@ export const xanCommands: XanCommand[] = [
         descriptionCn: "输出格式",
         required: true,
         isPositional: true,
-        options: ["html", "json", "jsonl", "md", "ndjson", "npy", "txt", "xlsx"],
+        options: [
+          "html",
+          "json",
+          "jsonl",
+          "md",
+          "ndjson",
+          "npy",
+          "txt",
+          "xlsx",
+        ],
         default: "xlsx",
       },
       {
@@ -3105,7 +3367,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "select",
         type: "string",
-        description: "Column to emit as text (txt) or numerical columns for NPY",
+        description:
+          "Column to emit as text (txt) or numerical columns for NPY",
         descriptionCn: "要作为文本(txt)发出的列或NPY的数值列",
         required: false,
       },
@@ -3128,10 +3391,24 @@ export const xanCommands: XanCommand[] = [
       {
         name: "format",
         type: "select",
-        description: "Input format (will be inferred from file extension if not given)",
+        description:
+          "Input format (will be inferred from file extension if not given)",
         descriptionCn: "输入格式 (如果未给出,将从文件扩展名推断)",
         required: false,
-        options: ["ods", "xls", "xlsb", "xlsx", "json", "jsonl", "ndjson", "txt", "npy", "tar", "md", "markdown"],
+        options: [
+          "ods",
+          "xls",
+          "xlsb",
+          "xlsx",
+          "json",
+          "jsonl",
+          "ndjson",
+          "txt",
+          "npy",
+          "tar",
+          "md",
+          "markdown",
+        ],
         default: "xlsx",
       },
       {
@@ -3188,7 +3465,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "single-object",
         type: "flag",
-        description: "Use if JSON only represents a single object that you want to map to a single CSV row",
+        description:
+          "Use if JSON only represents a single object that you want to map to a single CSV row",
         descriptionCn: "如果JSON只表示要映射到单个CSV行的单个对象,请使用此选项",
         required: false,
         default: false,
@@ -3196,22 +3474,25 @@ export const xanCommands: XanCommand[] = [
       {
         name: "root",
         type: "string",
-        description: "Convert nested object found at path instead of root object",
+        description:
+          "Convert nested object found at path instead of root object",
         descriptionCn: "转换在路径中找到的嵌套对象而不是根对象",
         required: false,
       },
       {
         name: "model",
         type: "string",
-        description: "Pass a dummy JSON object as the extraction model to avoid sampling or restrict extracted paths",
-        descriptionCn: "传递虚拟JSON对象作为提取模型,以避免采样或限制提取的路径",
+        description:
+          "Pass a dummy JSON object as the extraction model to avoid sampling or restrict extracted paths",
+        descriptionCn:
+          "传递虚拟JSON对象作为提取模型,以避免采样或限制提取的路径",
         required: false,
       },
       {
         name: "column",
         type: "string",
         description: "Name of the column to create (text lines)",
-        descriptionCn: "要创建的列的名称）",
+        descriptionCn: "要创建的列的名称)",
         required: false,
       },
       {
@@ -3272,7 +3553,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "column-sep",
         type: "string",
-        description: "Separator used to join column names when pivoting on multiple columns",
+        description:
+          "Separator used to join column names when pivoting on multiple columns",
         descriptionCn: "在多列上透视时用于连接列名的分隔符",
         required: false,
         default: "_",
@@ -3297,14 +3579,16 @@ export const xanCommands: XanCommand[] = [
       {
         name: "name-column",
         type: "string",
-        description: "Name for the column that will contain unpivoted column names",
+        description:
+          "Name for the column that will contain unpivoted column names",
         descriptionCn: "将包含逆透视列名的列的名称",
         required: false,
       },
       {
         name: "value-column",
         type: "string",
-        description: "Name for the column that will contain unpivoted column values",
+        description:
+          "Name for the column that will contain unpivoted column values",
         descriptionCn: "将包含逆透视列值的列的名称",
         required: false,
       },
@@ -3320,7 +3604,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "out-dir",
         type: "string",
-        description: "Where to write the chunks. Defaults to current working directory",
+        description:
+          "Where to write the chunks. Defaults to current working directory",
         descriptionCn: "写入分块的目录,默认为当前工作目录",
         required: false,
       },
@@ -3335,14 +3620,17 @@ export const xanCommands: XanCommand[] = [
       {
         name: "chunks",
         type: "number",
-        description: "Divide the file into at most <n> chunks having roughly the same number of records",
-        descriptionCn: "将文件分割为最多 <n> 个分块,每个分块包含大致相同数量的行数",
+        description:
+          "Divide the file into at most <n> chunks having roughly the same number of records",
+        descriptionCn:
+          "将文件分割为最多 <n> 个分块,每个分块包含大致相同数量的行数",
         required: false,
       },
       {
         name: "segments",
         type: "flag",
-        description: "When used with -c/--chunks, output the byte offsets of found segments instead",
+        description:
+          "When used with -c/--chunks, output the byte offsets of found segments instead",
         descriptionCn: "与 -c/--chunks 一起使用时,输出找到的分段的字节偏移量",
         required: false,
         default: false,
@@ -3350,7 +3638,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "filename",
         type: "string",
-        description: "A filename template to use when constructing the names of the output files",
+        description:
+          "A filename template to use when constructing the names of the output files",
         descriptionCn: "用于构造输出文件名的模板",
         required: false,
         default: "output_{}.csv",
@@ -3382,7 +3671,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "filename",
         type: "string",
-        description: "A filename template to use when constructing the names of the output files",
+        description:
+          "A filename template to use when constructing the names of the output files",
         descriptionCn: "用于构造输出文件名的模板",
         required: false,
         default: "output_{}.csv",
@@ -3390,14 +3680,16 @@ export const xanCommands: XanCommand[] = [
       {
         name: "prefix-length",
         type: "number",
-        description: "Truncate the partition column after the specified number of bytes when creating the output file",
+        description:
+          "Truncate the partition column after the specified number of bytes when creating the output file",
         descriptionCn: "创建输出文件时,将分区列截断为指定的字节数",
         required: false,
       },
       {
         name: "sorted",
         type: "flag",
-        description: "Use this flag if you know the file is sorted on the partition column in advance",
+        description:
+          "Use this flag if you know the file is sorted on the partition column in advance",
         descriptionCn: "如果文件已按分区列排序,请使用此标志",
         required: false,
         default: false,
@@ -3413,7 +3705,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "case-sensitive",
         type: "flag",
-        description: "Don't perform case normalization to assess whether a new file has to be created when seeing a new value",
+        description:
+          "Don't perform case normalization to assess whether a new file has to be created when seeing a new value",
         descriptionCn: "不执行大小写规范化来判断是否需要创建新文件",
         required: false,
         default: false,
@@ -3494,7 +3787,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "tee",
         type: "flag",
-        description: "Interleave a call to `xan view -T` between each step of given pipeline",
+        description:
+          "Interleave a call to `xan view -T` between each step of given pipeline",
         descriptionCn: "在给定工作流的每一步之间交错调用`xan view -T`",
         required: false,
         default: false,
@@ -3566,7 +3860,19 @@ export const xanCommands: XanCommand[] = [
         type: "string",
         description: "Text filter operator",
         required: false,
-        options: ["equals", "not_equals", "starts_with", "not_starts_with", "ends_with", "not_ends_with", "contains", "not_contains", "regex", "is_null", "is_not_null"],
+        options: [
+          "equals",
+          "not_equals",
+          "starts_with",
+          "not_starts_with",
+          "ends_with",
+          "not_ends_with",
+          "contains",
+          "not_contains",
+          "regex",
+          "is_null",
+          "is_not_null",
+        ],
         default: "equals",
       },
       {
@@ -3574,7 +3880,14 @@ export const xanCommands: XanCommand[] = [
         type: "string",
         description: "Number filter operator",
         required: false,
-        options: ["equals", "not_equals", "greater_than", "less_than", "greater_or_equal", "less_or_equal"],
+        options: [
+          "equals",
+          "not_equals",
+          "greater_than",
+          "less_than",
+          "greater_or_equal",
+          "less_or_equal",
+        ],
         default: "equals",
       },
       {
@@ -3630,7 +3943,21 @@ export const xanCommands: XanCommand[] = [
         type: "select",
         description: "Input format (auto-inferred if not given)",
         required: false,
-        options: ["csv", "ods", "xls", "xlsb", "xlsx", "json", "jsonl", "ndjson", "txt", "npy", "tar", "md", "markdown"],
+        options: [
+          "csv",
+          "ods",
+          "xls",
+          "xlsb",
+          "xlsx",
+          "json",
+          "jsonl",
+          "ndjson",
+          "txt",
+          "npy",
+          "tar",
+          "md",
+          "markdown",
+        ],
         default: "xlsx",
       },
       {
@@ -3662,7 +3989,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "sample-size",
         type: "number",
-        description: "Number of records to sample before emitting headers (JSON)",
+        description:
+          "Number of records to sample before emitting headers (JSON)",
         required: false,
       },
       {
@@ -3687,7 +4015,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "single-object",
         type: "flag",
-        description: "Use if JSON only represents a single object that you want to map to a single CSV row",
+        description:
+          "Use if JSON only represents a single object that you want to map to a single CSV row",
         required: false,
         default: false,
       },
@@ -3718,7 +4047,17 @@ export const xanCommands: XanCommand[] = [
         description: "Output format",
         required: true,
         isPositional: true,
-        options: ["csv", "html", "json", "jsonl", "md", "ndjson", "npy", "txt", "xlsx"],
+        options: [
+          "csv",
+          "html",
+          "json",
+          "jsonl",
+          "md",
+          "ndjson",
+          "npy",
+          "txt",
+          "xlsx",
+        ],
         default: "xlsx",
       },
       {
@@ -3764,7 +4103,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "select",
         type: "string",
-        description: "Column to emit as text (txt) or numerical columns for NPY",
+        description:
+          "Column to emit as text (txt) or numerical columns for NPY",
         required: false,
       },
       {

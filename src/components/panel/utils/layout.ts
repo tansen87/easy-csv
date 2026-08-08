@@ -19,7 +19,7 @@ export function getLayoutedElements(
   savedEdges?: PipelineEdge[],
   savedInputPosition?: { x: number; y: number },
   highlightedNodeId?: string | null,
-  onTableDelete?: () => void
+  onTableDelete?: () => void,
 ): { nodes: Node[]; edges: Edge[] } {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -68,7 +68,6 @@ export function getLayoutedElements(
 
   const edges: Edge[] = [];
 
-  // 辅助函数: 创建连线
   const createEdge = (sourceId: string, targetId: string) => {
     const sourceNode = nodes.find(n => n.id === sourceId);
     const targetNode = nodes.find(n => n.id === targetId);
@@ -81,39 +80,18 @@ export function getLayoutedElements(
       const targetX = targetNode.position.x;
 
       if (sourceX <= targetX) {
-        // 源在左,目标在右
-        if (sourceId === 'table-node') {
-          sourceHandle = 'table-right-source';
-        } else {
-          sourceHandle = 'right-source';
-        }
-
-        if (targetId === 'table-node') {
-          targetHandle = 'table-left-target';
-        } else {
-          targetHandle = 'left-target';
-        }
+        sourceHandle = sourceId === 'table-node' ? 'table-right-source' : 'right-source';
+        targetHandle = targetId === 'table-node' ? 'table-left-target' : 'left-target';
       } else {
-        // 源在右,目标在左
-        if (sourceId === 'table-node') {
-          sourceHandle = 'table-left-source';
-        } else {
-          sourceHandle = 'left-source';
-        }
-
-        if (targetId === 'table-node') {
-          targetHandle = 'table-right-target';
-        } else {
-          targetHandle = 'right-target';
-        }
+        sourceHandle = sourceId === 'table-node' ? 'table-left-source' : 'left-source';
+        targetHandle = targetId === 'table-node' ? 'table-right-target' : 'right-target';
       }
     } else {
-      // 默认值
       sourceHandle = sourceId === 'table-node' ? 'table-right-source' : 'right-source';
       targetHandle = targetId === 'table-node' ? 'table-left-target' : 'left-target';
     }
 
-    const edgeConfig: any = {
+    return {
       id: `e-${sourceId}-${targetId}`,
       source: sourceId,
       target: targetId,
@@ -127,9 +105,7 @@ export function getLayoutedElements(
         type: MarkerType.ArrowClosed,
         color: "var(--flow-line-color)",
       },
-    };
-
-    return edgeConfig as Edge;
+    } as Edge;
   };
 
   if (savedEdges && savedEdges.length > 0) {
@@ -139,9 +115,6 @@ export function getLayoutedElements(
         dagreGraph.setEdge(edge.source, edge.target);
       }
     });
-  } else if (hasTable && steps.length > 0) {
-    edges.push(createEdge("table-node", steps[0].id));
-    dagreGraph.setEdge("table-node", steps[0].id);
   }
 
   dagre.layout(dagreGraph);
@@ -206,12 +179,11 @@ export function getLayoutedElements(
   return { nodes, edges };
 }
 
-// 根据源和目标位置创建 edge 配置（供 FlowPanel 内部使用）
 export function createEdgeConfig(
   sourceId: string,
   targetId: string,
-  sourceNode?: { position: { x: number } },
-  targetNode?: { position: { x: number } },
+  sourceNode?: { position: { x: number }; type?: string },
+  targetNode?: { position: { x: number }; type?: string },
 ): any {
   let sourceHandle: string;
   let targetHandle: string;
@@ -221,29 +193,11 @@ export function createEdgeConfig(
     const targetX = targetNode.position.x;
 
     if (sourceX <= targetX) {
-      if (sourceId === 'table-node') {
-        sourceHandle = 'table-right-source';
-      } else {
-        sourceHandle = 'right-source';
-      }
-
-      if (targetId === 'table-node') {
-        targetHandle = 'table-left-target';
-      } else {
-        targetHandle = 'left-target';
-      }
+      sourceHandle = sourceId === 'table-node' ? 'table-right-source' : 'right-source';
+      targetHandle = targetId === 'table-node' ? 'table-left-target' : 'left-target';
     } else {
-      if (sourceId === 'table-node') {
-        sourceHandle = 'table-left-source';
-      } else {
-        sourceHandle = 'left-source';
-      }
-
-      if (targetId === 'table-node') {
-        targetHandle = 'table-right-target';
-      } else {
-        targetHandle = 'right-target';
-      }
+      sourceHandle = sourceId === 'table-node' ? 'table-left-source' : 'left-source';
+      targetHandle = targetId === 'table-node' ? 'table-right-target' : 'right-target';
     }
   } else {
     sourceHandle = sourceId === 'table-node' ? 'table-right-source' : 'right-source';

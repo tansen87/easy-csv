@@ -8,6 +8,7 @@ import { useDraggable } from "@/hooks/useDraggable";
 
 export type NumberTransformType =
   | "abs"
+  | "neg"
   | "floor"
   | "ceil"
   | "int"
@@ -34,6 +35,7 @@ interface NumberTransformDialogProps {
 
 const transformOptions: { value: NumberTransformType; label: string }[] = [
   { value: "abs", label: "Abs" },
+  { value: "neg", label: "Negate" },
   { value: "floor", label: "Floor" },
   { value: "ceil", label: "Ceil" },
   { value: "int", label: "Integer" },
@@ -96,6 +98,7 @@ export function NumberTransformDialog({
     const expressionMap: Record<NumberTransformType, (col: string) => string> =
       {
         abs: (col) => `abs(col("${col}")) as "${col}"`,
+        neg: (col) => `neg(col("${col}")) as "${col}"`,
         floor: (col) => `floor(col("${col}")) as "${col}"`,
         ceil: (col) => `ceil(col("${col}")) as "${col}"`,
         int: (col) => `trunc(col("${col}")) as "${col}"`,
@@ -146,19 +149,19 @@ export function NumberTransformDialog({
         </button>
       </div>
 
-      <div className="px-3 py-2 shrink-0">
+      <div className="px-3 py-2 shrink-0 no-drag">
         <div className="flex items-center gap-2">
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search columns..."
-            className="no-drag flex-1 h-7 px-2 text-xs border rounded-md bg-background"
+            className="flex-1 h-7 px-2 text-xs border rounded-md bg-background"
           />
         </div>
       </div>
 
-      <ScrollArea className="flex-1 p-3">
+      <ScrollArea className="flex-1 p-3 no-drag">
         <div className="mb-3">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Columns ({selectedColumns.length} selected)
@@ -174,7 +177,7 @@ export function NumberTransformDialog({
                   <button
                     key={header}
                     onClick={() => toggleColumn(header)}
-                    className={`no-drag w-full text-left px-2 py-1 text-xs rounded transition-colors ${
+                    className={`w-full text-left px-2 py-1 text-xs rounded transition-colors ${
                       selectedColumns.includes(header)
                         ? "bg-primary/10 text-primary"
                         : "hover:bg-accent"
@@ -223,7 +226,7 @@ export function NumberTransformDialog({
                 <button
                   key={option.value}
                   onClick={() => setSelectedTransform(option.value)}
-                  className={`no-drag w-1/3 text-center px-1 py-1.5 text-xs rounded transition-colors ${
+                  className={`w-1/3 text-center px-1 py-1.5 text-xs rounded transition-colors ${
                     selectedTransform === option.value
                       ? "bg-primary/10 text-primary"
                       : "hover:bg-accent"
@@ -237,7 +240,7 @@ export function NumberTransformDialog({
         </div>
       </ScrollArea>
 
-      <div className="px-3 pb-3 flex gap-2 shrink-0">
+      <div className="px-3 pb-3 flex gap-2 shrink-0 no-drag">
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
           variant="secondary"

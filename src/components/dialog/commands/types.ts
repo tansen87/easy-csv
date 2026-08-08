@@ -39,6 +39,7 @@ export const COMMAND_LABELS: Record<CommandDialogType, string> = {
   flatten: "Flatten",
   hist: "Hist",
   plot: "Plot",
+  chart: "Chart",
   drop: "Drop",
   map: "Map",
   transform: "Transform",

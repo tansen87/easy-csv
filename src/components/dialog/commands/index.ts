@@ -8,6 +8,7 @@ import {
   FlattenForm,
   HistForm,
   PlotForm,
+  ChartForm,
 } from "@/components/dialog/commands/ExploreForms";
 import {
   SearchForm,
@@ -90,6 +91,7 @@ export const COMMAND_FORMS: Record<
   flatten: FlattenForm,
   hist: HistForm,
   plot: PlotForm,
+  chart: ChartForm,
 
   // Search & filter
   search: SearchForm,

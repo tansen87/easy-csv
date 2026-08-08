@@ -144,7 +144,7 @@ export function ReplaceDialog({
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
-      <div className="px-3 py-2 border-b shrink-0">
+      <div className="px-3 py-2 shrink-0 no-drag">
         <label className="text-xs font-medium text-muted-foreground mb-1 block">
           Column
         </label>
@@ -155,7 +155,7 @@ export function ReplaceDialog({
           placeholder="Search or select column..."
         />
       </div>
-      <ScrollArea className="flex-1 p-3">
+      <ScrollArea className="flex-1 p-3 no-drag">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-xs font-medium text-muted-foreground">
@@ -196,7 +196,7 @@ export function ReplaceDialog({
                       updateReplacePair(index, "pattern", e.target.value)
                     }
                     placeholder="Pattern"
-                    className="no-drag flex-1 h-8 px-2 text-xs border rounded-md bg-background w-full"
+                    className="flex-1 h-8 px-2 text-xs border rounded-md bg-background w-full"
                   />
                   <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
                   <input
@@ -206,11 +206,11 @@ export function ReplaceDialog({
                       updateReplacePair(index, "replace", e.target.value)
                     }
                     placeholder="Replacement"
-                    className="no-drag flex-1 h-8 px-2 text-xs border rounded-md bg-background w-full"
+                    className="flex-1 h-8 px-2 text-xs border rounded-md bg-background w-full"
                   />
                 </div>
                 <div className="flex items-center gap-3">
-                  <label className="no-drag flex items-center gap-1.5 text-xs cursor-pointer">
+                  <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                     <input
                       type="checkbox"
                       checked={pair.regex}
@@ -221,7 +221,7 @@ export function ReplaceDialog({
                     />
                     Regex
                   </label>
-                  <label className="no-drag flex items-center gap-1.5 text-xs cursor-pointer">
+                  <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                     <input
                       type="checkbox"
                       checked={pair.ignoreCase}
@@ -239,7 +239,7 @@ export function ReplaceDialog({
         </div>
       </ScrollArea>
 
-      <div className="px-3 pb-2 flex gap-2 shrink-0">
+      <div className="px-3 pb-2 flex gap-2 shrink-0 no-drag">
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
           variant="secondary"

@@ -14,10 +14,36 @@ export interface Translations {
   executing: string;
   commandPanel: string;
   logPanel: string;
-  dataProfilePanel: string;
   checkUpdate: string;
   help: string;
   settings: string;
+  versionHistory: string;
+  dataLineage: string;
+  columnLineage: string;
+  dagView: string;
+  fullscreen: string;
+  exitFullscreen: string;
+  timelineView: string;
+  inputColumns: string;
+  outputColumns: string;
+  lineageTransformations: string;
+  rowsCount: string;
+  lineagePath: string;
+  sourceStep: string;
+  noLineageData: string;
+  searchColumns: string;
+  lineageForColumn: string;
+
+  // VersionControl
+  save: string;
+  saving: string;
+  saveVersion: string;
+  untitledVersion: string;
+  noVersionsSaved: string;
+  addTag: string;
+  versionMessagePlaceholder: string;
+  tagsPlaceholder: string;
+  confirmDeleteVersion: string;
 
   // ConfirmDialog
   confirm: string;
@@ -34,8 +60,8 @@ export interface Translations {
   csvDelimiter: string;
   noHeaders: string;
   noHeadersDesc: string;
-  showExecutionNotification: string;
-  showExecutionNotificationDesc: string;
+  systemNotification: string;
+  systemNotificationDesc: string;
   minimizeToTray: string;
   minimizeToTrayDesc: string;
   resetToDefaults: string;
@@ -43,8 +69,6 @@ export interface Translations {
   selectDelimiter: string;
   delimiterDesc: string;
   language: string;
-  historyLimit: string;
-  historyLimitDesc: string;
   unlimited: string;
 
   // CommandList
@@ -95,6 +119,18 @@ export interface Translations {
   logs: string;
   noLogsYet: string;
   executePipelineHint: string;
+  restore: string,
+  maximize: string,
+
+  // ChartPanel
+  chart: string;
+  chartType: string;
+  xAxis: string;
+  yAxis: string;
+  category: string;
+  title: string;
+  noData: string;
+  download: string;
 
   // DataProfile
   dataProfile: string;
@@ -111,6 +147,42 @@ export interface Translations {
   sum: string;
   minLen: string;
   maxLen: string;
+
+  // AIPanel
+  aiPanel: string;
+  aiPlaceholder: string;
+  aiWelcomeMessage: string;
+  aiThinking: string;
+  aiAddToPipeline: string;
+  aiCommandPreview: string;
+  aiClear: string;
+  aiTokenUsed: string;
+  aiConfigureApiKey: string;
+  aiFeedbackPositive: string;
+  aiFeedbackNegative: string;
+  aiFeedbackPlaceholder: string;
+  aiClarificationConfirm: string;
+  aiClarificationModify: string;
+  aiClearData: string;
+  aiClearDataDesc: string;
+  aiClearConversations: string;
+  aiClearFeedback: string;
+  aiClearCorrections: string;
+  aiClearConfirmTitle: string;
+  aiClearConfirmDesc: string;
+
+  // AI Settings
+  ai: string;
+  aiProvider: string;
+  aiProviderDesc: string;
+  aiSelectProvider: string;
+  aiApiKey: string;
+  aiApiKeyDesc: string;
+  aiGetToken: string;
+  aiCheckBalance: string;
+  aiModel: string;
+  aiModelDesc: string;
+  aiSelectModel: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -126,17 +198,45 @@ export const translations: Record<Language, Translations> = {
     redo: "Redo",
     execute: "Execute",
     executing: "Executing",
-    commandPanel: "Commands",
+    commandPanel: "Command",
     logPanel: "Logs",
-    dataProfilePanel: "Data Profile",
+    dataProfile: "Data Profile",
     checkUpdate: "Check Update",
     help: "Help",
     settings: "Settings",
+    versionHistory: "Version History",
+    dataLineage: "Data Lineage",
+    columnLineage: "Column Lineage",
+    dagView: "Graph",
+    timelineView: "Timeline",
+    fullscreen: "Fullscreen",
+    exitFullscreen: "Exit Fullscreen",
+    inputColumns: "Input Columns",
+    outputColumns: "Output Columns",
+    lineageTransformations: "Transformations",
+    rowsCount: "Rows",
+    lineagePath: "Lineage Path",
+    sourceStep: "Source",
+    noLineageData: "Execute a pipeline to see data lineage",
+    searchColumns: "Search columns...",
+    lineageForColumn: "Lineage for column:",
+
+    // VersionControl
+    save: "Save",
+    saving: "Saving...",
+    saveVersion: "Save Version",
+    untitledVersion: "Untitled version",
+    noVersionsSaved: "No versions saved yet",
+    addTag: "Add tag...",
+    versionMessagePlaceholder: "Version message...",
+    tagsPlaceholder: "Tags (comma separated)...",
+    confirmDeleteVersion: "Are you sure you want to delete this version?",
 
     // ConfirmDialog
     confirm: "Confirm",
     refreshTitle: "Refresh Page",
-    refreshMessage: "Are you sure you want to refresh the page? Unsaved changes will be lost.",
+    refreshMessage:
+      "Are you sure you want to refresh the page? Unsaved changes will be lost.",
 
     // Settings
     preference: "Preference",
@@ -148,21 +248,21 @@ export const translations: Record<Language, Translations> = {
     csvDelimiter: "CSV Delimiter",
     noHeaders: "No Headers",
     noHeadersDesc: "When set, the first row will not be interpreted as headers",
-    showExecutionNotification: "Notification",
-    showExecutionNotificationDesc: "When enabled, Show system notification when pipeline execution completes",
+    systemNotification: "Notification",
+    systemNotificationDesc:
+      "When enabled, Show system notification when pipeline execution completes",
     minimizeToTray: "Tray",
-    minimizeToTrayDesc: "When enabled, closing the window will minimize to system tray instead of exiting",
+    minimizeToTrayDesc:
+      "When enabled, closing the window will minimize to system tray instead of exiting",
     resetToDefaults: "Reset to Defaults",
     saveSettings: "Save Settings",
     selectDelimiter: "Select delimiter",
     delimiterDesc: "The field delimiter for reading CSV data",
     language: "Language",
-    historyLimit: "History Limit",
-    historyLimitDesc: "Maximum number of history entries to keep",
     unlimited: "Unlimited",
 
     // CommandList
-    cmds: "Cmds",
+    cmds: "Command",
     history: "History",
     searchCommand: "Search command",
     searchHistory: "Search history",
@@ -198,7 +298,7 @@ export const translations: Record<Language, Translations> = {
     searchShortcut: "Ctrl+F: Search",
     previousMatch: "↑: Previous match",
     nextMatch: "↓: Next match",
-    close: "ESC: Close",
+    close: "Close",
 
     // FlowPanel
     searchFlow: "Search in the workflow",
@@ -209,9 +309,20 @@ export const translations: Record<Language, Translations> = {
     logs: "Logs",
     noLogsYet: "No logs yet",
     executePipelineHint: "Execute a pipeline to see output",
+    restore: "Restore",
+    maximize: "Maximize",
+
+    // ChartPanel
+    chart: "Chart",
+    chartType: "Chart Type",
+    xAxis: "X Axis",
+    yAxis: "Y Axis",
+    category: "Category",
+    title: "Title",
+    noData: "No data to display",
+    download: "Download",
 
     // DataProfile
-    dataProfile: "Data Profile",
     searchFields: "Search fields",
     noFieldsMatch: "No fields matching",
     analyzingData: "Analyzing data...",
@@ -225,6 +336,42 @@ export const translations: Record<Language, Translations> = {
     sum: "Sum",
     minLen: "Min Len",
     maxLen: "Max Len",
+
+    // AIPanel
+    aiPanel: "AI",
+    aiPlaceholder: "Describe operations (Ctrl+Enter to send)...",
+    aiWelcomeMessage: "Easy CSV AI Assistant",
+    aiThinking: "Thinking...",
+    aiAddToPipeline: "Add to Pipeline",
+    aiCommandPreview: "Command Preview",
+    aiClear: "Clear",
+    aiTokenUsed: "Used",
+    aiConfigureApiKey: "Please configure API Key in settings",
+    aiFeedbackPositive: "Helpful",
+    aiFeedbackNegative: "Not helpful",
+    aiFeedbackPlaceholder: "Please describe what's wrong or how to improve...",
+    aiClarificationConfirm: "Confirm",
+    aiClarificationModify: "Modify",
+    aiClearData: "Clear AI Learning Data",
+    aiClearDataDesc: "Delete all AI conversation history, feedback, and correction rules",
+    aiClearConversations: "Clear Conversations",
+    aiClearFeedback: "Clear Feedback",
+    aiClearCorrections: "Clear Corrections",
+    aiClearConfirmTitle: "Confirm Delete",
+    aiClearConfirmDesc: "This action cannot be undone. Are you sure?",
+
+    // AI Settings
+    ai: "AI",
+    aiProvider: "Provider",
+    aiProviderDesc: "Select AI service provider",
+    aiSelectProvider: "Select provider",
+    aiApiKey: "API Key",
+    aiApiKeyDesc: "Your API token for accessing AI models",
+    aiGetToken: "Get API Token",
+    aiCheckBalance: "Check Balance",
+    aiModel: "Model",
+    aiModelDesc: "Select the AI model to use for generating commands",
+    aiSelectModel: "Select a model",
   },
   zh: {
     // MainMenu
@@ -240,10 +387,37 @@ export const translations: Record<Language, Translations> = {
     executing: "执行中",
     commandPanel: "命令",
     logPanel: "日志",
-    dataProfilePanel: "数据概览",
+    dataProfile: "数据概览",
     checkUpdate: "检查更新",
     help: "帮助",
     settings: "设置",
+    versionHistory: "版本控制",
+    dataLineage: "数据血缘",
+    columnLineage: "列级血缘",
+    dagView: "图形",
+    fullscreen: "全屏",
+    exitFullscreen: "退出全屏",
+    timelineView: "时间线",
+    inputColumns: "输入列",
+    outputColumns: "输出列",
+    lineageTransformations: "变换",
+    rowsCount: "行数",
+    lineagePath: "血缘路径",
+    sourceStep: "来源",
+    noLineageData: "执行后可查看数据血缘",
+    searchColumns: "搜索列...",
+    lineageForColumn: "列的血缘：",
+
+    // VersionControl
+    save: "保存",
+    saving: "保存中...",
+    saveVersion: "保存版本",
+    untitledVersion: "未命名版本",
+    noVersionsSaved: "暂无版本记录",
+    addTag: "添加标签...",
+    versionMessagePlaceholder: "版本描述...",
+    tagsPlaceholder: "标签（逗号分隔）...",
+    confirmDeleteVersion: "确定要删除此版本吗？",
 
     // ConfirmDialog
     confirm: "确认",
@@ -260,8 +434,8 @@ export const translations: Record<Language, Translations> = {
     csvDelimiter: "CSV 分隔符",
     noHeaders: "无表头",
     noHeadersDesc: "启用后,第一行将不被视为表头",
-    showExecutionNotification: "系统通知",
-    showExecutionNotificationDesc: "启用后,管道执行完成后显示系统通知",
+    systemNotification: "系统通知",
+    systemNotificationDesc: "启用后,管道执行完成后显示系统通知",
     minimizeToTray: "系统托盘",
     minimizeToTrayDesc: "启用后,关闭窗口将最小化到系统托盘而非退出应用",
     resetToDefaults: "恢复默认",
@@ -269,8 +443,6 @@ export const translations: Record<Language, Translations> = {
     selectDelimiter: "选择分隔符",
     delimiterDesc: "用于读取 CSV 数据的字段分隔符",
     language: "语言",
-    historyLimit: "历史记录上限",
-    historyLimitDesc: "保留的最大历史记录条数",
     unlimited: "无限制",
 
     // CommandList
@@ -310,7 +482,7 @@ export const translations: Record<Language, Translations> = {
     searchShortcut: "Ctrl+F: 搜索",
     previousMatch: "↑: 上一个匹配",
     nextMatch: "↓: 下一个匹配",
-    close: "ESC: 关闭",
+    close: "关闭",
 
     // FlowPanel
     searchFlow: "在工作流中搜索",
@@ -321,9 +493,20 @@ export const translations: Record<Language, Translations> = {
     logs: "日志",
     noLogsYet: "暂无日志",
     executePipelineHint: "执行工作流后查看输出",
+    restore: "恢复",
+    maximize: "最大化",
+
+    // ChartPanel
+    chart: "图表",
+    chartType: "图表类型",
+    xAxis: "X轴",
+    yAxis: "Y轴",
+    category: "分类",
+    title: "标题",
+    noData: "无数据可显示",
+    download: "下载",
 
     // DataProfile
-    dataProfile: "数据概况",
     searchFields: "搜索字段",
     noFieldsMatch: "无匹配字段",
     analyzingData: "分析数据中...",
@@ -337,5 +520,41 @@ export const translations: Record<Language, Translations> = {
     sum: "求和",
     minLen: "最小长度",
     maxLen: "最大长度",
+
+    // AIPanel
+    aiPanel: "AI",
+    aiPlaceholder: "描述操作 (Ctrl+Enter 发送)...",
+    aiWelcomeMessage: "Easy CSV AI助手",
+    aiThinking: "思考中...",
+    aiAddToPipeline: "添加到管道",
+    aiCommandPreview: "命令预览",
+    aiClear: "清空",
+    aiTokenUsed: "已用",
+    aiConfigureApiKey: "请先在设置中配置 API Key",
+    aiFeedbackPositive: "有帮助",
+    aiFeedbackNegative: "没帮助",
+    aiFeedbackPlaceholder: "请描述哪里不对或如何改进...",
+    aiClarificationConfirm: "确认",
+    aiClarificationModify: "修改",
+    aiClearData: "清除AI学习数据",
+    aiClearDataDesc: "删除所有AI对话历史、反馈记录和纠正规则",
+    aiClearConversations: "清除对话历史",
+    aiClearFeedback: "清除反馈记录",
+    aiClearCorrections: "清除纠正规则",
+    aiClearConfirmTitle: "确认删除",
+    aiClearConfirmDesc: "此操作不可撤销，确定要继续吗？",
+
+    // AI Settings
+    ai: "AI",
+    aiProvider: "服务提供商",
+    aiProviderDesc: "选择AI服务提供商",
+    aiSelectProvider: "选择提供商",
+    aiApiKey: "API Key",
+    aiApiKeyDesc: "用于访问AI模型的API令牌",
+    aiGetToken: "获取API令牌",
+    aiCheckBalance: "查询余额",
+    aiModel: "模型",
+    aiModelDesc: "选择用于生成命令的AI模型",
+    aiSelectModel: "选择模型",
   },
 };

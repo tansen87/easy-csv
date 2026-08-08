@@ -1,23 +1,46 @@
-import { Trash2, Info, CheckCircle, AlertCircle, XCircle, TextQuote, FileText, Copy, Check, X } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import {
+  Trash2,
+  Info,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+  TextQuote,
+  FileText,
+  Copy,
+  Check,
+  X,
+  Maximize2,
+  Minimize2,
+} from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ResizeHandle } from "@/components/ui/resize-handle";
+import { Tooltip } from "@/components/ui/tooltip";
 import { LogEntry } from "@/types/xan";
 import { useLanguage } from "@/i18n";
 
 interface LogPanelProps {
   logs: LogEntry[];
   onClear: () => void;
+  onRemoveLog: (id: string) => void;
   isVisible: boolean;
   onClose: () => void;
 }
 
-export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
+export const LogPanel = React.memo(function LogPanel({
+  logs,
+  onClear,
+  onRemoveLog,
+  isVisible,
+  onClose,
+}: LogPanelProps) {
   const { t } = useLanguage();
   const [height, setHeight] = useState<number>(300);
+  const [isMaximized, setIsMaximized] = useState<boolean>(false);
   const [copiedLogId, setCopiedLogId] = useState<string | null>(null);
+  const [panelLeft, setPanelLeft] = useState<number>(0);
   const isDraggingRef = useRef(false);
   const dragStateRef = useRef({
     startX: 0,
@@ -87,7 +110,7 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
     }
 
     const toolbarHeight = 56;
-    const panelWidth = 600;
+    const panelWidth = panelRef.current?.offsetWidth || 600;
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDraggingRef.current || !panelRef.current) return;
@@ -99,7 +122,10 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
       let newY = dragStateRef.current.offsetY + deltaY;
 
       newX = Math.max(0, Math.min(window.innerWidth - panelWidth, newX));
-      newY = Math.max(toolbarHeight, Math.min(window.innerHeight - height, newY));
+      newY = Math.max(
+        toolbarHeight,
+        Math.min(window.innerHeight - height, newY),
+      );
 
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
@@ -107,6 +133,7 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
       rafRef.current = requestAnimationFrame(() => {
         panelRef.current!.style.left = `${newX}px`;
         panelRef.current!.style.top = `${newY}px`;
+        panelRef.current!.style.bottom = "auto";
       });
     };
 
@@ -129,25 +156,46 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
   };
 
   useEffect(() => {
-    if (isVisible && panelRef.current) {
-      const panelWidth = 600;
+    if (isVisible) {
+      const panelWidth = panelRef.current?.offsetWidth || 600;
       const newX = window.innerWidth - panelWidth;
-      panelRef.current.style.left = `${newX}px`;
-      panelRef.current.style.top = `100px`;
+      setPanelLeft(newX);
     }
   }, [isVisible]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (panelRef.current && !isMaximized) {
+        const panelWidth = panelRef.current.offsetWidth || 600;
+        const newX = window.innerWidth - panelWidth;
+        setPanelLeft(newX);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [isMaximized]);
 
   if (!isVisible) return null;
 
   return (
     <div
       ref={panelRef}
-      style={{
-        left: window.innerWidth - 600,
-        top: 100,
-        height: height
-      }}
-      className={`fixed w-[600px] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isDraggingRef ? "shadow-2xl" : ""}`}
+      style={
+        isMaximized
+          ? {
+              left: 0,
+              top: 0,
+              width: "100vw",
+              height: "100vh",
+            }
+          : {
+              left: panelLeft,
+              bottom: 0,
+              height: height,
+            }
+      }
+      className={`fixed flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isMaximized ? "w-screen h-screen" : "w-[min(600px,calc(100vw-32px))]"} ${isDraggingRef ? "shadow-2xl" : ""}`}
       onContextMenu={(e) => e.preventDefault()}
     >
       <div
@@ -161,23 +209,41 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={onClear}
-            disabled={logs.length === 0}
-            className="px-2 font-medium"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={onClose}
-            className="px-2 font-medium"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <Tooltip content={t.aiClear}>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={onClear}
+              disabled={logs.length === 0}
+              className="px-2 font-medium"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </Tooltip>
+          <Tooltip content={isMaximized ? t.restore : t.maximize}>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => setIsMaximized(!isMaximized)}
+              className="px-2 font-medium"
+            >
+              {isMaximized ? (
+                <Minimize2 className="h-4 w-4" />
+              ) : (
+                <Maximize2 className="h-4 w-4" />
+              )}
+            </Button>
+          </Tooltip>
+          <Tooltip content={t.close}>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={onClose}
+              className="px-2 font-medium"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </Tooltip>
         </div>
       </div>
       <ScrollArea className="flex-1">
@@ -187,7 +253,9 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
               <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
                 <TextQuote className="h-8 w-8 text-muted-foreground/50" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">{t.noLogsYet}</p>
+              <p className="text-sm font-medium text-muted-foreground mb-1">
+                {t.noLogsYet}
+              </p>
               <p className="text-xs text-muted-foreground/70">
                 {t.executePipelineHint}
               </p>
@@ -200,10 +268,14 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
                   className={`p-3 border group ${getLogBgColor(log.type)} hover:shadow-sm transition-all duration-200`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex-shrink-0">{getLogIcon(log.type)}</div>
+                    <div className="mt-0.5 flex-shrink-0">
+                      {getLogIcon(log.type)}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5">
-                        <span className={`text-xs font-bold uppercase tracking-wider ${getLogColor(log.type)}`}>
+                        <span
+                          className={`text-xs font-bold uppercase tracking-wider ${getLogColor(log.type)}`}
+                        >
                           {log.type}
                         </span>
                         <span className="text-xs text-muted-foreground/70">
@@ -230,6 +302,17 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
                             </>
                           )}
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemoveLog(log.id);
+                          }}
+                          className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-primary/10"
+                        >
+                          <Trash2 className="text-muted-foreground" />
+                        </Button>
                       </div>
                       <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-foreground/90 font-mono">
                         {log.message}
@@ -242,11 +325,13 @@ export function LogPanel({ logs, onClear, isVisible, onClose }: LogPanelProps) {
           )}
         </div>
       </ScrollArea>
-      <ResizeHandle
-        direction="vertical"
-        onResize={handleResize}
-        className="absolute -bottom-1 left-0 right-0 z-10"
-      />
+      {!isMaximized && (
+        <ResizeHandle
+          direction="vertical"
+          onResize={handleResize}
+          className="absolute -bottom-1 left-0 right-0 z-10"
+        />
+      )}
     </div>
   );
-}
+});

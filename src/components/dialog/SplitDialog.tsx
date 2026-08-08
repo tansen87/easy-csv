@@ -185,7 +185,7 @@ export function SplitDialog({
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
-      <ScrollArea className="h-[280px]">
+      <ScrollArea className="h-[280px] no-drag">
         <div className="p-3 space-y-3">
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
@@ -365,7 +365,7 @@ export function SplitDialog({
           </div>
         </div>
       </ScrollArea>
-      <div className="flex items-center gap-2 px-3 py-2 shrink-0">
+      <div className="flex items-center gap-2 px-3 py-2 shrink-0 no-drag">
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
           variant="secondary"

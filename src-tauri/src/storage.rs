@@ -3,46 +3,63 @@ use serde_json::Map;
 use crate::config::get_resources_dir;
 
 #[tauri::command]
-pub async fn save_history(history: String, limit: Option<u32>) -> Result<(), String> {
+pub async fn save_pipeline_versions(pipeline_id: String, versions: String) -> Result<(), String> {
   let resources_dir = get_resources_dir();
-  let history_path = resources_dir.join("history.json");
+  let versions_dir = resources_dir.join("versions");
 
-  // Create directory if it doesn't exist
-  if !resources_dir.exists() {
-    std::fs::create_dir_all(&resources_dir)
-      .map_err(|e| format!("Failed to create directory: {}", e))?;
+  if !versions_dir.exists() {
+    std::fs::create_dir_all(&versions_dir)
+      .map_err(|e| format!("Failed to create versions directory: {}", e))?;
   }
 
-  // Apply limit if specified
-  let history_to_save = if let Some(max_limit) = limit {
-    if max_limit > 0 {
-      let mut items: Vec<serde_json::Value> = serde_json::from_str(&history)
-        .map_err(|e| format!("Failed to parse history: {}", e))?;
-      items.truncate(max_limit as usize);
-      serde_json::to_string(&items).map_err(|e| format!("Failed to serialize history: {}", e))?
-    } else {
-      history
-    }
-  } else {
-    history
-  };
-
-  // Save history to file
-  std::fs::write(&history_path, history_to_save)
-    .map_err(|e| format!("Failed to save history: {}", e))?;
+  let versions_path = versions_dir.join(format!("{}.json", pipeline_id));
+  std::fs::write(&versions_path, versions)
+    .map_err(|e| format!("Failed to save pipeline versions: {}", e))?;
 
   Ok(())
 }
 
 #[tauri::command]
-pub async fn load_history() -> Result<String, String> {
+pub async fn load_pipeline_versions(pipeline_id: String) -> Result<String, String> {
   let resources_dir = get_resources_dir();
-  let history_path = resources_dir.join("history.json");
+  let versions_dir = resources_dir.join("versions");
+  let versions_path = versions_dir.join(format!("{}.json", pipeline_id));
 
-  // Load history from file
-  if history_path.exists() {
-    let content = std::fs::read_to_string(&history_path)
-      .map_err(|e| format!("Failed to read history: {}", e))?;
+  if versions_path.exists() {
+    let content = std::fs::read_to_string(&versions_path)
+      .map_err(|e| format!("Failed to read pipeline versions: {}", e))?;
+    Ok(content)
+  } else {
+    Ok("[]".to_string())
+  }
+}
+
+#[tauri::command]
+pub async fn save_lineage_data(pipeline_id: String, lineage: String) -> Result<(), String> {
+  let resources_dir = get_resources_dir();
+  let lineage_dir = resources_dir.join("lineage");
+
+  if !lineage_dir.exists() {
+    std::fs::create_dir_all(&lineage_dir)
+      .map_err(|e| format!("Failed to create lineage directory: {}", e))?;
+  }
+
+  let lineage_path = lineage_dir.join(format!("{}.json", pipeline_id));
+  std::fs::write(&lineage_path, lineage)
+    .map_err(|e| format!("Failed to save lineage data: {}", e))?;
+
+  Ok(())
+}
+
+#[tauri::command]
+pub async fn load_lineage_data(pipeline_id: String) -> Result<String, String> {
+  let resources_dir = get_resources_dir();
+  let lineage_dir = resources_dir.join("lineage");
+  let lineage_path = lineage_dir.join(format!("{}.json", pipeline_id));
+
+  if lineage_path.exists() {
+    let content = std::fs::read_to_string(&lineage_path)
+      .map_err(|e| format!("Failed to read lineage data: {}", e))?;
     Ok(content)
   } else {
     Ok("[]".to_string())
@@ -198,6 +215,11 @@ pub async fn set_window_title(window: tauri::Window, title: String) -> Result<()
   window
     .set_title(&title)
     .map_err(|e| format!("Failed to set window title: {}", e))
+}
+
+#[tauri::command]
+pub async fn file_exists(file_path: String) -> Result<bool, String> {
+  Ok(std::path::Path::new(&file_path).exists())
 }
 
 #[tauri::command]

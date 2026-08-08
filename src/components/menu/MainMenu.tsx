@@ -1,3 +1,4 @@
+import React from "react";
 import {
   File,
   Undo2,
@@ -14,9 +15,11 @@ import {
   MessageCircleQuestionMark,
   CommandIcon,
   BarChart3,
+  GitBranch,
+  GitMerge,
+  Bot,
 } from "lucide-react";
 import { PipelineStep } from "@/types/xan";
-import { useKeyboardShortcuts } from "@/hooks/KeyboardShortcuts";
 import { useLanguage } from "@/i18n";
 import { Tooltip } from "@/components/ui/tooltip";
 
@@ -48,9 +51,15 @@ interface MainMenuProps {
   showDataProfile: boolean;
   onToggleDataProfile: () => void;
   hasInputFile: boolean;
+  showVersionPanel: boolean;
+  onToggleVersionPanel: () => void;
+  showLineagePanel: boolean;
+  onToggleLineagePanel: () => void;
+  showAIPanel: boolean;
+  onToggleAIPanel: () => void;
 }
 
-export function MainMenu({
+export const MainMenu = React.memo(function MainMenu({
   activeMenu,
   setActiveMenu,
   isMenuActivated,
@@ -78,29 +87,14 @@ export function MainMenu({
   showDataProfile,
   onToggleDataProfile,
   hasInputFile,
+  showVersionPanel,
+  onToggleVersionPanel,
+  showLineagePanel,
+  onToggleLineagePanel,
+  showAIPanel,
+  onToggleAIPanel,
 }: MainMenuProps) {
   const { t } = useLanguage();
-  useKeyboardShortcuts(
-    {
-      onOpenFile,
-      onOpenNewTabWithFile,
-      onSavePipeline,
-      onImportPipeline,
-      onExportPipeline,
-      onUndo,
-      onRedo,
-      onExecute,
-      onHelp,
-      onCheckUpdate,
-      onShowSettings,
-    },
-    {
-      undoStackLength: undoStack.length,
-      redoStackLength: redoStack.length,
-      currentPipelineLength,
-      isExecuting,
-    },
-  );
 
   return (
     <div className="relative w-full">
@@ -244,7 +238,9 @@ export function MainMenu({
               <Play className="h-3.5 w-3.5" />
               {t.execute}
               {currentPipelineLength > 0 && (
-                <span>({currentPipelineLength})</span>
+                <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 text-[10px] font-semibold rounded-full bg-primary/15 text-primary/80 leading-none">
+                  {currentPipelineLength}
+                </span>
               )}
             </>
           )}
@@ -259,6 +255,7 @@ export function MainMenu({
           <Tooltip content={t.commandPanel} side="bottom">
             <button
               onClick={onToggleCommandPanel}
+              aria-label={t.commandPanel}
               className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 showCommandPanel
                   ? "text-primary bg-primary/10"
@@ -271,6 +268,7 @@ export function MainMenu({
           <Tooltip content={t.logPanel} side="bottom">
             <button
               onClick={onToggleLogPanel}
+              aria-label={t.logPanel}
               className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 showLogPanel
                   ? "text-primary bg-primary/10"
@@ -281,9 +279,10 @@ export function MainMenu({
             </button>
           </Tooltip>
           {hasInputFile && (
-            <Tooltip content={t.dataProfilePanel} side="bottom">
+            <Tooltip content={t.dataProfile} side="bottom">
               <button
                 onClick={onToggleDataProfile}
+                aria-label={t.dataProfile}
                 className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
                   showDataProfile
                     ? "text-primary bg-primary/10"
@@ -294,10 +293,50 @@ export function MainMenu({
               </button>
             </Tooltip>
           )}
+          <Tooltip content={t.versionHistory} side="bottom">
+            <button
+              onClick={onToggleVersionPanel}
+              aria-label={t.versionHistory}
+              className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                showVersionPanel
+                  ? "text-primary bg-primary/10"
+                  : "text-primary hover:bg-primary/10"
+              }`}
+            >
+              <GitBranch className="h-4 w-4" />
+            </button>
+          </Tooltip>
+          <Tooltip content={t.dataLineage} side="bottom">
+            <button
+              onClick={onToggleLineagePanel}
+              aria-label={t.dataLineage}
+              className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                showLineagePanel
+                  ? "text-primary bg-primary/10"
+                  : "text-primary hover:bg-primary/10"
+              }`}
+            >
+              <GitMerge className="h-4 w-4" />
+            </button>
+          </Tooltip>
+          <Tooltip content={t.aiPanel} side="bottom">
+            <button
+              onClick={onToggleAIPanel}
+              aria-label={t.aiPanel}
+              className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                showAIPanel
+                  ? "text-primary bg-primary/10"
+                  : "text-primary hover:bg-primary/10"
+              }`}
+            >
+              <Bot className="h-4 w-4" />
+            </button>
+          </Tooltip>
           <Tooltip content={t.checkUpdate} side="bottom">
             <button
               onClick={onCheckUpdate}
               disabled={isCheckingUpdate}
+              aria-label={t.checkUpdate}
               className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 isCheckingUpdate
                   ? "text-primary opacity-70"
@@ -314,6 +353,7 @@ export function MainMenu({
           <Tooltip content={t.help} side="bottom">
             <button
               onClick={onHelp}
+              aria-label={t.help}
               className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
             >
               <MessageCircleQuestionMark className="h-4 w-4" />
@@ -322,6 +362,7 @@ export function MainMenu({
           <Tooltip content={t.settings} side="bottom">
             <button
               onClick={onShowSettings}
+              aria-label={t.settings}
               className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
             >
               <Settings className="h-4 w-4" />
@@ -331,4 +372,4 @@ export function MainMenu({
       </div>
     </div>
   );
-}
+});

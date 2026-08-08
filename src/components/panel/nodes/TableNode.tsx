@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useRef } from "react";
+import React, { useCallback, useState, useRef, useEffect } from "react";
 import { Handle, Position } from "reactflow";
 import { Table, Check, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -47,6 +47,21 @@ export function TableNode({
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.stopPropagation();
+  }, []);
+
+  useEffect(() => {
+    const viewport = scrollContainerRef.current?.closest(
+      "[data-radix-scroll-area-viewport]",
+    ) as HTMLElement | null;
+    if (!viewport) return;
+
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) return;
+      e.preventDefault();
+      viewport.scrollLeft += e.deltaY + e.deltaX;
+    };
+    viewport.addEventListener("wheel", onWheel, { passive: false });
+    return () => viewport.removeEventListener("wheel", onWheel);
   }, []);
 
   const handleTableMouseDown = useCallback((e: React.MouseEvent) => {
@@ -152,7 +167,7 @@ export function TableNode({
           <Table className="h-3 w-3 text-green-600" />
         </div>
         <span className="font-semibold text-sm">Input Data</span>
-        <div className="flex-1">
+        <div className="flex-1 nodrag nowheel">
           <SearchableSelect
             value=""
             onChange={(value) => {
@@ -188,7 +203,7 @@ export function TableNode({
         </button>
       </div>
       <ScrollArea
-        className="h-[165px]"
+        className="h-[16vh] nodrag nowheel"
         onWheel={handleWheel}
         onMouseDown={handleTableMouseDown}
         onMouseMove={handleTableMouseMove}

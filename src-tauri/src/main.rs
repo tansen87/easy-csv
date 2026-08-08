@@ -15,6 +15,7 @@ fn main() {
     .plugin(tauri_plugin_shell::init())
     .plugin(tauri_plugin_window_state::Builder::new().build())
     .plugin(tauri_plugin_notification::init())
+    .plugin(tauri_plugin_http::init())
     .invoke_handler(easy_csv::invoke_handler())
     .setup(|app| {
       let show_item = MenuItem::with_id(app, "show", "show", true, None::<&str>)?;

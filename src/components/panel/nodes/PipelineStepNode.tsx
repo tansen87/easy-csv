@@ -280,7 +280,7 @@ export function PipelineStepNode({
       <Card
         className={`${cardClass} ${data.isCutting ? "cut-node" : ""}`}
         style={{
-          boxShadow: data.isPendingDelete ? '0 0 12px rgba(249, 115, 22, 0.6)' : undefined,
+          boxShadow: data.isPendingDelete ? '0 0 12px rgba(154, 154, 166, 0.6)' : undefined,
         }}
         onContextMenu={(e) => {
           e.preventDefault();
