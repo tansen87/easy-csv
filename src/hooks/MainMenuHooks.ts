@@ -1061,6 +1061,55 @@ export function MainMenuHooks({
         ];
       }
 
+      if (config.chartType === "pie") {
+        if (categoryIndex >= 0) {
+          const categories = new Map<string, ChartDataPoint[]>();
+          data.forEach((row) => {
+            const cat = row[categoryIndex] || "Unknown";
+            if (!categories.has(cat)) {
+              categories.set(cat, []);
+            }
+            const point: ChartDataPoint = { [config.x]: row[xIndex] };
+            point[config.y || "count"] =
+              yIndex >= 0 ? parseFloat(row[yIndex]) || 0 : 1;
+            categories.get(cat)!.push(point);
+          });
+
+          const colors = [
+            "#8884d8",
+            "#82ca9d",
+            "#ffc658",
+            "#ff7300",
+            "#0088fe",
+            "#00C49F",
+            "#FFBB28",
+            "#FF8042",
+          ];
+          let colorIndex = 0;
+
+          return Array.from(categories.entries()).map(([cat, points]) => ({
+            name: cat,
+            data: points,
+            color: colors[colorIndex++ % colors.length],
+          }));
+        }
+
+        const valueKey = config.y || "count";
+        const points: ChartDataPoint[] = data.map((row) => {
+          const point: ChartDataPoint = { [config.x]: row[xIndex] };
+          point[valueKey] = yIndex >= 0 ? parseFloat(row[yIndex]) || 0 : 1;
+          return point;
+        });
+
+        return [
+          {
+            name: config.x,
+            data: points,
+            color: config.color || "#8884d8",
+          },
+        ];
+      }
+
       if (categoryIndex >= 0) {
         // Group by category
         const categories = new Map<string, ChartDataPoint[]>();

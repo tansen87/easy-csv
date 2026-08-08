@@ -136,7 +136,7 @@ export interface StepLineage {
   transformations: Transformation[];
 }
 
-export type ChartType = "line" | "scatter" | "bar" | "histogram";
+export type ChartType = "line" | "scatter" | "bar" | "histogram" | "pie";
 
 export interface ChartConfig {
   chartType: ChartType;

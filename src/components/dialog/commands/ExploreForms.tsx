@@ -878,6 +878,7 @@ export function ChartForm(props: CommandFormProps) {
               { label: "scatter", value: "scatter" },
               { label: "bar", value: "bar" },
               { label: "histogram", value: "histogram" },
+              { label: "pie", value: "pie" },
             ]}
             placeholder="Select chart type..."
             size="md"

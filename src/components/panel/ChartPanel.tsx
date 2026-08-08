@@ -12,6 +12,8 @@ import {
   Scatter,
   BarChart,
   Bar,
+  PieChart,
+  Pie,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -629,6 +631,223 @@ export const ChartPanel = React.memo(function ChartPanel({
       </BarChart>
     );
 
+    const pieContent = (() => {
+      const pieColors = [
+        "#8884d8",
+        "#82ca9d",
+        "#ffc658",
+        "#ff7300",
+        "#0088fe",
+        "#00C49F",
+        "#FFBB28",
+        "#FF8042",
+      ];
+
+      if (hasMultipleSeries) {
+        return (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "16px",
+              justifyContent: "center",
+              padding: "16px",
+              width: "100%",
+              height: "100%",
+            }}
+          >
+            {series.map((s, seriesIndex) => {
+              if (hiddenSeries.has(s.name)) return null;
+              const pieData = s.data.map((d) => ({
+                name: String(d[config.x]),
+                value: Number(d[config.y || "count"]) || 1,
+              }));
+              const pieColor =
+                s.color || pieColors[seriesIndex % pieColors.length];
+
+              return (
+                <div
+                  key={s.name}
+                  style={{
+                    flex: "1 1 auto",
+                    minWidth: "200px",
+                    maxWidth: "300px",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    border: `1px solid ${gridColor}`,
+                    borderRadius: "8px",
+                    padding: "8px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      marginBottom: "8px",
+                      color: textColor,
+                    }}
+                  >
+                    {s.name}
+                  </div>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        fill={pieColor}
+                        label={({ name, percent }) =>
+                          `${name}: ${(percent * 100).toFixed(0)}%`
+                        }
+                      >
+                        {pieData.map((_entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={pieColors[index % pieColors.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip
+                        contentStyle={{
+                          backgroundColor: tooltipBgColor,
+                          borderColor: tooltipBorderColor,
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              );
+            })}
+          </div>
+        );
+      }
+
+      const pieData = (series[0]?.data || []).map((d) => ({
+        name: String(d[config.x]),
+        value: Number(d[config.y || "count"]) || 1,
+      }));
+
+      const aggregatedPieData = Array.from(
+        pieData.reduce((map, item) => {
+          const existing = map.get(item.name);
+          if (existing) {
+            existing.value += item.value;
+          } else {
+            map.set(item.name, { ...item });
+          }
+          return map;
+        }, new Map<string, { name: string; value: number }>()),
+      ).map(([, v]) => v);
+
+      const visiblePieData = aggregatedPieData.filter(
+        (d) => !hiddenSeries.has(d.name),
+      );
+
+      return (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            width: "100%",
+            height: "100%",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              flexWrap: "wrap",
+              gap: "8px",
+              padding: "8px",
+            }}
+          >
+            {aggregatedPieData.map((d, idx) => {
+              const isHidden = hiddenSeries.has(d.name);
+              return (
+                <button
+                  key={d.name}
+                  onClick={() => handleLegendClick(d.name)}
+                  className="flex items-center gap-1 text-xs px-2 py-1 rounded"
+                  style={{
+                    cursor: "pointer",
+                    opacity: isHidden ? 0.5 : 1,
+                    border: "none",
+                    background: "transparent",
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: 12,
+                      height: 12,
+                      borderRadius: 2,
+                      backgroundColor: isHidden
+                        ? "#9ca3af"
+                        : pieColors[idx % pieColors.length],
+                    }}
+                  />
+                  <span style={{ color: isHidden ? "#9ca3af" : textColor }}>
+                    {d.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            {visiblePieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={visiblePieData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={
+                      Math.min(Number(chartWidth), Number(chartHeight)) * 0.35
+                    }
+                    fill={config.color || "#8884d8"}
+                    label={({ name, percent }) =>
+                      `${name}: ${(percent * 100).toFixed(0)}%`
+                    }
+                  >
+                    {visiblePieData.map((_entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={pieColors[index % pieColors.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip
+                    contentStyle={{
+                      backgroundColor: tooltipBgColor,
+                      borderColor: tooltipBorderColor,
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100%",
+                  color: textColor,
+                }}
+              >
+                {t.noData}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    })();
+
     let content: React.ReactNode;
     switch (config.chartType) {
       case "line":
@@ -642,6 +861,9 @@ export const ChartPanel = React.memo(function ChartPanel({
         break;
       case "histogram":
         content = histogramContent;
+        break;
+      case "pie":
+        content = pieContent;
         break;
       default:
         return <div>{t.noData}</div>;
