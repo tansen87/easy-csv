@@ -38,8 +38,6 @@ interface SettingsTabContentProps {
   onSystemNotificationChange: (value: boolean) => void;
   minimizeToTray: boolean;
   onMinimizeToTrayChange: (value: boolean) => void;
-  historyLimit: number;
-  onHistoryLimitChange: (limit: number) => void;
   onSave: () => void;
   aiConfig: AIConfig;
   onAIConfigChange: (config: AIConfig) => void;
@@ -57,8 +55,6 @@ export function SettingsTabContent({
   onSystemNotificationChange,
   minimizeToTray,
   onMinimizeToTrayChange,
-  historyLimit,
-  onHistoryLimitChange,
   onSave,
   aiConfig,
   onAIConfigChange,
@@ -298,38 +294,6 @@ export function SettingsTabContent({
                   </p>
                 </label>
               </div>
-              {/* History Limit */}
-              <div>
-                <label className="block text-sm font-medium">
-                  {t.historyLimit}
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="0"
-                    max="1000"
-                    value={historyLimit}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value, 10);
-                      if (!isNaN(val) && val >= 0) {
-                        onHistoryLimitChange(val);
-                      }
-                    }}
-                    className="w-24 px-3 py-1.5 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                  <Button
-                    variant={historyLimit === 0 ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => onHistoryLimitChange(0)}
-                    className="h-8 text-xs"
-                  >
-                    {t.unlimited}
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {t.historyLimitDesc}
-                </p>
-              </div>
             </div>
           )}
 
@@ -506,7 +470,6 @@ export function SettingsTabContent({
             onNoHeadersChange(false);
             onSystemNotificationChange(true);
             onMinimizeToTrayChange(true);
-            onHistoryLimitChange(100);
             setIsResetClicked(true);
             if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
             resetTimeoutRef.current = setTimeout(

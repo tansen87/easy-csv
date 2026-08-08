@@ -14,7 +14,6 @@ pub struct AppConfig {
   pub default_delimiter: Option<String>,
   pub no_headers: Option<bool>,
   pub show_execution_notification: Option<bool>,
-  pub history_limit: Option<u32>,
   pub minimize_to_tray: Option<bool>,
 }
 
@@ -24,7 +23,6 @@ impl Default for AppConfig {
       default_delimiter: None,
       no_headers: None,
       show_execution_notification: None,
-      history_limit: None,
       minimize_to_tray: None,
     }
   }
@@ -171,7 +169,6 @@ pub fn load_config() -> Result<AppConfig, String> {
   let no_headers = get_config_string("no_headers").and_then(|v| v.parse().ok());
   let show_execution_notification =
     get_config_string("show_execution_notification").and_then(|v| v.parse().ok());
-  let history_limit = get_config_string("history_limit").and_then(|v| v.parse().ok());
   let minimize_to_tray = get_config_string("minimize_to_tray").and_then(|v| v.parse().ok());
 
   Ok(AppConfig {
@@ -179,7 +176,6 @@ pub fn load_config() -> Result<AppConfig, String> {
     no_headers: no_headers.or(default.no_headers),
     show_execution_notification: show_execution_notification
       .or(default.show_execution_notification),
-    history_limit: history_limit.or(default.history_limit),
     minimize_to_tray: minimize_to_tray.or(default.minimize_to_tray),
   })
 }
@@ -193,9 +189,6 @@ pub fn save_config(config: &AppConfig) -> Result<(), String> {
   }
   if let Some(v) = config.show_execution_notification {
     set_config_string("show_execution_notification", &v.to_string())?;
-  }
-  if let Some(v) = config.history_limit {
-    set_config_string("history_limit", &v.to_string())?;
   }
   if let Some(v) = config.minimize_to_tray {
     set_config_string("minimize_to_tray", &v.to_string())?;
@@ -335,18 +328,6 @@ pub async fn get_system_notification() -> Option<bool> {
 pub async fn set_system_notification(show: bool) -> Result<(), String> {
   let mut config = load_config()?;
   config.show_execution_notification = Some(show);
-  save_config(&config)
-}
-
-#[tauri::command]
-pub async fn get_history_limit() -> Option<u32> {
-  load_config().unwrap_or_default().history_limit
-}
-
-#[tauri::command]
-pub async fn set_history_limit(limit: u32) -> Result<(), String> {
-  let mut config = load_config()?;
-  config.history_limit = Some(limit);
   save_config(&config)
 }
 

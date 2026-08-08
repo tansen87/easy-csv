@@ -10,7 +10,6 @@ export function useAppSettings(
   const [noHeaders, setNoHeaders] = useState(false);
   const [systemNotification, setSystemNotification] = useState(true);
   const [minimizeToTray, setMinimizeToTray] = useState(true);
-  const [historyLimit, setHistoryLimit] = useState(100);
 
   const loadDefaultDelimiter = useCallback(async () => {
     try {
@@ -60,29 +59,18 @@ export function useAppSettings(
     }
   }, [showToastRef]);
 
-  const loadHistoryLimit = useCallback(async () => {
-    try {
-      const saved = await invoke<number | null>("get_history_limit");
-      if (saved !== null) setHistoryLimit(saved);
-    } catch (error) {
-      showToastRef.current(`Failed to load history limit: ${error}`, "error");
-    }
-  }, [showToastRef]);
-
   const loadAll = useCallback(async () => {
     await Promise.all([
       loadDefaultDelimiter(),
       loadNoHeaders(),
       loadSystemNotification(),
       loadMinimizeToTray(),
-      loadHistoryLimit(),
     ]);
   }, [
     loadDefaultDelimiter,
     loadNoHeaders,
     loadSystemNotification,
     loadMinimizeToTray,
-    loadHistoryLimit,
   ]);
 
   return {
@@ -94,8 +82,6 @@ export function useAppSettings(
     setSystemNotification,
     minimizeToTray,
     setMinimizeToTray,
-    historyLimit,
-    setHistoryLimit,
     loadAll,
   };
 }

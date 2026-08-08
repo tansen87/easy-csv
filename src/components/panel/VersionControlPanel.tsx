@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   Tag,
   Clock,
@@ -270,30 +271,32 @@ export function VersionControlPanel({
         </div>
       </ScrollArea>
 
-      {deletingVersionId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-background border border-border rounded-lg p-4 shadow-lg w-[280px]">
-            <p className="text-sm mb-4">{t.confirmDeleteVersion}</p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setDeletingVersionId(null)}
-                className="h-7 px-3 text-xs bg-muted hover:bg-muted/80 rounded transition-colors"
-              >
-                {t.cancel}
-              </button>
-              <button
-                onClick={() => {
-                  onDeleteVersion(deletingVersionId);
-                  setDeletingVersionId(null);
-                }}
-                className="h-7 px-3 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded transition-colors"
-              >
-                {t.confirm}
-              </button>
+      {deletingVersionId &&
+        createPortal(
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50">
+            <div className="bg-background border border-border rounded-lg p-4 shadow-lg w-[280px]">
+              <p className="text-sm mb-4">{t.confirmDeleteVersion}</p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setDeletingVersionId(null)}
+                  className="h-7 px-3 text-xs bg-muted hover:bg-muted/80 rounded transition-colors"
+                >
+                  {t.cancel}
+                </button>
+                <button
+                  onClick={() => {
+                    onDeleteVersion(deletingVersionId);
+                    setDeletingVersionId(null);
+                  }}
+                  className="h-7 px-3 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded transition-colors"
+                >
+                  {t.confirm}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

@@ -32,12 +32,7 @@ import { usePipelineVersions } from "@/hooks/usePipelineVersions";
 import { useDataLineage } from "@/hooks/useDataLineage";
 import { useKeyboardShortcuts } from "@/hooks/KeyboardShortcuts";
 import { formatDateTime } from "@/utils/format";
-import {
-  PipelineStep,
-  XanCommand,
-  HistoricalPipeline,
-  PipelineEdge,
-} from "@/types/xan";
+import { PipelineStep, XanCommand, PipelineEdge } from "@/types/xan";
 import { AIConfig, DEFAULT_AI_CONFIG } from "@/services/ai/types";
 import { loadAIConfig, saveAIConfig, setAIConfig } from "@/services/ai/index";
 
@@ -53,7 +48,7 @@ function AppContent() {
   const { toasts, showToast, showToastRef, removeToastRef } = useToast();
 
   // Logs
-  const { logs, addLog, clearLogs } = useLogs();
+  const { logs, addLog, removeLog, clearLogs } = useLogs();
 
   // UI visibility state
   const ui = useUIState();
@@ -92,11 +87,6 @@ function AppContent() {
   const reactFlowInstanceRef = useRef<any>(null);
   const currentVersion = "0.2.1";
 
-  // Historical pipelines
-  const [historicalPipelines, setHistoricalPipelines] = useState<
-    HistoricalPipeline[]
-  >([]);
-
   // Selected step
   const [selectedStep, setSelectedStep] = useState<PipelineStep | null>(null);
 
@@ -120,60 +110,6 @@ function AppContent() {
     await saveAIConfig(config);
     setAIConfig(config);
   }, []);
-
-  // Load historical pipelines
-  const loadHistoricalPipelines = useCallback(async () => {
-    try {
-      const content = await invoke<string>("load_history");
-      const history: HistoricalPipeline[] = JSON.parse(content);
-
-      const reconstructed = history.map((item) => ({
-        ...item,
-        pipeline: item.pipeline
-          .map((step: any) => {
-            if (step.command) return step;
-            const command = xanCommands.find(
-              (cmd) => cmd.id === step.commandId,
-            );
-            if (!command) return null;
-            return {
-              id: step.id,
-              command,
-              parameters: step.parameters || {},
-              alias: step.alias,
-              position: step.position,
-            };
-          })
-          .filter(Boolean),
-      }));
-
-      setHistoricalPipelines(reconstructed);
-    } catch (error) {
-      setHistoricalPipelines([]);
-    }
-  }, []);
-
-  const saveHistoricalPipelines = useCallback(
-    async (history: HistoricalPipeline[]) => {
-      try {
-        await invoke("save_history", {
-          history: JSON.stringify(history, null, 2),
-          limit: settings.historyLimit > 0 ? settings.historyLimit : undefined,
-        });
-      } catch (error) {
-        addLog("error", `Failed to save historical pipelines: ${error}`);
-      }
-    },
-    [settings.historyLimit, addLog],
-  );
-
-  const updateHistoricalPipelines = useCallback(
-    (newHistory: HistoricalPipeline[]) => {
-      setHistoricalPipelines(newHistory);
-      saveHistoricalPipelines(newHistory);
-    },
-    [saveHistoricalPipelines],
-  );
 
   // Check for updates
   const checkForUpdates = useCallback(async () => {
@@ -497,14 +433,24 @@ function AppContent() {
       try {
         await invoke("check_xan_installed");
         await settings.loadAll();
-        await loadHistoricalPipelines();
         await tabsHook.loadRecentFiles();
+        // Load version history for all tabs
+        for (const tab of tabsHook.tabs) {
+          await versionsHook.loadVersions(tab.id);
+        }
       } catch (error) {
         console.error("Initialization failed:", error);
       }
     };
     initializeApp();
   }, []);
+
+  // Load versions when tab changes
+  useEffect(() => {
+    if (tabsHook.selectedTabId) {
+      versionsHook.loadVersions(tabsHook.selectedTabId);
+    }
+  }, [tabsHook.selectedTabId]);
 
   // F12/F5 handling
   useEffect(() => {
@@ -620,7 +566,6 @@ function AppContent() {
   } = MainMenuHooks({
     tabs: tabsHook.tabs,
     selectedTabId: tabsHook.selectedTabId,
-    historicalPipelines,
     defaultDelimiter: settings.defaultDelimiter,
     setDefaultDelimiter: settings.setDefaultDelimiter,
     showToast,
@@ -636,13 +581,13 @@ function AppContent() {
     setBranchProgress: ui.setBranchProgress,
     progressHideTimerRef,
     loadCsvData: tabsHook.loadCsvData,
-    updateHistoricalPipelines,
     formatDateTime,
     trackLineage: lineageHook.trackLineage,
     setShowChartPanel: ui.setShowChartPanel,
     setChartConfig: ui.setChartConfig,
     setChartSeries: ui.setChartSeries,
     setChartHeaders: ui.setChartHeaders,
+    saveVersion: versionsHook.saveVersion,
   });
 
   // Keyboard shortcuts (O-3: moved to App level)
@@ -765,49 +710,10 @@ function AppContent() {
       await invoke("set_minimize_to_tray", {
         minimize: settings.minimizeToTray,
       });
-      await invoke("set_history_limit", { limit: settings.historyLimit });
     } catch (error) {
       showToastRef.current(`Failed to save settings: ${error}`, "error");
     }
   }, [settings, showToastRef]);
-
-  // History handlers
-  const onNewTabFromHistory = useCallback(
-    (history: any) => {
-      const newTabId = `tab-${Date.now()}`;
-      const newTab = {
-        id: newTabId,
-        name: `${history.name}`,
-        pipeline: history.pipeline,
-        edges: history.edges || [],
-        inputPosition: history.inputPosition,
-        inputFile: history.inputFile,
-        defaultDelimiter: history.defaultDelimiter,
-        created: formatDateTime(new Date()),
-        updated: formatDateTime(new Date()),
-      };
-      tabsHook.setTabs((prev) => [...prev, newTab]);
-      tabsHook.setSelectedTabId(newTabId);
-
-      if (history.inputFile) {
-        tabsHook.loadCsvData(newTabId, history.inputFile);
-      }
-      if (history.defaultDelimiter) {
-        settings.setDefaultDelimiter(history.defaultDelimiter);
-      }
-    },
-    [tabsHook, settings],
-  );
-
-  const onDeleteHistory = useCallback(
-    (history: any) => {
-      const updatedHistory = historicalPipelines.filter(
-        (h) => h.id !== history.id,
-      );
-      updateHistoricalPipelines(updatedHistory);
-    },
-    [historicalPipelines, updateHistoricalPipelines],
-  );
 
   return (
     <>
@@ -923,16 +829,12 @@ function AppContent() {
             onSearchChange={ui.setSearchQuery}
             isVisible={ui.showCommandPanel}
             onClose={() => ui.setShowCommandPanel(false)}
-            activePanel={ui.activeLeftPanel}
-            onActivePanelChange={ui.setActiveLeftPanel}
-            historicalPipelines={historicalPipelines}
-            onNewTabFromHistory={onNewTabFromHistory}
-            onDeleteHistory={onDeleteHistory}
           />
 
           <LogPanel
             logs={logs}
             onClear={clearLogs}
+            onRemoveLog={removeLog}
             isVisible={ui.showLogPanel}
             onClose={() => ui.setShowLogPanel(false)}
           />
@@ -966,8 +868,6 @@ function AppContent() {
             onSystemNotificationChange={settings.setSystemNotification}
             minimizeToTray={settings.minimizeToTray}
             onMinimizeToTrayChange={settings.setMinimizeToTray}
-            historyLimit={settings.historyLimit}
-            onHistoryLimitChange={settings.setHistoryLimit}
             onSave={handleSaveSettings}
             aiConfig={aiConfig}
             onAIConfigChange={handleAIConfigChange}

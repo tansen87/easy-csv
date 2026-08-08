@@ -24,6 +24,7 @@ import { useLanguage } from "@/i18n";
 interface LogPanelProps {
   logs: LogEntry[];
   onClear: () => void;
+  onRemoveLog: (id: string) => void;
   isVisible: boolean;
   onClose: () => void;
 }
@@ -31,6 +32,7 @@ interface LogPanelProps {
 export const LogPanel = React.memo(function LogPanel({
   logs,
   onClear,
+  onRemoveLog,
   isVisible,
   onClose,
 }: LogPanelProps) {
@@ -38,6 +40,7 @@ export const LogPanel = React.memo(function LogPanel({
   const [height, setHeight] = useState<number>(300);
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
   const [copiedLogId, setCopiedLogId] = useState<string | null>(null);
+  const [panelLeft, setPanelLeft] = useState<number>(0);
   const isDraggingRef = useRef(false);
   const dragStateRef = useRef({
     startX: 0,
@@ -130,6 +133,7 @@ export const LogPanel = React.memo(function LogPanel({
       rafRef.current = requestAnimationFrame(() => {
         panelRef.current!.style.left = `${newX}px`;
         panelRef.current!.style.top = `${newY}px`;
+        panelRef.current!.style.bottom = "auto";
       });
     };
 
@@ -152,13 +156,25 @@ export const LogPanel = React.memo(function LogPanel({
   };
 
   useEffect(() => {
-    if (isVisible && panelRef.current) {
-      const panelWidth = panelRef.current.offsetWidth || 600;
-      const newX = window.innerWidth - panelWidth - 16;
-      panelRef.current.style.left = `${newX}px`;
-      panelRef.current.style.top = `100px`;
+    if (isVisible) {
+      const panelWidth = panelRef.current?.offsetWidth || 600;
+      const newX = window.innerWidth - panelWidth;
+      setPanelLeft(newX);
     }
   }, [isVisible]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (panelRef.current && !isMaximized) {
+        const panelWidth = panelRef.current.offsetWidth || 600;
+        const newX = window.innerWidth - panelWidth;
+        setPanelLeft(newX);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [isMaximized]);
 
   if (!isVisible) return null;
 
@@ -174,8 +190,8 @@ export const LogPanel = React.memo(function LogPanel({
               height: "100vh",
             }
           : {
-              left: window.innerWidth - 616,
-              top: 100,
+              left: panelLeft,
+              bottom: 0,
               height: height,
             }
       }
@@ -285,6 +301,17 @@ export const LogPanel = React.memo(function LogPanel({
                               <Copy className="text-muted-foreground" />
                             </>
                           )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemoveLog(log.id);
+                          }}
+                          className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-primary/10"
+                        >
+                          <Trash2 className="text-muted-foreground" />
                         </Button>
                       </div>
                       <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-foreground/90 font-mono">

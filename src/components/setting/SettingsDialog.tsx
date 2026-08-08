@@ -17,8 +17,6 @@ interface SettingsDialogProps {
   onSystemNotificationChange: (value: boolean) => void;
   minimizeToTray: boolean;
   onMinimizeToTrayChange: (value: boolean) => void;
-  historyLimit: number;
-  onHistoryLimitChange: (limit: number) => void;
   onSave: () => void;
   aiConfig: AIConfig;
   onAIConfigChange: (config: AIConfig) => void;
@@ -37,8 +35,6 @@ export function SettingsDialog({
   onSystemNotificationChange,
   minimizeToTray,
   onMinimizeToTrayChange,
-  historyLimit,
-  onHistoryLimitChange,
   onSave,
   aiConfig,
   onAIConfigChange,
@@ -170,8 +166,6 @@ export function SettingsDialog({
             onSystemNotificationChange={onSystemNotificationChange}
             minimizeToTray={minimizeToTray}
             onMinimizeToTrayChange={onMinimizeToTrayChange}
-            historyLimit={historyLimit}
-            onHistoryLimitChange={onHistoryLimitChange}
             onSave={onSave}
             aiConfig={aiConfig}
             onAIConfigChange={onAIConfigChange}

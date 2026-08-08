@@ -7,7 +7,6 @@ import {
   PipelineTab,
   PipelineEdge,
   LogEntry,
-  HistoricalPipeline,
   StepLineage,
   ChartConfig,
   ChartSeries,
@@ -21,7 +20,6 @@ import { BatchConvertHooks } from "@/hooks/BatchConvertHooks";
 interface MainMenuHooksProps {
   tabs: PipelineTab[];
   selectedTabId: string;
-  historicalPipelines: HistoricalPipeline[];
   defaultDelimiter: string;
   setDefaultDelimiter: React.Dispatch<React.SetStateAction<string>>;
   showToast: (
@@ -67,7 +65,6 @@ interface MainMenuHooksProps {
     filePath: string,
     customDelimiter?: string,
   ) => Promise<void>;
-  updateHistoricalPipelines: (history: HistoricalPipeline[]) => void;
   formatDateTime: (date: Date) => string;
   trackLineage?: (
     steps: PipelineStep[],
@@ -80,12 +77,12 @@ interface MainMenuHooksProps {
   setChartConfig: React.Dispatch<React.SetStateAction<ChartConfig | null>>;
   setChartSeries: React.Dispatch<React.SetStateAction<ChartSeries[]>>;
   setChartHeaders: React.Dispatch<React.SetStateAction<string[]>>;
+  saveVersion: (message?: string, tags?: string[]) => Promise<any>;
 }
 
 export function MainMenuHooks({
   tabs,
   selectedTabId,
-  historicalPipelines,
   defaultDelimiter,
   showToast,
   addLog,
@@ -100,13 +97,13 @@ export function MainMenuHooks({
   setBranchProgress,
   progressHideTimerRef,
   loadCsvData,
-  updateHistoricalPipelines,
   formatDateTime,
   trackLineage,
   setShowChartPanel,
   setChartConfig,
   setChartSeries,
   setChartHeaders,
+  saveVersion,
 }: MainMenuHooksProps) {
   const getCurrentTab = useCallback(() => {
     return tabs.find((tab) => tab.id === selectedTabId) || tabs[0];
@@ -925,50 +922,6 @@ export function MainMenuHooks({
         }
       }
 
-      const currentTabName = currentTab.name;
-      const existingHistoryIndex = historicalPipelines.findIndex(
-        (h) => h.name === currentTabName,
-      );
-
-      const historicalPipeline: HistoricalPipeline = {
-        id:
-          existingHistoryIndex >= 0
-            ? historicalPipelines[existingHistoryIndex].id
-            : `history-${Date.now()}`,
-        name: currentTabName,
-        pipeline: currentPipeline.map(
-          (step) =>
-            ({
-              id: step.id,
-              commandId: step.command.id,
-              parameters: step.parameters,
-              alias: step.alias,
-              position: step.position,
-            }) as any,
-        ),
-        inputFile,
-        defaultDelimiter,
-        executedAt: formatDateTime(new Date()),
-        success: allResults.every((r) => r.success),
-        edges: edges,
-        inputPosition: currentTab.inputPosition,
-      };
-
-      let updatedHistory: HistoricalPipeline[];
-      if (existingHistoryIndex >= 0) {
-        updatedHistory = [...historicalPipelines];
-        updatedHistory[existingHistoryIndex] = historicalPipeline;
-        updatedHistory.splice(existingHistoryIndex, 1);
-        updatedHistory.unshift(historicalPipeline);
-      } else {
-        updatedHistory = [historicalPipeline, ...historicalPipelines].slice(
-          0,
-          50,
-        );
-      }
-
-      updateHistoricalPipelines(updatedHistory);
-
       if (trackLineage) {
         const headers = currentTab.headers || [];
         const rows = currentTab.data || [];
@@ -982,6 +935,12 @@ export function MainMenuHooks({
           "success",
           `All ${branches.length} branch(es) executed successfully`,
         );
+        // Auto-save version on successful execution
+        try {
+          await saveVersion(`auto-generated`);
+        } catch (versionError) {
+          addLog("warning", `Failed to auto-save version: ${versionError}`);
+        }
       }
     } catch (error) {
       addLog("error", `${error}`);
@@ -996,7 +955,6 @@ export function MainMenuHooks({
     getCurrentPipeline,
     getCurrentTab,
     defaultDelimiter,
-    historicalPipelines,
     showToast,
     addLog,
     setIsExecuting,
@@ -1005,13 +963,13 @@ export function MainMenuHooks({
     setBranchProgress,
     progressHideTimerRef,
     buildExecutionBranches,
-    updateHistoricalPipelines,
     formatDateTime,
     trackLineage,
     setShowChartPanel,
     setChartConfig,
     setChartSeries,
     setChartHeaders,
+    saveVersion,
   ]);
 
   const processChartData = useCallback(

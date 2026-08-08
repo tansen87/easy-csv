@@ -73,13 +73,12 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | 内容 | 说明 |
 |------|------|
-| `AppConfig` 结构体 | `default_delimiter`, `no_headers`, `show_execution_notification`, `history_limit`, `minimize_to_tray` |
+| `AppConfig` 结构体 | `default_delimiter`, `no_headers`, `show_execution_notification`, `minimize_to_tray` |
 | `load_config()` / `save_config()` | JSON 配置文件读写 |
 | `get_resources_dir()` | 资源目录路径(可执行文件旁) |
 | `get/set_default_delimiter` | 默认分隔符配置命令 |
 | `get/set_no_headers` | 无表头配置命令 |
 | `get/set_show_execution_notification` | 执行通知配置命令 |
-| `get/set_history_limit` | 历史记录条数上限配置命令 |
 | `get/set_minimize_to_tray` | 最小化到托盘配置命令 |
 | `get_ai_config()` / `set_ai_config()` | AI 配置读写(provider、model) |
 | `save_api_key()` / `load_api_key()` / `delete_api_key()` / `has_api_key()` | Per-provider API Key 加密存储(AES-256-GCM) |
@@ -113,7 +112,6 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | 内容 | 说明 |
 |------|------|
-| `save_history` / `load_history` | 管道执行历史 |
 | `save_recent_files` / `load_recent_files` | 最近文件列表 |
 | `load_profile_cache` / `save_profile_cache` | 数据概况缓存(LRU 淘汰,上限50条) |
 | `save_pipeline_versions` / `load_pipeline_versions` | 管道版本持久化 |
@@ -154,7 +152,6 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `get/set_default_delimiter` | config | 读写默认分隔符配置 |
 | `get/set_no_headers` | config | 读写无表头配置 |
 | `get/set_show_execution_notification` | config | 读写执行通知配置 |
-| `get/set_history_limit` | config | 读写历史记录条数上限配置 |
 | `get/set_minimize_to_tray` | config | 读写最小化到托盘配置 |
 | `get/set_ai_config` | config | 读写 AI 配置(provider/model) |
 | `save/load/delete/has_api_key` | config | Per-provider API Key 加密存储(AES-256-GCM) |
@@ -168,7 +165,6 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `clear_feedback` | ai_memory | 清除全部反馈记录 |
 | `clear_corrections` | ai_memory | 清除全部纠正规则 |
 | `set_window_title` | storage | 设置窗口标题 |
-| `save_history` / `load_history` | storage | 管道执行历史持久化 |
 | `save_recent_files` / `load_recent_files` | storage | 最近文件列表持久化 |
 | `save_pipeline_versions` / `load_pipeline_versions` | storage | 管道版本持久化 |
 | `save_lineage_data` / `load_lineage_data` | storage | 数据血缘持久化 |
@@ -215,7 +211,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 |------|------|
 | `data/commands.ts` | **所有 xan 命令定义**(3794行),58个命令,含参数、分类、中英文描述 |
 | `data/functions.ts` | xan 表达式函数定义(200+,321行),含分类(string/number/array/date/aggregation/window/web/fuzzy/io/hashing)、关键字、运算符,供表达式编辑器补全和高亮使用 |
-| `types/xan.ts` | 核心类型: `XanCommand`, `XanParameter`, `PipelineStep`, `PipelineEdge`, `LogEntry`, `PipelineTab`, `HistoricalPipeline`, `PipelineVersion`, `StepLineage`, `ColumnSchema`, `Transformation`, `StoredPipelineStep`, `ChartType`, `ChartConfig`, `ChartDataPoint`, `ChartSeries` |
+| `types/xan.ts` | 核心类型: `XanCommand`, `XanParameter`, `PipelineStep`, `PipelineEdge`, `LogEntry`, `PipelineTab`, `PipelineVersion`, `StepLineage`, `ColumnSchema`, `Transformation`, `StoredPipelineStep`, `ChartType`, `ChartConfig`, `ChartDataPoint`, `ChartSeries` |
 | `generated/help-docs.ts` | 自动生成的命令帮助文档(中英文),由 `scripts/generate-help-docs.js` 生成 |
 | `utils/format.ts` | `formatDateTime()` 时间格式化工具 |
 
@@ -406,8 +402,6 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改国际化文本 | `src/i18n/translations.ts` |
 | 修改设置项 | `src/components/setting/SettingsTabContent.tsx` |
 | 修改应用配置持久化 | `src-tauri/src/config.rs` 中的 `load_config`/`save_config` 函数 |
-| 修改历史记录 | `src/hooks/MainMenuHooks.ts` + `src-tauri/src/storage.rs` 中的 `save_history`/`load_history` |
-| 修改历史记录上限 | `src-tauri/src/config.rs` + `src-tauri/src/storage.rs` + `src/components/setting/SettingsTabContent.tsx` |
 | 修改 Batch Filter 功能 | `src/hooks/BatchFilterHooks.ts` + `src/components/dialog/BatchFilterDialog.tsx` + `src/data/commands.ts` |
 | 修改 Batch Convert 功能 | `src/hooks/BatchConvertHooks.ts` + `src/hooks/MainMenuHooks.ts` |
 | 修改 AI 面板 UI/交互 | `src/components/panel/AIPanel.tsx` |

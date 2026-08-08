@@ -211,10 +211,11 @@ export function usePipelineVersions(
   );
 
   const loadVersions = useCallback(
-    async () => {
+    async (tabId?: string) => {
+      const targetTabId = tabId || selectedTabId;
       try {
         const content = await invoke<string>("load_pipeline_versions", {
-          pipelineId: selectedTabId,
+          pipelineId: targetTabId,
         });
         const versions: PipelineVersion[] = JSON.parse(content).map(
           (v: any) => ({
@@ -225,7 +226,7 @@ export function usePipelineVersions(
 
         setTabs((prev) =>
           prev.map((tab) =>
-            tab.id === selectedTabId
+            tab.id === targetTabId
               ? {
                   ...tab,
                   versions,

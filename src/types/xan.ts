@@ -66,19 +66,6 @@ export interface PipelineTab {
   lineage?: StepLineage[];
 }
 
-export interface HistoricalPipeline {
-  id: string;
-  name: string;
-  pipeline: PipelineStep[];
-  inputFile: string;
-  defaultDelimiter: string;
-  executedAt: string;
-  success: boolean;
-  edges?: PipelineEdge[];
-  inputPosition?: { x: number; y: number };
-  lineage?: StepLineage[];
-}
-
 export interface PipelineVersion {
   id: string;
   pipelineId: string;

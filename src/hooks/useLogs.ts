@@ -14,9 +14,13 @@ export function useLogs() {
     setLogs((prev) => [...prev, newLog]);
   }, []);
 
+  const removeLog = useCallback((id: string) => {
+    setLogs((prev) => prev.filter((log) => log.id !== id));
+  }, []);
+
   const clearLogs = useCallback(() => {
     setLogs([]);
   }, []);
 
-  return { logs, addLog, clearLogs };
+  return { logs, addLog, removeLog, clearLogs };
 }

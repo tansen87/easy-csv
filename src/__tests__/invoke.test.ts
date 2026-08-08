@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import { xanCommands } from "@/data/commands";
 
 // Test all invoke call patterns from App.tsx
 
@@ -46,44 +45,6 @@ describe("App.tsx invoke call patterns", () => {
         delimiter: "\t",
         limit: 31,
       });
-    });
-  });
-
-  describe("load_history / save_history", () => {
-    it("should load history and parse JSON", async () => {
-      const historyData = JSON.stringify([
-        { id: "h1", name: "Tab1", pipeline: [], executedAt: "2024-01-01" },
-      ]);
-      mockInvoke.mockResolvedValue(historyData);
-
-      const content = await invoke<string>("load_history");
-      const history = JSON.parse(content);
-
-      expect(history).toHaveLength(1);
-      expect(history[0].id).toBe("h1");
-    });
-
-    it("should save history with limit", async () => {
-      mockInvoke.mockResolvedValue(undefined);
-
-      await invoke("save_history", {
-        history: JSON.stringify([{ id: "h1" }]),
-        limit: 50,
-      });
-
-      expect(mockInvoke).toHaveBeenCalledWith("save_history", {
-        history: expect.any(String),
-        limit: 50,
-      });
-    });
-
-    it("should handle empty history gracefully", async () => {
-      mockInvoke.mockResolvedValue("[]");
-
-      const content = await invoke<string>("load_history");
-      const history = JSON.parse(content);
-
-      expect(history).toEqual([]);
     });
   });
 
@@ -252,80 +213,17 @@ describe("App.tsx invoke call patterns", () => {
     it("should handle invoke failure for load operations", async () => {
       mockInvoke.mockRejectedValue(new Error("File not found"));
 
-      await expect(invoke("load_history")).rejects.toThrow("File not found");
+      await expect(invoke("load_recent_files")).rejects.toThrow(
+        "File not found",
+      );
     });
 
     it("should handle invoke failure for save operations", async () => {
       mockInvoke.mockRejectedValue(new Error("Permission denied"));
 
       await expect(
-        invoke("save_history", { history: "[]", limit: 100 }),
+        invoke("save_recent_files", { recent_files: "[]" }),
       ).rejects.toThrow("Permission denied");
-    });
-  });
-
-  describe("history reconstruction from stored format", () => {
-    it("should reconstruct PipelineStep from minimal commandId format", () => {
-      const storedHistory = [
-        {
-          id: "h1",
-          name: "Tab1",
-          pipeline: [
-            {
-              id: "step-1",
-              commandId: "search",
-              parameters: { select: "name" },
-            },
-          ],
-        },
-      ];
-
-      const reconstructed = storedHistory.map((item: any) => ({
-        ...item,
-        pipeline: item.pipeline
-          .map((step: any) => {
-            if (step.command) return step;
-            const command = xanCommands.find(
-              (cmd: any) => cmd.id === step.commandId,
-            );
-            if (!command) return null;
-            return {
-              id: step.id,
-              command,
-              parameters: step.parameters || {},
-              alias: step.alias,
-              position: step.position,
-            };
-          })
-          .filter(Boolean),
-      }));
-
-      expect(reconstructed[0].pipeline).toHaveLength(1);
-      expect(reconstructed[0].pipeline[0].command.id).toBe("search");
-    });
-
-    it("should skip unknown commands during reconstruction", () => {
-      const storedHistory = [
-        {
-          id: "h1",
-          pipeline: [{ id: "s1", commandId: "nonexistent", parameters: {} }],
-        },
-      ];
-
-      const reconstructed = storedHistory.map((item: any) => ({
-        ...item,
-        pipeline: item.pipeline
-          .map((step: any) => {
-            const command = xanCommands.find(
-              (cmd: any) => cmd.id === step.commandId,
-            );
-            if (!command) return null;
-            return { id: step.id, command, parameters: step.parameters || {} };
-          })
-          .filter(Boolean),
-      }));
-
-      expect(reconstructed[0].pipeline).toHaveLength(0);
     });
   });
 });
