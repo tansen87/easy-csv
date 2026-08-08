@@ -35,6 +35,7 @@ import { formatDateTime } from "@/utils/format";
 import { PipelineStep, XanCommand, PipelineEdge } from "@/types/xan";
 import { AIConfig, DEFAULT_AI_CONFIG } from "@/services/ai/types";
 import { loadAIConfig, saveAIConfig, setAIConfig } from "@/services/ai/index";
+import pkg from "../package.json";
 
 function App() {
   return <AppContent />;
@@ -85,7 +86,7 @@ function AppContent() {
   );
   const headerRef = useRef<HTMLDivElement>(null);
   const reactFlowInstanceRef = useRef<any>(null);
-  const currentVersion = "0.2.1";
+  const currentVersion = pkg.version;
 
   // Selected step
   const [selectedStep, setSelectedStep] = useState<PipelineStep | null>(null);

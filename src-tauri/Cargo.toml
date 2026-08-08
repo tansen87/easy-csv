@@ -1,6 +1,6 @@
 [package]
 name = "easy-csv"
-version = "0.2.1"
+version = "0.3.0"
 description = "Handle CSV data in a modular way"
 authors = ["tansen"]
 edition = "2024"
