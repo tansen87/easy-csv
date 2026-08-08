@@ -50,6 +50,14 @@ export const ChartPanel = React.memo(function ChartPanel({
   const rafRef = useRef<number | null>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [heatTooltip, setHeatTooltip] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    xVal: string;
+    yVal: string;
+    value: number;
+  }>({ visible: false, x: 0, y: 0, xVal: "", yVal: "", value: 0 });
 
   useEffect(() => {
     setHiddenSeries(new Set());
@@ -704,7 +712,8 @@ export const ChartPanel = React.memo(function ChartPanel({
             attempts < maxAttempts &&
             placedWords.some(
               (placed) =>
-                Math.abs(placed.x - x) < 60 && Math.abs(placed.y - y) < fontSize,
+                Math.abs(placed.x - x) < 60 &&
+                Math.abs(placed.y - y) < fontSize,
             )
           );
 
@@ -756,6 +765,204 @@ export const ChartPanel = React.memo(function ChartPanel({
               </text>
             ))}
           </svg>
+        </div>
+      );
+    })();
+
+    const heatmapContent = (() => {
+      const heatData = series[0]?.data || [];
+
+      if (heatData.length === 0) {
+        return <div>{t.noData}</div>;
+      }
+
+      const yCol = config.y || "count";
+      const xValues = Array.from(
+        new Set(heatData.map((d) => String(d[config.x]))),
+      );
+      const yValues = Array.from(new Set(heatData.map((d) => String(d[yCol]))));
+      const maxValue = Math.max(
+        ...heatData.map((d) => Number(d.value) || 0),
+        1,
+      );
+
+      const cellWidth = Math.min(
+        80,
+        (Number(chartWidth) - 100) / xValues.length,
+      );
+      const cellHeight = Math.min(
+        40,
+        (Number(chartHeight) - 100) / yValues.length,
+      );
+
+      const getHeatColor = (value: number) => {
+        const ratio = value / maxValue;
+        if (ratio < 0.25)
+          return `rgb(${Math.round(59 + ratio * 4 * 76)}, ${Math.round(130 - ratio * 4 * 60)}, ${Math.round(246 - ratio * 4 * 100)})`;
+        if (ratio < 0.5)
+          return `rgb(${Math.round(135 + (ratio - 0.25) * 4 * 120)}, ${Math.round(70 + (ratio - 0.25) * 4 * 130)}, ${Math.round(146 - (ratio - 0.25) * 4 * 100)})`;
+        if (ratio < 0.75)
+          return `rgb(${Math.round(255 - (ratio - 0.5) * 4 * 40)}, ${Math.round(200 - (ratio - 0.5) * 4 * 80)}, ${Math.round(46 + (ratio - 0.5) * 4 * 100)})`;
+        return `rgb(${Math.round(215 - (ratio - 0.75) * 4 * 80)}, ${Math.round(48 + (ratio - 0.75) * 4 * 30)}, ${Math.round(39)})`;
+      };
+
+      const handleMouseEnter = (
+        e: React.MouseEvent,
+        xVal: string,
+        yVal: string,
+        value: number,
+      ) => {
+        const target = e.currentTarget as HTMLElement;
+        const rect = target.getBoundingClientRect();
+        const panelRect = panelRef.current?.getBoundingClientRect();
+        if (panelRef.current) {
+          setHeatTooltip({
+            visible: true,
+            x: rect.left - (panelRect?.left || 0) + rect.width / 2,
+            y: rect.bottom - (panelRect?.top || 0) + 10,
+            xVal,
+            yVal,
+            value,
+          });
+        }
+      };
+
+      const handleMouseLeave = () => {
+        setHeatTooltip((prev) => ({ ...prev, visible: false }));
+      };
+
+      return (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            overflow: "auto",
+            padding: "10px",
+            position: "relative",
+          }}
+        >
+          {heatTooltip.visible && (
+            <div
+              style={{
+                position: "absolute",
+                left: heatTooltip.x,
+                top: heatTooltip.y,
+                transform: "translate(-50%, -75%)",
+                backgroundColor: tooltipBgColor,
+                border: `1px solid ${tooltipBorderColor}`,
+                borderRadius: "4px",
+                padding: "6px 10px",
+                fontSize: "12px",
+                color: textColor,
+                whiteSpace: "nowrap",
+                zIndex: 100,
+                pointerEvents: "none",
+              }}
+            >
+              <div style={{ fontWeight: "bold" }}>
+                {heatTooltip.xVal} vs {heatTooltip.yVal}
+              </div>
+              <div>
+                {config.x}: {heatTooltip.xVal}
+              </div>
+              <div>
+                {yCol}: {heatTooltip.yVal}
+              </div>
+              <div>Count: {heatTooltip.value}</div>
+            </div>
+          )}
+          <div style={{ display: "flex", alignItems: "flex-start" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                marginRight: "8px",
+                paddingTop: "30px",
+              }}
+            >
+              {yValues.map((yVal) => (
+                <div
+                  key={yVal}
+                  style={{
+                    height: cellHeight,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    paddingRight: "4px",
+                    fontSize: "10px",
+                    color: textColor,
+                  }}
+                >
+                  {yVal}
+                </div>
+              ))}
+            </div>
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  marginBottom: "4px",
+                }}
+              >
+                {xValues.map((xVal) => (
+                  <div
+                    key={xVal}
+                    style={{
+                      width: cellWidth,
+                      textAlign: "center",
+                      fontSize: "10px",
+                      color: textColor,
+                      transform: "rotate(-45deg)",
+                      transformOrigin: "center",
+                      height: "30px",
+                    }}
+                  >
+                    {xVal}
+                  </div>
+                ))}
+              </div>
+              {yValues.map((yVal) => (
+                <div key={yVal} style={{ display: "flex" }}>
+                  {xValues.map((xVal) => {
+                    const cell = heatData.find(
+                      (d) =>
+                        String(d[config.x]) === xVal &&
+                        String(d[yCol]) === yVal,
+                    );
+                    const value = cell ? Number(cell.value) || 0 : 0;
+                    const color = getHeatColor(value);
+                    const isHidden = hiddenSeries.has(`${xVal}|${yVal}`);
+
+                    return (
+                      <div
+                        key={`${xVal}|${yVal}`}
+                        style={{
+                          width: cellWidth,
+                          height: cellHeight,
+                          backgroundColor: isHidden ? "#e5e7eb" : color,
+                          border: "1px solid #fff",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "9px",
+                          color: value / maxValue > 0.5 ? "#fff" : "#000",
+                          cursor: "pointer",
+                          opacity: isHidden ? 0.3 : 1,
+                        }}
+                        onMouseEnter={(e) =>
+                          handleMouseEnter(e, xVal, yVal, value)
+                        }
+                        onMouseLeave={handleMouseLeave}
+                        onClick={() => handleLegendClick(`${xVal}|${yVal}`)}
+                      >
+                        {value > 0 ? value.toFixed(1) : ""}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       );
     })();
@@ -996,6 +1203,9 @@ export const ChartPanel = React.memo(function ChartPanel({
         break;
       case "wordcloud":
         content = wordcloudContent;
+        break;
+      case "heatmap":
+        content = heatmapContent;
         break;
       default:
         return <div>{t.noData}</div>;

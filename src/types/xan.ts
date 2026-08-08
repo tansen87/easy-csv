@@ -142,7 +142,8 @@ export type ChartType =
   | "bar"
   | "histogram"
   | "pie"
-  | "wordcloud";
+  | "wordcloud"
+  | "heatmap";
 
 export interface ChartConfig {
   chartType: ChartType;

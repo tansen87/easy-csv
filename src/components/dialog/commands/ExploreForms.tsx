@@ -880,6 +880,7 @@ export function ChartForm(props: CommandFormProps) {
               { label: "histogram", value: "histogram" },
               { label: "pie", value: "pie" },
               { label: "wordcloud", value: "wordcloud" },
+              { label: "heatmap", value: "heatmap" },
             ]}
             placeholder="Select chart type..."
             size="md"

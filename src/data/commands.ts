@@ -669,9 +669,9 @@ export const xanCommands: XanCommand[] = [
         name: "chart-type",
         type: "string",
         description:
-          'Type of chart to create. Can be "line", "scatter", "bar", "histogram", "pie", "wordcloud"',
+          'Type of chart to create. Can be "line", "scatter", "bar", "histogram", "pie", "wordcloud", "heatmap"',
         descriptionCn:
-          '要创建的图表类型,可以是 "line"、"scatter"、"bar", "histogram", "pie", "wordcloud"',
+          '要创建的图表类型,可以是 "line"、"scatter"、"bar", "histogram", "pie", "wordcloud", "heatmap"',
         required: true,
         default: "line",
       },

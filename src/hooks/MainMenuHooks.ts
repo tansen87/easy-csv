@@ -1148,6 +1148,50 @@ export function MainMenuHooks({
         ];
       }
 
+      if (config.chartType === "heatmap") {
+        const yCol = yIndex >= 0 ? headers[yIndex] : "count";
+        const xValues = new Set<string>();
+        const yValues = new Set<string>();
+        const valueMap = new Map<string, number>();
+
+        data.forEach((row) => {
+          const xVal = String(row[xIndex] || "");
+          const yVal = yIndex >= 0 ? String(row[yIndex] || "") : "";
+
+          xValues.add(xVal);
+          yValues.add(yVal);
+
+          const key = `${xVal}|${yVal}`;
+          valueMap.set(key, (valueMap.get(key) || 0) + 1);
+        });
+
+        const xArray = Array.from(xValues);
+        const yArray = Array.from(yValues);
+        const maxValue = Math.max(...Array.from(valueMap.values()), 1);
+
+        const heatData: ChartDataPoint[] = [];
+        xArray.forEach((xVal) => {
+          yArray.forEach((yVal) => {
+            const key = `${xVal}|${yVal}`;
+            const value = valueMap.get(key) || 0;
+            heatData.push({
+              [config.x]: xVal,
+              [yCol]: yVal,
+              value,
+              normalizedValue: value / maxValue,
+            });
+          });
+        });
+
+        return [
+          {
+            name: `${config.x} vs ${yCol}`,
+            data: heatData,
+            color: config.color || "#8884d8",
+          },
+        ];
+      }
+
       if (categoryIndex >= 0) {
         // Group by category
         const categories = new Map<string, ChartDataPoint[]>();
