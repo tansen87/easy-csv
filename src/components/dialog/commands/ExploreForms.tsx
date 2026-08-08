@@ -863,6 +863,7 @@ export function PlotForm(props: CommandFormProps) {
 export function ChartForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
   const { language } = useLanguage();
+  const chartType = (commandDialog.params["chart-type"] as string) || "line";
   return (
     <CommandFormWrapper {...props} scrollHeight="26vh">
       <div className="grid grid-cols-2 gap-2">
@@ -900,37 +901,77 @@ export function ChartForm(props: CommandFormProps) {
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-sm font-medium">y column</label>
-          <input
-            type="text"
-            value={commandDialog.params.y ?? ""}
-            onChange={(e) =>
-              updateParam(commandDialog, setCommandDialog, "y", e.target.value)
-            }
-            placeholder={getParameterDescription("chart", "y", language)}
-            className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-          />
+      {(chartType === "line" ||
+        chartType === "scatter" ||
+        chartType === "bar" ||
+        chartType === "histogram" ||
+        chartType === "wordcloud" ||
+        chartType === "heatmap") && (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-sm font-medium">y column</label>
+            <input
+              type="text"
+              value={commandDialog.params.y ?? ""}
+              onChange={(e) =>
+                updateParam(
+                  commandDialog,
+                  setCommandDialog,
+                  "y",
+                  e.target.value,
+                )
+              }
+              placeholder={getParameterDescription("chart", "y", language)}
+              className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+            />
+          </div>
+          {chartType !== "histogram" && (
+            <div>
+              <label className="text-sm font-medium">category</label>
+              <input
+                type="text"
+                value={commandDialog.params.category ?? ""}
+                onChange={(e) =>
+                  updateParam(
+                    commandDialog,
+                    setCommandDialog,
+                    "category",
+                    e.target.value,
+                  )
+                }
+                placeholder={getParameterDescription(
+                  "chart",
+                  "category",
+                  language,
+                )}
+                className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+              />
+            </div>
+          )}
         </div>
-        <div>
-          <label className="text-sm font-medium">category</label>
-          <input
-            type="text"
-            value={commandDialog.params.category ?? ""}
-            onChange={(e) =>
-              updateParam(
-                commandDialog,
-                setCommandDialog,
-                "category",
-                e.target.value,
-              )
-            }
-            placeholder={getParameterDescription("chart", "category", language)}
-            className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-          />
+      )}
+      {chartType === "histogram" && (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-sm font-medium">bins (histogram)</label>
+            <input
+              type="number"
+              min={1}
+              value={commandDialog.params.bins ?? 10}
+              onChange={(e) =>
+                updateParam(
+                  commandDialog,
+                  setCommandDialog,
+                  "bins",
+                  parseInt(e.target.value) || 10,
+                )
+              }
+              placeholder={getParameterDescription("chart", "bins", language)}
+              className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+            />
+          </div>
         </div>
-      </div>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="text-sm font-medium">title</label>
@@ -949,61 +990,55 @@ export function ChartForm(props: CommandFormProps) {
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
-        <div>
-          <label className="text-sm font-medium">bins (histogram)</label>
-          <input
-            type="number"
-            min={1}
-            value={commandDialog.params.bins ?? 10}
-            onChange={(e) =>
-              updateParam(
-                commandDialog,
-                setCommandDialog,
-                "bins",
-                parseInt(e.target.value) || 10,
-              )
-            }
-            placeholder={getParameterDescription("chart", "bins", language)}
-            className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-sm font-medium">x-label</label>
-          <input
-            type="text"
-            value={commandDialog.params["x-label"] ?? ""}
-            onChange={(e) =>
-              updateParam(
-                commandDialog,
-                setCommandDialog,
+        {chartType !== "pie" && chartType !== "wordcloud" && (
+          <div>
+            <label className="text-sm font-medium">x-label</label>
+            <input
+              type="text"
+              value={commandDialog.params["x-label"] ?? ""}
+              onChange={(e) =>
+                updateParam(
+                  commandDialog,
+                  setCommandDialog,
+                  "x-label",
+                  e.target.value,
+                )
+              }
+              placeholder={getParameterDescription(
+                "chart",
                 "x-label",
-                e.target.value,
-              )
-            }
-            placeholder={getParameterDescription("chart", "x-label", language)}
-            className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">y-label</label>
-          <input
-            type="text"
-            value={commandDialog.params["y-label"] ?? ""}
-            onChange={(e) =>
-              updateParam(
-                commandDialog,
-                setCommandDialog,
-                "y-label",
-                e.target.value,
-              )
-            }
-            placeholder={getParameterDescription("chart", "y-label", language)}
-            className="w-full h-8 px-3 text-sm border rounded-md bg-background"
-          />
-        </div>
+                language,
+              )}
+              className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+            />
+          </div>
+        )}
       </div>
+      {chartType !== "pie" && chartType !== "wordcloud" && (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-sm font-medium">y-label</label>
+            <input
+              type="text"
+              value={commandDialog.params["y-label"] ?? ""}
+              onChange={(e) =>
+                updateParam(
+                  commandDialog,
+                  setCommandDialog,
+                  "y-label",
+                  e.target.value,
+                )
+              }
+              placeholder={getParameterDescription(
+                "chart",
+                "y-label",
+                language,
+              )}
+              className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+            />
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-2">
         <div>
           <label className="text-sm font-medium">color</label>
