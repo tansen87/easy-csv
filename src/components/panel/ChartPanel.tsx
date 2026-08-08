@@ -631,6 +631,135 @@ export const ChartPanel = React.memo(function ChartPanel({
       </BarChart>
     );
 
+    const wordcloudContent = (() => {
+      const wordColors = [
+        "#8884d8",
+        "#82ca9d",
+        "#ffc658",
+        "#ff7300",
+        "#0088fe",
+        "#00C49F",
+        "#FFBB28",
+        "#FF8042",
+        "#313695",
+        "#4575b4",
+        "#74add1",
+        "#abd9e9",
+        "#e0f3f8",
+        "#fee090",
+        "#fdae61",
+        "#f46d43",
+        "#d73027",
+        "#a50026",
+      ];
+
+      const wordData = (series[0]?.data || []).filter(
+        (d) => !hiddenSeries.has(String(d.text)),
+      );
+
+      if (wordData.length === 0) {
+        return <div>{t.noData}</div>;
+      }
+
+      const maxValue = Math.max(...wordData.map((d) => Number(d.value) || 1));
+      const minFontSize = 12;
+      const maxFontSize = 72;
+
+      const getRandomAngle = () => {
+        const angles = [0, 0, 0, 90, -90];
+        return angles[Math.floor(Math.random() * angles.length)];
+      };
+
+      const layoutWords = () => {
+        const placedWords: Array<{
+          text: string;
+          x: number;
+          y: number;
+          fontSize: number;
+          color: string;
+          angle: number;
+        }> = [];
+
+        const containerWidth = Number(chartWidth) - 40;
+        const containerHeight = Number(chartHeight) - 40;
+
+        wordData.forEach((d, i) => {
+          const value = Number(d.value) || 1;
+          const normalizedSize = value / maxValue;
+          const fontSize =
+            minFontSize + normalizedSize * (maxFontSize - minFontSize);
+          const color = wordColors[i % wordColors.length];
+          const angle = getRandomAngle();
+
+          let x: number;
+          let y: number;
+          let attempts = 0;
+          const maxAttempts = 50;
+
+          do {
+            x = 20 + Math.random() * (containerWidth - 100);
+            y = 20 + Math.random() * (containerHeight - 30);
+            attempts++;
+          } while (
+            attempts < maxAttempts &&
+            placedWords.some(
+              (placed) =>
+                Math.abs(placed.x - x) < 60 && Math.abs(placed.y - y) < fontSize,
+            )
+          );
+
+          placedWords.push({
+            text: String(d.text),
+            x,
+            y,
+            fontSize,
+            color,
+            angle,
+          });
+        });
+
+        return placedWords;
+      };
+
+      const words = layoutWords();
+
+      return (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          <svg width="100%" height="100%">
+            {words.map((word, i) => (
+              <text
+                key={`word-${i}`}
+                x={word.x}
+                y={word.y}
+                fill={word.color}
+                fontSize={word.fontSize}
+                fontWeight={word.fontSize > 30 ? "bold" : "normal"}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                transform={`rotate(${word.angle}, ${word.x}, ${word.y})`}
+                style={{ cursor: "pointer", userSelect: "none" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = "0.7";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = "1";
+                }}
+              >
+                {word.text}
+              </text>
+            ))}
+          </svg>
+        </div>
+      );
+    })();
+
     const pieContent = (() => {
       const pieColors = [
         "#8884d8",
@@ -864,6 +993,9 @@ export const ChartPanel = React.memo(function ChartPanel({
         break;
       case "pie":
         content = pieContent;
+        break;
+      case "wordcloud":
+        content = wordcloudContent;
         break;
       default:
         return <div>{t.noData}</div>;

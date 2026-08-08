@@ -1110,6 +1110,44 @@ export function MainMenuHooks({
         ];
       }
 
+      if (config.chartType === "wordcloud") {
+        const wordCounts = new Map<string, number>();
+
+        data.forEach((row) => {
+          const text = row[xIndex] || "";
+          const words = text.toLowerCase().split(/\s+/).filter(Boolean);
+          const weight = yIndex >= 0 ? parseFloat(row[yIndex]) || 1 : 1;
+
+          words.forEach((word) => {
+            const cleanWord = word.replace(/[^a-z0-9\u4e00-\u9fff]/g, "");
+            if (cleanWord) {
+              wordCounts.set(
+                cleanWord,
+                (wordCounts.get(cleanWord) || 0) + weight,
+              );
+            }
+          });
+        });
+
+        const maxCount = Math.max(...Array.from(wordCounts.values()), 1);
+        const wordData: ChartDataPoint[] = Array.from(wordCounts.entries())
+          .map(([word, count]) => ({
+            text: word,
+            value: count,
+            normalizedValue: count / maxCount,
+          }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 200);
+
+        return [
+          {
+            name: config.x,
+            data: wordData,
+            color: config.color || "#8884d8",
+          },
+        ];
+      }
+
       if (categoryIndex >= 0) {
         // Group by category
         const categories = new Map<string, ChartDataPoint[]>();

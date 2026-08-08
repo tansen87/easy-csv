@@ -867,7 +867,7 @@ export function ChartForm(props: CommandFormProps) {
     <CommandFormWrapper {...props} scrollHeight="26vh">
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-sm font-medium">chart-type *</label>
+          <label className="text-sm font-medium">chart-type</label>
           <SearchableSelect
             value={commandDialog.params["chart-type"] ?? "line"}
             onChange={(value) =>
@@ -879,6 +879,7 @@ export function ChartForm(props: CommandFormProps) {
               { label: "bar", value: "bar" },
               { label: "histogram", value: "histogram" },
               { label: "pie", value: "pie" },
+              { label: "wordcloud", value: "wordcloud" },
             ]}
             placeholder="Select chart type..."
             size="md"
