@@ -213,7 +213,7 @@ export function VersionControlPanel({
                         e.stopPropagation();
                         handleStartEditTag(version.id);
                       }}
-                      className="h-5 w-5 flex items-center justify-center hover:bg-muted rounded transition-colors"
+                      className="h-5 w-5 flex items-center justify-center hover:bg-foreground/10 rounded transition-colors"
                     >
                       <Tag className="h-3 w-3" />
                     </button>
@@ -222,7 +222,7 @@ export function VersionControlPanel({
                         e.stopPropagation();
                         onRestoreVersion(version.id);
                       }}
-                      className="h-5 w-5 flex items-center justify-center hover:bg-muted rounded transition-colors"
+                      className="h-5 w-5 flex items-center justify-center hover:bg-foreground/10 rounded transition-colors"
                     >
                       <RotateCcw className="h-3 w-3" />
                     </button>

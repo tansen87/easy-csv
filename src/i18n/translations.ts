@@ -210,7 +210,7 @@ export const translations: Record<Language, Translations> = {
     dagView: "Graph",
     timelineView: "Timeline",
     fullscreen: "Fullscreen",
-    exitFullscreen: "Exit Fullscreen (ESC)",
+    exitFullscreen: "Exit Fullscreen",
     inputColumns: "Input Columns",
     outputColumns: "Output Columns",
     lineageTransformations: "Transformations",
@@ -338,7 +338,7 @@ export const translations: Record<Language, Translations> = {
     maxLen: "Max Len",
 
     // AIPanel
-    aiPanel: "AI Assistant",
+    aiPanel: "AI",
     aiPlaceholder: "Describe operations (Ctrl+Enter to send)...",
     aiWelcomeMessage: "Easy CSV AI Assistant",
     aiThinking: "Thinking...",
@@ -396,7 +396,7 @@ export const translations: Record<Language, Translations> = {
     columnLineage: "列级血缘",
     dagView: "图形",
     fullscreen: "全屏",
-    exitFullscreen: "退出全屏(ESC)",
+    exitFullscreen: "退出全屏",
     timelineView: "时间线",
     inputColumns: "输入列",
     outputColumns: "输出列",
@@ -522,7 +522,7 @@ export const translations: Record<Language, Translations> = {
     maxLen: "最大长度",
 
     // AIPanel
-    aiPanel: "AI 助手",
+    aiPanel: "AI",
     aiPlaceholder: "描述操作 (Ctrl+Enter 发送)...",
     aiWelcomeMessage: "Easy CSV AI助手",
     aiThinking: "思考中...",

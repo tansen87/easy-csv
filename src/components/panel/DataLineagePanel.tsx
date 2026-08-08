@@ -139,7 +139,7 @@ export function DataLineagePanel({
                 value={columnSearch}
                 onChange={(e) => setColumnSearch(e.target.value)}
                 placeholder={t.searchColumns}
-                className="h-8 w-48 pl-7 pr-2 text-xs border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
+                className="h-8 w-48 pl-7 pr-2 text-xs border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
             </div>
             <ScrollArea className="h-8 max-w-[400px]">
@@ -271,7 +271,7 @@ export function DataLineagePanel({
             value={columnSearch}
             onChange={(e) => setColumnSearch(e.target.value)}
             placeholder={t.searchColumns}
-            className="w-full h-8 pl-7 pr-2 text-xs border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
+            className="w-full h-8 pl-7 pr-2 text-xs border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
           />
         </div>
         <ScrollArea className="h-[120px] mt-2">
