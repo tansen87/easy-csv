@@ -2,7 +2,7 @@ import { X, Maximize2, Minimize2, Download } from "lucide-react";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
-import { ChartConfig, ChartSeries } from "@/types/xan";
+import { ChartConfig, ChartDataPoint, ChartSeries } from "@/types/xan";
 import { useLanguage } from "@/i18n";
 import { useTheme } from "@/components/setting/ThemeProvider";
 import {
@@ -16,7 +16,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip as RechartsTooltip,
-  Legend,
   ResponsiveContainer,
   Cell,
 } from "recharts";
@@ -37,6 +36,7 @@ export const ChartPanel = React.memo(function ChartPanel({
   const { t } = useLanguage();
   const { theme } = useTheme();
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
+  const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
   const panelRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
   const dragStateRef = useRef({
@@ -49,6 +49,10 @@ export const ChartPanel = React.memo(function ChartPanel({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
+  useEffect(() => {
+    setHiddenSeries(new Set());
+  }, [series]);
+
   const isDark =
     theme === "dark" ||
     (theme === "system" &&
@@ -58,9 +62,20 @@ export const ChartPanel = React.memo(function ChartPanel({
   const tooltipBgColor = isDark ? "#1f2937" : "#ffffff";
   const tooltipBorderColor = isDark ? "#374151" : "#e5e7eb";
 
+  const handleLegendClick = useCallback((name: string) => {
+    setHiddenSeries((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  }, []);
+
   const handleExport = useCallback(async () => {
     if (!panelRef.current) return;
-    // Find the recharts SVG specifically (not the icon SVGs)
     const chartContainer = panelRef.current.querySelector(".recharts-wrapper");
     const svg =
       chartContainer?.querySelector("svg") ||
@@ -71,7 +86,6 @@ export const ChartPanel = React.memo(function ChartPanel({
       const { save } = await import("@tauri-apps/plugin-dialog");
       const { writeFile } = await import("@tauri-apps/plugin-fs");
 
-      // Clone the SVG and add background color
       const clonedSvg = svg.cloneNode(true) as SVGSVGElement;
       const bgRect = document.createElementNS(
         "http://www.w3.org/2000/svg",
@@ -186,6 +200,8 @@ export const ChartPanel = React.memo(function ChartPanel({
 
   if (!isVisible || !config) return null;
 
+  const hasMultipleSeries = series.length > 1;
+
   const renderChart = () => {
     const chartWidth = isMaximized
       ? containerSize.width || "100%"
@@ -196,176 +212,365 @@ export const ChartPanel = React.memo(function ChartPanel({
 
     const commonMargin = { top: 20, right: 30, left: 20, bottom: 20 };
 
-    const lineContent = (
-      <LineChart data={series[0]?.data || []} margin={commonMargin}>
-        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-        <XAxis
-          dataKey={config.x}
-          tick={{ fill: textColor }}
-          stroke={textColor}
-          label={
-            config.xLabel
-              ? {
-                  value: config.xLabel,
-                  position: "bottom",
-                  offset: 0,
-                  fill: textColor,
-                }
-              : undefined
-          }
-        />
-        <YAxis
-          tick={{ fill: textColor }}
-          stroke={textColor}
-          label={
-            config.yLabel
-              ? {
-                  value: config.yLabel,
-                  angle: -90,
-                  position: "insideLeft",
-                  fill: textColor,
-                }
-              : undefined
-          }
-        />
-        <RechartsTooltip
-          contentStyle={{
-            backgroundColor: tooltipBgColor,
-            borderColor: tooltipBorderColor,
-          }}
-        />
-        <Legend
-          verticalAlign="top"
-          align="right"
-          wrapperStyle={{ color: textColor }}
-        />
-        {series.map((s) => (
+    const lineContent = (() => {
+      if (hasMultipleSeries) {
+        const mergedData = new Map<string, ChartDataPoint>();
+        series.forEach((s) => {
+          s.data.forEach((point) => {
+            const xValue = String(point[config.x]);
+            if (!mergedData.has(xValue)) {
+              mergedData.set(xValue, { [config.x]: point[config.x] });
+            }
+            const existingPoint = mergedData.get(xValue)!;
+            existingPoint[s.name] = point[config.y || config.x];
+          });
+        });
+
+        const chartData = Array.from(mergedData.values());
+
+        return (
+          <LineChart data={chartData} margin={commonMargin}>
+            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+            <XAxis
+              dataKey={config.x}
+              tick={{ fill: textColor }}
+              stroke={textColor}
+              label={
+                config.xLabel
+                  ? {
+                      value: config.xLabel,
+                      position: "bottom",
+                      offset: 0,
+                      fill: textColor,
+                    }
+                  : undefined
+              }
+            />
+            <YAxis
+              tick={{ fill: textColor }}
+              stroke={textColor}
+              label={
+                config.yLabel
+                  ? {
+                      value: config.yLabel,
+                      angle: -90,
+                      position: "insideLeft",
+                      fill: textColor,
+                    }
+                  : undefined
+              }
+            />
+            <RechartsTooltip
+              contentStyle={{
+                backgroundColor: tooltipBgColor,
+                borderColor: tooltipBorderColor,
+              }}
+            />
+            {series.map((s) => {
+              const isHidden = hiddenSeries.has(s.name);
+              return (
+                <Line
+                  key={s.name}
+                  type="monotone"
+                  dataKey={s.name}
+                  name={s.name}
+                  stroke={isHidden ? "transparent" : s.color}
+                  dot={isHidden ? false : { fill: s.color }}
+                  activeDot={isHidden ? false : { r: 8 }}
+                />
+              );
+            })}
+          </LineChart>
+        );
+      }
+
+      return (
+        <LineChart data={series[0]?.data || []} margin={commonMargin}>
+          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+          <XAxis
+            dataKey={config.x}
+            tick={{ fill: textColor }}
+            stroke={textColor}
+            label={
+              config.xLabel
+                ? {
+                    value: config.xLabel,
+                    position: "bottom",
+                    offset: 0,
+                    fill: textColor,
+                  }
+                : undefined
+            }
+          />
+          <YAxis
+            tick={{ fill: textColor }}
+            stroke={textColor}
+            label={
+              config.yLabel
+                ? {
+                    value: config.yLabel,
+                    angle: -90,
+                    position: "insideLeft",
+                    fill: textColor,
+                  }
+                : undefined
+            }
+          />
+          <RechartsTooltip
+            contentStyle={{
+              backgroundColor: tooltipBgColor,
+              borderColor: tooltipBorderColor,
+            }}
+          />
           <Line
-            key={s.name}
             type="monotone"
             dataKey={config.y || config.x}
-            name={s.name}
-            stroke={s.color}
-            dot={{ fill: s.color }}
+            name={series[0]?.name || config.y || config.x}
+            stroke={series[0]?.color || config.color}
+            dot={{ fill: series[0]?.color || config.color }}
             activeDot={{ r: 8 }}
           />
-        ))}
-      </LineChart>
-    );
+        </LineChart>
+      );
+    })();
 
-    const scatterContent = (
-      <ScatterChart margin={commonMargin}>
-        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-        <XAxis
-          dataKey={config.x}
-          tick={{ fill: textColor }}
-          stroke={textColor}
-          label={
-            config.xLabel
-              ? {
-                  value: config.xLabel,
-                  position: "bottom",
-                  offset: 0,
-                  fill: textColor,
-                }
-              : undefined
-          }
-        />
-        <YAxis
-          dataKey={config.y}
-          tick={{ fill: textColor }}
-          stroke={textColor}
-          label={
-            config.yLabel
-              ? {
-                  value: config.yLabel,
-                  angle: -90,
-                  position: "insideLeft",
-                  fill: textColor,
-                }
-              : undefined
-          }
-        />
-        <RechartsTooltip
-          contentStyle={{
-            backgroundColor: tooltipBgColor,
-            borderColor: tooltipBorderColor,
-          }}
-        />
-        <Legend
-          verticalAlign="top"
-          align="right"
-          wrapperStyle={{ color: textColor }}
-        />
-        {series.map((s) => (
-          <Scatter
-            key={s.name}
-            name={s.name}
-            data={s.data}
-            fill={s.color}
-            stroke={s.color}
+    const scatterContent = (() => {
+      if (hasMultipleSeries) {
+        const xKey = config.x;
+        const yKey = config.y || config.x;
+
+        return (
+          <ScatterChart margin={commonMargin}>
+            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+            <XAxis
+              dataKey={xKey}
+              tick={{ fill: textColor }}
+              stroke={textColor}
+              label={
+                config.xLabel
+                  ? {
+                      value: config.xLabel,
+                      position: "bottom",
+                      offset: 0,
+                      fill: textColor,
+                    }
+                  : undefined
+              }
+            />
+            <YAxis
+              dataKey={yKey}
+              tick={{ fill: textColor }}
+              stroke={textColor}
+              label={
+                config.yLabel
+                  ? {
+                      value: config.yLabel,
+                      angle: -90,
+                      position: "insideLeft",
+                      fill: textColor,
+                    }
+                  : undefined
+              }
+            />
+            <RechartsTooltip
+              contentStyle={{
+                backgroundColor: tooltipBgColor,
+                borderColor: tooltipBorderColor,
+              }}
+            />
+            {series.map((s) => {
+              const isHidden = hiddenSeries.has(s.name);
+              return (
+                <Scatter
+                  key={s.name}
+                  name={s.name}
+                  data={s.data.map((point) => ({
+                    [xKey]: point[xKey],
+                    [yKey]: point[yKey],
+                  }))}
+                  fill={isHidden ? "transparent" : s.color}
+                  stroke={isHidden ? "transparent" : s.color}
+                />
+              );
+            })}
+          </ScatterChart>
+        );
+      }
+
+      return (
+        <ScatterChart margin={commonMargin}>
+          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+          <XAxis
+            dataKey={config.x}
+            tick={{ fill: textColor }}
+            stroke={textColor}
+            label={
+              config.xLabel
+                ? {
+                    value: config.xLabel,
+                    position: "bottom",
+                    offset: 0,
+                    fill: textColor,
+                  }
+                : undefined
+            }
           />
-        ))}
-      </ScatterChart>
-    );
-
-    const barContent = (
-      <BarChart data={series[0]?.data || []} margin={commonMargin}>
-        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-        <XAxis
-          dataKey={config.x}
-          tick={{ fill: textColor }}
-          stroke={textColor}
-          label={
-            config.xLabel
-              ? {
-                  value: config.xLabel,
-                  position: "bottom",
-                  offset: 0,
-                  fill: textColor,
-                }
-              : undefined
-          }
-        />
-        <YAxis
-          tick={{ fill: textColor }}
-          stroke={textColor}
-          label={
-            config.yLabel
-              ? {
-                  value: config.yLabel,
-                  angle: -90,
-                  position: "insideLeft",
-                  fill: textColor,
-                }
-              : undefined
-          }
-        />
-        <RechartsTooltip
-          contentStyle={{
-            backgroundColor: tooltipBgColor,
-            borderColor: tooltipBorderColor,
-          }}
-        />
-        <Legend
-          verticalAlign="top"
-          align="right"
-          wrapperStyle={{ color: textColor }}
-        />
-        <Bar
-          dataKey={config.y || "count"}
-          name={series[0]?.name || config.y || "count"}
-          fill={config.color}
-        >
-          {series[0]?.data.map((_entry, index) => (
-            <Cell
-              key={`cell-${index}`}
-              fill={series[0]?.color || config.color}
+          <YAxis
+            dataKey={config.y}
+            tick={{ fill: textColor }}
+            stroke={textColor}
+            label={
+              config.yLabel
+                ? {
+                    value: config.yLabel,
+                    angle: -90,
+                    position: "insideLeft",
+                    fill: textColor,
+                  }
+                : undefined
+            }
+          />
+          <RechartsTooltip
+            contentStyle={{
+              backgroundColor: tooltipBgColor,
+              borderColor: tooltipBorderColor,
+            }}
+          />
+          {series.map((s) => (
+            <Scatter
+              key={s.name}
+              name={s.name}
+              data={s.data}
+              fill={s.color}
+              stroke={s.color}
             />
           ))}
-        </Bar>
-      </BarChart>
-    );
+        </ScatterChart>
+      );
+    })();
+
+    const barContent = (() => {
+      if (hasMultipleSeries) {
+        const mergedData = new Map<string, ChartDataPoint>();
+        series.forEach((s) => {
+          s.data.forEach((point) => {
+            const xValue = String(point[config.x]);
+            if (!mergedData.has(xValue)) {
+              mergedData.set(xValue, { [config.x]: point[config.x] });
+            }
+            const existingPoint = mergedData.get(xValue)!;
+            existingPoint[s.name] = point[config.y || "count"];
+          });
+        });
+
+        const chartData = Array.from(mergedData.values());
+
+        return (
+          <BarChart data={chartData} margin={commonMargin}>
+            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+            <XAxis
+              dataKey={config.x}
+              tick={{ fill: textColor }}
+              stroke={textColor}
+              label={
+                config.xLabel
+                  ? {
+                      value: config.xLabel,
+                      position: "bottom",
+                      offset: 0,
+                      fill: textColor,
+                    }
+                  : undefined
+              }
+            />
+            <YAxis
+              tick={{ fill: textColor }}
+              stroke={textColor}
+              label={
+                config.yLabel
+                  ? {
+                      value: config.yLabel,
+                      angle: -90,
+                      position: "insideLeft",
+                      fill: textColor,
+                    }
+                  : undefined
+              }
+            />
+            <RechartsTooltip
+              contentStyle={{
+                backgroundColor: tooltipBgColor,
+                borderColor: tooltipBorderColor,
+              }}
+            />
+            {series.map((s) => {
+              const isHidden = hiddenSeries.has(s.name);
+              return (
+                <Bar
+                  key={s.name}
+                  dataKey={s.name}
+                  name={s.name}
+                  fill={isHidden ? "transparent" : s.color}
+                />
+              );
+            })}
+          </BarChart>
+        );
+      }
+
+      return (
+        <BarChart data={series[0]?.data || []} margin={commonMargin}>
+          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+          <XAxis
+            dataKey={config.x}
+            tick={{ fill: textColor }}
+            stroke={textColor}
+            label={
+              config.xLabel
+                ? {
+                    value: config.xLabel,
+                    position: "bottom",
+                    offset: 0,
+                    fill: textColor,
+                  }
+                : undefined
+            }
+          />
+          <YAxis
+            tick={{ fill: textColor }}
+            stroke={textColor}
+            label={
+              config.yLabel
+                ? {
+                    value: config.yLabel,
+                    angle: -90,
+                    position: "insideLeft",
+                    fill: textColor,
+                  }
+                : undefined
+            }
+          />
+          <RechartsTooltip
+            contentStyle={{
+              backgroundColor: tooltipBgColor,
+              borderColor: tooltipBorderColor,
+            }}
+          />
+          <Bar
+            dataKey={config.y || "count"}
+            name={series[0]?.name || config.y || "count"}
+            fill={series[0]?.color || config.color}
+          >
+            {series[0]?.data.map((_entry, index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={series[0]?.color || config.color}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      );
+    })();
 
     const histogramContent = (
       <BarChart data={series[0]?.data || []} margin={commonMargin}>
@@ -415,11 +620,6 @@ export const ChartPanel = React.memo(function ChartPanel({
             backgroundColor: tooltipBgColor,
             borderColor: tooltipBorderColor,
           }}
-        />
-        <Legend
-          verticalAlign="top"
-          align="right"
-          wrapperStyle={{ color: textColor }}
         />
         <Bar dataKey="count" name="Count" fill={config.color}>
           {series[0]?.data.map((_entry, index) => (
@@ -526,6 +726,42 @@ export const ChartPanel = React.memo(function ChartPanel({
           </Tooltip>
         </div>
       </div>
+      {hasMultipleSeries && (
+        <div
+          className="flex justify-end gap-2 px-4 py-2 flex-wrap"
+          style={{ borderBottom: "1px solid var(--border)" }}
+        >
+          {series.map((s) => {
+            const isHidden = hiddenSeries.has(s.name);
+            return (
+              <button
+                key={s.name}
+                onClick={() => handleLegendClick(s.name)}
+                className="flex items-center gap-1 text-xs px-2 py-1 rounded"
+                style={{
+                  cursor: "pointer",
+                  opacity: isHidden ? 0.5 : 1,
+                  border: "none",
+                  background: "transparent",
+                }}
+              >
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 12,
+                    height: 12,
+                    borderRadius: 2,
+                    backgroundColor: isHidden ? "#9ca3af" : s.color,
+                  }}
+                />
+                <span style={{ color: isHidden ? "#9ca3af" : textColor }}>
+                  {s.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div ref={chartContainerRef} className="flex-1 min-h-0 p-4">
         {renderChart()}
       </div>
