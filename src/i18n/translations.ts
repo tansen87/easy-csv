@@ -31,7 +31,6 @@ export interface Translations {
   lineagePath: string;
   sourceStep: string;
   noLineageData: string;
-  searchColumns: string;
   lineageForColumn: string;
 
   // VersionControl
@@ -134,8 +133,7 @@ export interface Translations {
 
   // DataProfile
   dataProfile: string;
-  searchFields: string;
-  noFieldsMatch: string;
+  noColumnsMatch: string;
   analyzingData: string;
   columns: string;
   rows: string;
@@ -184,7 +182,9 @@ export interface Translations {
   aiModelDesc: string;
   aiSelectModel: string;
 
+  // General
   close: string;
+  searchColumns: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -220,7 +220,6 @@ export const translations: Record<Language, Translations> = {
     lineagePath: "Lineage Path",
     sourceStep: "Source",
     noLineageData: "Execute a pipeline to see data lineage",
-    searchColumns: "Search columns...",
     lineageForColumn: "Lineage for column:",
 
     // VersionControl
@@ -325,8 +324,7 @@ export const translations: Record<Language, Translations> = {
     download: "Download",
 
     // DataProfile
-    searchFields: "Search fields",
-    noFieldsMatch: "No fields matching",
+    noColumnsMatch: "No columns matching",
     analyzingData: "Analyzing data...",
     columns: "Columns",
     rows: "Rows",
@@ -375,7 +373,9 @@ export const translations: Record<Language, Translations> = {
     aiModelDesc: "Select the AI model to use for generating commands",
     aiSelectModel: "Select a model",
 
+    // General
     close: "Close",
+    searchColumns: "Search columns",
   },
   zh: {
     // MainMenu
@@ -409,7 +409,6 @@ export const translations: Record<Language, Translations> = {
     lineagePath: "血缘路径",
     sourceStep: "来源",
     noLineageData: "执行后可查看数据血缘",
-    searchColumns: "搜索列...",
     lineageForColumn: "列的血缘：",
 
     // VersionControl
@@ -511,8 +510,7 @@ export const translations: Record<Language, Translations> = {
     download: "下载",
 
     // DataProfile
-    searchFields: "搜索字段",
-    noFieldsMatch: "无匹配字段",
+    noColumnsMatch: "没有匹配的列",
     analyzingData: "分析数据中...",
     columns: "列数",
     rows: "行数",
@@ -561,6 +559,8 @@ export const translations: Record<Language, Translations> = {
     aiModelDesc: "选择用于生成命令的AI模型",
     aiSelectModel: "选择模型",
 
+    // General
     close: "关闭",
+    searchColumns: "搜索列",
   },
 };

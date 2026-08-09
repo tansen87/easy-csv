@@ -169,7 +169,7 @@ export const DataProfilePanel = React.memo(function DataProfilePanel({
 
   return (
     <div
-      className="fixed right-2 top-19 w-[340px] h-[calc(100vh-86px)] bg-background border border-border/50 rounded-lg shadow-xl z-40 flex flex-col"
+      className="h-full flex flex-col"
       onContextMenu={(e) => e.preventDefault()}
     >
       <div className="p-3 border-b bg-card/80 flex items-center justify-between">
@@ -187,21 +187,23 @@ export const DataProfilePanel = React.memo(function DataProfilePanel({
         </Button>
       </div>
 
+      {columns.length > 0 && (
+        <div className="px-3 py-2 shrink-0">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder={t.searchColumns}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-8 pl-7 pr-2 text-xs bg-muted/50 border border-border/50 rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+        </div>
+      )}
+
       <ScrollArea className="flex-1">
         <div className="p-3">
-          {columns.length > 0 && !loading && (
-            <div className="relative mb-3">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder={t.searchFields}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-7 pl-7 pr-2 text-xs bg-muted/50 border border-border/50 rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-            </div>
-          )}
-
           {loading && (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
@@ -346,7 +348,7 @@ export const DataProfilePanel = React.memo(function DataProfilePanel({
                 {filteredColumns.length === 0 && search && (
                   <div className="text-center py-6">
                     <p className="text-xs text-muted-foreground">
-                      {t.noFieldsMatch} "{search}"
+                      {t.noColumnsMatch} "{search}"
                     </p>
                   </div>
                 )}

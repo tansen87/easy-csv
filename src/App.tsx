@@ -916,12 +916,23 @@ function AppContent() {
             />
           )}
 
-          <DataProfilePanel
-            filePath={tabsHook.getCurrentTab()?.inputFile || ""}
-            delimiter={settings.defaultDelimiter}
-            isVisible={ui.showDataProfile}
-            onClose={() => ui.setShowDataProfile(false)}
-          />
+          {/* Data Profile Panel */}
+          <div
+            className={`absolute top-0 right-0 h-full z-20 transition-all duration-300 ${
+              ui.showDataProfile ? "w-80" : "w-0"
+            }`}
+          >
+            {ui.showDataProfile && (
+              <div className="h-full bg-card border-l border-border/50 shadow-lg">
+                <DataProfilePanel
+                  filePath={tabsHook.getCurrentTab()?.inputFile || ""}
+                  delimiter={settings.defaultDelimiter}
+                  isVisible={ui.showDataProfile}
+                  onClose={() => ui.setShowDataProfile(false)}
+                />
+              </div>
+            )}
+          </div>
 
           <AIPanel
             isVisible={ui.showAIPanel}
