@@ -22,9 +22,10 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 │  命令配置 UI (shadcn) · i18n (中/英)                  │
 │  表达式编辑器 (语法高亮 + 自动补全)                     │
 │  AI 助手 (自然语言 → xan 命令, RAG 检索)              │
-│  图表可视化 (recharts: 折线/散点/柱状/直方图)          │
-│  管道版本控制 · 数据血缘追踪                           │
-│  系统托盘 · 拖拽打开 · 数据概况 · 管道步骤复制粘贴      │
+│  图表可视化 (recharts: 折线/散点/柱状/直方图等)         │
+│  管道版本控制 · 数据血缘追踪 · 全局命令面板 (Ctrl+K)     │
+│  CSV 对比 (Ctrl+D) · 编码转换 · 会话自动保存/恢复       │
+│  系统托盘 · 拖拽打开 · 数据概况 · 管道步骤复制粘贴       │
 │  通过 @tauri-apps/api invoke() 与后端通信             │
 └────────────────────┬───────────────────────────────┘
                      │  IPC (Tauri v2 commands)
@@ -33,18 +34,19 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 │  src-tauri/src/                                     │
 │  main.rs (入口) · lib.rs (模块声明)                   │
 │  config.rs · xan.rs · pipeline.rs · csv.rs          │
-│  storage.rs · ai.rs · ai_memory.rs                   │
+│  storage.rs · ai.rs · ai_memory.rs · session.rs     │
 │  AI 对话持久化 (ai_memory.db) · AI 配置 (config.db)     │
-│  API Key 加密存储 (AES-256-GCM) · 35+ 个 Tauri 命令    │
-│  CSV 读取 (csv crate) · 管道执行 (进程管理)            │
-│  AI 代理 (DeepSeek/Qwen/GLM) · AI 记忆持久化          │
-│  配置/历史持久化 · 数据概况缓存 · 版本/血缘存储         │
-│  系统托盘                                             │
+│  会话快照持久化 (session.db) · API Key 加密存储          │
+│  (AES-256-GCM) · 43 个 Tauri 命令                    │
+│  CSV 读取 (csv crate) · CSV 对比 · 编码转换            │
+│  管道执行 (进程管理 + 取消) · AI 代理 (DeepSeek/       │
+│  Qwen/GLM) · AI 记忆持久化 · 数据概况缓存              │
+│  版本/血缘存储 · 系统托盘                              │
 └────────────────────┬────────────────────────────────┘
                      │  子进程 (stdin/stdout 管道)
 ┌────────────────────▼────────────────────────────────┐
 │              xan.exe (内嵌 CLI 二进制)                │
-│  58 CSV 操作命令 (filter, sort, join, output, ...)   │
+│  59 CSV 操作命令 (filter, sort, join, output, ...)   │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -56,15 +58,16 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | 文件 | 职责 |
 |------|------|
-| `main.rs` | 二进制入口,注册插件/命令,系统托盘,窗口事件处理 |
-| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册所有命令) |
+| `main.rs` | 二进制入口,注册插件(opener/dialog/fs/shell/window_state/notification/http/prevent_default),系统托盘,窗口事件处理 |
+| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 43 个命令) |
 | `config.rs` | `AppConfig` 类型、SQLite 持久化(app_config/ai_config 表)、AES-256-GCM 加密存储 API Key、per-provider API Key 管理、配置相关命令 |
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
-| `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令 |
-| `csv.rs` | `CsvData` 类型、`read_csv_file`/`profile_csv` 命令 |
+| `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令、`set_pipeline_cancelled` 取消执行 |
+| `csv.rs` | `CsvData` 类型、`read_csv_file`/`profile_csv`/`diff_csv_files`/`convert_csv_encoding` 命令 |
 | `storage.rs` | 历史记录、最近文件、数据概况缓存、版本/血缘存储、窗口标题、开发者工具命令 |
 | `ai.rs` | AI 对话代理: `call_ai` 命令,转发到 DeepSeek / Qwen / GLM |
 | `ai_memory.rs` | AI 记忆持久化(SQLite): 对话历史、反馈记录、纠正规则的 CRUD + 清除 |
+| `session.rs` | 会话快照持久化(SQLite): 标签页快照 + 选中标签的保存/恢复 |
 | `build.rs` | Tauri 构建脚本,生成平台特定代码 |
 
 ### 各模块职责详解
@@ -78,7 +81,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `get_resources_dir()` | 资源目录路径(可执行文件旁) |
 | `get/set_default_delimiter` | 默认分隔符配置命令 |
 | `get/set_no_headers` | 无表头配置命令 |
-| `get/set_show_execution_notification` | 执行通知配置命令 |
+| `get/set_system_notification` | 系统通知配置命令 |
 | `get/set_minimize_to_tray` | 最小化到托盘配置命令 |
 | `get_ai_config()` / `set_ai_config()` | AI 配置读写(provider、model) |
 | `save_api_key()` / `load_api_key()` / `delete_api_key()` / `has_api_key()` | Per-provider API Key 加密存储(AES-256-GCM) |
@@ -99,6 +102,8 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `PipelineCommand` / `CommandParameter` | 管道步骤类型定义 |
 | `ExecutionResult` | 执行结果类型 |
 | `execute_xan_pipeline` | 核心函数: 构建 CLI 参数、单/多命令管道、进程管理、错误处理 |
+| `set_pipeline_cancelled` | 设置全局取消标志(AtomicBool),执行中轮询并 kill 子进程 |
+| `wait_with_cancel()` | 可取消的进程等待轮询(替代阻塞式 `wait_with_output`) |
 
 #### csv.rs — CSV 操作
 
@@ -107,6 +112,8 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `CsvData` | CSV 数据类型(headers + rows) |
 | `read_csv_file` | 读取 CSV 文件,返回表头 + 前51行预览 |
 | `profile_csv` | 调用 `xan stats` 生成数据概况统计 |
+| `diff_csv_files` | 双文件对比(共享内存 Table + 字符串驻留 + Myers diff,`spawn_blocking` 防阻塞) |
+| `convert_csv_encoding` | 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1,64KB 分块流式转码) |
 
 #### storage.rs — 持久化存储
 
@@ -120,12 +127,21 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `set_window_title` | 设置窗口标题 |
 | `toggle_devtools` | 切换开发者工具 |
 
+#### session.rs — 会话持久化 (SQLite)
+
+| 内容 | 说明 |
+|------|------|
+| `tab_snapshots` 表 | 标签页快照(tab_id, snapshot, updated_time),每次保存先清空再写入 |
+| `session_meta` 表 | 会话元数据(selected_tab_id) |
+| `save_session` | 序列化全部标签页快照 + 选中标签 ID |
+| `load_session` | 恢复标签页快照列表 + 选中标签 ID |
+
 #### ai.rs — AI 对话代理
 
 | 内容 | 说明 |
 |------|------|
 | `call_ai` | 核心命令,按 provider 路由到 DeepSeek/Qwen/GLM |
-| `call_deepseek` / `call_qwen` | OpenAI 兼容 Chat Completions 调用 |
+| `call_deepseek` / `call_qwen` / `call_glm` | OpenAI 兼容 Chat Completions 调用 |
 
 #### ai_memory.rs — AI 记忆持久化 (SQLite)
 
@@ -140,21 +156,25 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_correction` | 保存纠正规则 |
 | `clear_conversations` / `clear_feedback` / `clear_corrections` | 清除对应表全部数据 |
 
-### Tauri 命令清单(前端可调用)
+### Tauri 命令清单(前端可调用,共 43 个)
 
 | 命令 | 模块 | 功能 |
 |------|------|------|
 | `read_csv_file` | csv | 读取 CSV 文件,返回表头 + 前51行预览 |
 | `execute_xan_pipeline` | pipeline | 执行多步骤 xan 管道(核心命令) |
+| `set_pipeline_cancelled` | pipeline | 取消正在执行的管道(全局标志 + kill 子进程) |
 | `profile_csv` | csv | 调用 `xan stats` 生成数据概况统计 |
+| `diff_csv_files` | csv | 对比两个 CSV 文件(Myers diff,分页返回) |
+| `convert_csv_encoding` | csv | 转换 CSV 文件编码(64KB 流式转码) |
 | `load_profile_cache` / `save_profile_cache` | storage | 数据概况缓存(基于文件 mtime,LRU 淘汰,上限50条) |
 | `check_xan_installed` | xan | 检查 xan.exe 是否已解压 |
 | `get/set_default_delimiter` | config | 读写默认分隔符配置 |
 | `get/set_no_headers` | config | 读写无表头配置 |
-| `get/set_show_execution_notification` | config | 读写执行通知配置 |
+| `get/set_system_notification` | config | 读写系统通知配置 |
 | `get/set_minimize_to_tray` | config | 读写最小化到托盘配置 |
 | `get/set_ai_config` | config | 读写 AI 配置(provider/model) |
 | `save/load/delete/has_api_key` | config | Per-provider API Key 加密存储(AES-256-GCM) |
+| `save_session` / `load_session` | session | 会话快照保存/恢复(标签页 + 选中标签) |
 | `call_ai` | ai | 调用 AI 大模型代理(DeepSeek/Qwen/GLM) |
 | `save_conversation` | ai_memory | 保存对话历史 |
 | `load_conversation_history` | ai_memory | 加载对话历史 |
@@ -180,7 +200,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | 文件 | 职责 |
 |------|------|
 | `vitest.config.ts` | vitest 配置: jsdom 环境、`@/` 别名、`src/test/setup.ts` 作为 setup |
-| `src/test/setup.ts` | Mock 全局 API: `@tauri-apps/api/core` (invoke)、`@tauri-apps/plugin-dialog`、`@tauri-apps/plugin-fs`、localStorage、matchMedia |
+| `src/test/setup.ts` | Mock 全局 API: `@tauri-apps/api/core` (invoke)、`@tauri-apps/plugin-dialog`、`@tauri-apps/plugin-fs`、localStorage、matchMedia、scrollIntoView |
 
 运行测试: `pnpm test`
 
@@ -188,10 +208,15 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | 文件 | 职责 | 测试数 |
 |------|------|--------|
-| `commands.test.ts` | **核心测试**: 覆盖全部 58 个 xan 命令的参数构建正确性(命令名、参数名、值、isPositional、默认值) | ~76 |
-| `invoke.test.ts` | App.tsx 中所有 invoke 调用模式验证(read_csv_file、配置读写、历史记录、错误处理、历史重建) | ~25 |
+| `commands.test.ts` | **核心测试**: 覆盖全部 59 个 xan 命令的参数构建正确性(命令名、参数名、值、isPositional、默认值) | ~76 |
+| `invoke.test.ts` | App.tsx 中所有 invoke 调用模式验证(read_csv_file、配置读写、历史记录、错误处理、历史重建) | ~20 |
 | `BatchFilterHooks.test.ts` | Batch Filter 执行逻辑: 文件名清理、正则构建、文本/数值筛选 invoke 形状、频率提取、多值批处理 | ~31 |
-| `BatchConvertHooks.test.ts` | 批量格式转换: globToRegex、getBaseName、getOutputDir、CSV↔XLSX↔JSON 转换 invoke 模式 | ~23 |
+| `BatchConvertHooks.test.ts` | 批量格式转换: globToRegex、getBaseName、getOutputDir、CSV↔XLSX↔JSON 转换 invoke 模式 | ~37 |
+| `CommandPalette.test.tsx` | 命令面板: 搜索过滤、键盘导航、选中执行、Esc 关闭 | ~11 |
+| `CsvDiffDialog.test.tsx` | CSV 对比对话框: 结果解析、分页渲染、键列匹配 | ~4 |
+| `CsvEncodingDialog.test.tsx` | 编码转换对话框: 编码选择、invoke 形状、结果摘要 | ~5 |
+| `HelpDialog.test.tsx` | 帮助对话框搜索与打开 | ~2 |
+| `HelpMarkdown.test.tsx` | 自定义 Markdown 渲染器 | ~3 |
 
 ---
 
@@ -202,18 +227,19 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | 文件 | 职责 |
 |------|------|
 | `main.tsx` | 应用入口,包裹 ThemeProvider 和 LanguageProvider |
-| `App.tsx` | **根组件**(948行) 管理所有状态: 标签页、管道、撤销/重做、日志、配置、历史记录、更新检查、拖拽打开、数据概况、历史记录上限、AI 面板、版本控制、数据血缘 |
+| `App.tsx` | **根组件**(1290行) 管理所有状态: 标签页、管道、撤销/重做、日志、配置、历史记录、更新检查、拖拽打开、数据概况、历史记录上限、AI 面板、版本控制、数据血缘、会话恢复、命令面板、CSV 对比/编码转换 |
 | `index.css` | 全局 CSS,定义亮色/暗色主题变量、动画关键帧 |
 
 ### 数据与类型 (`data/` · `types/` · `utils/`)
 
 | 文件 | 职责 |
 |------|------|
-| `data/commands.ts` | **所有 xan 命令定义**(3794行),58个命令,含参数、分类、中英文描述 |
+| `data/commands.ts` | **所有 xan 命令定义**(4134行),59个命令,含参数、分类、中英文描述 |
 | `data/functions.ts` | xan 表达式函数定义(200+,321行),含分类(string/number/array/date/aggregation/window/web/fuzzy/io/hashing)、关键字、运算符,供表达式编辑器补全和高亮使用 |
-| `types/xan.ts` | 核心类型: `XanCommand`, `XanParameter`, `PipelineStep`, `PipelineEdge`, `LogEntry`, `PipelineTab`, `PipelineVersion`, `StepLineage`, `ColumnSchema`, `Transformation`, `StoredPipelineStep`, `ChartType`, `ChartConfig`, `ChartDataPoint`, `ChartSeries` |
+| `types/xan.ts` | 核心类型: `XanCommand`, `XanParameter`, `PipelineStep`, `StoredPipelineStep`, `PipelineEdge`, `LogEntry`, `PipelineTab`, `PipelineVersion`, `StepLineage`, `ColumnSchema`, `Transformation`, `ColumnLineagePath`, `ChartType`, `ChartConfig`, `ChartDataPoint`, `ChartSeries` |
 | `generated/help-docs.ts` | 自动生成的命令帮助文档(中英文),由 `scripts/generate-help-docs.js` 生成 |
 | `utils/format.ts` | `formatDateTime()` 时间格式化工具 |
+| `utils/session.ts` | 会话快照序列化: `stripStepCommand`/`reconstructStep`/`serializeTabSnapshot`/`deserializeTabSnapshot`(与 `usePipelineVersions` 共用) |
 
 ### 服务层 (`services/ai/`)
 
@@ -222,7 +248,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 文件 | 职责 |
 |------|------|
 | `services/ai/index.ts` | `sendAIMessage()` 入口: 校验 API Key、加载纠正规则、澄清检测、构建消息、调用 `callAI`; 对话历史/反馈/纠正规则 CRUD; Per-provider API Key 管理 |
-| `services/ai/context.ts` | **提示词工程核心**(800+行): 意图路由(含同义词)、命令索引、RAG 检索、模糊匹配、纠正规则加权、意图澄清检测、对话历史上下文注入 |
+| `services/ai/context.ts` | **提示词工程核心**(918行): 意图路由(含同义词)、命令索引、RAG 检索、模糊匹配、纠正规则加权、意图澄清检测、对话历史上下文注入 |
 | `services/ai/api.ts` | `callAI()` 各 provider 调用 + `parseJSONBlock()` 多行编号JSON解析器 |
 | `services/ai/types.ts` | `AIConfig`/`AIMessage`/`AIResponse`/`AICommand`/`AIFeedback`/`CorrectionRule` 类型 + provider/模型常量 |
 
@@ -232,26 +258,27 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 
 | 文件 | 职责 |
 |------|------|
-| `MainMenuHooks.ts` | 主菜单业务逻辑(911行): 文件打开、保存、导入/导出管道、撤销/重做、执行管道(DFS 构建分支) |
-| `useTabs.ts` | 标签页管理(219行): 标签增删改、当前标签、管道状态读写(`getCurrentPipeline`/`getCurrentTab`/`setTabs`) |
+| `MainMenuHooks.ts` | 主菜单业务逻辑(1299行): 文件打开、保存、导入/导出管道(含导出为 .sh/.ps1 xan 脚本)、撤销/重做、执行管道(DFS 构建分支)、取消执行、图表执行 |
+| `useSession.ts` | 会话持久化(89行): 启动恢复标签页、防抖自动保存(800ms)、beforeunload 兜底保存 |
+| `useTabs.ts` | 标签页管理(221行): 标签增删改、当前标签、管道状态读写(`getCurrentPipeline`/`getCurrentTab`/`setTabs`) |
 | `usePipelineState.ts` | 管道状态(194行): `updateTabPipeline` 单点更新管道+edges,撤销/重做状态管理 |
-| `usePipelineVersions.ts` | 管道版本控制(260行): 保存/恢复/删除版本、标签管理、步骤序列化与重建 |
-| `useDataLineage.ts` | 数据血缘(467行): 列类型推断、变换分析、血缘图数据构建与持久化 |
-| `useAppSettings.ts` | 应用配置(101行): 分隔符、无表头、通知、历史上限、托盘设置 |
+| `usePipelineVersions.ts` | 管道版本控制(236行): 保存/恢复/删除版本、标签管理、步骤序列化与重建(复用 `utils/session.ts`) |
+| `useDataLineage.ts` | 数据血缘(677行): 列类型推断、变换分析、血缘图数据构建与持久化 |
+| `useAppSettings.ts` | 应用配置(87行): 分隔符、无表头、通知、历史上限、托盘设置 |
 | `useToast.ts` | Toast 通知(29行) |
-| `useLogs.ts` | 执行日志(22行) |
-| `useUIState.ts` | UI 状态(84行): 对话框/面板开关 |
+| `useLogs.ts` | 执行日志(26行) |
+| `useUIState.ts` | UI 状态(111行): 对话框/面板开关(含命令面板、CSV 对比、编码转换) |
 | `BatchFilterHooks.ts` | Batch Filter 执行逻辑(621行): 文件名清理、正则构建、批量筛选执行(直接/带数据) |
 | `BatchConvertHooks.ts` | 批量格式转换(305行): globToRegex、getBaseName、getOutputDir、CSV↔XLSX↔JSON 转换 invoke 调用 |
 | `useDraggable.ts` | 通用拖拽 hook(91行): 管理拖拽位置、边界约束,用于命令面板和日志面板 |
-| `KeyboardShortcuts.ts` | 全局快捷键注册(105行): Ctrl+O/N/S/I/E/Z/Y/R, Shift+H/C/S |
+| `KeyboardShortcuts.ts` | 全局快捷键注册(121行): Ctrl+K(命令面板)、Ctrl+D(CSV 对比)、Ctrl+O/N/S/I/E/Z/Y/R、Alt+C/Q/D/A、Shift+H/C/S |
 
 ### 国际化 (`i18n/`)
 
 | 文件 | 职责 |
 |------|------|
 | `i18n/index.tsx` | 语言上下文 Provider,持久化到 localStorage |
-| `i18n/translations.ts` | 中英文翻译字符串(520+行,含 AI 面板、反馈、澄清、版本控制、血缘相关 key) |
+| `i18n/translations.ts` | 中英文翻译字符串(732行,含 AI 面板、反馈、澄清、版本控制、血缘、命令面板、CSV 对比/编码转换相关 key) |
 
 ### 工具函数 (`lib/`)
 
@@ -263,17 +290,19 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 
 | 文件 | 职责 |
 |------|------|
-| `components/HomeView.tsx` | **主工作区**(844行),管理所有对话框状态、标签页、右键菜单、表格列重命名 |
-| `components/CommandList.tsx` | **命令面板**(553行),可拖拽浮动面板,按分类展示命令,支持搜索和历史记录 |
+| `components/HomeView.tsx` | **主工作区**(854行),管理所有对话框状态、标签页、右键菜单、表格列重命名 |
+| `components/CommandList.tsx` | **命令面板**(454行),可拖拽浮动面板,按分类展示命令,支持搜索和历史记录 |
+| `components/CommandPalette.tsx` | **全局命令面板**(243行, Ctrl/Cmd+K): 可搜索、键盘导航的动作/标签/最近文件/xan 命令列表 |
 
 ### 组件 — 管道编辑 (`panel/`)
 
 | 文件 | 职责 |
 |------|------|
-| `panel/FlowPanel.tsx` | **可视化管道编辑器主组件**(1164行),组合子组件,管理状态和事件处理 |
-| `panel/AIPanel.tsx` | **AI 助手面板**(600+行): 聊天 UI、命令生成、一键插入管道、👍/👎反馈(可切换)、意图澄清对话框、对话历史加载 |
-| `panel/VersionControlPanel.tsx` | 管道版本控制面板(256行): 版本列表、保存/恢复/删除、标签管理 |
-| `panel/DataLineagePanel.tsx` | 数据血缘面板(298行): 列级血缘追踪、变换类型图标、保存血缘 |
+| `panel/FlowPanel.tsx` | **可视化管道编辑器主组件**(1163行),组合子组件,管理状态和事件处理 |
+| `panel/AIPanel.tsx` | **AI 助手面板**(590行): 聊天 UI、命令生成、一键插入管道、👍/👎反馈(可切换)、意图澄清对话框、对话历史加载 |
+| `panel/VersionControlPanel.tsx` | 管道版本控制面板(302行): 版本列表、保存/恢复/删除、标签管理 |
+| `panel/DataLineagePanel.tsx` | 数据血缘面板(421行): 列级血缘追踪、变换类型图标、保存血缘 |
+| `panel/LineageGraph.tsx` | 血缘关系图渲染(341行): ReactFlow 列节点、类型配色、高亮/置灰联动 |
 | `panel/nodes/TableNode.tsx` | 输入数据表格节点,支持表头重命名和右键菜单 |
 | `panel/nodes/PipelineStepNode.tsx` | 管道步骤节点,支持别名编辑、参数展示、切割动画 |
 | `panel/nodes/index.ts` | 节点类型注册表(nodeTypes) |
@@ -284,8 +313,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | `panel/overlays/ConnectionVisualization.tsx` | 右键连接线 SVG 渲染 |
 | `panel/CoordinateGrid.tsx` | ReactFlow 画布的坐标网格背景 |
 | `panel/LogPanel.tsx` | 浮动日志面板,显示执行结果,支持拖拽和复制 |
-| `panel/DataProfilePanel.tsx` | 数据概况面板,展示字段统计(计数/空值/极值/均值等),支持搜索 |
-| `panel/ChartPanel.tsx` | 图表面板(recharts),支持折线/散点/柱状/直方图,支持拖拽、最大化/还原、SVG导出、dark mode |
+| `panel/DataProfilePanel.tsx` | 数据概况右侧栏,展示字段统计(计数/空值/极值/均值等),支持固定搜索框 |
+| `panel/ChartPanel.tsx` | 图表面板(recharts),支持折线/散点/柱状/直方图/饼图/词云/热力图,支持拖拽、最大化/还原、SVG导出、dark mode |
 
 ### 组件 — 对话框 (`dialog/`)
 
@@ -305,6 +334,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | `ReplaceDialog.tsx` | 查找替换(支持正则) | `map` (replace) |
 | `WindowDialog.tsx` | 窗口函数(19种: rank/lag/lead/rolling等) | `window` |
 | `BatchFilterDialog.tsx` | 批量筛选(按列值拆分为多个文件) | `batch-filter` |
+| `CsvDiffDialog.tsx` | CSV 双文件对比(Ctrl+D),对齐展示增删改行 + 相同行摘要,分页避免卡顿 | 直接调用 `diff_csv_files` |
+| `CsvEncodingDialog.tsx` | CSV 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1) | 直接调用 `convert_csv_encoding` |
 | `UpdateDialog.tsx` | 应用更新通知 |  |
 | `ConfirmDialog.tsx` | 通用确认对话框(F5 刷新等场景) |  |
 
@@ -314,7 +345,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 
 | 文件 | 职责 | 包含的命令 |
 |------|------|-----------|
-| `types.ts` | `CommandFormProps` 接口定义 + `COMMAND_LABELS` 标签映射(58个命令) |  |
+| `types.ts` | `CommandFormProps` 接口定义 + `COMMAND_LABELS` 标签映射(59个命令) |  |
 | `index.ts` | `COMMAND_FORMS` 映射表(命令类型→表单组件),统一导出 | 全部命令 |
 | `CommandFormWrapper.tsx` | 可复用表单包装器: ScrollArea + Cancel/Add/Update 按钮 + `handleCommandSubmit` 调用 |  |
 | `helpers.ts` | `handleCommandSubmit()` 提交处理 + `updateParam()` 参数更新工具函数 |  |
@@ -347,7 +378,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 
 | 文件 | 职责 |
 |------|------|
-| `MainMenu.tsx` | 顶部工具栏: 文件菜单、撤销/重做、执行按钮、帮助/设置 |
+| `MainMenu.tsx` | 顶部工具栏: 文件菜单(打开/保存/导入/导出脚本/编码转换)、撤销/重做、执行按钮、命令面板按钮、帮助/设置 |
 | `ContextMenu.tsx` | 表格列右键菜单: 快速筛选、替换、透视、日期/文本/数值变换、排序 |
 
 ### 组件 — 设置与主题 (`setting/`)
@@ -357,8 +388,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | `ThemeProvider.tsx` | 主题上下文,管理 dark/light/system 模式 |
 | `SettingsDialog.tsx` | 设置对话框容器 |
 | `SettingsTabContent.tsx` | 设置内容: 语言、主题、分隔符、无表头选项、执行通知开关、历史记录条数上限、AI 配置(provider/model/apiKey)、AI 学习数据管理(清除对话/反馈/纠正规则) |
-| `Toast.tsx` | Toast 通知系统 |
-
+| `Toast.tsx` | Toast 通知系统(顶部居中) |
 
 ### 组件 — 帮助 (`help/`)
 
@@ -376,6 +406,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | `button.tsx` | 按钮 |
 | `card.tsx` | 卡片容器 |
 | `input.tsx` | 输入框 |
+| `textarea.tsx` | 多行文本域 |
 | `scroll-area.tsx` | 滚动区域 |
 | `resize-handle.tsx` | 面板拖拽调整大小手柄 |
 | `tooltip.tsx` | Tooltip 提示组件,支持 top/bottom/left/right 定位 |
@@ -393,7 +424,12 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改命令参数描述 | `src/components/dialog/commands/parameterDescriptions.ts` + `src/data/commands.ts`(参数 description 字段) |
 | 新增对话框 | 参考 `src/components/dialog/FilterDialog.tsx`,并在 `HomeView.tsx` 中注册状态和渲染 |
 | 修改管道执行逻辑 | `src-tauri/src/pipeline.rs` 中的 `execute_xan_pipeline` 函数 |
+| 修改管道执行取消 | `src-tauri/src/pipeline.rs`(`set_pipeline_cancelled` + `wait_with_cancel`) + `src/hooks/MainMenuHooks.ts`(取消按钮) |
 | 修改 CSV 预览读取 | `src-tauri/src/csv.rs` 中的 `read_csv_file` 函数 |
+| 修改 CSV 对比功能 | `src/components/dialog/CsvDiffDialog.tsx` + `src-tauri/src/csv.rs`(`diff_csv_files`) |
+| 修改 CSV 编码转换 | `src/components/dialog/CsvEncodingDialog.tsx` + `src-tauri/src/csv.rs`(`convert_csv_encoding`) |
+| 修改会话保存/恢复 | `src/hooks/useSession.ts` + `src/utils/session.ts` + `src-tauri/src/session.rs` |
+| 修改命令面板 | `src/components/CommandPalette.tsx` + `src/hooks/useUIState.ts` + `src/hooks/KeyboardShortcuts.ts`(Ctrl+K) |
 | 修改管道可视化布局 | `src/components/panel/FlowPanel.tsx`(主逻辑) + `panel/utils/layout.ts`(布局) + `panel/nodes/`(节点样式) |
 | 修改菜单/快捷键 | `src/components/menu/MainMenu.tsx` + `src/hooks/KeyboardShortcuts.ts` |
 | 修改右键菜单 | `src/components/menu/ContextMenu.tsx` |
@@ -404,6 +440,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改应用配置持久化 | `src-tauri/src/config.rs` 中的 `load_config`/`save_config` 函数 |
 | 修改 Batch Filter 功能 | `src/hooks/BatchFilterHooks.ts` + `src/components/dialog/BatchFilterDialog.tsx` + `src/data/commands.ts` |
 | 修改 Batch Convert 功能 | `src/hooks/BatchConvertHooks.ts` + `src/hooks/MainMenuHooks.ts` |
+| 修改导出管道脚本 (.sh/.ps1) | `src/hooks/MainMenuHooks.ts`(导出保存对话框逻辑) |
 | 修改 AI 面板 UI/交互 | `src/components/panel/AIPanel.tsx` |
 | 修改 AI 反馈/澄清逻辑 | `src/components/panel/AIPanel.tsx` + `src/services/ai/index.ts` |
 | 修改 AI 提示词/意图路由 | `src/services/ai/context.ts`(`INTENT_ROUTES`/`retrieveRelevantCommands`/`buildSystemPrompt`) |
@@ -419,7 +456,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改命令帮助文档(英文) | `src/docs/cmd/*.md` |
 | 修改命令帮助文档(中文) | `docs/cmd_zh/*.md` |
 | 修改管道版本控制 | `src/hooks/usePipelineVersions.ts` + `src/components/panel/VersionControlPanel.tsx` + `src-tauri/src/storage.rs` |
-| 修改数据血缘 | `src/hooks/useDataLineage.ts` + `src/components/panel/DataLineagePanel.tsx` + `src-tauri/src/storage.rs` |
+| 修改数据血缘 | `src/hooks/useDataLineage.ts` + `src/components/panel/DataLineagePanel.tsx` + `src/components/panel/LineageGraph.tsx` + `src-tauri/src/storage.rs` |
+| 修改血缘图渲染 | `src/components/panel/LineageGraph.tsx` |
 | 修改帮助内容 | `src/components/help/HelpContent.ts` (英文) / `HelpContentCn.ts` (中文) |
 | 修改命令帮助文档 | 运行 `node scripts/generate-help-docs.js` 重新生成 |
 | 修改 Tauri 插件/权限 | `src-tauri/tauri.conf.json` + `src-tauri/capabilities/default.json` |
@@ -445,5 +483,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 测试 Tauri invoke 调用模式 | `src/__tests__/invoke.test.ts` |
 | 测试 Batch Filter 逻辑 | `src/__tests__/BatchFilterHooks.test.ts` |
 | 测试 Batch Convert 逻辑 | `src/__tests__/BatchConvertHooks.test.ts` |
+| 测试命令面板 | `src/__tests__/CommandPalette.test.tsx` |
+| 测试 CSV 对比对话框 | `src/__tests__/CsvDiffDialog.test.tsx` |
+| 测试编码转换对话框 | `src/__tests__/CsvEncodingDialog.test.tsx` |
 | 修改测试 mock/setup | `src/test/setup.ts` |
 | 修改 vitest 配置 | `vitest.config.ts` |
