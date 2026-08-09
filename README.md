@@ -87,6 +87,7 @@ Supported providers:
 |----------|----------------|
 | DeepSeek | `deepseek-v4-flash`, `deepseek-v4-pro` |
 | Qwen | `qwen-turbo`, `qwen-max`, `qwen3.7-plus` |
+| GLM | `glm-4.7-flash`, `glm-4-flash-250414`, `glm-4-flash` |
 
 The assistant only uses your current message (not conversation history), and commands it generates are automatically connected to the last step in your pipeline.
 
@@ -94,9 +95,9 @@ The assistant only uses your current message (not conversation history), and com
 
 - [docs/AI/INDEX.md](docs/AI/INDEX.md) — full architecture and codebase index (Rust backend, frontend, hooks, components, how to modify each area)
 - [docs/AI/USAGE.md](docs/AI/USAGE.md) — merged usage docs for all 58 xan commands
-- `docs/AI_usage/` — generated per-command docs (source: `pnpm run generate-ai-usage`)
-- `docs/cmd/` — per-command help docs (English)
-- `docs/cmd_zh/` — per-command help docs (Chinese)
+- [src/docs/AI_usage/](src/docs/AI_usage) — generated per-command docs (source: `pnpm run generate-ai-usage`)
+- [src/docs/cmd/](src/docs/cmd) — per-command help docs (English)
+- [docs/cmd_zh/](docs/cmd_zh) — per-command help docs (Chinese)
 
 ## License
 
