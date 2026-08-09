@@ -38,6 +38,7 @@ export function useUIState() {
   const [chartConfig, setChartConfig] = useState<ChartConfig | null>(null);
   const [chartSeries, setChartSeries] = useState<ChartSeries[]>([]);
   const [chartHeaders, setChartHeaders] = useState<string[]>([]);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
 
   return {
     showHelp,
@@ -88,5 +89,7 @@ export function useUIState() {
     setChartSeries,
     chartHeaders,
     setChartHeaders,
+    showCommandPalette,
+    setShowCommandPalette,
   };
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -6,6 +6,27 @@ import { sendNotification } from "@tauri-apps/plugin-notification";
 import { useTheme } from "@/components/setting/ThemeProvider";
 import { ToastContainer } from "@/components/setting/Toast";
 import { CommandList } from "@/components/CommandList";
+import { CommandPalette, type PaletteItem } from "@/components/CommandPalette";
+import { commandIconMap } from "@/components/CommandList";
+import {
+  FolderOpen,
+  FileText,
+  Save,
+  Upload,
+  Download,
+  Undo2,
+  Redo2,
+  Play,
+  Settings,
+  CloudDownload,
+  MessageCircleQuestionMark,
+  CommandIcon,
+  BarChart3,
+  GitBranch,
+  GitMerge,
+  Bot,
+  RefreshCw,
+} from "lucide-react";
 import { LogPanel } from "@/components/panel/LogPanel";
 import { ChartPanel } from "@/components/panel/ChartPanel";
 import { SettingsDialog } from "@/components/setting/SettingsDialog";
@@ -650,6 +671,7 @@ function AppContent() {
       onLogs: () => ui.setShowLogPanel(!ui.showLogPanel),
       onDataProfile: () => ui.setShowDataProfile(!ui.showDataProfile),
       onAI: () => ui.setShowAIPanel(!ui.showAIPanel),
+      onCommandPalette: () => ui.setShowCommandPalette(!ui.showCommandPalette),
     },
     {
       undoStackLength: pipeline.undoStack.length,
@@ -747,6 +769,233 @@ function AppContent() {
     }
   }, [settings, showToastRef]);
 
+  const hasInputFile = !!tabsHook.getCurrentTab()?.inputFile;
+
+  const currentPipelineLength = tabsHook.getCurrentPipeline().length;
+  const undoStackLength = pipeline.undoStack.length;
+  const redoStackLength = pipeline.redoStack.length;
+
+  // Command palette items
+  const paletteItems = useMemo<PaletteItem[]>(() => {
+    const actions: PaletteItem[] = [
+      {
+        id: "open-file",
+        label: t.open,
+        description: t.openFileFormats,
+        icon: FolderOpen,
+        group: t.paletteActions,
+        shortcut: "Ctrl+O",
+        onSelect: handleOpenFile,
+      },
+      {
+        id: "open-new-tab",
+        label: t.openNewTab,
+        icon: FileText,
+        group: t.paletteActions,
+        shortcut: "Ctrl+N",
+        onSelect: handleOpenNewTabWithFile,
+      },
+      {
+        id: "save-pipeline",
+        label: t.savePipeline,
+        icon: Save,
+        group: t.paletteActions,
+        shortcut: "Ctrl+S",
+        disabled: currentPipelineLength === 0,
+        onSelect: handleSavePipeline,
+      },
+      {
+        id: "import-workflow",
+        label: t.importWorkflow,
+        icon: Upload,
+        group: t.paletteActions,
+        shortcut: "Ctrl+I",
+        onSelect: handleImportPipeline,
+      },
+      {
+        id: "export-workflow",
+        label: t.exportWorkflow,
+        icon: Download,
+        group: t.paletteActions,
+        shortcut: "Ctrl+E",
+        disabled: currentPipelineLength === 0,
+        onSelect: handleExportPipeline,
+      },
+      {
+        id: "undo",
+        label: t.undo,
+        icon: Undo2,
+        group: t.paletteActions,
+        shortcut: "Ctrl+Z",
+        disabled: undoStackLength === 0,
+        onSelect: () => {
+          pipeline.undo();
+          setSelectedStep(null);
+        },
+      },
+      {
+        id: "redo",
+        label: t.redo,
+        icon: Redo2,
+        group: t.paletteActions,
+        shortcut: "Ctrl+Y",
+        disabled: redoStackLength === 0,
+        onSelect: () => {
+          pipeline.redo();
+          setSelectedStep(null);
+        },
+      },
+      {
+        id: "execute",
+        label: t.execute,
+        icon: Play,
+        group: t.paletteActions,
+        shortcut: "Ctrl+R",
+        disabled: currentPipelineLength === 0 || isExecuting,
+        onSelect: handleExecute,
+      },
+      {
+        id: "settings",
+        label: t.settings,
+        icon: Settings,
+        group: t.paletteActions,
+        shortcut: "Shift+S",
+        onSelect: onShowSettings,
+      },
+      {
+        id: "check-update",
+        label: t.checkUpdate,
+        icon: CloudDownload,
+        group: t.paletteActions,
+        shortcut: "Shift+C",
+        onSelect: checkForUpdates,
+      },
+      {
+        id: "help",
+        label: t.help,
+        icon: MessageCircleQuestionMark,
+        group: t.paletteActions,
+        shortcut: "Shift+H",
+        onSelect: onHelp,
+      },
+      {
+        id: "refresh",
+        label: t.refreshTitle,
+        icon: RefreshCw,
+        group: t.paletteActions,
+        shortcut: "F5",
+        onSelect: () => ui.setShowRefreshDialog(true),
+      },
+      {
+        id: "toggle-command-panel",
+        label: t.commandPanel,
+        icon: CommandIcon,
+        group: t.paletteActions,
+        shortcut: "Alt+C",
+        onSelect: onToggleCommandPanel,
+      },
+      {
+        id: "toggle-log-panel",
+        label: t.logPanel,
+        icon: FileText,
+        group: t.paletteActions,
+        shortcut: "Alt+Q",
+        onSelect: onToggleLogPanel,
+      },
+      {
+        id: "toggle-data-profile",
+        label: t.dataProfile,
+        icon: BarChart3,
+        group: t.paletteActions,
+        shortcut: "Alt+D",
+        disabled: !hasInputFile,
+        onSelect: onToggleDataProfile,
+      },
+      {
+        id: "toggle-version-panel",
+        label: t.versionHistory,
+        icon: GitBranch,
+        group: t.paletteActions,
+        onSelect: () => ui.setShowVersionPanel(!ui.showVersionPanel),
+      },
+      {
+        id: "toggle-lineage-panel",
+        label: t.dataLineage,
+        icon: GitMerge,
+        group: t.paletteActions,
+        onSelect: () => ui.setShowLineagePanel(!ui.showLineagePanel),
+      },
+      {
+        id: "toggle-ai-panel",
+        label: t.aiPanel,
+        icon: Bot,
+        group: t.paletteActions,
+        shortcut: "Alt+A",
+        onSelect: () => ui.setShowAIPanel(!ui.showAIPanel),
+      },
+    ];
+
+    const tabs: PaletteItem[] = tabsHook.tabs.map((tab) => ({
+      id: `tab-${tab.id}`,
+      label: tab.name,
+      description: tab.inputFile || tab.id,
+      icon: FileText,
+      group: t.paletteTabs,
+      onSelect: () => tabsHook.setSelectedTabId(tab.id),
+    }));
+
+    const recent: PaletteItem[] = tabsHook.recentFiles.map((file) => ({
+      id: `recent-${file.path}`,
+      label: file.name,
+      description: file.path,
+      icon: FolderOpen,
+      group: t.paletteRecentFiles,
+      onSelect: () => onOpenRecentFile(file.path),
+    }));
+
+    const commands: PaletteItem[] = xanCommands.map((cmd) => {
+      const Icon = commandIconMap[cmd.name] || CommandIcon;
+      return {
+        id: `cmd-${cmd.id}`,
+        label: cmd.name,
+        description: language === "zh" ? cmd.descriptionCn : cmd.description,
+        keywords: cmd.category,
+        icon: Icon,
+        group: t.paletteCommands,
+        onSelect: () => handleCommandClick(cmd),
+      };
+    });
+
+    return [...actions, ...tabs, ...recent, ...commands];
+  }, [
+    t,
+    language,
+    currentPipelineLength,
+    undoStackLength,
+    redoStackLength,
+    isExecuting,
+    hasInputFile,
+    tabsHook.tabs,
+    tabsHook.recentFiles,
+    handleOpenFile,
+    handleOpenNewTabWithFile,
+    handleSavePipeline,
+    handleImportPipeline,
+    handleExportPipeline,
+    handleExecute,
+    handleCommandClick,
+    onOpenRecentFile,
+    onShowSettings,
+    checkForUpdates,
+    onHelp,
+    onToggleCommandPanel,
+    onToggleLogPanel,
+    onToggleDataProfile,
+    pipeline,
+    setSelectedStep,
+    ui,
+  ]);
+
   return (
     <>
       {
@@ -780,6 +1029,7 @@ function AppContent() {
               onHelp={onHelp}
               onCheckUpdate={checkForUpdates}
               onShowSettings={onShowSettings}
+              onOpenPalette={() => ui.setShowCommandPalette(true)}
               isExecuting={isExecuting}
               isCheckingUpdate={ui.isCheckingUpdate}
               currentPipelineLength={tabsHook.getCurrentPipeline().length}
@@ -863,6 +1113,12 @@ function AppContent() {
             onSearchChange={ui.setSearchQuery}
             isVisible={ui.showCommandPanel}
             onClose={() => ui.setShowCommandPanel(false)}
+          />
+
+          <CommandPalette
+            isOpen={ui.showCommandPalette}
+            onClose={() => ui.setShowCommandPalette(false)}
+            items={paletteItems}
           />
 
           <LogPanel

@@ -16,6 +16,7 @@ interface KeyboardShortcutCallbacks {
   onLogs: () => void;
   onDataProfile: () => void;
   onAI: () => void;
+  onCommandPalette: () => void;
 }
 
 interface KeyboardShortcutState {
@@ -37,17 +38,24 @@ export function useKeyboardShortcuts(
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const ctrl = e.ctrlKey || e.metaKey;
+      const shift = e.shiftKey;
+      const alt = e.altKey;
+      const key = e.key.toLowerCase();
+
+      // Command palette works even while typing in inputs
+      if (ctrl && key === "k") {
+        e.preventDefault();
+        callbacksRef.current.onCommandPalette();
+        return;
+      }
+
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement
       ) {
         return;
       }
-
-      const ctrl = e.ctrlKey || e.metaKey;
-      const shift = e.shiftKey;
-      const alt = e.altKey;
-      const key = e.key.toLowerCase();
 
       if (ctrl && key === "o") {
         e.preventDefault();

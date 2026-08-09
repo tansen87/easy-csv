@@ -120,8 +120,8 @@ export interface Translations {
   logs: string;
   noLogsYet: string;
   executePipelineHint: string;
-  restore: string,
-  maximize: string,
+  restore: string;
+  maximize: string;
 
   // ChartPanel
   chart: string;
@@ -183,6 +183,18 @@ export interface Translations {
   aiModel: string;
   aiModelDesc: string;
   aiSelectModel: string;
+
+  // CommandPalette
+  commandPalette: string;
+  commandPalettePlaceholder: string;
+  paletteActions: string;
+  paletteCommands: string;
+  paletteTabs: string;
+  paletteRecentFiles: string;
+  paletteNoResults: string;
+  paletteNavigateHint: string;
+  paletteSelectHint: string;
+  paletteCloseHint: string;
 
   // General
   close: string;
@@ -357,7 +369,8 @@ export const translations: Record<Language, Translations> = {
     aiClarificationConfirm: "Confirm",
     aiClarificationModify: "Modify",
     aiClearData: "Clear AI Learning Data",
-    aiClearDataDesc: "Delete all AI conversation history, feedback, and correction rules",
+    aiClearDataDesc:
+      "Delete all AI conversation history, feedback, and correction rules",
     aiClearConversations: "Clear Conversations",
     aiClearFeedback: "Clear Feedback",
     aiClearCorrections: "Clear Corrections",
@@ -376,6 +389,18 @@ export const translations: Record<Language, Translations> = {
     aiModel: "Model",
     aiModelDesc: "Select the AI model to use for generating commands",
     aiSelectModel: "Select a model",
+
+    // CommandPalette
+    commandPalette: "Command Palette",
+    commandPalettePlaceholder: "Type a command or search",
+    paletteActions: "Actions",
+    paletteCommands: "Commands",
+    paletteTabs: "Tabs",
+    paletteRecentFiles: "Recent Files",
+    paletteNoResults: "No matching commands",
+    paletteNavigateHint: "Navigate",
+    paletteSelectHint: "Select",
+    paletteCloseHint: "esc Close",
 
     // General
     close: "Close",
@@ -564,6 +589,18 @@ export const translations: Record<Language, Translations> = {
     aiModel: "模型",
     aiModelDesc: "选择用于生成命令的AI模型",
     aiSelectModel: "选择模型",
+
+    // CommandPalette
+    commandPalette: "命令面板",
+    commandPalettePlaceholder: "输入命令或搜索",
+    paletteActions: "操作",
+    paletteCommands: "命令",
+    paletteTabs: "标签页",
+    paletteRecentFiles: "最近文件",
+    paletteNoResults: "没有匹配的命令",
+    paletteNavigateHint: "导航",
+    paletteSelectHint: "选择",
+    paletteCloseHint: "esc 关闭",
 
     // General
     close: "关闭",

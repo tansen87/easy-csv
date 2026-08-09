@@ -18,6 +18,7 @@ import {
   GitBranch,
   GitMerge,
   Bot,
+  Search,
 } from "lucide-react";
 import { PipelineStep } from "@/types/xan";
 import { useLanguage } from "@/i18n";
@@ -41,6 +42,7 @@ interface MainMenuProps {
   onHelp: () => void;
   onCheckUpdate: () => void;
   onShowSettings: () => void;
+  onOpenPalette: () => void;
   isExecuting: boolean;
   isCheckingUpdate: boolean;
   currentPipelineLength: number;
@@ -77,6 +79,7 @@ export const MainMenu = React.memo(function MainMenu({
   onHelp,
   onCheckUpdate,
   onShowSettings,
+  onOpenPalette,
   isExecuting,
   isCheckingUpdate,
   currentPipelineLength,
@@ -251,6 +254,16 @@ export const MainMenu = React.memo(function MainMenu({
 
         {/* Right side buttons */}
         <div className="flex items-center rounded-md gap-1">
+          {/* Command Palette Button */}
+          <Tooltip content={t.commandPalette} side="bottom">
+            <button
+              onClick={onOpenPalette}
+              aria-label={t.commandPalette}
+              className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+          </Tooltip>
           {/* Panel Toggle Buttons */}
           <Tooltip content={t.commandPanel} side="bottom">
             <button
