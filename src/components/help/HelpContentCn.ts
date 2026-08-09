@@ -21,6 +21,7 @@ export const helpContentCn = `
 | \`Ctrl\` + \`Z\` | 撤销 |
 | \`Ctrl\` + \`Y\` | 重做 |
 | \`Ctrl\` + \`R\` | 执行 |
+| \`Ctrl\` + \`D\` | 比较 CSV 文件 |
 | \`Shift\` + \`H\` | 显示帮助 |
 | \`Shift\` + \`C\` | 检查更新 |
 | \`Shift\` + \`S\` | 打开设置 |

@@ -24,6 +24,7 @@ import {
   BarChart3,
   GitBranch,
   GitMerge,
+  GitCompareArrows,
   Bot,
   RefreshCw,
 } from "lucide-react";
@@ -36,6 +37,7 @@ import { getHelpContent } from "@/components/help/HelpContent";
 import { UpdateDialog } from "@/components/dialog/UpdateDialog";
 import { ConfirmDialog } from "@/components/dialog/ConfirmDialog";
 import { BatchFilterDialog } from "@/components/dialog/BatchFilterDialog";
+import { CsvDiffDialog } from "@/components/dialog/CsvDiffDialog";
 import { DataProfilePanel } from "@/components/panel/DataProfilePanel";
 import { AIPanel } from "@/components/panel/AIPanel";
 import { xanCommands } from "@/data/commands";
@@ -672,6 +674,12 @@ function AppContent() {
       onDataProfile: () => ui.setShowDataProfile(!ui.showDataProfile),
       onAI: () => ui.setShowAIPanel(!ui.showAIPanel),
       onCommandPalette: () => ui.setShowCommandPalette(!ui.showCommandPalette),
+      onOpenCsvDiff: () => {
+        ui.setCsvDiffInitialFileA(
+          tabsHook.getCurrentTab()?.inputFile || undefined,
+        );
+        ui.setShowCsvDiff(true);
+      },
     },
     {
       undoStackLength: pipeline.undoStack.length,
@@ -933,6 +941,20 @@ function AppContent() {
         shortcut: "Alt+A",
         onSelect: () => ui.setShowAIPanel(!ui.showAIPanel),
       },
+      {
+        id: "csv-diff",
+        label: t.csvDiff,
+        description: t.csvDiffNoResult,
+        icon: GitCompareArrows,
+        group: t.paletteActions,
+        shortcut: "Ctrl+D",
+        onSelect: () => {
+          ui.setCsvDiffInitialFileA(
+            tabsHook.getCurrentTab()?.inputFile || undefined,
+          );
+          ui.setShowCsvDiff(true);
+        },
+      },
     ];
 
     const tabs: PaletteItem[] = tabsHook.tabs.map((tab) => ({
@@ -1030,6 +1052,12 @@ function AppContent() {
               onCheckUpdate={checkForUpdates}
               onShowSettings={onShowSettings}
               onOpenPalette={() => ui.setShowCommandPalette(true)}
+              onOpenCsvDiff={() => {
+                ui.setCsvDiffInitialFileA(
+                  tabsHook.getCurrentTab()?.inputFile || undefined,
+                );
+                ui.setShowCsvDiff(true);
+              }}
               isExecuting={isExecuting}
               isCheckingUpdate={ui.isCheckingUpdate}
               currentPipelineLength={tabsHook.getCurrentPipeline().length}
@@ -1189,6 +1217,13 @@ function AppContent() {
               onClose={() => ui.setBatchFilterDialog(null)}
             />
           )}
+
+          <CsvDiffDialog
+            isOpen={ui.showCsvDiff}
+            onClose={() => ui.setShowCsvDiff(false)}
+            defaultDelimiter={settings.defaultDelimiter}
+            initialFileA={ui.csvDiffInitialFileA}
+          />
 
           {/* Data Profile Panel */}
           <div

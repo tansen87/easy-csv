@@ -39,6 +39,10 @@ export function useUIState() {
   const [chartSeries, setChartSeries] = useState<ChartSeries[]>([]);
   const [chartHeaders, setChartHeaders] = useState<string[]>([]);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showCsvDiff, setShowCsvDiff] = useState(false);
+  const [csvDiffInitialFileA, setCsvDiffInitialFileA] = useState<
+    string | undefined
+  >(undefined);
 
   return {
     showHelp,
@@ -91,5 +95,9 @@ export function useUIState() {
     setChartHeaders,
     showCommandPalette,
     setShowCommandPalette,
+    showCsvDiff,
+    setShowCsvDiff,
+    csvDiffInitialFileA,
+    setCsvDiffInitialFileA,
   };
 }

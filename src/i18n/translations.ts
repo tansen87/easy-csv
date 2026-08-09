@@ -199,6 +199,30 @@ export interface Translations {
   // General
   close: string;
   searchColumns: string;
+
+  // CsvDiff
+  csvDiff: string;
+  csvDiffFileA: string;
+  csvDiffFileB: string;
+  csvDiffFileAPlaceholder: string;
+  csvDiffFileBPlaceholder: string;
+  csvDiffBrowse: string;
+  csvDiffCompare: string;
+  csvDiffComparing: string;
+  csvDiffSelectBoth: string;
+  csvDiffNoResult: string;
+  csvDiffAdded: string;
+  csvDiffRemoved: string;
+  csvDiffModified: string;
+  csvDiffEqual: string;
+  csvDiffColsLeft: string;
+  csvDiffColsRight: string;
+  csvDiffKeyColumns: string;
+  csvDiffKeyColumnsHint: string;
+  csvDiffEqualRows: string;
+  csvDiffPrev: string;
+  csvDiffNext: string;
+  csvDiffPage: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -262,7 +286,7 @@ export const translations: Record<Language, Translations> = {
     light: "Light",
     dark: "Dark",
     system: "System",
-    csvDelimiter: "CSV Delimiter",
+    csvDelimiter: "Delim",
     noHeaders: "No Headers",
     noHeadersDesc: "When set, the first row will not be interpreted as headers",
     systemNotification: "Notification",
@@ -405,6 +429,31 @@ export const translations: Record<Language, Translations> = {
     // General
     close: "Close",
     searchColumns: "Search columns",
+
+    // CsvDiff
+    csvDiff: "CSV Compare",
+    csvDiffFileA: "File A",
+    csvDiffFileB: "File B",
+    csvDiffFileAPlaceholder: "Original CSV file",
+    csvDiffFileBPlaceholder: "Modified CSV file",
+    csvDiffBrowse: "Browse",
+    csvDiffCompare: "Compare",
+    csvDiffComparing: "Comparing...",
+    csvDiffSelectBoth: "Please select both files",
+    csvDiffNoResult: "Select two CSV files and click Compare",
+    csvDiffAdded: "Added",
+    csvDiffRemoved: "Removed",
+    csvDiffModified: "Modified",
+    csvDiffEqual: "Equal",
+    csvDiffColsLeft: "cols A",
+    csvDiffColsRight: "cols B",
+    csvDiffKeyColumns: "Key",
+    csvDiffKeyColumnsHint:
+      "Select key columns to match rows (faster for large files)",
+    csvDiffEqualRows: "identical rows",
+    csvDiffPrev: "Prev",
+    csvDiffNext: "Next",
+    csvDiffPage: "Page",
   },
   zh: {
     // MainMenu
@@ -465,7 +514,7 @@ export const translations: Record<Language, Translations> = {
     light: "浅色",
     dark: "深色",
     system: "跟随系统",
-    csvDelimiter: "CSV 分隔符",
+    csvDelimiter: "分隔符",
     noHeaders: "无表头",
     noHeadersDesc: "启用后,第一行将不被视为表头",
     systemNotification: "系统通知",
@@ -605,5 +654,29 @@ export const translations: Record<Language, Translations> = {
     // General
     close: "关闭",
     searchColumns: "搜索列",
+
+    // CsvDiff
+    csvDiff: "CSV 对比",
+    csvDiffFileA: "文件 A",
+    csvDiffFileB: "文件 B",
+    csvDiffFileAPlaceholder: "原始 CSV 文件",
+    csvDiffFileBPlaceholder: "修改后的 CSV 文件",
+    csvDiffBrowse: "浏览",
+    csvDiffCompare: "开始对比",
+    csvDiffComparing: "对比中...",
+    csvDiffSelectBoth: "请选择两个文件",
+    csvDiffNoResult: "选择两个 CSV 文件并点击开始对比",
+    csvDiffAdded: "新增",
+    csvDiffRemoved: "删除",
+    csvDiffModified: "修改",
+    csvDiffEqual: "相同",
+    csvDiffColsLeft: "列 A",
+    csvDiffColsRight: "列 B",
+    csvDiffKeyColumns: "关键列",
+    csvDiffKeyColumnsHint: "选择关键列以按主键匹配行(大文件更快)",
+    csvDiffEqualRows: "行相同",
+    csvDiffPrev: "上一页",
+    csvDiffNext: "下一页",
+    csvDiffPage: "页",
   },
 };

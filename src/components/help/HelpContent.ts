@@ -25,6 +25,7 @@ export const helpContentEn = `
 | \`Ctrl\` + \`Z\` | Undo |
 | \`Ctrl\` + \`Y\` | Redo |
 | \`Ctrl\` + \`R\` | Execute |
+| \`Ctrl\` + \`D\` | Compare CSV files |
 | \`Shift\` + \`H\` | Show help |
 | \`Shift\` + \`C\` | Check for updates |
 | \`Shift\` + \`S\` | Open settings |
