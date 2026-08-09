@@ -31,7 +31,7 @@ fn get_db() -> Option<&'static DbState> {
           session_id TEXT NOT NULL,
           role TEXT NOT NULL,
           content TEXT NOT NULL,
-          created_time DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_time DATETIME DEFAULT (datetime('now', 'localtime'))
         );
 
         CREATE TABLE IF NOT EXISTS ai_feedback (
@@ -41,7 +41,7 @@ fn get_db() -> Option<&'static DbState> {
           generated_command TEXT,
           feedback_type TEXT NOT NULL,
           correction TEXT,
-          created_time DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_time DATETIME DEFAULT (datetime('now', 'localtime'))
         );
 
         CREATE TABLE IF NOT EXISTS ai_corrections (
@@ -50,7 +50,7 @@ fn get_db() -> Option<&'static DbState> {
           wrong_command TEXT NOT NULL,
           correct_command TEXT NOT NULL,
           times_applied INTEGER DEFAULT 0,
-          created_time DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_time DATETIME DEFAULT (datetime('now', 'localtime'))
         );
         "#,
       )

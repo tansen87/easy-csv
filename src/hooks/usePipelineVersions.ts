@@ -1,34 +1,11 @@
 import { useState, useCallback } from "react";
-import { PipelineVersion, PipelineStep, PipelineTab, StoredPipelineStep } from "@/types/xan";
+import { PipelineVersion, PipelineStep, PipelineTab } from "@/types/xan";
 import { invoke } from "@tauri-apps/api/core";
 import { formatDateTime } from "@/utils/format";
-import { xanCommands } from "@/data/commands";
+import { reconstructStep, stripStepCommand } from "@/utils/session";
 
 function generateVersionId(): string {
   return `v-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
-
-function stripStepCommand(step: PipelineStep): StoredPipelineStep {
-  return {
-    id: step.id,
-    commandId: step.command.id,
-    parameters: step.parameters,
-    alias: step.alias,
-    position: step.position,
-  };
-}
-
-function reconstructStep(step: StoredPipelineStep | any): PipelineStep | null {
-  if (step.command) return step;
-  const command = xanCommands.find((cmd) => cmd.id === step.commandId);
-  if (!command) return null;
-  return {
-    id: step.id,
-    command,
-    parameters: step.parameters || {},
-    alias: step.alias,
-    position: step.position,
-  };
 }
 
 export function usePipelineVersions(
@@ -166,9 +143,7 @@ export function usePipelineVersions(
       if (!currentTab) return;
 
       const versions = (currentTab.versions || []).map((v) =>
-        v.id === versionId
-          ? { ...v, tags: [...(v.tags || []), tag] }
-          : v,
+        v.id === versionId ? { ...v, tags: [...(v.tags || []), tag] } : v,
       );
 
       setTabs((prev) =>

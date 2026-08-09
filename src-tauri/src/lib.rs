@@ -3,6 +3,7 @@ pub mod ai_memory;
 pub mod config;
 pub mod csv;
 pub mod pipeline;
+pub mod session;
 pub mod storage;
 pub mod xan;
 
@@ -36,6 +37,8 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     pipeline::execute_xan_pipeline,
     pipeline::set_pipeline_cancelled,
     xan::check_xan_installed,
+    session::save_session,
+    session::load_session,
     storage::save_recent_files,
     storage::load_recent_files,
     storage::load_profile_cache,

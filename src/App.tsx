@@ -30,6 +30,7 @@ import { useTabs } from "@/hooks/useTabs";
 import { usePipelineState } from "@/hooks/usePipelineState";
 import { usePipelineVersions } from "@/hooks/usePipelineVersions";
 import { useDataLineage } from "@/hooks/useDataLineage";
+import { useSession } from "@/hooks/useSession";
 import { useKeyboardShortcuts } from "@/hooks/KeyboardShortcuts";
 import { formatDateTime } from "@/utils/format";
 import { PipelineStep, XanCommand, PipelineEdge } from "@/types/xan";
@@ -92,6 +93,14 @@ function AppContent() {
     tabsHook.tabs,
     tabsHook.setTabs,
     tabsHook.selectedTabId,
+  );
+
+  // Session persistence (tab snapshots restored on startup)
+  const session = useSession(
+    tabsHook.tabs,
+    tabsHook.setTabs,
+    tabsHook.selectedTabId,
+    tabsHook.setSelectedTabId,
   );
 
   const progressHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -450,15 +459,21 @@ function AppContent() {
         await invoke("check_xan_installed");
         await settings.loadAll();
         await tabsHook.loadRecentFiles();
-        // Load version history for all tabs
-        for (const tab of tabsHook.tabs) {
-          await versionsHook.loadVersions(tab.id);
-        }
       } catch (error) {
         console.error("Initialization failed:", error);
       }
     };
-    initializeApp();
+    initializeApp().finally(() => {
+      const restoreAndLoadVersions = async () => {
+        const restoredTabs = await session.restoreSession();
+        const tabsToLoad =
+          restoredTabs.length > 0 ? restoredTabs : tabsHook.tabs;
+        for (const tab of tabsToLoad) {
+          await versionsHook.loadVersions(tab.id);
+        }
+      };
+      restoreAndLoadVersions().finally(() => session.markHydrated());
+    });
   }, []);
 
   // Load versions when tab changes
