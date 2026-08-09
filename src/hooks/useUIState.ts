@@ -43,6 +43,10 @@ export function useUIState() {
   const [csvDiffInitialFileA, setCsvDiffInitialFileA] = useState<
     string | undefined
   >(undefined);
+  const [showCsvEncoding, setShowCsvEncoding] = useState(false);
+  const [csvEncodingInitialInput, setCsvEncodingInitialInput] = useState<
+    string | undefined
+  >(undefined);
 
   return {
     showHelp,
@@ -99,5 +103,9 @@ export function useUIState() {
     setShowCsvDiff,
     csvDiffInitialFileA,
     setCsvDiffInitialFileA,
+    showCsvEncoding,
+    setShowCsvEncoding,
+    csvEncodingInitialInput,
+    setCsvEncodingInitialInput,
   };
 }

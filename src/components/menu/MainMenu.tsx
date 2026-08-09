@@ -20,6 +20,7 @@ import {
   Bot,
   Search,
   GitCompareArrows,
+  FileCode,
 } from "lucide-react";
 import { PipelineStep } from "@/types/xan";
 import { useLanguage } from "@/i18n";
@@ -45,6 +46,7 @@ interface MainMenuProps {
   onShowSettings: () => void;
   onOpenPalette: () => void;
   onOpenCsvDiff: () => void;
+  onOpenCsvEncoding: () => void;
   isExecuting: boolean;
   isCheckingUpdate: boolean;
   currentPipelineLength: number;
@@ -83,6 +85,7 @@ export const MainMenu = React.memo(function MainMenu({
   onShowSettings,
   onOpenPalette,
   onOpenCsvDiff,
+  onOpenCsvEncoding,
   isExecuting,
   isCheckingUpdate,
   currentPipelineLength,
@@ -200,6 +203,16 @@ export const MainMenu = React.memo(function MainMenu({
               >
                 <GitCompareArrows className="h-3.5 w-3.5" />
                 {t.csvDiff}
+              </button>
+              <button
+                onClick={() => {
+                  onOpenCsvEncoding();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                <FileCode className="h-3.5 w-3.5" />
+                {t.csvEncoding}
               </button>
             </div>
           )}

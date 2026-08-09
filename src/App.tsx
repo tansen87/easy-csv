@@ -27,6 +27,7 @@ import {
   GitCompareArrows,
   Bot,
   RefreshCw,
+  FileCode,
 } from "lucide-react";
 import { LogPanel } from "@/components/panel/LogPanel";
 import { ChartPanel } from "@/components/panel/ChartPanel";
@@ -38,6 +39,7 @@ import { UpdateDialog } from "@/components/dialog/UpdateDialog";
 import { ConfirmDialog } from "@/components/dialog/ConfirmDialog";
 import { BatchFilterDialog } from "@/components/dialog/BatchFilterDialog";
 import { CsvDiffDialog } from "@/components/dialog/CsvDiffDialog";
+import { CsvEncodingDialog } from "@/components/dialog/CsvEncodingDialog";
 import { DataProfilePanel } from "@/components/panel/DataProfilePanel";
 import { AIPanel } from "@/components/panel/AIPanel";
 import { xanCommands } from "@/data/commands";
@@ -955,6 +957,19 @@ function AppContent() {
           ui.setShowCsvDiff(true);
         },
       },
+      {
+        id: "csv-encoding",
+        label: t.csvEncoding,
+        description: t.csvEncoding,
+        icon: FileCode,
+        group: t.paletteActions,
+        onSelect: () => {
+          ui.setCsvEncodingInitialInput(
+            tabsHook.getCurrentTab()?.inputFile || undefined,
+          );
+          ui.setShowCsvEncoding(true);
+        },
+      },
     ];
 
     const tabs: PaletteItem[] = tabsHook.tabs.map((tab) => ({
@@ -1057,6 +1072,12 @@ function AppContent() {
                   tabsHook.getCurrentTab()?.inputFile || undefined,
                 );
                 ui.setShowCsvDiff(true);
+              }}
+              onOpenCsvEncoding={() => {
+                ui.setCsvEncodingInitialInput(
+                  tabsHook.getCurrentTab()?.inputFile || undefined,
+                );
+                ui.setShowCsvEncoding(true);
               }}
               isExecuting={isExecuting}
               isCheckingUpdate={ui.isCheckingUpdate}
@@ -1223,6 +1244,12 @@ function AppContent() {
             onClose={() => ui.setShowCsvDiff(false)}
             defaultDelimiter={settings.defaultDelimiter}
             initialFileA={ui.csvDiffInitialFileA}
+          />
+
+          <CsvEncodingDialog
+            isOpen={ui.showCsvEncoding}
+            onClose={() => ui.setShowCsvEncoding(false)}
+            initialInputFile={ui.csvEncodingInitialInput}
           />
 
           {/* Data Profile Panel */}

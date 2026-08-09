@@ -223,6 +223,22 @@ export interface Translations {
   csvDiffPrev: string;
   csvDiffNext: string;
   csvDiffPage: string;
+
+  // CsvEncoding
+  csvEncoding: string;
+  csvEncodingInputFile: string;
+  csvEncodingOutputFile: string;
+  csvEncodingBrowse: string;
+  csvEncodingSourceEncoding: string;
+  csvEncodingTargetEncoding: string;
+  csvEncodingConvert: string;
+  csvEncodingConverting: string;
+  csvEncodingSelectFiles: string;
+  csvEncodingNoResult: string;
+  csvEncodingSuccess: string;
+  csvEncodingSameEncoding: string;
+  csvEncodingBytes: string;
+  csvEncodingAutoDetect: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -454,6 +470,23 @@ export const translations: Record<Language, Translations> = {
     csvDiffPrev: "Prev",
     csvDiffNext: "Next",
     csvDiffPage: "Page",
+
+    // CsvEncoding
+    csvEncoding: "CSV Encoding",
+    csvEncodingInputFile: "Input",
+    csvEncodingOutputFile: "Output",
+    csvEncodingBrowse: "Browse",
+    csvEncodingSourceEncoding: "Source Encoding",
+    csvEncodingTargetEncoding: "Target Encoding",
+    csvEncodingConvert: "Convert",
+    csvEncodingConverting: "Converting...",
+    csvEncodingSelectFiles: "Select input and output files",
+    csvEncodingNoResult:
+      "Choose an input file, an output file and encodings, then click Convert. The result is written directly to the output file.",
+    csvEncodingSuccess: "Conversion successful",
+    csvEncodingSameEncoding: "Source and target encodings are the same",
+    csvEncodingBytes: "bytes",
+    csvEncodingAutoDetect: "Auto detect (BOM)",
   },
   zh: {
     // MainMenu
@@ -678,5 +711,22 @@ export const translations: Record<Language, Translations> = {
     csvDiffPrev: "上一页",
     csvDiffNext: "下一页",
     csvDiffPage: "页",
+
+    // CsvEncoding
+    csvEncoding: "编码转换",
+    csvEncodingInputFile: "输入",
+    csvEncodingOutputFile: "输出",
+    csvEncodingBrowse: "浏览",
+    csvEncodingSourceEncoding: "源编码",
+    csvEncodingTargetEncoding: "目标编码",
+    csvEncodingConvert: "开始转换",
+    csvEncodingConverting: "转换中...",
+    csvEncodingSelectFiles: "请选择输入和输出文件",
+    csvEncodingNoResult:
+      "选择输入文件、输出文件与编码,点击开始转换。结果直接写入输出文件。",
+    csvEncodingSuccess: "转换成功",
+    csvEncodingSameEncoding: "源编码与目标编码相同",
+    csvEncodingBytes: "字节",
+    csvEncodingAutoDetect: "自动检测 (BOM)",
   },
 };

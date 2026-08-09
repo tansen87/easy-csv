@@ -1138,6 +1138,7 @@ dependencies = [
  "chrono",
  "csv",
  "dirs",
+ "encoding_rs",
  "hex",
  "hostname",
  "rand 0.8.5",

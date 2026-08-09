@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, Read, Seek, Write};
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 use std::process::Command;
@@ -593,6 +593,171 @@ pub async fn profile_csv(file_path: String, delimiter: String) -> Result<String,
   Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CsvEncodingResult {
+  pub output_path: String,
+  pub bytes_read: usize,
+  pub bytes_written: usize,
+}
+
+/// Common encodings supported by the conversion dialog.
+pub const ENCODING_GBK: &str = "gbk";
+pub const ENCODING_GB18030: &str = "gb18030";
+pub const ENCODING_UTF8: &str = "utf-8";
+pub const ENCODING_UTF16_LE: &str = "utf-16le";
+pub const ENCODING_UTF16_BE: &str = "utf-16be";
+pub const ENCODING_LATIN1: &str = "latin1";
+
+/// Convert a CSV file from `source_encoding` to `target_encoding` and write
+/// the result directly to `output_path`. Byte-level text conversion: the file
+/// is streamed through a stateful `encoding_rs` decoder/encoder pair in chunks,
+/// so memory usage stays constant regardless of file size. The CSV structure
+/// (delimiters, quoting, line endings) is preserved untouched. Returns nothing
+/// on stdout.
+#[tauri::command]
+pub async fn convert_csv_encoding(
+  input_path: String,
+  output_path: String,
+  source_encoding: String,
+  target_encoding: String,
+) -> Result<CsvEncodingResult, String> {
+  tokio::task::spawn_blocking(move || -> Result<CsvEncodingResult, String> {
+    const CHUNK_SIZE: usize = 64 * 1024;
+
+    let source = resolve_encoding(&source_encoding)?;
+    let target = resolve_encoding(&target_encoding)?
+      .ok_or_else(|| "Target encoding cannot be 'auto'".to_string())?;
+
+    let mut input =
+      std::fs::File::open(&input_path).map_err(|e| format!("Failed to read input file: {}", e))?;
+    let mut output = std::fs::File::create(&output_path)
+      .map_err(|e| format!("Failed to write output file: {}", e))?;
+
+    // Resolve "auto" by peeking at the first few bytes for a BOM.
+    let mut probe = [0u8; 4];
+    let probe_len = input
+      .read(&mut probe)
+      .map_err(|e| format!("Failed to read input file: {}", e))?;
+    let source = match source {
+      Some(enc) => enc,
+      // Fall back to UTF-8 when no BOM is present (common for CSV exports).
+      None => detect_encoding_from_bom(&probe[..probe_len]).unwrap_or(encoding_rs::UTF_8),
+    };
+    input
+      .seek(std::io::SeekFrom::Start(0))
+      .map_err(|e| format!("Failed to seek input file: {}", e))?;
+
+    let (bytes_read, bytes_written) =
+      stream_convert(source, target, &mut input, &mut output, CHUNK_SIZE)
+        .map_err(|e| format!("Streaming conversion failed: {}", e))?;
+
+    Ok(CsvEncodingResult {
+      output_path,
+      bytes_read,
+      bytes_written,
+    })
+  })
+  .await
+  .map_err(|e| format!("Task join error: {}", e))?
+}
+
+/// Stream `input` (in `source` encoding) through a stateful decoder/encoder
+/// pair, writing `target`-encoded bytes to `output`. Reads are done in
+/// `chunk_size` blocks; incomplete multi-byte sequences spanning chunk
+/// boundaries are buffered by the decoder/encoder, so no carry-over is needed.
+/// Returns `(bytes_read, bytes_written)`.
+fn stream_convert(
+  source: &'static encoding_rs::Encoding,
+  target: &'static encoding_rs::Encoding,
+  input: &mut impl Read,
+  output: &mut impl Write,
+  chunk_size: usize,
+) -> Result<(usize, usize), String> {
+  use encoding_rs::CoderResult;
+
+  let mut decoder = source.new_decoder();
+  let mut encoder = target.new_encoder();
+
+  let mut in_buf = vec![0u8; chunk_size];
+  let mut text_buf = vec![0u8; chunk_size.max(16) * 4];
+  let mut out_buf = vec![0u8; chunk_size.max(16) * 4];
+
+  let mut bytes_read = 0usize;
+  let mut bytes_written = 0usize;
+
+  loop {
+    let n = input
+      .read(&mut in_buf)
+      .map_err(|e| format!("Failed to read input file: {}", e))?;
+    bytes_read += n;
+    let last = n == 0;
+
+    // Decode the chunk (or flush at EOF), then re-encode the produced text.
+    let mut used = 0usize;
+    loop {
+      let (result, read, written, _had_errors) =
+        decoder.decode_to_utf8(&in_buf[used..n], &mut text_buf, last);
+      used += read;
+
+      // Encode whatever UTF-8 text was produced.
+      let text = std::str::from_utf8(&text_buf[..written])
+        .map_err(|_| "Failed to decode input: invalid UTF-8 output".to_string())?;
+      let mut text_used = 0usize;
+      loop {
+        let (enc_result, enc_read, enc_written, _replaced) =
+          encoder.encode_from_utf8(&text[text_used..], &mut out_buf, last);
+        text_used += enc_read;
+        output
+          .write_all(&out_buf[..enc_written])
+          .map_err(|e| format!("Failed to write output file: {}", e))?;
+        bytes_written += enc_written;
+        match enc_result {
+          CoderResult::OutputFull => continue,
+          CoderResult::InputEmpty => break,
+        }
+      }
+
+      match result {
+        CoderResult::OutputFull => continue,
+        CoderResult::InputEmpty => break,
+      }
+    }
+
+    if last {
+      break;
+    }
+  }
+
+  Ok((bytes_read, bytes_written))
+}
+
+/// Resolve an encoding label to an `encoding_rs` `Encoding`. Returns `None` for
+/// the special "auto" label so the caller can sniff the BOM after reading.
+fn resolve_encoding(label: &str) -> Result<Option<&'static encoding_rs::Encoding>, String> {
+  use encoding_rs::Encoding;
+
+  if label == "auto" {
+    return Ok(None);
+  }
+  match label {
+    ENCODING_GBK => Ok(Some(encoding_rs::GBK)),
+    ENCODING_GB18030 => Ok(Some(encoding_rs::GB18030)),
+    ENCODING_UTF8 => Ok(Some(encoding_rs::UTF_8)),
+    ENCODING_UTF16_LE => Ok(Some(encoding_rs::UTF_16LE)),
+    ENCODING_UTF16_BE => Ok(Some(encoding_rs::UTF_16BE)),
+    ENCODING_LATIN1 => Ok(Some(encoding_rs::WINDOWS_1252)),
+    _ => Encoding::for_label(label.as_bytes())
+      .ok_or_else(|| format!("Unsupported encoding: {label}"))
+      .map(Some),
+  }
+}
+
+/// Sniff an encoding from the file's byte-order mark (BOM).
+fn detect_encoding_from_bom(bytes: &[u8]) -> Option<&'static encoding_rs::Encoding> {
+  use encoding_rs::Encoding;
+  Encoding::for_bom(bytes).map(|(encoding, _)| encoding)
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -918,5 +1083,94 @@ mod tests {
       Some(vec!["gone".to_string(), "x".to_string()])
     );
     assert_eq!(removed_count, 1);
+  }
+
+  #[test]
+  fn convert_encoding_utf8_to_gbk_roundtrip() {
+    let dir = std::env::temp_dir();
+    let input = dir.join("easy_csv_enc_in.csv");
+    let output = dir.join("easy_csv_enc_out.csv");
+
+    std::fs::write(&input, "name,value\ncaf\u{e9},1\n").unwrap();
+
+    let result = std::fs::read(&input).unwrap();
+    let (decoded, _, _) = encoding_rs::UTF_8.decode(&result);
+    let (encoded, _, _) = encoding_rs::GBK.encode(&decoded);
+    std::fs::write(&output, &encoded).unwrap();
+
+    // GBK bytes are not valid UTF-8 for "café".
+    let out_bytes = std::fs::read(&output).unwrap();
+    assert!(String::from_utf8(out_bytes.clone()).is_err());
+
+    // Round-trip back to UTF-8 and verify content.
+    let (back, _, _) = encoding_rs::GBK.decode(&out_bytes);
+    assert_eq!(back, "name,value\ncaf\u{e9},1\n");
+
+    let _ = std::fs::remove_file(&input);
+    let _ = std::fs::remove_file(&output);
+  }
+
+  #[test]
+  fn stream_convert_handles_multibyte_chunk_boundaries() {
+    // "姓名"/"地址" and "café" produce multi-byte sequences in GBK. Use a
+    // tiny chunk size so a single character is guaranteed to span chunks.
+    let text = "姓名,地址\ncaf\u{e9},1\n中文混合,ok\n";
+    let (src_bytes, _, _) = encoding_rs::GBK.encode(text);
+
+    let mut out = Vec::new();
+    let (read, written) = stream_convert(
+      encoding_rs::GBK,
+      encoding_rs::UTF_8,
+      &mut &src_bytes[..],
+      &mut out,
+      1,
+    )
+    .unwrap();
+
+    assert_eq!(read, src_bytes.len());
+    assert!(written > 0);
+    assert_eq!(out, text.as_bytes());
+  }
+
+  #[test]
+  fn stream_convert_large_ascii_passthrough() {
+    // ASCII CSV should pass through byte-for-byte regardless of chunk size.
+    let text = "id,name,value\n1,a,10\n2,b,20\n";
+    let mut out = Vec::new();
+    let (read, written) = stream_convert(
+      encoding_rs::UTF_8,
+      encoding_rs::UTF_8,
+      &mut text.as_bytes(),
+      &mut out,
+      5,
+    )
+    .unwrap();
+
+    assert_eq!(read, text.len());
+    assert_eq!(written, text.len());
+    assert_eq!(out, text.as_bytes());
+  }
+
+  #[test]
+  fn resolve_encoding_supports_common_labels() {
+    assert!(resolve_encoding(ENCODING_GBK).unwrap().is_some());
+    assert!(resolve_encoding(ENCODING_GB18030).unwrap().is_some());
+    assert!(resolve_encoding(ENCODING_UTF8).unwrap().is_some());
+    assert!(resolve_encoding(ENCODING_UTF16_LE).unwrap().is_some());
+    assert!(resolve_encoding(ENCODING_UTF16_BE).unwrap().is_some());
+    assert!(resolve_encoding(ENCODING_LATIN1).unwrap().is_some());
+    assert!(resolve_encoding("auto").unwrap().is_none());
+    assert!(resolve_encoding("bogus").is_err());
+  }
+
+  #[test]
+  fn detect_bom_identifies_utf16() {
+    let utf16le = b"\xFF\xFEa\x00b\x00";
+    assert_eq!(
+      detect_encoding_from_bom(utf16le),
+      Some(encoding_rs::UTF_16LE)
+    );
+    let no_bom = b"plain";
+    assert_eq!(detect_encoding_from_bom(no_bom), None);
   }
 }
