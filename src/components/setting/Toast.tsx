@@ -31,12 +31,17 @@ const iconColorMap = {
   info: "text-blue-500",
 };
 
-export function Toast({ message, type = "info", onClose, duration = 5000 }: ToastProps) {
+export function Toast({
+  message,
+  type = "info",
+  onClose,
+  duration = 5000,
+}: ToastProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     requestAnimationFrame(() => setIsVisible(true));
-    
+
     const timer = setTimeout(() => {
       setIsVisible(false);
       setTimeout(onClose, 300);
@@ -49,8 +54,8 @@ export function Toast({ message, type = "info", onClose, duration = 5000 }: Toas
 
   return (
     <div
-      className={`fixed bottom-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg backdrop-blur-sm transition-all duration-300 ${colorMap[type]} ${
-        isVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
+      className={`fixed top-12 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-2 py-2 rounded-lg border backdrop-blur-sm transition-all duration-300 ${colorMap[type]} ${
+        isVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
       }`}
     >
       <Icon className={`h-5 w-5 ${iconColorMap[type]} flex-shrink-0`} />
@@ -66,7 +71,7 @@ export interface ToastContainerProps {
 
 export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
   return (
-    <div className="fixed bottom-0 right-0 z-50 p-4 space-y-2">
+    <div className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center p-4 space-y-2 pointer-events-none">
       {toasts.map((toast) => (
         <Toast
           key={toast.id}

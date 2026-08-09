@@ -7,9 +7,6 @@ export function useUIState() {
   const [helpCommandName, setHelpCommandName] = useState("");
   const [showLogPanel, setShowLogPanel] = useState(false);
   const [showCommandPanel, setShowCommandPanel] = useState(false);
-  const [activeLeftPanel, setActiveLeftPanel] = useState<
-    "commands" | "history"
-  >("commands");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeMenu, setActiveMenu] = useState<"file" | null>(null);
   const [isMenuActivated, setIsMenuActivated] = useState(false);
@@ -53,8 +50,6 @@ export function useUIState() {
     setShowLogPanel,
     showCommandPanel,
     setShowCommandPanel,
-    activeLeftPanel,
-    setActiveLeftPanel,
     searchQuery,
     setSearchQuery,
     activeMenu,
