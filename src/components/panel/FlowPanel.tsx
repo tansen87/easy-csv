@@ -217,18 +217,17 @@ export function FlowPanel({
   const handleTableRenameRef = useRef(handleTableRename);
   handleTableRenameRef.current = handleTableRename;
 
-  // Ctrl+F 全局快捷键(HelpDialog 打开时由 HelpDialog 处理)
+  // Ctrl+F 全局快捷键(HelpDialog打开时由HelpDialog处理)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 如果对话框打开,不拦截 Ctrl+F
+      // 无论大小写都拦截 Ctrl+F,避免唤起浏览器查找框
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "f") return;
+      e.preventDefault();
+      e.stopPropagation();
+      // 如果对话框打开,不打开搜索框(由HelpDialog处理)
       const dialog = document.querySelector('[role="dialog"]');
       if (dialog) return;
-
-      if ((e.ctrlKey || e.metaKey) && e.key === "f") {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsSearchOpen(true);
-      }
+      setIsSearchOpen(true);
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);

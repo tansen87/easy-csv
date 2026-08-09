@@ -52,3 +52,6 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: vi.fn(),
   })),
 });
+
+// scrollIntoView is not implemented in jsdom
+Element.prototype.scrollIntoView = vi.fn();

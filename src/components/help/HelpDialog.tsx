@@ -8,7 +8,7 @@ import React, {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { HelpMarkdown } from "@/components/help/HelpMarkdown";
+import { HelpMarkdown, getSearchMatches } from "@/components/help/HelpMarkdown";
 import { X, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { useLanguage } from "@/i18n";
 
@@ -34,25 +34,8 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
   const hasFocusedRef = useRef(false);
   const { t } = useLanguage();
 
-  const escapeRegExp = (string: string) => {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  };
-
   const matches = useMemo(() => {
-    if (!searchQuery.trim() || !content) {
-      return [];
-    }
-
-    const escapedQuery = escapeRegExp(searchQuery);
-    const regex = new RegExp(escapedQuery, "gi");
-    const matchPositions: number[] = [];
-    let match;
-
-    while ((match = regex.exec(content)) !== null) {
-      matchPositions.push(match.index);
-    }
-
-    return matchPositions;
+    return getSearchMatches(content, searchQuery);
   }, [searchQuery, content]);
 
   useEffect(() => {
@@ -64,7 +47,7 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === "f") {
+      if (e.ctrlKey && e.key.toLowerCase() === "f") {
         e.preventDefault();
         searchInputRef.current?.focus();
       }
@@ -132,14 +115,17 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
   useEffect(() => {
     if (matches.length === 0 || !scrollAreaRef.current) return;
 
-    const currentMatchPosition = matches[currentMatchIndex];
     const scrollArea = scrollAreaRef.current.querySelector(
       "[data-radix-scroll-area-viewport]",
     );
+    if (!scrollArea) return;
 
-    if (scrollArea) {
+    const activeMatch = scrollArea.querySelector('[data-active-match="true"]');
+    if (activeMatch instanceof HTMLElement) {
+      activeMatch.scrollIntoView({ block: "center" });
+    } else {
       const totalLength = content.length;
-      const scrollRatio = currentMatchPosition / totalLength;
+      const scrollRatio = matches[currentMatchIndex] / totalLength;
       const maxScroll = scrollArea.scrollHeight - scrollArea.clientHeight;
       scrollArea.scrollTop = scrollRatio * maxScroll;
     }
@@ -235,7 +221,11 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
 
         <ScrollArea ref={scrollAreaRef} className="flex-1 h-0">
           <div className="text-sm font-mono pr-2">
-            <HelpMarkdown content={content} searchQuery={searchQuery} />
+            <HelpMarkdown
+              content={content}
+              searchQuery={searchQuery}
+              currentMatchIndex={currentMatchIndex}
+            />
           </div>
         </ScrollArea>
 
@@ -243,7 +233,7 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
           <span className="mr-4">{t.searchShortcut}</span>
           <span className="mr-4">{t.previousMatch}</span>
           <span className="mr-4">{t.nextMatch}</span>
-          <span>{t.close}</span>
+          <span>{t.helpClose}</span>
         </div>
       </div>
     </div>

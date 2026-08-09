@@ -108,7 +108,7 @@ export interface Translations {
   searchShortcut: string;
   previousMatch: string;
   nextMatch: string;
-  close: string;
+  helpClose: string;
 
   // FlowPanel
   searchFlow: string;
@@ -183,6 +183,8 @@ export interface Translations {
   aiModel: string;
   aiModelDesc: string;
   aiSelectModel: string;
+
+  close: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -298,7 +300,7 @@ export const translations: Record<Language, Translations> = {
     searchShortcut: "Ctrl+F: Search",
     previousMatch: "↑: Previous match",
     nextMatch: "↓: Next match",
-    close: "Close",
+    helpClose: "ESC: Close",
 
     // FlowPanel
     searchFlow: "Search in the workflow",
@@ -372,6 +374,8 @@ export const translations: Record<Language, Translations> = {
     aiModel: "Model",
     aiModelDesc: "Select the AI model to use for generating commands",
     aiSelectModel: "Select a model",
+
+    close: "Close",
   },
   zh: {
     // MainMenu
@@ -482,7 +486,7 @@ export const translations: Record<Language, Translations> = {
     searchShortcut: "Ctrl+F: 搜索",
     previousMatch: "↑: 上一个匹配",
     nextMatch: "↓: 下一个匹配",
-    close: "关闭",
+    helpClose: "ESC: 关闭",
 
     // FlowPanel
     searchFlow: "在工作流中搜索",
@@ -556,5 +560,7 @@ export const translations: Record<Language, Translations> = {
     aiModel: "模型",
     aiModelDesc: "选择用于生成命令的AI模型",
     aiSelectModel: "选择模型",
+
+    close: "关闭",
   },
 };

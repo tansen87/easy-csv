@@ -6,6 +6,7 @@ use tauri::{
   menu::{Menu, MenuItem},
   tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
 };
+use tauri_plugin_prevent_default::{Builder as PreventDefaultBuilder, Flags, PlatformOptions};
 
 fn main() {
   tauri::Builder::default()
@@ -16,6 +17,12 @@ fn main() {
     .plugin(tauri_plugin_window_state::Builder::new().build())
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_http::init())
+    .plugin(
+      PreventDefaultBuilder::new()
+        .with_flags(Flags::empty())
+        .platform(PlatformOptions::new().browser_accelerator_keys(false))
+        .build(),
+    )
     .invoke_handler(easy_csv::invoke_handler())
     .setup(|app| {
       let show_item = MenuItem::with_id(app, "show", "show", true, None::<&str>)?;

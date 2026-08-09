@@ -26,6 +26,7 @@ tauri-plugin-fs = "^2"
 tauri-plugin-window-state = "^2"
 tauri-plugin-notification = "^2"
 tauri-plugin-http = { version = "^2", features = ["default"] }
+tauri-plugin-prevent-default = { version = "^5", features = ["platform-windows"] }
 rusqlite = { version = "0.40.1", features = ["bundled"] }
 aes-gcm = "0.11.0"
 sha2 = "0.11.0"
