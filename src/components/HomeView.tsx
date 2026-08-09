@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { X, FolderOpen, FileUp, Star, Clock, File } from "lucide-react";
+import { X, FolderOpen, FileUp, Star, Clock, File, Square } from "lucide-react";
 import {
   PipelineStep,
   PipelineEdge,
@@ -76,6 +76,8 @@ interface HomeViewProps {
     status: "executing" | "completed" | "error";
   } | null;
   showProgressBar?: boolean;
+  isExecuting?: boolean;
+  onCancelExecution?: () => void;
   recentFiles?: RecentFile[];
   onOpenRecentFile?: (filePath: string) => void;
   reactFlowInstanceRef?: React.RefObject<any>;
@@ -139,6 +141,8 @@ export const HomeView = React.memo(function HomeView({
   showLineagePanel = false,
   onToggleVersionPanel,
   onToggleLineagePanel,
+  isExecuting = false,
+  onCancelExecution,
 }: HomeViewProps) {
   const { t } = useLanguage();
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
@@ -705,6 +709,15 @@ export const HomeView = React.memo(function HomeView({
                 {branchProgress.name}
               </span>
             </div>
+            {isExecuting && onCancelExecution && (
+              <button
+                onClick={onCancelExecution}
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors"
+              >
+                <Square className="h-2.5 w-2.5" />
+                {t.cancelExecution}
+              </button>
+            )}
           </div>
         </div>
       )}

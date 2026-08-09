@@ -12,6 +12,8 @@ export interface Translations {
   redo: string;
   execute: string;
   executing: string;
+  cancelExecution: string;
+  executionCancelled: string;
   commandPanel: string;
   logPanel: string;
   checkUpdate: string;
@@ -200,6 +202,8 @@ export const translations: Record<Language, Translations> = {
     redo: "Redo",
     execute: "Execute",
     executing: "Executing",
+    cancelExecution: "Cancel Execution",
+    executionCancelled: "Execution cancelled",
     commandPanel: "Command",
     logPanel: "Logs",
     dataProfile: "Data Profile",
@@ -389,6 +393,8 @@ export const translations: Record<Language, Translations> = {
     redo: "重做",
     execute: "执行",
     executing: "执行中",
+    cancelExecution: "取消执行",
+    executionCancelled: "执行已取消",
     commandPanel: "命令",
     logPanel: "日志",
     dataProfile: "数据概览",

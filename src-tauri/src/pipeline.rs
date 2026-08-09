@@ -4,7 +4,8 @@ use std::io::{BufReader, ErrorKind, Read, Write};
 use std::os::windows::process::CommandExt;
 use std::path::Path;
 use std::process::{Command, Stdio};
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 
 use serde::{Deserialize, Serialize};
@@ -31,6 +32,59 @@ pub struct ExecutionResult {
   pub success: bool,
   pub output: String,
   pub error: String,
+  pub cancelled: bool,
+}
+
+static CANCELLATION_FLAG: OnceLock<AtomicBool> = OnceLock::new();
+
+fn cancellation_flag() -> &'static AtomicBool {
+  CANCELLATION_FLAG.get_or_init(|| AtomicBool::new(false))
+}
+
+#[tauri::command]
+pub fn set_pipeline_cancelled(cancel: bool) {
+  cancellation_flag().store(cancel, Ordering::SeqCst);
+}
+
+fn wait_with_cancel(
+  mut child: std::process::Child,
+  cancel: &AtomicBool,
+) -> Result<std::process::Output, String> {
+  let stdout = child.stdout.take().ok_or("Failed to get stdout handle")?;
+  let stderr = child.stderr.take().ok_or("Failed to get stderr handle")?;
+
+  let stdout_thread = thread::spawn(move || {
+    let mut reader = BufReader::new(stdout);
+    let mut buf = Vec::new();
+    let _ = reader.read_to_end(&mut buf);
+    buf
+  });
+  let stderr_thread = thread::spawn(move || {
+    let mut reader = BufReader::new(stderr);
+    let mut buf = Vec::new();
+    let _ = reader.read_to_end(&mut buf);
+    buf
+  });
+
+  let status = loop {
+    if cancel.load(Ordering::Relaxed) {
+      let _ = child.kill();
+    }
+    match child.try_wait() {
+      Ok(Some(status)) => break status,
+      Ok(None) => thread::sleep(std::time::Duration::from_millis(50)),
+      Err(e) => return Err(format!("Wait for command failed: {}", e)),
+    }
+  };
+
+  let stdout = stdout_thread.join().unwrap_or_default();
+  let stderr = stderr_thread.join().unwrap_or_default();
+
+  Ok(std::process::Output {
+    status,
+    stdout,
+    stderr,
+  })
 }
 
 #[tauri::command]
@@ -39,6 +93,17 @@ pub async fn execute_xan_pipeline(
   input_file: String,
   default_delimiter: String,
 ) -> Result<ExecutionResult, String> {
+  let cancel_flag = cancellation_flag();
+
+  if cancel_flag.load(Ordering::SeqCst) {
+    return Ok(ExecutionResult {
+      success: false,
+      output: String::new(),
+      error: "Execution cancelled".to_string(),
+      cancelled: true,
+    });
+  }
+
   let xan_path = find_xan_executable().ok_or("xan executable not found")?;
 
   let config = load_config()?;
@@ -162,13 +227,9 @@ pub async fn execute_xan_pipeline(
           .spawn()
           .map_err(|e| format!("Failed to start command: {}", e))?;
 
-        child
-          .wait_with_output()
-          .map_err(|e| format!("Wait for command failed: {}", e))
+        wait_with_cancel(child, cancel_flag)
       } else if is_cat_command {
-        first_child
-          .wait_with_output()
-          .map_err(|e| format!("Wait for command failed: {}", e))
+        wait_with_cancel(first_child, cancel_flag)
       } else {
         {
           let mut stdin = first_child
@@ -178,6 +239,9 @@ pub async fn execute_xan_pipeline(
           let mut buffer = vec![0; 256 * 1024];
           let mut file = input_file_handle.take().unwrap();
           loop {
+            if cancel_flag.load(Ordering::Relaxed) {
+              break;
+            }
             match file.read(&mut buffer) {
               Ok(0) => break,
               Ok(n) => {
@@ -193,9 +257,7 @@ pub async fn execute_xan_pipeline(
           }
         }
 
-        first_child
-          .wait_with_output()
-          .map_err(|e| format!("Wait for command failed: {}", e))
+        wait_with_cancel(first_child, cancel_flag)
       }
     } else {
       // Multi-command pipeline
@@ -318,6 +380,9 @@ pub async fn execute_xan_pipeline(
         thread::spawn(move || {
           let mut buffer = vec![0; 64 * 1024];
           loop {
+            if cancel_flag.load(Ordering::Relaxed) {
+              break;
+            }
             match input_file_clone.read(&mut buffer) {
               Ok(0) => break,
               Ok(n) => {
@@ -367,6 +432,20 @@ pub async fn execute_xan_pipeline(
       let mut try_wait_error = None;
 
       while final_status.is_none() && try_wait_error.is_none() {
+        if cancel_flag.load(Ordering::Relaxed) {
+          for child in &mut children {
+            let _ = child.kill();
+          }
+          for child in &mut children {
+            let _ = child.wait();
+          }
+          let _ = last_child.kill();
+          if let Ok(status) = last_child.wait() {
+            final_status = Some(status);
+          }
+          break;
+        }
+
         match last_child.try_wait() {
           Ok(Some(status)) => {
             final_status = Some(status);
@@ -465,9 +544,12 @@ pub async fn execute_xan_pipeline(
   .await
   .map_err(|e| format!("Task execution failed: {}", e))??;
 
+  let cancelled = cancel_flag.load(Ordering::Relaxed);
+
   Ok(ExecutionResult {
-    success: output.status.success(),
+    success: output.status.success() && !cancelled,
     output: String::from_utf8_lossy(&output.stdout).to_string(),
     error: String::from_utf8_lossy(&output.stderr).to_string(),
+    cancelled,
   })
 }

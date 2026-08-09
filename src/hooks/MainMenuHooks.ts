@@ -548,6 +548,8 @@ export function MainMenuHooks({
     }
 
     try {
+      await invoke("set_pipeline_cancelled", { cancel: false });
+
       const outputStep = currentPipeline.find(
         (step) => step.command.id === "output",
       );
@@ -600,6 +602,7 @@ export function MainMenuHooks({
       }[] = [];
 
       let pipelineFailed = false;
+      let wasCancelled = false;
       for (let i = 0; i < branches.length; i++) {
         const branchSteps = branches[i];
         if (branchSteps.length === 0) continue;
@@ -888,6 +891,19 @@ export function MainMenuHooks({
           });
         }
 
+        if (result?.cancelled) {
+          addLog("warning", "Execution cancelled by user");
+          setBranchProgress({
+            current: i + 1,
+            total: branches.length,
+            name: branchName,
+            status: "error",
+          });
+          pipelineFailed = true;
+          wasCancelled = true;
+          break;
+        }
+
         allResults.push({
           success: result.success,
           output: result.output,
@@ -922,7 +938,7 @@ export function MainMenuHooks({
         }
       }
 
-      if (trackLineage) {
+      if (trackLineage && !wasCancelled) {
         const headers = currentTab.headers || [];
         const rows = currentTab.data || [];
         trackLineage(currentPipeline, edges, headers, rows);
@@ -1204,6 +1220,15 @@ export function MainMenuHooks({
     [],
   );
 
+  const handleCancelExecution = useCallback(async () => {
+    try {
+      await invoke("set_pipeline_cancelled", { cancel: true });
+      addLog("warning", "Cancelling execution...");
+    } catch (error) {
+      addLog("error", `Failed to cancel execution: ${error}`);
+    }
+  }, [addLog]);
+
   return {
     handleOpenFile,
     handleOpenNewTabWithFile,
@@ -1211,6 +1236,7 @@ export function MainMenuHooks({
     handleExportPipeline,
     handleImportPipeline,
     handleExecute,
+    handleCancelExecution,
     getCurrentPipeline,
     processChartData,
   };

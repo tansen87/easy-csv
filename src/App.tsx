@@ -579,6 +579,7 @@ function AppContent() {
     handleExportPipeline,
     handleImportPipeline,
     handleExecute,
+    handleCancelExecution,
   } = MainMenuHooks({
     tabs: tabsHook.tabs,
     selectedTabId: tabsHook.selectedTabId,
@@ -810,6 +811,8 @@ function AppContent() {
                 onOpenUrl={handleOpenUrl}
                 branchProgress={ui.branchProgress}
                 showProgressBar={ui.showProgressBar}
+                isExecuting={isExecuting}
+                onCancelExecution={handleCancelExecution}
                 recentFiles={tabsHook.recentFiles}
                 onOpenRecentFile={onOpenRecentFile}
                 reactFlowInstanceRef={reactFlowInstanceRef}
