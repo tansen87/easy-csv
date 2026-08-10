@@ -162,8 +162,8 @@ export function TableNode({
         className="opacity-0"
         style={{ opacity: 0, pointerEvents: "none" }}
       />
-      <div className="table-node-header px-3 py-2 bg-muted/50 border-b border-border/50 flex items-center gap-2">
-        <div className="w-6 h-6 bg-gradient-to-br from-green-500/25 to-green-500/10 rounded flex items-center justify-center">
+      <div className="table-node-header px-2 py-1 bg-muted/50 flex items-center gap-2">
+        <div className="w-6 h-6 bg-gradient-to-br from-green-500/25 to-green-500/10 rounded-md flex items-center justify-center">
           <Table className="h-3 w-3 text-green-600" />
         </div>
         <span className="font-semibold text-sm">Input Data</span>
@@ -178,7 +178,6 @@ export function TableNode({
             }}
             options={headers.map((h, _i) => ({ label: h, value: h }))}
             placeholder={t.headerRename}
-            size="sm"
           />
         </div>
         <span className="text-xs text-muted-foreground ml-auto">
@@ -190,20 +189,21 @@ export function TableNode({
               onSave();
               setShowSaveButton(false);
             }}
-            className="w-5 h-5 rounded-md flex items-center justify-center hover:bg-primary/10"
+            className="nodrag w-5 h-5 rounded-md flex items-center justify-center hover:bg-primary/10"
           >
             <Check className="h-3 w-3 text-green-500" />
           </button>
         )}
         <button
           onClick={() => onDelete?.()}
-          className="w-5 h-5 rounded-md flex items-center justify-center hover:bg-primary/10 transition-colors"
+          className="nodrag w-5 h-5 rounded-md flex items-center justify-center hover:bg-primary/10 transition-colors"
         >
           <X className="h-3 w-3" />
         </button>
       </div>
       <ScrollArea
-        className="h-[16vh] nodrag nowheel"
+        className="h-[16vh] nodrag nowheel cursor-default"
+        style={{ cursor: "default" }}
         onWheel={handleWheel}
         onMouseDown={handleTableMouseDown}
         onMouseMove={handleTableMouseMove}
