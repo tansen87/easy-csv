@@ -998,7 +998,6 @@ export function MainMenuHooks({
         const headers = currentTab.headers || [];
         const rows = currentTab.data || [];
         trackLineage(currentPipeline, edges, headers, rows);
-        addLog("info", "Data lineage tracked for this execution");
       }
 
       const successCount = allResults.filter((r) => r.success).length;

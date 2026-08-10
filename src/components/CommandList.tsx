@@ -67,7 +67,7 @@ import {
   FileCodeCorner,
   type LucideIcon,
 } from "lucide-react";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { XanCommand } from "@/types/xan";
 import { commandCategories } from "@/data/commands";
 import { useLanguage } from "@/i18n";
@@ -198,6 +198,9 @@ export const CommandList = React.memo(function CommandList({
     offsetY: 0,
   });
   const panelRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [keyboardNav, setKeyboardNav] = useState(false);
+  const activeCommandRef = useRef<HTMLDivElement>(null);
   const { language, t } = useLanguage();
 
   // Debounce search input 150ms
@@ -230,7 +233,22 @@ export const CommandList = React.memo(function CommandList({
       },
       {} as Record<string, XanCommand[]>,
     );
-  }, [filteredCommands]);
+  }, [filteredCommands, language]);
+
+  const isSearching = debouncedQuery.trim().length > 0;
+
+  const visibleCommands = useMemo(() => {
+    if (isSearching) return filteredCommands;
+    return filteredCommands.filter((cmd) => expandedCategories[cmd.category]);
+  }, [filteredCommands, isSearching, expandedCategories]);
+
+  const visibleIndexMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    visibleCommands.forEach((cmd, index) => {
+      map[cmd.id] = index;
+    });
+    return map;
+  }, [visibleCommands]);
 
   const toggleCategory = (category: string) => {
     setExpandedCategories((prev) => ({
@@ -315,6 +333,59 @@ export const CommandList = React.memo(function CommandList({
     }
   }, [isVisible]);
 
+  useEffect(() => {
+    setActiveIndex(0);
+    setKeyboardNav(false);
+  }, [isVisible]);
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [debouncedQuery]);
+
+  useEffect(() => {
+    setActiveIndex((prev) =>
+      prev >= visibleCommands.length
+        ? Math.max(visibleCommands.length - 1, 0)
+        : prev,
+    );
+  }, [visibleCommands.length]);
+
+  useEffect(() => {
+    activeCommandRef.current?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, visibleCommands.length]);
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setKeyboardNav(true);
+        setActiveIndex((prev) =>
+          Math.min(prev + 1, Math.max(visibleCommands.length - 1, 0)),
+        );
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setKeyboardNav(true);
+        setActiveIndex((prev) => Math.max(prev - 1, 0));
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        setKeyboardNav(true);
+        const command = visibleCommands[activeIndex];
+        if (command) onCommandClick(command);
+      }
+    },
+    [visibleCommands, activeIndex, onCommandClick, onClose],
+  );
+
+  useEffect(() => {
+    if (isVisible) {
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [isVisible, handleKeyDown]);
+
   if (!isVisible) return null;
 
   return (
@@ -327,28 +398,19 @@ export const CommandList = React.memo(function CommandList({
       }}
       className={`fixed w-[min(280px,calc(100vw-16px))] h-[min(500px,calc(100vh-80px))] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isDragging ? "shadow-2xl" : ""}`}
       onContextMenu={(e) => e.preventDefault()}
+      onMouseMove={() => setKeyboardNav(false)}
     >
-      <div
-        className="p-2 border-b bg-card/80 cursor-move flex items-center justify-between"
-        onMouseDown={handleMouseDown}
-      >
-        <div className="flex items-center gap-2">
-          <div className="flex bg-muted/50 bg-primary text-primary-foreground shadow-sm items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium">
+      <div className="p-2 border-b bg-card/80 flex items-center gap-2">
+        <div
+          className="flex items-center gap-2 cursor-grab active:cursor-grabbing select-none"
+          onMouseDown={handleMouseDown}
+        >
+          <div className="flex bg-primary text-primary-foreground shadow-sm items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium">
             <Command className="h-3.5 w-3.5" />
             {t.cmds}
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className="h-6 px-2 text-xs font-medium hover:bg-accent hover:text-foreground"
-        >
-          <X className="h-3 w-3" />
-        </Button>
-      </div>
-      <div className="p-2 border-b">
-        <div className="relative">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60 z-10 pointer-events-none" />
           <input
             type="text"
@@ -358,6 +420,14 @@ export const CommandList = React.memo(function CommandList({
             className="w-full pl-8 pr-3 py-1.5 text-xs border border-border/50 rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
           />
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClose}
+          className="h-6 px-2 text-xs font-medium hover:bg-accent hover:text-foreground"
+        >
+          <X className="h-3 w-3" />
+        </Button>
       </div>
       <ScrollArea className="flex-1">
         <div className="p-2">
@@ -375,7 +445,7 @@ export const CommandList = React.memo(function CommandList({
                     {category}
                   </h3>
                   <div className="text-muted-foreground/70">
-                    {expandedCategories[category] ? (
+                    {isSearching || expandedCategories[category] ? (
                       <ChevronDown className="h-4 w-4" />
                     ) : (
                       <ChevronRight className="h-4 w-4" />
@@ -383,22 +453,34 @@ export const CommandList = React.memo(function CommandList({
                   </div>
                 </button>
 
-                {expandedCategories[category] && (
+                {(isSearching || expandedCategories[category]) && (
                   <div className="mt-2 space-y-1.5 px-1">
                     {categoryCommands.map((command) => {
                       const CommandIcon =
                         commandIconMap[command.name] || Command;
+                      const isActive =
+                        visibleIndexMap[command.id] === activeIndex;
                       return (
                         <Card
                           key={command.id}
-                          className="cursor-pointer transition-all duration-200 hover:shadow-md bg-card/80 hover:bg-accent/30 border-border/50"
+                          ref={isActive ? activeCommandRef : undefined}
+                          role="button"
+                          tabIndex={isActive ? 0 : -1}
+                          onClick={() => onCommandClick(command)}
+                          onMouseEnter={() => {
+                            if (!keyboardNav) {
+                              setActiveIndex(visibleIndexMap[command.id] ?? 0);
+                            }
+                          }}
+                          className={`cursor-pointer transition-all duration-200 bg-card/80 border-border/50 ${
+                            isActive
+                              ? "ring-2 ring-primary/30 bg-accent/50"
+                              : "hover:shadow-md hover:bg-accent/30"
+                          }`}
                         >
                           <div className="p-3">
                             <div className="flex items-center justify-between gap-3">
-                              <div
-                                className="flex-1 min-w-0"
-                                onClick={() => onCommandClick(command)}
-                              >
+                              <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
                                   <CommandIcon className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
                                   <span className="font-semibold text-sm">
@@ -414,13 +496,13 @@ export const CommandList = React.memo(function CommandList({
                               <div className="flex items-center gap-1.5 flex-shrink-0">
                                 {onHelpClick && (
                                   <div
-                                    className="w-6 h-6 bg-blue-500/10 hover:bg-blue-500/20 rounded-full flex items-center justify-center transition-colors cursor-pointer"
+                                    className="w-6 h-6 bg-muted/60 hover:bg-primary/20 rounded-full flex items-center justify-center transition-all hover:scale-110 cursor-pointer"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       onHelpClick(command);
                                     }}
                                   >
-                                    <HelpCircle className="h-3.5 w-3.5 text-blue-500/70" />
+                                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/70 hover:text-primary" />
                                   </div>
                                 )}
                               </div>

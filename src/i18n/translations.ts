@@ -122,6 +122,12 @@ export interface Translations {
   executePipelineHint: string;
   restore: string;
   maximize: string;
+  allLogs: string;
+  copy: string;
+  copied: string;
+  removeLog: string;
+  scrollToBottom: string;
+  noMatchingLogs: string;
 
   // ChartPanel
   chart: string;
@@ -318,7 +324,7 @@ export const translations: Record<Language, Translations> = {
     unlimited: "Unlimited",
 
     // CommandList
-    cmds: "Command",
+    cmds: "Cmd",
     history: "History",
     searchCommand: "Search command",
     searchHistory: "Search history",
@@ -367,6 +373,12 @@ export const translations: Record<Language, Translations> = {
     executePipelineHint: "Execute a pipeline to see output",
     restore: "Restore",
     maximize: "Maximize",
+    allLogs: "All",
+    copy: "Copy",
+    copied: "Copied",
+    removeLog: "Remove",
+    scrollToBottom: "Scroll to bottom",
+    noMatchingLogs: "No logs match this filter",
 
     // ChartPanel
     chart: "Chart",
@@ -609,6 +621,12 @@ export const translations: Record<Language, Translations> = {
     executePipelineHint: "执行工作流后查看输出",
     restore: "恢复",
     maximize: "最大化",
+    allLogs: "全部",
+    copy: "复制",
+    copied: "已复制",
+    removeLog: "删除",
+    scrollToBottom: "滚动到底部",
+    noMatchingLogs: "没有符合筛选条件的日志",
 
     // ChartPanel
     chart: "图表",

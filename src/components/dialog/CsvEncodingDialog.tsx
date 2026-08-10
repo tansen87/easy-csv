@@ -232,7 +232,7 @@ export function CsvEncodingDialog({
               <SearchableSelect
                 value={targetEncoding}
                 onChange={setTargetEncoding}
-                options={ENCODINGS.filter((e) => e.value !== "auto")}
+                options={ENCODINGS}
                 size="sm"
               />
             </div>
