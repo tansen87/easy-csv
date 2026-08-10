@@ -27,7 +27,6 @@ interface CsvEncodingDialogProps {
 }
 
 const ENCODINGS = [
-  { value: "auto", label: "Auto detect (BOM)" },
   { value: "utf-8", label: "UTF-8" },
   { value: "gbk", label: "GBK / GB2312" },
   { value: "gb18030", label: "GB18030" },
@@ -44,7 +43,7 @@ export function CsvEncodingDialog({
   const { t } = useLanguage();
   const [inputFile, setInputFile] = useState("");
   const [outputFile, setOutputFile] = useState("");
-  const [sourceEncoding, setSourceEncoding] = useState("auto");
+  const [sourceEncoding, setSourceEncoding] = useState("utf-8");
   const [targetEncoding, setTargetEncoding] = useState("utf-8");
   const [isConverting, setIsConverting] = useState(false);
   const [result, setResult] = useState<CsvEncodingResult | null>(null);
@@ -55,7 +54,7 @@ export function CsvEncodingDialog({
     if (isOpen) {
       setInputFile(initialInputFile || "");
       setOutputFile("");
-      setSourceEncoding("auto");
+      setSourceEncoding("utf-8");
       setTargetEncoding("utf-8");
       setResult(null);
       setError(null);

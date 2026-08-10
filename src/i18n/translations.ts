@@ -238,7 +238,6 @@ export interface Translations {
   csvEncodingSuccess: string;
   csvEncodingSameEncoding: string;
   csvEncodingBytes: string;
-  csvEncodingAutoDetect: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -486,7 +485,6 @@ export const translations: Record<Language, Translations> = {
     csvEncodingSuccess: "Conversion successful",
     csvEncodingSameEncoding: "Source and target encodings are the same",
     csvEncodingBytes: "bytes",
-    csvEncodingAutoDetect: "Auto detect (BOM)",
   },
   zh: {
     // MainMenu
@@ -727,6 +725,5 @@ export const translations: Record<Language, Translations> = {
     csvEncodingSuccess: "转换成功",
     csvEncodingSameEncoding: "源编码与目标编码相同",
     csvEncodingBytes: "字节",
-    csvEncodingAutoDetect: "自动检测 (BOM)",
   },
 };

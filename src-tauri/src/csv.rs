@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, Read, Seek, Write};
+use std::io::{BufReader, Read, Write};
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 use std::process::Command;
@@ -625,27 +625,12 @@ pub async fn convert_csv_encoding(
     const CHUNK_SIZE: usize = 64 * 1024;
 
     let source = resolve_encoding(&source_encoding)?;
-    let target = resolve_encoding(&target_encoding)?
-      .ok_or_else(|| "Target encoding cannot be 'auto'".to_string())?;
+    let target = resolve_encoding(&target_encoding)?;
 
     let mut input =
       std::fs::File::open(&input_path).map_err(|e| format!("Failed to read input file: {}", e))?;
     let mut output = std::fs::File::create(&output_path)
       .map_err(|e| format!("Failed to write output file: {}", e))?;
-
-    // Resolve "auto" by peeking at the first few bytes for a BOM.
-    let mut probe = [0u8; 4];
-    let probe_len = input
-      .read(&mut probe)
-      .map_err(|e| format!("Failed to read input file: {}", e))?;
-    let source = match source {
-      Some(enc) => enc,
-      // Fall back to UTF-8 when no BOM is present (common for CSV exports).
-      None => detect_encoding_from_bom(&probe[..probe_len]).unwrap_or(encoding_rs::UTF_8),
-    };
-    input
-      .seek(std::io::SeekFrom::Start(0))
-      .map_err(|e| format!("Failed to seek input file: {}", e))?;
 
     let (bytes_read, bytes_written) =
       stream_convert(source, target, &mut input, &mut output, CHUNK_SIZE)
@@ -731,31 +716,21 @@ fn stream_convert(
   Ok((bytes_read, bytes_written))
 }
 
-/// Resolve an encoding label to an `encoding_rs` `Encoding`. Returns `None` for
-/// the special "auto" label so the caller can sniff the BOM after reading.
-fn resolve_encoding(label: &str) -> Result<Option<&'static encoding_rs::Encoding>, String> {
+/// Resolve an encoding label to an `encoding_rs` `Encoding`.
+fn resolve_encoding(label: &str) -> Result<&'static encoding_rs::Encoding, String> {
   use encoding_rs::Encoding;
 
-  if label == "auto" {
-    return Ok(None);
-  }
   match label {
-    ENCODING_GBK => Ok(Some(encoding_rs::GBK)),
-    ENCODING_GB18030 => Ok(Some(encoding_rs::GB18030)),
-    ENCODING_UTF8 => Ok(Some(encoding_rs::UTF_8)),
-    ENCODING_UTF16_LE => Ok(Some(encoding_rs::UTF_16LE)),
-    ENCODING_UTF16_BE => Ok(Some(encoding_rs::UTF_16BE)),
-    ENCODING_LATIN1 => Ok(Some(encoding_rs::WINDOWS_1252)),
-    _ => Encoding::for_label(label.as_bytes())
-      .ok_or_else(|| format!("Unsupported encoding: {label}"))
-      .map(Some),
+    ENCODING_GBK => Ok(encoding_rs::GBK),
+    ENCODING_GB18030 => Ok(encoding_rs::GB18030),
+    ENCODING_UTF8 => Ok(encoding_rs::UTF_8),
+    ENCODING_UTF16_LE => Ok(encoding_rs::UTF_16LE),
+    ENCODING_UTF16_BE => Ok(encoding_rs::UTF_16BE),
+    ENCODING_LATIN1 => Ok(encoding_rs::WINDOWS_1252),
+    _ => {
+      Encoding::for_label(label.as_bytes()).ok_or_else(|| format!("Unsupported encoding: {label}"))
+    }
   }
-}
-
-/// Sniff an encoding from the file's byte-order mark (BOM).
-fn detect_encoding_from_bom(bytes: &[u8]) -> Option<&'static encoding_rs::Encoding> {
-  use encoding_rs::Encoding;
-  Encoding::for_bom(bytes).map(|(encoding, _)| encoding)
 }
 
 #[cfg(test)]
@@ -1153,24 +1128,24 @@ mod tests {
 
   #[test]
   fn resolve_encoding_supports_common_labels() {
-    assert!(resolve_encoding(ENCODING_GBK).unwrap().is_some());
-    assert!(resolve_encoding(ENCODING_GB18030).unwrap().is_some());
-    assert!(resolve_encoding(ENCODING_UTF8).unwrap().is_some());
-    assert!(resolve_encoding(ENCODING_UTF16_LE).unwrap().is_some());
-    assert!(resolve_encoding(ENCODING_UTF16_BE).unwrap().is_some());
-    assert!(resolve_encoding(ENCODING_LATIN1).unwrap().is_some());
-    assert!(resolve_encoding("auto").unwrap().is_none());
-    assert!(resolve_encoding("bogus").is_err());
-  }
-
-  #[test]
-  fn detect_bom_identifies_utf16() {
-    let utf16le = b"\xFF\xFEa\x00b\x00";
+    assert_eq!(resolve_encoding(ENCODING_GBK).unwrap(), encoding_rs::GBK);
     assert_eq!(
-      detect_encoding_from_bom(utf16le),
-      Some(encoding_rs::UTF_16LE)
+      resolve_encoding(ENCODING_GB18030).unwrap(),
+      encoding_rs::GB18030
     );
-    let no_bom = b"plain";
-    assert_eq!(detect_encoding_from_bom(no_bom), None);
+    assert_eq!(resolve_encoding(ENCODING_UTF8).unwrap(), encoding_rs::UTF_8);
+    assert_eq!(
+      resolve_encoding(ENCODING_UTF16_LE).unwrap(),
+      encoding_rs::UTF_16LE
+    );
+    assert_eq!(
+      resolve_encoding(ENCODING_UTF16_BE).unwrap(),
+      encoding_rs::UTF_16BE
+    );
+    assert_eq!(
+      resolve_encoding(ENCODING_LATIN1).unwrap(),
+      encoding_rs::WINDOWS_1252
+    );
+    assert!(resolve_encoding("bogus").is_err());
   }
 }
