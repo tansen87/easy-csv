@@ -435,7 +435,7 @@ export const LogPanel = React.memo(function LogPanel({
                             )}
                           </Button>
                         </Tooltip>
-                        <Tooltip content={t.removeLog}>
+                        <Tooltip content={t.remove}>
                           <Button
                             variant="ghost"
                             size="xs"

@@ -58,6 +58,7 @@ import { useDataLineage } from "@/hooks/useDataLineage";
 import { useSession } from "@/hooks/useSession";
 import { useKeyboardShortcuts } from "@/hooks/KeyboardShortcuts";
 import { formatDateTime } from "@/utils/format";
+import { stripStepCommand } from "@/utils/session";
 import { PipelineStep, XanCommand, PipelineEdge } from "@/types/xan";
 import { AIConfig, DEFAULT_AI_CONFIG } from "@/services/ai/types";
 import { loadAIConfig, saveAIConfig, setAIConfig } from "@/services/ai/index";
@@ -1140,11 +1141,22 @@ function AppContent() {
                 }
                 versions={versionsHook.getCurrentVersions()}
                 currentVersionId={tabsHook.getCurrentTab()?.currentVersionId}
+                currentSnapshot={
+                  tabsHook.getCurrentTab()
+                    ? {
+                        steps: (tabsHook.getCurrentTab()?.pipeline || []).map(
+                          stripStepCommand,
+                        ),
+                        edges: tabsHook.getCurrentTab()?.edges || [],
+                      }
+                    : undefined
+                }
                 onSaveVersion={versionsHook.saveVersion}
                 onRestoreVersion={versionsHook.restoreVersion}
                 onDeleteVersion={versionsHook.deleteVersion}
                 onAddTag={versionsHook.addTag}
                 onRemoveTag={versionsHook.removeTag}
+                onRenameVersion={versionsHook.renameVersion}
                 isSavingVersion={versionsHook.isSavingVersion}
                 lineageData={lineageHook.lineageData}
                 onGetLineageForColumn={lineageHook.getLineageForColumn}

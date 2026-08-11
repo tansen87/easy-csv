@@ -3,6 +3,23 @@ import { PipelineVersion, PipelineStep, PipelineTab } from "@/types/xan";
 import { invoke } from "@tauri-apps/api/core";
 import { formatDateTime } from "@/utils/format";
 import { reconstructStep, stripStepCommand } from "@/utils/session";
+import { snapshotsEqual } from "@/utils/versionDiff";
+
+const MAX_VERSIONS = 20;
+
+function pruneVersions(
+  versions: PipelineVersion[],
+  currentVersionId?: string,
+): PipelineVersion[] {
+  if (versions.length <= MAX_VERSIONS) return versions;
+  const pruned = [...versions];
+  while (pruned.length > MAX_VERSIONS && pruned.length > 0) {
+    const first = pruned[0];
+    if (first.id === currentVersionId) break;
+    pruned.shift();
+  }
+  return pruned;
+}
 
 function generateVersionId(): string {
   return `v-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -29,19 +46,37 @@ export function usePipelineVersions(
 
       try {
         const parentId = currentTab.currentVersionId;
+        const steps = [...currentTab.pipeline.map(stripStepCommand)];
+        const edges = [...(currentTab.edges || [])];
+
+        const previousVersions = currentTab.versions || [];
+        const latest = previousVersions[previousVersions.length - 1];
+        if (
+          latest &&
+          snapshotsEqual(
+            { steps: latest.steps, edges: latest.edges },
+            { steps, edges },
+          )
+        ) {
+          return latest;
+        }
+
         const version: PipelineVersion = {
           id: generateVersionId(),
           pipelineId: selectedTabId,
           parentId,
-          steps: [...currentTab.pipeline.map(stripStepCommand)],
-          edges: [...(currentTab.edges || [])],
+          steps,
+          edges,
           inputPosition: currentTab.inputPosition,
           message,
           createdAt: formatDateTime(new Date()),
           tags,
         };
 
-        const versions = [...(currentTab.versions || []), version];
+        const versions = pruneVersions(
+          [...previousVersions, version],
+          parentId,
+        );
 
         setTabs((prev) =>
           prev.map((tab) =>
@@ -185,6 +220,29 @@ export function usePipelineVersions(
     [tabs, selectedTabId, setTabs],
   );
 
+  const renameVersion = useCallback(
+    async (versionId: string, message: string) => {
+      const currentTab = tabs.find((t) => t.id === selectedTabId);
+      if (!currentTab) return;
+
+      const versions = (currentTab.versions || []).map((v) =>
+        v.id === versionId ? { ...v, message } : v,
+      );
+
+      setTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === selectedTabId ? { ...tab, versions } : tab,
+        ),
+      );
+
+      await invoke("save_pipeline_versions", {
+        pipelineId: selectedTabId,
+        versions: JSON.stringify(versions),
+      });
+    },
+    [tabs, selectedTabId, setTabs],
+  );
+
   const loadVersions = useCallback(
     async (tabId?: string) => {
       const targetTabId = tabId || selectedTabId;
@@ -231,6 +289,7 @@ export function usePipelineVersions(
     deleteVersion,
     addTag,
     removeTag,
+    renameVersion,
     loadVersions,
   };
 }

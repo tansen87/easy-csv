@@ -8,6 +8,7 @@ import {
   PipelineTab,
   PipelineVersion,
   StepLineage,
+  StoredPipelineStep,
 } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 import { useLanguage } from "@/i18n";
@@ -83,6 +84,10 @@ interface HomeViewProps {
   reactFlowInstanceRef?: React.RefObject<any>;
   versions?: PipelineVersion[];
   currentVersionId?: string;
+  currentSnapshot?: {
+    steps: StoredPipelineStep[];
+    edges: PipelineEdge[];
+  };
   onSaveVersion?: (
     message?: string,
     tags?: string[],
@@ -91,6 +96,7 @@ interface HomeViewProps {
   onDeleteVersion?: (versionId: string) => void;
   onAddTag?: (versionId: string, tag: string) => void;
   onRemoveTag?: (versionId: string, tag: string) => void;
+  onRenameVersion?: (versionId: string, message: string) => void;
   isSavingVersion?: boolean;
   lineageData?: StepLineage[];
   onGetLineageForColumn?: (columnName: string) => StepLineage[];
@@ -128,11 +134,13 @@ export const HomeView = React.memo(function HomeView({
   reactFlowInstanceRef,
   versions = [],
   currentVersionId,
+  currentSnapshot,
   onSaveVersion,
   onRestoreVersion,
   onDeleteVersion,
   onAddTag,
   onRemoveTag,
+  onRenameVersion,
   isSavingVersion = false,
   lineageData = [],
   onGetLineageForColumn,
@@ -554,11 +562,13 @@ export const HomeView = React.memo(function HomeView({
             <VersionControlPanel
               versions={versions}
               currentVersionId={currentVersionId}
+              currentSnapshot={currentSnapshot}
               onSaveVersion={onSaveVersion || (async () => undefined)}
               onRestoreVersion={onRestoreVersion || (() => {})}
               onDeleteVersion={onDeleteVersion || (() => {})}
               onAddTag={onAddTag || (() => {})}
               onRemoveTag={onRemoveTag || (() => {})}
+              onRenameVersion={onRenameVersion || (() => {})}
               isSaving={isSavingVersion}
               onClose={onToggleVersionPanel || (() => {})}
             />

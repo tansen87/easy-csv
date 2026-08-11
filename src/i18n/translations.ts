@@ -45,6 +45,22 @@ export interface Translations {
   versionMessagePlaceholder: string;
   tagsPlaceholder: string;
   confirmDeleteVersion: string;
+  versionCurrent: string;
+  versionSteps: string;
+  versionSearchPlaceholder: string;
+  noMatchingVersions: string;
+  listView: string;
+  versionDiff: string;
+  versionCompareWithCurrent: string;
+  versionAddedSteps: string;
+  versionRemovedSteps: string;
+  versionModifiedSteps: string;
+  versionEdges: string;
+  versionNoChanges: string;
+  versionEditMessage: string;
+  versionEditTag: string;
+  confirmRestoreTitle: string;
+  confirmRestoreDesc: string;
 
   // ConfirmDialog
   confirm: string;
@@ -125,7 +141,6 @@ export interface Translations {
   allLogs: string;
   copy: string;
   copied: string;
-  removeLog: string;
   scrollToBottom: string;
   noMatchingLogs: string;
 
@@ -210,6 +225,7 @@ export interface Translations {
   // General
   close: string;
   searchColumns: string;
+  remove: string;
 
   // CsvDiff
   csvDiff: string;
@@ -298,6 +314,23 @@ export const translations: Record<Language, Translations> = {
     versionMessagePlaceholder: "Version message...",
     tagsPlaceholder: "Tags (comma separated)...",
     confirmDeleteVersion: "Are you sure you want to delete this version?",
+    versionCurrent: "current",
+    versionSteps: "steps",
+    versionSearchPlaceholder: "Search versions",
+    noMatchingVersions: "No matching versions",
+    listView: "List",
+    versionDiff: "Diff",
+    versionCompareWithCurrent: "Compare with current workspace",
+    versionAddedSteps: "steps added",
+    versionRemovedSteps: "steps removed",
+    versionModifiedSteps: "steps modified",
+    versionEdges: "connections",
+    versionNoChanges: "No changes",
+    versionEditMessage: "Edit message",
+    versionEditTag: "Edit tag",
+    confirmRestoreTitle: "Restore this version?",
+    confirmRestoreDesc:
+      "This will replace the current pipeline with the selected version.",
 
     // ConfirmDialog
     confirm: "Confirm",
@@ -381,7 +414,6 @@ export const translations: Record<Language, Translations> = {
     allLogs: "All",
     copy: "Copy",
     copied: "Copied",
-    removeLog: "Remove",
     scrollToBottom: "Scroll to bottom",
     noMatchingLogs: "No logs match this filter",
 
@@ -466,6 +498,7 @@ export const translations: Record<Language, Translations> = {
     // General
     close: "Close",
     searchColumns: "Search columns",
+    remove: "Remove",
 
     // CsvDiff
     csvDiff: "CSV Compare",
@@ -554,6 +587,22 @@ export const translations: Record<Language, Translations> = {
     versionMessagePlaceholder: "版本描述...",
     tagsPlaceholder: "标签（逗号分隔）...",
     confirmDeleteVersion: "确定要删除此版本吗？",
+    versionCurrent: "当前",
+    versionSteps: "个步骤",
+    versionSearchPlaceholder: "搜索版本",
+    noMatchingVersions: "没有匹配的版本",
+    listView: "列表",
+    versionDiff: "对比",
+    versionCompareWithCurrent: "与当前工作区对比",
+    versionAddedSteps: "个新增步骤",
+    versionRemovedSteps: "个删除步骤",
+    versionModifiedSteps: "个修改步骤",
+    versionEdges: "条连接",
+    versionNoChanges: "无变化",
+    versionEditMessage: "编辑描述",
+    versionEditTag: "编辑标签",
+    confirmRestoreTitle: "恢复此版本？",
+    confirmRestoreDesc: "这将用所选版本替换当前管道。",
 
     // ConfirmDialog
     confirm: "确认",
@@ -634,7 +683,6 @@ export const translations: Record<Language, Translations> = {
     allLogs: "全部",
     copy: "复制",
     copied: "已复制",
-    removeLog: "删除",
     scrollToBottom: "滚动到底部",
     noMatchingLogs: "没有符合筛选条件的日志",
 
@@ -718,6 +766,7 @@ export const translations: Record<Language, Translations> = {
     // General
     close: "关闭",
     searchColumns: "搜索列",
+    remove: "删除",
 
     // CsvDiff
     csvDiff: "CSV 对比",
