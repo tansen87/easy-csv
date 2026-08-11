@@ -34,6 +34,9 @@ export async function loadAIConfig(): Promise<AIConfig> {
         provider: parsed.provider || DEFAULT_AI_CONFIG.provider,
         model: parsed.model || DEFAULT_AI_CONFIG.model,
         apiKey: "",
+        baseUrl: parsed.baseUrl || "",
+        providerName: parsed.providerName || "",
+        models: Array.isArray(parsed.models) ? parsed.models : [],
       };
     }
   } catch (error) {
@@ -56,11 +59,16 @@ export async function loadAIConfig(): Promise<AIConfig> {
 export async function saveAIConfig(config: AIConfig): Promise<void> {
   currentConfig = config;
   try {
-    // Save provider + model (no key)
+    // Save provider + model + custom provider fields (no key)
     await invoke("set_ai_config", {
       config: JSON.stringify({
         provider: config.provider,
         model: config.model,
+        baseUrl: config.baseUrl || "",
+        providerName: config.providerName || "",
+        models: (config.models || [])
+          .map((m) => m.trim())
+          .filter((m) => m.length > 0),
       }),
     });
     // Save encrypted API key per provider

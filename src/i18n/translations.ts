@@ -189,6 +189,11 @@ export interface Translations {
   aiModel: string;
   aiModelDesc: string;
   aiSelectModel: string;
+  aiCustomProviderSettings: string;
+  aiProviderName: string;
+  aiBaseUrl: string;
+  aiModels: string;
+  aiAddModel: string;
 
   // CommandPalette
   commandPalette: string;
@@ -440,6 +445,11 @@ export const translations: Record<Language, Translations> = {
     aiModel: "Model",
     aiModelDesc: "Select the AI model to use for generating commands",
     aiSelectModel: "Select a model",
+    aiCustomProviderSettings: "Custom Provider Settings",
+    aiProviderName: "Provider Name",
+    aiBaseUrl: "Base URL",
+    aiModels: "Models",
+    aiAddModel: "Add Model",
 
     // CommandPalette
     commandPalette: "Command Palette",
@@ -687,6 +697,11 @@ export const translations: Record<Language, Translations> = {
     aiModel: "模型",
     aiModelDesc: "选择用于生成命令的AI模型",
     aiSelectModel: "选择模型",
+    aiCustomProviderSettings: "自定义提供商设置",
+    aiProviderName: "提供商名称",
+    aiBaseUrl: "Base URL",
+    aiModels: "模型列表",
+    aiAddModel: "添加模型",
 
     // CommandPalette
     commandPalette: "命令面板",

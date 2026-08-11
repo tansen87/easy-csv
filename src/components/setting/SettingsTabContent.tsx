@@ -16,6 +16,9 @@ import {
   ExternalLink,
   Trash2,
   Database,
+  Server,
+  Plus,
+  X,
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-shell";
 import { invoke } from "@tauri-apps/api/core";
@@ -23,7 +26,12 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { useLanguage } from "@/i18n";
-import { AIConfig, PROVIDERS, AVAILABLE_MODELS } from "@/services/ai/types";
+import {
+  AIConfig,
+  PROVIDERS,
+  AVAILABLE_MODELS,
+  isBuiltinProvider,
+} from "@/services/ai/types";
 import { loadProviderApiKey } from "@/services/ai";
 
 interface SettingsTabContentProps {
@@ -70,6 +78,20 @@ export function SettingsTabContent({
     "conversations" | "feedback" | "corrections" | null
   >(null);
   const [clearing, setClearing] = useState(false);
+
+  const updateCustomModels = useCallback(
+    (models: string[]) => {
+      const cleaned = models.map((m) => m.trim()).filter((m) => m.length > 0);
+      onAIConfigChange({
+        ...aiConfig,
+        models,
+        model: cleaned.includes(aiConfig.model)
+          ? aiConfig.model
+          : cleaned[0] || "",
+      });
+    },
+    [aiConfig, onAIConfigChange],
+  );
 
   const handleClearData = useCallback(async () => {
     if (!clearTarget) return;
@@ -311,20 +333,27 @@ export function SettingsTabContent({
                 <SearchableSelect
                   value={aiConfig.provider}
                   onChange={async (provider) => {
-                    const typedProvider = provider as
-                      | "deepseek"
-                      | "qwen"
-                      | "glm";
+                    const typedProvider = provider as string;
                     const newKey = await loadProviderApiKey(typedProvider);
-                    onAIConfigChange({
-                      ...aiConfig,
-                      provider: typedProvider,
-                      model:
+                    if (typedProvider === "custom") {
+                      onAIConfigChange({
+                        ...aiConfig,
+                        provider: typedProvider,
+                        apiKey: newKey,
+                      });
+                    } else {
+                      const model =
                         AVAILABLE_MODELS[
-                          provider as keyof typeof AVAILABLE_MODELS
-                        ]?.[0]?.id || "",
-                      apiKey: newKey,
-                    });
+                          typedProvider as keyof typeof AVAILABLE_MODELS
+                        ]?.[0]?.id || "";
+                      onAIConfigChange({
+                        ...aiConfig,
+                        provider: typedProvider,
+                        model,
+                        baseUrl: "",
+                        apiKey: newKey,
+                      });
+                    }
                   }}
                   options={PROVIDERS.map((p) => ({
                     label: p.name,
@@ -347,16 +376,124 @@ export function SettingsTabContent({
                 <SearchableSelect
                   value={aiConfig.model}
                   onChange={(model) => onAIConfigChange({ ...aiConfig, model })}
-                  options={(AVAILABLE_MODELS[aiConfig.provider] || []).map(
-                    (m) => ({
-                      label: m.name,
-                      value: m.id,
-                    }),
-                  )}
+                  options={
+                    isBuiltinProvider(aiConfig.provider)
+                      ? (
+                          AVAILABLE_MODELS[
+                            aiConfig.provider as keyof typeof AVAILABLE_MODELS
+                          ] || []
+                        ).map((m) => ({
+                          label: m.name,
+                          value: m.id,
+                        }))
+                      : (aiConfig.models || [])
+                          .map((m) => m.trim())
+                          .filter((m) => m.length > 0)
+                          .map((m) => ({
+                            label: m,
+                            value: m,
+                          }))
+                  }
                   placeholder={t.aiSelectModel}
                   size="sm"
                 />
               </div>
+
+              {/* Custom Provider Settings (only when provider is custom) */}
+              {aiConfig.provider === "custom" && (
+                <div className="space-y-4 border rounded-md p-3 bg-muted/20">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Server className="h-4 w-4" />
+                    {t.aiCustomProviderSettings}
+                  </h3>
+                  <div>
+                    <label className="block text-sm font-medium">
+                      {t.aiProviderName}
+                    </label>
+                    <input
+                      type="text"
+                      value={aiConfig.providerName || ""}
+                      onChange={(e) =>
+                        onAIConfigChange({
+                          ...aiConfig,
+                          providerName: e.target.value,
+                        })
+                      }
+                      placeholder="Provider"
+                      className="w-full h-7 px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium">
+                      {t.aiBaseUrl}
+                    </label>
+                    <input
+                      type="text"
+                      value={aiConfig.baseUrl}
+                      onChange={(e) =>
+                        onAIConfigChange({
+                          ...aiConfig,
+                          baseUrl: e.target.value,
+                        })
+                      }
+                      placeholder="https://api.example.com/v1"
+                      className="w-full h-7 px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      {t.aiModels}
+                    </label>
+                    <div className="space-y-2">
+                      {(aiConfig.models && aiConfig.models.length > 0
+                        ? aiConfig.models
+                        : [""]
+                      ).map((model, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={model}
+                            onChange={(e) => {
+                              const models = [
+                                ...(aiConfig.models &&
+                                aiConfig.models.length > 0
+                                  ? aiConfig.models
+                                  : [""]),
+                              ];
+                              models[index] = e.target.value;
+                              updateCustomModels(models);
+                            }}
+                            placeholder="Kimi-K2.6"
+                            className="flex-1 h-7 px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const models = [...(aiConfig.models || [])];
+                              models.splice(index, 1);
+                              updateCustomModels(models);
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() =>
+                        updateCustomModels([...(aiConfig.models || []), ""])
+                      }
+                    >
+                      <Plus className="h-3 w-3" />
+                      {t.aiAddModel}
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {/* API Key */}
               <div>
@@ -374,28 +511,28 @@ export function SettingsTabContent({
                     onAIConfigChange({ ...aiConfig, apiKey: e.target.value })
                   }
                   placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
-                  className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="w-full h-7 px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                 />
                 <p className="text-xs text-muted-foreground mt-2 flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      open(
-                        aiConfig.provider === "deepseek"
-                          ? "https://platform.deepseek.com/api_keys"
-                          : aiConfig.provider === "qwen"
-                            ? "https://bailian.console.aliyun.com/?apiKey=1"
-                            : "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
-                      )
-                    }
-                    className="text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    {t.aiGetToken}
-                    <ExternalLink className="h-3 w-3" />
-                  </button>
-                  {(aiConfig.provider === "deepseek" ||
-                    aiConfig.provider === "qwen" ||
-                    aiConfig.provider === "glm") && (
+                  {isBuiltinProvider(aiConfig.provider) && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        open(
+                          aiConfig.provider === "deepseek"
+                            ? "https://platform.deepseek.com/api_keys"
+                            : aiConfig.provider === "qwen"
+                              ? "https://bailian.console.aliyun.com/?apiKey=1"
+                              : "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
+                        )
+                      }
+                      className="text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      {t.aiGetToken}
+                      <ExternalLink className="h-3 w-3" />
+                    </button>
+                  )}
+                  {isBuiltinProvider(aiConfig.provider) && (
                     <button
                       type="button"
                       onClick={() =>

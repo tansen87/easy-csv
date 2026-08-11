@@ -37,7 +37,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 │  storage.rs · ai.rs · ai_memory.rs · session.rs     │
 │  AI 对话持久化 (ai_memory.db) · AI 配置 (config.db)     │
 │  会话快照持久化 (session.db) · API Key 加密存储          │
-│  (AES-256-GCM) · 43 个 Tauri 命令                    │
+│  (AES-256-GCM) · 46 个 Tauri 命令                    │
 │  CSV 读取 (csv crate) · CSV 对比 · 编码转换            │
 │  管道执行 (进程管理 + 取消) · AI 代理 (DeepSeek/       │
 │  Qwen/GLM) · AI 记忆持久化 · 数据概况缓存              │
@@ -59,8 +59,8 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | 文件 | 职责 |
 |------|------|
 | `main.rs` | 二进制入口,注册插件(opener/dialog/fs/shell/window_state/notification/http/prevent_default),系统托盘,窗口事件处理 |
-| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 43 个命令) |
-| `config.rs` | `AppConfig` 类型、SQLite 持久化(app_config/ai_config 表)、AES-256-GCM 加密存储 API Key、per-provider API Key 管理、配置相关命令 |
+| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 46 个命令) |
+| `config.rs` | `AppConfig` 类型、SQLite 持久化(app_config/ai_config 表)、AES-256-GCM 加密存储 API Key、per-provider API Key 管理、自定义 AI provider 配置(provider=custom 时存 name/base_url/models)、配置相关命令 |
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
 | `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令、`set_pipeline_cancelled` 取消执行 |
 | `csv.rs` | `CsvData` 类型、`read_csv_file`/`profile_csv`/`diff_csv_files`/`convert_csv_encoding` 命令 |
@@ -83,7 +83,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `get/set_no_headers` | 无表头配置命令 |
 | `get/set_system_notification` | 系统通知配置命令 |
 | `get/set_minimize_to_tray` | 最小化到托盘配置命令 |
-| `get_ai_config()` / `set_ai_config()` | AI 配置读写(provider、model) |
+| `get_ai_config()` / `set_ai_config()` | AI 配置读写(provider、model、baseUrl、providerName、models) |
 | `save_api_key()` / `load_api_key()` / `delete_api_key()` / `has_api_key()` | Per-provider API Key 加密存储(AES-256-GCM) |
 
 #### xan.rs — xan 可执行文件管理
@@ -140,8 +140,8 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | 内容 | 说明 |
 |------|------|
-| `call_ai` | 核心命令,按 provider 路由到 DeepSeek/Qwen/GLM |
-| `call_deepseek` / `call_qwen` / `call_glm` | OpenAI 兼容 Chat Completions 调用 |
+| `call_ai` | 核心命令,按 provider 路由到 DeepSeek/Qwen/GLM 或自定义 base URL |
+| `call_deepseek` / `call_qwen` / `call_glm` | OpenAI 兼容 Chat Completions 调用(已统一为 `call_openai_compatible`,内置 provider 使用默认 URL,自定义 provider 使用请求中的 base_url) |
 
 #### ai_memory.rs — AI 记忆持久化 (SQLite)
 
@@ -156,7 +156,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_correction` | 保存纠正规则 |
 | `clear_conversations` / `clear_feedback` / `clear_corrections` | 清除对应表全部数据 |
 
-### Tauri 命令清单(前端可调用,共 43 个)
+### Tauri 命令清单(前端可调用,共 46 个)
 
 | 命令 | 模块 | 功能 |
 |------|------|------|
@@ -172,7 +172,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `get/set_no_headers` | config | 读写无表头配置 |
 | `get/set_system_notification` | config | 读写系统通知配置 |
 | `get/set_minimize_to_tray` | config | 读写最小化到托盘配置 |
-| `get/set_ai_config` | config | 读写 AI 配置(provider/model) |
+| `get/set_ai_config` | config | 读写 AI 配置(provider/model/baseUrl/providerName/models) |
 | `save/load/delete/has_api_key` | config | Per-provider API Key 加密存储(AES-256-GCM) |
 | `save_session` / `load_session` | session | 会话快照保存/恢复(标签页 + 选中标签) |
 | `call_ai` | ai | 调用 AI 大模型代理(DeepSeek/Qwen/GLM) |
@@ -451,6 +451,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改 AI 多行JSON解析 | `src/services/ai/api.ts`(`parseJSONBlock`) |
 | 修改 AI 记忆持久化 | `src-tauri/src/ai_memory.rs` + `src/services/ai/index.ts` |
 | 修改 AI 配置(provider/model/key) | `src/services/ai/types.ts`(常量) + `src/components/setting/SettingsTabContent.tsx`(UI) + `src-tauri/src/config.rs`(持久化) |
+| 修改自定义 AI provider 配置 | `src/components/setting/SettingsTabContent.tsx`(provider 选 custom 时显示 name/baseUrl/models) + `src/services/ai/index.ts`(配置读写) + `src-tauri/src/config.rs`(ai_config 表持久化) |
 | 修改 AI 学习数据管理 | `src/components/setting/SettingsTabContent.tsx` + `src-tauri/src/ai_memory.rs` |
 | 修改命令使用文档 | `docs/AI_usage/*.md`(生成源: `scripts/generate-ai-usage-docs.ts`) / 合并版: `docs/AI/USAGE.md` |
 | 修改命令帮助文档(英文) | `src/docs/cmd/*.md` |

@@ -1,11 +1,18 @@
 import { invoke } from "@tauri-apps/api/core";
-import { AICommand, AIConfig, AIMessage, AIResponse, TokenUsage } from "./types";
+import {
+  AICommand,
+  AIConfig,
+  AIMessage,
+  AIResponse,
+  TokenUsage,
+} from "./types";
 
 interface BackendAIRequest {
   messages: { role: string; content: string }[];
   model: string;
   api_key: string;
   provider: string;
+  base_url?: string;
 }
 
 interface BackendAIResponse {
@@ -28,6 +35,7 @@ export async function callAI(
       model: config.model,
       api_key: config.apiKey,
       provider: config.provider,
+      base_url: config.baseUrl || undefined,
     };
 
     const response = await invoke<BackendAIResponse>("call_ai", {
@@ -47,7 +55,9 @@ export async function callAI(
   }
 }
 
-function parseJSONBlock(text: string): { parsed: any[]; endIndex: number } | null {
+function parseJSONBlock(
+  text: string,
+): { parsed: any[]; endIndex: number } | null {
   const parsed: any[] = [];
   let lastIndex = 0;
   let pos = 0;
@@ -102,7 +112,9 @@ function parseAIResponse(content: string, usage?: TokenUsage): AIResponse {
       const parsed = JSON.parse(match[1]);
       if (parsed.suggestion && parsed.commands) {
         suggestion = parsed.suggestion;
-        const cmds = Array.isArray(parsed.commands) ? parsed.commands : [parsed.commands];
+        const cmds = Array.isArray(parsed.commands)
+          ? parsed.commands
+          : [parsed.commands];
         cmds.forEach((item: any) => {
           if (item.command) {
             commands.push({

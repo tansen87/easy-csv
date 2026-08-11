@@ -40,6 +40,23 @@ struct DbState {
 
 static DB_STATE: std::sync::OnceLock<DbState> = std::sync::OnceLock::new();
 
+fn ensure_column(conn: &Connection, table: &str, column: &str, ddl: &str) {
+  let exists = conn
+    .prepare(&format!("PRAGMA table_info({})", table))
+    .ok()
+    .and_then(|mut stmt| {
+      stmt
+        .query_map([], |row| row.get::<_, String>(1))
+        .ok()
+        .map(|rows| rows.filter_map(|r| r.ok()).any(|c| c == column))
+    })
+    .unwrap_or(false);
+
+  if !exists {
+    let _ = conn.execute(&format!("ALTER TABLE {} ADD COLUMN {}", table, ddl), []);
+  }
+}
+
 fn get_db() -> Option<&'static DbState> {
   DB_STATE.get().or_else(|| {
     let resources_dir = get_resources_dir();
@@ -48,8 +65,9 @@ fn get_db() -> Option<&'static DbState> {
     let db_path = db_dir.join("config.db");
     let conn = Connection::open(db_path).ok()?;
 
-    conn.execute_batch(
-      r#"
+    conn
+      .execute_batch(
+        r#"
       CREATE TABLE IF NOT EXISTS app_config (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
@@ -66,8 +84,22 @@ fn get_db() -> Option<&'static DbState> {
         encrypted_key TEXT NOT NULL
       );
       "#,
-    )
-    .ok()?;
+      )
+      .ok()?;
+
+    ensure_column(
+      &conn,
+      "ai_config",
+      "base_url",
+      "base_url TEXT NOT NULL DEFAULT ''",
+    );
+    ensure_column(&conn, "ai_config", "name", "name TEXT NOT NULL DEFAULT ''");
+    ensure_column(
+      &conn,
+      "ai_config",
+      "models",
+      "models TEXT NOT NULL DEFAULT '[]'",
+    );
 
     let state = DbState {
       conn: Mutex::new(conn),
@@ -196,31 +228,52 @@ pub fn save_config(config: &AppConfig) -> Result<(), String> {
   Ok(())
 }
 
-pub fn load_ai_config() -> Result<(String, String), String> {
+pub fn load_ai_config() -> Result<(String, String, String, String, String), String> {
   let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   let result = conn.query_row(
-    "SELECT provider, model FROM ai_config WHERE id = 1",
+    "SELECT provider, model, base_url, name, models FROM ai_config WHERE id = 1",
     [],
-    |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+    |row| {
+      Ok((
+        row.get::<_, String>(0)?,
+        row.get::<_, String>(1)?,
+        row.get::<_, String>(2)?,
+        row.get::<_, String>(3)?,
+        row.get::<_, String>(4)?,
+      ))
+    },
   );
 
   match result {
-    Ok((provider, model)) => Ok((provider, model)),
-    Err(_) => Ok(("deepseek".to_string(), "deepseek-v4-flash".to_string())),
+    Ok((provider, model, base_url, name, models)) => Ok((provider, model, base_url, name, models)),
+    Err(_) => Ok((
+      "deepseek".to_string(),
+      "deepseek-v4-flash".to_string(),
+      String::new(),
+      String::new(),
+      "[]".to_string(),
+    )),
   }
 }
 
-pub fn save_ai_config(provider: &str, model: &str) -> Result<(), String> {
+pub fn save_ai_config(
+  provider: &str,
+  model: &str,
+  base_url: &str,
+  name: &str,
+  models: &str,
+) -> Result<(), String> {
   let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   conn
     .execute(
-      "INSERT INTO ai_config (id, provider, model) VALUES (1, ?1, ?2) \
-       ON CONFLICT(id) DO UPDATE SET provider = ?1, model = ?2",
-      params![provider, model],
+      "INSERT INTO ai_config (id, provider, model, base_url, name, models) \
+       VALUES (1, ?1, ?2, ?3, ?4, ?5) \
+       ON CONFLICT(id) DO UPDATE SET provider = ?1, model = ?2, base_url = ?3, name = ?4, models = ?5",
+      params![provider, model, base_url, name, models],
     )
     .map_err(|e| format!("Failed to save AI config: {}", e))?;
 
@@ -345,8 +398,17 @@ pub async fn set_minimize_to_tray(minimize: bool) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn get_ai_config() -> Result<String, String> {
-  let (provider, model) = load_ai_config()?;
-  Ok(serde_json::json!({ "provider": provider, "model": model }).to_string())
+  let (provider, model, base_url, name, models) = load_ai_config()?;
+  Ok(
+    serde_json::json!({
+      "provider": provider,
+      "model": model,
+      "baseUrl": base_url,
+      "providerName": name,
+      "models": serde_json::from_str::<Vec<String>>(&models).unwrap_or_default(),
+    })
+    .to_string(),
+  )
 }
 
 #[tauri::command]
@@ -362,6 +424,25 @@ pub async fn set_ai_config(config: String) -> Result<(), String> {
     .get("model")
     .and_then(|v| v.as_str())
     .unwrap_or("deepseek-v4-flash");
+  let base_url = parsed.get("baseUrl").and_then(|v| v.as_str()).unwrap_or("");
+  let name = parsed
+    .get("providerName")
+    .and_then(|v| v.as_str())
+    .unwrap_or("");
+  let models = parsed
+    .get("models")
+    .and_then(|v| v.as_array())
+    .map(|arr| {
+      serde_json::to_string(
+        &arr
+          .iter()
+          .filter_map(|m| m.as_str())
+          .map(|s| s.to_string())
+          .collect::<Vec<String>>(),
+      )
+      .unwrap_or_else(|_| "[]".to_string())
+    })
+    .unwrap_or_else(|| "[]".to_string());
 
-  save_ai_config(provider, model)
+  save_ai_config(provider, model, base_url, name, &models)
 }

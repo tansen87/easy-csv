@@ -27,9 +27,12 @@ export interface TokenUsage {
 }
 
 export interface AIConfig {
-  provider: "deepseek" | "qwen" | "glm";
+  provider: string;
   apiKey: string;
   model: string;
+  baseUrl: string;
+  providerName?: string;
+  models?: string[];
 }
 
 export interface AIContext {
@@ -62,13 +65,23 @@ export const DEFAULT_AI_CONFIG: AIConfig = {
   provider: "deepseek",
   apiKey: "",
   model: "deepseek-v4-flash",
+  baseUrl: "",
+  providerName: "",
+  models: [],
 };
 
 export const PROVIDERS = [
   { id: "deepseek" as const, name: "DeepSeek" },
   { id: "qwen" as const, name: "Qwen" },
   { id: "glm" as const, name: "GLM" },
+  { id: "custom" as const, name: "Custom" },
 ];
+
+export const BUILTIN_PROVIDER_IDS = new Set(["deepseek", "qwen", "glm"]);
+
+export function isBuiltinProvider(provider: string): boolean {
+  return BUILTIN_PROVIDER_IDS.has(provider);
+}
 
 export const AVAILABLE_MODELS = {
   deepseek: [
