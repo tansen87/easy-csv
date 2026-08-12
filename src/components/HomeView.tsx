@@ -446,7 +446,7 @@ export const HomeView = React.memo(function HomeView({
 
           {/* Recent files */}
           {recentFiles.length > 0 && (
-            <div className="w-full max-w-lg px-6">
+            <div className="w-full max-w-xl px-6">
               <div className="flex items-center gap-2 mb-3 px-1">
                 <Clock className="h-3.5 w-3.5 text-muted-foreground/60" />
                 <p className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wider">
@@ -459,12 +459,12 @@ export const HomeView = React.memo(function HomeView({
                     <button
                       key={file.path}
                       onClick={() => onOpenRecentFile?.(file.path)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-accent/60 transition-colors group"
+                      className="w-full grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-accent/60 transition-colors group"
                     >
                       <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
                         <File className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 overflow-hidden">
                         <p className="text-sm font-medium text-foreground truncate">
                           {file.name}
                         </p>

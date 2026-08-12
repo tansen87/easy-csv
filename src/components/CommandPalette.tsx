@@ -188,7 +188,7 @@ export const CommandPalette = React.memo(function CommandPalette({
                         if (!keyboardNav) setActiveIndex(index);
                       }}
                       onClick={() => select(item)}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                      className={`w-full grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-3 px-4 py-2.5 text-left transition-colors ${
                         isActive ? "bg-accent text-accent-foreground" : ""
                       }`}
                     >
@@ -197,7 +197,7 @@ export const CommandPalette = React.memo(function CommandPalette({
                       ) : (
                         <span className="w-4 flex-shrink-0" />
                       )}
-                      <span className="flex-1 min-w-0">
+                      <span className="min-w-0 overflow-hidden">
                         <span className="block text-sm font-medium truncate">
                           {item.label}
                         </span>
