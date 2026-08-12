@@ -18,7 +18,7 @@ import {
   GitBranch,
   GitMerge,
   Bot,
-  Search,
+  PackageOpen,
   GitCompareArrows,
   FileCode,
 } from "lucide-react";
@@ -287,7 +287,7 @@ export const MainMenu = React.memo(function MainMenu({
               aria-label={t.commandPalette}
               className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
             >
-              <Search className="h-4 w-4" />
+              <PackageOpen className="h-4 w-4" />
             </button>
           </Tooltip>
           {/* Panel Toggle Buttons */}

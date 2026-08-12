@@ -1262,6 +1262,7 @@ function AppContent() {
             isOpen={ui.showCsvEncoding}
             onClose={() => ui.setShowCsvEncoding(false)}
             initialInputFile={ui.csvEncodingInitialInput}
+            onShowToast={showToast}
           />
 
           {/* Data Profile Panel */}

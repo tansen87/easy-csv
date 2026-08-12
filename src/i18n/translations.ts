@@ -493,7 +493,7 @@ export const translations: Record<Language, Translations> = {
     paletteNoResults: "No matching commands",
     paletteNavigateHint: "Navigate",
     paletteSelectHint: "Select",
-    paletteCloseHint: "esc Close",
+    paletteCloseHint: "ESC Close",
 
     // General
     close: "Close",
@@ -761,7 +761,7 @@ export const translations: Record<Language, Translations> = {
     paletteNoResults: "没有匹配的命令",
     paletteNavigateHint: "导航",
     paletteSelectHint: "选择",
-    paletteCloseHint: "esc 关闭",
+    paletteCloseHint: "ESC 关闭",
 
     // General
     close: "关闭",
