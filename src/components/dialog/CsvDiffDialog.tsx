@@ -419,25 +419,26 @@ export function CsvDiffDialog({
               {t.csvDiffKeyColumns}
             </label>
             {headersA && headersA.length > 0 ? (
-              <div className="flex flex-1 items-center gap-1 overflow-x-auto py-0.5">
-                {headersA.map((h, i) => {
-                  const selected = keyColumns.includes(i);
-                  return (
-                    <button
-                      key={`kc-${i}`}
-                      onClick={() => toggleKeyColumn(i)}
-                      title={h}
-                      className={`px-2 py-1 text-[11px] rounded border whitespace-nowrap shrink-0 transition-colors ${
-                        selected
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background border-border hover:bg-accent"
-                      }`}
-                    >
-                      {h || `#${i + 1}`}
-                    </button>
-                  );
-                })}
-              </div>
+              <ScrollArea className="flex-1 max-h-9">
+                <div className="flex w-max items-center gap-1 py-0.5 pr-1">
+                  {headersA.map((h, i) => {
+                    const selected = keyColumns.includes(i);
+                    return (
+                      <button
+                        key={`kc-${i}`}
+                        onClick={() => toggleKeyColumn(i)}
+                        className={`px-2 py-1 text-[11px] rounded border whitespace-nowrap shrink-0 transition-colors ${
+                          selected
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background border-border hover:bg-accent"
+                        }`}
+                      >
+                        {h || `#${i + 1}`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
             ) : (
               <span className="text-xs text-muted-foreground">
                 {t.csvDiffKeyColumnsHint}
