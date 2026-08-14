@@ -68,7 +68,7 @@ pub async fn load_lineage_data(pipeline_id: String) -> Result<String, String> {
 
 #[tauri::command]
 pub async fn save_recent_files(recent_files: String) -> Result<(), String> {
-  let resources_dir = get_resources_dir();
+  let resources_dir = get_resources_dir().join("data");
   let recent_files_path = resources_dir.join("recent-files.json");
 
   // Create directory if it doesn't exist
@@ -86,7 +86,7 @@ pub async fn save_recent_files(recent_files: String) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn load_recent_files() -> Result<String, String> {
-  let resources_dir = get_resources_dir();
+  let resources_dir = get_resources_dir().join("data");
   let recent_files_path = resources_dir.join("recent-files.json");
 
   // Load recent files from file
@@ -104,7 +104,7 @@ pub async fn load_profile_cache(
   file_path: String,
   delimiter: String,
 ) -> Result<Option<String>, String> {
-  let resources_dir = get_resources_dir();
+  let resources_dir = get_resources_dir().join("data");
   let cache_path = resources_dir.join("profiles.json");
 
   if !cache_path.exists() {
@@ -148,7 +148,7 @@ pub async fn save_profile_cache(
   delimiter: String,
   stats: String,
 ) -> Result<(), String> {
-  let resources_dir = get_resources_dir();
+  let resources_dir = get_resources_dir().join("data");
   let cache_path = resources_dir.join("profiles.json");
 
   if !resources_dir.exists() {

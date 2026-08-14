@@ -10,7 +10,7 @@ static DB_STATE: std::sync::OnceLock<DbState> = std::sync::OnceLock::new();
 fn get_db() -> Option<&'static DbState> {
   DB_STATE.get().or_else(|| {
     let resources_dir = crate::config::get_resources_dir();
-    let db_dir = resources_dir.join("db");
+    let db_dir = resources_dir.join("data");
     std::fs::create_dir_all(&db_dir).ok()?;
     let db_path = db_dir.join("session.db");
     let conn = Connection::open(db_path).ok()?;

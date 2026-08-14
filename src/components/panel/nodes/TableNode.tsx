@@ -202,14 +202,14 @@ export function TableNode({
         </button>
       </div>
       <ScrollArea
-        className="h-[16vh] nodrag nowheel cursor-default"
+        className="nodrag nowheel cursor-default"
         style={{ cursor: "default" }}
         onWheel={handleWheel}
         onMouseDown={handleTableMouseDown}
         onMouseMove={handleTableMouseMove}
         onMouseUp={handleTableMouseUp}
       >
-        <div className="min-w-max" ref={scrollContainerRef}>
+        <div className="min-w-max h-41" ref={scrollContainerRef}>
           <table className="border-collapse">
             <colgroup>
               {headers.map((_, colIndex) => (

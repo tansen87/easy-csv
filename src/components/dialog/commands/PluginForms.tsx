@@ -5,7 +5,7 @@ import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { useLanguage } from "@/i18n";
 
 export function PinyinForm(props: CommandFormProps) {
-  const { commandDialog, setCommandDialog, headers } = props;
+  const { commandDialog, setCommandDialog } = props;
   const { language } = useLanguage();
   const isZh = language === "zh";
 

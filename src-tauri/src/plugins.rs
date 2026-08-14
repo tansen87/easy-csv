@@ -1,3 +1,5 @@
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Mutex;
@@ -64,7 +66,7 @@ static DB_STATE: std::sync::OnceLock<DbState> = std::sync::OnceLock::new();
 fn get_db() -> Option<&'static DbState> {
   DB_STATE.get().or_else(|| {
     let resources_dir = get_resources_dir();
-    let db_dir = resources_dir.join("db");
+    let db_dir = resources_dir.join("data");
     std::fs::create_dir_all(&db_dir).ok()?;
     let db_path = db_dir.join("plugins.db");
     let conn = Connection::open(db_path).ok()?;
@@ -280,11 +282,18 @@ pub async fn check_plugins() -> Result<Vec<PluginStatus>, String> {
   for plugin in plugins {
     let found = resolve_plugin_executable(&plugin.executable);
     let version = match &found {
-      Some(path) => Command::new(path)
-        .arg("--version")
-        .output()
-        .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
-        .unwrap_or_default(),
+      Some(path) => {
+        let mut cmd = Command::new(path);
+        cmd.arg("--version");
+        #[cfg(target_os = "windows")]
+        {
+          cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+        cmd
+          .output()
+          .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
+          .unwrap_or_default()
+      }
       None => String::new(),
     };
     statuses.push(PluginStatus {
