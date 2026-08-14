@@ -37,7 +37,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 │  storage.rs · ai.rs · ai_memory.rs · session.rs     │
 │  AI 对话持久化 (ai_memory.db) · AI 配置 (config.db)     │
 │  会话快照持久化 (session.db) · API Key 加密存储          │
-│  (AES-256-GCM) · 46 个 Tauri 命令                    │
+│  (AES-256-GCM) · 50 个 Tauri 命令                    │
 │  CSV 读取 (csv crate) · CSV 对比 · 编码转换            │
 │  管道执行 (进程管理 + 取消) · AI 代理 (DeepSeek/       │
 │  Qwen/GLM) · AI 记忆持久化 · 数据概况缓存              │
@@ -50,6 +50,14 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 └─────────────────────────────────────────────────────┘
 ```
 
+### CLI 插件 (`plugins/`)
+
+| 目录 | 职责 |
+|------|------|
+| `pinyin-cli/` | 独立 Rust CLI(二进制名 `pinyin`):中文转拼音,支持 stdin/stdout,可与 xan 命令组合成管道。参考 `src/pinyin.rs` 逻辑。已接入前端命令面板/命令列表 + 设置中的插件管理页签。设计文档:`docs/plugins/pinyin-cli.md` |
+
+前端插件命令定义位于 `src/data/commands.ts`(`pinyin`,`plugin: true`,category `Plugins`),表单位于 `src/components/dialog/commands/PluginForms.tsx`。
+
 ---
 
 ## Rust 后端 (`src-tauri/src/`)
@@ -59,10 +67,11 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | 文件 | 职责 |
 |------|------|
 | `main.rs` | 二进制入口,注册插件(opener/dialog/fs/shell/window_state/notification/http/prevent_default),系统托盘,窗口事件处理 |
-| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 46 个命令) |
+| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 50 个命令) |
 | `config.rs` | `AppConfig` 类型、SQLite 持久化(app_config/ai_config 表)、AES-256-GCM 加密存储 API Key、per-provider API Key 管理、自定义 AI provider 配置(provider=custom 时存 name/base_url/models)、配置相关命令 |
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
 | `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令、`set_pipeline_cancelled` 取消执行 |
+| `plugins.rs` | 外部 CLI 插件管理: `plugins` 表(plugins.db)持久化、`list_plugins`/`add_plugin`/`remove_plugin`/`check_plugins` 命令、`command_executable` 按命令名解析可执行文件(插件命令走插件二进制,其余走 xan.exe)。插件二进制默认在 `<exe目录>/easy-csv_resources/plugin/`(`pinyin.exe` 编译期嵌入 `src-tauri/resources/plugin/`、首次自动解压),解析顺序: 路径 → `plugin/` 目录(含 `.exe` 补全)→ `PATH` |
 | `csv.rs` | `CsvData` 类型、`read_csv_file`/`profile_csv`/`diff_csv_files`/`convert_csv_encoding` 命令 |
 | `storage.rs` | 历史记录、最近文件、数据概况缓存、版本/血缘存储、窗口标题、开发者工具命令 |
 | `ai.rs` | AI 对话代理: `call_ai` 命令,转发到 DeepSeek / Qwen / GLM |
@@ -156,7 +165,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_correction` | 保存纠正规则 |
 | `clear_conversations` / `clear_feedback` / `clear_corrections` | 清除对应表全部数据 |
 
-### Tauri 命令清单(前端可调用,共 46 个)
+### Tauri 命令清单(前端可调用,共 50 个)
 
 | 命令 | 模块 | 功能 |
 |------|------|------|
@@ -190,6 +199,10 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_lineage_data` / `load_lineage_data` | storage | 数据血缘持久化 |
 | `file_exists` | storage | 检查文件是否存在 |
 | `toggle_devtools` | storage | 切换开发者工具面板 |
+| `list_plugins` | plugins | 列出已注册的 CLI 插件 |
+| `add_plugin` | plugins | 注册/更新插件(命令名 + 可执行文件) |
+| `remove_plugin` | plugins | 移除插件 |
+| `check_plugins` | plugins | 检查插件可执行文件是否可用(解析 PATH + 读取 `--version`) |
 
 ---
 
@@ -489,3 +502,5 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 测试编码转换对话框 | `src/__tests__/CsvEncodingDialog.test.tsx` |
 | 修改测试 mock/setup | `src/test/setup.ts` |
 | 修改 vitest 配置 | `vitest.config.ts` |
+| 新增/修改 CLI 插件 | `plugins/<name>/`(独立 crate)+ `src/data/commands.ts`(命令定义)+ `src/components/dialog/commands/PluginForms.tsx`(表单)+ `src-tauri/src/plugins.rs`(后端注册)+ `src/docs/cmd/<name>.md` 与 `docs/cmd_zh/<name>.md`(帮助文档,改后跑 `pnpm generate-help`) |
+| 修改插件管理设置页 | `src/components/setting/SettingsTabContent.tsx`(Plugins 页签)+ `src-tauri/src/plugins.rs` |

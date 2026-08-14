@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Sun,
   Moon,
@@ -19,6 +19,10 @@ import {
   Server,
   Plus,
   X,
+  Plug,
+  RefreshCw,
+  CircleCheck,
+  CircleX,
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-shell";
 import { invoke } from "@tauri-apps/api/core";
@@ -33,9 +37,10 @@ import {
   isBuiltinProvider,
 } from "@/services/ai/types";
 import { loadProviderApiKey } from "@/services/ai";
+import { PluginInfo } from "@/types/xan";
 
 interface SettingsTabContentProps {
-  activeTab: "preference" | "general" | "ai";
+  activeTab: "preference" | "general" | "ai" | "plugins";
   theme: "dark" | "light" | "system";
   onThemeChange: (theme: "dark" | "light" | "system") => void;
   defaultDelimiter: string;
@@ -78,6 +83,79 @@ export function SettingsTabContent({
     "conversations" | "feedback" | "corrections" | null
   >(null);
   const [clearing, setClearing] = useState(false);
+
+  const [plugins, setPlugins] = useState<PluginInfo[]>([]);
+  const [pluginsLoading, setPluginsLoading] = useState(false);
+  const [checkingPlugins, setCheckingPlugins] = useState(false);
+  const [addName, setAddName] = useState("");
+  const [addExecutable, setAddExecutable] = useState("");
+  const [addingPlugin, setAddingPlugin] = useState(false);
+
+  const loadPlugins = useCallback(async () => {
+    setPluginsLoading(true);
+    try {
+      const statuses = await invoke<PluginInfo[]>("check_plugins");
+      setPlugins(statuses || []);
+    } catch (error) {
+      console.error("Failed to check plugins:", error);
+      try {
+        const list = await invoke<PluginInfo[]>("list_plugins");
+        setPlugins(list || []);
+      } catch (err) {
+        console.error("Failed to load plugins:", err);
+      }
+    } finally {
+      setPluginsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "plugins") {
+      loadPlugins();
+    }
+  }, [activeTab, loadPlugins]);
+
+  const handleCheckPlugins = useCallback(async () => {
+    setCheckingPlugins(true);
+    try {
+      const statuses = await invoke<PluginInfo[]>("check_plugins");
+      setPlugins(statuses || []);
+    } catch (error) {
+      console.error("Failed to check plugins:", error);
+    } finally {
+      setCheckingPlugins(false);
+    }
+  }, []);
+
+  const handleAddPlugin = useCallback(async () => {
+    if (!addName.trim() || !addExecutable.trim()) return;
+    setAddingPlugin(true);
+    try {
+      await invoke("add_plugin", {
+        name: addName.trim(),
+        executable: addExecutable.trim(),
+      });
+      setAddName("");
+      setAddExecutable("");
+      await loadPlugins();
+    } catch (error) {
+      console.error("Failed to add plugin:", error);
+    } finally {
+      setAddingPlugin(false);
+    }
+  }, [addName, addExecutable, loadPlugins]);
+
+  const handleRemovePlugin = useCallback(
+    async (name: string) => {
+      try {
+        await invoke("remove_plugin", { name });
+        await loadPlugins();
+      } catch (error) {
+        console.error("Failed to remove plugin:", error);
+      }
+    },
+    [loadPlugins],
+  );
 
   const updateCustomModels = useCallback(
     (models: string[]) => {
@@ -591,6 +669,130 @@ export function SettingsTabContent({
                     {t.aiClearCorrections}
                   </Button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "plugins" && (
+            <div className="space-y-6">
+              {/* Description + Check */}
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Plug className="h-4 w-4" />
+                  {t.plugins}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  {t.pluginDesc}
+                </p>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleCheckPlugins}
+                  disabled={checkingPlugins || pluginsLoading}
+                >
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 ${checkingPlugins ? "animate-spin" : ""}`}
+                  />
+                  {checkingPlugins ? t.pluginChecking : t.pluginCheck}
+                </Button>
+              </div>
+
+              {/* Plugin list */}
+              <div>
+                <h4 className="text-sm font-medium mb-2">
+                  {t.plugins} ({plugins.length})
+                </h4>
+                {plugins.length === 0 && !pluginsLoading ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t.pluginAdd}...
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {plugins.map((plugin) => (
+                      <div
+                        key={plugin.name}
+                        className="flex items-center justify-between gap-3 border rounded-md p-3 bg-muted/20"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {plugin.found ? (
+                            <CircleCheck className="h-4 w-4 text-green-600 flex-shrink-0" />
+                          ) : (
+                            <CircleX className="h-4 w-4 text-destructive flex-shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium">{plugin.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {plugin.version ? `${plugin.version}` : ""}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span
+                            className={`text-[11px] px-2 py-0.5 rounded-full ${
+                              plugin.found
+                                ? "bg-green-600/10 text-green-700"
+                                : "bg-destructive/10 text-destructive"
+                            }`}
+                          >
+                            {plugin.found ? t.pluginInstalled : t.pluginMissing}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-7 h-7 rounded-md"
+                            onClick={() => handleRemovePlugin(plugin.name)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Add plugin */}
+              <div className="border rounded-md p-3 bg-muted/20 space-y-3">
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                  <Plus className="h-3.5 w-3.5" />
+                  {t.pluginAdd}
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium">
+                      {t.pluginAddName}
+                    </label>
+                    <input
+                      type="text"
+                      value={addName}
+                      onChange={(e) => setAddName(e.target.value)}
+                      placeholder={t.pluginNamePlaceholder}
+                      className="w-full h-8 px-3 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium">
+                      {t.pluginAddExecutable}
+                    </label>
+                    <input
+                      type="text"
+                      value={addExecutable}
+                      onChange={(e) => setAddExecutable(e.target.value)}
+                      placeholder={t.pluginExecutablePlaceholder}
+                      className="w-full h-8 px-3 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring mt-1"
+                    />
+                  </div>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleAddPlugin}
+                  disabled={
+                    addingPlugin || !addName.trim() || !addExecutable.trim()
+                  }
+                >
+                  {addingPlugin ? "..." : t.pluginAddButton}
+                </Button>
               </div>
             </div>
           )}

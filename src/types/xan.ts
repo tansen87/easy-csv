@@ -4,7 +4,16 @@ export interface XanCommand {
   description: string;
   descriptionCn: string;
   category: string;
+  /** Marks a command that runs through an external CLI plugin instead of xan */
+  plugin?: boolean;
   parameters: XanParameter[];
+}
+
+export interface PluginInfo {
+  name: string;
+  executable: string;
+  found: boolean;
+  version?: string;
 }
 
 export interface XanParameter {

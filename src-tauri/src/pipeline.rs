@@ -11,6 +11,8 @@ use std::thread;
 use serde::{Deserialize, Serialize};
 
 use crate::config::load_config;
+use crate::plugins::command_executable;
+use crate::plugins::is_plugin_command;
 use crate::xan::find_xan_executable;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -173,8 +175,14 @@ pub async fn execute_xan_pipeline(
     };
 
     // Always use piped I/O so we can capture output
-    let mut command = Command::new(&xan_path);
-    command.args(&cmd_args_list[0]);
+    let first_exe = command_executable(&cmd_args_list[0][0], Path::new(&xan_path))?;
+    let mut command = Command::new(&first_exe);
+    // For plugins the command name is not a subcommand, so it must be skipped.
+    if is_plugin_command(&cmd_args_list[0][0]) {
+      command.args(&cmd_args_list[0][1..]);
+    } else {
+      command.args(&cmd_args_list[0]);
+    }
     if is_cat_command {
       command.stdin(Stdio::null());
     } else {
@@ -213,7 +221,8 @@ pub async fn execute_xan_pipeline(
         // Add input file as the last argument
         args.push(input_file.clone());
 
-        let mut command = Command::new(&xan_path);
+        let exe = command_executable(&cmd_args_list[0][0], Path::new(&xan_path))?;
+        let mut command = Command::new(&exe);
         command.args(args);
         command.stdout(Stdio::piped());
         command.stderr(Stdio::piped());
@@ -294,8 +303,14 @@ pub async fn execute_xan_pipeline(
 
       // Start all remaining commands and connect pipes BEFORE feeding input
       for (_idx, args) in cmd_args_list.into_iter().skip(1).enumerate() {
-        let mut command = Command::new(&xan_path);
-        command.args(args);
+        let exe = command_executable(&args[0], Path::new(&xan_path))?;
+        let mut command = Command::new(&exe);
+        // For plugins the command name is not a subcommand, so it must be skipped.
+        if is_plugin_command(&args[0]) {
+          command.args(&args[1..]);
+        } else {
+          command.args(&args);
+        }
         command.stdin(Stdio::piped());
         command.stdout(Stdio::piped());
         command.stderr(Stdio::piped());

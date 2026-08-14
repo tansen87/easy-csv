@@ -1,0 +1,22 @@
+[package]
+name = "pinyin-cli"
+version = "0.1.0"
+description = "Convert Chinese characters in CSV columns to pinyin, pipe-compatible with xan"
+edition = "2024"
+
+[[bin]]
+name = "pinyin"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+csv = "1"
+pinyin = "0.11"
+
+[profile.release]
+lto = "fat"
+opt-level = 3
+strip = true
+debug = false
+codegen-units = 1

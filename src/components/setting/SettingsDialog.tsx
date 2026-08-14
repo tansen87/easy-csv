@@ -39,9 +39,9 @@ export function SettingsDialog({
   aiConfig,
   onAIConfigChange,
 }: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<"preference" | "general" | "ai">(
-    "preference",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "preference" | "general" | "ai" | "plugins"
+  >("preference");
   const { t } = useLanguage();
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -102,16 +102,18 @@ export function SettingsDialog({
       >
         <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/20">
           <div className="flex items-center">
-            <div className="grid grid-cols-3 bg-muted/50 rounded-md p-0.5 border border-border/50 relative h-8">
+            <div className="grid grid-cols-4 bg-muted/50 rounded-md p-0.5 border border-border/50 relative h-8">
               <div
                 className={`absolute top-0.5 bottom-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${
                   activeTab === "general"
-                    ? "left-[calc(33.333%+1px)]"
+                    ? "left-[calc(25%+1px)]"
                     : activeTab === "ai"
-                      ? "left-[calc(66.666%+1px)]"
-                      : "left-0.5"
+                      ? "left-[calc(50%+1px)]"
+                      : activeTab === "plugins"
+                        ? "left-[calc(75%+1px)]"
+                        : "left-0.5"
                 }`}
-                style={{ width: "calc(33.333% - 1px)" }}
+                style={{ width: "calc(25% - 1px)" }}
               />
               <button
                 className={`flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
@@ -142,6 +144,16 @@ export function SettingsDialog({
                 onClick={() => setActiveTab("ai")}
               >
                 {t.ai}
+              </button>
+              <button
+                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
+                  activeTab === "plugins"
+                    ? "text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => setActiveTab("plugins")}
+              >
+                {t.plugins}
               </button>
             </div>
           </div>

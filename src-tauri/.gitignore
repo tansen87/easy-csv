@@ -6,5 +6,6 @@
 # will have schema files for capabilities auto-completion
 /gen/schemas
 
-# xan executable
+# exe executable
 xan.exe
+pinyin.exe

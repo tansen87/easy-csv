@@ -75,4 +75,5 @@ export const COMMAND_LABELS: Record<CommandDialogType, string> = {
   "batch-filter": "Batch Filter",
   "batch-from": "Batch From",
   "batch-to": "Batch To",
+  pinyin: "Pinyin",
 };

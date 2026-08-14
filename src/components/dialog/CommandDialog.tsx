@@ -62,7 +62,8 @@ export type CommandDialogType =
   | "output"
   | "batch-filter"
   | "batch-from"
-  | "batch-to";
+  | "batch-to"
+  | "pinyin";
 
 export interface CommandDialogState {
   type: CommandDialogType;

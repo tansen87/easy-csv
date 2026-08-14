@@ -3,6 +3,7 @@ pub mod ai_memory;
 pub mod config;
 pub mod csv;
 pub mod pipeline;
+pub mod plugins;
 pub mod session;
 pub mod storage;
 pub mod xan;
@@ -38,6 +39,10 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     csv::convert_csv_encoding,
     pipeline::execute_xan_pipeline,
     pipeline::set_pipeline_cancelled,
+    plugins::list_plugins,
+    plugins::add_plugin,
+    plugins::remove_plugin,
+    plugins::check_plugins,
     xan::check_xan_installed,
     session::save_session,
     session::load_session,

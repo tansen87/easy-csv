@@ -210,6 +210,23 @@ export interface Translations {
   aiModels: string;
   aiAddModel: string;
 
+  // Plugins
+  plugins: string;
+  pluginDesc: string;
+  pluginAdd: string;
+  pluginAddName: string;
+  pluginAddExecutable: string;
+  pluginAddButton: string;
+  pluginCheck: string;
+  pluginChecking: string;
+  pluginRemove: string;
+  pluginInstalled: string;
+  pluginMissing: string;
+  pluginVersion: string;
+  pluginAddSuccess: string;
+  pluginNamePlaceholder: string;
+  pluginExecutablePlaceholder: string;
+
   // CommandPalette
   commandPalette: string;
   commandPalettePlaceholder: string;
@@ -483,6 +500,24 @@ export const translations: Record<Language, Translations> = {
     aiModels: "Models",
     aiAddModel: "Add Model",
 
+    // Plugins
+    plugins: "Plugins",
+    pluginDesc:
+      "Register external CLI plugins that can be used in pipelines alongside xan commands.",
+    pluginAdd: "Add Plugin",
+    pluginAddName: "Command Name",
+    pluginAddExecutable: "Executable (path or name in PATH)",
+    pluginAddButton: "Add",
+    pluginCheck: "Check Plugins",
+    pluginChecking: "Checking...",
+    pluginRemove: "Remove",
+    pluginInstalled: "Found",
+    pluginMissing: "Not found",
+    pluginVersion: "Version",
+    pluginAddSuccess: "Plugin added",
+    pluginNamePlaceholder: "e.g. pinyin",
+    pluginExecutablePlaceholder: "e.g. pinyin or C:\\tools\\pinyin.exe",
+
     // CommandPalette
     commandPalette: "Command Palette",
     commandPalettePlaceholder: "Type a command or search",
@@ -602,12 +637,12 @@ export const translations: Record<Language, Translations> = {
     versionEditMessage: "编辑描述",
     versionEditTag: "编辑标签",
     confirmRestoreTitle: "恢复此版本？",
-    confirmRestoreDesc: "这将用所选版本替换当前管道。",
+    confirmRestoreDesc: "这将用所选版本替换当前管道.",
 
     // ConfirmDialog
     confirm: "确认",
     refreshTitle: "刷新页面",
-    refreshMessage: "确定要刷新页面吗？未保存的更改将会丢失。",
+    refreshMessage: "确定要刷新页面吗？未保存的更改将会丢失.",
 
     // Settings
     preference: "偏好设置",
@@ -751,6 +786,23 @@ export const translations: Record<Language, Translations> = {
     aiModels: "模型列表",
     aiAddModel: "添加模型",
 
+    // Plugins
+    plugins: "插件",
+    pluginDesc: "注册外部 CLI 插件,可在管道中与 xan 命令一起使用.",
+    pluginAdd: "添加插件",
+    pluginAddName: "命令名称",
+    pluginAddExecutable: "可执行文件(路径或 PATH 中的名称)",
+    pluginAddButton: "添加",
+    pluginCheck: "检查插件",
+    pluginChecking: "检查中...",
+    pluginRemove: "移除",
+    pluginInstalled: "已找到",
+    pluginMissing: "未找到",
+    pluginVersion: "版本",
+    pluginAddSuccess: "插件已添加",
+    pluginNamePlaceholder: "例如 pinyin",
+    pluginExecutablePlaceholder: "例如 pinyin 或 C:\\tools\\pinyin.exe",
+
     // CommandPalette
     commandPalette: "命令面板",
     commandPalettePlaceholder: "输入命令或搜索",
@@ -803,7 +855,7 @@ export const translations: Record<Language, Translations> = {
     csvEncodingConverting: "转换中...",
     csvEncodingSelectFiles: "请选择输入和输出文件",
     csvEncodingNoResult:
-      "选择输入文件、输出文件与编码,点击开始转换。结果直接写入输出文件。",
+      "选择输入文件、输出文件与编码,点击开始转换.结果直接写入输出文件.",
     csvEncodingSuccess: "转换成功",
     csvEncodingSameEncoding: "源编码与目标编码相同",
     csvEncodingBytes: "字节",

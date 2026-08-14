@@ -65,6 +65,7 @@ import {
   ArrowBigDownDash,
   BrushCleaning,
   FileCodeCorner,
+  Languages,
   type LucideIcon,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
@@ -157,6 +158,9 @@ export const commandIconMap: Record<string, LucideIcon> = {
   "batch-filter": FunnelPlus,
   "batch-from": FileInput,
   "batch-to": FileOutput,
+
+  // Plugins
+  pinyin: Languages,
 };
 
 interface CommandListProps {

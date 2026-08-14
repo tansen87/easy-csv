@@ -9,6 +9,9 @@ build/
 # Tauri
 src-tauri/target/
 
+# CLI plugins (cargo build outputs)
+plugins/*/target/
+
 # IDE
 .idea/
 .vscode/
