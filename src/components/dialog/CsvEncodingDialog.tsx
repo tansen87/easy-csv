@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
@@ -161,10 +162,7 @@ export function CsvEncodingDialog({
       });
       setResult(data);
       if (!isOpenRef.current) {
-        onShowToast?.(
-          `${t.csvEncodingSuccess}: ${data.output_path}`,
-          "success",
-        );
+        onShowToast?.(`${t.success}: ${data.output_path}`, "success");
       }
     } catch (err) {
       setError(String(err));
@@ -242,7 +240,7 @@ export function CsvEncodingDialog({
               onClick={browseInput}
             >
               <FolderOpen className="h-3.5 w-3.5" />
-              {t.csvEncodingBrowse}
+              {t.open}
             </Button>
           </div>
           <div className="flex items-center gap-2">
@@ -267,7 +265,7 @@ export function CsvEncodingDialog({
               onClick={browseOutput}
             >
               <FolderOpen className="h-3.5 w-3.5" />
-              {t.csvEncodingBrowse}
+              {t.open}
             </Button>
           </div>
           <div className="flex items-center gap-2">
@@ -311,13 +309,13 @@ export function CsvEncodingDialog({
               ) : (
                 <FileCode className="h-3.5 w-3.5" />
               )}
-              {isConverting ? t.csvEncodingConverting : t.csvEncodingConvert}
+              {isConverting ? t.converting : t.convert}
             </Button>
           </div>
           {isSameEncoding && (
             <div className="flex items-center gap-1.5 text-xs text-amber-600">
               <AlertCircle className="h-3.5 w-3.5" />
-              {t.csvEncodingSameEncoding}
+              {t.sameEncoding}
             </div>
           )}
         </div>
@@ -337,11 +335,11 @@ export function CsvEncodingDialog({
                 <div className="space-y-2">
                   <p className="flex items-center gap-2 text-xs font-medium text-green-600">
                     <CheckCircle2 className="h-4 w-4" />
-                    {t.csvEncodingSuccess}
+                    {t.success}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {result.bytes_read} {t.csvEncodingBytes} →{" "}
-                    {result.bytes_written} {t.csvEncodingBytes}
+                    {result.bytes_read} {t.bytes} → {result.bytes_written}{" "}
+                    {t.bytes}
                   </p>
                   <p className="flex items-center gap-2 text-xs text-muted-foreground/80 break-all">
                     <FileCode className="h-3.5 w-3.5 shrink-0" />

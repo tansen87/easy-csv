@@ -3,11 +3,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { sendNotification } from "@tauri-apps/plugin-notification";
-import { useTheme } from "@/components/setting/ThemeProvider";
-import { ToastContainer } from "@/components/setting/Toast";
-import { CommandList } from "@/components/CommandList";
-import { CommandPalette, type PaletteItem } from "@/components/CommandPalette";
-import { commandIconMap } from "@/components/CommandList";
 import {
   FolderOpen,
   FileText,
@@ -29,6 +24,7 @@ import {
   RefreshCw,
   FileCode,
 } from "lucide-react";
+
 import { LogPanel } from "@/components/panel/LogPanel";
 import { ChartPanel } from "@/components/panel/ChartPanel";
 import { SettingsDialog } from "@/components/setting/SettingsDialog";
@@ -42,6 +38,11 @@ import { CsvDiffDialog } from "@/components/dialog/CsvDiffDialog";
 import { CsvEncodingDialog } from "@/components/dialog/CsvEncodingDialog";
 import { DataProfilePanel } from "@/components/panel/DataProfilePanel";
 import { AIPanel } from "@/components/panel/AIPanel";
+import { useTheme } from "@/components/setting/ThemeProvider";
+import { ToastContainer } from "@/components/setting/Toast";
+import { CommandList } from "@/components/CommandList";
+import { CommandPalette, type PaletteItem } from "@/components/CommandPalette";
+import { commandIconMap } from "@/components/CommandList";
 import { xanCommands } from "@/data/commands";
 import { helpDocs, helpDocsZh } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
@@ -973,7 +974,7 @@ function AppContent() {
       },
       {
         id: "toggle-ai-panel",
-        label: t.aiPanel,
+        label: t.ai,
         icon: Bot,
         group: t.paletteActions,
         shortcut: "Alt+A",
@@ -1022,7 +1023,7 @@ function AppContent() {
       label: file.name,
       description: file.path,
       icon: FolderOpen,
-      group: t.paletteRecentFiles,
+      group: t.recentFiles,
       onSelect: () => onOpenRecentFile(file.path),
     }));
 

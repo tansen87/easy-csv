@@ -22,6 +22,7 @@ import {
   GitCompareArrows,
   FileCode,
 } from "lucide-react";
+
 import { PipelineStep } from "@/types/xan";
 import { useLanguage } from "@/i18n";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -353,10 +354,10 @@ export const MainMenu = React.memo(function MainMenu({
               <GitMerge className="h-4 w-4" />
             </button>
           </Tooltip>
-          <Tooltip content={t.aiPanel} side="bottom">
+          <Tooltip content={t.ai} side="bottom">
             <button
               onClick={onToggleAIPanel}
-              aria-label={t.aiPanel}
+              aria-label={t.ai}
               className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 showAIPanel
                   ? "text-primary bg-primary/10"

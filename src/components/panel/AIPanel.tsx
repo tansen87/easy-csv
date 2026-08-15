@@ -12,6 +12,7 @@ import {
   ThumbsUp,
   ThumbsDown,
 } from "lucide-react";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -413,7 +414,11 @@ export const AIPanel = React.memo(function AIPanel({
               variant="ghost"
               size="sm"
               className={`h-6 w-6 p-0 ${feedback === "negative" ? "text-red-500 opacity-100" : ""}`}
-              onClick={() => feedback === "negative" ? handleFeedback(index, "negative") : openFeedbackDialog(index, message)}
+              onClick={() =>
+                feedback === "negative"
+                  ? handleFeedback(index, "negative")
+                  : openFeedbackDialog(index, message)
+              }
             >
               <ThumbsDown className="h-3.5 w-3.5" />
             </Button>
@@ -460,7 +465,7 @@ export const AIPanel = React.memo(function AIPanel({
           <div className="flex items-center gap-2 flex-1">
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-primary text-primary-foreground shadow-sm">
               <Bot className="h-3.5 w-3.5" />
-              {t.aiPanel}
+              {t.ai}
             </div>
           </div>
           <span className="text-xs text-muted-foreground whitespace-nowrap px-2 flex-shrink-0">

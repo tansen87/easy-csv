@@ -12,6 +12,7 @@ import {
   ArrowDown,
   type LucideIcon,
 } from "lucide-react";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/i18n";
 
@@ -153,7 +154,7 @@ export const CommandPalette = React.memo(function CommandPalette({
           <input
             ref={inputRef}
             type="text"
-            placeholder={t.commandPalettePlaceholder}
+            placeholder={t.palettePlaceholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="flex-1 h-12 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"

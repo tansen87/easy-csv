@@ -1,9 +1,18 @@
 export type Language = "en" | "zh";
 
 export interface Translations {
+  rows: string;
+  confirm: string;
+  open: string;
+  ai: string;
+  recentFiles: string;
+  modify: string;
+  close: string;
+  searchColumns: string;
+  remove: string;
+
   // MainMenu
   file: string;
-  open: string;
   openNewTab: string;
   savePipeline: string;
   importWorkflow: string;
@@ -29,7 +38,6 @@ export interface Translations {
   inputColumns: string;
   outputColumns: string;
   lineageTransformations: string;
-  rowsCount: string;
   lineagePath: string;
   sourceStep: string;
   noLineageData: string;
@@ -65,7 +73,6 @@ export interface Translations {
   confirmRestoreDesc: string;
 
   // ConfirmDialog
-  confirm: string;
   refreshTitle: string;
   refreshMessage: string;
 
@@ -88,16 +95,12 @@ export interface Translations {
   selectDelimiter: string;
   delimiterDesc: string;
   language: string;
-  unlimited: string;
 
   // CommandList
   cmds: string;
-  history: string;
   searchCommand: string;
-  searchHistory: string;
   noCommandsFound: string;
   tryDifferentSearch: string;
-  noHistoryFound: string;
   executePipelinesHint: string;
   newTab: string;
 
@@ -109,7 +112,6 @@ export interface Translations {
   importFlow: string;
   importFlowFormats: string;
   starOnGitHub: string;
-  recentFiles: string;
   branchProgress: string;
 
   // UpdateDialog
@@ -160,7 +162,6 @@ export interface Translations {
   noColumnsMatch: string;
   analyzingData: string;
   columns: string;
-  rows: string;
   count: string;
   empty: string;
   min: string;
@@ -171,7 +172,6 @@ export interface Translations {
   maxLen: string;
 
   // AIPanel
-  aiPanel: string;
   aiPlaceholder: string;
   aiWelcomeMessage: string;
   aiThinking: string;
@@ -183,8 +183,6 @@ export interface Translations {
   aiFeedbackPositive: string;
   aiFeedbackNegative: string;
   aiFeedbackPlaceholder: string;
-  aiClarificationConfirm: string;
-  aiClarificationModify: string;
   aiClearData: string;
   aiClearDataDesc: string;
   aiClearConversations: string;
@@ -194,7 +192,6 @@ export interface Translations {
   aiClearConfirmDesc: string;
 
   // AI Settings
-  ai: string;
   aiProvider: string;
   aiProviderDesc: string;
   aiSelectProvider: string;
@@ -220,7 +217,6 @@ export interface Translations {
   pluginAddButton: string;
   pluginCheck: string;
   pluginChecking: string;
-  pluginRemove: string;
   pluginInstalled: string;
   pluginMissing: string;
   pluginVersion: string;
@@ -230,66 +226,66 @@ export interface Translations {
 
   // CommandPalette
   commandPalette: string;
-  commandPalettePlaceholder: string;
+  palettePlaceholder: string;
   paletteActions: string;
   paletteCommands: string;
   paletteTabs: string;
-  paletteRecentFiles: string;
   paletteNoResults: string;
   paletteNavigateHint: string;
   paletteSelectHint: string;
   paletteCloseHint: string;
 
-  // General
-  close: string;
-  searchColumns: string;
-  remove: string;
-
   // CsvDiff
   csvDiff: string;
-  csvDiffFileA: string;
-  csvDiffFileB: string;
+  fileA: string;
+  fileB: string;
   csvDiffFileAPlaceholder: string;
   csvDiffFileBPlaceholder: string;
-  csvDiffBrowse: string;
-  csvDiffCompare: string;
-  csvDiffComparing: string;
+  compare: string;
+  comparing: string;
   csvDiffSelectBoth: string;
   csvDiffNoResult: string;
-  csvDiffAdded: string;
-  csvDiffRemoved: string;
-  csvDiffModified: string;
-  csvDiffEqual: string;
-  csvDiffColsLeft: string;
-  csvDiffColsRight: string;
-  csvDiffKeyColumns: string;
-  csvDiffKeyColumnsHint: string;
-  csvDiffEqualRows: string;
-  csvDiffPrev: string;
-  csvDiffNext: string;
-  csvDiffPage: string;
+  added: string;
+  removed: string;
+  equal: string;
+  columnA: string;
+  columnB: string;
+  keyColumns: string;
+  keyColumnsHint: string;
+  equalRows: string;
+  prev: string;
+  next: string;
+  page: string;
 
   // CsvEncoding
   csvEncoding: string;
   inputFile: string;
   outputFile: string;
-  csvEncodingBrowse: string;
   sourceEncoding: string;
   targetEncoding: string;
-  csvEncodingConvert: string;
-  csvEncodingConverting: string;
+  convert: string;
+  converting: string;
   csvEncodingSelectFiles: string;
   csvEncodingNoResult: string;
-  csvEncodingSuccess: string;
-  csvEncodingSameEncoding: string;
-  csvEncodingBytes: string;
+  success: string;
+  sameEncoding: string;
+  bytes: string;
 }
 
 export const translations: Record<Language, Translations> = {
   en: {
+    rows: "Rows",
+    confirm: "Confirm",
+    open: "Open",
+    ai: "AI",
+    recentFiles: "Recent Files",
+    modify: "Modify",
+    close: "Close",
+    searchColumns: "Search columns",
+    remove: "Remove",
+
     // MainMenu
     file: "File",
-    open: "Open",
     openNewTab: "Open New Tab",
     savePipeline: "Save Pipeline",
     importWorkflow: "Import Workflow",
@@ -316,7 +312,6 @@ export const translations: Record<Language, Translations> = {
     inputColumns: "Input Columns",
     outputColumns: "Output Columns",
     lineageTransformations: "Transformations",
-    rowsCount: "Rows",
     lineagePath: "Lineage Path",
     sourceStep: "Source",
     noLineageData: "Execute a pipeline to see data lineage",
@@ -328,9 +323,9 @@ export const translations: Record<Language, Translations> = {
     saveVersion: "Save Version",
     untitledVersion: "Untitled version",
     noVersionsSaved: "No versions saved yet",
-    addTag: "Add tag...",
-    versionMessagePlaceholder: "Version message...",
-    tagsPlaceholder: "Tags (comma separated)...",
+    addTag: "Add tag",
+    versionMessagePlaceholder: "Version message",
+    tagsPlaceholder: "Tags (comma separated)",
     confirmDeleteVersion: "Are you sure you want to delete this version?",
     clearAllVersions: "Clear all versions",
     confirmClearAllVersions:
@@ -354,7 +349,6 @@ export const translations: Record<Language, Translations> = {
       "This will replace the current pipeline with the selected version.",
 
     // ConfirmDialog
-    confirm: "Confirm",
     refreshTitle: "Refresh Page",
     refreshMessage:
       "Are you sure you want to refresh the page? Unsaved changes will be lost.",
@@ -380,16 +374,12 @@ export const translations: Record<Language, Translations> = {
     selectDelimiter: "Select delimiter",
     delimiterDesc: "The field delimiter for reading CSV data",
     language: "Language",
-    unlimited: "Unlimited",
 
     // CommandList
     cmds: "Cmd",
-    history: "History",
     searchCommand: "Search command",
-    searchHistory: "Search history",
     noCommandsFound: "No commands found",
     tryDifferentSearch: "Try a different search term",
-    noHistoryFound: "No history found",
     executePipelinesHint: "Execute pipelines to see them here",
     newTab: "New Tab",
 
@@ -401,7 +391,6 @@ export const translations: Record<Language, Translations> = {
     importFlow: "Import Flow",
     importFlowFormats: ".xanflow files",
     starOnGitHub: "Star on GitHub",
-    recentFiles: "Recent Files",
     branchProgress: "Branch",
 
     // UpdateDialog
@@ -451,7 +440,6 @@ export const translations: Record<Language, Translations> = {
     noColumnsMatch: "No columns matching",
     analyzingData: "Analyzing data...",
     columns: "Columns",
-    rows: "Rows",
     count: "Count",
     empty: "Empty",
     min: "Min",
@@ -462,8 +450,7 @@ export const translations: Record<Language, Translations> = {
     maxLen: "Max Len",
 
     // AIPanel
-    aiPanel: "AI",
-    aiPlaceholder: "Describe operations (Ctrl+Enter to send)...",
+    aiPlaceholder: "Describe operations (Ctrl+Enter to send)",
     aiWelcomeMessage: "Easy CSV AI Assistant",
     aiThinking: "Thinking...",
     aiAddToPipeline: "Add to Pipeline",
@@ -473,9 +460,7 @@ export const translations: Record<Language, Translations> = {
     aiConfigureApiKey: "Please configure API Key in settings",
     aiFeedbackPositive: "Helpful",
     aiFeedbackNegative: "Not helpful",
-    aiFeedbackPlaceholder: "Please describe what's wrong or how to improve...",
-    aiClarificationConfirm: "Confirm",
-    aiClarificationModify: "Modify",
+    aiFeedbackPlaceholder: "Please describe what's wrong or how to improve",
     aiClearData: "Clear AI Learning Data",
     aiClearDataDesc:
       "Delete all AI conversation history, feedback, and correction rules",
@@ -486,7 +471,6 @@ export const translations: Record<Language, Translations> = {
     aiClearConfirmDesc: "This action cannot be undone. Are you sure?",
 
     // AI Settings
-    ai: "AI",
     aiProvider: "Provider",
     aiProviderDesc: "Select AI service provider",
     aiSelectProvider: "Select provider",
@@ -513,7 +497,6 @@ export const translations: Record<Language, Translations> = {
     pluginAddButton: "Add",
     pluginCheck: "Check Plugins",
     pluginChecking: "Checking...",
-    pluginRemove: "Remove",
     pluginInstalled: "Found",
     pluginMissing: "Not found",
     pluginVersion: "Version",
@@ -523,66 +506,66 @@ export const translations: Record<Language, Translations> = {
 
     // CommandPalette
     commandPalette: "Command Palette",
-    commandPalettePlaceholder: "Type a command or search",
+    palettePlaceholder: "Type a command or search",
     paletteActions: "Actions",
     paletteCommands: "Commands",
     paletteTabs: "Tabs",
-    paletteRecentFiles: "Recent Files",
     paletteNoResults: "No matching commands",
     paletteNavigateHint: "Navigate",
     paletteSelectHint: "Select",
     paletteCloseHint: "ESC Close",
 
-    // General
-    close: "Close",
-    searchColumns: "Search columns",
-    remove: "Remove",
-
     // CsvDiff
     csvDiff: "CSV Compare",
-    csvDiffFileA: "File A",
-    csvDiffFileB: "File B",
+    fileA: "File A",
+    fileB: "File B",
     csvDiffFileAPlaceholder: "Original CSV file",
     csvDiffFileBPlaceholder: "Modified CSV file",
-    csvDiffBrowse: "Browse",
-    csvDiffCompare: "Compare",
-    csvDiffComparing: "Comparing...",
+    compare: "Compare",
+    comparing: "Comparing...",
     csvDiffSelectBoth: "Please select both files",
     csvDiffNoResult: "Select two CSV files and click Compare",
-    csvDiffAdded: "Added",
-    csvDiffRemoved: "Removed",
-    csvDiffModified: "Modified",
-    csvDiffEqual: "Equal",
-    csvDiffColsLeft: "cols A",
-    csvDiffColsRight: "cols B",
-    csvDiffKeyColumns: "Key",
-    csvDiffKeyColumnsHint:
+    added: "Added",
+    removed: "Removed",
+    equal: "Equal",
+    columnA: "cols A",
+    columnB: "cols B",
+    keyColumns: "Key",
+    keyColumnsHint:
       "Select key columns to match rows (faster for large files)",
-    csvDiffEqualRows: "identical rows",
-    csvDiffPrev: "Prev",
-    csvDiffNext: "Next",
-    csvDiffPage: "Page",
+    equalRows: "identical rows",
+    prev: "Prev",
+    next: "Next",
+    page: "Page",
 
     // CsvEncoding
     csvEncoding: "CSV Encoding",
     inputFile: "Input",
     outputFile: "Output",
-    csvEncodingBrowse: "Browse",
     sourceEncoding: "Source",
     targetEncoding: "Target",
-    csvEncodingConvert: "Convert",
-    csvEncodingConverting: "Converting...",
+    convert: "Convert",
+    converting: "Converting...",
     csvEncodingSelectFiles: "Select input and output files",
     csvEncodingNoResult:
       "Choose an input file, an output file and encodings, then click Convert. The result is written directly to the output file.",
-    csvEncodingSuccess: "Conversion successful",
-    csvEncodingSameEncoding: "Source and target encodings are the same",
-    csvEncodingBytes: "bytes",
+    success: "Conversion successful",
+    sameEncoding: "Source and target encodings are the same",
+    bytes: "bytes",
   },
   zh: {
+    rows: "行数",
+    confirm: "确认",
+    open: "打开",
+    ai: "AI",
+    recentFiles: "最近文件",
+    modify: "修改",
+    close: "关闭",
+    searchColumns: "搜索列",
+    remove: "移除",
+
     // MainMenu
     file: "文件",
-    open: "打开",
     openNewTab: "新标签页打开",
     savePipeline: "保存Pipeline",
     importWorkflow: "导入工作流",
@@ -609,7 +592,6 @@ export const translations: Record<Language, Translations> = {
     inputColumns: "输入列",
     outputColumns: "输出列",
     lineageTransformations: "变换",
-    rowsCount: "行数",
     lineagePath: "血缘路径",
     sourceStep: "来源",
     noLineageData: "执行后可查看数据血缘",
@@ -621,9 +603,9 @@ export const translations: Record<Language, Translations> = {
     saveVersion: "保存版本",
     untitledVersion: "未命名版本",
     noVersionsSaved: "暂无版本记录",
-    addTag: "添加标签...",
-    versionMessagePlaceholder: "版本描述...",
-    tagsPlaceholder: "标签(逗号分隔)...",
+    addTag: "添加标签",
+    versionMessagePlaceholder: "版本描述",
+    tagsPlaceholder: "标签(逗号分隔)",
     confirmDeleteVersion: "确定要删除此版本吗?",
     clearAllVersions: "清除所有版本",
     confirmClearAllVersions: "确定要清除所有版本历史吗?此操作不可撤销.",
@@ -645,7 +627,6 @@ export const translations: Record<Language, Translations> = {
     confirmRestoreDesc: "这将用所选版本替换当前管道.",
 
     // ConfirmDialog
-    confirm: "确认",
     refreshTitle: "刷新页面",
     refreshMessage: "确定要刷新页面吗?未保存的更改将会丢失.",
 
@@ -668,18 +649,14 @@ export const translations: Record<Language, Translations> = {
     selectDelimiter: "选择分隔符",
     delimiterDesc: "用于读取 CSV 数据的字段分隔符",
     language: "语言",
-    unlimited: "无限制",
 
     // CommandList
     cmds: "命令",
-    history: "历史",
     searchCommand: "搜索命令",
-    searchHistory: "搜索历史",
     noCommandsFound: "未找到命令",
     tryDifferentSearch: "请尝试其他搜索词",
-    noHistoryFound: "暂无历史记录",
     executePipelinesHint: "执行工作流后将在此显示",
-    newTab: "新Tab打开",
+    newTab: "新标签页打开",
 
     // HomeView
     welcomeTitle: "欢迎使用 Easy CSV",
@@ -689,7 +666,6 @@ export const translations: Record<Language, Translations> = {
     importFlow: "导入工作流",
     importFlowFormats: ".xanflow 文件",
     starOnGitHub: "GitHub 点赞",
-    recentFiles: "最近文件",
     branchProgress: "分支",
 
     // UpdateDialog
@@ -739,7 +715,6 @@ export const translations: Record<Language, Translations> = {
     noColumnsMatch: "没有匹配的列",
     analyzingData: "分析数据中...",
     columns: "列数",
-    rows: "行数",
     count: "计数",
     empty: "空值",
     min: "最小值",
@@ -750,8 +725,7 @@ export const translations: Record<Language, Translations> = {
     maxLen: "最大长度",
 
     // AIPanel
-    aiPanel: "AI",
-    aiPlaceholder: "描述操作 (Ctrl+Enter 发送)...",
+    aiPlaceholder: "描述操作 (Ctrl+Enter 发送)",
     aiWelcomeMessage: "Easy CSV AI助手",
     aiThinking: "思考中...",
     aiAddToPipeline: "添加到管道",
@@ -761,19 +735,16 @@ export const translations: Record<Language, Translations> = {
     aiConfigureApiKey: "请先在设置中配置 API Key",
     aiFeedbackPositive: "有帮助",
     aiFeedbackNegative: "没帮助",
-    aiFeedbackPlaceholder: "请描述哪里不对或如何改进...",
-    aiClarificationConfirm: "确认",
-    aiClarificationModify: "修改",
+    aiFeedbackPlaceholder: "请描述哪里不对或如何改进",
     aiClearData: "清除AI学习数据",
     aiClearDataDesc: "删除所有AI对话历史、反馈记录和纠正规则",
     aiClearConversations: "清除对话历史",
     aiClearFeedback: "清除反馈记录",
     aiClearCorrections: "清除纠正规则",
     aiClearConfirmTitle: "确认删除",
-    aiClearConfirmDesc: "此操作不可撤销，确定要继续吗?",
+    aiClearConfirmDesc: "此操作不可撤销,确定要继续吗?",
 
     // AI Settings
-    ai: "AI",
     aiProvider: "服务提供商",
     aiProviderDesc: "选择AI服务提供商",
     aiSelectProvider: "选择提供商",
@@ -799,7 +770,6 @@ export const translations: Record<Language, Translations> = {
     pluginAddButton: "添加",
     pluginCheck: "检查插件",
     pluginChecking: "检查中...",
-    pluginRemove: "移除",
     pluginInstalled: "已找到",
     pluginMissing: "未找到",
     pluginVersion: "版本",
@@ -809,59 +779,50 @@ export const translations: Record<Language, Translations> = {
 
     // CommandPalette
     commandPalette: "命令面板",
-    commandPalettePlaceholder: "输入命令或搜索",
+    palettePlaceholder: "输入命令或搜索",
     paletteActions: "操作",
     paletteCommands: "命令",
     paletteTabs: "标签页",
-    paletteRecentFiles: "最近文件",
     paletteNoResults: "没有匹配的命令",
     paletteNavigateHint: "导航",
     paletteSelectHint: "选择",
     paletteCloseHint: "ESC 关闭",
 
-    // General
-    close: "关闭",
-    searchColumns: "搜索列",
-    remove: "删除",
-
     // CsvDiff
     csvDiff: "CSV 对比",
-    csvDiffFileA: "文件 A",
-    csvDiffFileB: "文件 B",
+    fileA: "文件 A",
+    fileB: "文件 B",
     csvDiffFileAPlaceholder: "原始 CSV 文件",
     csvDiffFileBPlaceholder: "修改后的 CSV 文件",
-    csvDiffBrowse: "浏览",
-    csvDiffCompare: "开始对比",
-    csvDiffComparing: "对比中...",
+    compare: "开始对比",
+    comparing: "对比中...",
     csvDiffSelectBoth: "请选择两个文件",
     csvDiffNoResult: "选择两个 CSV 文件并点击开始对比",
-    csvDiffAdded: "新增",
-    csvDiffRemoved: "删除",
-    csvDiffModified: "修改",
-    csvDiffEqual: "相同",
-    csvDiffColsLeft: "列 A",
-    csvDiffColsRight: "列 B",
-    csvDiffKeyColumns: "关键列",
-    csvDiffKeyColumnsHint: "选择关键列以按主键匹配行(大文件更快)",
-    csvDiffEqualRows: "行相同",
-    csvDiffPrev: "上一页",
-    csvDiffNext: "下一页",
-    csvDiffPage: "页",
+    added: "新增",
+    removed: "删除",
+    equal: "相同",
+    columnA: "列 A",
+    columnB: "列 B",
+    keyColumns: "关键列",
+    keyColumnsHint: "选择关键列以按主键匹配行(大文件更快)",
+    equalRows: "行相同",
+    prev: "上一页",
+    next: "下一页",
+    page: "页",
 
     // CsvEncoding
     csvEncoding: "CSV 编码转换",
     inputFile: "输入",
     outputFile: "输出",
-    csvEncodingBrowse: "浏览",
     sourceEncoding: "源编码",
     targetEncoding: "目标编码",
-    csvEncodingConvert: "开始转换",
-    csvEncodingConverting: "转换中...",
+    convert: "开始转换",
+    converting: "转换中...",
     csvEncodingSelectFiles: "请选择输入和输出文件",
     csvEncodingNoResult:
       "选择输入文件、输出文件与编码,点击开始转换.结果直接写入输出文件.",
-    csvEncodingSuccess: "转换成功",
-    csvEncodingSameEncoding: "源编码与目标编码相同",
-    csvEncodingBytes: "字节",
+    success: "转换成功",
+    sameEncoding: "源编码与目标编码相同",
+    bytes: "字节",
   },
 };

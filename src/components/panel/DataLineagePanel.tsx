@@ -18,6 +18,7 @@ import {
   Maximize2,
   Minimize2,
 } from "lucide-react";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StepLineage } from "@/types/xan";
 import { useLanguage } from "@/i18n";
@@ -128,7 +129,7 @@ export function DataLineagePanel({
             <GitMerge className="h-4 w-4 text-primary" />
             <span className="text-sm font-semibold">{t.dataLineage}</span>
             <span className="text-xs text-muted-foreground">
-              {lineageData.length} {t.rowsCount}
+              {lineageData.length} {t.rows}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -332,7 +333,7 @@ export function DataLineagePanel({
                       {step.commandName}
                     </span>
                     <span className="text-[10px] text-muted-foreground ml-auto">
-                      {step.inputRowCount} → {step.outputRowCount} {t.rowsCount}
+                      {step.inputRowCount} → {step.outputRowCount} {t.rows}
                     </span>
                   </div>
 
