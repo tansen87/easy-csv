@@ -135,7 +135,7 @@ export function buildConnectPreviewPath(params: {
 
 - 缺点:React Flow 原生连接必须**从 Handle 拖拽**触发,而当前 Handle 全部
   `pointerEvents: none`,且应用刻意用**右键**在节点上起手连接(左键留给移动节点)。
-  改为左键拖 Handle 等于推翻现有交互模型,改动大、学习成本高、与"切水果"右键逻辑冲突。
+  改为左键拖 Handle 等于推翻现有交互模型,改动大、学习成本高、与"切刀"右键逻辑冲突。
 - 结论:不采用,仅记录。
 
 ### 3.4 备选方案 D:直线预览
@@ -189,7 +189,7 @@ export function buildConnectPreviewPath(params: {
 - **目标吸附切换**:悬停合法目标时源端 handle 由 `resolveHandles` 重新决定(可能与手势
   起始 handle 不同),以"预览=最终边"为准;非法目标(自身/table 节点按现状不可连)不吸附。
 - **缩放平移**:缩放/平移画布时预览需随坐标系实时换算,避免与节点错位。
-- **切水果不受影响**:切割模式(`isCutting`)状态与路径不变,仅连接模式的预览变化。
+- **切刀不受影响**:切割模式(`isCutting`)状态与路径不变,仅连接模式的预览变化。
 - **回归点**:右键起手位置在节点边缘时,光标可能先落在源节点内部,需默认 `right-source`
   直至光标移出节点边界。
 
@@ -200,7 +200,7 @@ export function buildConnectPreviewPath(params: {
   2. 悬停到目标节点 → 预览吸附到两端真实锚点,形状与松开后生成的边完全一致(水平/垂直/斜向各测一组)。
   3. 缩放/平移画布后重复 1–2,预览始终与节点对齐。
   4. 目标节点高亮与提示文字(connectionTips)仍正常;松开正确建边,重复建边被去重。
-  5. 切水果(空白处右键拖动切边/节点)无回归。
+  5. 切刀(空白处右键拖动切边/节点)无回归。
 - **单测**(`src/__tests__/layout.test.ts`):
   - `pickStartHandle`:光标在源节点 右/左/下/上 及内部/迟滞边界各一组。
   - `buildConnectPreviewPath`:无目标(自由光标)与有目标(四方向吸附)各一组,

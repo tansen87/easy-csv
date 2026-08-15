@@ -319,7 +319,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 
 | 文件 | 职责 |
 |------|------|
-| `panel/FlowPanel.tsx` | **可视化管道编辑器主组件**(1237行),组合子组件,管理状态和事件处理;右键拖拽连线(贝塞尔实时预览)、切水果、节点拖拽 |
+| `panel/FlowPanel.tsx` | **可视化管道编辑器主组件**(1241行),组合子组件,管理状态和事件处理;右键拖拽连线(贝塞尔实时预览)、切刀、节点拖拽 |
 | `panel/AIPanel.tsx` | **AI 助手面板**(590行): 聊天 UI、命令生成、一键插入管道、👍/👎反馈(可切换)、意图澄清对话框、对话历史加载 |
 | `panel/VersionControlPanel.tsx` | 管道版本控制面板(302行): 版本列表、保存/恢复/删除、标签管理 |
 | `panel/DataLineagePanel.tsx` | 数据血缘面板(421行): 列级血缘追踪、变换类型图标、保存血缘 |
@@ -330,7 +330,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | `panel/utils/cutGeometry.ts` | 切割几何计算:交点检测、clip-path 生成、坠落方向 |
 | `panel/utils/layout.ts` | dagre 自动布局算法 + 节点/边生成与连接方向解析(`getLayoutedElements`/`createEdgeConfig`/`resolveHandles`/`handleAnchor`/`getEdgeEndpoints`/`pickStartHandle`/`buildConnectPreviewPath`/`transformBezierPath`) |
 | `panel/overlays/SearchOverlay.tsx` | 画布搜索框 UI(Ctrl+F) |
-| `panel/overlays/CutVisualization.tsx` | 切水果轨迹 SVG 渲染 |
+| `panel/overlays/CutVisualization.tsx` | 切刀轨迹 SVG 渲染 |
 | `panel/overlays/ConnectionVisualization.tsx` | 右键连线贝塞尔实时预览 SVG 渲染(渐变 + 箭头 + 起点圆点) |
 | `panel/CoordinateGrid.tsx` | ReactFlow 画布的坐标网格背景 |
 | `panel/LogPanel.tsx` | 浮动日志面板,显示执行结果,支持拖拽和复制 |

@@ -343,15 +343,19 @@ function AppContent() {
 
   // Step remove
   const handleStepRemove = useCallback(
-    (stepId: string | string[]) => {
+    (stepId: string | string[], extraEdgeIds?: string[]) => {
       const stepIds = Array.isArray(stepId) ? stepId : [stepId];
       const currentPipeline = tabsHook.getCurrentPipeline();
       const currentTab = tabsHook.getCurrentTab();
+      const extraIds = new Set(extraEdgeIds || []);
       const updatedPipeline = currentPipeline.filter(
         (s) => !stepIds.includes(s.id),
       );
       const updatedEdges = (currentTab.edges || []).filter(
-        (e) => !stepIds.includes(e.source) && !stepIds.includes(e.target),
+        (e) =>
+          !stepIds.includes(e.source) &&
+          !stepIds.includes(e.target) &&
+          !extraIds.has(e.id),
       );
       pipeline.updateTabPipeline(updatedPipeline, undefined, updatedEdges);
 

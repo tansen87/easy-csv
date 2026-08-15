@@ -55,7 +55,7 @@ interface FlowPanelProps {
   onStepsChange: (steps: PipelineStep[]) => void;
   onStepClick: (step: PipelineStep) => void;
   onStepAliasUpdate: (stepId: string, alias: string) => void;
-  onStepRemove: (stepId: string | string[]) => void;
+  onStepRemove: (stepId: string | string[], extraEdgeIds?: string[]) => void;
   onOpenFilterDialog: (col: number, x: number, y: number) => void;
   onOpenBatchFilter: (x: number, y: number) => void;
   onOpenPivotDialog: (x: number, y: number) => void;
@@ -139,7 +139,7 @@ export function FlowPanel({
   const onTableDeleteRef = useRef(onTableDelete);
   onTableDeleteRef.current = onTableDelete;
 
-  // 切水果功能状态
+  // 切刀功能状态
   const [cutPath, setCutPath] = useState<{ x: number; y: number }[]>([]);
   const [isCutting, setIsCutting] = useState(false);
   const [isClosingCut, setIsClosingCut] = useState(false);
@@ -257,6 +257,12 @@ export function FlowPanel({
 
   const [nodes, setNodes] = useNodesState([]);
   const [edges, setEdges] = useEdgesState([]);
+
+  // 切刀的延迟删除回调(连线 200ms)在异步时机执行,必须
+  // 读取当前状态而非创建时的旧快照,否则连续切割时后一个回调会拿旧数组
+  // 整体覆盖 App 的 edges,把先前已切掉的连线加回来.
+  const edgesRef = useRef<Edge[]>(edges);
+  edgesRef.current = edges;
 
   // Re-compute layout when data changes (not callbacks)
   useEffect(() => {
@@ -383,31 +389,12 @@ export function FlowPanel({
     [nodes],
   );
 
-  // 当savedEdges变化时(如从history导入),更新本地edges状态
-  useEffect(() => {
-    if (savedEdges && savedEdges.length > 0) {
-      const newEdges: Edge[] = savedEdges.map((edge) => {
-        const sourceNode = nodes.find((n) => n.id === edge.source);
-        const targetNode = nodes.find((n) => n.id === edge.target);
-
-        const config = createEdgeConfig(
-          edge.source,
-          edge.target,
-          sourceNode,
-          targetNode,
-        );
-        return { ...config, id: edge.id } as Edge;
-      });
-      setEdges(newEdges);
-    }
-  }, [savedEdges, nodes]);
-
   // 碰撞检测函数
   const detectAndDeleteElements = useCallback(
     (path: { x: number; y: number }[]) => {
       if (path.length < 2 || !reactFlowWrapper.current) return;
 
-      // 将切水果路径转换为 ReactFlow 画布坐标
+      // 将切刀路径转换为 ReactFlow 画布坐标
       const rect = reactFlowWrapper.current.getBoundingClientRect();
       const flowPath = path.map((p) => {
         return (
@@ -434,7 +421,7 @@ export function FlowPanel({
       });
 
       // 检测连线碰撞
-      const edgesToDelete: string[] = [];
+      const edgesToDelete: Edge[] = [];
       const edgeTargets = new Set<string>();
 
       edges.forEach((edge) => {
@@ -466,7 +453,7 @@ export function FlowPanel({
               edgeEnd.y,
             )
           ) {
-            edgesToDelete.push(edge.id);
+            edgesToDelete.push(edge);
             edgeTargets.add(edge.target);
             break;
           }
@@ -474,8 +461,8 @@ export function FlowPanel({
           const dist1 = pointToLineDistance(p1, edgeStart, edgeEnd);
           const dist2 = pointToLineDistance(p2, edgeStart, edgeEnd);
           if (dist1 < 20 || dist2 < 20) {
-            if (!edgesToDelete.includes(edge.id)) {
-              edgesToDelete.push(edge.id);
+            if (!edgesToDelete.some((e) => e.id === edge.id)) {
+              edgesToDelete.push(edge);
               edgeTargets.add(edge.target);
             }
           }
@@ -510,15 +497,25 @@ export function FlowPanel({
         }
       });
 
-      // 添加切水果动画效果
+      // 添加切刀动画效果
       if (edgesToDelete.length > 0 || nodesToDelete.length > 0) {
+        const edgeIdsToDelete = edgesToDelete.map((e) => e.id);
+        const edgeIdSet = new Set(edgeIdsToDelete);
+
         const newCutEdges = new Set(cutEdges);
-        edgesToDelete.forEach((id) => newCutEdges.add(id));
+        edgeIdsToDelete.forEach((id) => newCutEdges.add(id));
         setCutEdges(newCutEdges);
 
         const newCutNodes = new Set(cutNodes);
         nodesToDelete.forEach((id) => newCutNodes.add(id));
         setCutNodes(newCutNodes);
+
+        // 不与被切节点相连的连线 → 通过 onStepRemove 的额外参数一并删除;
+        // 与被切节点相连的连线由 onStepRemove 内部自动清理.
+        const nodeIdSet = new Set(nodesToDelete);
+        const extraEdgeIds = edgesToDelete
+          .filter((e) => !nodeIdSet.has(e.source) && !nodeIdSet.has(e.target))
+          .map((e) => e.id);
 
         // 为被切节点计算切割部分(自由坠落动画)
         const fallVec = calculateFallVector(path);
@@ -577,36 +574,40 @@ export function FlowPanel({
 
         setCutParts(newCutParts);
 
-        // 动画完成后删除元素
+        // 删除元素: 连线动画快(200ms),节点坠落动画慢(400ms),各自独立触发.
+        // 每次回调都用当前状态(edgesRef.current / App 最新 tabs)计算,避免旧
+        // 快照互相覆盖导致被切元素复活.切节点时其连线也随 200ms 一起删除,
+        // 节点本身再继续下坠至 400ms.
         setTimeout(() => {
-          if (edgesToDelete.length > 0) {
-            const updatedEdges = edges.filter(
-              (edge) => !edgesToDelete.includes(edge.id),
-            );
-            setEdges(updatedEdges);
+          if (edgeIdSet.size > 0) {
+            setEdges((prev) => prev.filter((e) => !edgeIdSet.has(e.id)));
             if (onEdgesChange) {
-              const pipelineEdges = updatedEdges
+              const remainingEdges = edgesRef.current.filter(
+                (e) => !edgeIdSet.has(e.id),
+              );
+              const pipelineEdges = remainingEdges
                 .filter((e) => e.source && e.target)
                 .map((e) => ({ id: e.id, source: e.source, target: e.target }));
               onEdgesChange(pipelineEdges);
             }
           }
-
-          if (nodesToDelete.length > 0) {
-            onStepRemove(nodesToDelete);
-          }
-
           setCutEdges(new Set());
+        }, 200);
+
+        setTimeout(() => {
+          if (nodesToDelete.length > 0) {
+            onStepRemove(nodesToDelete, extraEdgeIds);
+          }
           setCutNodes(new Set());
           setCutParts([]);
-        }, 700);
+        }, 400);
       }
     },
     [edges, nodes, setEdges, onStepRemove, onEdgesChange, cutEdges, cutNodes],
   );
 
-  // 节点 → flow 坐标矩形。优先用渲染后的真实尺寸(DOM 测量),
-  // 否则回退到节点自带 width/height,再不行用默认值。
+  // 节点 → flow 坐标矩形.优先用渲染后的真实尺寸(DOM 测量),
+  // 否则回退到节点自带 width/height,再不行用默认值.
   const getNodeRect = useCallback((node: Node): FlowRect => {
     const nodeData = node as any;
     const fallback: FlowRect = {
@@ -669,7 +670,7 @@ export function FlowPanel({
     [nodes, getNodeRect],
   );
 
-  // 右键按下 - 开始连接或切水果
+  // 右键按下 - 开始连接或切刀
   const handleCutStart = useCallback(
     (e: React.MouseEvent) => {
       if (e.button === 2) {
@@ -703,7 +704,7 @@ export function FlowPanel({
     [getNodeAtPosition],
   );
 
-  // 右键移动 - 连接模式或切水果模式
+  // 右键移动 - 连接模式或切刀模式
   const handleCutMove = useCallback(
     (e: React.MouseEvent) => {
       if (
@@ -909,7 +910,7 @@ export function FlowPanel({
     [setEdges, onEdgesChange, nodes],
   );
 
-  // 右键松开 - 完成连接或切水果
+  // 右键松开 - 完成连接或切刀
   const handleCutEnd = useCallback(
     (e: React.MouseEvent) => {
       if (isConnecting) {
@@ -1194,7 +1195,7 @@ export function FlowPanel({
         searchInputRef={searchInputRef as React.RefObject<HTMLInputElement>}
       />
 
-      {/* 切水果轨迹线 */}
+      {/* 切刀轨迹线 */}
       <CutVisualization
         isCutting={isCutting}
         isClosingCut={isClosingCut}
