@@ -58,6 +58,13 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 前端插件命令定义位于 `src/data/commands.ts`(`pinyin`,`plugin: true`,category `Plugins`),表单位于 `src/components/dialog/commands/PluginForms.tsx`。
 
+### 设计文档 (`docs/design/`)
+
+| 文件 | 内容 |
+|------|------|
+| `docs/design/flow-top-bottom-connect.md` | 节点连接点支持上下方向(已实现): `resolveHandles` 四方向选择算法、Handle 命名扩展(`top-*`/`bottom-*`/`table-top-*`)、切割碰撞检测同步更新 |
+| `docs/design/right-click-connect-bezier.md` | 右键连线改为贝塞尔实时预览(方案 A 已实现): 复用 `getBezierPath` 使预览=最终边、`pickStartHandle`/`buildConnectPreviewPath`、坐标换算与迟滞防抖 |
+
 ---
 
 ## Rust 后端 (`src-tauri/src/`)
@@ -230,6 +237,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `CsvEncodingDialog.test.tsx` | 编码转换对话框: 编码选择、invoke 形状、结果摘要 | ~5 |
 | `HelpDialog.test.tsx` | 帮助对话框搜索与打开 | ~2 |
 | `HelpMarkdown.test.tsx` | 自定义 Markdown 渲染器 | ~3 |
+| `layout.test.ts` | 连线布局工具: `resolveHandles` 四方向选择、`handleAnchor`/`getEdgeEndpoints`、`pickStartHandle`、`buildConnectPreviewPath`(贝塞尔预览)、`transformBezierPath` | ~27 |
 
 ---
 
@@ -291,7 +299,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 文件 | 职责 |
 |------|------|
 | `i18n/index.tsx` | 语言上下文 Provider,持久化到 localStorage |
-| `i18n/translations.ts` | 中英文翻译字符串(732行,含 AI 面板、反馈、澄清、版本控制、血缘、命令面板、CSV 对比/编码转换相关 key) |
+| `i18n/translations.ts` | 中英文翻译字符串(860行,含 AI 面板、反馈、澄清、版本控制、血缘、命令面板、CSV 对比/编码转换相关 key) |
 
 ### 工具函数 (`lib/`)
 
@@ -311,19 +319,19 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 
 | 文件 | 职责 |
 |------|------|
-| `panel/FlowPanel.tsx` | **可视化管道编辑器主组件**(1163行),组合子组件,管理状态和事件处理 |
+| `panel/FlowPanel.tsx` | **可视化管道编辑器主组件**(1237行),组合子组件,管理状态和事件处理;右键拖拽连线(贝塞尔实时预览)、切水果、节点拖拽 |
 | `panel/AIPanel.tsx` | **AI 助手面板**(590行): 聊天 UI、命令生成、一键插入管道、👍/👎反馈(可切换)、意图澄清对话框、对话历史加载 |
 | `panel/VersionControlPanel.tsx` | 管道版本控制面板(302行): 版本列表、保存/恢复/删除、标签管理 |
 | `panel/DataLineagePanel.tsx` | 数据血缘面板(421行): 列级血缘追踪、变换类型图标、保存血缘 |
 | `panel/LineageGraph.tsx` | 血缘关系图渲染(341行): ReactFlow 列节点、类型配色、高亮/置灰联动 |
-| `panel/nodes/TableNode.tsx` | 输入数据表格节点,支持表头重命名和右键菜单 |
-| `panel/nodes/PipelineStepNode.tsx` | 管道步骤节点,支持别名编辑、参数展示、切割动画 |
+| `panel/nodes/TableNode.tsx` | 输入数据表格节点,支持表头重命名和右键菜单;四方向连接点(带 `table-` 前缀) |
+| `panel/nodes/PipelineStepNode.tsx` | 管道步骤节点,支持别名编辑、参数展示、切割动画;左右/上下四方向连接点 |
 | `panel/nodes/index.ts` | 节点类型注册表(nodeTypes) |
 | `panel/utils/cutGeometry.ts` | 切割几何计算:交点检测、clip-path 生成、坠落方向 |
-| `panel/utils/layout.ts` | dagre 自动布局算法 + 节点/边生成(`getLayoutedElements`/`createEdgeConfig`) |
+| `panel/utils/layout.ts` | dagre 自动布局算法 + 节点/边生成与连接方向解析(`getLayoutedElements`/`createEdgeConfig`/`resolveHandles`/`handleAnchor`/`getEdgeEndpoints`/`pickStartHandle`/`buildConnectPreviewPath`/`transformBezierPath`) |
 | `panel/overlays/SearchOverlay.tsx` | 画布搜索框 UI(Ctrl+F) |
 | `panel/overlays/CutVisualization.tsx` | 切水果轨迹 SVG 渲染 |
-| `panel/overlays/ConnectionVisualization.tsx` | 右键连接线 SVG 渲染 |
+| `panel/overlays/ConnectionVisualization.tsx` | 右键连线贝塞尔实时预览 SVG 渲染(渐变 + 箭头 + 起点圆点) |
 | `panel/CoordinateGrid.tsx` | ReactFlow 画布的坐标网格背景 |
 | `panel/LogPanel.tsx` | 浮动日志面板,显示执行结果,支持拖拽和复制 |
 | `panel/DataProfilePanel.tsx` | 数据概况右侧栏,展示字段统计(计数/空值/极值/均值等),支持固定搜索框 |
@@ -444,6 +452,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改会话保存/恢复 | `src/hooks/useSession.ts` + `src/utils/session.ts` + `src-tauri/src/session.rs` |
 | 修改命令面板 | `src/components/CommandPalette.tsx` + `src/hooks/useUIState.ts` + `src/hooks/KeyboardShortcuts.ts`(Ctrl+K) |
 | 修改管道可视化布局 | `src/components/panel/FlowPanel.tsx`(主逻辑) + `panel/utils/layout.ts`(布局) + `panel/nodes/`(节点样式) |
+| 修改连线方向/锚点(上下/左右连接点) | `src/components/panel/utils/layout.ts`(`resolveHandles`/`handleAnchor`) + `panel/nodes/`(Handle 定义) |
+| 修改右键连线交互/预览 | `src/components/panel/FlowPanel.tsx`(`handleCutStart`/`handleCutMove`/`handleCutEnd`) + `panel/overlays/ConnectionVisualization.tsx`(贝塞尔渲染) + `layout.ts`(`pickStartHandle`/`buildConnectPreviewPath`/`transformBezierPath`) |
 | 修改菜单/快捷键 | `src/components/menu/MainMenu.tsx` + `src/hooks/KeyboardShortcuts.ts` |
 | 修改右键菜单 | `src/components/menu/ContextMenu.tsx` |
 | 修改主题/样式 | `src/index.css` + `src/components/setting/ThemeProvider.tsx` |
