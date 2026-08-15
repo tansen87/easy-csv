@@ -2,6 +2,126 @@ import { Node, Edge, MarkerType } from "reactflow";
 import dagre from "dagre";
 import { PipelineStep, PipelineEdge } from "@/types/xan";
 
+export interface RectLike {
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+}
+
+interface NodeRectSource {
+  position: { x: number; y?: number };
+  width?: number | null;
+  height?: number | null;
+}
+
+const handlePrefix = (id: string) => (id === "table-node" ? "table-" : "");
+
+const handleName = (id: string, side: string, role: "source" | "target") =>
+  `${handlePrefix(id)}${side}-${role}`;
+
+const toRect = (n?: NodeRectSource): RectLike | undefined => {
+  if (!n) return undefined;
+  return {
+    x: n.position.x,
+    y: n.position.y ?? 0,
+    width: n.width ?? undefined,
+    height: n.height ?? undefined,
+  };
+};
+
+// 根据两个节点的相对位置,选择最合理的连接方向
+export function resolveHandles(
+  sourceId: string,
+  targetId: string,
+  sourceNode?: NodeRectSource,
+  targetNode?: NodeRectSource,
+): { sourceHandle: string; targetHandle: string } {
+  const sourceRect = toRect(sourceNode);
+  const targetRect = toRect(targetNode);
+
+  // 无位置信息时退回默认:左右连接
+  if (!sourceRect || !targetRect) {
+    return {
+      sourceHandle: handleName(sourceId, "right", "source"),
+      targetHandle: handleName(targetId, "left", "target"),
+    };
+  }
+
+  const sourceCenterX = sourceRect.x + (sourceRect.width ?? 0) / 2;
+  const sourceCenterY = sourceRect.y + (sourceRect.height ?? 0) / 2;
+  const targetCenterX = targetRect.x + (targetRect.width ?? 0) / 2;
+  const targetCenterY = targetRect.y + (targetRect.height ?? 0) / 2;
+
+  const dx = targetCenterX - sourceCenterX;
+  const dy = targetCenterY - sourceCenterY;
+
+  // 纵向位移占主导 → 走上下连接,避免绕线
+  if (Math.abs(dy) >= Math.abs(dx)) {
+    if (dy >= 0) {
+      return {
+        sourceHandle: handleName(sourceId, "bottom", "source"),
+        targetHandle: handleName(targetId, "top", "target"),
+      };
+    }
+    return {
+      sourceHandle: handleName(sourceId, "top", "source"),
+      targetHandle: handleName(targetId, "bottom", "target"),
+    };
+  }
+
+  // 横向位移占主导 → 保持左右连接
+  if (dx >= 0) {
+    return {
+      sourceHandle: handleName(sourceId, "right", "source"),
+      targetHandle: handleName(targetId, "left", "target"),
+    };
+  }
+  return {
+    sourceHandle: handleName(sourceId, "left", "source"),
+    targetHandle: handleName(targetId, "right", "target"),
+  };
+}
+
+// 根据 handle 名返回对应边的中点
+export function handleAnchor(
+  rect: { x: number; y: number; width: number; height: number },
+  handle: string,
+): { x: number; y: number } {
+  const { x, y, width, height } = rect;
+  if (handle.includes("left")) return { x, y: y + height / 2 };
+  if (handle.includes("right")) return { x: x + width, y: y + height / 2 };
+  if (handle.includes("top")) return { x: x + width / 2, y };
+  return { x: x + width / 2, y: y + height };
+}
+
+// 计算边的起点/终点几何(用于切割碰撞检测)
+export function getEdgeEndpoints(
+  sourceId: string,
+  targetId: string,
+  sourceRect: { x: number; y: number; width: number; height: number },
+  targetRect: { x: number; y: number; width: number; height: number },
+): { start: { x: number; y: number }; end: { x: number; y: number } } {
+  const { sourceHandle, targetHandle } = resolveHandles(
+    sourceId,
+    targetId,
+    {
+      position: { x: sourceRect.x, y: sourceRect.y },
+      width: sourceRect.width,
+      height: sourceRect.height,
+    },
+    {
+      position: { x: targetRect.x, y: targetRect.y },
+      width: targetRect.width,
+      height: targetRect.height,
+    },
+  );
+  return {
+    start: handleAnchor(sourceRect, sourceHandle),
+    end: handleAnchor(targetRect, targetHandle),
+  };
+}
+
 export function getLayoutedElements(
   hasTable: boolean,
   steps: PipelineStep[],
@@ -44,6 +164,8 @@ export function getLayoutedElements(
       },
       selected: false,
       dragHandle: ".table-node-header",
+      width: 520,
+      height: 260,
     });
   }
 
@@ -53,6 +175,8 @@ export function getLayoutedElements(
       id: step.id,
       type: "pipelineStep",
       position: step.position || { x: 0, y: 0 },
+      width: 240,
+      height: 90,
       data: {
         step,
         onStepClick,
@@ -69,27 +193,15 @@ export function getLayoutedElements(
   const edges: Edge[] = [];
 
   const createEdge = (sourceId: string, targetId: string) => {
-    const sourceNode = nodes.find(n => n.id === sourceId);
-    const targetNode = nodes.find(n => n.id === targetId);
+    const sourceNode = nodes.find((n) => n.id === sourceId);
+    const targetNode = nodes.find((n) => n.id === targetId);
 
-    let sourceHandle: string;
-    let targetHandle: string;
-
-    if (sourceNode && targetNode) {
-      const sourceX = sourceNode.position.x;
-      const targetX = targetNode.position.x;
-
-      if (sourceX <= targetX) {
-        sourceHandle = sourceId === 'table-node' ? 'table-right-source' : 'right-source';
-        targetHandle = targetId === 'table-node' ? 'table-left-target' : 'left-target';
-      } else {
-        sourceHandle = sourceId === 'table-node' ? 'table-left-source' : 'left-source';
-        targetHandle = targetId === 'table-node' ? 'table-right-target' : 'right-target';
-      }
-    } else {
-      sourceHandle = sourceId === 'table-node' ? 'table-right-source' : 'right-source';
-      targetHandle = targetId === 'table-node' ? 'table-left-target' : 'left-target';
-    }
+    const { sourceHandle, targetHandle } = resolveHandles(
+      sourceId,
+      targetId,
+      sourceNode,
+      targetNode,
+    );
 
     return {
       id: `e-${sourceId}-${targetId}`,
@@ -133,7 +245,11 @@ export function getLayoutedElements(
   });
 
   const findFirstAvailablePosition = (): { x: number; y: number } => {
-    for (let col = 0; col < Math.ceil(steps.length / MAX_STEPS_PER_COLUMN) + 2; col++) {
+    for (
+      let col = 0;
+      col < Math.ceil(steps.length / MAX_STEPS_PER_COLUMN) + 2;
+      col++
+    ) {
       for (let row = 0; row < MAX_STEPS_PER_COLUMN; row++) {
         const posKey = `${col}-${row}`;
         if (!occupiedPositions.has(posKey)) {
@@ -143,7 +259,7 @@ export function getLayoutedElements(
       }
     }
 
-    const totalNodes = nodes.filter(n => n.id !== "table-node").length;
+    const totalNodes = nodes.filter((n) => n.id !== "table-node").length;
     const column = Math.floor(totalNodes / MAX_STEPS_PER_COLUMN);
     const rowInColumn = totalNodes % MAX_STEPS_PER_COLUMN;
     const newPos = { x: column * COLUMN_WIDTH, y: rowInColumn * ROW_HEIGHT };
@@ -182,27 +298,15 @@ export function getLayoutedElements(
 export function createEdgeConfig(
   sourceId: string,
   targetId: string,
-  sourceNode?: { position: { x: number }; type?: string },
-  targetNode?: { position: { x: number }; type?: string },
+  sourceNode?: NodeRectSource,
+  targetNode?: NodeRectSource,
 ): any {
-  let sourceHandle: string;
-  let targetHandle: string;
-
-  if (sourceNode && targetNode) {
-    const sourceX = sourceNode.position.x;
-    const targetX = targetNode.position.x;
-
-    if (sourceX <= targetX) {
-      sourceHandle = sourceId === 'table-node' ? 'table-right-source' : 'right-source';
-      targetHandle = targetId === 'table-node' ? 'table-left-target' : 'left-target';
-    } else {
-      sourceHandle = sourceId === 'table-node' ? 'table-left-source' : 'left-source';
-      targetHandle = targetId === 'table-node' ? 'table-right-target' : 'right-target';
-    }
-  } else {
-    sourceHandle = sourceId === 'table-node' ? 'table-right-source' : 'right-source';
-    targetHandle = targetId === 'table-node' ? 'table-left-target' : 'left-target';
-  }
+  const { sourceHandle, targetHandle } = resolveHandles(
+    sourceId,
+    targetId,
+    sourceNode,
+    targetNode,
+  );
 
   return {
     id: `e-${sourceId}-${targetId}`,
@@ -210,13 +314,13 @@ export function createEdgeConfig(
     target: targetId,
     sourceHandle,
     targetHandle,
-    type: 'default',
+    type: "default",
     animated: false,
     data: { curvature: 0.5 },
-    style: { stroke: 'var(--flow-line-color)', strokeWidth: 1.5 },
+    style: { stroke: "var(--flow-line-color)", strokeWidth: 1.5 },
     markerEnd: {
       type: MarkerType.ArrowClosed,
-      color: 'var(--flow-line-color)',
+      color: "var(--flow-line-color)",
     },
   };
 }

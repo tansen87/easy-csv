@@ -64,7 +64,10 @@ export function PipelineStepNode({
           if (paths.length === 1) {
             const path = paths[0].trim();
             // 检查是否是文件（有扩展名）
-            const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+            const lastSlash = Math.max(
+              path.lastIndexOf("/"),
+              path.lastIndexOf("\\"),
+            );
             const lastDot = path.lastIndexOf(".");
             if (lastDot > lastSlash && lastSlash >= 0) {
               // 是文件，只显示文件夹部分
@@ -75,7 +78,10 @@ export function PipelineStepNode({
           // 多个路径，只显示文件夹
           const folders = paths.map((p: string) => {
             const trimmed = p.trim();
-            const lastSlash = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
+            const lastSlash = Math.max(
+              trimmed.lastIndexOf("/"),
+              trimmed.lastIndexOf("\\"),
+            );
             const lastDot = trimmed.lastIndexOf(".");
             if (lastDot > lastSlash && lastSlash >= 0) {
               return trimmed.substring(0, lastSlash);
@@ -122,14 +128,29 @@ export function PipelineStepNode({
         position={Position.Left}
         id="left-target"
         className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
-        style={{ opacity: 0, pointerEvents: 'none' }}
+        style={{ opacity: 0, pointerEvents: "none" }}
       />
       <Handle
         type="source"
         position={Position.Left}
         id="left-source"
         className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
-        style={{ opacity: 0, pointerEvents: 'none' }}
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      {/* 双向 Handle - 顶部既是 source 也是 target */}
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="top-source"
+        className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="top-target"
+        className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
       />
       <div className="p-3">
         <div className="flex items-center gap-2 w-full">
@@ -176,7 +197,7 @@ export function PipelineStepNode({
                   <span
                     key={key}
                     className="bg-muted/70 px-1 py-0.5 rounded border border-border/40 max-w-full overflow-hidden"
-                    style={{ wordBreak: 'break-word' }}
+                    style={{ wordBreak: "break-word" }}
                   >
                     <span className="text-muted-foreground/80">{key}=</span>
                     <span className="font-medium">{String(value)}</span>
@@ -227,37 +248,55 @@ export function PipelineStepNode({
         position={Position.Right}
         id="right-source"
         className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
-        style={{ opacity: 0, pointerEvents: 'none' }}
+        style={{ opacity: 0, pointerEvents: "none" }}
       />
       <Handle
         type="target"
         position={Position.Right}
         id="right-target"
         className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
-        style={{ opacity: 0, pointerEvents: 'none' }}
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      {/* 双向 Handle - 底部既是 source 也是 target */}
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="bottom-source"
+        className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="bottom-target"
+        className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
       />
     </>
   );
 
-  const cardClass = `w-[220px] transition-all duration-200 hover:shadow-lg group relative ${selected
-    ? "bg-gradient-to-r from-primary/15 to-primary/5 border-primary/50 shadow-md ring-2 ring-primary/20"
-    : "bg-card/95 hover:bg-accent/30 border-border/60 hover:border-primary/30"
-    } ${data.isPendingDelete ? "border-orange-500" : ""} ${data.isHighlighted ? "ring-2 ring-primary ring-offset-2 animate-pulse-once" : ""}`;
+  const cardClass = `w-[220px] transition-all duration-200 hover:shadow-lg group relative ${
+    selected
+      ? "bg-gradient-to-r from-primary/15 to-primary/5 border-primary/50 shadow-md ring-2 ring-primary/20"
+      : "bg-card/95 hover:bg-accent/30 border-border/60 hover:border-primary/30"
+  } ${data.isPendingDelete ? "border-orange-500" : ""} ${data.isHighlighted ? "ring-2 ring-primary ring-offset-2 animate-pulse-once" : ""}`;
 
   // 如果有切割部分,渲染两个切割碎片
   if (data.cutParts && data.cutParts.length > 0) {
     return (
-      <div className="relative w-[220px]" style={{ height: 'auto' }}>
+      <div className="relative w-[220px]" style={{ height: "auto" }}>
         {data.cutParts.map((part, idx) => (
           <div
             key={idx}
             className="cut-part-fall"
-            style={{
-              clipPath: part.clipPath,
-              '--fall-dx': `${part.fallDx}px`,
-              '--fall-dy': `${part.fallDy}px`,
-              '--fall-rotation': `${part.fallRotation}deg`,
-            } as React.CSSProperties}
+            style={
+              {
+                clipPath: part.clipPath,
+                "--fall-dx": `${part.fallDx}px`,
+                "--fall-dy": `${part.fallDy}px`,
+                "--fall-rotation": `${part.fallRotation}deg`,
+              } as React.CSSProperties
+            }
           >
             <Card
               className={cardClass}
@@ -280,7 +319,9 @@ export function PipelineStepNode({
       <Card
         className={`${cardClass} ${data.isCutting ? "cut-node" : ""}`}
         style={{
-          boxShadow: data.isPendingDelete ? '0 0 12px rgba(154, 154, 166, 0.6)' : undefined,
+          boxShadow: data.isPendingDelete
+            ? "0 0 12px rgba(154, 154, 166, 0.6)"
+            : undefined,
         }}
         onContextMenu={(e) => {
           e.preventDefault();

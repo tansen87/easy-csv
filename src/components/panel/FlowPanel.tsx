@@ -23,6 +23,7 @@ import { CoordinateGrid } from "@/components/panel/CoordinateGrid";
 import {
   getLayoutedElements,
   createEdgeConfig,
+  getEdgeEndpoints,
 } from "@/components/panel/utils/layout";
 import {
   getCutIntersectionPoints,
@@ -416,8 +417,8 @@ export function FlowPanel({
         nodePositions.set(node.id, {
           x: node.position.x,
           y: node.position.y,
-          width: nodeData.measured?.width || 200,
-          height: nodeData.measured?.height || 80,
+          width: nodeData.width || nodeData.measured?.width || 200,
+          height: nodeData.height || nodeData.measured?.height || 80,
         });
       });
 
@@ -431,14 +432,12 @@ export function FlowPanel({
 
         if (!sourcePos || !targetPos) return;
 
-        const edgeStart = {
-          x: sourcePos.x + sourcePos.width,
-          y: sourcePos.y + sourcePos.height / 2,
-        };
-        const edgeEnd = {
-          x: targetPos.x,
-          y: targetPos.y + targetPos.height / 2,
-        };
+        const { start: edgeStart, end: edgeEnd } = getEdgeEndpoints(
+          edge.source,
+          edge.target,
+          sourcePos,
+          targetPos,
+        );
 
         for (let i = 0; i < flowPath.length - 1; i++) {
           const p1 = flowPath[i];
@@ -701,8 +700,8 @@ export function FlowPanel({
             nodePositions.set(node.id, {
               x: node.position.x,
               y: node.position.y,
-              width: nodeData.measured?.width || 200,
-              height: nodeData.measured?.height || 80,
+              width: nodeData.width || nodeData.measured?.width || 200,
+              height: nodeData.height || nodeData.measured?.height || 80,
             });
           });
 
@@ -715,14 +714,12 @@ export function FlowPanel({
             const targetPos = nodePositions.get(edge.target);
             if (!sourcePos || !targetPos) return;
 
-            const edgeStart = {
-              x: sourcePos.x + sourcePos.width,
-              y: sourcePos.y + sourcePos.height / 2,
-            };
-            const edgeEnd = {
-              x: targetPos.x,
-              y: targetPos.y + targetPos.height / 2,
-            };
+            const { start: edgeStart, end: edgeEnd } = getEdgeEndpoints(
+              edge.source,
+              edge.target,
+              sourcePos,
+              targetPos,
+            );
 
             for (let i = 0; i < flowPath.length - 1; i++) {
               const p1 = flowPath[i];

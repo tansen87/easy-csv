@@ -162,6 +162,34 @@ export function TableNode({
         className="opacity-0"
         style={{ opacity: 0, pointerEvents: "none" }}
       />
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="table-top-source"
+        className="opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="table-top-target"
+        className="opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="table-bottom-source"
+        className="opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="table-bottom-target"
+        className="opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
       <div className="table-node-header px-2 py-1 bg-muted/50 flex items-center gap-2">
         <div className="w-6 h-6 bg-gradient-to-br from-green-500/25 to-green-500/10 rounded-md flex items-center justify-center">
           <Table className="h-3 w-3 text-green-600" />
