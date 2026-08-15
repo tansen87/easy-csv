@@ -1,71 +1,70 @@
-import { useLanguage } from "@/i18n";
-
 interface ConnectionVisualizationProps {
   isConnecting: boolean;
-  connectPath: { x: number; y: number }[];
+  connectPreviewD: string | null;
+  connectStartAnchor: { x: number; y: number } | null;
+  connectEndAnchor: { x: number; y: number } | null;
   connectTargetNode: string | null;
 }
 
-export function ConnectionVisualization({ isConnecting, connectPath, connectTargetNode }: ConnectionVisualizationProps) {
-  const { t } = useLanguage();
-
-  if (!isConnecting || connectPath.length === 0) return null;
+export function ConnectionVisualization({
+  isConnecting,
+  connectPreviewD,
+  connectStartAnchor,
+}: ConnectionVisualizationProps) {
+  if (!isConnecting || !connectPreviewD) return null;
 
   return (
     <svg
       style={{
-        position: 'absolute',
+        position: "absolute",
         top: 0,
         left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
+        width: "100%",
+        height: "100%",
+        pointerEvents: "none",
         zIndex: 1000,
       }}
     >
       <defs>
         <linearGradient id="connectGradient" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor="var(--flow-line-color)" />
-          <stop offset="100%" stopColor="color-mix(in oklch, var(--flow-line-color), transparent 50%)" />
+          <stop
+            offset="100%"
+            stopColor="color-mix(in oklch, var(--flow-line-color), transparent 50%)"
+          />
         </linearGradient>
+        <marker
+          id="connectArrow"
+          markerWidth="8"
+          markerHeight="8"
+          refX="5"
+          refY="2"
+          orient="auto"
+          markerUnits="strokeWidth"
+        >
+          <path d="M0,0 L0,4 L6,2 z" fill="var(--flow-line-color)" />
+        </marker>
       </defs>
 
-      {/* 连接线 */}
-      {connectPath.length > 1 && (
-        <path
-          d={`M ${connectPath[0].x} ${connectPath[0].y} ${connectPath
-            .slice(1)
-            .map(p => `L ${p.x} ${p.y}`)
-            .join(' ')}`}
-          stroke="url(#connectGradient)"
-          strokeWidth="3"
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeDasharray="8 4"
-        />
-      )}
-
-      {/* 起点标记 */}
-      <circle
-        cx={connectPath[0]?.x || 0}
-        cy={connectPath[0]?.y || 0}
-        r="8"
-        fill="var(--flow-line-color)"
-        opacity="0.8"
+      {/* 贝塞尔连接线 */}
+      <path
+        d={connectPreviewD}
+        stroke="url(#connectGradient)"
+        strokeWidth="3"
+        fill="none"
+        strokeLinecap="round"
+        markerEnd="url(#connectArrow)"
       />
 
-      {/* 目标节点高亮 */}
-      {connectTargetNode && (
-        <text
-          x={connectPath[connectPath.length - 1]?.x || 0}
-          y={(connectPath[connectPath.length - 1]?.y || 0) - 20}
+      {/* 起点标记 */}
+      {connectStartAnchor && (
+        <circle
+          cx={connectStartAnchor.x}
+          cy={connectStartAnchor.y}
+          r="8"
           fill="var(--flow-line-color)"
-          fontSize="12"
-          textAnchor="middle"
-        >
-          {t.connectionTips}
-        </text>
+          opacity="0.8"
+        />
       )}
     </svg>
   );

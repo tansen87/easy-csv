@@ -1,8 +1,14 @@
 import { describe, it, expect } from "vitest";
+import { Position } from "reactflow";
 import {
   resolveHandles,
   handleAnchor,
   getEdgeEndpoints,
+  pickStartHandle,
+  buildConnectPreviewPath,
+  transformBezierPath,
+  sideToPosition,
+  oppositePosition,
 } from "@/components/panel/utils/layout";
 
 function node(_id: string, x: number, y: number, width = 220, height = 90) {
@@ -140,5 +146,115 @@ describe("getEdgeEndpoints", () => {
     const { start, end } = getEdgeEndpoints("a", "b", source, target);
     expect(start).toEqual({ x: 220, y: 45 });
     expect(end).toEqual({ x: 300, y: 45 });
+  });
+});
+
+describe("sideToPosition", () => {
+  it("maps handle names to React Flow positions", () => {
+    expect(sideToPosition("left-source")).toBe(Position.Left);
+    expect(sideToPosition("table-right-target")).toBe(Position.Right);
+    expect(sideToPosition("top-source")).toBe(Position.Top);
+    expect(sideToPosition("bottom-target")).toBe(Position.Bottom);
+  });
+});
+
+describe("oppositePosition", () => {
+  it("returns the mirrored side", () => {
+    expect(oppositePosition(Position.Left)).toBe(Position.Right);
+    expect(oppositePosition(Position.Right)).toBe(Position.Left);
+    expect(oppositePosition(Position.Top)).toBe(Position.Bottom);
+    expect(oppositePosition(Position.Bottom)).toBe(Position.Top);
+  });
+});
+
+describe("pickStartHandle", () => {
+  const rect = { x: 0, y: 0, width: 220, height: 90 };
+
+  it("defaults to right-source while the cursor is inside the node", () => {
+    expect(pickStartHandle("a", rect, { x: 110, y: 45 })).toBe("right-source");
+  });
+
+  it("picks bottom-source when the cursor is below the node", () => {
+    expect(pickStartHandle("a", rect, { x: 110, y: 300 })).toBe(
+      "bottom-source",
+    );
+  });
+
+  it("picks top-source when the cursor is above the node", () => {
+    expect(pickStartHandle("a", rect, { x: 110, y: -100 })).toBe("top-source");
+  });
+
+  it("picks right-source when the cursor is to the right", () => {
+    expect(pickStartHandle("a", rect, { x: 400, y: 45 })).toBe("right-source");
+  });
+
+  it("picks left-source when the cursor is to the left", () => {
+    expect(pickStartHandle("a", rect, { x: -300, y: 45 })).toBe("left-source");
+  });
+
+  it("keeps the table- prefix for the table node", () => {
+    expect(pickStartHandle("table-node", rect, { x: 110, y: 300 })).toBe(
+      "table-bottom-source",
+    );
+  });
+});
+
+describe("buildConnectPreviewPath", () => {
+  const sourceRect = { x: 0, y: 0, width: 220, height: 90 };
+
+  it("builds a bezier from the source anchor to a free cursor", () => {
+    const { d, sourceAnchor, targetAnchor } = buildConnectPreviewPath({
+      sourceId: "a",
+      sourceRect,
+      sourceHandle: "right-source",
+      cursor: { x: 500, y: 45 },
+    });
+    expect(d).toMatch(/^M[\d.]+,[\d.]+ C[\d.]+,[\d.]+ [\d.]+,[\d.]+ [\d.]+,[\d.]+$/);
+    expect(sourceAnchor).toEqual({ x: 220, y: 45 });
+    expect(targetAnchor).toEqual({ x: 500, y: 45 });
+  });
+
+  it("snaps to the target node anchors when hovering a target", () => {
+    const targetRect = { x: 0, y: 300, width: 220, height: 90 };
+    const { d, sourceAnchor, targetAnchor } = buildConnectPreviewPath({
+      sourceId: "a",
+      sourceRect,
+      sourceHandle: "right-source",
+      cursor: { x: 500, y: 400 },
+      target: { id: "b", rect: targetRect },
+    });
+    // 垂直排布 → 底部→顶部,锚点吸附到真实边上
+    expect(sourceAnchor).toEqual({ x: 110, y: 90 });
+    expect(targetAnchor).toEqual({ x: 110, y: 300 });
+    expect(d).toMatch(/^M[\d.]+,[\d.]+ C/);
+  });
+
+  it("resolves handles from the target node, ignoring the initial sourceHandle", () => {
+    const targetRect = { x: 300, y: 0, width: 220, height: 90 };
+    const { sourceAnchor, targetAnchor } = buildConnectPreviewPath({
+      sourceId: "a",
+      sourceRect,
+      sourceHandle: "top-source",
+      cursor: { x: 500, y: 45 },
+      target: { id: "b", rect: targetRect },
+    });
+    expect(sourceAnchor).toEqual({ x: 220, y: 45 });
+    expect(targetAnchor).toEqual({ x: 300, y: 45 });
+  });
+});
+
+describe("transformBezierPath", () => {
+  it("maps every bezier point through the affine transform", () => {
+    const d = "M0,0 C10,0 20,0 30,0";
+    const out = transformBezierPath(d, (p) => ({
+      x: p.x + 100,
+      y: p.y * 2,
+    }));
+    expect(out).toBe("M100,0 C110,0 120,0 130,0");
+  });
+
+  it("returns the input unchanged for unexpected formats", () => {
+    const d = "M0,0 L1,1";
+    expect(transformBezierPath(d, (p) => p)).toBe(d);
   });
 });

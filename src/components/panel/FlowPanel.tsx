@@ -24,6 +24,11 @@ import {
   getLayoutedElements,
   createEdgeConfig,
   getEdgeEndpoints,
+  pickStartHandle,
+  buildConnectPreviewPath,
+  transformBezierPath,
+  FlowRect,
+  ConnectPreviewTarget,
 } from "@/components/panel/utils/layout";
 import {
   getCutIntersectionPoints,
@@ -168,9 +173,15 @@ export function FlowPanel({
   const [connectSourceNode, setConnectSourceNode] = useState<string | null>(
     null,
   );
-  const [connectPath, setConnectPath] = useState<{ x: number; y: number }[]>(
-    [],
-  );
+  const [connectPreviewD, setConnectPreviewD] = useState<string | null>(null);
+  const [connectStartAnchor, setConnectStartAnchor] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [connectEndAnchor, setConnectEndAnchor] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const [connectTargetNode, setConnectTargetNode] = useState<string | null>(
     null,
   );
@@ -594,6 +605,43 @@ export function FlowPanel({
     [edges, nodes, setEdges, onStepRemove, onEdgesChange, cutEdges, cutNodes],
   );
 
+  // 节点 → flow 坐标矩形。优先用渲染后的真实尺寸(DOM 测量),
+  // 否则回退到节点自带 width/height,再不行用默认值。
+  const getNodeRect = useCallback((node: Node): FlowRect => {
+    const nodeData = node as any;
+    const fallback: FlowRect = {
+      x: node.position.x,
+      y: node.position.y,
+      width: nodeData.width || nodeData.measured?.width || 200,
+      height: nodeData.height || nodeData.measured?.height || 80,
+    };
+
+    if (!reactFlowWrapper.current || !reactFlowInstance.current)
+      return fallback;
+
+    const el = reactFlowWrapper.current.querySelector(
+      `.react-flow__node[data-id="${node.id}"]`,
+    );
+    if (!el) return fallback;
+
+    const b = el.getBoundingClientRect();
+    const topLeft = reactFlowInstance.current.screenToFlowPosition({
+      x: b.left,
+      y: b.top,
+    });
+    const bottomRight = reactFlowInstance.current.screenToFlowPosition({
+      x: b.right,
+      y: b.bottom,
+    });
+
+    return {
+      x: topLeft.x,
+      y: topLeft.y,
+      width: Math.max(bottomRight.x - topLeft.x, 1),
+      height: Math.max(bottomRight.y - topLeft.y, 1),
+    };
+  }, []);
+
   // 判断点击位置是否在节点上
   const getNodeAtPosition = useCallback(
     (clientX: number, clientY: number): string | null => {
@@ -605,22 +653,20 @@ export function FlowPanel({
       });
 
       for (const node of nodes) {
-        const nodeData = node as any;
-        const width = nodeData.measured?.width || 200;
-        const height = nodeData.measured?.height || 80;
+        const rect = getNodeRect(node);
 
         if (
-          flowPos.x >= node.position.x &&
-          flowPos.x <= node.position.x + width &&
-          flowPos.y >= node.position.y &&
-          flowPos.y <= node.position.y + height
+          flowPos.x >= rect.x &&
+          flowPos.x <= rect.x + rect.width &&
+          flowPos.y >= rect.y &&
+          flowPos.y <= rect.y + rect.height
         ) {
           return node.id;
         }
       }
       return null;
     },
-    [nodes],
+    [nodes, getNodeRect],
   );
 
   // 右键按下 - 开始连接或切水果
@@ -635,12 +681,10 @@ export function FlowPanel({
         if (clickedNode && clickedNode !== "table-node") {
           setIsConnecting(true);
           setConnectSourceNode(clickedNode);
-          if (reactFlowWrapper.current) {
-            const rect = reactFlowWrapper.current.getBoundingClientRect();
-            setConnectPath([
-              { x: e.clientX - rect.left, y: e.clientY - rect.top },
-            ]);
-          }
+          setConnectTargetNode(null);
+          setConnectPreviewD(null);
+          setConnectStartAnchor(null);
+          setConnectEndAnchor(null);
         } else {
           setIsCutting(true);
           setIsClosingCut(false);
@@ -662,18 +706,53 @@ export function FlowPanel({
   // 右键移动 - 连接模式或切水果模式
   const handleCutMove = useCallback(
     (e: React.MouseEvent) => {
-      if (isConnecting && reactFlowWrapper.current) {
+      if (
+        isConnecting &&
+        reactFlowWrapper.current &&
+        reactFlowInstance.current
+      ) {
         const rect = reactFlowWrapper.current.getBoundingClientRect();
-        setConnectPath((prev) => [
-          ...prev.slice(-20),
-          { x: e.clientX - rect.left, y: e.clientY - rect.top },
-        ]);
 
-        const hoveredNode = getNodeAtPosition(e.clientX, e.clientY);
-        if (hoveredNode && hoveredNode !== connectSourceNode) {
-          setConnectTargetNode(hoveredNode);
-        } else {
-          setConnectTargetNode(null);
+        const flowCursor = reactFlowInstance.current.screenToFlowPosition({
+          x: e.clientX,
+          y: e.clientY,
+        });
+
+        const sourceNode = nodes.find((n) => n.id === connectSourceNode);
+        if (sourceNode) {
+          const sourceRect = getNodeRect(sourceNode);
+          const sourceHandle = pickStartHandle(
+            connectSourceNode!,
+            sourceRect,
+            flowCursor,
+          );
+
+          const hoveredNode = getNodeAtPosition(e.clientX, e.clientY);
+          let target: ConnectPreviewTarget | undefined;
+          if (hoveredNode && hoveredNode !== connectSourceNode) {
+            const targetNode = nodes.find((n) => n.id === hoveredNode);
+            if (targetNode) {
+              target = { id: hoveredNode, rect: getNodeRect(targetNode) };
+            }
+          }
+
+          const preview = buildConnectPreviewPath({
+            sourceId: connectSourceNode!,
+            sourceRect,
+            sourceHandle,
+            cursor: flowCursor,
+            target,
+          });
+
+          const toWrapper = (p: { x: number; y: number }) => {
+            const s = reactFlowInstance.current.flowToScreenPosition(p);
+            return { x: s.x - rect.left, y: s.y - rect.top };
+          };
+
+          setConnectPreviewD(transformBezierPath(preview.d, toWrapper));
+          setConnectStartAnchor(toWrapper(preview.sourceAnchor));
+          setConnectEndAnchor(toWrapper(preview.targetAnchor));
+          setConnectTargetNode(target?.id ?? null);
         }
       } else if (isCutting && !isClosingCut && reactFlowWrapper.current) {
         const rect = reactFlowWrapper.current.getBoundingClientRect();
@@ -696,13 +775,8 @@ export function FlowPanel({
             { x: number; y: number; width: number; height: number }
           >();
           nodes.forEach((node) => {
-            const nodeData = node as any;
-            nodePositions.set(node.id, {
-              x: node.position.x,
-              y: node.position.y,
-              width: nodeData.width || nodeData.measured?.width || 200,
-              height: nodeData.height || nodeData.measured?.height || 80,
-            });
+            const rect = getNodeRect(node);
+            nodePositions.set(node.id, rect);
           });
 
           // 检测连线碰撞
@@ -790,6 +864,7 @@ export function FlowPanel({
       isCutting,
       isConnecting,
       getNodeAtPosition,
+      getNodeRect,
       connectSourceNode,
       cutPath,
       nodes,
@@ -841,14 +916,16 @@ export function FlowPanel({
         e.preventDefault();
         e.stopPropagation();
 
-        if (connectSourceNode && connectTargetNode && connectPath.length > 1) {
+        if (connectSourceNode && connectTargetNode) {
           createEdge(connectSourceNode, connectTargetNode);
         }
 
         setIsConnecting(false);
         setConnectSourceNode(null);
         setConnectTargetNode(null);
-        setConnectPath([]);
+        setConnectPreviewD(null);
+        setConnectStartAnchor(null);
+        setConnectEndAnchor(null);
       } else if (isCutting) {
         e.preventDefault();
         e.stopPropagation();
@@ -873,11 +950,9 @@ export function FlowPanel({
     [
       isCutting,
       isConnecting,
-      cutPath,
       detectAndDeleteElements,
       connectSourceNode,
       connectTargetNode,
-      connectPath,
       createEdge,
     ],
   );
@@ -1152,7 +1227,9 @@ export function FlowPanel({
       {/* 连接线可视化 */}
       <ConnectionVisualization
         isConnecting={isConnecting}
-        connectPath={connectPath}
+        connectPreviewD={connectPreviewD}
+        connectStartAnchor={connectStartAnchor}
+        connectEndAnchor={connectEndAnchor}
         connectTargetNode={connectTargetNode}
       />
     </div>

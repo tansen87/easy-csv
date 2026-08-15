@@ -129,7 +129,6 @@ export interface Translations {
 
   // FlowPanel
   searchFlow: string;
-  connectionTips: string;
   headerRename: string;
 
   // LogPanel
@@ -419,7 +418,6 @@ export const translations: Record<Language, Translations> = {
 
     // FlowPanel
     searchFlow: "Search in the workflow",
-    connectionTips: "Release the right-click connection",
     headerRename: "Search the header to modify",
 
     // LogPanel
@@ -706,7 +704,6 @@ export const translations: Record<Language, Translations> = {
 
     // FlowPanel
     searchFlow: "在工作流中搜索",
-    connectionTips: "松开右键连接",
     headerRename: "查询表头以修改",
 
     // LogPanel

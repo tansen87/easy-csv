@@ -1,4 +1,4 @@
-import { Node, Edge, MarkerType } from "reactflow";
+import { Node, Edge, MarkerType, Position, getBezierPath } from "reactflow";
 import dagre from "dagre";
 import { PipelineStep, PipelineEdge } from "@/types/xan";
 
@@ -7,6 +7,13 @@ export interface RectLike {
   y: number;
   width?: number;
   height?: number;
+}
+
+export interface FlowRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 interface NodeRectSource {
@@ -120,6 +127,141 @@ export function getEdgeEndpoints(
     start: handleAnchor(sourceRect, sourceHandle),
     end: handleAnchor(targetRect, targetHandle),
   };
+}
+
+// handle 名 → React Flow Position(用于计算贝塞尔方向)
+export function sideToPosition(handle: string): Position {
+  if (handle.includes("left")) return Position.Left;
+  if (handle.includes("right")) return Position.Right;
+  if (handle.includes("top")) return Position.Top;
+  return Position.Bottom;
+}
+
+// 反向方位(自由端点的 targetPosition 取源端反方向,曲线才自然)
+export function oppositePosition(pos: Position): Position {
+  switch (pos) {
+    case Position.Left:
+      return Position.Right;
+    case Position.Right:
+      return Position.Left;
+    case Position.Top:
+      return Position.Bottom;
+    default:
+      return Position.Top;
+  }
+}
+
+// 右键手势期间,根据光标相对源节点中心的位置选择源端 handle。
+// 光标仍在源节点内部时保持 right-source,防止起手瞬间误选上下方向。
+export function pickStartHandle(
+  sourceId: string,
+  sourceRect: FlowRect,
+  cursor: { x: number; y: number },
+): string {
+  const inside =
+    cursor.x >= sourceRect.x &&
+    cursor.x <= sourceRect.x + sourceRect.width &&
+    cursor.y >= sourceRect.y &&
+    cursor.y <= sourceRect.y + sourceRect.height;
+
+  if (inside) {
+    return handleName(sourceId, "right", "source");
+  }
+
+  const centerX = sourceRect.x + sourceRect.width / 2;
+  const centerY = sourceRect.y + sourceRect.height / 2;
+  const dx = cursor.x - centerX;
+  const dy = cursor.y - centerY;
+
+  if (Math.abs(dy) >= Math.abs(dx)) {
+    return handleName(sourceId, dy >= 0 ? "bottom" : "top", "source");
+  }
+  return handleName(sourceId, dx >= 0 ? "right" : "left", "source");
+}
+
+const rectToNodeRect = (r: FlowRect): NodeRectSource => ({
+  position: { x: r.x, y: r.y },
+  width: r.width,
+  height: r.height,
+});
+
+export interface ConnectPreviewTarget {
+  id: string;
+  rect: FlowRect;
+}
+
+export interface BuildConnectPreviewParams {
+  sourceId: string;
+  sourceRect: FlowRect;
+  sourceHandle: string;
+  cursor: { x: number; y: number };
+  target?: ConnectPreviewTarget;
+}
+
+// 生成右键连线的贝塞尔预览路径(flow 坐标)。
+// 悬停到合法目标节点时与最终边完全一致(resolveHandles + getBezierPath,curvature 0.25)。
+export function buildConnectPreviewPath(params: BuildConnectPreviewParams): {
+  d: string;
+  sourceAnchor: { x: number; y: number };
+  targetAnchor: { x: number; y: number };
+} {
+  const { sourceId, sourceRect, sourceHandle, cursor } = params;
+
+  let sh = sourceHandle;
+  let th: string | undefined;
+  let targetX = cursor.x;
+  let targetY = cursor.y;
+
+  if (params.target) {
+    const handles = resolveHandles(
+      sourceId,
+      params.target.id,
+      rectToNodeRect(sourceRect),
+      rectToNodeRect(params.target.rect),
+    );
+    sh = handles.sourceHandle;
+    th = handles.targetHandle;
+    const ta = handleAnchor(params.target.rect, th);
+    targetX = ta.x;
+    targetY = ta.y;
+  }
+
+  const sourceAnchor = handleAnchor(sourceRect, sh);
+  const sourcePosition = sideToPosition(sh);
+  const targetPosition = th
+    ? sideToPosition(th)
+    : oppositePosition(sourcePosition);
+
+  const [d] = getBezierPath({
+    sourceX: sourceAnchor.x,
+    sourceY: sourceAnchor.y,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+    curvature: 0.25,
+  });
+
+  return { d, sourceAnchor, targetAnchor: { x: targetX, y: targetY } };
+}
+
+// 把 getBezierPath 生成的 `M x,y C x,y x,y x,y` 按仿射变换逐点映射
+// (用于把 flow 坐标下的预览曲线转换到覆盖层 wrapper 坐标系)
+export function transformBezierPath(
+  d: string,
+  transform: (p: { x: number; y: number }) => { x: number; y: number },
+): string {
+  const m = d.match(
+    /^M(-?[\d.]+),(-?[\d.]+) C(-?[\d.]+),(-?[\d.]+) (-?[\d.]+),(-?[\d.]+) (-?[\d.]+),(-?[\d.]+)$/,
+  );
+  if (!m) return d;
+  const nums = m.slice(1).map(Number);
+  const pts: { x: number; y: number }[] = [];
+  for (let i = 0; i < nums.length; i += 2) {
+    pts.push(transform({ x: nums[i], y: nums[i + 1] }));
+  }
+  const [s, c1, c2, t] = pts;
+  return `M${s.x},${s.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${t.x},${t.y}`;
 }
 
 export function getLayoutedElements(
