@@ -269,11 +269,11 @@ export interface Translations {
 
   // CsvEncoding
   csvEncoding: string;
-  csvEncodingInputFile: string;
-  csvEncodingOutputFile: string;
+  inputFile: string;
+  outputFile: string;
   csvEncodingBrowse: string;
-  csvEncodingSourceEncoding: string;
-  csvEncodingTargetEncoding: string;
+  sourceEncoding: string;
+  targetEncoding: string;
   csvEncodingConvert: string;
   csvEncodingConverting: string;
   csvEncodingSelectFiles: string;
@@ -560,11 +560,11 @@ export const translations: Record<Language, Translations> = {
 
     // CsvEncoding
     csvEncoding: "CSV Encoding",
-    csvEncodingInputFile: "Input",
-    csvEncodingOutputFile: "Output",
+    inputFile: "Input",
+    outputFile: "Output",
     csvEncodingBrowse: "Browse",
-    csvEncodingSourceEncoding: "Source Encoding",
-    csvEncodingTargetEncoding: "Target Encoding",
+    sourceEncoding: "Source",
+    targetEncoding: "Target",
     csvEncodingConvert: "Convert",
     csvEncodingConverting: "Converting...",
     csvEncodingSelectFiles: "Select input and output files",
@@ -842,12 +842,12 @@ export const translations: Record<Language, Translations> = {
     csvDiffPage: "页",
 
     // CsvEncoding
-    csvEncoding: "编码转换",
-    csvEncodingInputFile: "输入",
-    csvEncodingOutputFile: "输出",
+    csvEncoding: "CSV 编码转换",
+    inputFile: "输入",
+    outputFile: "输出",
     csvEncodingBrowse: "浏览",
-    csvEncodingSourceEncoding: "源编码",
-    csvEncodingTargetEncoding: "目标编码",
+    sourceEncoding: "源编码",
+    targetEncoding: "目标编码",
     csvEncodingConvert: "开始转换",
     csvEncodingConverting: "转换中...",
     csvEncodingSelectFiles: "请选择输入和输出文件",

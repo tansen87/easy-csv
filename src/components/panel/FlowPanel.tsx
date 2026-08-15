@@ -47,6 +47,24 @@ import { ContextMenu } from "@/components/menu/ContextMenu";
 import { TextTransformType } from "@/components/dialog/TextTransformDialog";
 import { NumberTransformType } from "@/components/dialog/NumberTransformDialog";
 
+function formatRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 5) return "just now";
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour}h ago`;
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 interface FlowPanelProps {
   steps: PipelineStep[];
   headers: string[];
@@ -91,6 +109,7 @@ interface FlowPanelProps {
   savedEdges?: PipelineEdge[];
   savedInputPosition?: { x: number; y: number };
   reactFlowInstanceRef?: React.RefObject<any>;
+  pipelineSavedAt?: number;
 }
 
 export function FlowPanel({
@@ -122,6 +141,7 @@ export function FlowPanel({
   savedEdges,
   savedInputPosition,
   reactFlowInstanceRef,
+  pipelineSavedAt,
 }: FlowPanelProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
@@ -139,7 +159,32 @@ export function FlowPanel({
   const onTableDeleteRef = useRef(onTableDelete);
   onTableDeleteRef.current = onTableDelete;
 
-  // 切刀功能状态
+  // Save status tracking
+  const savedStepsRef = useRef<string>(JSON.stringify(steps));
+  const [lastSavedTime, setLastSavedTime] = useState<number>(
+    () => pipelineSavedAt || Date.now(),
+  );
+
+  // When the pipelinSavedAt is updated (with a save notification from the parent component),
+  // record the current snapshot
+  useEffect(() => {
+    if (pipelineSavedAt && pipelineSavedAt > lastSavedTime) {
+      savedStepsRef.current = JSON.stringify(steps);
+      setLastSavedTime(pipelineSavedAt);
+    }
+  }, [pipelineSavedAt]);
+
+  // Refresh relative time display every 30 seconds
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  const stepsJson = JSON.stringify(steps);
+  const isDirty = stepsJson !== savedStepsRef.current;
+
+  // Cutting function status
   const [cutPath, setCutPath] = useState<{ x: number; y: number }[]>([]);
   const [isCutting, setIsCutting] = useState(false);
   const [isClosingCut, setIsClosingCut] = useState(false);
@@ -147,12 +192,12 @@ export function FlowPanel({
     x: number;
     y: number;
   } | null>(null);
-  // 被切元素的动画状态
+  // Animation status of elements to be cut
   const [cutNodes, setCutNodes] = useState<Set<string>>(new Set());
   const [cutEdges, setCutEdges] = useState<Set<string>>(new Set());
-  // 切割部分信息(用于自由坠落动画)
+  // Cut part information (used for free fall animation)
   const [cutParts, setCutParts] = useState<CutPartInfo[]>([]);
-  // 实时高亮状态 - 用于显示即将被删除的元素
+  // Real-time highlight status - display elements to be deleted
   const [pendingDeleteNodes, setPendingDeleteNodes] = useState<Set<string>>(
     new Set(),
   );
@@ -160,7 +205,7 @@ export function FlowPanel({
     new Set(),
   );
 
-  // 画布搜索状态
+  // Canvas search status
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(
@@ -168,7 +213,7 @@ export function FlowPanel({
   );
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // 右键连接功能状态
+  // Right-click connect function status
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectSourceNode, setConnectSourceNode] = useState<string | null>(
     null,
@@ -229,14 +274,15 @@ export function FlowPanel({
   const handleTableRenameRef = useRef(handleTableRename);
   handleTableRenameRef.current = handleTableRename;
 
-  // Ctrl+F 全局快捷键(HelpDialog打开时由HelpDialog处理)
+  // Ctrl+F global shortcut (handled if HelpDialog is open)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 无论大小写都拦截 Ctrl+F,避免唤起浏览器查找框
+      // Block Ctrl+F regardless of case to avoid triggering browser search boxes
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "f") return;
       e.preventDefault();
       e.stopPropagation();
-      // 如果对话框打开,不打开搜索框(由HelpDialog处理)
+      // If the dialog box is open, do not open the search box
+      // (handled if HelpDialog is open)
       const dialog = document.querySelector('[role="dialog"]');
       if (dialog) return;
       setIsSearchOpen(true);
@@ -245,7 +291,7 @@ export function FlowPanel({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // 搜索框打开时自动聚焦
+  // Focus and select search input when it opens
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
       searchInputRef.current.focus();
@@ -258,9 +304,10 @@ export function FlowPanel({
   const [nodes, setNodes] = useNodesState([]);
   const [edges, setEdges] = useEdgesState([]);
 
-  // 切刀的延迟删除回调(连线 200ms)在异步时机执行,必须
-  // 读取当前状态而非创建时的旧快照,否则连续切割时后一个回调会拿旧数组
-  // 整体覆盖 App 的 edges,把先前已切掉的连线加回来.
+  // Cutting function status (line delay 200ms), must read current state
+  // instead of old snapshot when cutting in succession,
+  // otherwise the last callback will use old array
+  // Fully overwrite App's edges, add back the edges that were cut out.
   const edgesRef = useRef<Edge[]>(edges);
   edgesRef.current = edges;
 
@@ -320,7 +367,7 @@ export function FlowPanel({
     );
   }, [selectedStepId, highlightedNodeId]);
 
-  // 搜索结果:匹配命令名称或 alias
+  // Search results: match command name or alias
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
@@ -331,7 +378,7 @@ export function FlowPanel({
       isTableNode?: boolean;
     }[] = [];
 
-    // 搜索 "Input Data" 节点(不搜索其列名)
+    // Search "Input Data" node (not its column names)
     if ("input data".includes(query) || "input".includes(query)) {
       results.push({
         step: null,
@@ -341,7 +388,7 @@ export function FlowPanel({
       });
     }
 
-    // 搜索 pipeline 步骤
+    // Search pipeline steps
     for (const step of steps) {
       const name = step.command.name.toLowerCase();
       const alias = step.alias?.toLowerCase() || "";
@@ -357,7 +404,7 @@ export function FlowPanel({
     return results;
   }, [searchQuery, steps]);
 
-  // 点击搜索结果:跳转到节点并高亮
+  // Click search result: jump to node and highlight
   const reactFlowInstance = useRef<any>(null);
 
   const handleSearchResultClick = useCallback(
@@ -366,7 +413,7 @@ export function FlowPanel({
       const node = nodes.find((n) => n.id === nodeId);
       if (!node || !reactFlowInstance.current) return;
 
-      // 使用 setCenter 跳转到节点位置(居中显示)
+      // Use setCenter to jump to node position (centered)
       const w = node.type === "tableNode" ? 260 : 110;
       const h = node.type === "tableNode" ? 130 : 45;
       reactFlowInstance.current.setCenter(
@@ -378,23 +425,23 @@ export function FlowPanel({
         },
       );
 
-      // 设置高亮节点(触发动画)
+      // Set highlighted node (trigger animation effect)
       setHighlightedNodeId(nodeId);
       setTimeout(() => setHighlightedNodeId(null), 1500);
 
-      // 关闭搜索框
+      // Close search box
       setIsSearchOpen(false);
       setSearchQuery("");
     },
     [nodes],
   );
 
-  // 碰撞检测函数
+  // Collision detection function
   const detectAndDeleteElements = useCallback(
     (path: { x: number; y: number }[]) => {
       if (path.length < 2 || !reactFlowWrapper.current) return;
 
-      // 将切刀路径转换为 ReactFlow 画布坐标
+      // Convert cutting path to ReactFlow canvas coordinates
       const rect = reactFlowWrapper.current.getBoundingClientRect();
       const flowPath = path.map((p) => {
         return (
@@ -405,7 +452,7 @@ export function FlowPanel({
         );
       });
 
-      // 构建节点位置映射
+      // Build node position mapping
       const nodePositions = new Map<
         string,
         { x: number; y: number; width: number; height: number }
@@ -420,7 +467,7 @@ export function FlowPanel({
         });
       });
 
-      // 检测连线碰撞
+      // Detect edge collisions
       const edgesToDelete: Edge[] = [];
       const edgeTargets = new Set<string>();
 
@@ -469,7 +516,7 @@ export function FlowPanel({
         }
       });
 
-      // 检测节点碰撞
+      // Detect node collisions
       const nodesToDelete: string[] = [];
 
       nodes.forEach((node) => {
@@ -497,7 +544,7 @@ export function FlowPanel({
         }
       });
 
-      // 添加切刀动画效果
+      // Add cutting animation effect
       if (edgesToDelete.length > 0 || nodesToDelete.length > 0) {
         const edgeIdsToDelete = edgesToDelete.map((e) => e.id);
         const edgeIdSet = new Set(edgeIdsToDelete);
@@ -510,14 +557,14 @@ export function FlowPanel({
         nodesToDelete.forEach((id) => newCutNodes.add(id));
         setCutNodes(newCutNodes);
 
-        // 不与被切节点相连的连线 → 通过 onStepRemove 的额外参数一并删除;
-        // 与被切节点相连的连线由 onStepRemove 内部自动清理.
+        // Edges not connected to the cutting nodes → delete them with extra parameter;
+        // Edges connected to the cutting nodes are automatically cleaned up.
         const nodeIdSet = new Set(nodesToDelete);
         const extraEdgeIds = edgesToDelete
           .filter((e) => !nodeIdSet.has(e.source) && !nodeIdSet.has(e.target))
           .map((e) => e.id);
 
-        // 为被切节点计算切割部分(自由坠落动画)
+        // Calculate cutting parts for the cutting nodes (free fall animation)
         const fallVec = calculateFallVector(path);
         const newCutParts: CutPartInfo[] = [];
 
@@ -574,10 +621,10 @@ export function FlowPanel({
 
         setCutParts(newCutParts);
 
-        // 删除元素: 连线动画快(200ms),节点坠落动画慢(400ms),各自独立触发.
-        // 每次回调都用当前状态(edgesRef.current / App 最新 tabs)计算,避免旧
-        // 快照互相覆盖导致被切元素复活.切节点时其连线也随 200ms 一起删除,
-        // 节点本身再继续下坠至 400ms.
+        // Delete elements: Edge animation fast (200ms), node fall animation slow (400ms), each independent trigger.
+        // Each callback uses current state (edgesRef.current / App latest tabs) to calculate,
+        // to avoid old snapshots. When cutting nodes, edges are deleted with 200ms,
+        // Nodes continue to fall for 400ms.
         setTimeout(() => {
           if (edgeIdSet.size > 0) {
             setEdges((prev) => prev.filter((e) => !edgeIdSet.has(e.id)));
@@ -606,8 +653,8 @@ export function FlowPanel({
     [edges, nodes, setEdges, onStepRemove, onEdgesChange, cutEdges, cutNodes],
   );
 
-  // 节点 → flow 坐标矩形.优先用渲染后的真实尺寸(DOM 测量),
-  // 否则回退到节点自带 width/height,再不行用默认值.
+  // Node → flow coordinate rectangle. First Prefer using rendered width/height,
+  // fallback to node's own width/height, finally use default.
   const getNodeRect = useCallback((node: Node): FlowRect => {
     const nodeData = node as any;
     const fallback: FlowRect = {
@@ -643,7 +690,7 @@ export function FlowPanel({
     };
   }, []);
 
-  // 判断点击位置是否在节点上
+  // Check if click position is on a node.
   const getNodeAtPosition = useCallback(
     (clientX: number, clientY: number): string | null => {
       if (!reactFlowWrapper.current || !reactFlowInstance.current) return null;
@@ -670,7 +717,7 @@ export function FlowPanel({
     [nodes, getNodeRect],
   );
 
-  // 右键按下 - 开始连接或切刀
+  // Right-click - Start connecting or cutting nodes
   const handleCutStart = useCallback(
     (e: React.MouseEvent) => {
       if (e.button === 2) {
@@ -704,7 +751,7 @@ export function FlowPanel({
     [getNodeAtPosition],
   );
 
-  // 右键移动 - 连接模式或切刀模式
+  // Right-click move - Connect or cut nodes mode
   const handleCutMove = useCallback(
     (e: React.MouseEvent) => {
       if (
@@ -762,7 +809,7 @@ export function FlowPanel({
           setCutPath([cutStartPoint, newPoint]);
         }
 
-        // 实时碰撞检测 - 更新待删除元素高亮
+        // Real-time collision detection - Update pending elements highlight
         if (cutPath.length >= 2 && reactFlowInstance.current) {
           const flowPath = cutPath.map((p) =>
             reactFlowInstance.current!.screenToFlowPosition({
@@ -780,7 +827,7 @@ export function FlowPanel({
             nodePositions.set(node.id, rect);
           });
 
-          // 检测连线碰撞
+          // Detect edge collision
           const pendingEdges = new Set<string>();
           const edgeTargets = new Set<string>();
 
@@ -827,7 +874,7 @@ export function FlowPanel({
             }
           });
 
-          // 检测节点碰撞
+          // Detect node collision
           const pendingNodes = new Set<string>();
           nodes.forEach((node) => {
             if (node.id === "table-node" || edgeTargets.has(node.id)) return;
@@ -875,7 +922,7 @@ export function FlowPanel({
     ],
   );
 
-  // 创建连线
+  // Create edge between two nodes
   const createEdge = useCallback(
     (sourceId: string, targetId: string) => {
       const sourceNode = nodes.find((n) => n.id === sourceId);
@@ -910,7 +957,7 @@ export function FlowPanel({
     [setEdges, onEdgesChange, nodes],
   );
 
-  // 右键松开 - 完成连接或切刀
+  // Right-click release - Complete connecting or cutting nodes
   const handleCutEnd = useCallback(
     (e: React.MouseEvent) => {
       if (isConnecting) {
@@ -958,12 +1005,12 @@ export function FlowPanel({
     ],
   );
 
-  // 屏蔽默认右键菜单
+  // Prevent default right-click menu on panel
   const handlePanelContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
   }, []);
 
-  // 更新节点的 isCutting 属性、待删除高亮效果和切割部分
+  // Update node's isCutting attribute, pending delete highlight, and cut parts
   useEffect(() => {
     setNodes((prevNodes) =>
       prevNodes.map((node) => ({
@@ -978,7 +1025,7 @@ export function FlowPanel({
     );
   }, [cutNodes, pendingDeleteNodes, cutParts]);
 
-  // 更新连线的切断效果和待删除高亮效果
+  // Update edge's cut effect and pending delete highlight
   useEffect(() => {
     const rafId = requestAnimationFrame(() => {
       setEdges((prevEdges) =>
@@ -1174,7 +1221,7 @@ export function FlowPanel({
         <CoordinateGrid />
       </ReactFlow>
 
-      {/* 画布搜索框 */}
+      {/* Search overlay on canvas */}
       <SearchOverlay
         isOpen={isSearchOpen}
         searchQuery={searchQuery}
@@ -1195,7 +1242,7 @@ export function FlowPanel({
         searchInputRef={searchInputRef as React.RefObject<HTMLInputElement>}
       />
 
-      {/* 切刀轨迹线 */}
+      {/* Cut visualization line */}
       <CutVisualization
         isCutting={isCutting}
         isClosingCut={isClosingCut}
@@ -1225,7 +1272,7 @@ export function FlowPanel({
         />
       )}
 
-      {/* 连接线可视化 */}
+      {/* Connection visualization line */}
       <ConnectionVisualization
         isConnecting={isConnecting}
         connectPreviewD={connectPreviewD}
@@ -1233,6 +1280,33 @@ export function FlowPanel({
         connectEndAnchor={connectEndAnchor}
         connectTargetNode={connectTargetNode}
       />
+
+      {/* Canvas status indicator - Bottom-right */}
+      <div
+        className="absolute bottom-2 left-3 z-50 flex items-center gap-3 text-[11px] text-muted-foreground/60 select-none pointer-events-none"
+        data-tick={tick}
+      >
+        <span className="flex items-center gap-1">
+          <span className="font-medium tabular-nums">{steps.length}</span>
+          <span>{steps.length === 1 ? "step" : "steps"}</span>
+        </span>
+        <span className="w-px h-3 bg-border/40" />
+        <span className="flex items-center gap-1">
+          {isDirty ? (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500/70 inline-block" />
+              <span>Unsaved</span>
+            </>
+          ) : (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 inline-block" />
+              <span>Saved</span>
+            </>
+          )}
+        </span>
+        <span className="w-px h-3 bg-border/40" />
+        <span>{formatRelativeTime(new Date(lastSavedTime))}</span>
+      </div>
     </div>
   );
 }

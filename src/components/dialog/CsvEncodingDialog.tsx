@@ -222,7 +222,7 @@ export function CsvEncodingDialog({
         <div className="px-4 py-3 shrink-0 space-y-2">
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-muted-foreground shrink-0">
-              {t.csvEncodingInputFile}
+              {t.inputFile}
             </label>
             <input
               type="text"
@@ -232,7 +232,7 @@ export function CsvEncodingDialog({
                 autoBaseRef.current = null;
                 setInputFile(e.target.value);
               }}
-              placeholder={t.csvEncodingInputFile}
+              placeholder={t.inputFile}
               className="flex-1 min-w-0 h-8 px-2 text-xs border rounded-md bg-background"
             />
             <Button
@@ -247,7 +247,7 @@ export function CsvEncodingDialog({
           </div>
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-muted-foreground shrink-0">
-              {t.csvEncodingOutputFile}
+              {t.outputFile}
             </label>
             <input
               type="text"
@@ -257,7 +257,7 @@ export function CsvEncodingDialog({
                 autoBaseRef.current = null;
                 setOutputFile(e.target.value);
               }}
-              placeholder={t.csvEncodingOutputFile}
+              placeholder={t.outputFile}
               className="flex-1 min-w-0 h-8 px-2 text-xs border rounded-md bg-background"
             />
             <Button
@@ -272,7 +272,7 @@ export function CsvEncodingDialog({
           </div>
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-muted-foreground shrink-0">
-              {t.csvEncodingSourceEncoding}
+              {t.sourceEncoding}
             </label>
             <div className="flex-1 min-w-0">
               <SearchableSelect
@@ -286,7 +286,7 @@ export function CsvEncodingDialog({
               />
             </div>
             <label className="text-xs font-medium text-muted-foreground shrink-0">
-              {t.csvEncodingTargetEncoding}
+              {t.targetEncoding}
             </label>
             <div className="flex-1 min-w-0">
               <SearchableSelect

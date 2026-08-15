@@ -266,11 +266,6 @@ export const MainMenu = React.memo(function MainMenu({
             <>
               <Play className="h-3.5 w-3.5" />
               {t.execute}
-              {currentPipelineLength > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 text-[10px] font-semibold rounded-full bg-primary/15 text-primary/80 leading-none">
-                  {currentPipelineLength}
-                </span>
-              )}
             </>
           )}
         </button>

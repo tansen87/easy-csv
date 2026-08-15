@@ -105,6 +105,7 @@ interface HomeViewProps {
   showLineagePanel?: boolean;
   onToggleVersionPanel?: () => void;
   onToggleLineagePanel?: () => void;
+  pipelineSavedAt?: number;
 }
 
 export const HomeView = React.memo(function HomeView({
@@ -151,6 +152,7 @@ export const HomeView = React.memo(function HomeView({
   onToggleLineagePanel,
   isExecuting = false,
   onCancelExecution,
+  pipelineSavedAt,
 }: HomeViewProps) {
   const { t } = useLanguage();
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
@@ -548,6 +550,7 @@ export const HomeView = React.memo(function HomeView({
               onInputPositionChange(selectedTabId, position);
             }
           }}
+          pipelineSavedAt={pipelineSavedAt}
         />
       </div>
 

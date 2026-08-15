@@ -142,6 +142,12 @@ function AppContent() {
   // Executing state
   const [isExecuting, setIsExecuting] = useState(false);
 
+  // Pipeline save status tracking
+  const [pipelineSavedAt, setPipelineSavedAt] = useState<number>(Date.now());
+  const markPipelineSaved = useCallback(() => {
+    setPipelineSavedAt(Date.now());
+  }, []);
+
   // AI Config
   const [aiConfig, setAIConfigState] = useState<AIConfig>({
     ...DEFAULT_AI_CONFIG,
@@ -652,14 +658,39 @@ function AppContent() {
     saveVersion: versionsHook.saveVersion,
   });
 
+  // Wrap save/execute/export callbacks to update pipeline save timestamp
+  const handleExecuteAndMarkSaved = useCallback(() => {
+    handleExecute();
+    markPipelineSaved();
+  }, [handleExecute, markPipelineSaved]);
+
+  const handleSavePipelineAndMarkSaved = useCallback(() => {
+    handleSavePipeline();
+    markPipelineSaved();
+  }, [handleSavePipeline, markPipelineSaved]);
+
+  const handleExportPipelineAndMarkSaved = useCallback(() => {
+    handleExportPipeline();
+    markPipelineSaved();
+  }, [handleExportPipeline, markPipelineSaved]);
+
+  const handleSaveVersionAndMarkSaved = useCallback(
+    async (message?: string, tags?: string[]) => {
+      const result = await versionsHook.saveVersion(message, tags);
+      markPipelineSaved();
+      return result;
+    },
+    [versionsHook.saveVersion, markPipelineSaved],
+  );
+
   // Keyboard shortcuts (O-3: moved to App level)
   useKeyboardShortcuts(
     {
       onOpenFile: handleOpenFile,
       onOpenNewTabWithFile: handleOpenNewTabWithFile,
-      onSavePipeline: handleSavePipeline,
+      onSavePipeline: handleSavePipelineAndMarkSaved,
       onImportPipeline: handleImportPipeline,
-      onExportPipeline: handleExportPipeline,
+      onExportPipeline: handleExportPipelineAndMarkSaved,
       onUndo: () => {
         pipeline.undo();
         setSelectedStep(null);
@@ -668,7 +699,7 @@ function AppContent() {
         pipeline.redo();
         setSelectedStep(null);
       },
-      onExecute: handleExecute,
+      onExecute: handleExecuteAndMarkSaved,
       onHelp: () => {
         ui.setHelpCommandName(language === "zh" ? "帮助" : "Help");
         ui.setHelpContent(getHelpContent(language));
@@ -817,7 +848,7 @@ function AppContent() {
         group: t.paletteActions,
         shortcut: "Ctrl+S",
         disabled: currentPipelineLength === 0,
-        onSelect: handleSavePipeline,
+        onSelect: handleSavePipelineAndMarkSaved,
       },
       {
         id: "import-workflow",
@@ -834,7 +865,7 @@ function AppContent() {
         group: t.paletteActions,
         shortcut: "Ctrl+E",
         disabled: currentPipelineLength === 0,
-        onSelect: handleExportPipeline,
+        onSelect: handleExportPipelineAndMarkSaved,
       },
       {
         id: "undo",
@@ -867,7 +898,7 @@ function AppContent() {
         group: t.paletteActions,
         shortcut: "Ctrl+R",
         disabled: currentPipelineLength === 0 || isExecuting,
-        onSelect: handleExecute,
+        onSelect: handleExecuteAndMarkSaved,
       },
       {
         id: "settings",
@@ -1012,7 +1043,6 @@ function AppContent() {
   }, [
     t,
     language,
-    currentPipelineLength,
     undoStackLength,
     redoStackLength,
     isExecuting,
@@ -1062,12 +1092,12 @@ function AppContent() {
                 pipeline.redo();
                 setSelectedStep(null);
               }}
-              onExecute={handleExecute}
+              onExecute={handleExecuteAndMarkSaved}
               onOpenFile={handleOpenFile}
               onOpenNewTabWithFile={handleOpenNewTabWithFile}
-              onSavePipeline={handleSavePipeline}
+              onSavePipeline={handleSavePipelineAndMarkSaved}
               onImportPipeline={handleImportPipeline}
-              onExportPipeline={handleExportPipeline}
+              onExportPipeline={handleExportPipelineAndMarkSaved}
               onHelp={onHelp}
               onCheckUpdate={checkForUpdates}
               onShowSettings={onShowSettings}
@@ -1155,7 +1185,7 @@ function AppContent() {
                       }
                     : undefined
                 }
-                onSaveVersion={versionsHook.saveVersion}
+                onSaveVersion={handleSaveVersionAndMarkSaved}
                 onRestoreVersion={versionsHook.restoreVersion}
                 onDeleteVersion={versionsHook.deleteVersion}
                 onAddTag={versionsHook.addTag}
@@ -1165,6 +1195,7 @@ function AppContent() {
                 lineageData={lineageHook.lineageData}
                 onGetLineageForColumn={lineageHook.getLineageForColumn}
                 onSaveLineage={lineageHook.saveLineage}
+                pipelineSavedAt={pipelineSavedAt}
               />
             </div>
           </main>
