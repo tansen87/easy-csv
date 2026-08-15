@@ -220,6 +220,24 @@ export function usePipelineVersions(
     [tabs, selectedTabId, setTabs],
   );
 
+  const clearAllVersions = useCallback(async () => {
+    const currentTab = tabs.find((t) => t.id === selectedTabId);
+    if (!currentTab) return;
+
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === selectedTabId
+          ? { ...tab, versions: [], currentVersionId: undefined }
+          : tab,
+      ),
+    );
+
+    await invoke("save_pipeline_versions", {
+      pipelineId: selectedTabId,
+      versions: JSON.stringify([]),
+    });
+  }, [tabs, selectedTabId, setTabs]);
+
   const renameVersion = useCallback(
     async (versionId: string, message: string) => {
       const currentTab = tabs.find((t) => t.id === selectedTabId);
@@ -287,6 +305,7 @@ export function usePipelineVersions(
     saveVersion,
     restoreVersion,
     deleteVersion,
+    clearAllVersions,
     addTag,
     removeTag,
     renameVersion,

@@ -1188,6 +1188,7 @@ function AppContent() {
                 onSaveVersion={handleSaveVersionAndMarkSaved}
                 onRestoreVersion={versionsHook.restoreVersion}
                 onDeleteVersion={versionsHook.deleteVersion}
+                onClearAllVersions={versionsHook.clearAllVersions}
                 onAddTag={versionsHook.addTag}
                 onRemoveTag={versionsHook.removeTag}
                 onRenameVersion={versionsHook.renameVersion}

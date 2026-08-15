@@ -39,6 +39,7 @@ interface VersionControlPanelProps {
   ) => Promise<PipelineVersion | undefined>;
   onRestoreVersion: (versionId: string) => void;
   onDeleteVersion: (versionId: string) => void;
+  onClearAllVersions?: () => void;
   onAddTag: (versionId: string, tag: string) => void;
   onRemoveTag: (versionId: string, tag: string) => void;
   onRenameVersion: (versionId: string, message: string) => void;
@@ -69,6 +70,7 @@ export function VersionControlPanel({
   onSaveVersion,
   onRestoreVersion,
   onDeleteVersion,
+  onClearAllVersions,
   onAddTag,
   onRemoveTag,
   onRenameVersion,
@@ -87,6 +89,7 @@ export function VersionControlPanel({
   );
   const [restoringVersion, setRestoringVersion] =
     useState<PipelineVersion | null>(null);
+  const [clearingAll, setClearingAll] = useState(false);
   const [editingMessageVersionId, setEditingMessageVersionId] = useState<
     string | null
   >(null);
@@ -451,6 +454,18 @@ export function VersionControlPanel({
             {t.versionHistory}
           </h3>
           <div className="flex items-center gap-1">
+            {versions.length > 0 && onClearAllVersions && (
+              <Tooltip content={t.clearAllVersions}>
+                <Button
+                  onClick={() => setClearingAll(true)}
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 w-6 rounded-md hover:bg-primary/10 hover:text-primary"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </Tooltip>
+            )}
             <Tooltip
               content={viewMode === "list" ? t.timelineView : t.listView}
             >
@@ -735,6 +750,35 @@ export function VersionControlPanel({
                   variant="secondary"
                 >
                   {t.restore}
+                </Button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {clearingAll &&
+        createPortal(
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50">
+            <div className="bg-background border border-border rounded-lg p-4 shadow-lg w-[280px]">
+              <p className="text-sm mb-4">{t.confirmClearAllVersions}</p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  onClick={() => setClearingAll(false)}
+                  size="sm"
+                  variant="secondary"
+                >
+                  {t.cancel}
+                </Button>
+                <Button
+                  onClick={() => {
+                    onClearAllVersions?.();
+                    setClearingAll(false);
+                  }}
+                  size="sm"
+                  variant="secondary"
+                >
+                  {t.confirm}
                 </Button>
               </div>
             </div>

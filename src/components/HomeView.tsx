@@ -97,6 +97,7 @@ interface HomeViewProps {
   onAddTag?: (versionId: string, tag: string) => void;
   onRemoveTag?: (versionId: string, tag: string) => void;
   onRenameVersion?: (versionId: string, message: string) => void;
+  onClearAllVersions?: () => void;
   isSavingVersion?: boolean;
   lineageData?: StepLineage[];
   onGetLineageForColumn?: (columnName: string) => StepLineage[];
@@ -142,6 +143,7 @@ export const HomeView = React.memo(function HomeView({
   onAddTag,
   onRemoveTag,
   onRenameVersion,
+  onClearAllVersions,
   isSavingVersion = false,
   lineageData = [],
   onGetLineageForColumn,
@@ -572,6 +574,7 @@ export const HomeView = React.memo(function HomeView({
               onAddTag={onAddTag || (() => {})}
               onRemoveTag={onRemoveTag || (() => {})}
               onRenameVersion={onRenameVersion || (() => {})}
+              onClearAllVersions={onClearAllVersions}
               isSaving={isSavingVersion}
               onClose={onToggleVersionPanel || (() => {})}
             />

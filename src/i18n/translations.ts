@@ -45,6 +45,8 @@ export interface Translations {
   versionMessagePlaceholder: string;
   tagsPlaceholder: string;
   confirmDeleteVersion: string;
+  clearAllVersions: string;
+  confirmClearAllVersions: string;
   versionCurrent: string;
   versionSteps: string;
   versionSearchPlaceholder: string;
@@ -330,6 +332,9 @@ export const translations: Record<Language, Translations> = {
     versionMessagePlaceholder: "Version message...",
     tagsPlaceholder: "Tags (comma separated)...",
     confirmDeleteVersion: "Are you sure you want to delete this version?",
+    clearAllVersions: "Clear all versions",
+    confirmClearAllVersions:
+      "Are you sure you want to clear all versions? This cannot be undone.",
     versionCurrent: "current",
     versionSteps: "steps",
     versionSearchPlaceholder: "Search versions",
@@ -618,8 +623,10 @@ export const translations: Record<Language, Translations> = {
     noVersionsSaved: "暂无版本记录",
     addTag: "添加标签...",
     versionMessagePlaceholder: "版本描述...",
-    tagsPlaceholder: "标签（逗号分隔）...",
-    confirmDeleteVersion: "确定要删除此版本吗？",
+    tagsPlaceholder: "标签(逗号分隔)...",
+    confirmDeleteVersion: "确定要删除此版本吗?",
+    clearAllVersions: "清除所有版本",
+    confirmClearAllVersions: "确定要清除所有版本历史吗?此操作不可撤销.",
     versionCurrent: "当前",
     versionSteps: "个步骤",
     versionSearchPlaceholder: "搜索版本",
@@ -634,13 +641,13 @@ export const translations: Record<Language, Translations> = {
     versionNoChanges: "无变化",
     versionEditMessage: "编辑描述",
     versionEditTag: "编辑标签",
-    confirmRestoreTitle: "恢复此版本？",
+    confirmRestoreTitle: "恢复此版本?",
     confirmRestoreDesc: "这将用所选版本替换当前管道.",
 
     // ConfirmDialog
     confirm: "确认",
     refreshTitle: "刷新页面",
-    refreshMessage: "确定要刷新页面吗？未保存的更改将会丢失.",
+    refreshMessage: "确定要刷新页面吗?未保存的更改将会丢失.",
 
     // Settings
     preference: "偏好设置",
@@ -763,7 +770,7 @@ export const translations: Record<Language, Translations> = {
     aiClearFeedback: "清除反馈记录",
     aiClearCorrections: "清除纠正规则",
     aiClearConfirmTitle: "确认删除",
-    aiClearConfirmDesc: "此操作不可撤销，确定要继续吗？",
+    aiClearConfirmDesc: "此操作不可撤销，确定要继续吗?",
 
     // AI Settings
     ai: "AI",
