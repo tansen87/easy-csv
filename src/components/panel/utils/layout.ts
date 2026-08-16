@@ -305,6 +305,7 @@ export function getLayoutedElements(
         onDelete: onTableDelete,
       },
       selected: false,
+      selectable: false,
       dragHandle: ".table-node-header",
       width: 520,
       height: 260,

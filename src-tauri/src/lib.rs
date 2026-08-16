@@ -27,6 +27,8 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     config::set_system_notification,
     config::get_minimize_to_tray,
     config::set_minimize_to_tray,
+    config::get_double_click_fit_view,
+    config::set_double_click_fit_view,
     config::get_ai_config,
     config::set_ai_config,
     config::save_api_key,

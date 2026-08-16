@@ -106,6 +106,9 @@ interface HomeViewProps {
   showLineagePanel?: boolean;
   onToggleVersionPanel?: () => void;
   onToggleLineagePanel?: () => void;
+  doubleClickFitView?: boolean;
+  onSavePipeline?: () => void;
+  onOpenCommandPalette?: () => void;
   pipelineSavedAt?: number;
 }
 
@@ -154,6 +157,9 @@ export const HomeView = React.memo(function HomeView({
   onToggleLineagePanel,
   isExecuting = false,
   onCancelExecution,
+  doubleClickFitView = true,
+  onSavePipeline,
+  onOpenCommandPalette,
   pipelineSavedAt,
 }: HomeViewProps) {
   const { t } = useLanguage();
@@ -553,6 +559,9 @@ export const HomeView = React.memo(function HomeView({
             }
           }}
           pipelineSavedAt={pipelineSavedAt}
+          doubleClickFitView={doubleClickFitView}
+          onSavePipeline={onSavePipeline}
+          onOpenCommandPalette={onOpenCommandPalette}
         />
       </div>
 

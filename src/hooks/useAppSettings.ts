@@ -10,6 +10,7 @@ export function useAppSettings(
   const [noHeaders, setNoHeaders] = useState(false);
   const [systemNotification, setSystemNotification] = useState(true);
   const [minimizeToTray, setMinimizeToTray] = useState(true);
+  const [doubleClickFitView, setDoubleClickFitView] = useState(true);
 
   const loadDefaultDelimiter = useCallback(async () => {
     try {
@@ -59,18 +60,32 @@ export function useAppSettings(
     }
   }, [showToastRef]);
 
+  const loadDoubleClickFitView = useCallback(async () => {
+    try {
+      const saved = await invoke<boolean | null>("get_double_click_fit_view");
+      if (saved !== null) setDoubleClickFitView(saved);
+    } catch (error) {
+      showToastRef.current(
+        `Failed to load double click fit view setting: ${error}`,
+        "error",
+      );
+    }
+  }, [showToastRef]);
+
   const loadAll = useCallback(async () => {
     await Promise.all([
       loadDefaultDelimiter(),
       loadNoHeaders(),
       loadSystemNotification(),
       loadMinimizeToTray(),
+      loadDoubleClickFitView(),
     ]);
   }, [
     loadDefaultDelimiter,
     loadNoHeaders,
     loadSystemNotification,
     loadMinimizeToTray,
+    loadDoubleClickFitView,
   ]);
 
   return {
@@ -82,6 +97,8 @@ export function useAppSettings(
     setSystemNotification,
     minimizeToTray,
     setMinimizeToTray,
+    doubleClickFitView,
+    setDoubleClickFitView,
     loadAll,
   };
 }

@@ -16,6 +16,7 @@ import ReactFlow, {
   applyEdgeChanges,
   ConnectionMode,
   Connection,
+  SelectionMode,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { nodeTypes } from "@/components/panel/nodes";
@@ -46,23 +47,24 @@ import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "@/components/menu/ContextMenu";
 import { TextTransformType } from "@/components/dialog/TextTransformDialog";
 import { NumberTransformType } from "@/components/dialog/NumberTransformDialog";
+import { Copy, Trash2 } from "lucide-react";
+import { useLanguage } from "@/i18n";
 
-function formatRelativeTime(date: Date): string {
+function formatRelativeTime(
+  date: Date,
+  t: { justNow: string; minutesAgo: string; hoursAgo: string; daysAgo: string },
+): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffSec = Math.floor(diffMs / 1000);
-  if (diffSec < 5) return "just now";
-  if (diffSec < 60) return `${diffSec}s ago`;
+  if (diffSec < 5) return t.justNow;
+  if (diffSec < 60) return `${diffSec}s`;
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffMin < 60) return t.minutesAgo.replace("{n}", String(diffMin));
   const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour}h ago`;
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  if (diffHour < 24) return t.hoursAgo.replace("{n}", String(diffHour));
+  const diffDay = Math.floor(diffHour / 24);
+  return t.daysAgo.replace("{n}", String(diffDay));
 }
 
 interface FlowPanelProps {
@@ -110,6 +112,9 @@ interface FlowPanelProps {
   savedInputPosition?: { x: number; y: number };
   reactFlowInstanceRef?: React.RefObject<any>;
   pipelineSavedAt?: number;
+  doubleClickFitView?: boolean;
+  onSavePipeline?: () => void;
+  onOpenCommandPalette?: () => void;
 }
 
 export function FlowPanel({
@@ -142,8 +147,11 @@ export function FlowPanel({
   savedInputPosition,
   reactFlowInstanceRef,
   pipelineSavedAt,
+  doubleClickFitView = true,
+  onOpenCommandPalette,
 }: FlowPanelProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
 
   // Store callbacks in refs to avoid unnecessary re-layout
   const onStepClickRef = useRef(onStepClick);
@@ -230,6 +238,17 @@ export function FlowPanel({
   const [connectTargetNode, setConnectTargetNode] = useState<string | null>(
     null,
   );
+
+  // Multi-select (drag) state
+  const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(
+    new Set(),
+  );
+
+  // Copy/paste clipboard
+  const clipboardRef = useRef<{
+    steps: PipelineStep[];
+    edges: { source: string; target: string }[];
+  } | null>(null);
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -336,7 +355,11 @@ export function FlowPanel({
     const updatedNodes = layoutedNodes.map((newNode) => {
       const existingNode = nodes.find((n) => n.id === newNode.id);
       if (existingNode && existingNode.position) {
-        return { ...newNode, position: existingNode.position };
+        return {
+          ...newNode,
+          position: existingNode.position,
+          selected: existingNode.selected,
+        };
       }
       return newNode;
     });
@@ -1186,6 +1209,121 @@ export function FlowPanel({
     [steps, onStepsChange, setEdges, onEdgesChange, nodes],
   );
 
+  // Multi-select (Shift+drag or click) → track selected node ids
+  const handleSelectionChange = useCallback(
+    ({ nodes: selNodes }: { nodes: Node[] }) => {
+      setSelectedNodeIds(
+        new Set(selNodes.map((n) => n.id).filter((id) => id !== "table-node")),
+      );
+    },
+    [],
+  );
+
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedNodeIds.size === 0) return;
+    const ids = [...selectedNodeIds];
+    const extraEdgeIds = edges
+      .filter(
+        (e) =>
+          e.source &&
+          e.target &&
+          !ids.includes(e.source) &&
+          !ids.includes(e.target),
+      )
+      .map((e) => e.id);
+    onStepRemove(ids, extraEdgeIds);
+    setSelectedNodeIds(new Set());
+  }, [selectedNodeIds, edges, onStepRemove]);
+
+  const handleCopySelected = useCallback(() => {
+    if (selectedNodeIds.size === 0) return;
+    const selectedSteps = steps.filter((s) => selectedNodeIds.has(s.id));
+    if (selectedSteps.length === 0) return;
+    const ids = new Set(selectedSteps.map((s) => s.id));
+    const internalEdges = edges.filter(
+      (e) => e.source && e.target && ids.has(e.source) && ids.has(e.target),
+    );
+    clipboardRef.current = {
+      steps: selectedSteps,
+      edges: internalEdges.map((e) => ({
+        source: e.source,
+        target: e.target,
+      })),
+    };
+    // Close the floating action bar after copying
+    setSelectedNodeIds(new Set());
+  }, [selectedNodeIds, steps, edges]);
+
+  const handlePasteClipboard = useCallback(() => {
+    const clip = clipboardRef.current;
+    if (!clip || clip.steps.length === 0) return;
+
+    const idMap = new Map<string, string>();
+    const newSteps: PipelineStep[] = clip.steps.map((s) => {
+      const newId = `step-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      idMap.set(s.id, newId);
+      return {
+        ...s,
+        id: newId,
+        alias: s.alias ? `${s.alias} (copy)` : s.alias,
+        position: undefined,
+      };
+    });
+    const newEdges: PipelineEdge[] = clip.edges
+      .map((e) => {
+        const source = idMap.get(e.source);
+        const target = idMap.get(e.target);
+        if (!source || !target) return null;
+        return { id: `e-${source}-${target}`, source, target };
+      })
+      .filter((e): e is PipelineEdge => e !== null);
+
+    onStepsChange([...steps, ...newSteps]);
+    if (newEdges.length > 0 && onEdgesChange) {
+      const existingEdges = edges
+        .filter((e) => e.source && e.target)
+        .map((e) => ({ id: e.id, source: e.source, target: e.target }));
+      onEdgesChange([...existingEdges, ...newEdges]);
+    }
+  }, [steps, edges, onStepsChange, onEdgesChange]);
+
+  // Delete / Backspace / Ctrl+C / Ctrl+V keyboard handling
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement)?.isContentEditable
+      ) {
+        return;
+      }
+
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        handleDeleteSelected();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        handleCopySelected();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") {
+        e.preventDefault();
+        handlePasteClipboard();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleDeleteSelected, handleCopySelected, handlePasteClipboard]);
+
+  // Double-click blank canvas → fit view
+  const handleCanvasDoubleClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (!doubleClickFitView) return;
+      const target = event.target as HTMLElement;
+      if (target.closest(".react-flow__node")) return;
+      reactFlowInstance.current?.fitView({ padding: 0.3, duration: 300 });
+    },
+    [doubleClickFitView],
+  );
+
   return (
     <div
       ref={reactFlowWrapper}
@@ -1204,6 +1342,16 @@ export function FlowPanel({
         onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
         connectionMode={ConnectionMode.Loose}
+        onSelectionChange={handleSelectionChange}
+        deleteKeyCode={null}
+        // Left-drag on blank → box select; pan via Space+left or middle-button drag
+        panOnDrag={[1]}
+        panActivationKeyCode="Space"
+        selectionOnDrag={true}
+        selectionKeyCode="Shift"
+        selectionMode={SelectionMode.Partial}
+        zoomOnDoubleClick={!doubleClickFitView}
+        onDoubleClick={handleCanvasDoubleClick}
         fitView
         fitViewOptions={{ padding: 0.3 }}
         minZoom={0.3}
@@ -1230,15 +1378,15 @@ export function FlowPanel({
           setIsSearchOpen(false);
           setSearchQuery("");
         }}
-        onEnter={() => {
-          if (searchResults.length > 0)
-            handleSearchResultClick(
-              searchResults[0].step,
-              searchResults[0].isTableNode,
-            );
+        onEnter={(index) => {
+          if (searchResults.length > 0) {
+            const r = searchResults[Math.min(index, searchResults.length - 1)];
+            handleSearchResultClick(r.step, r.isTableNode);
+          }
         }}
         searchResults={searchResults}
         onResultClick={handleSearchResultClick}
+        onOpenCommandPalette={onOpenCommandPalette || (() => {})}
         searchInputRef={searchInputRef as React.RefObject<HTMLInputElement>}
       />
 
@@ -1281,7 +1429,30 @@ export function FlowPanel({
         connectTargetNode={connectTargetNode}
       />
 
-      {/* Canvas status indicator - Bottom-right */}
+      {/* Multi-select floating action bar */}
+      {selectedNodeIds.size > 0 && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 bg-card border border-border/70 rounded-lg shadow-lg px-2 py-1.5">
+          <span className="px-1.5 text-xs font-medium text-muted-foreground tabular-nums">
+            {selectedNodeIds.size}
+          </span>
+          <button
+            onClick={handleCopySelected}
+            className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-accent/50 transition-colors"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            {t.copy}
+          </button>
+          <button
+            onClick={handleDeleteSelected}
+            className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-red-500 hover:bg-red-500/10 transition-colors"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {t.deleteSteps}
+          </button>
+        </div>
+      )}
+
+      {/* Canvas status indicator - Bottom-left */}
       <div
         className="absolute bottom-2 left-3 z-50 flex items-center gap-3 text-[11px] text-muted-foreground/60 select-none pointer-events-none"
         data-tick={tick}
@@ -1291,21 +1462,26 @@ export function FlowPanel({
           <span>{steps.length === 1 ? "step" : "steps"}</span>
         </span>
         <span className="w-px h-3 bg-border/40" />
-        <span className="flex items-center gap-1">
-          {isDirty ? (
-            <>
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500/70 inline-block" />
-              <span>Unsaved</span>
-            </>
-          ) : (
-            <>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 inline-block" />
-              <span>Saved</span>
-            </>
-          )}
-        </span>
+        {isDirty ? (
+          <>
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500/70 inline-block" />
+            <span>{t.unsaved}</span>
+          </>
+        ) : (
+          <>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 inline-block" />
+            <span>{t.saved}</span>
+          </>
+        )}
         <span className="w-px h-3 bg-border/40" />
-        <span>{formatRelativeTime(new Date(lastSavedTime))}</span>
+        <span>
+          {formatRelativeTime(new Date(lastSavedTime), {
+            justNow: t.justNow,
+            minutesAgo: t.minutesAgo,
+            hoursAgo: t.hoursAgo,
+            daysAgo: t.daysAgo,
+          })}
+        </span>
       </div>
     </div>
   );

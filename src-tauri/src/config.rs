@@ -15,6 +15,7 @@ pub struct AppConfig {
   pub no_headers: Option<bool>,
   pub show_execution_notification: Option<bool>,
   pub minimize_to_tray: Option<bool>,
+  pub double_click_fit_view: Option<bool>,
 }
 
 impl Default for AppConfig {
@@ -24,6 +25,7 @@ impl Default for AppConfig {
       no_headers: None,
       show_execution_notification: None,
       minimize_to_tray: None,
+      double_click_fit_view: Some(true),
     }
   }
 }
@@ -202,6 +204,8 @@ pub fn load_config() -> Result<AppConfig, String> {
   let show_execution_notification =
     get_config_string("show_execution_notification").and_then(|v| v.parse().ok());
   let minimize_to_tray = get_config_string("minimize_to_tray").and_then(|v| v.parse().ok());
+  let double_click_fit_view =
+    get_config_string("double_click_fit_view").and_then(|v| v.parse().ok());
 
   Ok(AppConfig {
     default_delimiter: default_delimiter.or(default.default_delimiter),
@@ -209,6 +213,7 @@ pub fn load_config() -> Result<AppConfig, String> {
     show_execution_notification: show_execution_notification
       .or(default.show_execution_notification),
     minimize_to_tray: minimize_to_tray.or(default.minimize_to_tray),
+    double_click_fit_view: double_click_fit_view.or(default.double_click_fit_view),
   })
 }
 
@@ -224,6 +229,9 @@ pub fn save_config(config: &AppConfig) -> Result<(), String> {
   }
   if let Some(v) = config.minimize_to_tray {
     set_config_string("minimize_to_tray", &v.to_string())?;
+  }
+  if let Some(v) = config.double_click_fit_view {
+    set_config_string("double_click_fit_view", &v.to_string())?;
   }
   Ok(())
 }
@@ -393,6 +401,18 @@ pub async fn get_minimize_to_tray() -> Option<bool> {
 pub async fn set_minimize_to_tray(minimize: bool) -> Result<(), String> {
   let mut config = load_config()?;
   config.minimize_to_tray = Some(minimize);
+  save_config(&config)
+}
+
+#[tauri::command]
+pub async fn get_double_click_fit_view() -> Option<bool> {
+  load_config().unwrap_or_default().double_click_fit_view
+}
+
+#[tauri::command]
+pub async fn set_double_click_fit_view(enabled: bool) -> Result<(), String> {
+  let mut config = load_config()?;
+  config.double_click_fit_view = Some(enabled);
   save_config(&config)
 }
 

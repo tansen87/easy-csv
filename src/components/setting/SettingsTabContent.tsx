@@ -23,6 +23,7 @@ import {
   RefreshCw,
   CircleCheck,
   CircleX,
+  MousePointer2,
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-shell";
 import { invoke } from "@tauri-apps/api/core";
@@ -51,6 +52,8 @@ interface SettingsTabContentProps {
   onSystemNotificationChange: (value: boolean) => void;
   minimizeToTray: boolean;
   onMinimizeToTrayChange: (value: boolean) => void;
+  doubleClickFitView: boolean;
+  onDoubleClickFitViewChange: (value: boolean) => void;
   onSave: () => void;
   aiConfig: AIConfig;
   onAIConfigChange: (config: AIConfig) => void;
@@ -68,6 +71,8 @@ export function SettingsTabContent({
   onSystemNotificationChange,
   minimizeToTray,
   onMinimizeToTrayChange,
+  doubleClickFitView,
+  onDoubleClickFitViewChange,
   onSave,
   aiConfig,
   onAIConfigChange,
@@ -346,6 +351,29 @@ export function SettingsTabContent({
                   <div className="text-left">
                     <p className="text-sm text-muted-foreground">
                       {t.minimizeToTrayDesc}
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Double-click Canvas to Fit View */}
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <MousePointer2 className="h-4 w-4" />
+                  {t.doubleClickFitView}
+                </h3>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={doubleClickFitView}
+                    onChange={(e) =>
+                      onDoubleClickFitViewChange(e.target.checked)
+                    }
+                    className="w-4 h-4 rounded border-input accent-foreground"
+                  />
+                  <div className="text-left">
+                    <p className="text-sm text-muted-foreground">
+                      {t.doubleClickFitViewDesc}
                     </p>
                   </div>
                 </label>
@@ -809,6 +837,7 @@ export function SettingsTabContent({
             onNoHeadersChange(false);
             onSystemNotificationChange(true);
             onMinimizeToTrayChange(true);
+            onDoubleClickFitViewChange(true);
             setIsResetClicked(true);
             if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
             resetTimeoutRef.current = setTimeout(

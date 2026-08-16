@@ -17,6 +17,8 @@ interface SettingsDialogProps {
   onSystemNotificationChange: (value: boolean) => void;
   minimizeToTray: boolean;
   onMinimizeToTrayChange: (value: boolean) => void;
+  doubleClickFitView: boolean;
+  onDoubleClickFitViewChange: (value: boolean) => void;
   onSave: () => void;
   aiConfig: AIConfig;
   onAIConfigChange: (config: AIConfig) => void;
@@ -35,6 +37,8 @@ export function SettingsDialog({
   onSystemNotificationChange,
   minimizeToTray,
   onMinimizeToTrayChange,
+  doubleClickFitView,
+  onDoubleClickFitViewChange,
   onSave,
   aiConfig,
   onAIConfigChange,
@@ -178,6 +182,8 @@ export function SettingsDialog({
             onSystemNotificationChange={onSystemNotificationChange}
             minimizeToTray={minimizeToTray}
             onMinimizeToTrayChange={onMinimizeToTrayChange}
+            doubleClickFitView={doubleClickFitView}
+            onDoubleClickFitViewChange={onDoubleClickFitViewChange}
             onSave={onSave}
             aiConfig={aiConfig}
             onAIConfigChange={onAIConfigChange}

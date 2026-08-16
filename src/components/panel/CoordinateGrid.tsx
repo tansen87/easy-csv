@@ -40,57 +40,124 @@ export function CoordinateGrid() {
 
   const s = "var(--muted-foreground)";
 
+  // Fade grid out as you zoom out to reduce visual noise (P3)
+  const gridOpacity = Math.min(1, Math.max(0.15, zoom));
+
   return (
-    <svg className="coordinate-grid" width={W} height={H} style={{ pointerEvents: "none" }}>
+    <svg
+      className="coordinate-grid"
+      width={W}
+      height={H}
+      style={{ pointerEvents: "none", opacity: gridOpacity }}
+    >
       {/* Minor vertical lines */}
       {data.nV.map((wx) => {
         const sx = vx + wx * zoom;
         return (
-          <line key={`nv${wx}`} x1={sx} y1={0} x2={sx} y2={H}
-            stroke={s} strokeOpacity={0.06} strokeWidth={1} />
+          <line
+            key={`nv${wx}`}
+            x1={sx}
+            y1={0}
+            x2={sx}
+            y2={H}
+            stroke={s}
+            strokeOpacity={0.06}
+            strokeWidth={1}
+          />
         );
       })}
       {/* Minor horizontal lines */}
       {data.nH.map((wy) => {
         const sy = vy + wy * zoom;
         return (
-          <line key={`nh${wy}`} x1={0} y1={sy} x2={W} y2={sy}
-            stroke={s} strokeOpacity={0.06} strokeWidth={1} />
+          <line
+            key={`nh${wy}`}
+            x1={0}
+            y1={sy}
+            x2={W}
+            y2={sy}
+            stroke={s}
+            strokeOpacity={0.06}
+            strokeWidth={1}
+          />
         );
       })}
       {/* Major vertical lines */}
       {data.mV.map((wx) => {
         const sx = vx + wx * zoom;
         return (
-          <line key={`mv${wx}`} x1={sx} y1={0} x2={sx} y2={H}
-            stroke={s} strokeOpacity={0.12} strokeWidth={1} />
+          <line
+            key={`mv${wx}`}
+            x1={sx}
+            y1={0}
+            x2={sx}
+            y2={H}
+            stroke={s}
+            strokeOpacity={0.12}
+            strokeWidth={1}
+          />
         );
       })}
       {/* Major horizontal lines */}
       {data.mH.map((wy) => {
         const sy = vy + wy * zoom;
         return (
-          <line key={`mh${wy}`} x1={0} y1={sy} x2={W} y2={sy}
-            stroke={s} strokeOpacity={0.12} strokeWidth={1} />
+          <line
+            key={`mh${wy}`}
+            x1={0}
+            y1={sy}
+            x2={W}
+            y2={sy}
+            stroke={s}
+            strokeOpacity={0.12}
+            strokeWidth={1}
+          />
         );
       })}
       {/* X-axis (horizontal at world y=0) */}
-      <line x1={0} y1={vy} x2={W} y2={vy}
-        stroke={s} strokeOpacity={0.5} strokeWidth={1.5} />
+      <line
+        x1={0}
+        y1={vy}
+        x2={W}
+        y2={vy}
+        stroke={s}
+        strokeOpacity={0.5}
+        strokeWidth={1.5}
+      />
       {/* Y-axis (vertical at world x=0) */}
-      <line x1={vx} y1={0} x2={vx} y2={H}
-        stroke={s} strokeOpacity={0.5} strokeWidth={1.5} />
+      <line
+        x1={vx}
+        y1={0}
+        x2={vx}
+        y2={H}
+        stroke={s}
+        strokeOpacity={0.5}
+        strokeWidth={1.5}
+      />
       {/* X-axis ticks + labels */}
       {data.mV.map((wx) => {
         const sx = vx + wx * zoom;
         return (
           <g key={`tx${wx}`}>
-            <line x1={sx} y1={vy} x2={sx} y2={vy + TICK}
-              stroke={s} strokeOpacity={0.3} strokeWidth={1.5} />
-            <text x={sx} y={vy + TICK + LABEL_PAD}
-              textAnchor="middle" fill={s} fillOpacity={0.45}
-              fontSize={10} fontFamily="var(--font-sans)"
-              style={{ userSelect: "none" }}>
+            <line
+              x1={sx}
+              y1={vy}
+              x2={sx}
+              y2={vy + TICK}
+              stroke={s}
+              strokeOpacity={0.3}
+              strokeWidth={1.5}
+            />
+            <text
+              x={sx}
+              y={vy + TICK + LABEL_PAD}
+              textAnchor="middle"
+              fill={s}
+              fillOpacity={0.45}
+              fontSize={10}
+              fontFamily="var(--font-sans)"
+              style={{ userSelect: "none" }}
+            >
               {wx}
             </text>
           </g>
@@ -101,12 +168,25 @@ export function CoordinateGrid() {
         const sy = vy + wy * zoom;
         return (
           <g key={`ty${wy}`}>
-            <line x1={vx} y1={sy} x2={vx + TICK} y2={sy}
-              stroke={s} strokeOpacity={0.3} strokeWidth={1.5} />
-            <text x={vx + TICK + LABEL_PAD} y={sy}
-              dominantBaseline="middle" fill={s} fillOpacity={0.45}
-              fontSize={10} fontFamily="var(--font-sans)"
-              style={{ userSelect: "none" }}>
+            <line
+              x1={vx}
+              y1={sy}
+              x2={vx + TICK}
+              y2={sy}
+              stroke={s}
+              strokeOpacity={0.3}
+              strokeWidth={1.5}
+            />
+            <text
+              x={vx + TICK + LABEL_PAD}
+              y={sy}
+              dominantBaseline="middle"
+              fill={s}
+              fillOpacity={0.45}
+              fontSize={10}
+              fontFamily="var(--font-sans)"
+              style={{ userSelect: "none" }}
+            >
               {wy}
             </text>
           </g>

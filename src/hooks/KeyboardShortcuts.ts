@@ -17,7 +17,6 @@ interface KeyboardShortcutCallbacks {
   onDataProfile: () => void;
   onAI: () => void;
   onCommandPalette: () => void;
-  onOpenCsvDiff: () => void;
 }
 
 interface KeyboardShortcutState {
@@ -88,9 +87,6 @@ export function useKeyboardShortcuts(
           !stateRef.current.isExecuting
         )
           callbacksRef.current.onExecute();
-      } else if (ctrl && key === "d") {
-        e.preventDefault();
-        callbacksRef.current.onOpenCsvDiff();
       } else if (shift && e.key === "h") {
         e.preventDefault();
         callbacksRef.current.onHelp();

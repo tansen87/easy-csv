@@ -32,50 +32,41 @@ export function PipelineStepNode({
   const activeParams = useMemo(() => {
     return Object.entries(data.step.parameters)
       .filter(([, value]) => {
-        // 对于布尔值(flag参数),只有值为true时才显示
         if (typeof value === "boolean") {
           return value === true;
         }
-        // 对于数组,过滤掉空数组
         if (Array.isArray(value)) {
           return value.length > 0;
         }
-        // 对于其他参数,过滤掉 undefined 和空字符串
         return value !== undefined && value !== "";
       })
       .map(([key, value]) => {
-        // 对于布尔值(flag参数),只显示参数名
         if (typeof value === "boolean") {
-          return [key, null]; // null 表示不显示值
+          return [key, null];
         }
-        // 对于数组参数(如inputs),截断显示
         if (Array.isArray(value)) {
           const count = value.length;
           if (count <= 2) {
             return [key, value.join(", ")];
           }
-          // 只显示第一个文件名和总数
           const firstName = String(value[0]).split(/[\\/]/).pop() || value[0];
           return [key, `${firstName} +${count - 1} files`];
         }
-        // 对于source-path,只显示文件夹路径
         if (key === "source-path" && typeof value === "string") {
           const paths = value.split(";").filter((p: string) => p.trim());
           if (paths.length === 1) {
             const path = paths[0].trim();
-            // 检查是否是文件（有扩展名）
             const lastSlash = Math.max(
               path.lastIndexOf("/"),
               path.lastIndexOf("\\"),
             );
             const lastDot = path.lastIndexOf(".");
             if (lastDot > lastSlash && lastSlash >= 0) {
-              // 是文件，只显示文件夹部分
               return [key, path.substring(0, lastSlash)];
             }
             return [key, path];
           }
-          // 多个路径，只显示文件夹
+
           const folders = paths.map((p: string) => {
             const trimmed = p.trim();
             const lastSlash = Math.max(
@@ -88,7 +79,6 @@ export function PipelineStepNode({
             }
             return trimmed;
           });
-          // 去重
           const uniqueFolders = [...new Set(folders)];
           return [key, uniqueFolders.join(";")];
         }
@@ -96,7 +86,7 @@ export function PipelineStepNode({
       });
   }, [data.step.parameters]);
 
-  // 分离flag参数和非flag参数
+  // Separate flag parameters and non flag parameters
   const flagParams = useMemo(() => {
     return activeParams.filter(([, value]) => value === null);
   }, [activeParams]);
@@ -119,7 +109,7 @@ export function PipelineStepNode({
     }
   };
 
-  // 渲染节点内容的辅助函数
+  // Auxiliary functions for rendering node content
   const renderCardContent = () => (
     <>
       {/* 双向 Handle - 左侧既是 target 也是 source */}
@@ -277,7 +267,7 @@ export function PipelineStepNode({
 
   const cardClass = `w-[220px] transition-all duration-200 hover:shadow-lg group relative ${
     selected
-      ? "bg-gradient-to-r from-primary/15 to-primary/5 border-primary/50 shadow-md ring-2 ring-primary/20"
+      ? "bg-card/100 border-emerald-700/80 shadow-md ring-2 ring-emerald-700/30"
       : "bg-card/95 hover:bg-accent/30 border-border/60 hover:border-primary/30"
   } ${data.isPendingDelete ? "border-orange-500" : ""} ${data.isHighlighted ? "ring-2 ring-primary ring-offset-2 animate-pulse-once" : ""}`;
 

@@ -713,12 +713,6 @@ function AppContent() {
       onDataProfile: () => ui.setShowDataProfile(!ui.showDataProfile),
       onAI: () => ui.setShowAIPanel(!ui.showAIPanel),
       onCommandPalette: () => ui.setShowCommandPalette(!ui.showCommandPalette),
-      onOpenCsvDiff: () => {
-        ui.setCsvDiffInitialFileA(
-          tabsHook.getCurrentTab()?.inputFile || undefined,
-        );
-        ui.setShowCsvDiff(true);
-      },
     },
     {
       undoStackLength: pipeline.undoStack.length,
@@ -810,6 +804,9 @@ function AppContent() {
       });
       await invoke("set_minimize_to_tray", {
         minimize: settings.minimizeToTray,
+      });
+      await invoke("set_double_click_fit_view", {
+        enabled: settings.doubleClickFitView,
       });
     } catch (error) {
       showToastRef.current(`Failed to save settings: ${error}`, "error");
@@ -1198,6 +1195,9 @@ function AppContent() {
                 onGetLineageForColumn={lineageHook.getLineageForColumn}
                 onSaveLineage={lineageHook.saveLineage}
                 pipelineSavedAt={pipelineSavedAt}
+                doubleClickFitView={settings.doubleClickFitView}
+                onSavePipeline={handleSavePipelineAndMarkSaved}
+                onOpenCommandPalette={() => ui.setShowCommandPalette(true)}
               />
             </div>
           </main>
@@ -1256,6 +1256,8 @@ function AppContent() {
             onSystemNotificationChange={settings.setSystemNotification}
             minimizeToTray={settings.minimizeToTray}
             onMinimizeToTrayChange={settings.setMinimizeToTray}
+            doubleClickFitView={settings.doubleClickFitView}
+            onDoubleClickFitViewChange={settings.setDoubleClickFitView}
             onSave={handleSaveSettings}
             aiConfig={aiConfig}
             onAIConfigChange={handleAIConfigChange}

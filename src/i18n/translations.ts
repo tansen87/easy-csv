@@ -90,6 +90,8 @@ export interface Translations {
   systemNotificationDesc: string;
   minimizeToTray: string;
   minimizeToTrayDesc: string;
+  doubleClickFitView: string;
+  doubleClickFitViewDesc: string;
   resetToDefaults: string;
   saveSettings: string;
   selectDelimiter: string;
@@ -134,6 +136,13 @@ export interface Translations {
   // FlowPanel
   searchFlow: string;
   headerRename: string;
+  deleteSteps: string;
+  justNow: string;
+  minutesAgo: string;
+  hoursAgo: string;
+  daysAgo: string;
+  saved: string;
+  unsaved: string;
 
   // LogPanel
   logs: string;
@@ -369,6 +378,9 @@ export const translations: Record<Language, Translations> = {
     minimizeToTray: "Tray",
     minimizeToTrayDesc:
       "When enabled, closing the window will minimize to system tray instead of exiting",
+    doubleClickFitView: "Fit View",
+    doubleClickFitViewDesc:
+      "When enabled, double-clicking an empty area of the canvas fits the view to all nodes",
     resetToDefaults: "Reset to Defaults",
     saveSettings: "Save Settings",
     selectDelimiter: "Select delimiter",
@@ -413,6 +425,13 @@ export const translations: Record<Language, Translations> = {
     // FlowPanel
     searchFlow: "Search in the workflow",
     headerRename: "Search the header to modify",
+    deleteSteps: "Delete",
+    justNow: "just now",
+    minutesAgo: "{n}m ago",
+    hoursAgo: "{n}h ago",
+    daysAgo: "{n}d ago",
+    saved: "Saved",
+    unsaved: "Unsaved",
 
     // LogPanel
     logs: "Logs",
@@ -531,8 +550,7 @@ export const translations: Record<Language, Translations> = {
     columnA: "cols A",
     columnB: "cols B",
     keyColumns: "Key",
-    keyColumnsHint:
-      "Select key columns to match rows (faster for large files)",
+    keyColumnsHint: "Select key columns to match rows (faster for large files)",
     equalRows: "identical rows",
     prev: "Prev",
     next: "Next",
@@ -644,6 +662,9 @@ export const translations: Record<Language, Translations> = {
     systemNotificationDesc: "启用后,管道执行完成后显示系统通知",
     minimizeToTray: "系统托盘",
     minimizeToTrayDesc: "启用后,关闭窗口将最小化到系统托盘而非退出应用",
+    doubleClickFitView: "双击画布空白处适配视图",
+    doubleClickFitViewDesc:
+      "启用后,双击画布空白区域将自动缩放视图以容纳所有节点",
     resetToDefaults: "恢复默认",
     saveSettings: "保存设置",
     selectDelimiter: "选择分隔符",
@@ -688,6 +709,13 @@ export const translations: Record<Language, Translations> = {
     // FlowPanel
     searchFlow: "在工作流中搜索",
     headerRename: "查询表头以修改",
+    deleteSteps: "删除",
+    justNow: "刚刚",
+    minutesAgo: "{n} 分钟前",
+    hoursAgo: "{n} 小时前",
+    daysAgo: "{n} 天前",
+    saved: "已保存",
+    unsaved: "未保存",
 
     // LogPanel
     logs: "日志",
