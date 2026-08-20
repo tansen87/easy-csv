@@ -42,8 +42,6 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     pipeline::execute_xan_pipeline,
     pipeline::set_pipeline_cancelled,
     plugins::list_plugins,
-    plugins::add_plugin,
-    plugins::remove_plugin,
     plugins::check_plugins,
     xan::check_xan_installed,
     session::save_session,

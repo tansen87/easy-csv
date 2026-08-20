@@ -77,7 +77,6 @@ export interface Translations {
   refreshMessage: string;
 
   // Settings
-  preference: string;
   general: string;
   theme: string;
   light: string;
@@ -220,18 +219,11 @@ export interface Translations {
   // Plugins
   plugins: string;
   pluginDesc: string;
-  pluginAdd: string;
-  pluginAddName: string;
-  pluginAddExecutable: string;
-  pluginAddButton: string;
+  pluginNone: string;
   pluginCheck: string;
   pluginChecking: string;
   pluginInstalled: string;
   pluginMissing: string;
-  pluginVersion: string;
-  pluginAddSuccess: string;
-  pluginNamePlaceholder: string;
-  pluginExecutablePlaceholder: string;
 
   // CommandPalette
   commandPalette: string;
@@ -363,13 +355,12 @@ export const translations: Record<Language, Translations> = {
       "Are you sure you want to refresh the page? Unsaved changes will be lost.",
 
     // Settings
-    preference: "Preference",
     general: "General",
     theme: "Theme",
     light: "Light",
     dark: "Dark",
     system: "System",
-    csvDelimiter: "Delim",
+    csvDelimiter: "Delimiter",
     noHeaders: "No Headers",
     noHeadersDesc: "When set, the first row will not be interpreted as headers",
     systemNotification: "Notification",
@@ -380,7 +371,7 @@ export const translations: Record<Language, Translations> = {
       "When enabled, closing the window will minimize to system tray instead of exiting",
     doubleClickFitView: "Fit View",
     doubleClickFitViewDesc:
-      "When enabled, double-clicking an empty area of the canvas fits the view to all nodes",
+      "When enabled, double-clicking an empty area of the canvas fits the view",
     resetToDefaults: "Reset to Defaults",
     saveSettings: "Save Settings",
     selectDelimiter: "Select delimiter",
@@ -509,19 +500,12 @@ export const translations: Record<Language, Translations> = {
     // Plugins
     plugins: "Plugins",
     pluginDesc:
-      "Register external CLI plugins that can be used in pipelines alongside xan commands.",
-    pluginAdd: "Add Plugin",
-    pluginAddName: "Command Name",
-    pluginAddExecutable: "Executable (path or name in PATH)",
-    pluginAddButton: "Add",
+      "Register external CLI plugins that can be used in pipelines alongside xan commands",
+    pluginNone: "No plugins registered",
     pluginCheck: "Check Plugins",
     pluginChecking: "Checking...",
     pluginInstalled: "Found",
     pluginMissing: "Not found",
-    pluginVersion: "Version",
-    pluginAddSuccess: "Plugin added",
-    pluginNamePlaceholder: "e.g. pinyin",
-    pluginExecutablePlaceholder: "e.g. pinyin or C:\\tools\\pinyin.exe",
 
     // CommandPalette
     commandPalette: "Command Palette",
@@ -649,7 +633,6 @@ export const translations: Record<Language, Translations> = {
     refreshMessage: "确定要刷新页面吗?未保存的更改将会丢失.",
 
     // Settings
-    preference: "偏好设置",
     general: "通用",
     theme: "主题",
     light: "浅色",
@@ -662,9 +645,8 @@ export const translations: Record<Language, Translations> = {
     systemNotificationDesc: "启用后,管道执行完成后显示系统通知",
     minimizeToTray: "系统托盘",
     minimizeToTrayDesc: "启用后,关闭窗口将最小化到系统托盘而非退出应用",
-    doubleClickFitView: "双击画布空白处适配视图",
-    doubleClickFitViewDesc:
-      "启用后,双击画布空白区域将自动缩放视图以容纳所有节点",
+    doubleClickFitView: "适配视图",
+    doubleClickFitViewDesc: "启用后,双击画布空白区域将自动缩放视图",
     resetToDefaults: "恢复默认",
     saveSettings: "保存设置",
     selectDelimiter: "选择分隔符",
@@ -791,19 +773,12 @@ export const translations: Record<Language, Translations> = {
 
     // Plugins
     plugins: "插件",
-    pluginDesc: "注册外部 CLI 插件,可在管道中与 xan 命令一起使用.",
-    pluginAdd: "添加插件",
-    pluginAddName: "命令名称",
-    pluginAddExecutable: "可执行文件(路径或 PATH 中的名称)",
-    pluginAddButton: "添加",
+    pluginDesc: "注册外部 CLI 插件,可在管道中与 xan 命令一起使用",
+    pluginNone: "暂无已注册插件",
     pluginCheck: "检查插件",
     pluginChecking: "检查中...",
     pluginInstalled: "已找到",
     pluginMissing: "未找到",
-    pluginVersion: "版本",
-    pluginAddSuccess: "插件已添加",
-    pluginNamePlaceholder: "例如 pinyin",
-    pluginExecutablePlaceholder: "例如 pinyin 或 C:\\tools\\pinyin.exe",
 
     // CommandPalette
     commandPalette: "命令面板",

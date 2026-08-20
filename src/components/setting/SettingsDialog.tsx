@@ -43,9 +43,9 @@ export function SettingsDialog({
   aiConfig,
   onAIConfigChange,
 }: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<
-    "preference" | "general" | "ai" | "plugins"
-  >("preference");
+  const [activeTab, setActiveTab] = useState<"general" | "ai" | "plugins">(
+    "general",
+  );
   const { t } = useLanguage();
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -101,34 +101,22 @@ export function SettingsDialog({
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
-        className="relative bg-card rounded-lg shadow-xl w-full max-w-4xl h-[64vh] overflow-hidden outline-none flex flex-col"
+        className="relative bg-card rounded-lg shadow-xl w-full max-w-4xl h-[72vh] overflow-hidden outline-none flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/20">
+        <div className="flex items-center justify-between px-4 py-3 bg-muted/20">
           <div className="flex items-center">
-            <div className="grid grid-cols-4 bg-muted/50 rounded-md p-0.5 border border-border/50 relative h-8">
+            <div className="grid grid-cols-3 bg-muted/50 rounded-md p-0.5 border border-border/50 relative h-8">
               <div
                 className={`absolute top-0.5 bottom-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${
-                  activeTab === "general"
-                    ? "left-[calc(25%+1px)]"
-                    : activeTab === "ai"
-                      ? "left-[calc(50%+1px)]"
-                      : activeTab === "plugins"
-                        ? "left-[calc(75%+1px)]"
-                        : "left-0.5"
+                  activeTab === "ai"
+                    ? "left-[calc(33.333%+1px)]"
+                    : activeTab === "plugins"
+                      ? "left-[calc(66.666%+1px)]"
+                      : "left-0.5"
                 }`}
-                style={{ width: "calc(25% - 1px)" }}
+                style={{ width: "calc(33.333% - 1px)" }}
               />
-              <button
-                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
-                  activeTab === "preference"
-                    ? "text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                onClick={() => setActiveTab("preference")}
-              >
-                {t.preference}
-              </button>
               <button
                 className={`flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
                   activeTab === "general"

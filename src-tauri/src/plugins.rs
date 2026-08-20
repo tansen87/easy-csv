@@ -231,50 +231,6 @@ pub async fn list_plugins() -> Result<Vec<Plugin>, String> {
 }
 
 #[tauri::command]
-pub async fn add_plugin(name: String, executable: String) -> Result<(), String> {
-  let name = name.trim().to_string();
-  let executable = executable.trim().to_string();
-
-  if name.is_empty() {
-    return Err("Plugin name cannot be empty".to_string());
-  }
-  if executable.is_empty() {
-    return Err("Plugin executable cannot be empty".to_string());
-  }
-  if !name
-    .chars()
-    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
-  {
-    return Err(format!("Invalid plugin name: '{name}'"));
-  }
-
-  let db = get_db().ok_or("Database not initialized")?;
-  let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
-
-  conn
-    .execute(
-      "INSERT INTO plugins (name, executable) VALUES (?1, ?2) \
-       ON CONFLICT(name) DO UPDATE SET executable = ?2",
-      params![name, executable],
-    )
-    .map_err(|e| format!("Failed to save plugin: {}", e))?;
-
-  Ok(())
-}
-
-#[tauri::command]
-pub async fn remove_plugin(name: String) -> Result<(), String> {
-  let db = get_db().ok_or("Database not initialized")?;
-  let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
-
-  conn
-    .execute("DELETE FROM plugins WHERE name = ?1", params![name])
-    .map_err(|e| format!("Failed to remove plugin: {}", e))?;
-
-  Ok(())
-}
-
-#[tauri::command]
 pub async fn check_plugins() -> Result<Vec<PluginStatus>, String> {
   let plugins = list_plugins().await?;
 

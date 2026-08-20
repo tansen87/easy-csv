@@ -24,6 +24,8 @@ import {
   CircleCheck,
   CircleX,
   MousePointer2,
+  SeparatorVertical,
+  RectangleEllipsis,
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-shell";
 import { invoke } from "@tauri-apps/api/core";
@@ -41,7 +43,7 @@ import { loadProviderApiKey } from "@/services/ai";
 import { PluginInfo } from "@/types/xan";
 
 interface SettingsTabContentProps {
-  activeTab: "preference" | "general" | "ai" | "plugins";
+  activeTab: "general" | "ai" | "plugins";
   theme: "dark" | "light" | "system";
   onThemeChange: (theme: "dark" | "light" | "system") => void;
   defaultDelimiter: string;
@@ -88,13 +90,9 @@ export function SettingsTabContent({
     "conversations" | "feedback" | "corrections" | null
   >(null);
   const [clearing, setClearing] = useState(false);
-
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
   const [pluginsLoading, setPluginsLoading] = useState(false);
   const [checkingPlugins, setCheckingPlugins] = useState(false);
-  const [addName, setAddName] = useState("");
-  const [addExecutable, setAddExecutable] = useState("");
-  const [addingPlugin, setAddingPlugin] = useState(false);
 
   const loadPlugins = useCallback(async () => {
     setPluginsLoading(true);
@@ -131,36 +129,6 @@ export function SettingsTabContent({
       setCheckingPlugins(false);
     }
   }, []);
-
-  const handleAddPlugin = useCallback(async () => {
-    if (!addName.trim() || !addExecutable.trim()) return;
-    setAddingPlugin(true);
-    try {
-      await invoke("add_plugin", {
-        name: addName.trim(),
-        executable: addExecutable.trim(),
-      });
-      setAddName("");
-      setAddExecutable("");
-      await loadPlugins();
-    } catch (error) {
-      console.error("Failed to add plugin:", error);
-    } finally {
-      setAddingPlugin(false);
-    }
-  }, [addName, addExecutable, loadPlugins]);
-
-  const handleRemovePlugin = useCallback(
-    async (name: string) => {
-      try {
-        await invoke("remove_plugin", { name });
-        await loadPlugins();
-      } catch (error) {
-        console.error("Failed to remove plugin:", error);
-      }
-    },
-    [loadPlugins],
-  );
 
   const updateCustomModels = useCallback(
     (models: string[]) => {
@@ -218,7 +186,7 @@ export function SettingsTabContent({
       {/* Content Area */}
       <ScrollArea className="flex-1 min-h-0">
         <div className="p-6">
-          {activeTab === "preference" && (
+          {activeTab === "general" && (
             <div className="space-y-6">
               {/* Language */}
               <div>
@@ -378,16 +346,13 @@ export function SettingsTabContent({
                   </div>
                 </label>
               </div>
-            </div>
-          )}
 
-          {activeTab === "general" && (
-            <div className="space-y-6">
               {/* Delimiter */}
-              <div>
-                <label className="block text-sm font-medium">
+              <div className="w-1/3">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <SeparatorVertical className="h-4 w-4" />
                   {t.csvDelimiter}
-                </label>
+                </h3>
                 <SearchableSelect
                   value={defaultDelimiter}
                   onChange={onDefaultDelimiterChange}
@@ -407,9 +372,10 @@ export function SettingsTabContent({
               </div>
               {/* No Headers */}
               <div>
-                <label className="block text-sm font-medium">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <RectangleEllipsis className="h-4 w-4" />
                   {t.noHeaders}
-                </label>
+                </h3>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -732,7 +698,7 @@ export function SettingsTabContent({
                 </h4>
                 {plugins.length === 0 && !pluginsLoading ? (
                   <p className="text-sm text-muted-foreground">
-                    {t.pluginAdd}...
+                    {t.pluginNone}
                   </p>
                 ) : (
                   <div className="space-y-2">
@@ -764,63 +730,11 @@ export function SettingsTabContent({
                           >
                             {plugin.found ? t.pluginInstalled : t.pluginMissing}
                           </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-7 h-7 rounded-md"
-                            onClick={() => handleRemovePlugin(plugin.name)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
-
-              {/* Add plugin */}
-              <div className="border rounded-md p-3 bg-muted/20 space-y-3">
-                <h4 className="text-sm font-medium flex items-center gap-2">
-                  <Plus className="h-3.5 w-3.5" />
-                  {t.pluginAdd}
-                </h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium">
-                      {t.pluginAddName}
-                    </label>
-                    <input
-                      type="text"
-                      value={addName}
-                      onChange={(e) => setAddName(e.target.value)}
-                      placeholder={t.pluginNamePlaceholder}
-                      className="w-full h-8 px-3 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium">
-                      {t.pluginAddExecutable}
-                    </label>
-                    <input
-                      type="text"
-                      value={addExecutable}
-                      onChange={(e) => setAddExecutable(e.target.value)}
-                      placeholder={t.pluginExecutablePlaceholder}
-                      className="w-full h-8 px-3 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring mt-1"
-                    />
-                  </div>
-                </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleAddPlugin}
-                  disabled={
-                    addingPlugin || !addName.trim() || !addExecutable.trim()
-                  }
-                >
-                  {addingPlugin ? "..." : t.pluginAddButton}
-                </Button>
               </div>
             </div>
           )}
