@@ -11,14 +11,14 @@ use crate::config::get_resources_dir;
 
 /// Embed the default pinyin plugin binary at compile time (Windows only).
 #[cfg(target_os = "windows")]
-const PINYIN_EXE_BYTES: &[u8] = include_bytes!("../resources/plugin/pinyin.exe");
+const PINYIN_EXE_BYTES: &[u8] = include_bytes!("../resources/plugins/pinyin.exe");
 
 /// Directory where plugin binaries live by default.
 pub fn get_plugin_dir() -> std::path::PathBuf {
-  get_resources_dir().join("plugin")
+  get_resources_dir().join("plugins")
 }
 
-/// Extract embedded plugin binaries to `<resources>/plugin/` on first use.
+/// Extract embedded plugin binaries to `<resources>/plugins/` on first use.
 #[cfg(target_os = "windows")]
 fn ensure_default_plugins_extracted() -> Result<String, String> {
   let plugin_dir = get_plugin_dir();
@@ -96,6 +96,20 @@ fn get_db() -> Option<&'static DbState> {
       );
     }
 
+    let seeded_xan: i64 = conn
+      .query_row(
+        "SELECT COUNT(*) FROM plugins WHERE name = 'xan'",
+        [],
+        |row| row.get(0),
+      )
+      .unwrap_or(0);
+    if seeded_xan == 0 {
+      let _ = conn.execute(
+        "INSERT INTO plugins (name, executable) VALUES ('xan', 'xan')",
+        [],
+      );
+    }
+
     // Extract the embedded default plugin binary so it is usable out of the box.
     let _ = ensure_default_plugins_extracted();
 
@@ -160,7 +174,7 @@ pub fn resolve_executable(name: &str) -> Option<PathBuf> {
   resolve_executable_with_dirs(name, &[])
 }
 
-/// Resolve a plugin's executable. The `<resources>/plugin/` directory is
+/// Resolve a plugin's executable. The `<resources>/plugins/` directory is
 /// preferred over `PATH`, so a binary dropped there is used by default.
 pub fn resolve_plugin_executable(name: &str) -> Option<PathBuf> {
   let plugin_dir = get_plugin_dir();
@@ -171,11 +185,11 @@ pub fn resolve_plugin_executable(name: &str) -> Option<PathBuf> {
 /// Plugin commands are resolved to the registered plugin binary,
 /// everything else falls back to the xan binary.
 pub fn command_executable(name: &str, xan_path: &Path) -> Result<PathBuf, String> {
-  if let Some(plugin) = get_plugin(name) {
-    resolve_plugin_executable(&plugin.executable).ok_or_else(|| {
+  if let Some(plugins) = get_plugin(name) {
+    resolve_plugin_executable(&plugins.executable).ok_or_else(|| {
       format!(
-        "plugin executable '{}' for command '{}' not found",
-        plugin.executable, name
+        "plugins executable '{}' for command '{}' not found",
+        plugins.executable, name
       )
     })
   } else {
@@ -211,7 +225,10 @@ pub async fn list_plugins() -> Result<Vec<Plugin>, String> {
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
   let mut stmt = conn
-    .prepare("SELECT name, executable FROM plugins ORDER BY name")
+    .prepare(
+      "SELECT name, executable FROM plugins \
+       ORDER BY CASE WHEN name = 'xan' THEN 0 ELSE 1 END, name",
+    )
     .map_err(|e| format!("Failed to prepare statement: {}", e))?;
 
   let rows = stmt

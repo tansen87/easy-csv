@@ -20,7 +20,6 @@ import {
   Plus,
   X,
   Plug,
-  RefreshCw,
   CircleCheck,
   CircleX,
   MousePointer2,
@@ -92,7 +91,6 @@ export function SettingsTabContent({
   const [clearing, setClearing] = useState(false);
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
   const [pluginsLoading, setPluginsLoading] = useState(false);
-  const [checkingPlugins, setCheckingPlugins] = useState(false);
 
   const loadPlugins = useCallback(async () => {
     setPluginsLoading(true);
@@ -117,18 +115,6 @@ export function SettingsTabContent({
       loadPlugins();
     }
   }, [activeTab, loadPlugins]);
-
-  const handleCheckPlugins = useCallback(async () => {
-    setCheckingPlugins(true);
-    try {
-      const statuses = await invoke<PluginInfo[]>("check_plugins");
-      setPlugins(statuses || []);
-    } catch (error) {
-      console.error("Failed to check plugins:", error);
-    } finally {
-      setCheckingPlugins(false);
-    }
-  }, []);
 
   const updateCustomModels = useCallback(
     (models: string[]) => {
@@ -669,33 +655,17 @@ export function SettingsTabContent({
 
           {activeTab === "plugins" && (
             <div className="space-y-6">
-              {/* Description + Check */}
+              {/* Description */}
               <div>
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <Plug className="h-4 w-4" />
-                  {t.plugins}
+                  {t.plugins} ({plugins.length})
                 </h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {t.pluginDesc}
-                </p>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleCheckPlugins}
-                  disabled={checkingPlugins || pluginsLoading}
-                >
-                  <RefreshCw
-                    className={`h-3.5 w-3.5 ${checkingPlugins ? "animate-spin" : ""}`}
-                  />
-                  {checkingPlugins ? t.pluginChecking : t.pluginCheck}
-                </Button>
+                <p className="text-sm text-muted-foreground">{t.pluginDesc}</p>
               </div>
 
               {/* Plugin list */}
               <div>
-                <h4 className="text-sm font-medium mb-2">
-                  {t.plugins} ({plugins.length})
-                </h4>
                 {plugins.length === 0 && !pluginsLoading ? (
                   <p className="text-sm text-muted-foreground">
                     {t.pluginNone}

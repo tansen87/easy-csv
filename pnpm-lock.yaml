@@ -36,11 +36,11 @@ importers:
         specifier: ^2.11.1
         version: 2.11.1
       '@tauri-apps/plugin-dialog':
-        specifier: ^2.6.0
-        version: 2.6.0
+        specifier: ^2.7.2
+        version: 2.7.2
       '@tauri-apps/plugin-fs':
-        specifier: ^2.4.5
-        version: 2.4.5
+        specifier: ^2.5.1
+        version: 2.5.1
       '@tauri-apps/plugin-http':
         specifier: ^2.5.9
         version: 2.5.9
@@ -1489,11 +1489,11 @@ packages:
     engines: {node: '>= 10'}
     hasBin: true
 
-  '@tauri-apps/plugin-dialog@2.6.0':
-    resolution: {integrity: sha512-q4Uq3eY87TdcYzXACiYSPhmpBA76shgmQswGkSVio4C82Sz2W4iehe9TnKYwbq7weHiL88Yw19XZm7v28+Micg==}
+  '@tauri-apps/plugin-dialog@2.7.2':
+    resolution: {integrity: sha512-pX0IGm1I3I6wc+zeKYcq1GSqogK6okCNX5fOdaNU5ab1AjGS6l1E5wFNjEb7meg7ZFSp0JUs+0jQGQNyOvLrsg==}
 
-  '@tauri-apps/plugin-fs@2.4.5':
-    resolution: {integrity: sha512-dVxWWGE6VrOxC7/jlhyE+ON/Cc2REJlM35R3PJX3UvFw2XwYhLGQVAIyrehenDdKjotipjYEVc4YjOl3qq90fA==}
+  '@tauri-apps/plugin-fs@2.5.1':
+    resolution: {integrity: sha512-9Lz+Jopp6QyeEWhlpkMx4R/+P9HgR+AVAI4vOZhlT8Xaymtz8iVI/Ov984/XTqgJz/5gz5NretqPB/XEMS3NhQ==}
 
   '@tauri-apps/plugin-http@2.5.9':
     resolution: {integrity: sha512-lCiY0+vs4HvIUSvZrBs8TC3TiCB0MOPRmiUjTq4prW7SlcJE2jdLeT6KBsJrT9Tlplufl7W1pY6SFAO3gCWxDA==}
@@ -5216,11 +5216,11 @@ snapshots:
       '@tauri-apps/cli-win32-ia32-msvc': 2.10.1
       '@tauri-apps/cli-win32-x64-msvc': 2.10.1
 
-  '@tauri-apps/plugin-dialog@2.6.0':
+  '@tauri-apps/plugin-dialog@2.7.2':
     dependencies:
       '@tauri-apps/api': 2.11.1
 
-  '@tauri-apps/plugin-fs@2.4.5':
+  '@tauri-apps/plugin-fs@2.5.1':
     dependencies:
       '@tauri-apps/api': 2.11.1
 

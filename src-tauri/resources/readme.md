@@ -1,1 +1,0 @@
-* Place xan.exe in the current path

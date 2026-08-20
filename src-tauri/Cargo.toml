@@ -10,8 +10,8 @@ rust-version = "1.94.0"
 tauri-build = { version = "^2", features = [] }
 
 [profile.release]
-lto = "fat"
-opt-level = 3
+lto = "thin"
+opt-level = "z"
 strip = true
 debug = false
 codegen-units = 1
@@ -27,22 +27,22 @@ tauri-plugin-window-state = "^2"
 tauri-plugin-notification = "^2"
 tauri-plugin-http = { version = "^2", features = ["default"] }
 tauri-plugin-prevent-default = { version = "^5", features = ["platform-windows"] }
-rusqlite = { version = "0.40.1", features = ["bundled"] }
-aes-gcm = "0.11.0"
-sha2 = "0.11.0"
-hex = "0.4"
+rusqlite = { version = "^0.40.2", features = ["bundled"] }
+aes-gcm = "^0.11.0"
+sha2 = "^0.11.0"
+hex = "^0.4"
 rand = "0.8"
-hostname = "0.4"
-whoami = "2.1.2"
-dirs = "6"
-csv = "1"
+hostname = "^0.4"
+whoami = "^2.1.2"
+dirs = "^6"
+csv = "^1.4"
 similar = "^3"
-encoding_rs = "0.8"
+encoding_rs = "^0.8"
 serde = { version = "^1", features = ["derive"] }
 serde_json = "^1"
-tokio = { version = "1.53.1", features = ["rt", "process"] }
-reqwest = { version = "0.13.4", features = ["json"] }
-chrono = "0.4.45"
+tokio = { version = "^1.53.1", features = ["rt", "process"] }
+reqwest = { version = "^0.13.4", features = ["json"] }
+chrono = "^0.4.45"
 
 [features]
 default = ["custom-protocol"]

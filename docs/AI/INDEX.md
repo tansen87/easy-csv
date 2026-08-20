@@ -78,7 +78,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `config.rs` | `AppConfig` 类型、SQLite 持久化(app_config/ai_config 表)、AES-256-GCM 加密存储 API Key、per-provider API Key 管理、自定义 AI provider 配置(provider=custom 时存 name/base_url/models)、配置相关命令 |
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
 | `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令、`set_pipeline_cancelled` 取消执行 |
-| `plugins.rs` | 外部 CLI 插件管理: `plugins` 表(plugins.db)持久化、`list_plugins`/`check_plugins` 命令、`command_executable` 按命令名解析可执行文件(插件命令走插件二进制,其余走 xan.exe)。插件二进制默认在 `<exe目录>/easy-csv_resources/plugin/`(`pinyin.exe` 编译期嵌入 `src-tauri/resources/plugin/`、首次自动解压),解析顺序: 路径 → `plugin/` 目录(含 `.exe` 补全)→ `PATH` |
+| `plugins.rs` | 外部 CLI 插件管理: `plugins` 表(plugins.db)持久化、`list_plugins`/`check_plugins` 命令、`command_executable` 按命令名解析可执行文件(插件命令走插件二进制,其余走 xan.exe)。`xan` 与 `pinyin` 默认注册进插件表,列表按 xan 置顶排序。插件二进制默认在 `<exe目录>/easy-csv_resources/plugins/`(`pinyin.exe`/`xan.exe` 编译期嵌入 `src-tauri/resources/plugins/`、首次自动解压),解析顺序: 路径 → `plugins/` 目录(含 `.exe` 补全)→ `PATH` |
 | `csv.rs` | `CsvData` 类型、`read_csv_file`/`profile_csv`/`diff_csv_files`/`convert_csv_encoding` 命令 |
 | `storage.rs` | 历史记录、最近文件、数据概况缓存、版本/血缘存储、窗口标题、开发者工具命令 |
 | `ai.rs` | AI 对话代理: `call_ai` 命令,转发到 DeepSeek / Qwen / GLM |

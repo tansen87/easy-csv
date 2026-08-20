@@ -1,12 +1,12 @@
 use crate::config::get_resources_dir;
 
 // Embed xan.exe binary at compile time
-const XAN_EXE_BYTES: &[u8] = include_bytes!("../resources/xan.exe");
+const XAN_EXE_BYTES: &[u8] = include_bytes!("../resources/plugins/xan.exe");
 
-/// Extract embedded xan.exe to resources directory
+/// Extract embedded xan.exe to the plugins directory
 fn extract_xan_executable() -> Result<String, String> {
   let resources_dir = get_resources_dir();
-  let xan_path = resources_dir.join("xan.exe");
+  let xan_path = resources_dir.join("plugins").join("xan.exe");
 
   // Check if already extracted and valid
   if xan_path.exists() {

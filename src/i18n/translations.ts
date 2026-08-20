@@ -220,8 +220,6 @@ export interface Translations {
   plugins: string;
   pluginDesc: string;
   pluginNone: string;
-  pluginCheck: string;
-  pluginChecking: string;
   pluginInstalled: string;
   pluginMissing: string;
 
@@ -499,11 +497,8 @@ export const translations: Record<Language, Translations> = {
 
     // Plugins
     plugins: "Plugins",
-    pluginDesc:
-      "Register external CLI plugins that can be used in pipelines alongside xan commands",
+    pluginDesc: "Register external CLI plugins",
     pluginNone: "No plugins registered",
-    pluginCheck: "Check Plugins",
-    pluginChecking: "Checking...",
     pluginInstalled: "Found",
     pluginMissing: "Not found",
 
@@ -773,10 +768,8 @@ export const translations: Record<Language, Translations> = {
 
     // Plugins
     plugins: "插件",
-    pluginDesc: "注册外部 CLI 插件,可在管道中与 xan 命令一起使用",
+    pluginDesc: "注册外部 CLI 插件",
     pluginNone: "暂无已注册插件",
-    pluginCheck: "检查插件",
-    pluginChecking: "检查中...",
     pluginInstalled: "已找到",
     pluginMissing: "未找到",
 

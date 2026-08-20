@@ -1,0 +1,1 @@
+* Place plugin (exe) in the current path
