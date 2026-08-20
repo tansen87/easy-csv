@@ -1,1 +1,0 @@
-* Place plugin in the current path
