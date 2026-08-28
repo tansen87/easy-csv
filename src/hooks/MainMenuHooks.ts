@@ -606,6 +606,20 @@ export function MainMenuHooks({
     try {
       await invoke("set_pipeline_cancelled", { cancel: false });
 
+      // Clear any previous step execution errors so stale errors don't remain
+      setTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === selectedTabId
+            ? {
+                ...tab,
+                pipeline: tab.pipeline.map((step) =>
+                  step.error ? { ...step, error: undefined } : step,
+                ),
+              }
+            : tab,
+        ),
+      );
+
       const outputStep = currentPipeline.find(
         (step) => step.command.id === "output",
       );
@@ -656,6 +670,9 @@ export function MainMenuHooks({
         error?: string;
         branchSteps: string[];
       }[] = [];
+
+      // Accumulate per-step execution errors to display on the nodes
+      const accumulatedErrors: Record<string, string> = {};
 
       let pipelineFailed = false;
       let wasCancelled = false;
@@ -748,7 +765,11 @@ export function MainMenuHooks({
                 ),
                 isPositional: param.isPositional,
               }));
-              return { name: step.command.name, parameters: params };
+              return {
+                name: step.command.name,
+                id: step.id,
+                parameters: params,
+              };
             });
 
             const preResult = await invoke<any>("execute_xan_pipeline", {
@@ -829,7 +850,11 @@ export function MainMenuHooks({
                   ),
                   isPositional: param.isPositional,
                 }));
-                return { name: step.command.name, parameters: params };
+                return {
+                  name: step.command.name,
+                  id: step.id,
+                  parameters: params,
+                };
               });
 
               const preResult = await invoke<any>("execute_xan_pipeline", {
@@ -936,6 +961,7 @@ export function MainMenuHooks({
 
             return {
               name: step.command.name,
+              id: step.id,
               parameters: params,
             };
           });
@@ -966,6 +992,17 @@ export function MainMenuHooks({
           error: result.error,
           branchSteps: branchStepNames,
         });
+
+        // Merge per-step errors from this branch
+        const stepErrors = result.step_errors as
+          | Record<string, string>
+          | undefined;
+        if (stepErrors) {
+          for (const stepId in stepErrors) {
+            const err = stepErrors[stepId];
+            if (err) accumulatedErrors[stepId] = err;
+          }
+        }
 
         setBranchProgress({
           current: i + 1,
@@ -998,6 +1035,26 @@ export function MainMenuHooks({
         const headers = currentTab.headers || [];
         const rows = currentTab.data || [];
         trackLineage(currentPipeline, edges, headers, rows);
+      }
+
+      // Apply per-step execution errors so they render on the nodes
+      if (Object.keys(accumulatedErrors).length > 0) {
+        setTabs((prev) =>
+          prev.map((tab) =>
+            tab.id === selectedTabId
+              ? {
+                  ...tab,
+                  pipeline: tab.pipeline.map((step) => {
+                    const err = accumulatedErrors[step.id];
+                    if (err !== undefined) {
+                      return { ...step, error: err };
+                    }
+                    return step;
+                  }),
+                }
+              : tab,
+          ),
+        );
       }
 
       const successCount = allResults.filter((r) => r.success).length;

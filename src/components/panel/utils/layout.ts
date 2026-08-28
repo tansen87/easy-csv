@@ -313,13 +313,18 @@ export function getLayoutedElements(
   }
 
   steps.forEach((step) => {
-    dagreGraph.setNode(step.id, { width: 240, height: 90 });
+    // Estimate the node height, expanding it when an execution error is shown
+    const errorLines = step.error
+      ? Math.max(1, Math.ceil(step.error.length / 42))
+      : 0;
+    const nodeHeight = 90 + errorLines * 16;
+    dagreGraph.setNode(step.id, { width: 240, height: nodeHeight });
     nodes.push({
       id: step.id,
       type: "pipelineStep",
       position: step.position || { x: 0, y: 0 },
       width: 240,
-      height: 90,
+      height: nodeHeight,
       data: {
         step,
         onStepClick,

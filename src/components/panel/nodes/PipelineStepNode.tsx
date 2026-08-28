@@ -262,6 +262,15 @@ export function PipelineStepNode({
         className="!w-3 !h-3 !bg-primary/50 !border-2 !border-background opacity-0"
         style={{ opacity: 0, pointerEvents: "none" }}
       />
+      {data.step.error && (
+        <div
+          className="mx-2 mb-2 px-2 py-1 rounded bg-red-500/10 border border-red-500/40 text-[9px] text-red-600 dark:text-red-400 break-words nodrag"
+          style={{ wordBreak: "break-word" }}
+          title={data.step.error}
+        >
+          {data.step.error}
+        </div>
+      )}
     </>
   );
 
@@ -269,9 +278,9 @@ export function PipelineStepNode({
     selected
       ? "bg-card/100 border-emerald-700/80 shadow-md ring-2 ring-emerald-700/30"
       : "bg-card/95 hover:bg-accent/30 border-border/60 hover:border-primary/30"
-  } ${data.isPendingDelete ? "border-orange-500" : ""} ${data.isHighlighted ? "ring-2 ring-primary ring-offset-2 animate-pulse-once" : ""}`;
+  } ${data.step.error ? "border-red-500/70 shadow-md ring-2 ring-red-500/30" : ""} ${data.isPendingDelete ? "border-orange-500" : ""} ${data.isHighlighted ? "ring-2 ring-primary ring-offset-2 animate-pulse-once" : ""}`;
 
-  // 如果有切割部分,渲染两个切割碎片
+  // If there is a cutting section, render two cutting fragments
   if (data.cutParts && data.cutParts.length > 0) {
     return (
       <div className="relative w-[220px]" style={{ height: "auto" }}>

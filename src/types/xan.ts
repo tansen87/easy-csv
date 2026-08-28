@@ -34,6 +34,8 @@ export interface PipelineStep {
   parameters: Record<string, any>;
   alias?: string;
   position?: { x: number; y: number };
+  /** Execution error message, displayed on the node when set */
+  error?: string;
 }
 
 export interface StoredPipelineStep {
