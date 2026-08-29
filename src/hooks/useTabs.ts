@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { PipelineTab } from "@/types/xan";
 import { formatDateTime } from "@/utils/format";
@@ -152,11 +152,12 @@ export function useTabs(
       }
 
       try {
+        const delimiter = customDelimiter || defaultDelimiter;
         const data = await invoke<{ headers: string[]; rows: string[][] }>(
           "read_csv_file",
           {
             filePath,
-            delimiter: customDelimiter || defaultDelimiter,
+            delimiter,
             limit: 31,
           },
         );
@@ -166,6 +167,7 @@ export function useTabs(
               ? {
                   ...tab,
                   data: data.rows,
+                  defaultDelimiter: delimiter,
                   headers: data.headers,
                   inputFile: filePath,
                   updatedAt: formatDateTime(new Date()),
@@ -180,23 +182,20 @@ export function useTabs(
     [defaultDelimiter, addLog, saveRecentFiles],
   );
 
-  // 当分割符变化时,自动重新加载当前tab的数据
-  const defaultDelimiterRef = useRef(defaultDelimiter);
-  defaultDelimiterRef.current = defaultDelimiter;
-
+  // Automatically reload the data of the current tab when the delimiter changes
   useEffect(() => {
     const currentTab = tabs.find((t) => t.id === selectedTabId);
     if (currentTab?.inputFile && isCsvFile(currentTab.inputFile)) {
-      loadCsvData(selectedTabId, currentTab.inputFile);
+      loadCsvData(selectedTabId, currentTab.inputFile, defaultDelimiter);
     }
   }, [defaultDelimiter, selectedTabId]);
 
-  // 初始化时加载最近文件
+  // Load recent files during initialization
   useEffect(() => {
     loadRecentFiles();
   }, []);
 
-  // 自动选中第一个 tab
+  // Automatically select the first tab
   useEffect(() => {
     if (tabs.length > 0 && !tabs.find((t) => t.id === selectedTabId)) {
       setSelectedTabId(tabs[0].id);

@@ -266,7 +266,6 @@ export function PipelineStepNode({
         <div
           className="mx-2 mb-2 px-2 py-1 rounded bg-red-500/10 border border-red-500/40 text-[9px] text-red-600 dark:text-red-400 break-words nodrag"
           style={{ wordBreak: "break-word" }}
-          title={data.step.error}
         >
           {data.step.error}
         </div>
