@@ -112,15 +112,7 @@ const INTENT_ROUTES: IntentRoute[] = [
       "非空",
       "过滤",
     ],
-    synonyms: [
-      "search",
-      "find",
-      "filter",
-      "select",
-      "query",
-      "locate",
-      "检索",
-    ],
+    synonyms: ["search", "find", "filter", "select", "query", "locate", "检索"],
     commands: ["search", "filter"],
   },
   {
@@ -306,13 +298,7 @@ const INTENT_ROUTES: IntentRoute[] = [
   {
     intent: "格式/分隔符",
     keywords: ["格式", "分隔符", "转换格式", "制表符"],
-    synonyms: [
-      "format",
-      "delimiter",
-      "tab",
-      "制表符",
-      "分隔",
-    ],
+    synonyms: ["format", "delimiter", "tab", "制表符", "分隔"],
     commands: ["fmt", "from", "to", "input"],
   },
   {
@@ -601,13 +587,25 @@ interface ClarificationPattern {
   pattern: RegExp;
   question: string;
   options: string[];
+  /**
+   * When the query already answers the question, asking again is noise.
+   * e.g. "分别统计销售额、成本、利润的总和" already states the aggregation.
+   */
+  skipIf?: RegExp;
 }
+
+/** Aggregation functions the user may state explicitly in the query. */
+const EXPLICIT_AGGREGATION =
+  /总和|求和|合计|总计|累加|平均|均值|average|avg|计数|数量|个数|条数|count|最大|最小|max|min|极值|中位数|median|方差|标准差|stddev|sum/i;
 
 const CLARIFICATION_PATTERNS: ClarificationPattern[] = [
   {
     pattern: /拆分.+/i,
     question: "您是想按行拆分,还是按条件拆分为多个文件?",
-    options: ["按行拆分为多个文件(split)", "按条件拆分为多个文件(batch-filter)"],
+    options: [
+      "按行拆分为多个文件(split)",
+      "按条件拆分为多个文件(batch-filter)",
+    ],
   },
   {
     pattern: /转换.+(?:格式|excel|json|html)/i,
@@ -617,7 +615,11 @@ const CLARIFICATION_PATTERNS: ClarificationPattern[] = [
   {
     pattern: /合并.+(?:文件|多个)/i,
     question: "您想如何合并文件?",
-    options: ["按行拼接(上下合并)", "按列拼接(左右合并)", "按关键列关联(类似SQL JOIN)"],
+    options: [
+      "按行拼接(上下合并)",
+      "按列拼接(左右合并)",
+      "按关键列关联(类似SQL JOIN)",
+    ],
   },
   {
     pattern: /排序.+(?:多列|多个)/i,
@@ -633,6 +635,7 @@ const CLARIFICATION_PATTERNS: ClarificationPattern[] = [
     pattern: /统计|聚合|汇总/i,
     question: "您想统计什么?",
     options: ["计数", "求和", "平均值", "最大/最小值", "自定义聚合"],
+    skipIf: EXPLICIT_AGGREGATION,
   },
   {
     pattern: /导出|保存|输出/i,
@@ -658,13 +661,14 @@ function detectClarificationNeed(
   const query = userMessage.toLowerCase();
 
   for (const pattern of CLARIFICATION_PATTERNS) {
-    if (pattern.pattern.test(query)) {
-      return {
-        needed: true,
-        question: pattern.question,
-        options: pattern.options,
-      };
-    }
+    if (!pattern.pattern.test(query)) continue;
+    // The query already contains the answer this pattern would ask for.
+    if (pattern.skipIf && pattern.skipIf.test(query)) continue;
+    return {
+      needed: true,
+      question: pattern.question,
+      options: pattern.options,
+    };
   }
 
   return { needed: false };
@@ -726,6 +730,9 @@ export async function buildSystemPrompt(
     - 参数名用短横线形式(如 select → -s);-r(regex)、-e(exact) 是flag类型参数,后面不接值,模式内容始终放在pattern(-p)中.
     - 创建新列时必须使用as指定列名(如map、groupby、agg命令).示例: 用户"根据debit-credit得到amount" → {"command":"map","parameters":{"expression":"col(\\"debit\\") - col(\\"credit\\") as amount"},"explanation":"计算debit减去credit得到amount列"}.严禁省略as.
     - groupby/agg的expression参数必须包含as子句.示例: 用户"按地区汇总销售额" → {"command":"groupby","parameters":{"columns":"region","expression":"sum(sales) as sales"},"explanation":"按地区汇总销售额"}.严禁写成'sum(sales)'而缺少'as sales'.
+    - 需求是"对多列做同一种聚合"(如"分别统计A、B、C的总和"、"同时求X、Y的平均值")时,必须用[一条]agg命令:expression 用英文逗号拼接多个聚合表达式,每个都要有 as 别名.严禁拆成多条 agg 命令——agg 的输出只有一行,串联会让后续步骤基于已聚合的单行重复计算.示例: 用户"分别统计销售额、成本、利润的总和" -> {"command":"agg","parameters":{"expression":"sum(col(\\"销售额\\")) as \"销售额_总和\", sum(col(\\"成本\\")) as \"成本_总和\", sum(col(\\"利润\\")) as \"利润_总和\""},"explanation":"一次性统计三列的总和"}.中文列名请用 col("列名") 形式引用,以保证表达式可解析.
+    - 特别注意括号匹配: as 别名必须写在函数括号[外面].正确: sum(col("销售额")) as "销售额_总和" ;错误: sum(col("销售额") as "销售额_总和") - 别名被包进括号会导致括号不闭合.
+    - 别名含中文、空格或特殊字符时,必须用[双引号]包裹.正确: sum(col("销售额")) as "销售额_总和"、max(x) as "Max Replies";仅由英文字母/数字/下划线组成的别名(如 total、sales_sum)可不加引号.
     - 需求"合并/拼接某目录下所有CSV文件为1个CSV"时,用cat命令:mode=rows(按行拼接),勾选union(合并各文件列头),glob填目录通配符(如D:\test\*.csv).不要用join、merge或output.示例: 用户"合并D:\test所有的csv文件为1个csv" → {"command":"cat","parameters":{"mode":"rows","union":true,"glob":"D:\\\\test\\\\*.csv"},"explanation":"合并D:\\test下所有csv文件为1个csv"}`);
 
   sections.push(`
@@ -886,9 +893,8 @@ export async function buildFullPrompt(
 ): Promise<{ role: "system" | "user" | "assistant"; content: string }[]> {
   const systemPrompt = await buildSystemPrompt(context, userMessage);
 
-  const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
-    { role: "system" as const, content: systemPrompt },
-  ];
+  const messages: { role: "system" | "user" | "assistant"; content: string }[] =
+    [{ role: "system" as const, content: systemPrompt }];
 
   // Add conversation history if available
   if (context.conversationHistory && context.conversationHistory.length > 0) {

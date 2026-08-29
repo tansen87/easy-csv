@@ -137,7 +137,133 @@ function parseJSONBlock(
   return parsed.length > 0 ? { parsed, endIndex: lastIndex } : null;
 }
 
-function parseAIResponse(content: string, usage?: TokenUsage): AIResponse {
+/** Split on commas that are not nested inside parentheses or quotes. */
+function splitTopLevel(input: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+  let quote: string | null = null;
+
+  for (const ch of input) {
+    if (quote) {
+      current += ch;
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      current += ch;
+      continue;
+    }
+    if (ch === "(") depth++;
+    else if (ch === ")") depth--;
+    if (ch === "," && depth === 0) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += ch;
+  }
+  parts.push(current);
+  return parts;
+}
+
+/**
+ * Matches `sum(col("x") as total)` — an alias wrongly placed inside the call.
+ * A correctly written `sum(col("x")) as total` does NOT match, because the
+ * string then ends with the alias rather than with a closing parenthesis.
+ */
+const MISPLACED_ALIAS =
+  /^([A-Za-z_]\w*)\(((?:\([^()]*\)|[^()])*)\s+as\s+([^()]+)\)$/;
+
+/**
+ * An alias only needs quotes when it is not a plain identifier: Chinese
+ * names, spaces or punctuation all require them (`xan agg 'sum(n) as sum,
+ * max(x) as "Max Replies"'`).
+ */
+function quoteAlias(alias: string): string {
+  if (!alias) return alias;
+  const alreadyQuoted =
+    (alias.startsWith('"') && alias.endsWith('"')) ||
+    (alias.startsWith("'") && alias.endsWith("'"));
+  if (alreadyQuoted) return alias;
+  return /[^A-Za-z0-9_]/.test(alias) ? `"${alias}"` : alias;
+}
+
+/** Index of the top-level ` as ` (ignoring nested calls and string literals). */
+function findTopLevelAs(segment: string): number {
+  let depth = 0;
+  let quote: string | null = null;
+
+  for (let i = 0; i < segment.length; i++) {
+    const ch = segment[i];
+    if (quote) {
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (ch === "(") {
+      depth++;
+      continue;
+    }
+    if (ch === ")") {
+      depth--;
+      continue;
+    }
+    if (depth === 0 && ch === " " && /^as\s/.test(segment.slice(i + 1))) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function normalizeSegment(segment: string): string {
+  // 1. Move an alias that was written inside the function call back out.
+  const misplaced = segment.match(MISPLACED_ALIAS);
+  const fixed = misplaced
+    ? `${misplaced[1]}(${misplaced[2]}) as ${misplaced[3]}`
+    : segment;
+
+  // 2. Quote the alias when it is not a plain identifier.
+  const asIndex = findTopLevelAs(fixed);
+  if (asIndex === -1) return fixed;
+  const match = fixed.slice(asIndex).match(/^\s+as\s+(.+)$/);
+  if (!match) return fixed;
+  return `${fixed.slice(0, asIndex)} as ${quoteAlias(match[1].trim())}`;
+}
+
+/**
+ * Repairs `as` aliases in an expression:
+ * - `sum(col("x") as total)`  -> `sum(col("x")) as total`
+ * - `sum(col("x")) as 销售额`  -> `sum(col("x")) as "销售额"`
+ */
+export function normalizeExpressionAliases(expression: string): string {
+  if (!expression) return expression;
+
+  return splitTopLevel(expression)
+    .map((part) => normalizeSegment(part.trim()))
+    .join(", ");
+}
+
+/** Applies alias repair to every command carrying an expression. */
+function withNormalizedExpressions(commands: AICommand[]): AICommand[] {
+  return commands.map((cmd) => {
+    const expression = cmd.parameters?.expression;
+    if (typeof expression !== "string") return cmd;
+    const normalized = normalizeExpressionAliases(expression);
+    return normalized === expression
+      ? cmd
+      : { ...cmd, parameters: { ...cmd.parameters, expression: normalized } };
+  });
+}
+
+export function parseAIResponse(
+  content: string,
+  usage?: TokenUsage,
+): AIResponse {
   const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/g;
   const commands: AICommand[] = [];
   let lastIndex = 0;
@@ -198,7 +324,12 @@ function parseAIResponse(content: string, usage?: TokenUsage): AIResponse {
 
   if (commands.length > 0) {
     const remaining = content.slice(lastIndex).trim();
-    return { content: remaining, commands, suggestion, usage };
+    return {
+    content: remaining,
+    commands: withNormalizedExpressions(commands),
+    suggestion,
+    usage,
+  };
   }
 
   // Parse numbered format outside code blocks
@@ -217,7 +348,12 @@ function parseAIResponse(content: string, usage?: TokenUsage): AIResponse {
     });
     if (commands.length > 0) {
       const remaining = numberedContent.slice(result.endIndex).trim();
-      return { content: remaining, commands, suggestion, usage };
+      return {
+    content: remaining,
+    commands: withNormalizedExpressions(commands),
+    suggestion,
+    usage,
+  };
     }
   }
 
