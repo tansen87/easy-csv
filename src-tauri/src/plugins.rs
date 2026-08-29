@@ -20,7 +20,7 @@ pub fn get_plugin_dir() -> std::path::PathBuf {
 
 /// Extract embedded plugin binaries to `<resources>/plugins/` on first use.
 #[cfg(target_os = "windows")]
-fn ensure_default_plugins_extracted() -> Result<String, String> {
+pub fn ensure_default_plugins_extracted() -> Result<String, String> {
   let plugin_dir = get_plugin_dir();
   let pinyin_path = plugin_dir.join("pinyin.exe");
 
@@ -37,6 +37,15 @@ fn ensure_default_plugins_extracted() -> Result<String, String> {
     .map_err(|e| format!("Failed to extract pinyin plugin: {}", e))?;
 
   Ok(pinyin_path.to_string_lossy().to_string())
+}
+
+/// Ensure the default plugin binaries (xan.exe + pinyin.exe) are present in
+/// `<resources>/plugins/`. Called proactively at startup so the folder is
+/// populated reliably, regardless of which lazy path runs first.
+pub fn ensure_plugins_extracted() {
+  #[cfg(target_os = "windows")]
+  let _ = ensure_default_plugins_extracted();
+  let _ = crate::xan::extract_xan_executable();
 }
 
 /// A registered CLI plugin. `name` is the command name used inside pipelines

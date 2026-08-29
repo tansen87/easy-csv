@@ -25,6 +25,11 @@ fn main() {
     )
     .invoke_handler(easy_csv::invoke_handler())
     .setup(|app| {
+      // Extract the embedded default plugins (xan.exe + pinyin.exe) to
+      // `<exe_dir>/easy-csv_resources/plugins/` on startup so they are
+      // available before the first command runs.
+      easy_csv::plugins::ensure_plugins_extracted();
+
       let show_item = MenuItem::with_id(app, "show", "show", true, None::<&str>)?;
       let quit_item = MenuItem::with_id(app, "quit", "quit", true, None::<&str>)?;
       let tray_menu = Menu::with_items(app, &[&show_item, &quit_item])?;

@@ -4,9 +4,10 @@ use crate::config::get_resources_dir;
 const XAN_EXE_BYTES: &[u8] = include_bytes!("../resources/plugins/xan.exe");
 
 /// Extract embedded xan.exe to the plugins directory
-fn extract_xan_executable() -> Result<String, String> {
+pub fn extract_xan_executable() -> Result<String, String> {
   let resources_dir = get_resources_dir();
-  let xan_path = resources_dir.join("plugins").join("xan.exe");
+  let plugin_dir = resources_dir.join("plugins");
+  let xan_path = plugin_dir.join("xan.exe");
 
   // Check if already extracted and valid
   if xan_path.exists() {
@@ -18,11 +19,10 @@ fn extract_xan_executable() -> Result<String, String> {
     }
   }
 
-  // Create resources directory if it doesn't exist
-  if !resources_dir.exists() {
-    std::fs::create_dir_all(&resources_dir)
-      .map_err(|e| format!("Failed to create resources directory: {}", e))?;
-  }
+  // Create the plugin directory (and resources dir) so the write never
+  // fails with a missing parent directory
+  std::fs::create_dir_all(&plugin_dir)
+    .map_err(|e| format!("Failed to create plugin directory: {}", e))?;
 
   // Extract xan.exe
   std::fs::write(&xan_path, XAN_EXE_BYTES)
