@@ -79,20 +79,14 @@ export function SearchForm(props: CommandFormProps) {
         />
       </div>
       <div className="grid grid-cols-5 gap-2">
-        {["keep", "lines", "exact", "regex", "url-prefix"].map((n) => (
-          <Checkbox
-            key={n}
-            name={n}
-            commandDialog={commandDialog}
-            setCommandDialog={setCommandDialog}
-          />
-        ))}
-      </div>
-      <div className="grid grid-cols-5 gap-2">
         {[
+          "ignore-case",
+          "invert-match",
+          "exact",
+          "regex",
+          "url-prefix",
           "non-empty",
           "empty",
-          "ignore-case",
           "parallel",
           "fast-parser",
           "every-column",

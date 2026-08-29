@@ -90,6 +90,15 @@ export const AIPanel = React.memo(function AIPanel({
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Timestamps are used as React keys, so they must be strictly increasing.
+  const lastTimestampRef = useRef(0);
+  const nextTimestamp = useCallback(() => {
+    const now = Math.max(Date.now(), lastTimestampRef.current + 1);
+    lastTimestampRef.current = now;
+    return now;
+  }, []);
+  // Assistant message currently receiving streamed chunks (null when idle).
+  const streamingRef = useRef<AIMessage | null>(null);
 
   const autoResizeTextarea = useCallback(() => {
     const textarea = inputRef.current;
@@ -141,13 +150,43 @@ export const AIPanel = React.memo(function AIPanel({
     const userMessage: AIMessage = {
       role: "user",
       content: messageToSend,
-      timestamp: Date.now(),
+      timestamp: nextTimestamp(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
     setIsLoading(true);
     setIsExpanded(true);
+
+    // Placeholder that receives the streamed deltas as they arrive.
+    const placeholder: AIMessage = {
+      role: "assistant",
+      content: "",
+      timestamp: nextTimestamp(),
+    };
+    streamingRef.current = placeholder;
+    setMessages((prev) => [...prev, placeholder]);
+
+    const onChunk = (delta: string) => {
+      const target = streamingRef.current;
+      if (!target) return;
+      const updated = { ...target, content: target.content + delta };
+      streamingRef.current = updated;
+      setMessages((prev) => prev.map((m) => (m === target ? updated : m)));
+    };
+
+    // Replaces the placeholder with the final (formatted) message.
+    const finalizeStream = (content: string): AIMessage => {
+      const target = streamingRef.current;
+      streamingRef.current = null;
+      const final: AIMessage = target
+        ? { ...target, content }
+        : { role: "assistant", content, timestamp: nextTimestamp() };
+      setMessages((prev) =>
+        target ? prev.map((m) => (m === target ? final : m)) : [...prev, final],
+      );
+      return final;
+    };
 
     // Add to conversation history
     const updatedHistory = [...conversationHistory, userMessage];
@@ -164,6 +203,7 @@ export const AIPanel = React.memo(function AIPanel({
         userMessage.content,
         messageContext,
         conversationHistory,
+        onChunk,
       );
 
       if (response.usage) {
@@ -183,12 +223,7 @@ export const AIPanel = React.memo(function AIPanel({
           originalQuery: userMessage.content,
         });
 
-        const assistantMessage: AIMessage = {
-          role: "assistant",
-          content: response.clarification,
-          timestamp: Date.now(),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
+        const assistantMessage = finalizeStream(response.clarification);
         setConversationHistory((prev) => [...prev, assistantMessage]);
         return;
       }
@@ -207,20 +242,15 @@ export const AIPanel = React.memo(function AIPanel({
             .join("\n")
         : "";
 
-      const assistantMessage: AIMessage = {
-        role: "assistant",
-        content:
-          (response.suggestion
-            ? `💡suggestion: ${response.suggestion}\n\n`
-            : "") +
+      const assistantMessage = finalizeStream(
+        (response.suggestion
+          ? `💡suggestion: ${response.suggestion}\n\n`
+          : "") +
           (response.content ||
             commandsText ||
             response.error ||
             "Sorry, I didn't understand your request."),
-        timestamp: Date.now(),
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
+      );
       setConversationHistory((prev) => [...prev, assistantMessage]);
 
       // Save conversation history
@@ -255,14 +285,12 @@ export const AIPanel = React.memo(function AIPanel({
         }
       }
     } catch (error) {
-      const errorMessage: AIMessage = {
-        role: "assistant",
-        content: `${error instanceof Error ? error.message : "Unknown error"}`,
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      const errorMessage = finalizeStream(
+        `${error instanceof Error ? error.message : "Unknown error"}`,
+      );
       setConversationHistory((prev) => [...prev, errorMessage]);
     } finally {
+      streamingRef.current = null;
       setIsLoading(false);
     }
   };
@@ -367,6 +395,8 @@ export const AIPanel = React.memo(function AIPanel({
   const renderMessage = (message: AIMessage, index: number) => {
     const isUser = message.role === "user";
     const feedback = feedbackState[index];
+    // While loading, the trailing assistant message is the one being streamed.
+    const isStreaming = isLoading && !isUser && index === messages.length - 1;
 
     return (
       <div
@@ -383,6 +413,12 @@ export const AIPanel = React.memo(function AIPanel({
         >
           <div className="whitespace-pre-wrap break-words">
             {message.content}
+            {isStreaming && (
+              <span
+                aria-hidden="true"
+                className="inline-block w-1.5 h-3.5 ml-0.5 align-middle bg-primary animate-pulse"
+              />
+            )}
           </div>
           <button
             onClick={() => handleCopy(message.content, message.timestamp)}

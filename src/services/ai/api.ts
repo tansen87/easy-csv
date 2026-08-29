@@ -13,6 +13,8 @@ interface BackendAIRequest {
   api_key: string;
   provider: string;
   base_url?: string;
+  /** Correlates the `ai-stream` events with this request. */
+  request_id?: string;
 }
 
 interface BackendAIResponse {
@@ -25,10 +27,42 @@ interface BackendAIResponse {
   };
 }
 
+/** Payload of the `ai-stream` event emitted by the Rust backend. */
+interface AIStreamEvent {
+  request_id: string;
+  delta?: string | null;
+  done: boolean;
+  error?: string | null;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  } | null;
+}
+
 export async function callAI(
   messages: AIMessage[],
   config: AIConfig,
+  onChunk?: (delta: string) => void,
 ): Promise<AIResponse> {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  let unlisten: (() => void) | undefined;
+
+  // Subscribe before sending so no chunk is missed. The listener is optional:
+  // if event support is unavailable we simply fall back to a single response.
+  if (onChunk) {
+    try {
+      const { listen } = await import("@tauri-apps/api/event");
+      unlisten = await listen<AIStreamEvent>("ai-stream", (event) => {
+        const payload = event.payload;
+        if (!payload || payload.request_id !== requestId) return;
+        if (payload.delta) onChunk(payload.delta);
+      });
+    } catch {
+      // ignore: streaming is an enhancement, not a requirement
+    }
+  }
+
   try {
     const request: BackendAIRequest = {
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
@@ -36,6 +70,7 @@ export async function callAI(
       api_key: config.apiKey,
       provider: config.provider,
       base_url: config.baseUrl || undefined,
+      request_id: requestId,
     };
 
     const response = await invoke<BackendAIResponse>("call_ai", {
@@ -52,6 +87,8 @@ export async function callAI(
       content: "",
       error: `network error: ${error instanceof Error ? error.message : "Unknown error"}`,
     };
+  } finally {
+    unlisten?.();
   }
 }
 

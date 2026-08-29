@@ -174,6 +174,7 @@ export async function sendAIMessage(
   userMessage: string,
   context: AIContext,
   conversationHistory: AIMessage[] = [],
+  onChunk?: (delta: string) => void,
 ): Promise<AIResponse> {
   if (!currentConfig.apiKey) {
     return {
@@ -218,7 +219,7 @@ export async function sendAIMessage(
     timestamp: Date.now(),
   }));
 
-  return await callAI(allMessages, currentConfig);
+  return await callAI(allMessages, currentConfig, onChunk);
 }
 
 export function isAIConfigured(): boolean {

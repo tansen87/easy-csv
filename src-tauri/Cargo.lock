@@ -1124,6 +1124,7 @@ dependencies = [
  "csv",
  "dirs",
  "encoding_rs",
+ "futures-util",
  "hex",
  "hostname",
  "rand 0.8.7",
