@@ -15,6 +15,7 @@ export const helpContentEn = `
 ### Keyboard Shortcuts
 | Shortcut | Action |
 |----------|--------|
+| \`Ctrl\` + \`K\` | Command Palette |
 | \`Ctrl\` + \`O\` | Open |
 | \`Ctrl\` + \`N\` | Open New Tab |
 | \`Ctrl\` + \`S\` | Save as script |
@@ -23,13 +24,11 @@ export const helpContentEn = `
 | \`Ctrl\` + \`Z\` | Undo |
 | \`Ctrl\` + \`Y\` | Redo |
 | \`Ctrl\` + \`R\` | Execute |
-| \`Ctrl\` + \`K\` | Command Palette |
 | \`Shift\` + \`H\` | Show help |
 | \`Shift\` + \`C\` | Check for updates |
 | \`Shift\` + \`S\` | Open settings |
 | \`Alt\` + \`C\` | Command |
 | \`Alt\` + \`Q\` | Logs |
-| \`Alt\` + \`D\` | Data Profile |
 | \`Alt\` + \`A\` | AI Assistant |
 | \`F5\` | Refresh |
 `;

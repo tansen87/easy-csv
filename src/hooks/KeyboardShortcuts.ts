@@ -14,7 +14,6 @@ interface KeyboardShortcutCallbacks {
   onShowSettings: () => void;
   onCommands: () => void;
   onLogs: () => void;
-  onDataProfile: () => void;
   onAI: () => void;
   onCommandPalette: () => void;
 }
@@ -102,9 +101,6 @@ export function useKeyboardShortcuts(
       } else if (alt && key === "q") {
         e.preventDefault();
         callbacksRef.current.onLogs();
-      } else if (alt && key === "d") {
-        e.preventDefault();
-        callbacksRef.current.onDataProfile();
       } else if (alt && key === "a") {
         e.preventDefault();
         callbacksRef.current.onAI();

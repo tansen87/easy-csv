@@ -708,7 +708,6 @@ function AppContent() {
       onShowSettings: () => ui.setShowSettingsDialog(true),
       onCommands: () => ui.setShowCommandPanel(!ui.showCommandPanel),
       onLogs: () => ui.setShowLogPanel(!ui.showLogPanel),
-      onDataProfile: () => ui.setShowDataProfile(!ui.showDataProfile),
       onAI: () => ui.setShowAIPanel(!ui.showAIPanel),
       onCommandPalette: () => ui.setShowCommandPalette(!ui.showCommandPalette),
     },
@@ -985,7 +984,6 @@ function AppContent() {
         label: t.dataProfile,
         icon: BarChart3,
         group: t.paletteActions,
-        shortcut: "Alt+D",
         disabled: !hasInputFile,
         onSelect: onToggleDataProfile,
       },
@@ -1017,7 +1015,6 @@ function AppContent() {
         description: t.csvDiffNoResult,
         icon: GitCompareArrows,
         group: t.paletteActions,
-        shortcut: "Ctrl+D",
         onSelect: () => {
           ui.setCsvDiffInitialFileA(
             tabsHook.getCurrentTab()?.inputFile || undefined,
