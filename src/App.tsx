@@ -38,7 +38,6 @@ import { CsvDiffDialog } from "@/components/dialog/CsvDiffDialog";
 import { CsvEncodingDialog } from "@/components/dialog/CsvEncodingDialog";
 import { DataProfilePanel } from "@/components/panel/DataProfilePanel";
 import { AIPanel } from "@/components/panel/AIPanel";
-import { useTheme } from "@/components/setting/ThemeProvider";
 import { ToastContainer } from "@/components/setting/Toast";
 import { CommandList } from "@/components/CommandList";
 import { CommandPalette, type PaletteItem } from "@/components/CommandPalette";
@@ -83,7 +82,6 @@ function App() {
 }
 
 function AppContent() {
-  const { theme, setTheme } = useTheme();
   const { language, t } = useLanguage();
 
   // Toast
@@ -753,6 +751,42 @@ function AppContent() {
     [tabsHook.setTabs],
   );
 
+  // Stable HomeView callbacks so the memoized HomeView (and the React Flow
+  // canvas beneath it) do not re-render on unrelated context changes (theme,
+  // language). Inline arrows below would otherwise defeat React.memo.
+  const onOpenBatchFilter = useCallback(
+    (x: number, y: number) => ui.setBatchFilterDialog({ x, y }),
+    [ui],
+  );
+
+  const onToggleVersionPanel = useCallback(
+    () => ui.setShowVersionPanel(!ui.showVersionPanel),
+    [ui.showVersionPanel],
+  );
+
+  const onToggleLineagePanel = useCallback(
+    () => ui.setShowLineagePanel(!ui.showLineagePanel),
+    [ui.showLineagePanel],
+  );
+
+  const onOpenCommandPalette = useCallback(
+    () => ui.setShowCommandPalette(true),
+    [ui],
+  );
+
+  const currentTab = tabsHook.getCurrentTab();
+
+  const currentSnapshot = useMemo(
+    () =>
+      currentTab
+        ? {
+            steps: (currentTab.pipeline || []).map(stripStepCommand),
+            edges: currentTab.edges || [],
+          }
+        : undefined,
+    [currentTab],
+  );
+
   const onOpenRecentFile = useCallback(
     async (filePath: string) => {
       const fileExists = await invoke<boolean>("file_exists", { filePath });
@@ -1154,7 +1188,7 @@ function AppContent() {
                 onInputPositionChange={onInputPositionChange}
                 onOpenFile={handleOpenFile}
                 onImportPipeline={handleImportPipeline}
-                onOpenBatchFilter={(x, y) => ui.setBatchFilterDialog({ x, y })}
+                onOpenBatchFilter={onOpenBatchFilter}
                 onOpenUrl={handleOpenUrl}
                 branchProgress={ui.branchProgress}
                 showProgressBar={ui.showProgressBar}
@@ -1165,24 +1199,11 @@ function AppContent() {
                 reactFlowInstanceRef={reactFlowInstanceRef}
                 showVersionPanel={ui.showVersionPanel}
                 showLineagePanel={ui.showLineagePanel}
-                onToggleVersionPanel={() =>
-                  ui.setShowVersionPanel(!ui.showVersionPanel)
-                }
-                onToggleLineagePanel={() =>
-                  ui.setShowLineagePanel(!ui.showLineagePanel)
-                }
+                onToggleVersionPanel={onToggleVersionPanel}
+                onToggleLineagePanel={onToggleLineagePanel}
                 versions={versionsHook.getCurrentVersions()}
                 currentVersionId={tabsHook.getCurrentTab()?.currentVersionId}
-                currentSnapshot={
-                  tabsHook.getCurrentTab()
-                    ? {
-                        steps: (tabsHook.getCurrentTab()?.pipeline || []).map(
-                          stripStepCommand,
-                        ),
-                        edges: tabsHook.getCurrentTab()?.edges || [],
-                      }
-                    : undefined
-                }
+                currentSnapshot={currentSnapshot}
                 onSaveVersion={handleSaveVersionAndMarkSaved}
                 onRestoreVersion={versionsHook.restoreVersion}
                 onDeleteVersion={versionsHook.deleteVersion}
@@ -1197,7 +1218,7 @@ function AppContent() {
                 pipelineSavedAt={pipelineSavedAt}
                 doubleClickFitView={settings.doubleClickFitView}
                 onSavePipeline={handleSavePipelineAndMarkSaved}
-                onOpenCommandPalette={() => ui.setShowCommandPalette(true)}
+                onOpenCommandPalette={onOpenCommandPalette}
               />
             </div>
           </main>
@@ -1246,8 +1267,6 @@ function AppContent() {
           <SettingsDialog
             isOpen={ui.showSettingsDialog}
             onClose={() => ui.setShowSettingsDialog(false)}
-            theme={theme}
-            onThemeChange={setTheme}
             defaultDelimiter={settings.defaultDelimiter}
             onDefaultDelimiterChange={settings.setDefaultDelimiter}
             noHeaders={settings.noHeaders}

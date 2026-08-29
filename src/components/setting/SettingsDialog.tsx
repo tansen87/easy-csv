@@ -2,13 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { X } from "lucide-react";
 import { SettingsTabContent } from "@/components/setting/SettingsTabContent";
 import { useLanguage } from "@/i18n";
+import { useTheme } from "@/components/setting/ThemeProvider";
 import { AIConfig } from "@/services/ai/types";
 
 interface SettingsDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  theme: "dark" | "light" | "system";
-  onThemeChange: (theme: "dark" | "light" | "system") => void;
   defaultDelimiter: string;
   onDefaultDelimiterChange: (delimiter: string) => void;
   noHeaders: boolean;
@@ -27,8 +26,6 @@ interface SettingsDialogProps {
 export function SettingsDialog({
   isOpen,
   onClose,
-  theme,
-  onThemeChange,
   defaultDelimiter,
   onDefaultDelimiterChange,
   noHeaders,
@@ -47,6 +44,7 @@ export function SettingsDialog({
     "general",
   );
   const { t } = useLanguage();
+  const { theme, setTheme } = useTheme();
   const dialogRef = useRef<HTMLDivElement>(null);
 
   const handleKeyDown = useCallback(
@@ -161,7 +159,7 @@ export function SettingsDialog({
           <SettingsTabContent
             activeTab={activeTab}
             theme={theme}
-            onThemeChange={onThemeChange}
+            onThemeChange={setTheme}
             defaultDelimiter={defaultDelimiter}
             onDefaultDelimiterChange={onDefaultDelimiterChange}
             noHeaders={noHeaders}
