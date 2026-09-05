@@ -38,4 +38,6 @@ coverage/
 # Misc
 *.local
 
+# ai agent
 /.mimocode/
+.box-agent
