@@ -17,6 +17,76 @@ import { BatchFilterConfig } from "@/components/dialog/BatchFilterDialog";
 import { BatchFilterHooks } from "@/hooks/BatchFilterHooks";
 import { BatchConvertHooks } from "@/hooks/BatchConvertHooks";
 
+interface CliParam {
+  name: string;
+  value: string;
+  isPositional?: boolean;
+}
+
+/**
+ * Serialize a step's parameters to CLI param entries.
+ *
+ * `search` multi-pattern (S1): `add-pattern` is emitted as repeated `-P`
+ * flags (OR). xan requires a positional `<pattern>` as the first mode, so if
+ * the main `pattern` is empty but the list has values, the first value is
+ * promoted to the positional pattern and the rest become `-P`.
+ *
+ * Other array values (e.g. multiple file paths) are joined with `|`.
+ */
+function serializeStepParams(step: PipelineStep): CliParam[] {
+  const params: CliParam[] = [];
+  const isSearch = step.command.name === "search";
+
+  // Normalize add-pattern values to a trimmed list.
+  const apRaw = step.parameters["add-pattern"];
+  let extraPatterns: string[] = Array.isArray(apRaw)
+    ? apRaw
+        .map((v) => String(v).trim())
+        .filter(Boolean)
+    : apRaw && String(apRaw).trim()
+      ? [String(apRaw).trim()]
+      : [];
+
+  // Positional `pattern`; promote the first extra pattern when empty.
+  const patternParam = step.command.parameters.find(
+    (p) => p.name === "pattern",
+  );
+  let positionedPattern = patternParam
+    ? String(step.parameters["pattern"] ?? patternParam.default ?? "").trim()
+    : "";
+  if (isSearch && !positionedPattern && extraPatterns.length > 0) {
+    positionedPattern = extraPatterns[0];
+    extraPatterns = extraPatterns.slice(1);
+  }
+
+  for (const param of step.command.parameters) {
+    if (param.name === "pattern") {
+      params.push({
+        name: "pattern",
+        value: positionedPattern,
+        isPositional: param.isPositional,
+      });
+      continue;
+    }
+    if (isSearch && param.name === "add-pattern") {
+      for (const v of extraPatterns) {
+        params.push({
+          name: "add-pattern",
+          value: v,
+          isPositional: param.isPositional,
+        });
+      }
+      continue;
+    }
+    const raw = step.parameters[param.name] ?? param.default;
+    const value = Array.isArray(raw)
+      ? raw.filter(Boolean).join("|")
+      : String(raw || "");
+    params.push({ name: param.name, value, isPositional: param.isPositional });
+  }
+  return params;
+}
+
 interface MainMenuHooksProps {
   tabs: PipelineTab[];
   selectedTabId: string;
@@ -273,9 +343,41 @@ export function MainMenuHooks({
       );
 
       const pipelineLines = executableSteps.map((step, index) => {
+        // Promote first add-pattern to the positional pattern for search when
+        // the main `pattern` is empty (keeps exported scripts consistent with
+        // the multi-value execution path).
+        const isSearch = step.command.name === "search";
+        const apRaw = step.parameters["add-pattern"];
+        let extraPatterns = Array.isArray(apRaw)
+          ? apRaw.filter(Boolean).map(String)
+          : [];
+        const patternParamDef = step.command.parameters.find(
+          (p) => p.name === "pattern",
+        );
+        let patternStr = String(
+          step.parameters["pattern"] ?? patternParamDef?.default ?? "",
+        ).trim();
+        if (isSearch && !patternStr && extraPatterns.length > 0) {
+          patternStr = extraPatterns[0];
+          extraPatterns = extraPatterns.slice(1);
+        }
+
         let params = step.command.parameters
           .map((param) => {
-            const value = step.parameters[param.name] ?? param.default;
+            let value = step.parameters[param.name] ?? param.default;
+            if (param.name === "pattern") {
+              value = patternStr;
+            } else if (param.name === "add-pattern" && isSearch) {
+              if (extraPatterns.length === 0) return "";
+              const prefix = param.isPositional ? "" : `--${param.name}`;
+              return extraPatterns
+                .map((v: string) =>
+                  v.includes(" ") || v.includes('"')
+                    ? `${prefix} "${v.replace(/"/g, '\\"')}"`
+                    : `${prefix} ${v}`,
+                )
+                .join(" ");
+            }
 
             if (param.type === "flag") {
               if (value !== true) {
@@ -758,13 +860,7 @@ export function MainMenuHooks({
               `Executing ${preBatchSteps.length} step(s) before batch filter...`,
             );
             const preCommands = preBatchSteps.map((step) => {
-              let params = step.command.parameters.map((param) => ({
-                name: param.name,
-                value: String(
-                  step.parameters[param.name] || param.default || "",
-                ),
-                isPositional: param.isPositional,
-              }));
+              let params = serializeStepParams(step);
               return {
                 name: step.command.name,
                 id: step.id,
@@ -843,13 +939,7 @@ export function MainMenuHooks({
 
             if (precedingSteps.length > 0) {
               const preCommands = precedingSteps.map((step) => {
-                let params = step.command.parameters.map((param) => ({
-                  name: param.name,
-                  value: String(
-                    step.parameters[param.name] || param.default || "",
-                  ),
-                  isPositional: param.isPositional,
-                }));
+                let params = serializeStepParams(step);
                 return {
                   name: step.command.name,
                   id: step.id,
@@ -924,18 +1014,7 @@ export function MainMenuHooks({
         } else {
           // Normal pipeline execution (no batch-filter)
           const commands = branchSteps.map((step, index) => {
-            let params = step.command.parameters.map((param) => {
-              const rawValue = step.parameters[param.name] ?? param.default;
-              // For arrays (e.g., multiple file paths), join with | separator
-              const value = Array.isArray(rawValue)
-                ? rawValue.filter(Boolean).join("|")
-                : String(rawValue || "");
-              return {
-                name: param.name,
-                value,
-                isPositional: param.isPositional,
-              };
-            });
+            let params = serializeStepParams(step);
 
             if (step.command.name === "run") {
               const mode = step.parameters.mode || "pipeline";

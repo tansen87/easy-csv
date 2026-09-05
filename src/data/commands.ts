@@ -1101,8 +1101,8 @@ export const xanCommands: XanCommand[] = [
       {
         name: "select",
         type: "string",
-        description: "Select the columns to search",
-        descriptionCn: "选择要搜索的列",
+        description: "Columns to search",
+        descriptionCn: "搜索的列",
         required: false,
       },
       {
@@ -1309,7 +1309,7 @@ export const xanCommands: XanCommand[] = [
         default: false,
       },
       {
-        name: "--every-column",
+        name: "every-column",
         type: "flag",
         description:
           "Only output a row when every selected column matches a pattern",

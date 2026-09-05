@@ -4,6 +4,7 @@ import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { MultiValueInput } from "@/components/ui/MultiValueInput";
 import { useDraggable } from "@/hooks/useDraggable";
 
 interface FilterDialogState {
@@ -79,7 +80,7 @@ export function FilterDialog({
   const [textOperator, setTextOperator] = useState<TextOperator>("equals");
   const [numberOperator, setNumberOperator] =
     useState<NumberOperator>("equals");
-  const [textValue, setTextValue] = useState("");
+  const [textValues, setTextValues] = useState<string[]>([]);
   const [numberValue, setNumberValue] = useState("");
   const [caseInsensitive, setCaseInsensitive] = useState(false);
   const [selectedColumn, setSelectedColumn] = useState<string>(
@@ -149,44 +150,58 @@ export function FilterDialog({
             },
             textOperator,
           );
-        } else if (textOperator === "equals" || textOperator === "not_equals") {
-          if (!textValue.trim()) return;
-          onAddCommand(
-            searchCommand,
-            {
-              select: selectedColumn,
-              exact: true,
-              pattern: textValue,
-              "ignore-case": caseInsensitive,
-              "invert-match": textOperator === "not_equals",
-            },
-            textOperator,
-          );
         } else {
-          if (!textValue.trim()) return;
-          const isNegative = [
-            "not_starts_with",
-            "not_ends_with",
-            "not_contains",
-          ].includes(textOperator);
-          let pattern = buildRegexPattern(textOperator, textValue);
-          if (
-            (textOperator === "contains" || textOperator === "not_contains") &&
-            pattern.startsWith("-")
-          ) {
-            pattern = "\\" + pattern;
+          const patterns = textValues.map((v) => v.trim()).filter(Boolean);
+          if (patterns.length === 0) return;
+          const restPatterns = patterns.slice(1);
+          // Empty string tells serialization there are no extra -P patterns.
+          const addPattern = restPatterns.length ? restPatterns : "";
+          if (textOperator === "equals" || textOperator === "not_equals") {
+            onAddCommand(
+              searchCommand,
+              {
+                select: selectedColumn,
+                exact: true,
+                pattern: patterns[0],
+                "add-pattern": addPattern,
+                "ignore-case": caseInsensitive,
+                "invert-match": textOperator === "not_equals",
+              },
+              textOperator,
+            );
+          } else {
+            const isNegative = [
+              "not_starts_with",
+              "not_ends_with",
+              "not_contains",
+            ].includes(textOperator);
+            const escapeDash = (p: string) =>
+              (textOperator === "contains" ||
+                textOperator === "not_contains") &&
+              p.startsWith("-")
+                ? "\\" + p
+                : p;
+            onAddCommand(
+              searchCommand,
+              {
+                select: selectedColumn,
+                pattern: escapeDash(
+                  buildRegexPattern(textOperator, patterns[0]),
+                ),
+                "add-pattern": addPattern
+                  ? patterns
+                      .slice(1)
+                      .map((p) =>
+                        escapeDash(buildRegexPattern(textOperator, p)),
+                      )
+                  : "",
+                regex: true,
+                "ignore-case": caseInsensitive,
+                "invert-match": isNegative,
+              },
+              textOperator,
+            );
           }
-          onAddCommand(
-            searchCommand,
-            {
-              select: selectedColumn,
-              pattern,
-              regex: true,
-              "ignore-case": caseInsensitive,
-              "invert-match": isNegative,
-            },
-            textOperator,
-          );
         }
       }
     } else {
@@ -314,16 +329,15 @@ export function FilterDialog({
                   <label className="text-xs font-medium text-muted-foreground">
                     {textOperator === "regex" ? "Pattern" : "Value"}
                   </label>
-                  <input
-                    type="text"
-                    value={textValue}
-                    onChange={(e) => setTextValue(e.target.value)}
+                  <MultiValueInput
+                    values={textValues}
+                    onChange={setTextValues}
                     placeholder={
                       textOperator === "regex"
-                        ? "Regex pattern..."
-                        : "Search text..."
+                        ? "Regex patterns..."
+                        : "Add values, Enter to add..."
                     }
-                    className="w-full h-7 px-3 text-sm border rounded-md bg-background"
+                    className="mt-1"
                   />
                 </div>
 

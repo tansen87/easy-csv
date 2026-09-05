@@ -4,6 +4,7 @@ import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrap
 import { getParameterDescription } from "@/components/dialog/commands/parameterDescriptions";
 import { CommandDialogState } from "@/components/dialog/CommandDialog";
 import { useLanguage } from "@/i18n";
+import { MultiValueInput } from "@/components/ui/MultiValueInput";
 
 function Checkbox({
   name,
@@ -58,12 +59,56 @@ function TextField({
   );
 }
 
+/**
+ * Multi-value tag input backing the search `add-pattern` parameter.
+ * Each value becomes a repeated `-P` flag (OR) at serialization time.
+ */
+function PatternListInput({
+  commandDialog,
+  setCommandDialog,
+}: {
+  commandDialog: CommandDialogState;
+  setCommandDialog: (d: CommandDialogState | null) => void;
+}) {
+  const { t } = useLanguage();
+  const raw = commandDialog.params["add-pattern"];
+  const values = Array.isArray(raw)
+    ? raw.filter((v) => v !== undefined && v !== null)
+    : raw
+      ? [raw]
+      : [];
+
+  return (
+    <div>
+      <label className="text-sm font-medium">add-pattern</label>
+      <MultiValueInput
+        values={values}
+        onChange={(v) =>
+          updateParam(commandDialog, setCommandDialog, "add-pattern", v)
+        }
+        placeholder={t.searchMultiPatternPlaceholder}
+      />
+    </div>
+  );
+}
+
 export function SearchForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
+
+  const rawAddPattern = commandDialog.params["add-pattern"];
+  const hasMultiPattern = Array.isArray(rawAddPattern)
+    ? rawAddPattern.some((v) => v !== "" && v != null)
+    : !!rawAddPattern;
+  const hasPatternsFile = !!commandDialog.params["patterns"];
 
   return (
     <CommandFormWrapper {...props} scrollHeight="28vh">
+      {hasMultiPattern && hasPatternsFile && (
+        <div className="text-xs text-amber-600 dark:text-amber-400 border border-amber-300 rounded-md px-2 py-1.5">
+          {t.searchPatternConflictWarning}
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <TextField
           name="select"
@@ -78,6 +123,10 @@ export function SearchForm(props: CommandFormProps) {
           setCommandDialog={setCommandDialog}
         />
       </div>
+      <PatternListInput
+        commandDialog={commandDialog}
+        setCommandDialog={setCommandDialog}
+      />
       <div className="grid grid-cols-5 gap-2">
         {[
           "ignore-case",
@@ -164,12 +213,8 @@ export function SearchForm(props: CommandFormProps) {
           setCommandDialog={setCommandDialog}
         />
         <TextField
-          name="add-pattern"
-          placeholder={getParameterDescription(
-            "search",
-            "add-pattern",
-            language,
-          )}
+          name="patterns"
+          placeholder={getParameterDescription("search", "patterns", language)}
           commandDialog={commandDialog}
           setCommandDialog={setCommandDialog}
         />
@@ -192,12 +237,6 @@ export function SearchForm(props: CommandFormProps) {
           setCommandDialog={setCommandDialog}
         />
       </div>
-      <TextField
-        name="patterns"
-        placeholder={getParameterDescription("search", "patterns", language)}
-        commandDialog={commandDialog}
-        setCommandDialog={setCommandDialog}
-      />
       <div className="grid grid-cols-2 gap-2">
         <TextField
           name="pattern-column"

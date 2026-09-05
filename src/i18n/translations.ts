@@ -108,6 +108,10 @@ export interface Translations {
   executePipelinesHint: string;
   newTab: string;
 
+  // SearchForm (009 S1 multi-pattern)
+  searchMultiPatternPlaceholder: string;
+  searchPatternConflictWarning: string;
+
   // HomeView
   welcomeTitle: string;
   welcomeSubtitle: string;
@@ -390,6 +394,11 @@ export const translations: Record<Language, Translations> = {
     executePipelinesHint: "Execute pipelines to see them here",
     newTab: "New Tab",
 
+    // SearchForm (009 S1 multi-pattern)
+    searchMultiPatternPlaceholder: "Add search values; Enter to add",
+    searchPatternConflictWarning:
+      "Both manual values and a patterns file are set; results may combine unexpectedly.",
+
     // HomeView
     welcomeTitle: "Welcome to Easy CSV",
     welcomeSubtitle: "Open a file or import a flow to get started",
@@ -664,6 +673,11 @@ export const translations: Record<Language, Translations> = {
     tryDifferentSearch: "请尝试其他搜索词",
     executePipelinesHint: "执行工作流后将在此显示",
     newTab: "新标签页打开",
+
+    // SearchForm (009 S1 multi-pattern)
+    searchMultiPatternPlaceholder: "添加搜索值,回车添加",
+    searchPatternConflictWarning:
+      "同时填写了手动多值与 patterns 文件,结果可能意外组合.",
 
     // HomeView
     welcomeTitle: "欢迎使用 Easy CSV",
