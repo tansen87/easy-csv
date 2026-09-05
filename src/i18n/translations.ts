@@ -162,6 +162,11 @@ export interface Translations {
   scrollToBottom: string;
   noMatchingLogs: string;
 
+  // Result preview (F1)
+  copyCsv: string;
+  copyMarkdown: string;
+  resultTruncated: string;
+
   // ChartPanel
   chart: string;
   chartType: string;
@@ -449,6 +454,12 @@ export const translations: Record<Language, Translations> = {
     scrollToBottom: "Scroll to bottom",
     noMatchingLogs: "No logs match this filter",
 
+    // Result preview (F1)
+    copyCsv: "Copy as CSV",
+    copyMarkdown: "Copy as Markdown table",
+    resultTruncated:
+      "Result truncated to first rows; use an output/to step to export the full data.",
+
     // ChartPanel
     chart: "Chart",
     chartType: "Chart Type",
@@ -728,6 +739,11 @@ export const translations: Record<Language, Translations> = {
     copied: "已复制",
     scrollToBottom: "滚动到底部",
     noMatchingLogs: "没有符合筛选条件的日志",
+
+    // Result preview (F1)
+    copyCsv: "复制为 CSV",
+    copyMarkdown: "复制为 Markdown 表格",
+    resultTruncated: "结果已截断为前几行,请用 output/to 步骤导出完整数据.",
 
     // ChartPanel
     chart: "图表",

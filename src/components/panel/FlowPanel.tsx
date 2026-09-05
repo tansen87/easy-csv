@@ -72,6 +72,7 @@ interface FlowPanelProps {
   headers: string[];
   rows: string[][];
   columnWidths: Record<number, number>;
+  resultPreview?: import("@/hooks/MainMenuHooks").ResultPreview[];
   onStepsChange: (steps: PipelineStep[]) => void;
   onStepClick: (step: PipelineStep) => void;
   onStepAliasUpdate: (stepId: string, alias: string) => void;
@@ -122,6 +123,7 @@ export function FlowPanel({
   headers,
   rows,
   columnWidths,
+  resultPreview,
   onStepsChange,
   onStepClick,
   onStepAliasUpdate,
@@ -212,6 +214,19 @@ export function FlowPanel({
   const [pendingDeleteEdges, setPendingDeleteEdges] = useState<Set<string>>(
     new Set(),
   );
+
+  // Result preview nodes the user dismissed (removed from the canvas)
+  const [dismissedResults, setDismissedResults] = useState<Set<string>>(
+    new Set(),
+  );
+
+  // When a fresh set of results arrives (new execution), clear previous
+  // dismissal records so every new run shows its result nodes by default.
+  useEffect(() => {
+    if (resultPreview && resultPreview.length > 0) {
+      setDismissedResults(new Set());
+    }
+  }, [resultPreview]);
 
   // Canvas search status
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -364,7 +379,50 @@ export function FlowPanel({
       return newNode;
     });
 
-    setNodes(updatedNodes);
+    // Inject result preview nodes (F1) to the right of the pipeline graph.
+    // Preserve an existing result node's position so it isn't pushed around
+    // when other nodes are dragged (which re-triggers this layout effect).
+    const existingResultPos = new Map<string, { x: number; y: number }>();
+    for (const n of nodes) {
+      if (n.type === "resultTableNode" && n.position) {
+        existingResultPos.set(n.id, n.position);
+      }
+    }
+    const maxRight = updatedNodes.reduce(
+      (m, n) => Math.max(m, (n.position?.x || 0) + (n.width || 0)),
+      0,
+    );
+    let fallbackY = 20;
+    const resultNodes = (resultPreview || [])
+      .filter((r) => !dismissedResults.has(r.id))
+      .map((r) => {
+        const position = existingResultPos.get(r.id) || {
+          x: maxRight + 60,
+          y: fallbackY,
+        };
+        fallbackY += 260;
+        return {
+          id: r.id,
+          type: "resultTableNode" as const,
+          position,
+          data: {
+            headers: r.headers,
+            rows: r.rows,
+            label: r.label,
+            totalRows: r.totalRows,
+            truncated: r.truncated,
+            onClose: () =>
+              setDismissedResults((prev) => new Set(prev).add(r.id)),
+          },
+          selectable: false,
+          draggable: true,
+          dragHandle: ".result-node-header",
+          width: 520,
+          height: 220,
+        };
+      });
+
+    setNodes([...updatedNodes, ...resultNodes]);
     setEdges(layoutedEdges);
   }, [
     hasTable,
@@ -374,6 +432,8 @@ export function FlowPanel({
     columnWidths,
     savedEdges,
     savedInputPosition,
+    resultPreview,
+    dismissedResults,
   ]);
 
   // Apply selection/highlight as visual-only properties (no layout recompute)
@@ -399,6 +459,7 @@ export function FlowPanel({
       displayName: string;
       secondaryName: string | null;
       isTableNode?: boolean;
+      resultId?: string;
     }[] = [];
 
     // Search "Input Data" node (not its column names)
@@ -409,6 +470,18 @@ export function FlowPanel({
         secondaryName: null,
         isTableNode: true,
       });
+    }
+
+    // Search result preview nodes (F1)
+    for (const r of resultPreview || []) {
+      if (r.label.toLowerCase().includes(query)) {
+        results.push({
+          step: null,
+          displayName: r.label,
+          secondaryName: null,
+          resultId: r.id,
+        });
+      }
     }
 
     // Search pipeline steps
@@ -425,20 +498,20 @@ export function FlowPanel({
     }
 
     return results;
-  }, [searchQuery, steps]);
+  }, [searchQuery, steps, resultPreview]);
 
   // Click search result: jump to node and highlight
   const reactFlowInstance = useRef<any>(null);
 
   const handleSearchResultClick = useCallback(
-    (step: PipelineStep | null, isTable?: boolean) => {
-      const nodeId = isTable ? "table-node" : step!.id;
+    (step: PipelineStep | null, isTable?: boolean, resultId?: string) => {
+      const nodeId = resultId ? resultId : isTable ? "table-node" : step!.id;
       const node = nodes.find((n) => n.id === nodeId);
       if (!node || !reactFlowInstance.current) return;
 
       // Use setCenter to jump to node position (centered)
-      const w = node.type === "tableNode" ? 260 : 110;
-      const h = node.type === "tableNode" ? 130 : 45;
+      const w = node.type === "tableNode" || node.type === "resultTableNode" ? 260 : 110;
+      const h = node.type === "tableNode" || node.type === "resultTableNode" ? 130 : 45;
       reactFlowInstance.current.setCenter(
         node.position.x + w,
         node.position.y + h,
@@ -1381,7 +1454,7 @@ export function FlowPanel({
         onEnter={(index) => {
           if (searchResults.length > 0) {
             const r = searchResults[Math.min(index, searchResults.length - 1)];
-            handleSearchResultClick(r.step, r.isTableNode);
+            handleSearchResultClick(r.step, r.isTableNode, r.resultId);
           }
         }}
         searchResults={searchResults}

@@ -630,6 +630,7 @@ function AppContent() {
     handleImportPipeline,
     handleExecute,
     handleCancelExecution,
+    resultPreview,
   } = MainMenuHooks({
     tabs: tabsHook.tabs,
     selectedTabId: tabsHook.selectedTabId,
@@ -1178,6 +1179,7 @@ function AppContent() {
                 onTabChange={tabsHook.setSelectedTabId}
                 onRemoveTab={tabsHook.removeTab}
                 onRenameTab={tabsHook.renameTab}
+                resultPreview={resultPreview}
                 onAddCommand={handleCommandClick}
                 onStepClick={handleStepClick}
                 onStepUpdate={handleStepUpdate}

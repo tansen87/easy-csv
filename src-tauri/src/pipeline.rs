@@ -119,6 +119,7 @@ pub async fn execute_xan_pipeline(
   commands: Vec<PipelineCommand>,
   input_file: String,
   default_delimiter: String,
+  max_output_bytes: Option<usize>,
 ) -> Result<ExecutionResult, String> {
   let cancel_flag = cancellation_flag();
 
@@ -650,9 +651,23 @@ pub async fn execute_xan_pipeline(
 
   Ok(ExecutionResult {
     success: process_output.status.success() && !cancelled,
-    output: String::from_utf8_lossy(&process_output.stdout).to_string(),
+    output: truncate_output(
+      String::from_utf8_lossy(&process_output.stdout).to_string(),
+      max_output_bytes,
+    ),
     error: String::from_utf8_lossy(&process_output.stderr).to_string(),
     cancelled,
     step_errors,
   })
+}
+
+/// Cap an output string to `max` bytes, cutting at a UTF-8 char boundary.
+fn truncate_output(mut s: String, max: Option<usize>) -> String {
+  if let Some(max) = max {
+    if s.len() > max {
+      let idx = s.floor_char_boundary(max);
+      s.truncate(idx);
+    }
+  }
+  s
 }

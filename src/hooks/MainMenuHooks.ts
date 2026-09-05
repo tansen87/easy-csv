@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
@@ -16,11 +16,25 @@ import { xanCommands } from "@/data/commands";
 import { BatchFilterConfig } from "@/components/dialog/BatchFilterDialog";
 import { BatchFilterHooks } from "@/hooks/BatchFilterHooks";
 import { BatchConvertHooks } from "@/hooks/BatchConvertHooks";
+import { parseCsvString } from "@/utils/csv";
+
+/** Cap execution stdout returned to the UI (bytes) to protect the WebView. */
+const MAX_OUTPUT_BYTES = 2 * 1024 * 1024;
 
 interface CliParam {
   name: string;
   value: string;
   isPositional?: boolean;
+}
+
+/** Parsed execution result shown as a canvas table node (F1). */
+export interface ResultPreview {
+  id: string;
+  label: string;
+  headers: string[];
+  rows: string[][];
+  totalRows: number;
+  truncated: boolean;
 }
 
 /**
@@ -40,9 +54,7 @@ function serializeStepParams(step: PipelineStep): CliParam[] {
   // Normalize add-pattern values to a trimmed list.
   const apRaw = step.parameters["add-pattern"];
   let extraPatterns: string[] = Array.isArray(apRaw)
-    ? apRaw
-        .map((v) => String(v).trim())
-        .filter(Boolean)
+    ? apRaw.map((v) => String(v).trim()).filter(Boolean)
     : apRaw && String(apRaw).trim()
       ? [String(apRaw).trim()]
       : [];
@@ -193,6 +205,8 @@ export function MainMenuHooks({
     setBranchProgress,
     getCurrentTab,
   });
+
+  const [resultPreview, setResultPreview] = useState<ResultPreview[]>([]);
 
   const getCurrentPipeline = useCallback(() => {
     return getCurrentTab().pipeline;
@@ -707,6 +721,7 @@ export function MainMenuHooks({
 
     try {
       await invoke("set_pipeline_cancelled", { cancel: false });
+      setResultPreview([]);
 
       // Clear any previous step execution errors so stale errors don't remain
       setTabs((prev) =>
@@ -872,6 +887,7 @@ export function MainMenuHooks({
               commands: preCommands,
               inputFile,
               defaultDelimiter,
+              maxOutputBytes: MAX_OUTPUT_BYTES,
             });
 
             if (!preResult.success) {
@@ -951,6 +967,7 @@ export function MainMenuHooks({
                 commands: preCommands,
                 inputFile,
                 defaultDelimiter,
+                maxOutputBytes: MAX_OUTPUT_BYTES,
               });
 
               if (preResult.success && preResult.output) {
@@ -1049,6 +1066,7 @@ export function MainMenuHooks({
             commands,
             inputFile,
             defaultDelimiter,
+            maxOutputBytes: MAX_OUTPUT_BYTES,
           });
         }
 
@@ -1109,6 +1127,29 @@ export function MainMenuHooks({
           pipelineFailed = true;
         }
       }
+
+      // Build canvas result previews from successful branch outputs (F1)
+      const runTs = Date.now();
+      const previews: ResultPreview[] = [];
+      allResults.forEach((r, i) => {
+        if (r.success && r.output?.trim()) {
+          const parsed = parseCsvString(r.output, 500);
+          if (parsed.headers.length > 0) {
+            previews.push({
+              id: `result-${runTs}-${i}`,
+              label:
+                r.branchSteps.length > 0
+                  ? `Result: ${r.branchSteps.join(" → ")}`
+                  : `Branch ${i + 1}`,
+              headers: parsed.headers,
+              rows: parsed.rows,
+              totalRows: parsed.rows.length,
+              truncated: parsed.truncated,
+            });
+          }
+        }
+      });
+      setResultPreview(previews);
 
       if (trackLineage && !wasCancelled) {
         const headers = currentTab.headers || [];
@@ -1430,5 +1471,6 @@ export function MainMenuHooks({
     handleCancelExecution,
     getCurrentPipeline,
     processChartData,
+    resultPreview,
   };
 }
