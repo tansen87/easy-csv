@@ -54,6 +54,8 @@ interface MainMenuProps {
   onToggleLineagePanel: () => void;
   showAIPanel: boolean;
   onToggleAIPanel: () => void;
+  showVariablePanel: boolean;
+  onToggleVariablePanel: () => void;
 }
 
 export const MainMenu = React.memo(function MainMenu({
@@ -95,6 +97,8 @@ export const MainMenu = React.memo(function MainMenu({
   onToggleLineagePanel,
   showAIPanel,
   onToggleAIPanel,
+  showVariablePanel,
+  onToggleVariablePanel,
 }: MainMenuProps) {
   const { t } = useLanguage();
 
@@ -122,7 +126,10 @@ export const MainMenu = React.memo(function MainMenu({
   }, [openMenu, closeDropdowns]);
 
   const anyCollapsedPanelOpen =
-    showDataProfile || showVersionPanel || showLineagePanel;
+    showDataProfile ||
+    showVersionPanel ||
+    showLineagePanel ||
+    showVariablePanel;
 
   const commandButtonClass = (active: boolean) =>
     cn(
@@ -432,6 +439,22 @@ export const MainMenu = React.memo(function MainMenu({
                   )}
                 >
                   <span className="whitespace-nowrap">{t.dataLineage}</span>
+                </button>
+                <button
+                  role="menuitemcheckbox"
+                  aria-checked={showVariablePanel}
+                  onClick={() => {
+                    onToggleVariablePanel();
+                    closeDropdowns();
+                  }}
+                  className={cn(
+                    "flex items-center gap-2 w-full px-3 py-2 text-xs font-medium rounded-md transition-colors",
+                    showVariablePanel
+                      ? "text-foreground hover:bg-accent"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                  )}
+                >
+                  <span className="whitespace-nowrap">{t.variables}</span>
                 </button>
                 <div className="border-t border-border my-1" />
                 <button

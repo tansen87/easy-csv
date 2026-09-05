@@ -71,6 +71,7 @@ export function usePipelineVersions(
           message,
           createdAt: formatDateTime(new Date()),
           tags,
+          variables: currentTab.variables,
         };
 
         const versions = pruneVersions(
@@ -127,6 +128,7 @@ export function usePipelineVersions(
                 edges: [...version.edges],
                 inputPosition: version.inputPosition,
                 currentVersionId: versionId,
+                variables: version.variables,
                 updatedAt: formatDateTime(new Date()),
               }
             : tab,

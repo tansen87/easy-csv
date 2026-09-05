@@ -86,23 +86,44 @@
 
 **价值**:让管道从"一次性手工品"变成"可复用的加工函数",是模板(F4)与批量复用的前置。
 
-**方案**:
+**方案**(集代码实测的落地设计,2026-09 补充):
 
-1. 语法:参数值支持 `{{变量名}}` 占位;表单输入框中输入 `{{` 时给出提示;
-2. 变量面板:画布顶部(或设置区)集中展示当前管道声明的全部变量,含默认值、类型推断(string/number/path);
-3. 执行时检测未赋值变量 → 弹出一次性输入对话框(批量填完再执行),已赋值跳过;
-4. 序列化兼容:`StoredPipelineStep` 原样保留占位符字符串,旧版本 JSON 导入不受影响(占位符只是普通字符串);导出 `.sh`/`.ps1` 时翻译为脚本位置参数(`$1`/`$args[0]`),已有 Usage 注释正好承接;
-5. **范围限定**:第一期仅参数值级变量,不做表达式级(即 `{{var}}` 只出现在参数输入框,不进入 moonblade 表达式),避免与表达式语法冲突。
+> 前提核对:命令表单均为**自定义组件**(`commands/*.tsx`),每个参数是裸 `<input>`,无法低成本全局注入提示;执行的分发有多个分支(`batch-filter`/`chart`/常规管道),且 `serializeStepParams` 与 `handleSavePipeline` 各自序列化。据此定稿:
+
+1. **语法与识别**:参数值支持 `{{变量名}}` 占位,识别正则 `/\{\{\s*([A-Za-z_]\w*)\s*\}\}/g`;变量名为字母/数字/下划线。
+2. **隐式声明 + 自动检测**:用户只需在参数里写 `{{name}}` 即视为声明(无需单独建变量步骤),系统扫描整条管道收集引用到的变量并推断类型(string/number/path)。新增纯逻辑 `utils/params.ts`:
+
+   - `collectVariablesFromPipeline(steps, existing)` → 合并「检测到的引用」与「面板声明的默认值/类型」;
+
+   - `inferVariableType(default)` → path(含 `/` `\` 或扩展名 like `.csv`) / number(`isFinite`) / string;
+
+   - `resolveStepPlaceholders(steps, values)` → **深克隆**解析后的步骤(不写回 tab,保持占位符原样存留)。
+3. **变量面板**:右侧抽屉(与版本/血缘面板同构图,`HomeView` 右侧 `w-80` 悬浮层),集中展示当前管道已检测/声明的全部变量,支持编辑默认值与类型;底部可手动新增变量。
+4. **执行门控(单一收口点)**:`MainMenuHooks.handleExecute` 校验通过后、分发到各分支**之前**,对 `executableSteps` 统一扫描引用变量:
+
+   - 取「本次运行值」= **已声明默认值**(`PipelineTab.variables[].defaultValue`)——声明默认值是唯一数据源(`runVariableValues` 覆盖逻辑已移除,避免「面板改了不生效」);确认弹窗填写的值会**写回**声明默认值,实现弹窗与面板双向同步;
+
+   - 存在未赋值(值为空)的变量 → 弹出一次性 `VariableValuesDialog`(默认值可改,批量填完再执行);
+
+   - 全部已赋值 → 跳过对话框,直接解析执行;
+
+   - 解析后的深克隆步骤供给后端命令序列、`batch-filter`、`chart` 等所有分支使用,**存储中的占位符不变**。
+5. **序列化 roundtrip**:`StoredPipelineStep.parameters` 原样保留占位符字符串,旧 JSON 导入不受影响(占位符只是普通字符串);`PipelineVariable[]` 挂在 `PipelineTab.variables`,并随 `utils/session.ts` 的 tab 快照与版本快照(`usePipelineVersions.saveVersion/restoreVersion`)一起存取,默认值即变量的当前值。
+6. **导出脚本位置参数**:`handleSavePipeline` 按首次出现顺序收集管道引用变量,`.ps1` 翻译为 `$args[0]`/`$args[1]`…,`.sh` 翻译为 `$1`/`$2`…,Usage 注释同步标注(如 `# Usage: ./script.sh [input.csv] [var=name] [var=limit]`),已有 `$INPUT` 位置参数优先占 `$1`、其余变量依次后移。
+7. **表单** **`{{`** **提示(全量命令表单)**:通过 `CommandFormWrapper` 的**事件委托**(input/focusout 委托 + 定位 tooltip)统一注入提示,覆盖全部 `commands/*.tsx` 命令表单(含 `MultiValueInput` 的值输入),无需逐个改动裸 `<input>`;独立的列操作对话框(`FilterDialog` 文本值 / `ReplaceDialog` 替换值 / `SplitDialog` 自定义分隔符、连接符)用共享 `<VariableHint>` 组件接入。提示在输入含 `{{` 时显示,失焦隐藏。
+8. **范围限定**:第一期仅参数值级变量,不做表达式级(即 `{{var}}` 只出现在参数输入框,不进入 moonblade 表达式),避免与表达式语法冲突。
 
 **验收清单**:
 
-- [ ] 含 `{{var}}` 的管道保存/恢复/版本控制 roundtrip 无损;
+- [x] 含 `{{var}}` 的管道保存/恢复/版本控制 roundtrip 无损;
 
 - [ ] 执行时未赋值变量弹出收集对话框,默认值可改;
 
 - [ ] 导出脚本后用位置参数运行成功(Windows PowerShell + bash 各验一次);
 
 - [ ] 不含变量的管道行为与现状完全一致(回归)。
+
+**落地状态**:数据模型 `PipelineVariable` + `PipelineTab.variables/runVariableValues` 已定稿并接入序列化;`utils/params.ts` 已落地;执行门控/变量收集对话框/右侧变量面板/导出位置参数翻译已接线;`{{` 提示已通过 `CommandFormWrapper` 事件委托全量覆盖命令表单,并在列操作对话框用 `<VariableHint>` 接入。
 
 ### F4. 管道模板库(P1)
 

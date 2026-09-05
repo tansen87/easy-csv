@@ -5,6 +5,7 @@ import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { MultiValueInput } from "@/components/ui/MultiValueInput";
+import { VariableHint } from "@/components/dialog/commands/VariableHint";
 import { useDraggable } from "@/hooks/useDraggable";
 
 interface FilterDialogState {
@@ -341,6 +342,7 @@ export function FilterDialog({
                     }
                     className="mt-1"
                   />
+                  <VariableHint value={textValues.join(" ")} />
                 </div>
 
                 <div className="flex items-center gap-1.5">

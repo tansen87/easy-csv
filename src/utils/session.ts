@@ -2,6 +2,7 @@ import {
   PipelineEdge,
   PipelineStep,
   PipelineTab,
+  PipelineVariable,
   StoredPipelineStep,
 } from "@/types/xan";
 import { formatDateTime } from "@/utils/format";
@@ -44,6 +45,8 @@ export interface TabSnapshot {
   inputPosition?: { x: number; y: number };
   isSettings?: boolean;
   currentVersionId?: string;
+  variables?: PipelineVariable[];
+  runVariableValues?: Record<string, string>;
   pipeline: StoredPipelineStep[];
   edges: PipelineEdge[];
 }
@@ -61,6 +64,8 @@ export function serializeTabSnapshot(tab: PipelineTab): TabSnapshot {
     inputPosition: tab.inputPosition,
     isSettings: tab.isSettings,
     currentVersionId: tab.currentVersionId,
+    variables: tab.variables,
+    runVariableValues: tab.runVariableValues,
     pipeline: (tab.pipeline || []).map(stripStepCommand),
     edges: tab.edges || [],
   };
@@ -85,5 +90,7 @@ export function deserializeTabSnapshot(snap: any): PipelineTab | null {
     inputPosition: snap.inputPosition,
     isSettings: snap.isSettings,
     currentVersionId: snap.currentVersionId,
+    variables: snap.variables,
+    runVariableValues: snap.runVariableValues,
   };
 }

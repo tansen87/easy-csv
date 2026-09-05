@@ -33,6 +33,8 @@ import { HelpDialog } from "@/components/help/HelpDialog";
 import { getHelpContent } from "@/components/help/HelpContent";
 import { UpdateDialog } from "@/components/dialog/UpdateDialog";
 import { ConfirmDialog } from "@/components/dialog/ConfirmDialog";
+import { VariableValuesDialog } from "@/components/dialog/VariableValuesDialog";
+import { VariablePanel } from "@/components/panel/VariablePanel";
 import { BatchFilterDialog } from "@/components/dialog/BatchFilterDialog";
 import { CsvDiffDialog } from "@/components/dialog/CsvDiffDialog";
 import { CsvEncodingDialog } from "@/components/dialog/CsvEncodingDialog";
@@ -59,7 +61,12 @@ import { useSession } from "@/hooks/useSession";
 import { useKeyboardShortcuts } from "@/hooks/KeyboardShortcuts";
 import { formatDateTime } from "@/utils/format";
 import { stripStepCommand } from "@/utils/session";
-import { PipelineStep, XanCommand, PipelineEdge } from "@/types/xan";
+import {
+  PipelineStep,
+  XanCommand,
+  PipelineEdge,
+  PipelineVariable,
+} from "@/types/xan";
 import { AIConfig, DEFAULT_AI_CONFIG } from "@/services/ai/types";
 import { loadAIConfig, saveAIConfig, setAIConfig } from "@/services/ai/index";
 import pkg from "../package.json";
@@ -140,6 +147,9 @@ function AppContent() {
 
   // Executing state
   const [isExecuting, setIsExecuting] = useState(false);
+
+  // Variables panel (F3)
+  const [showVariablePanel, setShowVariablePanel] = useState(false);
 
   // Pipeline save status tracking
   const [pipelineSavedAt, setPipelineSavedAt] = useState<number>(Date.now());
@@ -631,6 +641,9 @@ function AppContent() {
     handleExecute,
     handleCancelExecution,
     resultPreview,
+    variablePrompt,
+    confirmVariables,
+    cancelVariables,
   } = MainMenuHooks({
     tabs: tabsHook.tabs,
     selectedTabId: tabsHook.selectedTabId,
@@ -749,6 +762,29 @@ function AppContent() {
       );
     },
     [tabsHook.setTabs],
+  );
+
+  // persist declared pipeline variables for the active tab.
+  const onVariablesChange = useCallback(
+    (next: PipelineVariable[]) => {
+      tabsHook.setTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === tabsHook.selectedTabId
+            ? {
+                ...tab,
+                variables: next,
+                updatedAt: formatDateTime(new Date()),
+              }
+            : tab,
+        ),
+      );
+    },
+    [tabsHook.setTabs, tabsHook.selectedTabId],
+  );
+
+  const onToggleVariablePanel = useCallback(
+    () => setShowVariablePanel((v) => !v),
+    [],
   );
 
   // Stable HomeView callbacks so the memoized HomeView (and the React Flow
@@ -1168,6 +1204,8 @@ function AppContent() {
               }
               showAIPanel={ui.showAIPanel}
               onToggleAIPanel={() => ui.setShowAIPanel(!ui.showAIPanel)}
+              showVariablePanel={showVariablePanel}
+              onToggleVariablePanel={onToggleVariablePanel}
             />
           </header>
 
@@ -1355,6 +1393,32 @@ function AppContent() {
             onAddCommand={handleCommandClick}
             onAddCommands={handleCommandsClick}
           />
+
+          {variablePrompt && (
+            <VariableValuesDialog
+              prompt={variablePrompt}
+              onConfirm={confirmVariables}
+              onCancel={cancelVariables}
+            />
+          )}
+
+          {/* Pipeline variables panel (right drawer) */}
+          <div
+            className={`absolute top-0 right-0 h-full z-30 transition-all duration-300 ${
+              showVariablePanel ? "w-80" : "w-0"
+            }`}
+          >
+            {showVariablePanel && (
+              <div className="h-full bg-card border-l border-border/50 shadow-lg">
+                <VariablePanel
+                  steps={tabsHook.getCurrentTab()?.pipeline || []}
+                  variables={tabsHook.getCurrentTab()?.variables || []}
+                  onChange={onVariablesChange}
+                  onClose={onToggleVariablePanel}
+                />
+              </div>
+            )}
+          </div>
         </div>
       }
     </>

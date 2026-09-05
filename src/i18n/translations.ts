@@ -46,6 +46,23 @@ export interface Translations {
   noLineageData: string;
   lineageForColumn: string;
 
+  // Variables (F3 pipeline parameterization)
+  variables: string;
+  variableName: string;
+  variableDefault: string;
+  variableType: string;
+  addVariable: string;
+  runWithVariables: string;
+  variableInputValue: string;
+  variableFillValues: string;
+  variablePlaceholderHint: string;
+  variableEmptyName: string;
+  variableDuplicateName: string;
+  noVariablesDetected: string;
+  deleteVariable: string;
+  clearAllVariables: string;
+  confirmClearAllVariables: string;
+
   // VersionControl
   save: string;
   saving: string;
@@ -330,6 +347,27 @@ export const translations: Record<Language, Translations> = {
     sourceStep: "Source",
     noLineageData: "Execute a pipeline to see data lineage",
     lineageForColumn: "Lineage for column:",
+
+    // Variables (F3)
+    variables: "Variables",
+    variableName: "Name",
+    variableDefault: "Default",
+    variableType: "Type",
+    addVariable: "Add variable",
+    runWithVariables: "Run with variables",
+    variableInputValue: "Value",
+    variableFillValues:
+      "Provide values for the pipeline variables below, then run.",
+    variablePlaceholderHint:
+      "Tip: type {{varName}} in a parameter value to reference a variable. Manage defaults in the Variables panel.",
+    variableEmptyName: "Variable name cannot be empty",
+    variableDuplicateName: "Variable name already exists",
+    noVariablesDetected:
+      "No variables yet. Type {{varName}} in a parameter value to create one.",
+    deleteVariable: "Delete variable",
+    clearAllVariables: "Clear all",
+    confirmClearAllVariables:
+      "Remove all declared variables? Referenced placeholders will keep working.",
 
     // VersionControl
     save: "Save",
@@ -622,6 +660,25 @@ export const translations: Record<Language, Translations> = {
     sourceStep: "来源",
     noLineageData: "执行后可查看数据血缘",
     lineageForColumn: "列的血缘：",
+
+    // Variables (F3)
+    variables: "管道变量",
+    variableName: "名称",
+    variableDefault: "默认值",
+    variableType: "类型",
+    addVariable: "添加变量",
+    runWithVariables: "带变量运行",
+    variableInputValue: "值",
+    variableFillValues: "请为下方管道变量填写值后运行。",
+    variablePlaceholderHint:
+      "提示：在参数值中书写 {{变量名}} 即可引用变量，可在“管道变量”面板管理默认值。",
+    variableEmptyName: "变量名不能为空",
+    variableDuplicateName: "变量名已存在",
+    noVariablesDetected: "暂无变量。在参数值中书写 {{变量名}} 即可创建变量。",
+    deleteVariable: "删除变量",
+    clearAllVariables: "全部清除",
+    confirmClearAllVariables:
+      "确定移除所有已声明的变量？被引用的占位符仍会继续生效。",
 
     // VersionControl
     save: "保存",

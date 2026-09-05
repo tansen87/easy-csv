@@ -6,6 +6,7 @@ import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { useDraggable } from "@/hooks/useDraggable";
+import { VariableHint } from "@/components/dialog/commands/VariableHint";
 
 interface ReplaceDialogState {
   col: number;
@@ -211,6 +212,7 @@ export function ReplaceDialog({
                     className="flex-1 h-8 px-2 text-xs border rounded-md bg-background w-full"
                   />
                 </div>
+                <VariableHint value={pair.replace} />
                 <div className="flex items-center gap-3">
                   <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                     <input

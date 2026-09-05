@@ -46,6 +46,16 @@ export interface StoredPipelineStep {
   position?: { x: number; y: number };
 }
 
+export type PipelineVariableType = "string" | "number" | "path";
+
+/** A pipeline variable referenced via `{{name}}` placeholders (F3). */
+export interface PipelineVariable {
+  /** Placeholder name, e.g. `limit` for `{{limit}}`. */
+  name: string;
+  defaultValue?: string;
+  type: PipelineVariableType;
+}
+
 export interface PipelineEdge {
   id: string;
   source: string;
@@ -75,6 +85,10 @@ export interface PipelineTab {
   versions?: PipelineVersion[];
   currentVersionId?: string;
   lineage?: StepLineage[];
+  /** Declared pipeline variables (defaults/type), persisted (F3). */
+  variables?: PipelineVariable[];
+  /** Last-run values for variables, session-only (F3, "已赋值跳过"). */
+  runVariableValues?: Record<string, string>;
 }
 
 export interface PipelineVersion {
@@ -87,6 +101,8 @@ export interface PipelineVersion {
   message?: string;
   createdAt: string;
   tags?: string[];
+  /** Declared variables snapshot at version time (F3). */
+  variables?: PipelineVariable[];
 }
 
 export interface ColumnSchema {

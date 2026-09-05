@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { Tooltip } from "@/components/ui/tooltip";
+import { ConfirmDialog } from "@/components/dialog/ConfirmDialog";
 import { PipelineVersion } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 import { useLanguage } from "@/i18n";
@@ -757,34 +758,16 @@ export function VersionControlPanel({
           document.body,
         )}
 
-      {clearingAll &&
-        createPortal(
-          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50">
-            <div className="bg-background border border-border rounded-lg p-4 shadow-lg w-[280px]">
-              <p className="text-sm mb-4">{t.confirmClearAllVersions}</p>
-              <div className="flex justify-end gap-2">
-                <Button
-                  onClick={() => setClearingAll(false)}
-                  size="sm"
-                  variant="secondary"
-                >
-                  {t.cancel}
-                </Button>
-                <Button
-                  onClick={() => {
-                    onClearAllVersions?.();
-                    setClearingAll(false);
-                  }}
-                  size="sm"
-                  variant="secondary"
-                >
-                  {t.confirm}
-                </Button>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+      <ConfirmDialog
+        isOpen={clearingAll}
+        title={t.clearAllVersions}
+        message={t.confirmClearAllVersions}
+        onConfirm={() => {
+          onClearAllVersions?.();
+          setClearingAll(false);
+        }}
+        onCancel={() => setClearingAll(false)}
+      />
     </div>
   );
 }

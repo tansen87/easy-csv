@@ -8,6 +8,8 @@ interface SearchableSelectProps {
   options: { label: string; value: string }[];
   placeholder?: string;
   size?: "sm" | "md";
+  /** Container width. Defaults to full width of the parent. */
+  width?: string | number;
 }
 
 export function SearchableSelect({
@@ -16,6 +18,7 @@ export function SearchableSelect({
   options,
   placeholder = "Search or select...",
   size = "sm",
+  width,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -24,10 +27,12 @@ export function SearchableSelect({
   const listRef = useRef<HTMLDivElement>(null);
 
   const filteredOptions = searchValue
-    ? options.filter(opt => opt.label.toLowerCase().includes(searchValue.toLowerCase()))
+    ? options.filter((opt) =>
+        opt.label.toLowerCase().includes(searchValue.toLowerCase()),
+      )
     : options;
 
-  const selectedOption = options.find(opt => opt.value === value);
+  const selectedOption = options.find((opt) => opt.value === value);
 
   useEffect(() => {
     setActiveIndex(-1);
@@ -35,59 +40,76 @@ export function SearchableSelect({
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
         setIsOpen(false);
         setSearchValue("");
       }
     };
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [isOpen]);
 
-  const handleSelect = useCallback((optValue: string) => {
-    onChange(optValue);
-    setIsOpen(false);
-    setSearchValue("");
-  }, [onChange]);
+  const handleSelect = useCallback(
+    (optValue: string) => {
+      onChange(optValue);
+      setIsOpen(false);
+      setSearchValue("");
+    },
+    [onChange],
+  );
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!isOpen) {
-      if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        setIsOpen(true);
-        setSearchValue("");
-      }
-      return;
-    }
-
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault();
-        setActiveIndex(prev => Math.min(prev + 1, filteredOptions.length - 1));
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        setActiveIndex(prev => Math.max(prev - 1, 0));
-        break;
-      case "Enter":
-        e.preventDefault();
-        if (activeIndex >= 0 && activeIndex < filteredOptions.length) {
-          handleSelect(filteredOptions[activeIndex].value);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!isOpen) {
+        if (
+          e.key === "ArrowDown" ||
+          e.key === "ArrowUp" ||
+          e.key === "Enter" ||
+          e.key === " "
+        ) {
+          e.preventDefault();
+          setIsOpen(true);
+          setSearchValue("");
         }
-        break;
-      case "Escape":
-        e.preventDefault();
-        setIsOpen(false);
-        setSearchValue("");
-        break;
-      case "Tab":
-        setIsOpen(false);
-        setSearchValue("");
-        break;
-    }
-  }, [isOpen, activeIndex, filteredOptions, handleSelect]);
+        return;
+      }
+
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setActiveIndex((prev) =>
+            Math.min(prev + 1, filteredOptions.length - 1),
+          );
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setActiveIndex((prev) => Math.max(prev - 1, 0));
+          break;
+        case "Enter":
+          e.preventDefault();
+          if (activeIndex >= 0 && activeIndex < filteredOptions.length) {
+            handleSelect(filteredOptions[activeIndex].value);
+          }
+          break;
+        case "Escape":
+          e.preventDefault();
+          setIsOpen(false);
+          setSearchValue("");
+          break;
+        case "Tab":
+          setIsOpen(false);
+          setSearchValue("");
+          break;
+      }
+    },
+    [isOpen, activeIndex, filteredOptions, handleSelect],
+  );
 
   useEffect(() => {
     if (activeIndex >= 0 && listRef.current) {
@@ -96,22 +118,29 @@ export function SearchableSelect({
     }
   }, [activeIndex]);
 
-  const inputClassName = size === "md"
-    ? "w-full h-8 px-3 pr-8 text-sm border rounded-md bg-background"
-    : "w-full h-8 px-3 pr-8 text-xs border rounded-md bg-background";
+  const inputClassName =
+    size === "md"
+      ? "w-full h-8 px-3 pr-8 text-sm border rounded-md bg-background"
+      : "w-full h-8 px-3 pr-8 text-xs border rounded-md bg-background";
 
   const iconSize = size === "md" ? "h-3 w-3" : "h-3 w-3";
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div
+      className="relative"
+      ref={dropdownRef}
+      style={width !== undefined ? { width } : undefined}
+    >
       <input
         type="text"
         role="combobox"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-autocomplete="list"
-        aria-activedescendant={activeIndex >= 0 ? `ss-option-${activeIndex}` : undefined}
-        value={isOpen ? searchValue : (selectedOption?.label || "")}
+        aria-activedescendant={
+          activeIndex >= 0 ? `ss-option-${activeIndex}` : undefined
+        }
+        value={isOpen ? searchValue : selectedOption?.label || ""}
         onChange={(e) => {
           setSearchValue(e.target.value);
           setIsOpen(true);
@@ -131,7 +160,9 @@ export function SearchableSelect({
         }}
         className="absolute right-1 top-1/2 -translate-y-1/2 p-1 hover:bg-accent rounded transition-colors"
       >
-        <ChevronDown className={`${iconSize} text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDown
+          className={`${iconSize} text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
+        />
       </button>
       {isOpen && (
         <div
