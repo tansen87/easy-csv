@@ -25,6 +25,9 @@ export interface Translations {
   executionCancelled: string;
   commandPanel: string;
   logPanel: string;
+  morePanels: string;
+  helpCenter: string;
+  dataProfileRequiresInput: string;
   checkUpdate: string;
   help: string;
   settings: string;
@@ -297,6 +300,9 @@ export const translations: Record<Language, Translations> = {
     executionCancelled: "Execution cancelled",
     commandPanel: "Command",
     logPanel: "Logs",
+    morePanels: "More Panels",
+    helpCenter: "Help Center",
+    dataProfileRequiresInput: "Requires an input file",
     dataProfile: "Data Profile",
     checkUpdate: "Check Update",
     help: "Help",
@@ -575,6 +581,9 @@ export const translations: Record<Language, Translations> = {
     executionCancelled: "执行已取消",
     commandPanel: "命令",
     logPanel: "日志",
+    morePanels: "更多面板",
+    helpCenter: "帮助中心",
+    dataProfileRequiresInput: "需要载入输入文件",
     dataProfile: "数据概览",
     checkUpdate: "检查更新",
     help: "帮助",

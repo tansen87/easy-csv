@@ -1,31 +1,19 @@
 import React from "react";
 import {
-  File,
-  Undo2,
-  Redo2,
-  Play,
-  FolderOpen,
-  FileText,
-  Save,
-  Upload,
-  Download,
   CloudDownload,
   RefreshCw,
   Settings,
-  MessageCircleQuestionMark,
-  CommandIcon,
-  BarChart3,
-  GitBranch,
-  GitMerge,
+  Command,
+  ListTree,
+  ScrollText,
   Bot,
-  PackageOpen,
-  GitCompareArrows,
-  FileCode,
+  PanelLeft,
 } from "lucide-react";
 
 import { PipelineStep } from "@/types/xan";
 import { useLanguage } from "@/i18n";
 import { Tooltip } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface MainMenuProps {
   activeMenu: "file" | null;
@@ -50,6 +38,8 @@ interface MainMenuProps {
   onOpenCsvEncoding: () => void;
   isExecuting: boolean;
   isCheckingUpdate: boolean;
+  hasUpdate: boolean;
+  showLogErrorBadge: boolean;
   currentPipelineLength: number;
   showCommandPanel: boolean;
   onToggleCommandPanel: () => void;
@@ -89,6 +79,8 @@ export const MainMenu = React.memo(function MainMenu({
   onOpenCsvEncoding,
   isExecuting,
   isCheckingUpdate,
+  hasUpdate,
+  showLogErrorBadge,
   currentPipelineLength,
   showCommandPanel,
   onToggleCommandPanel,
@@ -105,6 +97,38 @@ export const MainMenu = React.memo(function MainMenu({
   onToggleAIPanel,
 }: MainMenuProps) {
   const { t } = useLanguage();
+
+  const [openMenu, setOpenMenu] = React.useState(false);
+  const rightRef = React.useRef<HTMLDivElement>(null);
+
+  const closeDropdowns = React.useCallback(() => setOpenMenu(false), []);
+
+  React.useEffect(() => {
+    if (!openMenu) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeDropdowns();
+    };
+    const onPointerDown = (e: MouseEvent) => {
+      if (rightRef.current && !rightRef.current.contains(e.target as Node)) {
+        closeDropdowns();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [openMenu, closeDropdowns]);
+
+  const anyCollapsedPanelOpen =
+    showDataProfile || showVersionPanel || showLineagePanel;
+
+  const commandButtonClass = (active: boolean) =>
+    cn(
+      "relative flex items-center justify-center h-7 w-7 rounded-md text-primary transition-colors",
+      active ? "bg-accent text-foreground" : "hover:bg-accent/60",
+    );
 
   return (
     <div className="relative w-full">
@@ -129,30 +153,33 @@ export const MainMenu = React.memo(function MainMenu({
                 : "text-primary hover:text-primary hover:bg-primary/10"
             }`}
           >
-            <File className="h-3.5 w-3.5" />
             {t.file}
           </button>
           {activeMenu === "file" && (
-            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[160px]">
+            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 w-max">
               <button
                 onClick={() => {
                   onOpenFile();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
-                <FolderOpen className="h-3.5 w-3.5" />
-                {t.open}
+                <span className="flex-1 text-left">{t.open}</span>
+                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                  Ctrl+O
+                </kbd>
               </button>
               <button
                 onClick={() => {
                   onOpenNewTabWithFile();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
-                <FileText className="h-3.5 w-3.5" />
-                {t.openNewTab}
+                <span className="flex-1 text-left">{t.openNewTab}</span>
+                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                  Ctrl+N
+                </kbd>
               </button>
               <div className="border-t border-border my-1" />
               <button
@@ -167,8 +194,10 @@ export const MainMenu = React.memo(function MainMenu({
                     : "text-muted-foreground hover:text-foreground hover:bg-accent"
                 }`}
               >
-                <Save className="h-3.5 w-3.5" />
-                {t.savePipeline}
+                <span className="flex-1 text-left">{t.savePipeline}</span>
+                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                  Ctrl+S
+                </kbd>
               </button>
               <button
                 onClick={() => {
@@ -177,8 +206,10 @@ export const MainMenu = React.memo(function MainMenu({
                 }}
                 className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
-                <Upload className="h-3.5 w-3.5" />
-                {t.importWorkflow}
+                <span className="flex-1 text-left">{t.importWorkflow}</span>
+                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                  Ctrl+I
+                </kbd>
               </button>
               <button
                 onClick={() => {
@@ -192,8 +223,10 @@ export const MainMenu = React.memo(function MainMenu({
                     : "text-muted-foreground hover:text-foreground hover:bg-accent"
                 }`}
               >
-                <Download className="h-3.5 w-3.5" />
-                {t.exportWorkflow}
+                <span className="flex-1 text-left">{t.exportWorkflow}</span>
+                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                  Ctrl+E
+                </kbd>
               </button>
               <button
                 onClick={() => {
@@ -202,7 +235,6 @@ export const MainMenu = React.memo(function MainMenu({
                 }}
                 className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
-                <GitCompareArrows className="h-3.5 w-3.5" />
                 {t.csvDiff}
               </button>
               <button
@@ -212,7 +244,6 @@ export const MainMenu = React.memo(function MainMenu({
                 }}
                 className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
-                <FileCode className="h-3.5 w-3.5" />
                 {t.csvEncoding}
               </button>
             </div>
@@ -230,7 +261,6 @@ export const MainMenu = React.memo(function MainMenu({
                 : "text-primary hover:bg-primary/10"
             }`}
           >
-            <Undo2 className="h-3.5 w-3.5" />
             {t.undo}
           </button>
           <button
@@ -242,7 +272,6 @@ export const MainMenu = React.memo(function MainMenu({
                 : "text-primary hover:bg-primary/10"
             }`}
           >
-            <Redo2 className="h-3.5 w-3.5" />
             {t.redo}
           </button>
         </div>
@@ -264,10 +293,7 @@ export const MainMenu = React.memo(function MainMenu({
               {t.executing}
             </>
           ) : (
-            <>
-              <Play className="h-3.5 w-3.5" />
-              {t.execute}
-            </>
+            <>{t.execute}</>
           )}
         </button>
 
@@ -275,130 +301,178 @@ export const MainMenu = React.memo(function MainMenu({
         <div className="flex-1" />
 
         {/* Right side buttons */}
-        <div className="flex items-center rounded-md gap-1">
-          {/* Command Palette Button */}
-          <Tooltip content={t.commandPalette} side="bottom">
+        <div ref={rightRef} className="flex items-center rounded-md gap-0.5">
+          {/* ── Group 1: Command entry ─────────────────────────────── */}
+          <Tooltip content={t.commandPalette}>
             <button
               onClick={onOpenPalette}
-              aria-label={t.commandPalette}
-              className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+              className="relative flex items-center justify-center h-7 w-7 rounded-md text-primary hover:bg-accent/60 transition-colors"
             >
-              <PackageOpen className="h-4 w-4" />
+              <Command className="h-4 w-4" />
             </button>
           </Tooltip>
-          {/* Panel Toggle Buttons */}
-          <Tooltip content={t.commandPanel} side="bottom">
+
+          <div className="w-px h-4 bg-border mx-1.5" />
+
+          {/* ── Group 2: High-frequency panel toggles ──────────────── */}
+          <Tooltip content={t.commandPanel}>
             <button
               onClick={onToggleCommandPanel}
-              aria-label={t.commandPanel}
-              className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                showCommandPanel
-                  ? "text-primary bg-primary/10"
-                  : "text-primary hover:bg-primary/10"
-              }`}
+              className={commandButtonClass(showCommandPanel)}
             >
-              <CommandIcon className="h-4 w-4" />
+              <ListTree className="h-4 w-4" />
+              {showCommandPanel && (
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 w-3 rounded-full bg-current" />
+              )}
             </button>
           </Tooltip>
-          <Tooltip content={t.logPanel} side="bottom">
+          <Tooltip content={t.logPanel}>
             <button
               onClick={onToggleLogPanel}
-              aria-label={t.logPanel}
-              className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                showLogPanel
-                  ? "text-primary bg-primary/10"
-                  : "text-primary hover:bg-primary/10"
-              }`}
+              className={commandButtonClass(showLogPanel)}
             >
-              <FileText className="h-4 w-4" />
+              <ScrollText className="h-4 w-4" />
+              {showLogPanel && (
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 w-3 rounded-full bg-current" />
+              )}
+              {showLogErrorBadge && (
+                <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-red-500" />
+              )}
             </button>
           </Tooltip>
-          {hasInputFile && (
-            <Tooltip content={t.dataProfile} side="bottom">
-              <button
-                onClick={onToggleDataProfile}
-                aria-label={t.dataProfile}
-                className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                  showDataProfile
-                    ? "text-primary bg-primary/10"
-                    : "text-primary hover:bg-primary/10"
-                }`}
-              >
-                <BarChart3 className="h-4 w-4" />
-              </button>
-            </Tooltip>
-          )}
-          <Tooltip content={t.versionHistory} side="bottom">
-            <button
-              onClick={onToggleVersionPanel}
-              aria-label={t.versionHistory}
-              className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                showVersionPanel
-                  ? "text-primary bg-primary/10"
-                  : "text-primary hover:bg-primary/10"
-              }`}
-            >
-              <GitBranch className="h-4 w-4" />
-            </button>
-          </Tooltip>
-          <Tooltip content={t.dataLineage} side="bottom">
-            <button
-              onClick={onToggleLineagePanel}
-              aria-label={t.dataLineage}
-              className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                showLineagePanel
-                  ? "text-primary bg-primary/10"
-                  : "text-primary hover:bg-primary/10"
-              }`}
-            >
-              <GitMerge className="h-4 w-4" />
-            </button>
-          </Tooltip>
-          <Tooltip content={t.ai} side="bottom">
+          <Tooltip content={t.ai}>
             <button
               onClick={onToggleAIPanel}
-              aria-label={t.ai}
-              className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                showAIPanel
-                  ? "text-primary bg-primary/10"
-                  : "text-primary hover:bg-primary/10"
-              }`}
+              className={commandButtonClass(showAIPanel)}
             >
               <Bot className="h-4 w-4" />
+              {showAIPanel && (
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 w-3 rounded-full bg-current" />
+              )}
             </button>
           </Tooltip>
-          <Tooltip content={t.checkUpdate} side="bottom">
+
+          {/* ── Group 3: More panels dropdown ───────────────────────── */}
+          <div className="relative">
+            <Tooltip content={t.morePanels}>
+              <button
+                onClick={() => setOpenMenu(!openMenu)}
+                aria-haspopup="menu"
+                aria-expanded={openMenu}
+                className={cn(
+                  "relative flex items-center justify-center h-7 w-7 gap-0.5 rounded-md transition-colors",
+                  anyCollapsedPanelOpen || openMenu
+                    ? "bg-accent text-foreground"
+                    : "text-primary hover:bg-accent/60",
+                )}
+              >
+                <PanelLeft className="h-4 w-4" />
+                {anyCollapsedPanelOpen && (
+                  <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 w-3 rounded-full bg-current" />
+                )}
+              </button>
+            </Tooltip>
+            {openMenu && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full mt-2 bg-card border border-border rounded-lg shadow-lg z-50 w-max p-1"
+              >
+                <div
+                  role="menuitemcheckbox"
+                  aria-checked={showDataProfile}
+                  aria-disabled={!hasInputFile}
+                >
+                  <button
+                    onClick={() => {
+                      if (!hasInputFile) return;
+                      onToggleDataProfile();
+                      closeDropdowns();
+                    }}
+                    disabled={!hasInputFile}
+                    className={cn(
+                      "flex items-center gap-2 w-full px-3 py-2 text-xs font-medium rounded-md transition-colors",
+                      !hasInputFile
+                        ? "text-muted-foreground/40 cursor-not-allowed"
+                        : showDataProfile
+                          ? "text-foreground hover:bg-accent"
+                          : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                    )}
+                  >
+                    <span className="whitespace-nowrap">{t.dataProfile}</span>
+                  </button>
+                </div>
+                <button
+                  role="menuitemcheckbox"
+                  aria-checked={showVersionPanel}
+                  onClick={() => {
+                    onToggleVersionPanel();
+                    closeDropdowns();
+                  }}
+                  className={cn(
+                    "flex items-center gap-2 w-full px-3 py-2 text-xs font-medium rounded-md transition-colors",
+                    showVersionPanel
+                      ? "text-foreground hover:bg-accent"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                  )}
+                >
+                  <span className="whitespace-nowrap">{t.versionHistory}</span>
+                </button>
+                <button
+                  role="menuitemcheckbox"
+                  aria-checked={showLineagePanel}
+                  onClick={() => {
+                    onToggleLineagePanel();
+                    closeDropdowns();
+                  }}
+                  className={cn(
+                    "flex items-center gap-2 w-full px-3 py-2 text-xs font-medium rounded-md transition-colors",
+                    showLineagePanel
+                      ? "text-foreground hover:bg-accent"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                  )}
+                >
+                  <span className="whitespace-nowrap">{t.dataLineage}</span>
+                </button>
+                <div className="border-t border-border my-1" />
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    onHelp();
+                    closeDropdowns();
+                  }}
+                  aria-label={t.helpCenter}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                >
+                  <span className="whitespace-nowrap">{t.helpCenter}</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* ── Group 4: Global actions ─────────────────────────────── */}
+          <Tooltip content={t.checkUpdate}>
             <button
               onClick={onCheckUpdate}
               disabled={isCheckingUpdate}
-              aria-label={t.checkUpdate}
-              className={`flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                isCheckingUpdate
-                  ? "text-primary opacity-70"
-                  : "text-primary hover:bg-primary/10"
-              }`}
+              className="relative flex items-center justify-center h-7 w-7 rounded-md text-primary hover:bg-accent/60 transition-colors disabled:opacity-70"
             >
               {isCheckingUpdate ? (
                 <RefreshCw className="h-4 w-4 animate-spin" />
               ) : (
                 <CloudDownload className="h-4 w-4" />
               )}
+              {hasUpdate && (
+                <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-green-500" />
+              )}
             </button>
           </Tooltip>
-          <Tooltip content={t.help} side="bottom">
-            <button
-              onClick={onHelp}
-              aria-label={t.help}
-              className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
-            >
-              <MessageCircleQuestionMark className="h-4 w-4" />
-            </button>
-          </Tooltip>
-          <Tooltip content={t.settings} side="bottom">
+
+          <div className="w-px h-4 bg-border mx-1.5" />
+
+          <Tooltip content={t.settings}>
             <button
               onClick={onShowSettings}
-              aria-label={t.settings}
-              className="flex items-center px-1.5 py-1.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+              className="relative flex items-center justify-center h-7 w-7 rounded-md text-primary hover:bg-accent/60 transition-colors"
             >
               <Settings className="h-4 w-4" />
             </button>

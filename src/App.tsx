@@ -1145,6 +1145,10 @@ function AppContent() {
               }}
               isExecuting={isExecuting}
               isCheckingUpdate={ui.isCheckingUpdate}
+              hasUpdate={!!ui.updateInfo?.hasUpdate}
+              showLogErrorBadge={
+                !ui.showLogPanel && logs.some((l) => l.type === "error")
+              }
               currentPipelineLength={tabsHook.getCurrentPipeline().length}
               showCommandPanel={ui.showCommandPanel}
               onToggleCommandPanel={onToggleCommandPanel}

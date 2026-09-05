@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   ChevronRight,
   ChevronDown,
-  Command,
+  ListTree,
   Sparkles,
   HelpCircle,
   Eye,
@@ -410,7 +410,7 @@ export const CommandList = React.memo(function CommandList({
           onMouseDown={handleMouseDown}
         >
           <div className="flex bg-primary text-primary-foreground shadow-sm items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium">
-            <Command className="h-3.5 w-3.5" />
+            <ListTree className="h-3.5 w-3.5" />
             {t.cmds}
           </div>
         </div>
@@ -461,7 +461,7 @@ export const CommandList = React.memo(function CommandList({
                   <div className="mt-2 space-y-1.5 px-1">
                     {categoryCommands.map((command) => {
                       const CommandIcon =
-                        commandIconMap[command.name] || Command;
+                        commandIconMap[command.name] || ListTree;
                       const isActive =
                         visibleIndexMap[command.id] === activeIndex;
                       return (

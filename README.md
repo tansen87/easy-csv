@@ -63,7 +63,7 @@ pnpm test:watch  # watch mode
 2. **Browse commands** — the left panel lists all 58 xan commands by category (or press `Alt+C`)
 3. **Add to flow** — click a command (or ask the AI assistant with `Alt+A`) to add it to your pipeline
 4. **Configure parameters** — click the gear icon on a step card, or double-click the node
-5. **Execute** — press `Ctrl+R` to run the whole pipeline, then inspect results in the log panel (`Alt+Q`) and data profile (`Alt+D`)
+5. **Execute** — press `Ctrl+R` to run the whole pipeline, then inspect results in the log panel (`Alt+Q`) and the data profile (open it from the **More Panels** menu in the top bar)
 
 ### Keyboard shortcuts
 
@@ -75,7 +75,7 @@ pnpm test:watch  # watch mode
 | `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
 | `Ctrl+R` | Execute pipeline |
 | `Shift+H` / `Shift+C` / `Shift+S` | Help / check update / settings |
-| `Alt+C` / `Alt+Q` / `Alt+D` / `Alt+A` | Commands / logs / data profile / AI panel |
+| `Alt+C` / `Alt+Q` / `Alt+A` | Commands / logs / AI panel |
 
 ## AI Assistant
 

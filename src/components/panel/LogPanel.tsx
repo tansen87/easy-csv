@@ -1,7 +1,6 @@
 import {
   Trash2,
-  TextQuote,
-  FileText,
+  ScrollText,
   Copy,
   Check,
   X,
@@ -302,7 +301,7 @@ export const LogPanel = React.memo(function LogPanel({
           className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-primary text-primary-foreground shadow-sm cursor-grab active:cursor-grabbing select-none"
           onMouseDown={handleMouseDown}
         >
-          <FileText className="h-3.5 w-3.5" />
+          <ScrollText className="h-3.5 w-3.5" />
           {t.logs}
         </div>
         {logs.length > 0 && (
@@ -379,7 +378,7 @@ export const LogPanel = React.memo(function LogPanel({
             logs.length === 0 ? (
               <div className="text-center py-12 px-4">
                 <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
-                  <TextQuote className="h-8 w-8 text-muted-foreground/50" />
+                  <ScrollText className="h-8 w-8 text-muted-foreground/50" />
                 </div>
                 <p className="text-sm font-medium text-muted-foreground mb-1">
                   {t.noLogsYet}
