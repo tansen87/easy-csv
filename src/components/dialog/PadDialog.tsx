@@ -96,15 +96,18 @@ export function PadDialog({
   return (
     <div
       ref={dialogRef}
-      className={`fixed bg-card border rounded-lg shadow-xl z-50 w-[240px] select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+      className="fixed bg-card border rounded-lg shadow-xl z-50 w-[240px] select-none"
       style={{
         left: position.x,
         top: position.y,
       }}
       onClick={(e) => e.stopPropagation()}
-      onMouseDown={handleMouseDown}
+      onContextMenu={(e) => e.preventDefault()}
     >
-      <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0">
+      <div
+        onMouseDown={handleMouseDown}
+        className={`flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+      >
         <div className="flex items-center gap-2">
           <span className="text-base font-medium">Pad</span>
         </div>
