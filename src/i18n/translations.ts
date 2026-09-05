@@ -298,6 +298,25 @@ export interface Translations {
   success: string;
   sameEncoding: string;
   bytes: string;
+
+  // Pipeline Templates
+  newFromTemplate: string;
+  templateName: string;
+  templateSearchPlaceholder: string;
+  templateNoMatches: string;
+  templateDescriptionPlaceholder: string;
+  noTemplates: string;
+  templateApply: string;
+  templateRename: string;
+  templateDelete: string;
+  templateExport: string;
+  templateImport: string;
+  confirmDeleteTemplate: string;
+  templateSaved: string;
+  templateApplied: string;
+  templateNameRequired: string;
+  templateImportFailed: string;
+  paletteTemplates: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -613,6 +632,27 @@ export const translations: Record<Language, Translations> = {
     success: "Conversion successful",
     sameEncoding: "Source and target encodings are the same",
     bytes: "bytes",
+
+    // Pipeline Templates
+    newFromTemplate: "New from Template",
+    templateName: "Template name",
+    templateSearchPlaceholder: "Search templates",
+    templateNoMatches: "No matching templates",
+    templateDescriptionPlaceholder: "Optional description",
+    noTemplates:
+      "No templates yet. Save the current pipeline as a template to reuse it.",
+    templateApply: "Apply",
+    templateRename: "Rename",
+    templateDelete: "Delete",
+    templateExport: "Export",
+    templateImport: "Import",
+    confirmDeleteTemplate: "Delete this template?",
+    templateSaved: "Pipeline saved as template",
+    templateApplied: "Pipeline created from template",
+    templateNameRequired:
+      "Add steps to the pipeline before saving as a template.",
+    templateImportFailed: "The selected file is not a valid template file.",
+    paletteTemplates: "Templates",
   },
   zh: {
     rows: "行数",
@@ -916,5 +956,24 @@ export const translations: Record<Language, Translations> = {
     success: "转换成功",
     sameEncoding: "源编码与目标编码相同",
     bytes: "字节",
+
+    // Pipeline Templates
+    newFromTemplate: "从模板新建",
+    templateName: "模板名称",
+    templateSearchPlaceholder: "搜索模板",
+    templateNoMatches: "无匹配模板",
+    templateDescriptionPlaceholder: "可选描述",
+    noTemplates: "暂无模板,可将当前管道另存为模板以复用",
+    templateApply: "套用",
+    templateRename: "重命名",
+    templateDelete: "删除",
+    templateExport: "导出",
+    templateImport: "导入",
+    confirmDeleteTemplate: "确定删除该模板吗?",
+    templateSaved: "管道已保存为模板",
+    templateApplied: "已从模板创建新管道",
+    templateNameRequired: "请先在管道中添加步骤再另存为模板。",
+    templateImportFailed: "所选文件不是有效的模板文件。",
+    paletteTemplates: "模板",
   },
 };

@@ -105,6 +105,34 @@ export interface PipelineVersion {
   variables?: PipelineVariable[];
 }
 
+/** A saved pipeline template. `snapshot` reuses `utils/session.ts`'s
+ *  `TabSnapshot` shape so pipelines roundtrip losslessly. */
+export interface PipelineTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  tags?: string[];
+  created: string;
+  updated: string;
+  snapshot: {
+    id: string;
+    name: string;
+    created: string;
+    updated: string;
+    inputFile?: string;
+    defaultDelimiter?: string;
+    headers?: string[];
+    data?: string[][];
+    inputPosition?: { x: number; y: number };
+    isSettings?: boolean;
+    currentVersionId?: string;
+    variables?: PipelineVariable[];
+    runVariableValues?: Record<string, string>;
+    pipeline: StoredPipelineStep[];
+    edges: PipelineEdge[];
+  };
+}
+
 export interface ColumnSchema {
   name: string;
   type: "string" | "number" | "date" | "boolean";

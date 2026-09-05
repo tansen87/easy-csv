@@ -55,6 +55,9 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     storage::file_exists,
     storage::save_pipeline_versions,
     storage::load_pipeline_versions,
+    storage::save_pipeline_template,
+    storage::load_pipeline_templates,
+    storage::delete_pipeline_template,
     storage::save_lineage_data,
     storage::load_lineage_data
   ])

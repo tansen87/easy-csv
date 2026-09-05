@@ -34,6 +34,71 @@ pub async fn load_pipeline_versions(pipeline_id: String) -> Result<String, Strin
   }
 }
 
+// ── Pipeline templates ────────────────────────────────────────────────
+
+fn templates_path() -> std::path::PathBuf {
+  get_resources_dir().join("templates").join("templates.json")
+}
+
+fn read_templates() -> Result<Vec<serde_json::Value>, String> {
+  let path = templates_path();
+  if !path.exists() {
+    return Ok(Vec::new());
+  }
+  let content = std::fs::read_to_string(&path)
+    .map_err(|e| format!("Failed to read pipeline templates: {}", e))?;
+  Ok(serde_json::from_str(&content).unwrap_or_default())
+}
+
+fn write_templates(templates: &[serde_json::Value]) -> Result<(), String> {
+  let path = templates_path();
+  if let Some(dir) = path.parent() {
+    std::fs::create_dir_all(dir)
+      .map_err(|e| format!("Failed to create templates directory: {}", e))?;
+  }
+  let json = serde_json::to_string_pretty(templates)
+    .map_err(|e| format!("Failed to serialize pipeline templates: {}", e))?;
+  std::fs::write(&path, json).map_err(|e| format!("Failed to write pipeline templates: {}", e))
+}
+
+fn get_template_id(tpl: &serde_json::Value) -> String {
+  tpl
+    .get("id")
+    .and_then(|v| v.as_str())
+    .unwrap_or_default()
+    .to_string()
+}
+
+/// Upsert a single template (replaces any existing template with the same id).
+#[tauri::command]
+pub async fn save_pipeline_template(template: String) -> Result<(), String> {
+  let tpl: serde_json::Value = serde_json::from_str(&template)
+    .map_err(|e| format!("Failed to parse pipeline template: {}", e))?;
+  let id = get_template_id(&tpl);
+  if id.is_empty() {
+    return Err("Pipeline template requires an id".to_string());
+  }
+  let mut list = read_templates()?;
+  list.retain(|t| get_template_id(t) != id);
+  list.push(tpl);
+  write_templates(&list)
+}
+
+/// Load the full list of saved templates as a JSON array string.
+#[tauri::command]
+pub async fn load_pipeline_templates() -> Result<String, String> {
+  let list = read_templates()?;
+  serde_json::to_string(&list).map_err(|e| format!("Failed to serialize pipeline templates: {}", e))
+}
+
+/// Delete a template by its id.
+#[tauri::command]
+pub async fn delete_pipeline_template(template_id: String) -> Result<(), String> {
+  let mut list = read_templates()?;
+  list.retain(|t| get_template_id(t) != template_id);
+  write_templates(&list)
+}
+
 #[tauri::command]
 pub async fn save_lineage_data(pipeline_id: String, lineage: String) -> Result<(), String> {
   let resources_dir = get_resources_dir();

@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
+import {
+  open as openDialog,
+  save as saveDialog,
+} from "@tauri-apps/plugin-dialog";
+import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import {
@@ -23,6 +28,7 @@ import {
   Bot,
   RefreshCw,
   FileCode,
+  LayoutTemplate,
 } from "lucide-react";
 
 import { LogPanel } from "@/components/panel/LogPanel";
@@ -33,6 +39,7 @@ import { HelpDialog } from "@/components/help/HelpDialog";
 import { getHelpContent } from "@/components/help/HelpContent";
 import { UpdateDialog } from "@/components/dialog/UpdateDialog";
 import { ConfirmDialog } from "@/components/dialog/ConfirmDialog";
+import { PipelineTemplateDialog } from "@/components/dialog/PipelineTemplateDialog";
 import { VariableValuesDialog } from "@/components/dialog/VariableValuesDialog";
 import { VariablePanel } from "@/components/panel/VariablePanel";
 import { BatchFilterDialog } from "@/components/dialog/BatchFilterDialog";
@@ -56,16 +63,22 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { useTabs } from "@/hooks/useTabs";
 import { usePipelineState } from "@/hooks/usePipelineState";
 import { usePipelineVersions } from "@/hooks/usePipelineVersions";
+import { usePipelineTemplates } from "@/hooks/usePipelineTemplates";
 import { useDataLineage } from "@/hooks/useDataLineage";
 import { useSession } from "@/hooks/useSession";
 import { useKeyboardShortcuts } from "@/hooks/KeyboardShortcuts";
 import { formatDateTime } from "@/utils/format";
-import { stripStepCommand } from "@/utils/session";
+import {
+  stripStepCommand,
+  serializeTabSnapshot,
+  deserializeTabSnapshot,
+} from "@/utils/session";
 import {
   PipelineStep,
   XanCommand,
   PipelineEdge,
   PipelineVariable,
+  PipelineTemplate,
 } from "@/types/xan";
 import { AIConfig, DEFAULT_AI_CONFIG } from "@/services/ai/types";
 import { loadAIConfig, saveAIConfig, setAIConfig } from "@/services/ai/index";
@@ -696,6 +709,164 @@ function AppContent() {
     [versionsHook.saveVersion, markPipelineSaved],
   );
 
+  // ── Pipeline templates (F4) ───────────────────────────────────────────────
+  const templateStore = usePipelineTemplates();
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [templateToDelete, setTemplateToDelete] =
+    useState<PipelineTemplate | null>(null);
+
+  const handleUseOrSaveTemplate = useCallback(
+    async (name: string, description?: string) => {
+      const currentTab = tabsHook.getCurrentTab();
+      if (!currentTab || currentTab.pipeline.length === 0) {
+        showToast(t.templateNameRequired, "warning");
+        return;
+      }
+      try {
+        const template: PipelineTemplate = {
+          id: `tpl-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          name,
+          description,
+          created: formatDateTime(new Date()),
+          updated: formatDateTime(new Date()),
+          snapshot: serializeTabSnapshot(currentTab),
+        };
+        await templateStore.savePipelineTemplate(template);
+        showToast(`${t.templateSaved}: ${name}`, "success");
+      } catch (error) {
+        showToast(`Failed to save template: ${error}`, "error");
+      }
+    },
+    [showToast, tabsHook, templateStore, formatDateTime, t],
+  );
+
+  const handleApplyTemplate = useCallback(
+    async (id: string) => {
+      const template = templateStore.templates.find((tpl) => tpl.id === id);
+      if (!template) {
+        showToast("Template not found", "error");
+        return;
+      }
+      const tab = deserializeTabSnapshot(template.snapshot);
+      if (!tab) {
+        showToast("Failed to apply template", "error");
+        return;
+      }
+      const newTabId = `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const newTab = {
+        ...tab,
+        id: newTabId,
+        name: template.name,
+        created: formatDateTime(new Date()),
+        updated: formatDateTime(new Date()),
+      };
+      tabsHook.setTabs((prev) => [...prev, newTab]);
+      tabsHook.setSelectedTabId(newTabId);
+      setSelectedStep(null);
+      if (template.snapshot.inputFile) {
+        await tabsHook.loadCsvData(
+          newTabId,
+          template.snapshot.inputFile,
+          template.snapshot.defaultDelimiter,
+        );
+      }
+      showToast(`${t.templateApplied}: ${template.name}`, "success");
+    },
+    [
+      showToast,
+      templateStore.templates,
+      tabsHook,
+      setSelectedStep,
+      formatDateTime,
+      t,
+    ],
+  );
+
+  const handleRenameTemplate = useCallback(
+    async (id: string, name: string, description?: string) => {
+      await templateStore.renamePipelineTemplate(id, name, description);
+    },
+    [templateStore],
+  );
+
+  const confirmDeleteTemplate = useCallback(() => {
+    if (templateToDelete) {
+      void templateStore.deletePipelineTemplate(templateToDelete.id);
+      setTemplateToDelete(null);
+    }
+  }, [templateStore, templateToDelete]);
+
+  const handleExportTemplate = useCallback(
+    async (id: string) => {
+      const template = templateStore.templates.find((tpl) => tpl.id === id);
+      if (!template) return;
+      try {
+        const filePath = await saveDialog({
+          filters: [
+            {
+              name: "EasyCSV Template",
+              extensions: ["ecsv-template.json"],
+            },
+          ],
+          defaultPath: `${template.name}.ecsv-template.json`,
+        });
+        if (!filePath) return;
+        const payload = { version: 1, templates: [template] };
+        const encoder = new TextEncoder();
+        await writeFile(
+          filePath,
+          encoder.encode(JSON.stringify(payload, null, 2)),
+        );
+        showToast(`Exported: ${template.name}`, "success");
+      } catch (error) {
+        showToast(`Failed to export template: ${error}`, "error");
+      }
+    },
+    [templateStore.templates, showToast],
+  );
+
+  const handleImportTemplate = useCallback(async () => {
+    const file = await openDialog({
+      multiple: false,
+      filters: [
+        {
+          name: "EasyCSV Template",
+          extensions: ["ecsv-template.json", "json"],
+        },
+      ],
+    });
+    if (!file) return;
+    try {
+      const content = await readFile(file);
+      const text = new TextDecoder().decode(content);
+      const data = JSON.parse(text);
+      let incoming: PipelineTemplate[] = [];
+      if (Array.isArray(data)) {
+        incoming = data;
+      } else if (Array.isArray(data?.templates)) {
+        incoming = data.templates as PipelineTemplate[];
+      } else if (data && typeof data === "object" && data.snapshot) {
+        incoming = [data as PipelineTemplate];
+      }
+      if (incoming.length === 0) {
+        showToast(t.templateImportFailed, "error");
+        return;
+      }
+      for (const tpl of incoming) {
+        if (!tpl.snapshot) continue;
+        const imported: PipelineTemplate = {
+          ...tpl,
+          id: `tpl-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          updated: formatDateTime(new Date()),
+        };
+        await templateStore.savePipelineTemplate(imported);
+      }
+      showToast(`Imported ${incoming.length} template(s)`, "success");
+    } catch (error) {
+      showToast(t.templateImportFailed, "error");
+    }
+  }, [templateStore, showToast, t, formatDateTime]);
+
   // Keyboard shortcuts (O-3: moved to App level)
   useKeyboardShortcuts(
     {
@@ -724,6 +895,7 @@ function AppContent() {
       onLogs: () => ui.setShowLogPanel(!ui.showLogPanel),
       onAI: () => ui.setShowAIPanel(!ui.showAIPanel),
       onCommandPalette: () => ui.setShowCommandPalette(!ui.showCommandPalette),
+      onOpenTemplates: () => setShowTemplateDialog(true),
     },
     {
       undoStackLength: pipeline.undoStack.length,
@@ -1072,7 +1244,25 @@ function AppContent() {
           ui.setShowCsvEncoding(true);
         },
       },
+      {
+        id: "use-or-save-template",
+        label: t.paletteTemplates,
+        icon: LayoutTemplate,
+        group: t.paletteActions,
+        shortcut: "Ctrl+T",
+        onSelect: () => setShowTemplateDialog(true),
+      },
     ];
+
+    const templateItems: PaletteItem[] = templateStore.templates.map((tpl) => ({
+      id: `template-${tpl.id}`,
+      label: tpl.name,
+      description: tpl.description || t.newFromTemplate,
+      keywords: t.newFromTemplate,
+      icon: LayoutTemplate,
+      group: t.paletteTemplates,
+      onSelect: () => void handleApplyTemplate(tpl.id),
+    }));
 
     const tabs: PaletteItem[] = tabsHook.tabs.map((tab) => ({
       id: `tab-${tab.id}`,
@@ -1105,7 +1295,7 @@ function AppContent() {
       };
     });
 
-    return [...actions, ...tabs, ...recent, ...commands];
+    return [...actions, ...tabs, ...recent, ...commands, ...templateItems];
   }, [
     t,
     language,
@@ -1132,6 +1322,9 @@ function AppContent() {
     pipeline,
     setSelectedStep,
     ui,
+    templateStore.templates,
+    handleApplyTemplate,
+    currentPipelineLength,
   ]);
 
   return (
@@ -1164,6 +1357,7 @@ function AppContent() {
               onSavePipeline={handleSavePipelineAndMarkSaved}
               onImportPipeline={handleImportPipeline}
               onExportPipeline={handleExportPipelineAndMarkSaved}
+              onUseOrSaveTemplate={() => setShowTemplateDialog(true)}
               onHelp={onHelp}
               onCheckUpdate={checkForUpdates}
               onShowSettings={onShowSettings}
@@ -1339,6 +1533,39 @@ function AppContent() {
               window.location.reload();
             }}
             onCancel={() => ui.setShowRefreshDialog(false)}
+          />
+
+          <PipelineTemplateDialog
+            isOpen={showTemplateDialog}
+            onClose={() => setShowTemplateDialog(false)}
+            templates={templateStore.templates}
+            canSave={currentPipelineLength > 0}
+            defaultName={tabsHook.getCurrentTab()?.name || "Pipeline"}
+            onSave={(name, description) =>
+              void handleUseOrSaveTemplate(name, description)
+            }
+            onApply={(id) => void handleApplyTemplate(id)}
+            onRename={(id, name, description) =>
+              void handleRenameTemplate(id, name, description)
+            }
+            onDelete={(id) => {
+              const tpl = templateStore.templates.find((t) => t.id === id);
+              if (tpl) setTemplateToDelete(tpl);
+            }}
+            onExport={(id) => void handleExportTemplate(id)}
+            onImport={() => void handleImportTemplate()}
+          />
+
+          <ConfirmDialog
+            isOpen={templateToDelete !== null}
+            title={t.confirmDeleteTemplate}
+            message={
+              templateToDelete
+                ? `${t.confirmDeleteTemplate} (${templateToDelete.name})`
+                : ""
+            }
+            onConfirm={confirmDeleteTemplate}
+            onCancel={() => setTemplateToDelete(null)}
           />
 
           {ui.batchFilterDialog && (

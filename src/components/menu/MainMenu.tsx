@@ -30,6 +30,7 @@ interface MainMenuProps {
   onSavePipeline: () => void;
   onImportPipeline: () => void;
   onExportPipeline: () => void;
+  onUseOrSaveTemplate: () => void;
   onHelp: () => void;
   onCheckUpdate: () => void;
   onShowSettings: () => void;
@@ -73,6 +74,7 @@ export const MainMenu = React.memo(function MainMenu({
   onSavePipeline,
   onImportPipeline,
   onExportPipeline,
+  onUseOrSaveTemplate,
   onHelp,
   onCheckUpdate,
   onShowSettings,
@@ -233,6 +235,19 @@ export const MainMenu = React.memo(function MainMenu({
                 <span className="flex-1 text-left">{t.exportWorkflow}</span>
                 <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
                   Ctrl+E
+                </kbd>
+              </button>
+              <div className="border-t border-border my-1" />
+              <button
+                onClick={() => {
+                  onUseOrSaveTemplate();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                <span className="flex-1 text-left">{t.paletteTemplates}</span>
+                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                  Ctrl+T
                 </kbd>
               </button>
               <button
