@@ -110,6 +110,7 @@ interface HomeViewProps {
   doubleClickFitView?: boolean;
   onSavePipeline?: () => void;
   onOpenCommandPalette?: () => void;
+  onSaveIntermediate?: (stepId: string) => void;
   pipelineSavedAt?: number;
 }
 
@@ -162,6 +163,7 @@ export const HomeView = React.memo(function HomeView({
   doubleClickFitView = true,
   onSavePipeline,
   onOpenCommandPalette,
+  onSaveIntermediate,
   pipelineSavedAt,
 }: HomeViewProps) {
   const { t } = useLanguage();
@@ -565,6 +567,7 @@ export const HomeView = React.memo(function HomeView({
           doubleClickFitView={doubleClickFitView}
           onSavePipeline={onSavePipeline}
           onOpenCommandPalette={onOpenCommandPalette}
+          onSaveIntermediate={onSaveIntermediate}
         />
       </div>
 

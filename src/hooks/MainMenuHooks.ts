@@ -118,6 +118,61 @@ function serializeStepParams(step: PipelineStep): CliParam[] {
   return params;
 }
 
+/**
+ * Build the sub-chain from the input to a target step (inclusive) along the
+ * edges. Used by "save intermediate result as input CSV": the output of this
+ * prefix is exactly the data the target step receives.
+ *
+ * Linear pipelines (no edges) simply slice by array order. Branching pipelines
+ * take the first DFS path that reaches the target; a disconnected target falls
+ * back to the array-order prefix so it can still be inspected.
+ */
+function buildPrefixToStep(
+  steps: PipelineStep[],
+  edges: PipelineEdge[],
+  targetStepId: string,
+): PipelineStep[] {
+  if (!steps.some((s) => s.id === targetStepId)) return [];
+  if (edges.length === 0) {
+    const idx = steps.findIndex((s) => s.id === targetStepId);
+    return idx >= 0 ? steps.slice(0, idx + 1) : [];
+  }
+
+  const stepMap = new Map(steps.map((s) => [s.id, s]));
+  const adjacency = new Map<string, string[]>();
+  for (const e of edges) {
+    if (e.source && e.target && stepMap.has(e.target)) {
+      if (!adjacency.has(e.source)) adjacency.set(e.source, []);
+      adjacency.get(e.source)!.push(e.target);
+    }
+  }
+
+  const targetIds = new Set(edges.map((e) => e.target));
+  const startIds = steps.filter((s) => !targetIds.has(s.id)).map((s) => s.id);
+
+  const visited = new Set<string>();
+  const stack: Array<{ id: string; path: string[] }> = startIds.map((id) => ({
+    id,
+    path: [],
+  }));
+  while (stack.length > 0) {
+    const { id, path } = stack.pop()!;
+    if (visited.has(id)) continue;
+    visited.add(id);
+    const newPath = [...path, id];
+    if (id === targetStepId) {
+      return newPath.map((nid) => stepMap.get(nid)!).filter(Boolean);
+    }
+    for (const next of adjacency.get(id) || []) {
+      stack.push({ id: next, path: newPath });
+    }
+  }
+
+  // Not reachable via edges; fall back to array-order prefix.
+  const idx = steps.findIndex((s) => s.id === targetStepId);
+  return idx >= 0 ? steps.slice(0, idx + 1) : [];
+}
+
 interface MainMenuHooksProps {
   tabs: PipelineTab[];
   selectedTabId: string;
@@ -542,7 +597,10 @@ export function MainMenuHooks({
           // with a `${N:-default}` fallback so missing args don't trip `set -u`.
           const bashEscape = (s: string) => s.replace(/[\\"$`]/g, "\\$&");
           const defaultByVar = new Map(
-            (currentTab.variables || []).map((v) => [v.name, v.defaultValue ?? ""]),
+            (currentTab.variables || []).map((v) => [
+              v.name,
+              v.defaultValue ?? "",
+            ]),
           );
           variableNames.forEach((name, i) => {
             const argIndex = i + 2;
@@ -1638,6 +1696,97 @@ export function MainMenuHooks({
     [],
   );
 
+  /**
+   * Save the intermediate result of a step (input → target step, inclusive)
+   * as a full CSV file. Runs the prefix sub-chain WITHOUT the output-size cap
+   * so large results are written completely, then prompts for a save path.
+   */
+  const handleSaveIntermediateAsInput = useCallback(
+    async (stepId: string) => {
+      const currentTab = getCurrentTab();
+      const currentPipeline = currentTab.pipeline;
+      if (currentPipeline.length === 0) {
+        showToast("No pipeline to save", "warning");
+        return;
+      }
+      const inputFile = currentTab.inputFile || "";
+      if (!inputFile) {
+        showToast("Open an input file first", "warning");
+        return;
+      }
+
+      const target = currentPipeline.find((s) => s.id === stepId);
+      if (!target) {
+        showToast("Step not found", "error");
+        return;
+      }
+
+      const edges = currentTab.edges || [];
+      const prefix = buildPrefixToStep(currentPipeline, edges, stepId);
+      const executablePrefix = prefix.filter((s) => s.command.id !== "output");
+      if (executablePrefix.length === 0) {
+        showToast("No executable steps up to this step", "warning");
+        return;
+      }
+
+      // Resolve {{var}} placeholders with declared defaults (F3).
+      const values: Record<string, string> = {};
+      for (const v of currentTab.variables || []) {
+        values[v.name] = v.defaultValue ?? "";
+      }
+      const resolvedSteps = resolveStepPlaceholders(executablePrefix, values);
+
+      const commands = resolvedSteps.map((step) => {
+        let params = serializeStepParams(step);
+        if (step.command.name === "run") {
+          const mode = step.parameters.mode || "pipeline";
+          params = params.filter((param) => {
+            if (mode === "script" && param.name === "pipeline") return false;
+            if (mode === "pipeline" && param.name === "file") return false;
+            return true;
+          });
+        }
+        return {
+          name: step.command.name,
+          id: step.id,
+          parameters: params,
+        };
+      });
+
+      try {
+        // No maxOutputBytes: the intermediate must be written in full.
+        const result = await invoke<any>("execute_xan_pipeline", {
+          commands,
+          inputFile,
+          defaultDelimiter,
+        });
+        if (!result.success) {
+          showToast(`Failed: ${result.error || "execution error"}`, "error");
+          return;
+        }
+        const output = (result.output as string) || "";
+        if (!output.trim()) {
+          showToast("No output produced by these steps", "warning");
+          return;
+        }
+
+        const stepName = target.alias || target.command.name;
+        const filePath = await save({
+          filters: [{ name: "CSV", extensions: ["csv"] }],
+          defaultPath: `${currentTab.name}_${stepName}.csv`,
+        });
+        if (!filePath) return;
+
+        const encoder = new TextEncoder();
+        await writeFile(filePath, encoder.encode(output));
+        showToast(`Intermediate saved to: ${filePath}`, "success");
+      } catch (error) {
+        showToast(`Failed to save intermediate: ${error}`, "error");
+      }
+    },
+    [getCurrentTab, showToast, defaultDelimiter],
+  );
+
   const handleCancelExecution = useCallback(async () => {
     try {
       await invoke("set_pipeline_cancelled", { cancel: true });
@@ -1655,6 +1804,7 @@ export function MainMenuHooks({
     handleImportPipeline,
     handleExecute,
     handleCancelExecution,
+    handleSaveIntermediateAsInput,
     getCurrentPipeline,
     processChartData,
     resultPreview,

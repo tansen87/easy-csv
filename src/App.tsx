@@ -653,6 +653,7 @@ function AppContent() {
     handleImportPipeline,
     handleExecute,
     handleCancelExecution,
+    handleSaveIntermediateAsInput,
     resultPreview,
     variablePrompt,
     confirmVariables,
@@ -1454,6 +1455,7 @@ function AppContent() {
                 doubleClickFitView={settings.doubleClickFitView}
                 onSavePipeline={handleSavePipelineAndMarkSaved}
                 onOpenCommandPalette={onOpenCommandPalette}
+                onSaveIntermediate={handleSaveIntermediateAsInput}
               />
             </div>
           </main>

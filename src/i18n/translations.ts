@@ -166,6 +166,9 @@ export interface Translations {
   daysAgo: string;
   saved: string;
   unsaved: string;
+  rightClickCutMode: string;
+  rightClickMenuMode: string;
+  saveIntermediateAsInput: string;
 
   // LogPanel
   logs: string;
@@ -176,6 +179,7 @@ export interface Translations {
   allLogs: string;
   copy: string;
   copied: string;
+  paste: string;
   scrollToBottom: string;
   noMatchingLogs: string;
 
@@ -498,6 +502,9 @@ export const translations: Record<Language, Translations> = {
     daysAgo: "{n}d ago",
     saved: "Saved",
     unsaved: "Unsaved",
+    rightClickCutMode: "Right click: cut",
+    rightClickMenuMode: "Right click: menu",
+    saveIntermediateAsInput: "Save result up to this step as CSV",
 
     // LogPanel
     logs: "Logs",
@@ -508,6 +515,7 @@ export const translations: Record<Language, Translations> = {
     allLogs: "All",
     copy: "Copy",
     copied: "Copied",
+    paste: "Paste",
     scrollToBottom: "Scroll to bottom",
     noMatchingLogs: "No logs match this filter",
 
@@ -824,6 +832,9 @@ export const translations: Record<Language, Translations> = {
     daysAgo: "{n} 天前",
     saved: "已保存",
     unsaved: "未保存",
+    rightClickCutMode: "右键: 划线",
+    rightClickMenuMode: "右键: 菜单",
+    saveIntermediateAsInput: "保存到该步的结果为CSV",
 
     // LogPanel
     logs: "日志",
@@ -834,6 +845,7 @@ export const translations: Record<Language, Translations> = {
     allLogs: "全部",
     copy: "复制",
     copied: "已复制",
+    paste: "粘贴",
     scrollToBottom: "滚动到底部",
     noMatchingLogs: "没有符合筛选条件的日志",
 

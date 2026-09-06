@@ -45,9 +45,21 @@ import { CutVisualization } from "@/components/panel/overlays/CutVisualization";
 import { ConnectionVisualization } from "@/components/panel/overlays/ConnectionVisualization";
 import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "@/components/menu/ContextMenu";
+import {
+  CanvasContextMenu,
+  type CanvasMenuItem,
+} from "@/components/menu/CanvasContextMenu";
 import { TextTransformType } from "@/components/dialog/TextTransformDialog";
 import { NumberTransformType } from "@/components/dialog/NumberTransformDialog";
-import { Copy, Trash2 } from "lucide-react";
+import {
+  Copy,
+  Trash2,
+  ClipboardPaste,
+  Scissors,
+  MousePointerClick,
+  FileDown,
+} from "lucide-react";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useLanguage } from "@/i18n";
 
 function formatRelativeTime(
@@ -116,6 +128,7 @@ interface FlowPanelProps {
   doubleClickFitView?: boolean;
   onSavePipeline?: () => void;
   onOpenCommandPalette?: () => void;
+  onSaveIntermediate?: (stepId: string) => void;
 }
 
 export function FlowPanel({
@@ -151,6 +164,7 @@ export function FlowPanel({
   pipelineSavedAt,
   doubleClickFitView = true,
   onOpenCommandPalette,
+  onSaveIntermediate,
 }: FlowPanelProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
@@ -275,11 +289,27 @@ export function FlowPanel({
     setContextMenu(null);
   }, []);
 
+  // Right-click interaction mode: "cut" keeps the cut-to-delete / connect
+  // gesture; "menu" opens the canvas context menu instead (paste, more later).
+  const [rightClickMode, setRightClickMode] = useState<"cut" | "menu">("cut");
+  const [canvasMenu, setCanvasMenu] = useState<{
+    x: number;
+    y: number;
+    stepId: string | null;
+  } | null>(null);
+
   const handleContextMenu = useCallback(
     (stepId: string, x: number, y: number) => {
-      setContextMenu({ x, y, stepId });
+      // In menu mode, right-clicking a step node opens the canvas context menu
+      // (with that step under the cursor). Nodes call this via their own
+      // onContextMenu which stops propagation, so we route here explicitly.
+      if (rightClickMode === "menu") {
+        setCanvasMenu({ x, y, stepId });
+      } else {
+        setContextMenu({ x, y, stepId });
+      }
     },
-    [],
+    [rightClickMode],
   );
 
   const [tableContextMenu, setTableContextMenu] = useState<{
@@ -510,8 +540,12 @@ export function FlowPanel({
       if (!node || !reactFlowInstance.current) return;
 
       // Use setCenter to jump to node position (centered)
-      const w = node.type === "tableNode" || node.type === "resultTableNode" ? 260 : 110;
-      const h = node.type === "tableNode" || node.type === "resultTableNode" ? 130 : 45;
+      const w =
+        node.type === "tableNode" || node.type === "resultTableNode"
+          ? 260
+          : 110;
+      const h =
+        node.type === "tableNode" || node.type === "resultTableNode" ? 130 : 45;
       reactFlowInstance.current.setCenter(
         node.position.x + w,
         node.position.y + h,
@@ -816,6 +850,8 @@ export function FlowPanel({
   // Right-click - Start connecting or cutting nodes
   const handleCutStart = useCallback(
     (e: React.MouseEvent) => {
+      // In "menu" mode right-click is reserved for the context menu.
+      if (rightClickMode !== "cut") return;
       if (e.button === 2) {
         e.preventDefault();
         e.stopPropagation();
@@ -844,7 +880,7 @@ export function FlowPanel({
         }
       }
     },
-    [getNodeAtPosition],
+    [getNodeAtPosition, rightClickMode],
   );
 
   // Right-click move - Connect or cut nodes mode
@@ -1102,9 +1138,20 @@ export function FlowPanel({
   );
 
   // Prevent default right-click menu on panel
-  const handlePanelContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-  }, []);
+  const handlePanelContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (rightClickMode === "menu") {
+        const nodeId = getNodeAtPosition(e.clientX, e.clientY);
+        setCanvasMenu({
+          x: e.clientX,
+          y: e.clientY,
+          stepId: nodeId && nodeId !== "table-node" ? nodeId : null,
+        });
+      }
+    },
+    [rightClickMode, getNodeAtPosition],
+  );
 
   // Update node's isCutting attribute, pending delete highlight, and cut parts
   useEffect(() => {
@@ -1397,6 +1444,30 @@ export function FlowPanel({
     [doubleClickFitView],
   );
 
+  // Canvas context menu items (right-click menu mode). Built on every render
+  // so the paste disabled state reflects the current clipboard and the save
+  // entry only shows when the cursor is over a step node. Extend this list as
+  // more menu features are added.
+  const canvasMenuItems: CanvasMenuItem[] = [
+    ...(canvasMenu?.stepId && onSaveIntermediate
+      ? [
+          {
+            key: "save-intermediate",
+            label: t.saveIntermediateAsInput,
+            icon: FileDown,
+            onSelect: () => onSaveIntermediate(canvasMenu.stepId!),
+          } as CanvasMenuItem,
+        ]
+      : []),
+    {
+      key: "paste",
+      label: t.paste,
+      icon: ClipboardPaste,
+      disabled: !clipboardRef.current,
+      onSelect: handlePasteClipboard,
+    },
+  ];
+
   return (
     <div
       ref={reactFlowWrapper}
@@ -1501,6 +1572,56 @@ export function FlowPanel({
         connectEndAnchor={connectEndAnchor}
         connectTargetNode={connectTargetNode}
       />
+
+      {/* Right-click interaction mode toggle (cut gesture vs context menu) */}
+      <div
+        className="absolute right-2 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center gap-1 bg-card border border-border/70 rounded-lg shadow-lg p-1"
+        onMouseDown={(e) => e.stopPropagation()}
+        onContextMenu={(e) => e.stopPropagation()}
+      >
+        <Tooltip content={t.rightClickCutMode} side="left">
+          <button
+            onClick={() => {
+              setRightClickMode("cut");
+              setCanvasMenu(null);
+            }}
+            aria-pressed={rightClickMode === "cut"}
+            className={`relative flex items-center justify-center h-7 w-7 rounded-lg transition-colors ${
+              rightClickMode === "cut"
+                ? "bg-primary text-primary-foreground"
+                : "text-primary hover:bg-accent/60"
+            }`}
+          >
+            <Scissors className="h-4 w-4" />
+          </button>
+        </Tooltip>
+        <Tooltip content={t.rightClickMenuMode} side="left">
+          <button
+            onClick={() => {
+              setRightClickMode("menu");
+              setCanvasMenu(null);
+            }}
+            aria-pressed={rightClickMode === "menu"}
+            className={`relative flex items-center justify-center h-7 w-7 rounded-lg transition-colors ${
+              rightClickMode === "menu"
+                ? "bg-primary text-primary-foreground"
+                : "text-primary hover:bg-accent/60"
+            }`}
+          >
+            <MousePointerClick className="h-4 w-4" />
+          </button>
+        </Tooltip>
+      </div>
+
+      {/* Canvas context menu (right-click menu mode) */}
+      {canvasMenu && (
+        <CanvasContextMenu
+          x={canvasMenu.x}
+          y={canvasMenu.y}
+          items={canvasMenuItems}
+          onClose={() => setCanvasMenu(null)}
+        />
+      )}
 
       {/* Multi-select floating action bar */}
       {selectedNodeIds.size > 0 && (
