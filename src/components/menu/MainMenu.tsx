@@ -478,7 +478,6 @@ export const MainMenu = React.memo(function MainMenu({
                     onHelp();
                     closeDropdowns();
                   }}
-                  aria-label={t.helpCenter}
                   className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
                 >
                   <span className="whitespace-nowrap">{t.helpCenter}</span>

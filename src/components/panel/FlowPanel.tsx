@@ -1630,8 +1630,6 @@ export function FlowPanel({
           <button
             type="button"
             className="h-1.5 w-8 rounded-full bg-black/60 dark:bg-white/70 shadow cursor-pointer transition-all hover:scale-x-110 hover:bg-black/80 dark:hover:bg-white/90"
-            aria-label={t.rightClickCutMode}
-            title={t.rightClickCutMode}
           />
         )}
       </div>

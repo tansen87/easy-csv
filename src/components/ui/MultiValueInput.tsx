@@ -59,7 +59,6 @@ export function MultiValueInput({
           <button
             type="button"
             onClick={() => remove(i)}
-            aria-label="Remove"
             className="text-muted-foreground hover:text-foreground"
           >
             x

@@ -132,7 +132,6 @@ export function ExecutionHistoryDialog({
               onClick={onRefresh}
               disabled={loading}
               className="px-2"
-              aria-label={t.historyButton}
             >
               <RefreshCw
                 className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
@@ -143,7 +142,6 @@ export function ExecutionHistoryDialog({
               size="xs"
               onClick={onClose}
               className="px-2"
-              aria-label={t.close}
             >
               <X className="h-4 w-4" />
             </Button>

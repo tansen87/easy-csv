@@ -320,7 +320,6 @@ export const LogPanel = React.memo(function LogPanel({
         className="fixed z-floating flex items-center gap-1.5 px-3 py-2 bg-background border border-border/50 rounded-full shadow-xl cursor-pointer select-none"
         style={{ top: capsuleY ?? 56, right: 8 }}
         role="button"
-        aria-label={t.expandPanel}
         onContextMenu={(e) => e.preventDefault()}
         onClick={() => toggleCollapsed()}
       >

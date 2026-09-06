@@ -116,7 +116,6 @@ export function VariablePanel({
             variant="ghost"
             size="icon"
             onClick={onClose}
-            aria-label={t.close}
           >
             <X className="h-4 w-4 accent-foreground" />
           </Button>
@@ -163,8 +162,6 @@ export function VariablePanel({
                     {declaredNames.has(v.name) && (
                       <button
                         onClick={() => deleteVariable(v.name)}
-                        title={t.deleteVariable}
-                        aria-label={t.deleteVariable}
                         className="p-1 rounded hover:bg-red-500/10 text-muted-foreground/60 hover:text-red-500 transition-colors"
                       >
                         <X className="h-3.5 w-3.5" />

@@ -80,7 +80,6 @@ export function VariableValuesDialog({
             variant="ghost"
             size="icon"
             onClick={onCancel}
-            aria-label={t.close}
           >
             <X className="h-4 w-4 accent-foreground" />
           </Button>

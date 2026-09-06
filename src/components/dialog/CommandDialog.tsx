@@ -188,7 +188,6 @@ export function CommandDialog({
             variant="ghost"
             size="icon"
             onClick={() => setCommandDialog(null)}
-            aria-label="Close"
           >
             <X className="h-4 w-4 accent-foreground" />
           </Button>
