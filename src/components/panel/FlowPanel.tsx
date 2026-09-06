@@ -292,6 +292,9 @@ export function FlowPanel({
   // Right-click interaction mode: "cut" keeps the cut-to-delete / connect
   // gesture; "menu" opens the canvas context menu instead (paste, more later).
   const [rightClickMode, setRightClickMode] = useState<"cut" | "menu">("cut");
+  // The mode toggle renders as a small dot by default and expands into the
+  // vertical bar when the mouse nears the right edge (D2 follow-up).
+  const [modeBarHovered, setModeBarHovered] = useState(false);
   const [canvasMenu, setCanvasMenu] = useState<{
     x: number;
     y: number;
@@ -886,6 +889,13 @@ export function FlowPanel({
   // Right-click move - Connect or cut nodes mode
   const handleCutMove = useCallback(
     (e: React.MouseEvent) => {
+      // Reveal the mode toggle bar when the mouse nears the right edge.
+      // Returns the previous state when unchanged so React skips re-renders.
+      setModeBarHovered((prev) => {
+        const near = e.clientX >= window.innerWidth - 56;
+        return prev === near ? prev : near;
+      });
+
       if (
         isConnecting &&
         reactFlowWrapper.current &&
@@ -1475,6 +1485,7 @@ export function FlowPanel({
       onMouseDown={handleCutStart}
       onMouseMove={handleCutMove}
       onMouseUp={handleCutEnd}
+      onMouseLeave={() => setModeBarHovered(false)}
       onContextMenu={handlePanelContextMenu}
     >
       <ReactFlow
@@ -1573,44 +1584,56 @@ export function FlowPanel({
         connectTargetNode={connectTargetNode}
       />
 
-      {/* Right-click interaction mode toggle (cut gesture vs context menu) */}
+      {/* Right-click interaction mode toggle: a small dot by default,
+          expanding into the vertical bar when the mouse nears the right edge. */}
       <div
-        className="absolute right-2 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center gap-1 bg-card border border-border/70 rounded-lg shadow-lg p-1"
+        className="absolute right-2 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center"
         onMouseDown={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.stopPropagation()}
       >
-        <Tooltip content={t.rightClickCutMode} side="left">
+        {modeBarHovered ? (
+          <div className="flex flex-col items-center gap-1 bg-card border border-border/70 rounded-lg shadow-lg p-1 animate-in fade-in zoom-in-95 duration-150">
+            <Tooltip content={t.rightClickCutMode} side="left">
+              <button
+                onClick={() => {
+                  setRightClickMode("cut");
+                  setCanvasMenu(null);
+                }}
+                aria-pressed={rightClickMode === "cut"}
+                className={`relative flex items-center justify-center h-7 w-7 rounded-lg transition-colors ${
+                  rightClickMode === "cut"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-primary hover:bg-accent/60"
+                }`}
+              >
+                <Scissors className="h-4 w-4" />
+              </button>
+            </Tooltip>
+            <Tooltip content={t.rightClickMenuMode} side="left">
+              <button
+                onClick={() => {
+                  setRightClickMode("menu");
+                  setCanvasMenu(null);
+                }}
+                aria-pressed={rightClickMode === "menu"}
+                className={`relative flex items-center justify-center h-7 w-7 rounded-lg transition-colors ${
+                  rightClickMode === "menu"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-primary hover:bg-accent/60"
+                }`}
+              >
+                <MousePointerClick className="h-4 w-4" />
+              </button>
+            </Tooltip>
+          </div>
+        ) : (
           <button
-            onClick={() => {
-              setRightClickMode("cut");
-              setCanvasMenu(null);
-            }}
-            aria-pressed={rightClickMode === "cut"}
-            className={`relative flex items-center justify-center h-7 w-7 rounded-lg transition-colors ${
-              rightClickMode === "cut"
-                ? "bg-primary text-primary-foreground"
-                : "text-primary hover:bg-accent/60"
-            }`}
-          >
-            <Scissors className="h-4 w-4" />
-          </button>
-        </Tooltip>
-        <Tooltip content={t.rightClickMenuMode} side="left">
-          <button
-            onClick={() => {
-              setRightClickMode("menu");
-              setCanvasMenu(null);
-            }}
-            aria-pressed={rightClickMode === "menu"}
-            className={`relative flex items-center justify-center h-7 w-7 rounded-lg transition-colors ${
-              rightClickMode === "menu"
-                ? "bg-primary text-primary-foreground"
-                : "text-primary hover:bg-accent/60"
-            }`}
-          >
-            <MousePointerClick className="h-4 w-4" />
-          </button>
-        </Tooltip>
+            type="button"
+            className="h-1.5 w-8 rounded-full bg-black/60 dark:bg-white/70 shadow cursor-pointer transition-all hover:scale-x-110 hover:bg-black/80 dark:hover:bg-white/90"
+            aria-label={t.rightClickCutMode}
+            title={t.rightClickCutMode}
+          />
+        )}
       </div>
 
       {/* Canvas context menu (right-click menu mode) */}
