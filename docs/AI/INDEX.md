@@ -149,9 +149,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | 内容 | 说明 |
 |------|------|
 | `tab_snapshots` 表 | 标签页快照(tab_id, snapshot, updated_time),每次保存先清空再写入 |
-| `session_meta` 表 | 会话元数据(selected_tab_id) |
-| `save_session` | 序列化全部标签页快照 + 选中标签 ID |
-| `load_session` | 恢复标签页快照列表 + 选中标签 ID |
+| `session_meta` 表 | 会话元数据(selected_tab_id、panel_states 面板停靠状态) |
+| `save_session` | 序列化全部标签页快照 + 选中标签 ID + 面板停靠状态 |
+| `load_session` | 恢复标签页快照列表 + 选中标签 ID + 面板停靠状态 |
 
 #### ai.rs — AI 对话代理
 
@@ -191,7 +191,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `get/set_minimize_to_tray` | config | 读写最小化到托盘配置 |
 | `get/set_ai_config` | config | 读写 AI 配置(provider/model/baseUrl/providerName/models) |
 | `save/load/delete/has_api_key` | config | Per-provider API Key 加密存储(AES-256-GCM) |
-| `save_session` / `load_session` | session | 会话快照保存/恢复(标签页 + 选中标签) |
+| `save_session` / `load_session` | session | 会话快照保存/恢复(标签页 + 选中标签 + 面板停靠状态 panel_states) |
 | `call_ai` | ai | 调用 AI 大模型代理(DeepSeek/Qwen/GLM) |
 | `save_conversation` | ai_memory | 保存对话历史 |
 | `load_conversation_history` | ai_memory | 加载对话历史 |

@@ -667,7 +667,7 @@ export function VersionControlPanel({
 
       {deletingVersionId &&
         createPortal(
-          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50">
+          <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/50">
             <div className="bg-background border border-border rounded-lg p-4 shadow-lg w-[280px]">
               <p className="text-sm mb-4">{t.confirmDeleteVersion}</p>
               <div className="flex justify-end gap-2">
@@ -696,7 +696,7 @@ export function VersionControlPanel({
 
       {restoringVersion &&
         createPortal(
-          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50">
+          <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/50">
             <div className="bg-background border border-border rounded-lg p-4 shadow-lg w-[320px]">
               <p className="text-sm font-medium mb-1">
                 {t.confirmRestoreTitle}

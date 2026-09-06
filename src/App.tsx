@@ -150,8 +150,39 @@ function AppContent() {
     tabsHook.setSelectedTabId,
   );
 
-  // Execution history (F6)
+  // Execution history
   const executionHistory = useExecutionHistory();
+
+  // AI panel expanded state is derived from the persisted panel state
+  // (default: collapsed strip), and drives the LogPanel avoidance offset.
+  const aiPanelExpanded =
+    session.panelStates.aiPanel?.collapsed === undefined
+      ? false
+      : !session.panelStates.aiPanel.collapsed;
+  const aiBottomOffset: number | string = useMemo(() => {
+    if (!ui.showAIPanel || !aiPanelExpanded) return 0;
+    // 36vh message area + header + input strip.
+    return "calc(36vh + 96px)";
+  }, [ui.showAIPanel, aiPanelExpanded]);
+
+  // D2: collapsed capsules stack in a fixed order at the top-right corner,
+  // below the app header (48px), one slot per collapsed panel.
+  const collapsedStack = useMemo(() => {
+    const order = ["logPanel", "chartPanel", "commandList"] as const;
+    const result: Partial<Record<(typeof order)[number], number>> = {};
+    let slot = 0;
+    for (const key of order) {
+      if (session.panelStates[key]?.collapsed) {
+        result[key] = 56 + slot * 44;
+        slot++;
+      }
+    }
+    return result;
+  }, [
+    session.panelStates.logPanel?.collapsed,
+    session.panelStates.chartPanel?.collapsed,
+    session.panelStates.commandList?.collapsed,
+  ]);
 
   const progressHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -1478,6 +1509,11 @@ function AppContent() {
             onSearchChange={ui.setSearchQuery}
             isVisible={ui.showCommandPanel}
             onClose={() => ui.setShowCommandPanel(false)}
+            dockState={session.panelStates.commandList}
+            onDockChange={(patch) =>
+              session.updatePanelState("commandList", patch)
+            }
+            capsuleY={collapsedStack.commandList}
           />
 
           <CommandPalette
@@ -1496,6 +1532,12 @@ function AppContent() {
               setShowHistoryDialog(true);
               executionHistory.loadHistory();
             }}
+            dockState={session.panelStates.logPanel}
+            onDockChange={(patch) =>
+              session.updatePanelState("logPanel", patch)
+            }
+            bottomOffset={aiBottomOffset}
+            capsuleY={collapsedStack.logPanel}
           />
 
           <ExecutionHistoryDialog
@@ -1511,6 +1553,11 @@ function AppContent() {
             series={ui.chartSeries}
             isVisible={ui.showChartPanel}
             onClose={() => ui.setShowChartPanel(false)}
+            dockState={session.panelStates.chartPanel}
+            onDockChange={(patch) =>
+              session.updatePanelState("chartPanel", patch)
+            }
+            capsuleY={collapsedStack.chartPanel}
           />
 
           <HelpDialog
@@ -1642,6 +1689,10 @@ function AppContent() {
             }}
             onAddCommand={handleCommandClick}
             onAddCommands={handleCommandsClick}
+            expanded={aiPanelExpanded}
+            onExpandedChange={(v) =>
+              session.updatePanelState("aiPanel", { collapsed: !v })
+            }
           />
 
           {variablePrompt && (

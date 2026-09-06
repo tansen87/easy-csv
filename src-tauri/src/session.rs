@@ -41,7 +41,11 @@ fn get_db() -> Option<&'static DbState> {
 }
 
 #[tauri::command]
-pub async fn save_session(tabs: String, selected_tab_id: String) -> Result<(), String> {
+pub async fn save_session(
+  tabs: String,
+  selected_tab_id: String,
+  panel_states: Option<String>,
+) -> Result<(), String> {
   let db = get_db().ok_or("Database not initialized")?;
   let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
 
@@ -71,6 +75,15 @@ pub async fn save_session(tabs: String, selected_tab_id: String) -> Result<(), S
       params![selected_tab_id],
     )
     .map_err(|e| format!("Failed to save selected tab: {}", e))?;
+
+  // persist floating panel docking states (absent in old sessions → default).
+  let panel_states = panel_states.unwrap_or_else(|| "{}".to_string());
+  conn
+    .execute(
+      "INSERT INTO session_meta (key, value) VALUES ('panel_states', ?1) ON CONFLICT(key) DO UPDATE SET value = ?1",
+      params![panel_states],
+    )
+    .map_err(|e| format!("Failed to save panel states: {}", e))?;
 
   Ok(())
 }
@@ -106,10 +119,21 @@ pub async fn load_session() -> Result<String, String> {
       .unwrap_or_default()
   };
 
+  // panel docking states; old sessions simply have none.
+  let panel_states: String = {
+    let mut stmt = conn
+      .prepare("SELECT value FROM session_meta WHERE key = 'panel_states'")
+      .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+    stmt
+      .query_row([], |row| row.get::<_, String>(0))
+      .unwrap_or_else(|_| "{}".to_string())
+  };
+
   Ok(
     serde_json::json!({
       "tabs": tabs,
       "selectedTabId": selected_tab_id,
+      "panelStates": serde_json::from_str::<serde_json::Value>(&panel_states).unwrap_or_else(|_| serde_json::json!({})),
     })
     .to_string(),
   )

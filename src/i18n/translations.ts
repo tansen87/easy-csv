@@ -183,7 +183,11 @@ export interface Translations {
   scrollToBottom: string;
   noMatchingLogs: string;
 
-  // Execution history (F6)
+  // Floating panel docking
+  collapsePanel: string;
+  expandPanel: string;
+
+  // Execution history
   executionHistory: string;
   historyButton: string;
   noHistoryYet: string;
@@ -199,7 +203,7 @@ export interface Translations {
   historyStatusCancelled: string;
   clearExecutionHistory: string;
 
-  // Result preview (F1)
+  // Result preview
   copyCsv: string;
   copyMarkdown: string;
   resultTruncated: string;
@@ -535,7 +539,11 @@ export const translations: Record<Language, Translations> = {
     scrollToBottom: "Scroll to bottom",
     noMatchingLogs: "No logs match this filter",
 
-    // Execution history (F6)
+    // Floating panel docking
+    collapsePanel: "Collapse",
+    expandPanel: "Expand",
+
+    // Execution history
     executionHistory: "Execution History",
     historyButton: "History",
     noHistoryYet: "No execution history yet",
@@ -881,7 +889,11 @@ export const translations: Record<Language, Translations> = {
     scrollToBottom: "滚动到底部",
     noMatchingLogs: "没有符合筛选条件的日志",
 
-    // Execution history (F6)
+    // Floating panel docking
+    collapsePanel: "折叠",
+    expandPanel: "展开",
+
+    // Execution history
     executionHistory: "执行历史",
     historyButton: "历史",
     noHistoryYet: "暂无执行记录",

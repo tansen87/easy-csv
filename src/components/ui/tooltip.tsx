@@ -33,7 +33,7 @@ export function Tooltip({
       {visible && (
         <div
           className={cn(
-            "absolute z-[9999] px-2 py-1 text-xs font-medium text-popover-foreground bg-popover border border-border rounded-md shadow-md pointer-events-none whitespace-nowrap",
+            "absolute z-tooltip px-2 py-1 text-xs font-medium text-popover-foreground bg-popover border border-border rounded-md shadow-md pointer-events-none whitespace-nowrap",
             sideClasses[side],
             className,
           )}

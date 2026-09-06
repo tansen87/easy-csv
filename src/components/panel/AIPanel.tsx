@@ -47,6 +47,9 @@ interface AIPanelProps {
   onAddCommands?: (
     commands: { command: XanCommand; parameters?: Record<string, any> }[],
   ) => void;
+  /** Controlled expanded state, so App can persist + avoid overlaps. */
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }
 
 interface FeedbackState {
@@ -65,12 +68,22 @@ export const AIPanel = React.memo(function AIPanel({
   context,
   onAddCommand,
   onAddCommands,
+  expanded,
+  onExpandedChange,
 }: AIPanelProps) {
   const { t } = useLanguage();
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const isExpanded = expanded !== undefined ? expanded : internalExpanded;
+  const handleSetExpanded = useCallback(
+    (v: boolean) => {
+      setInternalExpanded(v);
+      onExpandedChange?.(v);
+    },
+    [onExpandedChange],
+  );
   const [cumulativeUsage, setCumulativeUsage] = useState<TokenUsage>({
     prompt_tokens: 0,
     completion_tokens: 0,
@@ -156,7 +169,7 @@ export const AIPanel = React.memo(function AIPanel({
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
     setIsLoading(true);
-    setIsExpanded(true);
+    handleSetExpanded(true);
 
     // Placeholder that receives the streamed deltas as they arrive.
     const placeholder: AIMessage = {
@@ -493,7 +506,7 @@ export const AIPanel = React.memo(function AIPanel({
 
   return (
     <div
-      className="fixed bottom-2 left-1/2 -translate-x-1/2 w-[min(700px,calc(100vw-32px))] z-40"
+      className="fixed bottom-2 left-1/2 -translate-x-1/2 w-[min(700px,calc(100vw-32px))] z-floating"
       onContextMenu={(e) => e.preventDefault()}
     >
       <div className="flex flex-col bg-transparent border border-border/50 rounded-lg shadow-xl overflow-hidden">
@@ -522,7 +535,7 @@ export const AIPanel = React.memo(function AIPanel({
             <Button
               variant="ghost"
               size="xs"
-              onClick={() => setIsExpanded(!isExpanded)}
+              onClick={() => handleSetExpanded(!isExpanded)}
               className="px-2 font-medium"
               disabled={!isAIConfigured()}
             >
@@ -581,7 +594,7 @@ export const AIPanel = React.memo(function AIPanel({
                   autoResizeTextarea();
                 }}
                 onKeyDown={handleKeyDown}
-                onFocus={() => setIsExpanded(true)}
+                onFocus={() => handleSetExpanded(true)}
                 placeholder={t.aiPlaceholder}
                 disabled={isLoading}
                 className="w-full h-auto min-h-[36px] max-h-[96px] resize-none overflow-y-auto py-2 pr-10 text-sm leading-5 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent"

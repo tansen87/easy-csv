@@ -27,7 +27,9 @@ export function ExpressionEditor({
   autoFocus = false,
 }: ExpressionEditorProps) {
   const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const [autocompleteItems, setAutocompleteItems] = useState<AutocompleteItem[]>([]);
+  const [autocompleteItems, setAutocompleteItems] = useState<
+    AutocompleteItem[]
+  >([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [autocompleteStart, setAutocompleteStart] = useState(0);
   const [autocompleteEnd, setAutocompleteEnd] = useState(0);
@@ -78,7 +80,7 @@ export function ExpressionEditor({
         setShowAutocomplete(false);
       }
     },
-    [onChange, columns]
+    [onChange, columns],
   );
 
   // Handle keyboard navigation
@@ -90,13 +92,13 @@ export function ExpressionEditor({
         case "ArrowDown":
           e.preventDefault();
           setSelectedIndex((prev) =>
-            prev < autocompleteItems.length - 1 ? prev + 1 : 0
+            prev < autocompleteItems.length - 1 ? prev + 1 : 0,
           );
           break;
         case "ArrowUp":
           e.preventDefault();
           setSelectedIndex((prev) =>
-            prev > 0 ? prev - 1 : autocompleteItems.length - 1
+            prev > 0 ? prev - 1 : autocompleteItems.length - 1,
           );
           break;
         case "Enter":
@@ -112,7 +114,7 @@ export function ExpressionEditor({
           break;
       }
     },
-    [showAutocomplete, autocompleteItems, selectedIndex]
+    [showAutocomplete, autocompleteItems, selectedIndex],
   );
 
   // Select an autocomplete item
@@ -125,7 +127,7 @@ export function ExpressionEditor({
         value,
         autocompleteStart,
         autocompleteEnd,
-        item.value
+        item.value,
       );
 
       onChange(newExpression);
@@ -138,7 +140,7 @@ export function ExpressionEditor({
         textarea.focus();
       });
     },
-    [value, autocompleteStart, autocompleteEnd, onChange]
+    [value, autocompleteStart, autocompleteEnd, onChange],
   );
 
   // Close autocomplete when clicking outside
@@ -162,7 +164,7 @@ export function ExpressionEditor({
       textareaRef.current.style.height = "auto";
       textareaRef.current.style.height = `${Math.min(
         textareaRef.current.scrollHeight,
-        150
+        150,
       )}px`;
     }
   }, [value]);
@@ -199,7 +201,7 @@ export function ExpressionEditor({
           "bg-transparent border border-transparent rounded-md resize-none",
           "focus:outline-none focus:ring-2 focus:ring-ring",
           "text-transparent caret-black dark:caret-white",
-          "expr-editor-scrollbar"
+          "expr-editor-scrollbar",
         )}
       />
 
@@ -217,7 +219,8 @@ export function ExpressionEditor({
                   className={cn(
                     "px-3 py-2 cursor-pointer flex items-center gap-2 rounded-sm",
                     "hover:bg-accent hover:text-accent-foreground",
-                    index === selectedIndex && "bg-accent text-accent-foreground"
+                    index === selectedIndex &&
+                      "bg-accent text-accent-foreground",
                   )}
                   onClick={() => selectAutocompleteItem(item)}
                   onMouseEnter={() => setSelectedIndex(index)}
@@ -225,20 +228,26 @@ export function ExpressionEditor({
                   <span
                     className={cn(
                       "px-1.5 py-0.5 text-xs rounded",
-                      item.type === "function" && "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-                      item.type === "keyword" && "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
-                      item.type === "column" && "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-                      item.type === "operator" && "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
+                      item.type === "function" &&
+                        "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+                      item.type === "keyword" &&
+                        "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+                      item.type === "column" &&
+                        "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+                      item.type === "operator" &&
+                        "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
                     )}
                   >
                     {item.type}
                   </span>
                   <span className="font-mono font-medium">{item.label}</span>
-                  {item.type === "function" && item.params && item.params.length > 0 && (
-                    <span className="font-mono text-xs text-muted-foreground">
-                      ({item.params.join(", ")})
-                    </span>
-                  )}
+                  {item.type === "function" &&
+                    item.params &&
+                    item.params.length > 0 && (
+                      <span className="font-mono text-xs text-muted-foreground">
+                        ({item.params.join(", ")})
+                      </span>
+                    )}
                   {item.description && (
                     <span className="text-muted-foreground text-xs ml-auto truncate">
                       {item.description}
@@ -253,16 +262,22 @@ export function ExpressionEditor({
 
       {/* Parameter hint bar */}
       {functionContext && (
-        <div className={`px-2 py-1 text-xs font-mono bg-muted rounded-md flex items-center ${showAutocomplete ? "relative z-[60]" : ""}`}>
-          <span className="text-muted-foreground">{functionContext.funcName}(</span>
+        <div
+          className={`px-2 py-1 text-xs font-mono bg-muted rounded-md flex items-center ${showAutocomplete ? "relative z-toast" : ""}`}
+        >
+          <span className="text-muted-foreground">
+            {functionContext.funcName}(
+          </span>
           {functionContext.params.map((param, i) => (
             <span key={i}>
-              <span className={cn(
-                "px-1 py-0.5 rounded",
-                i === functionContext.paramIndex
-                  ? "bg-primary text-primary-foreground font-bold"
-                  : "text-muted-foreground"
-              )}>
+              <span
+                className={cn(
+                  "px-1 py-0.5 rounded",
+                  i === functionContext.paramIndex
+                    ? "bg-primary text-primary-foreground font-bold"
+                    : "text-muted-foreground",
+                )}
+              >
                 {param}
               </span>
               {i < functionContext.params.length - 1 && (
@@ -283,7 +298,10 @@ interface FunctionContext {
   paramIndex: number;
 }
 
-function detectFunctionContext(expression: string, cursorPos: number): FunctionContext | null {
+function detectFunctionContext(
+  expression: string,
+  cursorPos: number,
+): FunctionContext | null {
   // Walk backwards from cursor to find the function call context
   let depth = 0;
   let paramCount = 0;

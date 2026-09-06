@@ -1,10 +1,24 @@
-import { X, Maximize2, Minimize2, Download } from "lucide-react";
+import {
+  X,
+  Maximize2,
+  Minimize2,
+  Download,
+  ChevronUp,
+  ChevronDown,
+  BarChart3,
+} from "lucide-react";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
-import { ChartConfig, ChartDataPoint, ChartSeries } from "@/types/xan";
+import {
+  ChartConfig,
+  ChartDataPoint,
+  ChartSeries,
+  PanelDockState,
+} from "@/types/xan";
 import { useLanguage } from "@/i18n";
 import { useTheme } from "@/components/setting/ThemeProvider";
+import { clampPanelPosition } from "@/utils/panelDock";
 import {
   LineChart,
   Line,
@@ -27,6 +41,12 @@ interface ChartPanelProps {
   series: ChartSeries[];
   isVisible: boolean;
   onClose: () => void;
+  /** Persisted docking state (D2). */
+  dockState?: PanelDockState;
+  /** Report position/collapse changes for persistence (D2). */
+  onDockChange?: (patch: Partial<PanelDockState>) => void;
+  /** Top-right stack offset for the collapsed capsule (D2). */
+  capsuleY?: number;
 }
 
 export const ChartPanel = React.memo(function ChartPanel({
@@ -34,10 +54,17 @@ export const ChartPanel = React.memo(function ChartPanel({
   series,
   isVisible,
   onClose,
+  dockState,
+  onDockChange,
+  capsuleY,
 }: ChartPanelProps) {
   const { t } = useLanguage();
   const { theme } = useTheme();
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
+  const [collapsed, setCollapsed] = useState<boolean>(
+    dockState?.collapsed ?? false,
+  );
+  const [pos, setPos] = useState<{ x: number; y: number }>({ x: 50, y: 100 });
   const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
   const panelRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -169,6 +196,11 @@ export const ChartPanel = React.memo(function ChartPanel({
           cancelAnimationFrame(rafRef.current);
           rafRef.current = null;
         }
+        if (panelRef.current) {
+          const rect = panelRef.current.getBoundingClientRect();
+          setPos({ x: rect.left, y: rect.top });
+          onDockChange?.({ x: rect.left, y: rect.top });
+        }
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
         document.body.style.cursor = "";
@@ -180,19 +212,21 @@ export const ChartPanel = React.memo(function ChartPanel({
       document.body.style.cursor = "move";
       document.body.style.userSelect = "none";
     },
-    [isMaximized],
+    [isMaximized, onDockChange],
   );
 
   useEffect(() => {
     if (isVisible && panelRef.current && !isMaximized) {
       const panelWidth = panelRef.current.offsetWidth || 640;
       const panelHeight = panelRef.current.offsetHeight || 500;
-      const newX = Math.max(0, (window.innerWidth - panelWidth) / 2);
-      const newY = Math.max(56, (window.innerHeight - panelHeight) / 2);
-      panelRef.current.style.left = `${newX}px`;
-      panelRef.current.style.top = `${newY}px`;
+      // Persisted position wins; otherwise center in the viewport.
+      const clamped = clampPanelPosition(dockState, {
+        width: panelWidth,
+        height: panelHeight,
+      });
+      setPos({ x: clamped.x, y: clamped.y });
     }
-  }, [isVisible, isMaximized]);
+  }, [isVisible, isMaximized, dockState?.x, dockState?.y]);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -209,6 +243,29 @@ export const ChartPanel = React.memo(function ChartPanel({
   }, [isVisible]);
 
   if (!isVisible || !config) return null;
+
+  // collapsed capsule (edge pill) with one-click restore.
+  if (collapsed && !isMaximized) {
+    return (
+      <div
+        className="fixed z-floating flex items-center gap-1.5 px-3 py-2 bg-background border border-border/50 rounded-full shadow-xl cursor-pointer select-none"
+        style={{ top: capsuleY ?? 56, right: 8 }}
+        role="button"
+        aria-label={t.expandPanel}
+        onContextMenu={(e) => e.preventDefault()}
+        onClick={() => {
+          setCollapsed(false);
+          onDockChange?.({ collapsed: false });
+        }}
+      >
+        <BarChart3 className="h-4 w-4 text-primary" />
+        <span className="text-xs font-medium max-w-[160px] truncate">
+          {config.title || `${t.chart}: ${config.chartType}`}
+        </span>
+        <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+      </div>
+    );
+  }
 
   const hasMultipleSeries = series.length > 1;
 
@@ -1230,13 +1287,13 @@ export const ChartPanel = React.memo(function ChartPanel({
               height: "100vh",
             }
           : {
-              left: 50,
-              top: 100,
+              left: pos.x,
+              top: pos.y,
               width: `${(config.width || 600) + 40}px`,
               height: `${(config.height || 400) + 100}px`,
             }
       }
-      className={`fixed flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isDraggingRef ? "shadow-2xl" : ""}`}
+      className={`fixed flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-floating ${isDraggingRef ? "shadow-2xl" : ""}`}
       onContextMenu={(e) => e.preventDefault()}
     >
       <div
@@ -1276,6 +1333,20 @@ export const ChartPanel = React.memo(function ChartPanel({
               ) : (
                 <Maximize2 className="h-4 w-4" />
               )}
+            </Button>
+          </Tooltip>
+          <Tooltip content={t.collapsePanel}>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => {
+                setCollapsed(true);
+                onDockChange?.({ collapsed: true });
+              }}
+              disabled={isMaximized}
+              className="px-2 font-medium"
+            >
+              <ChevronDown className="h-4 w-4" />
             </Button>
           </Tooltip>
           <Tooltip content={t.close}>

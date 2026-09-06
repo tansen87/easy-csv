@@ -48,7 +48,17 @@ export interface StoredPipelineStep {
 
 export type PipelineVariableType = "string" | "number" | "path";
 
-/** A pipeline variable referenced via `{{name}}` placeholders (F3). */
+/** Docked position / collapse state of one floating panel. */
+export interface PanelDockState {
+  x?: number;
+  y?: number;
+  collapsed?: boolean;
+}
+
+/** Per-panel docking states persisted across sessions. */
+export type PanelStates = Record<string, PanelDockState>;
+
+/** A pipeline variable referenced via `{{name}}` placeholders. */
 export interface PipelineVariable {
   /** Placeholder name, e.g. `limit` for `{{limit}}`. */
   name: string;
@@ -71,7 +81,7 @@ export interface LogEntry {
 
 export type ExecutionHistoryStatus = "success" | "error" | "cancelled";
 
-/** A persisted pipeline execution record (F6). `outputSummary` is a JSON
+/** A persisted pipeline execution record. `outputSummary` is a JSON
  *  string with `{ columns, rows, bytes, preview }` — never full stdout. */
 export interface ExecutionHistoryEntry {
   id: number;
@@ -115,9 +125,9 @@ export interface PipelineTab {
   versions?: PipelineVersion[];
   currentVersionId?: string;
   lineage?: StepLineage[];
-  /** Declared pipeline variables (defaults/type), persisted (F3). */
+  /** Declared pipeline variables (defaults/type), persisted. */
   variables?: PipelineVariable[];
-  /** Last-run values for variables, session-only (F3, "已赋值跳过"). */
+  /** Last-run values for variables, session-only. */
   runVariableValues?: Record<string, string>;
 }
 
@@ -131,7 +141,7 @@ export interface PipelineVersion {
   message?: string;
   createdAt: string;
   tags?: string[];
-  /** Declared variables snapshot at version time (F3). */
+  /** Declared variables snapshot at version time. */
   variables?: PipelineVariable[];
 }
 
