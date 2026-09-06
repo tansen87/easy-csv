@@ -8,6 +8,7 @@ import {
   Minimize2,
   ArrowDown,
   Filter,
+  History,
 } from "lucide-react";
 import React, {
   useState,
@@ -30,6 +31,7 @@ interface LogPanelProps {
   onRemoveLog: (id: string) => void;
   isVisible: boolean;
   onClose: () => void;
+  onShowHistory?: () => void;
 }
 
 export const LogPanel = React.memo(function LogPanel({
@@ -38,6 +40,7 @@ export const LogPanel = React.memo(function LogPanel({
   onRemoveLog,
   isVisible,
   onClose,
+  onShowHistory,
 }: LogPanelProps) {
   const { t } = useLanguage();
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
@@ -335,6 +338,18 @@ export const LogPanel = React.memo(function LogPanel({
           </div>
         )}
         <div className="flex items-center gap-1 ml-auto">
+          {onShowHistory && (
+            <Tooltip content={t.historyButton}>
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={onShowHistory}
+                className="px-2 font-medium"
+              >
+                <History className="h-4 w-4" />
+              </Button>
+            </Tooltip>
+          )}
           <Tooltip content={t.aiClear}>
             <Button
               variant="ghost"

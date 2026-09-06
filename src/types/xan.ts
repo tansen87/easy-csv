@@ -69,6 +69,36 @@ export interface LogEntry {
   message: string;
 }
 
+export type ExecutionHistoryStatus = "success" | "error" | "cancelled";
+
+/** A persisted pipeline execution record (F6). `outputSummary` is a JSON
+ *  string with `{ columns, rows, bytes, preview }` — never full stdout. */
+export interface ExecutionHistoryEntry {
+  id: number;
+  tabId: string;
+  tabName: string;
+  pipelineSnapshotHash: string;
+  versionId: string | null;
+  status: ExecutionHistoryStatus;
+  durationMs: number;
+  rows: number;
+  outputSummary: string;
+  startedAt: string;
+}
+
+/** Input payload for `save_execution_history` (backend assigns the id). */
+export interface ExecutionHistoryInput {
+  tabId: string;
+  tabName: string;
+  pipelineSnapshotHash: string;
+  versionId: string | null;
+  status: ExecutionHistoryStatus;
+  durationMs: number;
+  rows: number;
+  outputSummary: string;
+  startedAt: string;
+}
+
 export interface PipelineTab {
   id: string;
   name: string;

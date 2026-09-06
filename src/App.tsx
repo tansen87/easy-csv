@@ -41,6 +41,7 @@ import { UpdateDialog } from "@/components/dialog/UpdateDialog";
 import { ConfirmDialog } from "@/components/dialog/ConfirmDialog";
 import { PipelineTemplateDialog } from "@/components/dialog/PipelineTemplateDialog";
 import { VariableValuesDialog } from "@/components/dialog/VariableValuesDialog";
+import { ExecutionHistoryDialog } from "@/components/dialog/ExecutionHistoryDialog";
 import { VariablePanel } from "@/components/panel/VariablePanel";
 import { BatchFilterDialog } from "@/components/dialog/BatchFilterDialog";
 import { CsvDiffDialog } from "@/components/dialog/CsvDiffDialog";
@@ -66,6 +67,7 @@ import { usePipelineVersions } from "@/hooks/usePipelineVersions";
 import { usePipelineTemplates } from "@/hooks/usePipelineTemplates";
 import { useDataLineage } from "@/hooks/useDataLineage";
 import { useSession } from "@/hooks/useSession";
+import { useExecutionHistory } from "@/hooks/useExecutionHistory";
 import { useKeyboardShortcuts } from "@/hooks/KeyboardShortcuts";
 import { formatDateTime } from "@/utils/format";
 import {
@@ -148,6 +150,9 @@ function AppContent() {
     tabsHook.setSelectedTabId,
   );
 
+  // Execution history (F6)
+  const executionHistory = useExecutionHistory();
+
   const progressHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -157,6 +162,9 @@ function AppContent() {
 
   // Selected step
   const [selectedStep, setSelectedStep] = useState<PipelineStep | null>(null);
+
+  // Execution history dialog (F6)
+  const [showHistoryDialog, setShowHistoryDialog] = useState(false);
 
   // Executing state
   const [isExecuting, setIsExecuting] = useState(false);
@@ -683,6 +691,7 @@ function AppContent() {
     setChartSeries: ui.setChartSeries,
     setChartHeaders: ui.setChartHeaders,
     saveVersion: versionsHook.saveVersion,
+    saveExecutionHistory: executionHistory.saveEntry,
   });
 
   // Wrap save/execute/export callbacks to update pipeline save timestamp
@@ -1483,6 +1492,18 @@ function AppContent() {
             onRemoveLog={removeLog}
             isVisible={ui.showLogPanel}
             onClose={() => ui.setShowLogPanel(false)}
+            onShowHistory={() => {
+              setShowHistoryDialog(true);
+              executionHistory.loadHistory();
+            }}
+          />
+
+          <ExecutionHistoryDialog
+            isOpen={showHistoryDialog}
+            onClose={() => setShowHistoryDialog(false)}
+            history={executionHistory.history}
+            loading={executionHistory.loading}
+            onRefresh={executionHistory.loadHistory}
           />
 
           <ChartPanel

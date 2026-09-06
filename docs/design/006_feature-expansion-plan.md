@@ -190,20 +190,22 @@
 
 **方案**:
 
-1. SQLite 新表 `execution_history`(id/tab\_id/pipeline\_snapshot\_hash/version\_id/status/duration/rows/output\_summary/started\_at),每次执行成功后写入,LRU 保留最近 100 条(参照 profile 缓存上限模式);
+1. SQLite 新表 `execution_history`(id/tab\_id/tab\_name/pipeline\_snapshot\_hash/version\_id/status/duration\_ms/rows/output\_summary/started\_at),每次执行结束后写入,LRU 保留最近 100 条(参照 profile 缓存上限模式);
 2. 不存完整 stdout(体积风险),只存统计摘要(行数/列数/字节数/前几行预览);
 3. 入口:日志面板头部加"历史"按钮 → 弹窗列表(时间/状态/耗时/关联版本),点击查看摘要;
 4. 与 F3/F4 联动:模板套用后历史自动归属新 tab。
 
 **验收清单**:
 
-- [ ] 重启后可查看最近执行记录(≤100 条);
+- [x] 重启后可查看最近执行记录(≤100 条);
 
-- [ ] 记录关联版本号(若执行时管道已保存版本);
+- [x] 记录关联版本号(若执行时管道已保存版本);
 
-- [ ] 数据库体积可控(单条记录 < 10KB);
+- [x] 数据库体积可控(单条记录 < 10KB);
 
-- [ ] 清除历史入口进设置页"学习数据管理"同区块。
+- [x] 清除历史入口进设置页"学习数据管理"同区块。
+
+**落地状态**:后端 `storage.rs` 新增 `execution_history` 表(独立 `execution_history.db`,OnceLock+Mutex 模式同 `ai_memory.rs`),`save_execution_history`/`load_execution_history`/`clear_execution_history` 三个 Tauri 命令已注册;`runNow` 在 `finally` 中写入执行记录(状态 success/error/cancelled、耗时、管道快照哈希、关联 `currentVersionId`、输出摘要);`utils/executionHistory.ts` 提供纯逻辑(`computePipelineSnapshotHash` cyrb53 稳定哈希 + `buildOutputSummary` 摘要统计),并补 `src/__tests__/executionHistory.test.ts` 用例;日志面板头部新增"历史"按钮与 `ExecutionHistoryDialog`(列表 + 展开摘要);设置页"AI 学习数据"区块新增"清除执行历史"按钮。
 
 ***
 

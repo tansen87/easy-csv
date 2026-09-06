@@ -183,6 +183,22 @@ export interface Translations {
   scrollToBottom: string;
   noMatchingLogs: string;
 
+  // Execution history (F6)
+  executionHistory: string;
+  historyButton: string;
+  noHistoryYet: string;
+  historyLoading: string;
+  historySummaryHint: string;
+  historyColumns: string;
+  historyRows: string;
+  historyBytes: string;
+  historyDuration: string;
+  historyVersion: string;
+  historyStatusSuccess: string;
+  historyStatusError: string;
+  historyStatusCancelled: string;
+  clearExecutionHistory: string;
+
   // Result preview (F1)
   copyCsv: string;
   copyMarkdown: string;
@@ -519,6 +535,22 @@ export const translations: Record<Language, Translations> = {
     scrollToBottom: "Scroll to bottom",
     noMatchingLogs: "No logs match this filter",
 
+    // Execution history (F6)
+    executionHistory: "Execution History",
+    historyButton: "History",
+    noHistoryYet: "No execution history yet",
+    historyLoading: "Loading execution history...",
+    historySummaryHint: "Click a record to view its output summary",
+    historyColumns: "Columns",
+    historyRows: "Rows",
+    historyBytes: "Size",
+    historyDuration: "Duration",
+    historyVersion: "Version",
+    historyStatusSuccess: "Success",
+    historyStatusError: "Failed",
+    historyStatusCancelled: "Cancelled",
+    clearExecutionHistory: "Clear Execution History",
+
     // Result preview (F1)
     copyCsv: "Copy as CSV",
     copyMarkdown: "Copy as Markdown table",
@@ -848,6 +880,22 @@ export const translations: Record<Language, Translations> = {
     paste: "粘贴",
     scrollToBottom: "滚动到底部",
     noMatchingLogs: "没有符合筛选条件的日志",
+
+    // Execution history (F6)
+    executionHistory: "执行历史",
+    historyButton: "历史",
+    noHistoryYet: "暂无执行记录",
+    historyLoading: "正在加载执行历史...",
+    historySummaryHint: "点击记录查看输出摘要",
+    historyColumns: "列数",
+    historyRows: "行数",
+    historyBytes: "大小",
+    historyDuration: "耗时",
+    historyVersion: "版本",
+    historyStatusSuccess: "成功",
+    historyStatusError: "失败",
+    historyStatusCancelled: "已取消",
+    clearExecutionHistory: "清除执行历史",
 
     // Result preview (F1)
     copyCsv: "复制为 CSV",

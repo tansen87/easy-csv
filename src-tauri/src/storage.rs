@@ -1,6 +1,11 @@
+use rusqlite::{Connection, params};
 use serde_json::Map;
+use std::sync::Mutex;
 
 use crate::config::get_resources_dir;
+
+/// Cap on how many execution history records are kept (LRU by insertion).
+const EXECUTION_HISTORY_MAX: i64 = 100;
 
 #[tauri::command]
 pub async fn save_pipeline_versions(pipeline_id: String, versions: String) -> Result<(), String> {
@@ -297,5 +302,171 @@ pub async fn toggle_devtools(window: tauri::Window) -> Result<(), String> {
       webview.open_devtools();
     }
   }
+  Ok(())
+}
+
+// ── Execution history (F6) ────────────────────────────────────────────────
+// SQLite-backed execution records. Only summary stats are stored (no full
+// stdout), keeping each row small; the newest `EXECUTION_HISTORY_MAX` rows
+// are kept and older ones pruned on every save.
+
+struct ExecutionHistoryDb {
+  conn: Mutex<Connection>,
+}
+
+static EXECUTION_HISTORY_DB: std::sync::OnceLock<ExecutionHistoryDb> = std::sync::OnceLock::new();
+
+fn get_execution_history_db() -> Option<&'static ExecutionHistoryDb> {
+  EXECUTION_HISTORY_DB.get().or_else(|| {
+    let resources_dir = get_resources_dir();
+    let db_dir = resources_dir.join("data");
+    std::fs::create_dir_all(&db_dir).ok()?;
+    let db_path = db_dir.join("execution_history.db");
+    let conn = Connection::open(db_path).ok()?;
+
+    conn
+      .execute_batch(
+        r#"
+        CREATE TABLE IF NOT EXISTS execution_history (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          tab_id TEXT NOT NULL,
+          tab_name TEXT NOT NULL DEFAULT '',
+          pipeline_snapshot_hash TEXT NOT NULL DEFAULT '',
+          version_id TEXT,
+          status TEXT NOT NULL,
+          duration_ms INTEGER NOT NULL DEFAULT 0,
+          rows INTEGER NOT NULL DEFAULT 0,
+          output_summary TEXT NOT NULL DEFAULT '',
+          started_at TEXT NOT NULL DEFAULT ''
+        );
+        "#,
+      )
+      .ok()?;
+
+    let state = ExecutionHistoryDb {
+      conn: Mutex::new(conn),
+    };
+    EXECUTION_HISTORY_DB.set(state).ok()?;
+    EXECUTION_HISTORY_DB.get()
+  })
+}
+
+/// Persist one execution record, then prune to the most recent 100 rows.
+#[tauri::command]
+pub async fn save_execution_history(entry: String) -> Result<(), String> {
+  let db = get_execution_history_db().ok_or("Database not initialized")?;
+  let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+  let parsed: serde_json::Value =
+    serde_json::from_str(&entry).map_err(|e| format!("Failed to parse entry: {}", e))?;
+
+  let get_str = |key: &str| {
+    parsed
+      .get(key)
+      .and_then(|v| v.as_str())
+      .unwrap_or("")
+      .to_string()
+  };
+  let get_int =
+    |key: &str, default: i64| parsed.get(key).and_then(|v| v.as_i64()).unwrap_or(default);
+
+  conn
+    .execute(
+      "INSERT INTO execution_history \
+       (tab_id, tab_name, pipeline_snapshot_hash, version_id, status, duration_ms, rows, output_summary, started_at) \
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+      params![
+        get_str("tabId"),
+        get_str("tabName"),
+        get_str("pipelineSnapshotHash"),
+        parsed
+          .get("versionId")
+          .and_then(|v| v.as_str())
+          .map(|s| s.to_string()),
+        get_str("status"),
+        get_int("durationMs", 0),
+        get_int("rows", 0),
+        get_str("outputSummary"),
+        get_str("startedAt"),
+      ],
+    )
+    .map_err(|e| format!("Failed to save execution history: {}", e))?;
+
+  // LRU-style prune: keep the most recent records.
+  conn
+    .execute(
+      "DELETE FROM execution_history WHERE id NOT IN \
+       (SELECT id FROM execution_history ORDER BY id DESC LIMIT ?1)",
+      params![EXECUTION_HISTORY_MAX],
+    )
+    .map_err(|e| format!("Failed to prune execution history: {}", e))?;
+
+  Ok(())
+}
+
+/// Load the most recent execution records (default 100, newest first).
+#[tauri::command]
+pub async fn load_execution_history(limit: Option<u32>) -> Result<String, String> {
+  let db = get_execution_history_db().ok_or("Database not initialized")?;
+  let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+  let max_limit = limit.unwrap_or(100).max(1);
+
+  let mut stmt = conn
+    .prepare(
+      "SELECT id, tab_id, tab_name, pipeline_snapshot_hash, version_id, status, \
+              duration_ms, rows, output_summary, started_at \
+       FROM execution_history ORDER BY id DESC LIMIT ?1",
+    )
+    .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+
+  let rows = stmt
+    .query_map(params![max_limit], |row| {
+      Ok((
+        row.get::<_, i64>(0)?,
+        row.get::<_, String>(1)?,
+        row.get::<_, String>(2)?,
+        row.get::<_, String>(3)?,
+        row.get::<_, Option<String>>(4)?,
+        row.get::<_, String>(5)?,
+        row.get::<_, i64>(6)?,
+        row.get::<_, i64>(7)?,
+        row.get::<_, String>(8)?,
+        row.get::<_, String>(9)?,
+      ))
+    })
+    .map_err(|e| format!("Failed to query: {}", e))?;
+
+  let mut records: Vec<serde_json::Value> = Vec::new();
+  for row in rows {
+    let (id, tab_id, tab_name, hash, version_id, status, duration_ms, rows, summary, started_at) =
+      row.map_err(|e| format!("Failed to read row: {}", e))?;
+    records.push(serde_json::json!({
+      "id": id,
+      "tabId": tab_id,
+      "tabName": tab_name,
+      "pipelineSnapshotHash": hash,
+      "versionId": version_id,
+      "status": status,
+      "durationMs": duration_ms,
+      "rows": rows,
+      "outputSummary": summary,
+      "startedAt": started_at,
+    }));
+  }
+
+  serde_json::to_string(&records).map_err(|e| format!("Failed to serialize: {}", e))
+}
+
+/// Delete all execution history records.
+#[tauri::command]
+pub async fn clear_execution_history() -> Result<(), String> {
+  let db = get_execution_history_db().ok_or("Database not initialized")?;
+  let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+  conn
+    .execute("DELETE FROM execution_history", [])
+    .map_err(|e| format!("Failed to clear execution history: {}", e))?;
+
   Ok(())
 }

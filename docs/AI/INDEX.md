@@ -139,6 +139,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `load_profile_cache` / `save_profile_cache` | 数据概况缓存(LRU 淘汰,上限50条) |
 | `save_pipeline_versions` / `load_pipeline_versions` | 管道版本持久化 |
 | `save_lineage_data` / `load_lineage_data` | 数据血缘持久化 |
+| `save_execution_history` / `load_execution_history` / `clear_execution_history` | 执行历史持久化(SQLite `execution_history` 表,只存统计摘要,LRU 保留最近100条) |
 | `file_exists` | 文件存在性检查 |
 | `set_window_title` | 设置窗口标题 |
 | `toggle_devtools` | 切换开发者工具 |
@@ -204,6 +205,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_recent_files` / `load_recent_files` | storage | 最近文件列表持久化 |
 | `save_pipeline_versions` / `load_pipeline_versions` | storage | 管道版本持久化 |
 | `save_lineage_data` / `load_lineage_data` | storage | 数据血缘持久化 |
+| `save_execution_history` / `load_execution_history` / `clear_execution_history` | storage | 执行历史持久化(SQLite,只存摘要,LRU 100条) |
 | `file_exists` | storage | 检查文件是否存在 |
 | `toggle_devtools` | storage | 切换开发者工具面板 |
 | `list_plugins` | plugins | 列出已注册的 CLI 插件 |

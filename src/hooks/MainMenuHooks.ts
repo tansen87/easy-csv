@@ -11,12 +11,19 @@ import {
   ChartConfig,
   ChartSeries,
   ChartDataPoint,
+  ExecutionHistoryInput,
+  ExecutionHistoryStatus,
 } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 import { BatchFilterConfig } from "@/components/dialog/BatchFilterDialog";
 import { BatchFilterHooks } from "@/hooks/BatchFilterHooks";
 import { BatchConvertHooks } from "@/hooks/BatchConvertHooks";
 import { parseCsvString } from "@/utils/csv";
+import { stripStepCommand } from "@/utils/session";
+import {
+  computePipelineSnapshotHash,
+  buildOutputSummary,
+} from "@/utils/executionHistory";
 import {
   collectVariablesFromPipeline,
   resolveStepPlaceholders,
@@ -234,6 +241,8 @@ interface MainMenuHooksProps {
   setChartSeries: React.Dispatch<React.SetStateAction<ChartSeries[]>>;
   setChartHeaders: React.Dispatch<React.SetStateAction<string[]>>;
   saveVersion: (message?: string, tags?: string[]) => Promise<any>;
+  /** Persist one execution record after each run (F6). */
+  saveExecutionHistory?: (entry: ExecutionHistoryInput) => Promise<void>;
 }
 
 export function MainMenuHooks({
@@ -260,6 +269,7 @@ export function MainMenuHooks({
   setChartSeries,
   setChartHeaders,
   saveVersion,
+  saveExecutionHistory,
 }: MainMenuHooksProps) {
   const getCurrentTab = useCallback(() => {
     return tabs.find((tab) => tab.id === selectedTabId) || tabs[0];
@@ -866,6 +876,19 @@ export function MainMenuHooks({
         progressHideTimerRef.current = null;
       }
 
+      const runStartedAt = Date.now();
+      // Hoisted so the finally block can determine the final status.
+      let pipelineFailed = false;
+      let wasCancelled = false;
+      let executionError: string | null = null;
+      // Accumulated branch results, read by the finally block (F6).
+      const allResults: {
+        success: boolean;
+        output?: string;
+        error?: string;
+        branchSteps: string[];
+      }[] = [];
+
       try {
         await invoke("set_pipeline_cancelled", { cancel: false });
         setResultPreview([]);
@@ -886,18 +909,9 @@ export function MainMenuHooks({
 
         const branches = buildExecutionBranches(resolvedSteps, edges);
 
-        const allResults: {
-          success: boolean;
-          output?: string;
-          error?: string;
-          branchSteps: string[];
-        }[] = [];
-
         // Accumulate per-step execution errors to display on the nodes
         const accumulatedErrors: Record<string, string> = {};
 
-        let pipelineFailed = false;
-        let wasCancelled = false;
         for (let i = 0; i < branches.length; i++) {
           const branchSteps = branches[i];
           if (branchSteps.length === 0) continue;
@@ -1303,9 +1317,38 @@ export function MainMenuHooks({
           }
         }
       } catch (error) {
+        executionError = String(error);
         addLog("error", `${error}`);
       } finally {
         setIsExecuting(false);
+
+        // F6: persist a compact execution record (summary only, no stdout).
+        if (saveExecutionHistory) {
+          const summary = buildOutputSummary(allResults);
+          const status: ExecutionHistoryStatus = wasCancelled
+            ? "cancelled"
+            : pipelineFailed || executionError
+              ? "error"
+              : "success";
+          const entry: ExecutionHistoryInput = {
+            tabId: currentTab.id,
+            tabName: currentTab.name,
+            pipelineSnapshotHash: computePipelineSnapshotHash(
+              currentPipeline.map(stripStepCommand),
+              edges,
+            ),
+            versionId: currentTab.currentVersionId ?? null,
+            status,
+            durationMs: Date.now() - runStartedAt,
+            rows: summary.rows,
+            outputSummary: JSON.stringify(summary),
+            startedAt: formatDateTime(new Date()),
+          };
+          saveExecutionHistory(entry).catch((err) =>
+            addLog("warning", `Failed to save execution history: ${err}`),
+          );
+        }
+
         progressHideTimerRef.current = setTimeout(() => {
           setShowProgressBar(false);
           setBranchProgress(null);
@@ -1331,6 +1374,7 @@ export function MainMenuHooks({
       setChartSeries,
       setChartHeaders,
       saveVersion,
+      saveExecutionHistory,
     ],
   );
 
