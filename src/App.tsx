@@ -694,6 +694,9 @@ function AppContent() {
     handleCancelExecution,
     handleSaveIntermediateAsInput,
     resultPreview,
+    overwriteConfirm,
+    confirmOverwriteExecution,
+    cancelOverwriteExecution,
     variablePrompt,
     confirmVariables,
     cancelVariables,
@@ -1603,6 +1606,22 @@ function AppContent() {
               window.location.reload();
             }}
             onCancel={() => ui.setShowRefreshDialog(false)}
+          />
+
+          {/* Several branches overwriting the same output file */}
+          <ConfirmDialog
+            isOpen={overwriteConfirm !== null}
+            title={t.branchOverwriteTitle}
+            message={
+              overwriteConfirm
+                ? t.branchOverwriteMessage.replace(
+                    "{count}",
+                    String(overwriteConfirm.branchCount),
+                  )
+                : ""
+            }
+            onConfirm={() => void confirmOverwriteExecution()}
+            onCancel={cancelOverwriteExecution}
           />
 
           <PipelineTemplateDialog

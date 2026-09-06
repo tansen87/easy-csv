@@ -16,12 +16,15 @@ interface BatchConvertHooksProps {
     } | null>
   >;
   getCurrentTab: () => { inputFile?: string };
+  /** Called before each iteration; breaking out of the loop when true */
+  isCancelRequested?: () => boolean;
 }
 
 export function BatchConvertHooks({
   defaultDelimiter,
   addLog,
   setBranchProgress,
+  isCancelRequested = () => false,
 }: BatchConvertHooksProps) {
   const globToRegex = (pattern: string): RegExp => {
     const regexStr = pattern
@@ -122,6 +125,11 @@ export function BatchConvertHooks({
     let failCount = 0;
 
     for (let i = 0; i < files.length; i++) {
+      // Honor a pending cancel request between iterations
+      if (isCancelRequested()) {
+        addLog("warning", `Batch conversion cancelled after ${i} file(s)`);
+        break;
+      }
       const file = files[i];
       const displayName = getBaseName(file);
 
@@ -192,9 +200,12 @@ export function BatchConvertHooks({
         const targetIsCsv = outputFormat === "csv";
 
         if (sourceIsCsv && targetIsCsv) {
-          // csv → csv: no conversion needed, just copy
+          // csv -> csv: no conversion needed, just copy
           // This shouldn't happen in practice, but handle gracefully
-          addLog("warning", "Source and target are both CSV, no conversion needed");
+          addLog(
+            "warning",
+            "Source and target are both CSV, no conversion needed",
+          );
           setBranchProgress({
             current: i + 1,
             total: files.length,

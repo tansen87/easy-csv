@@ -31,6 +31,13 @@ import {
   inferVariableType,
 } from "@/utils/params";
 import { PipelineVariableType } from "@/types/xan";
+import { useLanguage } from "@/i18n";
+
+/** Shared state for the S6 "multiple branches overwrite one output file" gate. */
+export interface OverwriteConfirm {
+  branchCount: number;
+  outputPath: string;
+}
 
 /** Cap execution stdout returned to the UI (bytes) to protect the WebView. */
 const MAX_OUTPUT_BYTES = 2 * 1024 * 1024;
@@ -271,6 +278,16 @@ export function MainMenuHooks({
   saveVersion,
   saveExecutionHistory,
 }: MainMenuHooksProps) {
+  const { t } = useLanguage();
+
+  // Backend cancel is global; this frontend-only flag lets the batch loops
+  // (batch-filter / batch-from:batch-to) stop promptly, because they never hit
+  // the shared backend flag on their own (S7-1).
+  const cancelRequestedRef = useRef(false);
+  // Values persisted at the S6 overwrite gate so the confirmed re-run resolves
+  // `{{var}}` placeholders identically to the first attempt.
+  const pendingRunValuesRef = useRef<Record<string, string>>({});
+
   const getCurrentTab = useCallback(() => {
     return tabs.find((tab) => tab.id === selectedTabId) || tabs[0];
   }, [tabs, selectedTabId]);
@@ -281,6 +298,7 @@ export function MainMenuHooks({
       addLog,
       setBranchProgress,
       getCurrentTab,
+      isCancelRequested: () => cancelRequestedRef.current,
     });
 
   const { executeBatchConvert } = BatchConvertHooks({
@@ -288,12 +306,16 @@ export function MainMenuHooks({
     addLog,
     setBranchProgress,
     getCurrentTab,
+    isCancelRequested: () => cancelRequestedRef.current,
   });
 
   const [resultPreview, setResultPreview] = useState<ResultPreview[]>([]);
   const [variablePrompt, setVariablePrompt] = useState<VariablePrompt | null>(
     null,
   );
+  // S6: "several branches will write the same output file" confirmation gate.
+  const [overwriteConfirm, setOverwriteConfirm] =
+    useState<OverwriteConfirm | null>(null);
   // Stash the prepared run while the variable prompt is open, so the confirmed
   // execution reuses the exact pipeline/outputPath/edges snapshot.
   const pendingRunRef = useRef<{
@@ -806,10 +828,26 @@ export function MainMenuHooks({
 
       const branches: PipelineStep[][] = [];
 
-      const dfs = (currentId: string, path: PipelineStep[]) => {
+      // Cycle-safe DFS over the step graph. `onPath` tracks the nodes on the
+      // current exploration path; revisiting one means the graph has a cycle
+      // (previously this recursed forever -> "Maximum call stack size exceeded").
+      const dfs = (
+        currentId: string,
+        path: PipelineStep[],
+        onPath: Set<string>,
+      ) => {
+        if (onPath.has(currentId)) {
+          const chain = [...onPath, currentId];
+          const err = new Error(`cycle: ${chain.join(" → ")}`) as Error & {
+            cycleNodeIds: string[];
+          };
+          err.cycleNodeIds = chain;
+          throw err;
+        }
         const currentStep = stepMap.get(currentId);
         if (!currentStep) return;
 
+        const newOnPath = new Set(onPath).add(currentId);
         const newPath = [...path, currentStep];
         const nextEdges = adjacency.get(currentId) || [];
 
@@ -819,11 +857,19 @@ export function MainMenuHooks({
         }
 
         nextEdges.forEach((nextId) => {
-          dfs(nextId, newPath);
+          dfs(nextId, newPath, newOnPath);
         });
       };
 
-      const targetIds = new Set(edges.map((e) => e.target));
+      // S1-4: only edges sourced from an executable step contribute to
+      // in-degree. `table-node`'s outgoing edges must not mark their target as
+      // "has a dependency"; otherwise in the mixed graph (table-node→S1 plus an
+      // isolated S2) S1 would be silently skipped.
+      const targetIds = new Set(
+        edges
+          .filter((edge) => stepMap.has(edge.source))
+          .map((edge) => edge.target),
+      );
       const startNodes = steps
         .filter((step) => !targetIds.has(step.id))
         .map((step) => step.id);
@@ -832,7 +878,7 @@ export function MainMenuHooks({
         const tableEdges = adjacency.get("table-node") || [];
         if (tableEdges.length > 0) {
           tableEdges.forEach((edge) => {
-            dfs(edge, []);
+            dfs(edge, [], new Set<string>());
           });
           return branches;
         }
@@ -840,7 +886,7 @@ export function MainMenuHooks({
       }
 
       startNodes.forEach((startId) => {
-        dfs(startId, []);
+        dfs(startId, [], new Set<string>());
       });
 
       return branches;
@@ -849,7 +895,10 @@ export function MainMenuHooks({
   );
 
   const runNow = useCallback(
-    async (resolveValues: Record<string, string>) => {
+    async (
+      resolveValues: Record<string, string>,
+      opts?: { force?: boolean },
+    ) => {
       const pending = pendingRunRef.current;
       if (!pending) return;
       const {
@@ -866,6 +915,50 @@ export function MainMenuHooks({
         executableSteps,
         resolveValues,
       );
+
+      // A fresh run starts with no pending frontend cancel request.
+      cancelRequestedRef.current = false;
+
+      // Guard before any executing side effects:
+      //  - An existing cycle in the graph must surface as a readable
+      //    error (and mark the involved nodes red) instead of a stack overflow.
+      //  - Multiple branches writing one output file need an explicit
+      //    overwrite confirmation.
+      let branches: PipelineStep[][] = [];
+      try {
+        branches = buildExecutionBranches(resolvedSteps, edges);
+      } catch (error) {
+        const cycleErr = error as Error & { cycleNodeIds?: string[] };
+        const chain = cycleErr.message.replace(/^cycle: /, "");
+        addLog("error", `${t.cycleDetected}: ${chain}`);
+        showToast(
+          cycleErr.cycleNodeIds ? `${t.cycleDetected}: ${chain}` : `${error}`,
+          "error",
+        );
+        if (cycleErr.cycleNodeIds?.length) {
+          setTabs((prev) =>
+            prev.map((tab) =>
+              tab.id === selectedTabId
+                ? {
+                    ...tab,
+                    pipeline: tab.pipeline.map((step) =>
+                      cycleErr.cycleNodeIds!.includes(step.id)
+                        ? { ...step, error: t.cycleDetected }
+                        : step,
+                    ),
+                  }
+                : tab,
+            ),
+          );
+        }
+        return;
+      }
+
+      if (branches.length > 1 && outputPath && !opts?.force) {
+        pendingRunValuesRef.current = resolveValues;
+        setOverwriteConfirm({ branchCount: branches.length, outputPath });
+        return;
+      }
 
       setIsExecuting(true);
       setShowLogPanel(true);
@@ -906,8 +999,6 @@ export function MainMenuHooks({
               : tab,
           ),
         );
-
-        const branches = buildExecutionBranches(resolvedSteps, edges);
 
         // Accumulate per-step execution errors to display on the nodes
         const accumulatedErrors: Record<string, string> = {};
@@ -1832,6 +1923,9 @@ export function MainMenuHooks({
   );
 
   const handleCancelExecution = useCallback(async () => {
+    // S7-1: signal the frontend batch loops (batch-filter / batch-from:batch-to)
+    // to stop at the next iteration boundary, in addition to the backend flag.
+    cancelRequestedRef.current = true;
     try {
       await invoke("set_pipeline_cancelled", { cancel: true });
       addLog("warning", "Cancelling execution...");
@@ -1839,6 +1933,19 @@ export function MainMenuHooks({
       addLog("error", `Failed to cancel execution: ${error}`);
     }
   }, [addLog]);
+
+  // S6: confirmed → proceed with the pending run while accepting the overwrite.
+  const confirmOverwriteExecution = useCallback(async () => {
+    setOverwriteConfirm(null);
+    const pending = pendingRunRef.current;
+    if (pending) {
+      await runNow(pendingRunValuesRef.current, { force: true });
+    }
+  }, [setOverwriteConfirm, pendingRunRef, runNow]);
+
+  const cancelOverwriteExecution = useCallback(() => {
+    setOverwriteConfirm(null);
+  }, [setOverwriteConfirm]);
 
   return {
     handleOpenFile,
@@ -1852,6 +1959,9 @@ export function MainMenuHooks({
     getCurrentPipeline,
     processChartData,
     resultPreview,
+    overwriteConfirm,
+    confirmOverwriteExecution,
+    cancelOverwriteExecution,
     variablePrompt,
     confirmVariables,
     cancelVariables,

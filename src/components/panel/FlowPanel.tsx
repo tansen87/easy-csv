@@ -378,6 +378,17 @@ export function FlowPanel({
   const edgesRef = useRef<Edge[]>(edges);
   edgesRef.current = edges;
 
+  // Transient notice shown when a cyclic connection is rejected
+  const [cycleNotice, setCycleNotice] = useState(false);
+  const cycleNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const showCycleNotice = useCallback(() => {
+    setCycleNotice(true);
+    if (cycleNoticeTimerRef.current) clearTimeout(cycleNoticeTimerRef.current);
+    cycleNoticeTimerRef.current = setTimeout(() => setCycleNotice(false), 3000);
+  }, []);
+
   // Re-compute layout when data changes (not callbacks)
   useEffect(() => {
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
@@ -1269,6 +1280,39 @@ export function FlowPanel({
     (connection: Connection) => {
       if (!connection.source || !connection.target) return;
 
+      // Reject a connection that would introduce a cycle. Adding
+      // source -> target closes a cycle iff target can already reach source.
+      if (connection.source === connection.target) {
+        showCycleNotice();
+        return;
+      }
+      const adjacency = new Map<string, string[]>();
+      edgesRef.current.forEach((edge) => {
+        if (!edge.source || !edge.target) return;
+        if (!adjacency.has(edge.source)) adjacency.set(edge.source, []);
+        adjacency.get(edge.source)!.push(edge.target);
+      });
+      const stack = [connection.target];
+      const seen = new Set<string>([connection.target]);
+      let wouldCycle = false;
+      while (stack.length > 0) {
+        const current = stack.pop()!;
+        if (current === connection.source) {
+          wouldCycle = true;
+          break;
+        }
+        (adjacency.get(current) || []).forEach((next) => {
+          if (!seen.has(next)) {
+            seen.add(next);
+            stack.push(next);
+          }
+        });
+      }
+      if (wouldCycle) {
+        showCycleNotice();
+        return;
+      }
+
       const sourceNode = nodes.find((n) => n.id === connection.source);
       const targetNode = nodes.find((n) => n.id === connection.target);
 
@@ -1336,7 +1380,7 @@ export function FlowPanel({
         return newEdges;
       });
     },
-    [steps, onStepsChange, setEdges, onEdgesChange, nodes],
+    [steps, onStepsChange, setEdges, onEdgesChange, nodes, showCycleNotice],
   );
 
   // Multi-select (Shift+drag or click) → track selected node ids
@@ -1488,6 +1532,11 @@ export function FlowPanel({
       onMouseLeave={() => setModeBarHovered(false)}
       onContextMenu={handlePanelContextMenu}
     >
+      {cycleNotice && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-md bg-destructive/90 text-destructive-foreground text-sm shadow-lg">
+          {t.cycleRejected}
+        </div>
+      )}
       <ReactFlow
         nodes={nodes}
         edges={edges}

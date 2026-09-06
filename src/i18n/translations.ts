@@ -95,6 +95,10 @@ export interface Translations {
   // ConfirmDialog
   refreshTitle: string;
   refreshMessage: string;
+  cycleRejected: string;
+  cycleDetected: string;
+  branchOverwriteTitle: string;
+  branchOverwriteMessage: string;
 
   // Settings
   general: string;
@@ -447,6 +451,12 @@ export const translations: Record<Language, Translations> = {
     refreshTitle: "Refresh Page",
     refreshMessage:
       "Are you sure you want to refresh the page? Unsaved changes will be lost.",
+    cycleRejected:
+      "Connection rejected: it would create a cycle in the pipeline.",
+    cycleDetected: "Detected a cycle in the pipeline",
+    branchOverwriteTitle: "Overwrite output file?",
+    branchOverwriteMessage:
+      "{count} branches will write to the same file; later writes overwrite earlier ones. Continue?",
 
     // Settings
     general: "General",
@@ -800,6 +810,11 @@ export const translations: Record<Language, Translations> = {
     // ConfirmDialog
     refreshTitle: "刷新页面",
     refreshMessage: "确定要刷新页面吗?未保存的更改将会丢失.",
+    cycleRejected: "连接被拒绝:该连接会引发生成环.",
+    cycleDetected: "检测到环",
+    branchOverwriteTitle: "覆盖输出文件?",
+    branchOverwriteMessage:
+      "{count} 条分支将写入同一文件,后写入会覆盖先写入.是否继续?",
 
     // Settings
     general: "通用",
