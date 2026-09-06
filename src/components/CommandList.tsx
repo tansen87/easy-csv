@@ -6,68 +6,10 @@ import {
   ChevronRight,
   ChevronDown,
   ListTree,
-  Sparkles,
   HelpCircle,
-  Eye,
-  List,
-  Hash,
-  ArrowDown,
-  BarChart3,
-  CheckCheck,
-  Trash2,
-  SquareFunction,
-  RefreshCw,
-  ListOrdered,
-  PaintBucket,
-  CheckCircle,
-  Columns3,
   Search,
-  Filter,
-  ArrowUp,
-  Scissors,
-  Trophy,
-  Dices,
-  ArrowUpDown,
-  Rows3,
-  Shuffle,
-  BarChart2,
-  Group,
-  Activity,
-  Sigma,
-  LayoutGrid,
-  PanelLeft,
-  Files,
-  GitMerge,
-  Merge,
-  Pencil,
-  Minus,
-  Ruler,
-  MoveRight,
-  MoveLeft,
-  Repeat,
-  Repeat2,
-  Grid3X3,
-  Table2,
-  TableRowsSplit,
-  Grid3x3,
-  Table,
-  Bug,
-  FileOutput,
   X,
-  LayersPlus,
-  LayersMinus,
-  FileInput,
-  ScanSearch,
-  Pickaxe,
-  ChartBar,
-  ChartLine,
-  FunnelPlus,
-  ArrowBigDownDash,
-  BrushCleaning,
-  FileCodeCorner,
-  Languages,
   ChevronUp,
-  type LucideIcon,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -75,96 +17,6 @@ import { XanCommand, PanelDockState } from "@/types/xan";
 import { commandCategories } from "@/data/commands";
 import { useLanguage } from "@/i18n";
 import { clampPanelPosition } from "@/utils/panelDock";
-
-export const commandIconMap: Record<string, LucideIcon> = {
-  // Output
-  output: FileOutput,
-
-  // Explore & visualize
-  view: Eye,
-  headers: List,
-  count: Hash,
-  flatten: Minus,
-  hist: BarChart3,
-  plot: ChartBar,
-  chart: ChartLine,
-
-  // Add, transform, drop and move columns
-  select: CheckCheck,
-  drop: Trash2,
-  map: SquareFunction,
-  transform: RefreshCw,
-  enum: ListOrdered,
-  fill: PaintBucket,
-  complete: CheckCircle,
-  blank: ArrowBigDownDash,
-  separate: Columns3,
-
-  // Search & filter
-  search: Search,
-  filter: Filter,
-  head: ArrowUp,
-  tail: ArrowDown,
-  slice: Scissors,
-  top: Trophy,
-  sample: Dices,
-  bisect: ScanSearch,
-
-  // Sort & deduplicate
-  sort: ArrowUpDown,
-  dedup: Rows3,
-  shuffle: Shuffle,
-
-  // Aggregate
-  frequency: BarChart2,
-  groupby: Group,
-  stats: Activity,
-  agg: Sigma,
-  bins: LayoutGrid,
-  window: PanelLeft,
-
-  // Combine multiple CSV files
-  cat: Files,
-  join: GitMerge,
-  merge: Merge,
-
-  // Format, convert & recombobulate
-  rename: Pencil,
-  behead: Minus,
-  input: FileInput,
-  fixlengths: Ruler,
-  fmt: BrushCleaning,
-  explode: LayersPlus,
-  implode: LayersMinus,
-  scrape: Pickaxe,
-  to: MoveRight,
-  from: MoveLeft,
-  reverse: Repeat,
-  transpose: Repeat2,
-
-  // Transpose & pivot
-  pivot: Grid3X3,
-  unpivot: Table2,
-
-  // Split a CSV file into multiple
-  split: TableRowsSplit,
-  partition: Grid3x3,
-
-  // Generate CSV files
-  range: Table,
-
-  // Scripting
-  run: FileCodeCorner,
-  eval: Bug,
-
-  // Batch method
-  "batch-filter": FunnelPlus,
-  "batch-from": FileInput,
-  "batch-to": FileOutput,
-
-  // Plugins
-  pinyin: Languages,
-};
 
 interface CommandListProps {
   commands: XanCommand[];
@@ -508,8 +360,6 @@ export const CommandList = React.memo(function CommandList({
                 {(isSearching || expandedCategories[category]) && (
                   <div className="mt-2 space-y-1.5 px-1">
                     {categoryCommands.map((command) => {
-                      const CommandIcon =
-                        commandIconMap[command.name] || ListTree;
                       const isActive =
                         visibleIndexMap[command.id] === activeIndex;
                       return (
@@ -534,7 +384,6 @@ export const CommandList = React.memo(function CommandList({
                             <div className="flex items-center justify-between gap-3">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                  <CommandIcon className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
                                   <span className="font-semibold text-sm">
                                     {command.name}
                                   </span>
@@ -570,9 +419,6 @@ export const CommandList = React.memo(function CommandList({
           })}
           {filteredCommands.length === 0 && (
             <div className="text-center py-12 px-4">
-              <div className="w-12 h-12 mx-auto mb-3 bg-muted/50 rounded-xl flex items-center justify-center">
-                <Sparkles className="h-6 w-6 text-muted-foreground/50" />
-              </div>
               <p className="text-sm font-medium text-muted-foreground mb-1">
                 {t.noCommandsFound}
               </p>

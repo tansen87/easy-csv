@@ -9,26 +9,10 @@ import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import {
-  FolderOpen,
-  FileText,
-  Save,
-  Upload,
-  Download,
-  Undo2,
-  Redo2,
-  Play,
-  Settings,
-  CloudDownload,
-  MessageCircleQuestionMark,
-  CommandIcon,
-  BarChart3,
-  GitBranch,
-  GitMerge,
-  GitCompareArrows,
-  Bot,
-  RefreshCw,
-  FileCode,
-  LayoutTemplate,
+  FileClock,
+  NotebookTabs,
+  ListTree,
+  Zap,
 } from "lucide-react";
 
 import { LogPanel } from "@/components/panel/LogPanel";
@@ -51,12 +35,12 @@ import { AIPanel } from "@/components/panel/AIPanel";
 import { ToastContainer } from "@/components/setting/Toast";
 import { CommandList } from "@/components/CommandList";
 import { CommandPalette, type PaletteItem } from "@/components/CommandPalette";
-import { commandIconMap } from "@/components/CommandList";
 import { xanCommands } from "@/data/commands";
 import { helpDocs, helpDocsZh } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
 import { MainMenuHooks } from "@/hooks/MainMenuHooks";
 import { useLanguage } from "@/i18n";
+import { translations } from "@/i18n/translations";
 import { useToast } from "@/hooks/useToast";
 import { useLogs } from "@/hooks/useLogs";
 import { useUIState } from "@/hooks/useUIState";
@@ -1112,24 +1096,24 @@ function AppContent() {
         id: "open-file",
         label: t.open,
         description: t.openFileFormats,
-        icon: FolderOpen,
         group: t.paletteActions,
+        groupIcon: Zap,
         shortcut: "Ctrl+O",
         onSelect: handleOpenFile,
       },
       {
         id: "open-new-tab",
         label: t.openNewTab,
-        icon: FileText,
         group: t.paletteActions,
+        groupIcon: Zap,
         shortcut: "Ctrl+N",
         onSelect: handleOpenNewTabWithFile,
       },
       {
         id: "save-pipeline",
         label: t.savePipeline,
-        icon: Save,
         group: t.paletteActions,
+        groupIcon: Zap,
         shortcut: "Ctrl+S",
         disabled: currentPipelineLength === 0,
         onSelect: handleSavePipelineAndMarkSaved,
@@ -1137,16 +1121,16 @@ function AppContent() {
       {
         id: "import-workflow",
         label: t.importWorkflow,
-        icon: Upload,
         group: t.paletteActions,
+        groupIcon: Zap,
         shortcut: "Ctrl+I",
         onSelect: handleImportPipeline,
       },
       {
         id: "export-workflow",
         label: t.exportWorkflow,
-        icon: Download,
         group: t.paletteActions,
+        groupIcon: Zap,
         shortcut: "Ctrl+E",
         disabled: currentPipelineLength === 0,
         onSelect: handleExportPipelineAndMarkSaved,
@@ -1154,8 +1138,8 @@ function AppContent() {
       {
         id: "undo",
         label: t.undo,
-        icon: Undo2,
         group: t.paletteActions,
+        groupIcon: Zap,
         shortcut: "Ctrl+Z",
         disabled: undoStackLength === 0,
         onSelect: () => {
@@ -1166,8 +1150,8 @@ function AppContent() {
       {
         id: "redo",
         label: t.redo,
-        icon: Redo2,
         group: t.paletteActions,
+        groupIcon: Zap,
         shortcut: "Ctrl+Y",
         disabled: redoStackLength === 0,
         onSelect: () => {
@@ -1178,8 +1162,8 @@ function AppContent() {
       {
         id: "execute",
         label: t.execute,
-        icon: Play,
         group: t.paletteActions,
+        groupIcon: Zap,
         shortcut: "Ctrl+R",
         disabled: currentPipelineLength === 0 || isExecuting,
         onSelect: handleExecuteAndMarkSaved,
@@ -1187,78 +1171,78 @@ function AppContent() {
       {
         id: "settings",
         label: t.settings,
-        icon: Settings,
         group: t.paletteActions,
+        groupIcon: Zap,
         shortcut: "Shift+S",
         onSelect: onShowSettings,
       },
       {
         id: "check-update",
         label: t.checkUpdate,
-        icon: CloudDownload,
         group: t.paletteActions,
+        groupIcon: Zap,
         shortcut: "Shift+C",
         onSelect: checkForUpdates,
       },
       {
         id: "help",
         label: t.help,
-        icon: MessageCircleQuestionMark,
         group: t.paletteActions,
+        groupIcon: Zap,
         shortcut: "Shift+H",
         onSelect: onHelp,
       },
       {
         id: "refresh",
         label: t.refreshTitle,
-        icon: RefreshCw,
         group: t.paletteActions,
+        groupIcon: Zap,
         shortcut: "F5",
         onSelect: () => ui.setShowRefreshDialog(true),
       },
       {
         id: "toggle-command-panel",
         label: t.commandPanel,
-        icon: CommandIcon,
         group: t.paletteActions,
+        groupIcon: Zap,
         shortcut: "Alt+C",
         onSelect: onToggleCommandPanel,
       },
       {
         id: "toggle-log-panel",
         label: t.logPanel,
-        icon: FileText,
         group: t.paletteActions,
+        groupIcon: Zap,
         shortcut: "Alt+Q",
         onSelect: onToggleLogPanel,
       },
       {
         id: "toggle-data-profile",
         label: t.dataProfile,
-        icon: BarChart3,
         group: t.paletteActions,
+        groupIcon: Zap,
         disabled: !hasInputFile,
         onSelect: onToggleDataProfile,
       },
       {
         id: "toggle-version-panel",
         label: t.versionHistory,
-        icon: GitBranch,
         group: t.paletteActions,
+        groupIcon: Zap,
         onSelect: () => ui.setShowVersionPanel(!ui.showVersionPanel),
       },
       {
         id: "toggle-lineage-panel",
         label: t.dataLineage,
-        icon: GitMerge,
         group: t.paletteActions,
+        groupIcon: Zap,
         onSelect: () => ui.setShowLineagePanel(!ui.showLineagePanel),
       },
       {
         id: "toggle-ai-panel",
         label: t.ai,
-        icon: Bot,
         group: t.paletteActions,
+        groupIcon: Zap,
         shortcut: "Alt+A",
         onSelect: () => ui.setShowAIPanel(!ui.showAIPanel),
       },
@@ -1266,8 +1250,8 @@ function AppContent() {
         id: "csv-diff",
         label: t.csvDiff,
         description: t.csvDiffNoResult,
-        icon: GitCompareArrows,
         group: t.paletteActions,
+        groupIcon: Zap,
         onSelect: () => {
           ui.setCsvDiffInitialFileA(
             tabsHook.getCurrentTab()?.inputFile || undefined,
@@ -1279,8 +1263,8 @@ function AppContent() {
         id: "csv-encoding",
         label: t.csvEncoding,
         description: t.csvEncoding,
-        icon: FileCode,
         group: t.paletteActions,
+        groupIcon: Zap,
         onSelect: () => {
           ui.setCsvEncodingInitialInput(
             tabsHook.getCurrentTab()?.inputFile || undefined,
@@ -1291,19 +1275,49 @@ function AppContent() {
       {
         id: "use-or-save-template",
         label: t.paletteTemplates,
-        icon: LayoutTemplate,
         group: t.paletteActions,
+        groupIcon: Zap,
         shortcut: "Ctrl+T",
         onSelect: () => setShowTemplateDialog(true),
       },
     ];
+
+    // English alias for localized action labels, so English input matches even
+    // while the UI (labels) is Chinese.
+    const actionEnKey: Record<string, keyof typeof translations.en> = {
+      "open-file": "open",
+      "open-new-tab": "openNewTab",
+      "save-pipeline": "savePipeline",
+      "import-workflow": "importWorkflow",
+      "export-workflow": "exportWorkflow",
+      undo: "undo",
+      redo: "redo",
+      execute: "execute",
+      settings: "settings",
+      "check-update": "checkUpdate",
+      help: "help",
+      refresh: "refreshTitle",
+      "toggle-command-panel": "commandPanel",
+      "toggle-log-panel": "logPanel",
+      "toggle-data-profile": "dataProfile",
+      "toggle-version-panel": "versionHistory",
+      "toggle-lineage-panel": "dataLineage",
+      "toggle-ai-panel": "ai",
+      "csv-diff": "csvDiff",
+      "csv-encoding": "csvEncoding",
+      "use-or-save-template": "paletteTemplates",
+    };
+    const actionsWithSearch: PaletteItem[] = actions.map((a) => {
+      const k = actionEnKey[a.id];
+      return k ? { ...a, search: translations.en[k] } : a;
+    });
 
     const templateItems: PaletteItem[] = templateStore.templates.map((tpl) => ({
       id: `template-${tpl.id}`,
       label: tpl.name,
       description: tpl.description || t.newFromTemplate,
       keywords: t.newFromTemplate,
-      icon: LayoutTemplate,
+      icon: Zap,
       group: t.paletteTemplates,
       onSelect: () => void handleApplyTemplate(tpl.id),
     }));
@@ -1312,7 +1326,7 @@ function AppContent() {
       id: `tab-${tab.id}`,
       label: tab.name,
       description: tab.inputFile || tab.id,
-      icon: FileText,
+      groupIcon: NotebookTabs,
       group: t.paletteTabs,
       onSelect: () => tabsHook.setSelectedTabId(tab.id),
     }));
@@ -1321,25 +1335,26 @@ function AppContent() {
       id: `recent-${file.path}`,
       label: file.name,
       description: file.path,
-      icon: FolderOpen,
+      groupIcon: FileClock,
       group: t.recentFiles,
       onSelect: () => onOpenRecentFile(file.path),
     }));
 
     const commands: PaletteItem[] = xanCommands.map((cmd) => {
-      const Icon = commandIconMap[cmd.name] || CommandIcon;
       return {
         id: `cmd-${cmd.id}`,
         label: cmd.name,
         description: language === "zh" ? cmd.descriptionCn : cmd.description,
-        keywords: cmd.category,
-        icon: Icon,
+        // Include the English name, category and description so English input
+        // still matches even while the UI (descriptions) is localized to zh.
+        keywords: `${cmd.name} ${cmd.category} ${cmd.description}`,
+        groupIcon: ListTree,
         group: t.paletteCommands,
         onSelect: () => handleCommandClick(cmd),
       };
     });
 
-    return [...actions, ...tabs, ...recent, ...commands, ...templateItems];
+    return [...actionsWithSearch, ...tabs, ...recent, ...commands, ...templateItems];
   }, [
     t,
     language,
