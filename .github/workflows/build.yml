@@ -10,14 +10,20 @@ jobs:
   build:
     strategy:
       fail-fast: false
+      # Note: github retired Intel macOS runners, so macOS uses a single
+      # Apple-Silicon (arm64) runner that also cross-compiles x86_64 via
+      # `--target x86_64-apple-darwin`.
       matrix:
-        os: [windows-latest, macos-14, macos-13, ubuntu-22.04]
+        os: [windows-latest, macos-14, ubuntu-22.04]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          # Cross-compile target only relevant on macOS (currently empty otherwise).
+          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
@@ -63,7 +69,13 @@ jobs:
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
       - name: Build release (Tauri)
-        run: pnpm tauri build
+        shell: bash
+        run: |
+          pnpm tauri build
+          # macOS: also cross-compile Intel so one runner yields both archs.
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            pnpm tauri build --target x86_64-apple-darwin
+          fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -71,4 +83,5 @@ jobs:
           name: EasyCsv-${{ matrix.os }}
           path: |
             src-tauri/target/release/bundle/**
+            src-tauri/target/x86_64-apple-darwin/release/bundle/**
           if-no-files-found: warn
