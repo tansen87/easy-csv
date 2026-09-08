@@ -8,7 +8,9 @@ use tauri::{
   menu::{Menu, MenuItem},
   tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
 };
-use tauri_plugin_prevent_default::{Builder as PreventDefaultBuilder, Flags, PlatformOptions};
+#[cfg(target_os = "windows")]
+use tauri_plugin_prevent_default::PlatformOptions;
+use tauri_plugin_prevent_default::{Builder as PreventDefaultBuilder, Flags};
 
 /// Runtime tray availability. On Linux the tray depends on libappindicator /
 /// GTK; if it is unavailable the app keeps running without a tray and
@@ -77,12 +79,14 @@ fn main() {
     .plugin(tauri_plugin_window_state::Builder::new().build())
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_http::init())
-    .plugin(
-      PreventDefaultBuilder::new()
-        .with_flags(Flags::empty())
-        .platform(PlatformOptions::new().browser_accelerator_keys(false))
-        .build(),
-    )
+    .plugin({
+      let builder = PreventDefaultBuilder::new().with_flags(Flags::empty());
+      // PlatformOptions (browser accelerator key handling) is Windows-only in
+      // tauri-plugin-prevent-default v5; other platforms just use empty flags.
+      #[cfg(target_os = "windows")]
+      let builder = builder.platform(PlatformOptions::new().browser_accelerator_keys(false));
+      builder.build()
+    })
     .invoke_handler(easy_csv::invoke_handler())
     .setup(|app| {
       // Ensure the (user-provided) plugin drop-in directory exists so the

@@ -53,6 +53,12 @@ jobs:
       - name: Run frontend tests
         run: pnpm test
 
+      # Build the frontend so `cargo test` (which compiles the bin and invokes
+      # tauri::generate_context!) can find ../dist. `tauri build` regenerates it
+      # anyway via beforeBuildCommand, but this keeps the standalone test step green.
+      - name: Build frontend
+        run: pnpm build
+
       - name: Run backend tests
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
