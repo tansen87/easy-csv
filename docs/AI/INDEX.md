@@ -78,7 +78,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `config.rs` | `AppConfig` 类型、SQLite 持久化(app_config/ai_config 表)、AES-256-GCM 加密存储 API Key、per-provider API Key 管理、自定义 AI provider 配置(provider=custom 时存 name/base_url/models)、配置相关命令 |
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
 | `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令、`set_pipeline_cancelled` 取消执行 |
-| `plugins.rs` | 外部 CLI 插件管理: `plugins` 表(plugins.db)持久化、`list_plugins`/`check_plugins` 命令、`command_executable` 按命令名解析可执行文件(插件命令走插件二进制,其余走 xan.exe)。`xan` 与 `pinyin` 默认注册进插件表,列表按 xan 置顶排序。插件二进制默认在 `<exe目录>/easy-csv_resources/plugins/`(`pinyin.exe`/`xan.exe` 编译期嵌入 `src-tauri/resources/plugins/`、首次自动解压),解析顺序: 路径 → `plugins/` 目录(含 `.exe` 补全)→ `PATH` |
+| `plugins.rs` | 外部 CLI 插件管理: `plugins` 表(plugins.db)持久化、`list_plugins`/`check_plugins` 命令、`command_executable` 按命令名解析可执行文件(插件命令走插件二进制,其余走 xan.exe)。`xan` 与 `pinyin` 默认注册进插件表,列表按 xan 置顶排序。插件二进制按平台编译期嵌入 `src-tauri/resources/plugins/<target>/`(`include_bytes!`)、首启自动解压到平台插件目录,Unix 下 `make_executable` 置 0o755。解压目录: Windows `<exe>/EasyCsv_resources/plugins/`,macOS `~/Library/Application Support/EasyCsv/resources/plugins/`,Linux `~/.local/share/EasyCsv/resources/plugins/`。解析顺序: 路径 → `plugins/` 目录(含 `.exe` 补全)→ `PATH` |
 | `csv.rs` | `CsvData` 类型、`read_csv_file`/`profile_csv`/`diff_csv_files`/`convert_csv_encoding` 命令 |
 | `storage.rs` | 历史记录、最近文件、数据概况缓存、版本/血缘存储、窗口标题、开发者工具命令 |
 | `ai.rs` | AI 对话代理: `call_ai` 命令,转发到 DeepSeek / Qwen / GLM |
@@ -94,7 +94,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 |------|------|
 | `AppConfig` 结构体 | `default_delimiter`, `no_headers`, `show_execution_notification`, `minimize_to_tray` |
 | `load_config()` / `save_config()` | JSON 配置文件读写 |
-| `get_resources_dir()` | 资源目录路径(可执行文件旁) |
+| `get_resources_dir()` | 资源/数据根目录。Windows: `<exe>/EasyCsv_resources`(不变);macOS: `~/Library/Application Support/EasyCsv`;Linux: `~/.local/share/EasyCsv`。所有 db 数据目录经它派生,插件目录经 `plugins::get_plugin_dir()` 派生 |
 | `get/set_default_delimiter` | 默认分隔符配置命令 |
 | `get/set_no_headers` | 无表头配置命令 |
 | `get/set_system_notification` | 系统通知配置命令 |

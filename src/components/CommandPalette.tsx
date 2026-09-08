@@ -15,6 +15,7 @@ import {
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/i18n";
+import { modKeySymbol } from "@/utils/platform";
 
 export interface PaletteItem {
   id: string;
@@ -38,6 +39,12 @@ interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
   items: PaletteItem[];
+}
+
+/** Render a shortcut with the platform modifier (⌘ on macOS, Ctrl elsewhere). */
+function displayShortcut(shortcut?: string): string {
+  if (!shortcut) return "";
+  return shortcut.replace(/^Ctrl\+/, `${modKeySymbol()}+`);
 }
 
 export const CommandPalette = React.memo(function CommandPalette({
@@ -225,7 +232,7 @@ export const CommandPalette = React.memo(function CommandPalette({
                         </span>
                         {item.shortcut && (
                           <kbd className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-muted text-muted-foreground/70 flex-shrink-0">
-                            {item.shortcut}
+                            {displayShortcut(item.shortcut)}
                           </kbd>
                         )}
                         <CornerDownLeft
