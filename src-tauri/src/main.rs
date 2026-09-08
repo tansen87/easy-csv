@@ -83,11 +83,11 @@ fn main() {
         .platform(PlatformOptions::new().browser_accelerator_keys(false))
         .build(),
     )
-    .invoke_handler(easycsv::invoke_handler())
+    .invoke_handler(easy_csv::invoke_handler())
     .setup(|app| {
       // Ensure the (user-provided) plugin drop-in directory exists so the
       // resolution errors are easy to understand.
-      easycsv::plugins::ensure_plugin_dir_exists();
+      easy_csv::plugins::ensure_plugin_dir_exists();
 
       // Tray is optional: degrade gracefully (no tray) if it fails to build.
       let tray_available = setup_tray(app.handle()).is_ok();
@@ -108,7 +108,7 @@ fn main() {
           .try_state::<AppState>()
           .map(|s| s.tray_available.load(Ordering::Relaxed))
           .unwrap_or(false);
-        let config = easycsv::config::load_config().unwrap_or_default();
+        let config = easy_csv::config::load_config().unwrap_or_default();
         let minimize_to_tray = config.minimize_to_tray.unwrap_or(true);
         if minimize_to_tray && tray_available {
           api.prevent_close();
