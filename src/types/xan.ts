@@ -46,6 +46,26 @@ export interface StoredPipelineStep {
   position?: { x: number; y: number };
 }
 
+export type PipelineVariableType = "string" | "number" | "path";
+
+/** Docked position / collapse state of one floating panel. */
+export interface PanelDockState {
+  x?: number;
+  y?: number;
+  collapsed?: boolean;
+}
+
+/** Per-panel docking states persisted across sessions. */
+export type PanelStates = Record<string, PanelDockState>;
+
+/** A pipeline variable referenced via `{{name}}` placeholders. */
+export interface PipelineVariable {
+  /** Placeholder name, e.g. `limit` for `{{limit}}`. */
+  name: string;
+  defaultValue?: string;
+  type: PipelineVariableType;
+}
+
 export interface PipelineEdge {
   id: string;
   source: string;
@@ -57,6 +77,36 @@ export interface LogEntry {
   timestamp: Date;
   type: "info" | "success" | "error" | "warning";
   message: string;
+}
+
+export type ExecutionHistoryStatus = "success" | "error" | "cancelled";
+
+/** A persisted pipeline execution record. `outputSummary` is a JSON
+ *  string with `{ columns, rows, bytes, preview }` — never full stdout. */
+export interface ExecutionHistoryEntry {
+  id: number;
+  tabId: string;
+  tabName: string;
+  pipelineSnapshotHash: string;
+  versionId: string | null;
+  status: ExecutionHistoryStatus;
+  durationMs: number;
+  rows: number;
+  outputSummary: string;
+  startedAt: string;
+}
+
+/** Input payload for `save_execution_history` (backend assigns the id). */
+export interface ExecutionHistoryInput {
+  tabId: string;
+  tabName: string;
+  pipelineSnapshotHash: string;
+  versionId: string | null;
+  status: ExecutionHistoryStatus;
+  durationMs: number;
+  rows: number;
+  outputSummary: string;
+  startedAt: string;
 }
 
 export interface PipelineTab {
@@ -75,6 +125,10 @@ export interface PipelineTab {
   versions?: PipelineVersion[];
   currentVersionId?: string;
   lineage?: StepLineage[];
+  /** Declared pipeline variables (defaults/type), persisted. */
+  variables?: PipelineVariable[];
+  /** Last-run values for variables, session-only. */
+  runVariableValues?: Record<string, string>;
 }
 
 export interface PipelineVersion {
@@ -87,6 +141,36 @@ export interface PipelineVersion {
   message?: string;
   createdAt: string;
   tags?: string[];
+  /** Declared variables snapshot at version time. */
+  variables?: PipelineVariable[];
+}
+
+/** A saved pipeline template. `snapshot` reuses `utils/session.ts`'s
+ *  `TabSnapshot` shape so pipelines roundtrip losslessly. */
+export interface PipelineTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  tags?: string[];
+  created: string;
+  updated: string;
+  snapshot: {
+    id: string;
+    name: string;
+    created: string;
+    updated: string;
+    inputFile?: string;
+    defaultDelimiter?: string;
+    headers?: string[];
+    data?: string[][];
+    inputPosition?: { x: number; y: number };
+    isSettings?: boolean;
+    currentVersionId?: string;
+    variables?: PipelineVariable[];
+    runVariableValues?: Record<string, string>;
+    pipeline: StoredPipelineStep[];
+    edges: PipelineEdge[];
+  };
 }
 
 export interface ColumnSchema {

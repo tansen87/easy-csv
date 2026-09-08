@@ -6,6 +6,10 @@ authors = ["tansen"]
 edition = "2024"
 rust-version = "1.94.0"
 
+[[bin]]
+name = "EasyCsv"
+path = "src/main.rs"
+
 [build-dependencies]
 tauri-build = { version = "^2", features = [] }
 
@@ -26,6 +30,9 @@ tauri-plugin-fs = "^2"
 tauri-plugin-window-state = "^2"
 tauri-plugin-notification = "^2"
 tauri-plugin-http = { version = "^2", features = ["default"] }
+# NOTE: tauri-plugin-prevent-default v5 only exposes the `platform-windows`
+# feature (no platform-linux/macos feature exists as of 5.0.2), so the macOS/
+# Linux interception ideas from design 012 W4 are not applicable.
 tauri-plugin-prevent-default = { version = "^5", features = ["platform-windows"] }
 rusqlite = { version = "^0.40.2", features = ["bundled"] }
 aes-gcm = "^0.11.0"

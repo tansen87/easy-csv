@@ -6,6 +6,7 @@ import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { useDraggable } from "@/hooks/useDraggable";
+import { VariableHint } from "@/components/dialog/commands/VariableHint";
 
 interface SplitDialogState {
   col: number;
@@ -301,6 +302,7 @@ export function SplitDialog({
                     placeholder="Enter custom separator"
                     className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                   />
+                  <VariableHint value={customSeparator} />
                 </div>
               )}
 
@@ -349,6 +351,7 @@ export function SplitDialog({
                   placeholder="e.g., -, _, /, etc."
                   className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                 />
+                <VariableHint value={joinWith} />
               </div>
             </div>
           )}

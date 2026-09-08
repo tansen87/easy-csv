@@ -8,6 +8,9 @@ import {
   Minimize2,
   ArrowDown,
   Filter,
+  History,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import React, {
   useState,
@@ -21,7 +24,7 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
-import { LogEntry } from "@/types/xan";
+import { LogEntry, PanelDockState } from "@/types/xan";
 import { useLanguage } from "@/i18n";
 
 interface LogPanelProps {
@@ -30,6 +33,15 @@ interface LogPanelProps {
   onRemoveLog: (id: string) => void;
   isVisible: boolean;
   onClose: () => void;
+  onShowHistory?: () => void;
+  /** Persisted docking state. */
+  dockState?: PanelDockState;
+  /** Report position/collapse changes for persistence. */
+  onDockChange?: (patch: Partial<PanelDockState>) => void;
+  /** Raise the docked bottom edge to avoid the expanded AI panel (D2). */
+  bottomOffset?: number | string;
+  /** Top-right stack offset for the collapsed capsule (D2). */
+  capsuleY?: number;
 }
 
 export const LogPanel = React.memo(function LogPanel({
@@ -38,9 +50,17 @@ export const LogPanel = React.memo(function LogPanel({
   onRemoveLog,
   isVisible,
   onClose,
+  onShowHistory,
+  dockState,
+  onDockChange,
+  bottomOffset = 0,
+  capsuleY,
 }: LogPanelProps) {
   const { t } = useLanguage();
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
+  const [collapsed, setCollapsed] = useState<boolean>(
+    dockState?.collapsed ?? false,
+  );
   const [copiedLogId, setCopiedLogId] = useState<string | null>(null);
   const [panelLeft, setPanelLeft] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -58,6 +78,14 @@ export const LogPanel = React.memo(function LogPanel({
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
   const copyTimerRef = useRef<number | null>(null);
+
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      onDockChange?.({ collapsed: next });
+      return next;
+    });
+  }, [onDockChange]);
 
   const getLogColor = (type: LogEntry["type"]) => {
     switch (type) {
@@ -231,7 +259,9 @@ export const LogPanel = React.memo(function LogPanel({
         rafRef.current = null;
       }
       if (panelRef.current) {
-        setPanelLeft(panelRef.current.getBoundingClientRect().left);
+        const left = panelRef.current.getBoundingClientRect().left;
+        setPanelLeft(left);
+        onDockChange?.({ x: left });
       }
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
@@ -248,18 +278,25 @@ export const LogPanel = React.memo(function LogPanel({
   useEffect(() => {
     if (isVisible) {
       const panelWidth = panelRef.current?.offsetWidth || 600;
-      const newX = window.innerWidth - panelWidth;
+      // Persisted x wins; otherwise dock to the right edge.
+      const newX =
+        dockState?.x !== undefined
+          ? dockState.x
+          : window.innerWidth - panelWidth;
       setPanelLeft(newX);
     }
-  }, [isVisible]);
+  }, [isVisible, dockState?.x]);
 
   useLayoutEffect(() => {
     if (isMaximized || !panelRef.current) return;
     panelRef.current.style.top = "";
-    panelRef.current.style.bottom = "0";
+    panelRef.current.style.bottom =
+      typeof bottomOffset === "number" ? `${bottomOffset}px` : bottomOffset;
     const panelWidth = panelRef.current.offsetWidth || 600;
-    setPanelLeft(window.innerWidth - panelWidth);
-  }, [isMaximized]);
+    const newX =
+      dockState?.x !== undefined ? dockState.x : window.innerWidth - panelWidth;
+    setPanelLeft(newX);
+  }, [isMaximized, bottomOffset, dockState?.x]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -276,6 +313,23 @@ export const LogPanel = React.memo(function LogPanel({
 
   if (!isVisible) return null;
 
+  // Collapsed capsule (edge pill) with one-click restore.
+  if (collapsed && !isMaximized) {
+    return (
+      <div
+        className="fixed z-floating flex items-center gap-1.5 px-3 py-2 bg-background border border-border/50 rounded-full shadow-xl cursor-pointer select-none"
+        style={{ top: capsuleY ?? 56, right: 8 }}
+        role="button"
+        onContextMenu={(e) => e.preventDefault()}
+        onClick={() => toggleCollapsed()}
+      >
+        <ScrollText className="h-4 w-4 text-primary" />
+        <span className="text-xs font-medium">{t.logs}</span>
+        <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div
       ref={panelRef}
@@ -289,11 +343,11 @@ export const LogPanel = React.memo(function LogPanel({
             }
           : {
               left: panelLeft,
-              bottom: 0,
+              bottom: bottomOffset,
               height: 300,
             }
       }
-      className={`fixed flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isMaximized ? "w-screen h-screen" : "w-[min(600px,calc(100vw-32px))]"} ${isDragging ? "shadow-2xl" : ""}`}
+      className={`fixed flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-floating ${isMaximized ? "w-screen h-screen" : "w-[min(600px,calc(100vw-32px))]"} ${isDragging ? "shadow-2xl" : ""}`}
       onContextMenu={(e) => e.preventDefault()}
     >
       <div className="p-2 border-b bg-card/80 flex items-center gap-2">
@@ -335,6 +389,18 @@ export const LogPanel = React.memo(function LogPanel({
           </div>
         )}
         <div className="flex items-center gap-1 ml-auto">
+          {onShowHistory && (
+            <Tooltip content={t.historyButton}>
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={onShowHistory}
+                className="px-2 font-medium"
+              >
+                <History className="h-4 w-4" />
+              </Button>
+            </Tooltip>
+          )}
           <Tooltip content={t.aiClear}>
             <Button
               variant="ghost"
@@ -358,6 +424,17 @@ export const LogPanel = React.memo(function LogPanel({
               ) : (
                 <Maximize2 className="h-4 w-4" />
               )}
+            </Button>
+          </Tooltip>
+          <Tooltip content={collapsed ? t.expandPanel : t.collapsePanel}>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={toggleCollapsed}
+              disabled={isMaximized}
+              className="px-2 font-medium"
+            >
+              <ChevronDown className="h-4 w-4" />
             </Button>
           </Tooltip>
           <Tooltip content={t.close}>

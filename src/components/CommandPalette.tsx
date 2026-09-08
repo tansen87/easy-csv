@@ -15,13 +15,20 @@ import {
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/i18n";
+import { modKeySymbol } from "@/utils/platform";
 
 export interface PaletteItem {
   id: string;
   label: string;
   description?: string;
   keywords?: string;
+  /** Extra searchable tokens (e.g. English aliases for localized labels). */
+  search?: string;
   icon?: LucideIcon;
+  /** Icon shown once on the group header; when set, per-item icons are hidden. */
+  groupIcon?: LucideIcon;
+  /** Suppress icons entirely for this item's group (no header, no per-item). */
+  noIcon?: boolean;
   group: string;
   shortcut?: string;
   disabled?: boolean;
@@ -32,6 +39,12 @@ interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
   items: PaletteItem[];
+}
+
+/** Render a shortcut with the platform modifier (⌘ on macOS, Ctrl elsewhere). */
+function displayShortcut(shortcut?: string): string {
+  if (!shortcut) return "";
+  return shortcut.replace(/^Ctrl\+/, `${modKeySymbol()}+`);
 }
 
 export const CommandPalette = React.memo(function CommandPalette({
@@ -55,6 +68,7 @@ export const CommandPalette = React.memo(function CommandPalette({
         item.label,
         item.description,
         item.keywords,
+        item.search,
         item.group,
         item.shortcut,
       ]
@@ -171,58 +185,67 @@ export const CommandPalette = React.memo(function CommandPalette({
                 {t.paletteNoResults}
               </div>
             )}
-            {groups.map((group) => (
-              <div key={group.name}>
-                <div className="px-4 py-1.5 text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
-                  {group.name}
-                </div>
-                {group.items.map((item) => {
-                  const index = filtered.indexOf(item);
-                  const isActive = index === activeIndex;
-                  const Icon = item.icon;
-                  return (
-                    <button
-                      key={item.id}
-                      ref={isActive ? activeItemRef : undefined}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onMouseEnter={() => {
-                        if (!keyboardNav) setActiveIndex(index);
-                      }}
-                      onClick={() => select(item)}
-                      className={`w-full grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                        isActive ? "bg-accent text-accent-foreground" : ""
-                      }`}
-                    >
-                      {Icon ? (
-                        <Icon className="h-4 w-4 text-muted-foreground/70 flex-shrink-0" />
-                      ) : (
-                        <span className="w-4 flex-shrink-0" />
-                      )}
-                      <span className="min-w-0 overflow-hidden">
-                        <span className="block text-sm font-medium truncate">
-                          {item.label}
-                        </span>
-                        {item.description && (
-                          <span className="block text-xs text-muted-foreground/80 truncate">
-                            {item.description}
+            {groups.map((group) => {
+              const noIcon = group.items[0]?.noIcon;
+              const GroupIcon = noIcon ? undefined : group.items[0]?.groupIcon;
+              return (
+                <div key={group.name}>
+                  <div className="px-4 py-1.5 text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider flex items-center gap-1.5">
+                    {GroupIcon && (
+                      <GroupIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                    )}
+                    {group.name}
+                  </div>
+                  {group.items.map((item) => {
+                    const index = filtered.indexOf(item);
+                    const isActive = index === activeIndex;
+                    // Per-item icons are hidden for groups with a header icon or
+                    // with no icons at all (reduces visual noise).
+                    const Icon = noIcon || GroupIcon ? undefined : item.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        ref={isActive ? activeItemRef : undefined}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onMouseEnter={() => {
+                          if (!keyboardNav) setActiveIndex(index);
+                        }}
+                        onClick={() => select(item)}
+                        className={`w-full grid items-center gap-3 pr-4 py-2.5 text-left transition-colors ${
+                          Icon
+                            ? "grid-cols-[auto_minmax(0,1fr)_auto_auto] pl-4"
+                            : "grid-cols-[minmax(0,1fr)_auto_auto] pl-9"
+                        } ${isActive ? "bg-accent text-accent-foreground" : ""}`}
+                      >
+                        {Icon ? (
+                          <Icon className="h-4 w-4 text-muted-foreground/70 flex-shrink-0" />
+                        ) : null}
+                        <span className="min-w-0 overflow-hidden">
+                          <span className="block text-sm font-medium truncate">
+                            {item.label}
                           </span>
+                          {item.description && (
+                            <span className="block text-xs text-muted-foreground/80 truncate">
+                              {item.description}
+                            </span>
+                          )}
+                        </span>
+                        {item.shortcut && (
+                          <kbd className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-muted text-muted-foreground/70 flex-shrink-0">
+                            {displayShortcut(item.shortcut)}
+                          </kbd>
                         )}
-                      </span>
-                      {item.shortcut && (
-                        <kbd className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-muted text-muted-foreground/70 flex-shrink-0">
-                          {item.shortcut}
-                        </kbd>
-                      )}
-                      <CornerDownLeft
-                        className={`h-3.5 w-3.5 flex-shrink-0 ${
-                          isActive ? "text-primary" : "text-transparent"
-                        }`}
-                      />
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
+                        <CornerDownLeft
+                          className={`h-3.5 w-3.5 flex-shrink-0 ${
+                            isActive ? "text-primary" : "text-transparent"
+                          }`}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
         </ScrollArea>
 

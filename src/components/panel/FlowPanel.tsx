@@ -45,9 +45,21 @@ import { CutVisualization } from "@/components/panel/overlays/CutVisualization";
 import { ConnectionVisualization } from "@/components/panel/overlays/ConnectionVisualization";
 import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "@/components/menu/ContextMenu";
+import {
+  CanvasContextMenu,
+  type CanvasMenuItem,
+} from "@/components/menu/CanvasContextMenu";
 import { TextTransformType } from "@/components/dialog/TextTransformDialog";
 import { NumberTransformType } from "@/components/dialog/NumberTransformDialog";
-import { Copy, Trash2 } from "lucide-react";
+import {
+  Copy,
+  Trash2,
+  ClipboardPaste,
+  Scissors,
+  MousePointerClick,
+  FileDown,
+} from "lucide-react";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useLanguage } from "@/i18n";
 
 function formatRelativeTime(
@@ -72,6 +84,7 @@ interface FlowPanelProps {
   headers: string[];
   rows: string[][];
   columnWidths: Record<number, number>;
+  resultPreview?: import("@/hooks/MainMenuHooks").ResultPreview[];
   onStepsChange: (steps: PipelineStep[]) => void;
   onStepClick: (step: PipelineStep) => void;
   onStepAliasUpdate: (stepId: string, alias: string) => void;
@@ -115,6 +128,7 @@ interface FlowPanelProps {
   doubleClickFitView?: boolean;
   onSavePipeline?: () => void;
   onOpenCommandPalette?: () => void;
+  onSaveIntermediate?: (stepId: string) => void;
 }
 
 export function FlowPanel({
@@ -122,6 +136,7 @@ export function FlowPanel({
   headers,
   rows,
   columnWidths,
+  resultPreview,
   onStepsChange,
   onStepClick,
   onStepAliasUpdate,
@@ -149,6 +164,7 @@ export function FlowPanel({
   pipelineSavedAt,
   doubleClickFitView = true,
   onOpenCommandPalette,
+  onSaveIntermediate,
 }: FlowPanelProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
@@ -213,6 +229,19 @@ export function FlowPanel({
     new Set(),
   );
 
+  // Result preview nodes the user dismissed (removed from the canvas)
+  const [dismissedResults, setDismissedResults] = useState<Set<string>>(
+    new Set(),
+  );
+
+  // When a fresh set of results arrives (new execution), clear previous
+  // dismissal records so every new run shows its result nodes by default.
+  useEffect(() => {
+    if (resultPreview && resultPreview.length > 0) {
+      setDismissedResults(new Set());
+    }
+  }, [resultPreview]);
+
   // Canvas search status
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -260,11 +289,30 @@ export function FlowPanel({
     setContextMenu(null);
   }, []);
 
+  // Right-click interaction mode: "cut" keeps the cut-to-delete / connect
+  // gesture; "menu" opens the canvas context menu instead (paste, more later).
+  const [rightClickMode, setRightClickMode] = useState<"cut" | "menu">("cut");
+  // The mode toggle renders as a small dot by default and expands into the
+  // vertical bar when the mouse nears the right edge (D2 follow-up).
+  const [modeBarHovered, setModeBarHovered] = useState(false);
+  const [canvasMenu, setCanvasMenu] = useState<{
+    x: number;
+    y: number;
+    stepId: string | null;
+  } | null>(null);
+
   const handleContextMenu = useCallback(
     (stepId: string, x: number, y: number) => {
-      setContextMenu({ x, y, stepId });
+      // In menu mode, right-clicking a step node opens the canvas context menu
+      // (with that step under the cursor). Nodes call this via their own
+      // onContextMenu which stops propagation, so we route here explicitly.
+      if (rightClickMode === "menu") {
+        setCanvasMenu({ x, y, stepId });
+      } else {
+        setContextMenu({ x, y, stepId });
+      }
     },
-    [],
+    [rightClickMode],
   );
 
   const [tableContextMenu, setTableContextMenu] = useState<{
@@ -330,6 +378,17 @@ export function FlowPanel({
   const edgesRef = useRef<Edge[]>(edges);
   edgesRef.current = edges;
 
+  // Transient notice shown when a cyclic connection is rejected
+  const [cycleNotice, setCycleNotice] = useState(false);
+  const cycleNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const showCycleNotice = useCallback(() => {
+    setCycleNotice(true);
+    if (cycleNoticeTimerRef.current) clearTimeout(cycleNoticeTimerRef.current);
+    cycleNoticeTimerRef.current = setTimeout(() => setCycleNotice(false), 3000);
+  }, []);
+
   // Re-compute layout when data changes (not callbacks)
   useEffect(() => {
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
@@ -364,7 +423,50 @@ export function FlowPanel({
       return newNode;
     });
 
-    setNodes(updatedNodes);
+    // Inject result preview nodes (F1) to the right of the pipeline graph.
+    // Preserve an existing result node's position so it isn't pushed around
+    // when other nodes are dragged (which re-triggers this layout effect).
+    const existingResultPos = new Map<string, { x: number; y: number }>();
+    for (const n of nodes) {
+      if (n.type === "resultTableNode" && n.position) {
+        existingResultPos.set(n.id, n.position);
+      }
+    }
+    const maxRight = updatedNodes.reduce(
+      (m, n) => Math.max(m, (n.position?.x || 0) + (n.width || 0)),
+      0,
+    );
+    let fallbackY = 20;
+    const resultNodes = (resultPreview || [])
+      .filter((r) => !dismissedResults.has(r.id))
+      .map((r) => {
+        const position = existingResultPos.get(r.id) || {
+          x: maxRight + 60,
+          y: fallbackY,
+        };
+        fallbackY += 260;
+        return {
+          id: r.id,
+          type: "resultTableNode" as const,
+          position,
+          data: {
+            headers: r.headers,
+            rows: r.rows,
+            label: r.label,
+            totalRows: r.totalRows,
+            truncated: r.truncated,
+            onClose: () =>
+              setDismissedResults((prev) => new Set(prev).add(r.id)),
+          },
+          selectable: false,
+          draggable: true,
+          dragHandle: ".result-node-header",
+          width: 520,
+          height: 220,
+        };
+      });
+
+    setNodes([...updatedNodes, ...resultNodes]);
     setEdges(layoutedEdges);
   }, [
     hasTable,
@@ -374,6 +476,8 @@ export function FlowPanel({
     columnWidths,
     savedEdges,
     savedInputPosition,
+    resultPreview,
+    dismissedResults,
   ]);
 
   // Apply selection/highlight as visual-only properties (no layout recompute)
@@ -399,6 +503,7 @@ export function FlowPanel({
       displayName: string;
       secondaryName: string | null;
       isTableNode?: boolean;
+      resultId?: string;
     }[] = [];
 
     // Search "Input Data" node (not its column names)
@@ -409,6 +514,18 @@ export function FlowPanel({
         secondaryName: null,
         isTableNode: true,
       });
+    }
+
+    // Search result preview nodes (F1)
+    for (const r of resultPreview || []) {
+      if (r.label.toLowerCase().includes(query)) {
+        results.push({
+          step: null,
+          displayName: r.label,
+          secondaryName: null,
+          resultId: r.id,
+        });
+      }
     }
 
     // Search pipeline steps
@@ -425,20 +542,24 @@ export function FlowPanel({
     }
 
     return results;
-  }, [searchQuery, steps]);
+  }, [searchQuery, steps, resultPreview]);
 
   // Click search result: jump to node and highlight
   const reactFlowInstance = useRef<any>(null);
 
   const handleSearchResultClick = useCallback(
-    (step: PipelineStep | null, isTable?: boolean) => {
-      const nodeId = isTable ? "table-node" : step!.id;
+    (step: PipelineStep | null, isTable?: boolean, resultId?: string) => {
+      const nodeId = resultId ? resultId : isTable ? "table-node" : step!.id;
       const node = nodes.find((n) => n.id === nodeId);
       if (!node || !reactFlowInstance.current) return;
 
       // Use setCenter to jump to node position (centered)
-      const w = node.type === "tableNode" ? 260 : 110;
-      const h = node.type === "tableNode" ? 130 : 45;
+      const w =
+        node.type === "tableNode" || node.type === "resultTableNode"
+          ? 260
+          : 110;
+      const h =
+        node.type === "tableNode" || node.type === "resultTableNode" ? 130 : 45;
       reactFlowInstance.current.setCenter(
         node.position.x + w,
         node.position.y + h,
@@ -743,6 +864,8 @@ export function FlowPanel({
   // Right-click - Start connecting or cutting nodes
   const handleCutStart = useCallback(
     (e: React.MouseEvent) => {
+      // In "menu" mode right-click is reserved for the context menu.
+      if (rightClickMode !== "cut") return;
       if (e.button === 2) {
         e.preventDefault();
         e.stopPropagation();
@@ -771,12 +894,19 @@ export function FlowPanel({
         }
       }
     },
-    [getNodeAtPosition],
+    [getNodeAtPosition, rightClickMode],
   );
 
   // Right-click move - Connect or cut nodes mode
   const handleCutMove = useCallback(
     (e: React.MouseEvent) => {
+      // Reveal the mode toggle bar when the mouse nears the right edge.
+      // Returns the previous state when unchanged so React skips re-renders.
+      setModeBarHovered((prev) => {
+        const near = e.clientX >= window.innerWidth - 56;
+        return prev === near ? prev : near;
+      });
+
       if (
         isConnecting &&
         reactFlowWrapper.current &&
@@ -1029,9 +1159,20 @@ export function FlowPanel({
   );
 
   // Prevent default right-click menu on panel
-  const handlePanelContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-  }, []);
+  const handlePanelContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (rightClickMode === "menu") {
+        const nodeId = getNodeAtPosition(e.clientX, e.clientY);
+        setCanvasMenu({
+          x: e.clientX,
+          y: e.clientY,
+          stepId: nodeId && nodeId !== "table-node" ? nodeId : null,
+        });
+      }
+    },
+    [rightClickMode, getNodeAtPosition],
+  );
 
   // Update node's isCutting attribute, pending delete highlight, and cut parts
   useEffect(() => {
@@ -1139,6 +1280,39 @@ export function FlowPanel({
     (connection: Connection) => {
       if (!connection.source || !connection.target) return;
 
+      // Reject a connection that would introduce a cycle. Adding
+      // source -> target closes a cycle iff target can already reach source.
+      if (connection.source === connection.target) {
+        showCycleNotice();
+        return;
+      }
+      const adjacency = new Map<string, string[]>();
+      edgesRef.current.forEach((edge) => {
+        if (!edge.source || !edge.target) return;
+        if (!adjacency.has(edge.source)) adjacency.set(edge.source, []);
+        adjacency.get(edge.source)!.push(edge.target);
+      });
+      const stack = [connection.target];
+      const seen = new Set<string>([connection.target]);
+      let wouldCycle = false;
+      while (stack.length > 0) {
+        const current = stack.pop()!;
+        if (current === connection.source) {
+          wouldCycle = true;
+          break;
+        }
+        (adjacency.get(current) || []).forEach((next) => {
+          if (!seen.has(next)) {
+            seen.add(next);
+            stack.push(next);
+          }
+        });
+      }
+      if (wouldCycle) {
+        showCycleNotice();
+        return;
+      }
+
       const sourceNode = nodes.find((n) => n.id === connection.source);
       const targetNode = nodes.find((n) => n.id === connection.target);
 
@@ -1206,7 +1380,7 @@ export function FlowPanel({
         return newEdges;
       });
     },
-    [steps, onStepsChange, setEdges, onEdgesChange, nodes],
+    [steps, onStepsChange, setEdges, onEdgesChange, nodes, showCycleNotice],
   );
 
   // Multi-select (Shift+drag or click) → track selected node ids
@@ -1324,6 +1498,30 @@ export function FlowPanel({
     [doubleClickFitView],
   );
 
+  // Canvas context menu items (right-click menu mode). Built on every render
+  // so the paste disabled state reflects the current clipboard and the save
+  // entry only shows when the cursor is over a step node. Extend this list as
+  // more menu features are added.
+  const canvasMenuItems: CanvasMenuItem[] = [
+    ...(canvasMenu?.stepId && onSaveIntermediate
+      ? [
+          {
+            key: "save-intermediate",
+            label: t.saveIntermediateAsInput,
+            icon: FileDown,
+            onSelect: () => onSaveIntermediate(canvasMenu.stepId!),
+          } as CanvasMenuItem,
+        ]
+      : []),
+    {
+      key: "paste",
+      label: t.paste,
+      icon: ClipboardPaste,
+      disabled: !clipboardRef.current,
+      onSelect: handlePasteClipboard,
+    },
+  ];
+
   return (
     <div
       ref={reactFlowWrapper}
@@ -1331,8 +1529,14 @@ export function FlowPanel({
       onMouseDown={handleCutStart}
       onMouseMove={handleCutMove}
       onMouseUp={handleCutEnd}
+      onMouseLeave={() => setModeBarHovered(false)}
       onContextMenu={handlePanelContextMenu}
     >
+      {cycleNotice && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-md bg-destructive/90 text-destructive-foreground text-sm shadow-lg">
+          {t.cycleRejected}
+        </div>
+      )}
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -1381,7 +1585,7 @@ export function FlowPanel({
         onEnter={(index) => {
           if (searchResults.length > 0) {
             const r = searchResults[Math.min(index, searchResults.length - 1)];
-            handleSearchResultClick(r.step, r.isTableNode);
+            handleSearchResultClick(r.step, r.isTableNode, r.resultId);
           }
         }}
         searchResults={searchResults}
@@ -1428,6 +1632,66 @@ export function FlowPanel({
         connectEndAnchor={connectEndAnchor}
         connectTargetNode={connectTargetNode}
       />
+
+      {/* Right-click interaction mode toggle: a small dot by default,
+          expanding into the vertical bar when the mouse nears the right edge. */}
+      <div
+        className="absolute right-2 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center"
+        onMouseDown={(e) => e.stopPropagation()}
+        onContextMenu={(e) => e.stopPropagation()}
+      >
+        {modeBarHovered ? (
+          <div className="flex flex-col items-center gap-1 bg-card border border-border/70 rounded-lg shadow-lg p-1 animate-in fade-in zoom-in-95 duration-150">
+            <Tooltip content={t.rightClickCutMode} side="left">
+              <button
+                onClick={() => {
+                  setRightClickMode("cut");
+                  setCanvasMenu(null);
+                }}
+                aria-pressed={rightClickMode === "cut"}
+                className={`relative flex items-center justify-center h-7 w-7 rounded-lg transition-colors ${
+                  rightClickMode === "cut"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-primary hover:bg-accent/60"
+                }`}
+              >
+                <Scissors className="h-4 w-4" />
+              </button>
+            </Tooltip>
+            <Tooltip content={t.rightClickMenuMode} side="left">
+              <button
+                onClick={() => {
+                  setRightClickMode("menu");
+                  setCanvasMenu(null);
+                }}
+                aria-pressed={rightClickMode === "menu"}
+                className={`relative flex items-center justify-center h-7 w-7 rounded-lg transition-colors ${
+                  rightClickMode === "menu"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-primary hover:bg-accent/60"
+                }`}
+              >
+                <MousePointerClick className="h-4 w-4" />
+              </button>
+            </Tooltip>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="h-1.5 w-8 rounded-full bg-black/60 dark:bg-white/70 shadow cursor-pointer transition-all hover:scale-x-110 hover:bg-black/80 dark:hover:bg-white/90"
+          />
+        )}
+      </div>
+
+      {/* Canvas context menu (right-click menu mode) */}
+      {canvasMenu && (
+        <CanvasContextMenu
+          x={canvasMenu.x}
+          y={canvasMenu.y}
+          items={canvasMenuItems}
+          onClose={() => setCanvasMenu(null)}
+        />
+      )}
 
       {/* Multi-select floating action bar */}
       {selectedNodeIds.size > 0 && (

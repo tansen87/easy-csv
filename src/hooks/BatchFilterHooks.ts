@@ -18,6 +18,8 @@ interface BatchFilterHooksProps {
     } | null>
   >;
   getCurrentTab: () => { inputFile?: string };
+  /** Called before each iteration; breaking out of the loop when true */
+  isCancelRequested?: () => boolean;
 }
 
 export function BatchFilterHooks({
@@ -25,6 +27,7 @@ export function BatchFilterHooks({
   addLog,
   setBranchProgress,
   getCurrentTab,
+  isCancelRequested = () => false,
 }: BatchFilterHooksProps) {
   const sanitizeFileName = (value: string): string => {
     // Remove all characters not allowed in Windows filenames
@@ -159,8 +162,13 @@ export function BatchFilterHooks({
       return;
     }
 
-    // Step 2: Execute for each value
+    // Execute for each value
     for (let i = 0; i < values.length; i++) {
+      // Honor a pending cancel request between iterations
+      if (isCancelRequested()) {
+        addLog("warning", `Batch filter cancelled after ${i} value(s)`);
+        break;
+      }
       const value = values[i];
       const displayName =
         value.length > 20 ? value.substring(0, 20) + "..." : value;
@@ -443,8 +451,13 @@ export function BatchFilterHooks({
     const encoder = new TextEncoder();
     await writeFile(tempInputPath, encoder.encode(inputData));
 
-    // Step 2: Execute for each value
+    // Execute for each value
     for (let i = 0; i < values.length; i++) {
+      // Honor a pending cancel request between iterations
+      if (isCancelRequested()) {
+        addLog("warning", `Batch filter cancelled after ${i} value(s)`);
+        break;
+      }
       const value = values[i];
       const displayName =
         value.length > 20 ? value.substring(0, 20) + "..." : value;

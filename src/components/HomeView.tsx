@@ -49,6 +49,7 @@ interface HomeViewProps {
   onTabChange: (tabId: string) => void;
   onRemoveTab: (tabId: string) => void;
   onRenameTab: (tabId: string, name: string) => void;
+  resultPreview?: import("@/hooks/MainMenuHooks").ResultPreview[];
   onAddCommand: (
     command: XanCommand,
     initialParameters?: Record<string, any>,
@@ -109,6 +110,7 @@ interface HomeViewProps {
   doubleClickFitView?: boolean;
   onSavePipeline?: () => void;
   onOpenCommandPalette?: () => void;
+  onSaveIntermediate?: (stepId: string) => void;
   pipelineSavedAt?: number;
 }
 
@@ -118,6 +120,7 @@ export const HomeView = React.memo(function HomeView({
   onTabChange,
   onRemoveTab,
   onRenameTab,
+  resultPreview,
   onAddCommand,
   onStepClick,
   onStepUpdate,
@@ -160,6 +163,7 @@ export const HomeView = React.memo(function HomeView({
   doubleClickFitView = true,
   onSavePipeline,
   onOpenCommandPalette,
+  onSaveIntermediate,
   pipelineSavedAt,
 }: HomeViewProps) {
   const { t } = useLanguage();
@@ -502,6 +506,7 @@ export const HomeView = React.memo(function HomeView({
           headers={displayHeaders}
           rows={data}
           columnWidths={columnWidths}
+          resultPreview={resultPreview}
           onStepsChange={(newPipeline) => {
             if (onPipelineReorder && selectedTabId) {
               onPipelineReorder(selectedTabId, newPipeline);
@@ -562,6 +567,7 @@ export const HomeView = React.memo(function HomeView({
           doubleClickFitView={doubleClickFitView}
           onSavePipeline={onSavePipeline}
           onOpenCommandPalette={onOpenCommandPalette}
+          onSaveIntermediate={onSaveIntermediate}
         />
       </div>
 

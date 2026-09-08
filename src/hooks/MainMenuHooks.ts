@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
@@ -11,16 +11,64 @@ import {
   ChartConfig,
   ChartSeries,
   ChartDataPoint,
+  ExecutionHistoryInput,
+  ExecutionHistoryStatus,
 } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 import { BatchFilterConfig } from "@/components/dialog/BatchFilterDialog";
 import { BatchFilterHooks } from "@/hooks/BatchFilterHooks";
 import { BatchConvertHooks } from "@/hooks/BatchConvertHooks";
+import { parseCsvString } from "@/utils/csv";
+import { stripStepCommand } from "@/utils/session";
+import {
+  computePipelineSnapshotHash,
+  buildOutputSummary,
+} from "@/utils/executionHistory";
+import {
+  collectVariablesFromPipeline,
+  resolveStepPlaceholders,
+  extractVariableNames,
+  inferVariableType,
+} from "@/utils/params";
+import { PipelineVariableType } from "@/types/xan";
+import { isWindows } from "@/utils/platform";
+import { useLanguage } from "@/i18n";
+
+/** Shared state for the S6 "multiple branches overwrite one output file" gate. */
+export interface OverwriteConfirm {
+  branchCount: number;
+  outputPath: string;
+}
+
+/** Cap execution stdout returned to the UI (bytes) to protect the WebView. */
+const MAX_OUTPUT_BYTES = 2 * 1024 * 1024;
 
 interface CliParam {
   name: string;
   value: string;
   isPositional?: boolean;
+}
+
+/** Parsed execution result shown as a canvas table node (F1). */
+export interface ResultPreview {
+  id: string;
+  label: string;
+  headers: string[];
+  rows: string[][];
+  totalRows: number;
+  truncated: boolean;
+}
+
+/** One variable awaiting a runtime value before execution (F3). */
+export interface VariablePromptItem {
+  name: string;
+  type: PipelineVariableType;
+  value: string;
+}
+
+/** Dialog state opened when the pipeline references unassigned variables (F3). */
+export interface VariablePrompt {
+  variables: VariablePromptItem[];
 }
 
 /**
@@ -40,9 +88,7 @@ function serializeStepParams(step: PipelineStep): CliParam[] {
   // Normalize add-pattern values to a trimmed list.
   const apRaw = step.parameters["add-pattern"];
   let extraPatterns: string[] = Array.isArray(apRaw)
-    ? apRaw
-        .map((v) => String(v).trim())
-        .filter(Boolean)
+    ? apRaw.map((v) => String(v).trim()).filter(Boolean)
     : apRaw && String(apRaw).trim()
       ? [String(apRaw).trim()]
       : [];
@@ -85,6 +131,61 @@ function serializeStepParams(step: PipelineStep): CliParam[] {
     params.push({ name: param.name, value, isPositional: param.isPositional });
   }
   return params;
+}
+
+/**
+ * Build the sub-chain from the input to a target step (inclusive) along the
+ * edges. Used by "save intermediate result as input CSV": the output of this
+ * prefix is exactly the data the target step receives.
+ *
+ * Linear pipelines (no edges) simply slice by array order. Branching pipelines
+ * take the first DFS path that reaches the target; a disconnected target falls
+ * back to the array-order prefix so it can still be inspected.
+ */
+function buildPrefixToStep(
+  steps: PipelineStep[],
+  edges: PipelineEdge[],
+  targetStepId: string,
+): PipelineStep[] {
+  if (!steps.some((s) => s.id === targetStepId)) return [];
+  if (edges.length === 0) {
+    const idx = steps.findIndex((s) => s.id === targetStepId);
+    return idx >= 0 ? steps.slice(0, idx + 1) : [];
+  }
+
+  const stepMap = new Map(steps.map((s) => [s.id, s]));
+  const adjacency = new Map<string, string[]>();
+  for (const e of edges) {
+    if (e.source && e.target && stepMap.has(e.target)) {
+      if (!adjacency.has(e.source)) adjacency.set(e.source, []);
+      adjacency.get(e.source)!.push(e.target);
+    }
+  }
+
+  const targetIds = new Set(edges.map((e) => e.target));
+  const startIds = steps.filter((s) => !targetIds.has(s.id)).map((s) => s.id);
+
+  const visited = new Set<string>();
+  const stack: Array<{ id: string; path: string[] }> = startIds.map((id) => ({
+    id,
+    path: [],
+  }));
+  while (stack.length > 0) {
+    const { id, path } = stack.pop()!;
+    if (visited.has(id)) continue;
+    visited.add(id);
+    const newPath = [...path, id];
+    if (id === targetStepId) {
+      return newPath.map((nid) => stepMap.get(nid)!).filter(Boolean);
+    }
+    for (const next of adjacency.get(id) || []) {
+      stack.push({ id: next, path: newPath });
+    }
+  }
+
+  // Not reachable via edges; fall back to array-order prefix.
+  const idx = steps.findIndex((s) => s.id === targetStepId);
+  return idx >= 0 ? steps.slice(0, idx + 1) : [];
 }
 
 interface MainMenuHooksProps {
@@ -148,6 +249,8 @@ interface MainMenuHooksProps {
   setChartSeries: React.Dispatch<React.SetStateAction<ChartSeries[]>>;
   setChartHeaders: React.Dispatch<React.SetStateAction<string[]>>;
   saveVersion: (message?: string, tags?: string[]) => Promise<any>;
+  /** Persist one execution record after each run (F6). */
+  saveExecutionHistory?: (entry: ExecutionHistoryInput) => Promise<void>;
 }
 
 export function MainMenuHooks({
@@ -174,7 +277,18 @@ export function MainMenuHooks({
   setChartSeries,
   setChartHeaders,
   saveVersion,
+  saveExecutionHistory,
 }: MainMenuHooksProps) {
+  const { t } = useLanguage();
+
+  // Backend cancel is global; this frontend-only flag lets the batch loops
+  // (batch-filter / batch-from:batch-to) stop promptly, because they never hit
+  // the shared backend flag on their own (S7-1).
+  const cancelRequestedRef = useRef(false);
+  // Values persisted at the S6 overwrite gate so the confirmed re-run resolves
+  // `{{var}}` placeholders identically to the first attempt.
+  const pendingRunValuesRef = useRef<Record<string, string>>({});
+
   const getCurrentTab = useCallback(() => {
     return tabs.find((tab) => tab.id === selectedTabId) || tabs[0];
   }, [tabs, selectedTabId]);
@@ -185,6 +299,7 @@ export function MainMenuHooks({
       addLog,
       setBranchProgress,
       getCurrentTab,
+      isCancelRequested: () => cancelRequestedRef.current,
     });
 
   const { executeBatchConvert } = BatchConvertHooks({
@@ -192,7 +307,26 @@ export function MainMenuHooks({
     addLog,
     setBranchProgress,
     getCurrentTab,
+    isCancelRequested: () => cancelRequestedRef.current,
   });
+
+  const [resultPreview, setResultPreview] = useState<ResultPreview[]>([]);
+  const [variablePrompt, setVariablePrompt] = useState<VariablePrompt | null>(
+    null,
+  );
+  // S6: "several branches will write the same output file" confirmation gate.
+  const [overwriteConfirm, setOverwriteConfirm] =
+    useState<OverwriteConfirm | null>(null);
+  // Stash the prepared run while the variable prompt is open, so the confirmed
+  // execution reuses the exact pipeline/outputPath/edges snapshot.
+  const pendingRunRef = useRef<{
+    executableSteps: PipelineStep[];
+    outputPath: string;
+    edges: PipelineEdge[];
+    currentPipeline: PipelineStep[];
+    currentTab: PipelineTab;
+    inputFile: string;
+  } | null>(null);
 
   const getCurrentPipeline = useCallback(() => {
     return getCurrentTab().pipeline;
@@ -428,13 +562,41 @@ export function MainMenuHooks({
         return;
       }
 
+      // F3: collect `{{var}}` placeholders (first-appearance order) so exported
+      // scripts map them to positional arguments ($args[N] / $N).
+      const variableNames: string[] = [];
+      const varSeen = new Set<string>();
+      for (const step of executableSteps) {
+        for (const rawValue of Object.values(step.parameters)) {
+          const itemList = Array.isArray(rawValue) ? rawValue : [rawValue];
+          for (const item of itemList) {
+            if (typeof item !== "string") continue;
+            for (const name of extractVariableNames(item)) {
+              if (!varSeen.has(name)) {
+                varSeen.add(name);
+                variableNames.push(name);
+              }
+            }
+          }
+        }
+      }
+
       const inputFile = currentTab.inputFile || "";
+      // Default to PowerShell on Windows and a POSIX shell script elsewhere;
+      // the preferred format is listed first so it is the default filter.
+      const defaultIsPs = isWindows();
+      const scriptFilters = defaultIsPs
+        ? [
+            { name: "PowerShell", extensions: ["ps1"] },
+            { name: "Shell Script", extensions: ["sh"] },
+          ]
+        : [
+            { name: "Shell Script", extensions: ["sh"] },
+            { name: "PowerShell", extensions: ["ps1"] },
+          ];
       const filePath = await save({
-        filters: [
-          { name: "PowerShell", extensions: ["ps1"] },
-          { name: "Shell Script", extensions: ["sh"] },
-        ],
-        defaultPath: `${currentTab.name}.ps1`,
+        filters: scriptFilters,
+        defaultPath: `${currentTab.name}.${defaultIsPs ? "ps1" : "sh"}`,
       });
 
       if (filePath) {
@@ -445,14 +607,25 @@ export function MainMenuHooks({
           const head = inputFile
             ? `Get-Content -Raw -LiteralPath '${inputFile.replace(/'/g, "''")}' | `
             : "";
+          let psBody = pipelineBody.replace(/\bxan\b/g, ".\\xan");
+          // Map each placeholder to a quoted positional $args[N] so values
+          // containing spaces / special chars survive as a single argument.
+          variableNames.forEach((name, i) => {
+            psBody = psBody.split(`{{${name}}}`).join(`"$args[${i}]"`);
+          });
+          const usageVars = variableNames
+            .map((name, i) => `[var:${name} => $args[${i}]]`)
+            .join(" ");
           scriptContent = [
-            "# Generated by easy-csv",
+            "# Generated by EasyCsv",
             "# Encoding: utf-8",
             `# Generated at: ${generatedAt}`,
-            "# Usage: .\\script.ps1 [input.csv]",
+            variableNames.length > 0
+              ? `# Usage: .\\script.ps1 ${usageVars}`
+              : "# Usage: .\\script.ps1 [input.csv]",
             '$ErrorActionPreference = "Stop"',
             "",
-            `${head}${pipelineBody.replace(/\bxan\b/g, ".\\xan")}`,
+            `${head}${psBody}`,
             "",
           ].join("\r\n");
         } else {
@@ -462,18 +635,40 @@ export function MainMenuHooks({
           let bashBody = pipelineBody
             .replace(/\\/g, "/")
             .replace(/\bxan\b/g, '"$XAN"');
+          // $1 is INPUT; each placeholder becomes the next positional arg,
+          // with a `${N:-default}` fallback so missing args don't trip `set -u`.
+          const bashEscape = (s: string) => s.replace(/[\\"$`]/g, "\\$&");
+          const defaultByVar = new Map(
+            (currentTab.variables || []).map((v) => [
+              v.name,
+              v.defaultValue ?? "",
+            ]),
+          );
+          variableNames.forEach((name, i) => {
+            const argIndex = i + 2;
+            const fallback = defaultByVar.get(name) || "";
+            const expr = fallback
+              ? `"${"${" + argIndex + ":-" + bashEscape(fallback) + "}"}"`
+              : `"${"${" + argIndex + ":-}"}"`;
+            bashBody = bashBody.split(`{{${name}}}`).join(expr);
+          });
           const firstPipeIndex = bashBody.indexOf(" | ");
           if (firstPipeIndex === -1) {
             bashBody = `${bashBody} < "$INPUT"`;
           } else {
             bashBody = `${bashBody.slice(0, firstPipeIndex)} < "$INPUT"${bashBody.slice(firstPipeIndex)}`;
           }
+          const usageVars = variableNames
+            .map((name, i) => `[var:${name} => $${i + 2}]`)
+            .join(" ");
           scriptContent = [
             "#!/usr/bin/env bash",
-            "# Generated by easy-csv",
+            "# Generated by EasyCsv",
             "# Encoding: utf-8",
             `# Generated at: ${generatedAt}`,
-            "# Usage: ./script.sh [input.csv]",
+            variableNames.length > 0
+              ? `# Usage: ./script.sh [input.csv] ${usageVars}`
+              : "# Usage: ./script.sh [input.csv]",
             "set -euo pipefail",
             "",
             'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"',
@@ -643,10 +838,26 @@ export function MainMenuHooks({
 
       const branches: PipelineStep[][] = [];
 
-      const dfs = (currentId: string, path: PipelineStep[]) => {
+      // Cycle-safe DFS over the step graph. `onPath` tracks the nodes on the
+      // current exploration path; revisiting one means the graph has a cycle
+      // (previously this recursed forever -> "Maximum call stack size exceeded").
+      const dfs = (
+        currentId: string,
+        path: PipelineStep[],
+        onPath: Set<string>,
+      ) => {
+        if (onPath.has(currentId)) {
+          const chain = [...onPath, currentId];
+          const err = new Error(`cycle: ${chain.join(" → ")}`) as Error & {
+            cycleNodeIds: string[];
+          };
+          err.cycleNodeIds = chain;
+          throw err;
+        }
         const currentStep = stepMap.get(currentId);
         if (!currentStep) return;
 
+        const newOnPath = new Set(onPath).add(currentId);
         const newPath = [...path, currentStep];
         const nextEdges = adjacency.get(currentId) || [];
 
@@ -656,11 +867,19 @@ export function MainMenuHooks({
         }
 
         nextEdges.forEach((nextId) => {
-          dfs(nextId, newPath);
+          dfs(nextId, newPath, newOnPath);
         });
       };
 
-      const targetIds = new Set(edges.map((e) => e.target));
+      // S1-4: only edges sourced from an executable step contribute to
+      // in-degree. `table-node`'s outgoing edges must not mark their target as
+      // "has a dependency"; otherwise in the mixed graph (table-node→S1 plus an
+      // isolated S2) S1 would be silently skipped.
+      const targetIds = new Set(
+        edges
+          .filter((edge) => stepMap.has(edge.source))
+          .map((edge) => edge.target),
+      );
       const startNodes = steps
         .filter((step) => !targetIds.has(step.id))
         .map((step) => step.id);
@@ -669,7 +888,7 @@ export function MainMenuHooks({
         const tableEdges = adjacency.get("table-node") || [];
         if (tableEdges.length > 0) {
           tableEdges.forEach((edge) => {
-            dfs(edge, []);
+            dfs(edge, [], new Set<string>());
           });
           return branches;
         }
@@ -677,12 +896,587 @@ export function MainMenuHooks({
       }
 
       startNodes.forEach((startId) => {
-        dfs(startId, []);
+        dfs(startId, [], new Set<string>());
       });
 
       return branches;
     },
     [],
+  );
+
+  const runNow = useCallback(
+    async (
+      resolveValues: Record<string, string>,
+      opts?: { force?: boolean },
+    ) => {
+      const pending = pendingRunRef.current;
+      if (!pending) return;
+      const {
+        currentPipeline,
+        currentTab,
+        edges,
+        inputFile,
+        outputPath,
+        executableSteps,
+      } = pending;
+      // Resolve `{{var}}` placeholders on a deep clone; stored placeholders and
+      // the tab pipeline stay untouched (F3).
+      const resolvedSteps = resolveStepPlaceholders(
+        executableSteps,
+        resolveValues,
+      );
+
+      // A fresh run starts with no pending frontend cancel request.
+      cancelRequestedRef.current = false;
+
+      // Guard before any executing side effects:
+      //  - An existing cycle in the graph must surface as a readable
+      //    error (and mark the involved nodes red) instead of a stack overflow.
+      //  - Multiple branches writing one output file need an explicit
+      //    overwrite confirmation.
+      let branches: PipelineStep[][] = [];
+      try {
+        branches = buildExecutionBranches(resolvedSteps, edges);
+      } catch (error) {
+        const cycleErr = error as Error & { cycleNodeIds?: string[] };
+        const chain = cycleErr.message.replace(/^cycle: /, "");
+        addLog("error", `${t.cycleDetected}: ${chain}`);
+        showToast(
+          cycleErr.cycleNodeIds ? `${t.cycleDetected}: ${chain}` : `${error}`,
+          "error",
+        );
+        if (cycleErr.cycleNodeIds?.length) {
+          setTabs((prev) =>
+            prev.map((tab) =>
+              tab.id === selectedTabId
+                ? {
+                    ...tab,
+                    pipeline: tab.pipeline.map((step) =>
+                      cycleErr.cycleNodeIds!.includes(step.id)
+                        ? { ...step, error: t.cycleDetected }
+                        : step,
+                    ),
+                  }
+                : tab,
+            ),
+          );
+        }
+        return;
+      }
+
+      if (branches.length > 1 && outputPath && !opts?.force) {
+        pendingRunValuesRef.current = resolveValues;
+        setOverwriteConfirm({ branchCount: branches.length, outputPath });
+        return;
+      }
+
+      setIsExecuting(true);
+      setShowLogPanel(true);
+      setShowProgressBar(true);
+
+      if (progressHideTimerRef.current) {
+        clearTimeout(progressHideTimerRef.current);
+        progressHideTimerRef.current = null;
+      }
+
+      const runStartedAt = Date.now();
+      // Hoisted so the finally block can determine the final status.
+      let pipelineFailed = false;
+      let wasCancelled = false;
+      let executionError: string | null = null;
+      // Accumulated branch results, read by the finally block (F6).
+      const allResults: {
+        success: boolean;
+        output?: string;
+        error?: string;
+        branchSteps: string[];
+      }[] = [];
+
+      try {
+        await invoke("set_pipeline_cancelled", { cancel: false });
+        setResultPreview([]);
+
+        // Clear any previous step execution errors so stale errors don't remain
+        setTabs((prev) =>
+          prev.map((tab) =>
+            tab.id === selectedTabId
+              ? {
+                  ...tab,
+                  pipeline: tab.pipeline.map((step) =>
+                    step.error ? { ...step, error: undefined } : step,
+                  ),
+                }
+              : tab,
+          ),
+        );
+
+        // Accumulate per-step execution errors to display on the nodes
+        const accumulatedErrors: Record<string, string> = {};
+
+        for (let i = 0; i < branches.length; i++) {
+          const branchSteps = branches[i];
+          if (branchSteps.length === 0) continue;
+
+          const branchStepNames = branchSteps.map(
+            (s) => s.alias || s.command.name,
+          );
+          const branchName = branchStepNames.join(" -> ");
+          addLog(
+            "info",
+            `Executing branch ${i + 1}/${branches.length}: ${branchName}`,
+          );
+
+          setBranchProgress({
+            current: i + 1,
+            total: branches.length,
+            name: branchName,
+            status: "executing",
+          });
+
+          // Check if branch contains batch-from and batch-to steps
+          const batchFromIndex = branchSteps.findIndex(
+            (s) => s.command.id === "batch-from",
+          );
+          const batchToIndex = branchSteps.findIndex(
+            (s) => s.command.id === "batch-to",
+          );
+
+          let result: any;
+
+          // Validate batch-from and batch-to pairing
+          if (batchFromIndex >= 0 || batchToIndex >= 0) {
+            if (batchFromIndex < 0) {
+              result = {
+                success: false,
+                error: "batch-to requires batch-from",
+              };
+              setBranchProgress({
+                current: i + 1,
+                total: branches.length,
+                name: branchName,
+                status: "error",
+              });
+              pipelineFailed = true;
+              continue;
+            }
+            if (batchToIndex < 0) {
+              result = {
+                success: false,
+                error: "batch-from requires batch-to",
+              };
+              setBranchProgress({
+                current: i + 1,
+                total: branches.length,
+                name: branchName,
+                status: "error",
+              });
+              pipelineFailed = true;
+              continue;
+            }
+            // Execute batch conversion
+            const batchFromStep = branchSteps[batchFromIndex];
+            const batchToStep = branchSteps[batchToIndex];
+            await executeBatchConvert(
+              batchFromStep.parameters,
+              batchToStep.parameters,
+            );
+            result = { success: true, output: "" };
+          } else if (
+            branchSteps.findIndex((s) => s.command.id === "batch-filter") >= 0
+          ) {
+            // Check if branch contains batch-filter step
+            const batchFilterIndex = branchSteps.findIndex(
+              (s) => s.command.id === "batch-filter",
+            );
+
+            // Split branch: steps before batch-filter + batch-filter step
+            const preBatchSteps = branchSteps.slice(0, batchFilterIndex);
+            const batchFilterStep = branchSteps[batchFilterIndex];
+
+            // Execute pre-batch steps as pipeline to get intermediate input
+            let preBatchOutput: string | null = null;
+            if (preBatchSteps.length > 0) {
+              addLog(
+                "info",
+                `Executing ${preBatchSteps.length} step(s) before batch filter...`,
+              );
+              const preCommands = preBatchSteps.map((step) => {
+                let params = serializeStepParams(step);
+                return {
+                  name: step.command.name,
+                  id: step.id,
+                  parameters: params,
+                };
+              });
+
+              const preResult = await invoke<any>("execute_xan_pipeline", {
+                commands: preCommands,
+                inputFile,
+                defaultDelimiter,
+                maxOutputBytes: MAX_OUTPUT_BYTES,
+              });
+
+              if (!preResult.success) {
+                addLog("error", `Pre-batch steps failed: ${preResult.error}`);
+                result = preResult;
+              } else {
+                preBatchOutput = preResult.output || "";
+                addLog(
+                  "info",
+                  `Pre-batch steps completed, using result as input for batch filter`,
+                );
+              }
+            }
+
+            // Execute batch-filter if pre-batch steps succeeded (or no pre-batch steps)
+            if (!result || result.success) {
+              const bfParams = batchFilterStep.parameters;
+              const bfConfig: BatchFilterConfig = {
+                column: bfParams.column,
+                filterType: bfParams["filter-type"] || "text",
+                textOperator: bfParams["text-operator"],
+                numberOperator: bfParams["number-operator"],
+                valueMode: bfParams["value-mode"] || "manual",
+                manualValues: bfParams["manual-values"],
+                extractColumn: bfParams["extract-column"],
+                caseInsensitive: bfParams["case-insensitive"],
+                outputDir: bfParams["output-dir"],
+              };
+
+              // Execute batch filter: use pre-batch output data directly if available
+              if (preBatchOutput !== null) {
+                await executeBatchFilterWithData(bfConfig, preBatchOutput);
+              } else {
+                await executeBatchFilterDirect(bfConfig, inputFile);
+              }
+              result = { success: true, output: "" };
+            }
+          } else if (
+            branchSteps.findIndex((s) => s.command.id === "chart") >= 0
+          ) {
+            // Handle chart command - render in frontend with recharts
+            const chartStep = branchSteps.find((s) => s.command.id === "chart");
+            if (chartStep) {
+              const chartParams = chartStep.parameters;
+              const chartConfig: ChartConfig = {
+                chartType: chartParams["chart-type"] || "line",
+                x: chartParams.x,
+                y: chartParams.y,
+                category: chartParams.category,
+                title: chartParams.title,
+                xLabel: chartParams["x-label"],
+                yLabel: chartParams["y-label"],
+                bins: chartParams.bins || 10,
+                color: chartParams.color || "#8884d8",
+                width: chartParams.width || 600,
+                height: chartParams.height || 400,
+              };
+
+              // Execute preceding commands to get data
+              const precedingSteps = branchSteps.filter(
+                (s) => s.command.id !== "chart",
+              );
+              let headers = currentTab.headers || [];
+              let data = currentTab.data || [];
+
+              if (precedingSteps.length > 0) {
+                const preCommands = precedingSteps.map((step) => {
+                  let params = serializeStepParams(step);
+                  return {
+                    name: step.command.name,
+                    id: step.id,
+                    parameters: params,
+                  };
+                });
+
+                const preResult = await invoke<any>("execute_xan_pipeline", {
+                  commands: preCommands,
+                  inputFile,
+                  defaultDelimiter,
+                  maxOutputBytes: MAX_OUTPUT_BYTES,
+                });
+
+                if (preResult.success && preResult.output) {
+                  // Parse CSV output
+                  const lines = (preResult.output as string).trim().split("\n");
+                  if (lines.length > 0) {
+                    const delimiter = defaultDelimiter || ",";
+                    headers = lines[0]
+                      .split(delimiter)
+                      .map((h: string) => h.trim().replace(/^"|"$/g, ""));
+                    data = lines
+                      .slice(1)
+                      .map((line: string) =>
+                        line
+                          .split(delimiter)
+                          .map((cell: string) =>
+                            cell.trim().replace(/^"|"$/g, ""),
+                          ),
+                      );
+                  }
+                }
+              } else {
+                // Use raw CSV data
+                if (inputFile) {
+                  const csvContent = await readFile(inputFile);
+                  const text = new TextDecoder().decode(csvContent);
+                  const lines = text.trim().split("\n");
+                  if (lines.length > 0) {
+                    const delimiter = defaultDelimiter || ",";
+                    headers = lines[0]
+                      .split(delimiter)
+                      .map((h: string) => h.trim().replace(/^"|"$/g, ""));
+                    data = lines
+                      .slice(1)
+                      .map((line: string) =>
+                        line
+                          .split(delimiter)
+                          .map((cell: string) =>
+                            cell.trim().replace(/^"|"$/g, ""),
+                          ),
+                      );
+                  }
+                }
+              }
+
+              // Process data for chart
+              const chartSeries = processChartData(headers, data, chartConfig);
+
+              setChartConfig(chartConfig);
+              setChartSeries(chartSeries);
+              setChartHeaders(headers);
+              setShowChartPanel(true);
+
+              result = {
+                success: true,
+                output: `Chart generated: ${chartConfig.chartType} (${chartConfig.x}${chartConfig.y ? ` vs ${chartConfig.y}` : ""})`,
+              };
+            } else {
+              result = { success: false, error: "Chart step not found" };
+            }
+          } else {
+            // Normal pipeline execution (no batch-filter)
+            const commands = branchSteps.map((step, index) => {
+              let params = serializeStepParams(step);
+
+              if (step.command.name === "run") {
+                const mode = step.parameters.mode || "pipeline";
+                params = params.filter((param) => {
+                  if (mode === "script" && param.name === "pipeline")
+                    return false;
+                  if (mode === "pipeline" && param.name === "file")
+                    return false;
+                  return true;
+                });
+              }
+
+              if (
+                index === branchSteps.length - 1 &&
+                outputPath &&
+                !pipelineFailed
+              ) {
+                params.push({
+                  name: "output",
+                  value: outputPath,
+                  isPositional: false,
+                });
+              }
+
+              return {
+                name: step.command.name,
+                id: step.id,
+                parameters: params,
+              };
+            });
+
+            result = await invoke<any>("execute_xan_pipeline", {
+              commands,
+              inputFile,
+              defaultDelimiter,
+              maxOutputBytes: MAX_OUTPUT_BYTES,
+            });
+          }
+
+          if (result?.cancelled) {
+            addLog("warning", "Execution cancelled by user");
+            setBranchProgress({
+              current: i + 1,
+              total: branches.length,
+              name: branchName,
+              status: "error",
+            });
+            pipelineFailed = true;
+            wasCancelled = true;
+            break;
+          }
+
+          allResults.push({
+            success: result.success,
+            output: result.output,
+            error: result.error,
+            branchSteps: branchStepNames,
+          });
+
+          // Merge per-step errors from this branch
+          const stepErrors = result.step_errors as
+            | Record<string, string>
+            | undefined;
+          if (stepErrors) {
+            for (const stepId in stepErrors) {
+              const err = stepErrors[stepId];
+              if (err) accumulatedErrors[stepId] = err;
+            }
+          }
+
+          setBranchProgress({
+            current: i + 1,
+            total: branches.length,
+            name: branchName,
+            status: result.success ? "completed" : "error",
+          });
+
+          if (result.success) {
+            if (result.output) {
+              const output = (result.output as string).trimStart().trimEnd();
+              addLog("success", `${output}`);
+            } else {
+              addLog(
+                "info",
+                `Branch ${i + 1} completed successfully with no output`,
+              );
+            }
+          } else {
+            if (result.error) {
+              addLog("error", `${result.error}`);
+            } else {
+              addLog("error", `Branch ${i + 1} failed with no error message`);
+            }
+            pipelineFailed = true;
+          }
+        }
+
+        // Build canvas result previews from successful branch outputs (F1)
+        const runTs = Date.now();
+        const previews: ResultPreview[] = [];
+        allResults.forEach((r, i) => {
+          if (r.success && r.output?.trim()) {
+            const parsed = parseCsvString(r.output, 500);
+            if (parsed.headers.length > 0) {
+              previews.push({
+                id: `result-${runTs}-${i}`,
+                label:
+                  r.branchSteps.length > 0
+                    ? `Result: ${r.branchSteps.join(" → ")}`
+                    : `Branch ${i + 1}`,
+                headers: parsed.headers,
+                rows: parsed.rows,
+                totalRows: parsed.rows.length,
+                truncated: parsed.truncated,
+              });
+            }
+          }
+        });
+        setResultPreview(previews);
+
+        if (trackLineage && !wasCancelled) {
+          const headers = currentTab.headers || [];
+          const rows = currentTab.data || [];
+          trackLineage(currentPipeline, edges, headers, rows);
+        }
+
+        // Apply per-step execution errors so they render on the nodes
+        if (Object.keys(accumulatedErrors).length > 0) {
+          setTabs((prev) =>
+            prev.map((tab) =>
+              tab.id === selectedTabId
+                ? {
+                    ...tab,
+                    pipeline: tab.pipeline.map((step) => {
+                      const err = accumulatedErrors[step.id];
+                      if (err !== undefined) {
+                        return { ...step, error: err };
+                      }
+                      return step;
+                    }),
+                  }
+                : tab,
+            ),
+          );
+        }
+
+        const successCount = allResults.filter((r) => r.success).length;
+        if (successCount === branches.length) {
+          addLog(
+            "success",
+            `All ${branches.length} branch(es) executed successfully`,
+          );
+          // Auto-save version on successful execution
+          try {
+            await saveVersion(`auto-generated`);
+          } catch (versionError) {
+            addLog("warning", `Failed to auto-save version: ${versionError}`);
+          }
+        }
+      } catch (error) {
+        executionError = String(error);
+        addLog("error", `${error}`);
+      } finally {
+        setIsExecuting(false);
+
+        // F6: persist a compact execution record (summary only, no stdout).
+        if (saveExecutionHistory) {
+          const summary = buildOutputSummary(allResults);
+          const status: ExecutionHistoryStatus = wasCancelled
+            ? "cancelled"
+            : pipelineFailed || executionError
+              ? "error"
+              : "success";
+          const entry: ExecutionHistoryInput = {
+            tabId: currentTab.id,
+            tabName: currentTab.name,
+            pipelineSnapshotHash: computePipelineSnapshotHash(
+              currentPipeline.map(stripStepCommand),
+              edges,
+            ),
+            versionId: currentTab.currentVersionId ?? null,
+            status,
+            durationMs: Date.now() - runStartedAt,
+            rows: summary.rows,
+            outputSummary: JSON.stringify(summary),
+            startedAt: formatDateTime(new Date()),
+          };
+          saveExecutionHistory(entry).catch((err) =>
+            addLog("warning", `Failed to save execution history: ${err}`),
+          );
+        }
+
+        progressHideTimerRef.current = setTimeout(() => {
+          setShowProgressBar(false);
+          setBranchProgress(null);
+        }, 5000);
+      }
+    },
+    [
+      getCurrentPipeline,
+      getCurrentTab,
+      defaultDelimiter,
+      showToast,
+      addLog,
+      setIsExecuting,
+      setShowLogPanel,
+      setShowProgressBar,
+      setBranchProgress,
+      progressHideTimerRef,
+      buildExecutionBranches,
+      formatDateTime,
+      trackLineage,
+      setShowChartPanel,
+      setChartConfig,
+      setChartSeries,
+      setChartHeaders,
+      saveVersion,
+      saveExecutionHistory,
+    ],
   );
 
   const handleExecute = useCallback(async () => {
@@ -696,488 +1490,124 @@ export function MainMenuHooks({
       return;
     }
 
-    setIsExecuting(true);
-    setShowLogPanel(true);
-    setShowProgressBar(true);
+    const outputStep = currentPipeline.find(
+      (step) => step.command.id === "output",
+    );
+    const outputPath = outputStep?.parameters.path || "";
 
-    if (progressHideTimerRef.current) {
-      clearTimeout(progressHideTimerRef.current);
-      progressHideTimerRef.current = null;
+    const executableSteps = currentPipeline.filter(
+      (step) => step.command.id !== "output",
+    );
+
+    if (executableSteps.length === 0) {
+      showToast(
+        "No executable steps found in pipeline - add other commands before output",
+        "warning",
+      );
+      return;
     }
 
-    try {
-      await invoke("set_pipeline_cancelled", { cancel: false });
+    // Validate required parameters before execution
+    const missingParams: string[] = [];
+    for (const step of executableSteps) {
+      for (const param of step.command.parameters) {
+        if (
+          param.required &&
+          (step.parameters[param.name] === undefined ||
+            step.parameters[param.name] === "")
+        ) {
+          missingParams.push(
+            `${step.alias || step.command.name} → ${param.name}`,
+          );
+        }
+      }
+    }
+    if (missingParams.length > 0) {
+      showToast(
+        `Missing required parameters: ${missingParams.join(", ")}`,
+        "warning",
+      );
+      return;
+    }
 
-      // Clear any previous step execution errors so stale errors don't remain
+    // F3: collect referenced variables and detect any that are unassigned
+    // (no default yet). The declared `variables` defaults are the single
+    // source of truth; the runtime dialog writes back into them. Unassigned
+    // ones open a one-shot collection dialog; assigned ones execute directly.
+    const declared = new Map(
+      (currentTab.variables || []).map((v) => [v.name, v]),
+    );
+    const resolved = collectVariablesFromPipeline(
+      executableSteps,
+      currentTab.variables,
+    );
+    const values: Record<string, string> = {};
+    for (const v of resolved) {
+      values[v.name] = declared.get(v.name)?.defaultValue ?? "";
+    }
+    const needInput = resolved.filter((v) => !String(values[v.name]).trim());
+
+    // Stash the run snapshot so confirmVariables can resume it exactly.
+    pendingRunRef.current = {
+      executableSteps,
+      outputPath,
+      edges,
+      currentPipeline,
+      currentTab,
+      inputFile,
+    };
+
+    if (needInput.length > 0) {
+      setVariablePrompt({
+        variables: needInput.map((v) => ({
+          name: v.name,
+          type: v.type,
+          value: values[v.name],
+        })),
+      });
+      return;
+    }
+    await runNow(values);
+  }, [getCurrentPipeline, getCurrentTab, showToast, runNow]);
+
+  const confirmVariables = useCallback(
+    (items: { name: string; value: string }[]) => {
+      const pending = pendingRunRef.current;
+      if (!pending) return;
+      const values: Record<string, string> = {};
+      const nextVars = new Map(
+        (pending.currentTab.variables || []).map((v) => [v.name, v]),
+      );
+      items.forEach((it) => {
+        values[it.name] = it.value;
+        const existing = nextVars.get(it.name);
+        nextVars.set(it.name, {
+          name: it.name,
+          defaultValue: it.value,
+          type: existing?.type ?? inferVariableType(it.value),
+        });
+      });
       setTabs((prev) =>
         prev.map((tab) =>
           tab.id === selectedTabId
             ? {
                 ...tab,
-                pipeline: tab.pipeline.map((step) =>
-                  step.error ? { ...step, error: undefined } : step,
-                ),
+                variables: Array.from(nextVars.values()),
+                updatedAt: formatDateTime(new Date()),
               }
             : tab,
         ),
       );
+      setVariablePrompt(null);
+      void runNow(values);
+    },
+    [runNow, setTabs, selectedTabId, formatDateTime, inferVariableType],
+  );
 
-      const outputStep = currentPipeline.find(
-        (step) => step.command.id === "output",
-      );
-      const outputPath = outputStep?.parameters.path || "";
-
-      const executableSteps = currentPipeline.filter(
-        (step) => step.command.id !== "output",
-      );
-
-      if (executableSteps.length === 0) {
-        showToast(
-          "No executable steps found in pipeline - add other commands before output",
-          "warning",
-        );
-        setIsExecuting(false);
-        return;
-      }
-
-      // Validate required parameters before execution
-      const missingParams: string[] = [];
-      for (const step of executableSteps) {
-        for (const param of step.command.parameters) {
-          if (
-            param.required &&
-            (step.parameters[param.name] === undefined ||
-              step.parameters[param.name] === "")
-          ) {
-            missingParams.push(
-              `${step.alias || step.command.name} → ${param.name}`,
-            );
-          }
-        }
-      }
-      if (missingParams.length > 0) {
-        showToast(
-          `Missing required parameters: ${missingParams.join(", ")}`,
-          "warning",
-        );
-        setIsExecuting(false);
-        return;
-      }
-
-      const branches = buildExecutionBranches(executableSteps, edges);
-
-      const allResults: {
-        success: boolean;
-        output?: string;
-        error?: string;
-        branchSteps: string[];
-      }[] = [];
-
-      // Accumulate per-step execution errors to display on the nodes
-      const accumulatedErrors: Record<string, string> = {};
-
-      let pipelineFailed = false;
-      let wasCancelled = false;
-      for (let i = 0; i < branches.length; i++) {
-        const branchSteps = branches[i];
-        if (branchSteps.length === 0) continue;
-
-        const branchStepNames = branchSteps.map(
-          (s) => s.alias || s.command.name,
-        );
-        const branchName = branchStepNames.join(" -> ");
-        addLog(
-          "info",
-          `Executing branch ${i + 1}/${branches.length}: ${branchName}`,
-        );
-
-        setBranchProgress({
-          current: i + 1,
-          total: branches.length,
-          name: branchName,
-          status: "executing",
-        });
-
-        // Check if branch contains batch-from and batch-to steps
-        const batchFromIndex = branchSteps.findIndex(
-          (s) => s.command.id === "batch-from",
-        );
-        const batchToIndex = branchSteps.findIndex(
-          (s) => s.command.id === "batch-to",
-        );
-
-        let result: any;
-
-        // Validate batch-from and batch-to pairing
-        if (batchFromIndex >= 0 || batchToIndex >= 0) {
-          if (batchFromIndex < 0) {
-            result = { success: false, error: "batch-to requires batch-from" };
-            setBranchProgress({
-              current: i + 1,
-              total: branches.length,
-              name: branchName,
-              status: "error",
-            });
-            pipelineFailed = true;
-            continue;
-          }
-          if (batchToIndex < 0) {
-            result = { success: false, error: "batch-from requires batch-to" };
-            setBranchProgress({
-              current: i + 1,
-              total: branches.length,
-              name: branchName,
-              status: "error",
-            });
-            pipelineFailed = true;
-            continue;
-          }
-          // Execute batch conversion
-          const batchFromStep = branchSteps[batchFromIndex];
-          const batchToStep = branchSteps[batchToIndex];
-          await executeBatchConvert(
-            batchFromStep.parameters,
-            batchToStep.parameters,
-          );
-          result = { success: true, output: "" };
-        } else if (
-          branchSteps.findIndex((s) => s.command.id === "batch-filter") >= 0
-        ) {
-          // Check if branch contains batch-filter step
-          const batchFilterIndex = branchSteps.findIndex(
-            (s) => s.command.id === "batch-filter",
-          );
-
-          // Split branch: steps before batch-filter + batch-filter step
-          const preBatchSteps = branchSteps.slice(0, batchFilterIndex);
-          const batchFilterStep = branchSteps[batchFilterIndex];
-
-          // Execute pre-batch steps as pipeline to get intermediate input
-          let preBatchOutput: string | null = null;
-          if (preBatchSteps.length > 0) {
-            addLog(
-              "info",
-              `Executing ${preBatchSteps.length} step(s) before batch filter...`,
-            );
-            const preCommands = preBatchSteps.map((step) => {
-              let params = serializeStepParams(step);
-              return {
-                name: step.command.name,
-                id: step.id,
-                parameters: params,
-              };
-            });
-
-            const preResult = await invoke<any>("execute_xan_pipeline", {
-              commands: preCommands,
-              inputFile,
-              defaultDelimiter,
-            });
-
-            if (!preResult.success) {
-              addLog("error", `Pre-batch steps failed: ${preResult.error}`);
-              result = preResult;
-            } else {
-              preBatchOutput = preResult.output || "";
-              addLog(
-                "info",
-                `Pre-batch steps completed, using result as input for batch filter`,
-              );
-            }
-          }
-
-          // Execute batch-filter if pre-batch steps succeeded (or no pre-batch steps)
-          if (!result || result.success) {
-            const bfParams = batchFilterStep.parameters;
-            const bfConfig: BatchFilterConfig = {
-              column: bfParams.column,
-              filterType: bfParams["filter-type"] || "text",
-              textOperator: bfParams["text-operator"],
-              numberOperator: bfParams["number-operator"],
-              valueMode: bfParams["value-mode"] || "manual",
-              manualValues: bfParams["manual-values"],
-              extractColumn: bfParams["extract-column"],
-              caseInsensitive: bfParams["case-insensitive"],
-              outputDir: bfParams["output-dir"],
-            };
-
-            // Execute batch filter: use pre-batch output data directly if available
-            if (preBatchOutput !== null) {
-              await executeBatchFilterWithData(bfConfig, preBatchOutput);
-            } else {
-              await executeBatchFilterDirect(bfConfig, inputFile);
-            }
-            result = { success: true, output: "" };
-          }
-        } else if (
-          branchSteps.findIndex((s) => s.command.id === "chart") >= 0
-        ) {
-          // Handle chart command - render in frontend with recharts
-          const chartStep = branchSteps.find((s) => s.command.id === "chart");
-          if (chartStep) {
-            const chartParams = chartStep.parameters;
-            const chartConfig: ChartConfig = {
-              chartType: chartParams["chart-type"] || "line",
-              x: chartParams.x,
-              y: chartParams.y,
-              category: chartParams.category,
-              title: chartParams.title,
-              xLabel: chartParams["x-label"],
-              yLabel: chartParams["y-label"],
-              bins: chartParams.bins || 10,
-              color: chartParams.color || "#8884d8",
-              width: chartParams.width || 600,
-              height: chartParams.height || 400,
-            };
-
-            // Execute preceding commands to get data
-            const precedingSteps = branchSteps.filter(
-              (s) => s.command.id !== "chart",
-            );
-            let headers = currentTab.headers || [];
-            let data = currentTab.data || [];
-
-            if (precedingSteps.length > 0) {
-              const preCommands = precedingSteps.map((step) => {
-                let params = serializeStepParams(step);
-                return {
-                  name: step.command.name,
-                  id: step.id,
-                  parameters: params,
-                };
-              });
-
-              const preResult = await invoke<any>("execute_xan_pipeline", {
-                commands: preCommands,
-                inputFile,
-                defaultDelimiter,
-              });
-
-              if (preResult.success && preResult.output) {
-                // Parse CSV output
-                const lines = (preResult.output as string).trim().split("\n");
-                if (lines.length > 0) {
-                  const delimiter = defaultDelimiter || ",";
-                  headers = lines[0]
-                    .split(delimiter)
-                    .map((h: string) => h.trim().replace(/^"|"$/g, ""));
-                  data = lines
-                    .slice(1)
-                    .map((line: string) =>
-                      line
-                        .split(delimiter)
-                        .map((cell: string) =>
-                          cell.trim().replace(/^"|"$/g, ""),
-                        ),
-                    );
-                }
-              }
-            } else {
-              // Use raw CSV data
-              if (inputFile) {
-                const csvContent = await readFile(inputFile);
-                const text = new TextDecoder().decode(csvContent);
-                const lines = text.trim().split("\n");
-                if (lines.length > 0) {
-                  const delimiter = defaultDelimiter || ",";
-                  headers = lines[0]
-                    .split(delimiter)
-                    .map((h: string) => h.trim().replace(/^"|"$/g, ""));
-                  data = lines
-                    .slice(1)
-                    .map((line: string) =>
-                      line
-                        .split(delimiter)
-                        .map((cell: string) =>
-                          cell.trim().replace(/^"|"$/g, ""),
-                        ),
-                    );
-                }
-              }
-            }
-
-            // Process data for chart
-            const chartSeries = processChartData(headers, data, chartConfig);
-
-            setChartConfig(chartConfig);
-            setChartSeries(chartSeries);
-            setChartHeaders(headers);
-            setShowChartPanel(true);
-
-            result = {
-              success: true,
-              output: `Chart generated: ${chartConfig.chartType} (${chartConfig.x}${chartConfig.y ? ` vs ${chartConfig.y}` : ""})`,
-            };
-          } else {
-            result = { success: false, error: "Chart step not found" };
-          }
-        } else {
-          // Normal pipeline execution (no batch-filter)
-          const commands = branchSteps.map((step, index) => {
-            let params = serializeStepParams(step);
-
-            if (step.command.name === "run") {
-              const mode = step.parameters.mode || "pipeline";
-              params = params.filter((param) => {
-                if (mode === "script" && param.name === "pipeline")
-                  return false;
-                if (mode === "pipeline" && param.name === "file") return false;
-                return true;
-              });
-            }
-
-            if (
-              index === branchSteps.length - 1 &&
-              outputPath &&
-              !pipelineFailed
-            ) {
-              params.push({
-                name: "output",
-                value: outputPath,
-                isPositional: false,
-              });
-            }
-
-            return {
-              name: step.command.name,
-              id: step.id,
-              parameters: params,
-            };
-          });
-
-          result = await invoke<any>("execute_xan_pipeline", {
-            commands,
-            inputFile,
-            defaultDelimiter,
-          });
-        }
-
-        if (result?.cancelled) {
-          addLog("warning", "Execution cancelled by user");
-          setBranchProgress({
-            current: i + 1,
-            total: branches.length,
-            name: branchName,
-            status: "error",
-          });
-          pipelineFailed = true;
-          wasCancelled = true;
-          break;
-        }
-
-        allResults.push({
-          success: result.success,
-          output: result.output,
-          error: result.error,
-          branchSteps: branchStepNames,
-        });
-
-        // Merge per-step errors from this branch
-        const stepErrors = result.step_errors as
-          | Record<string, string>
-          | undefined;
-        if (stepErrors) {
-          for (const stepId in stepErrors) {
-            const err = stepErrors[stepId];
-            if (err) accumulatedErrors[stepId] = err;
-          }
-        }
-
-        setBranchProgress({
-          current: i + 1,
-          total: branches.length,
-          name: branchName,
-          status: result.success ? "completed" : "error",
-        });
-
-        if (result.success) {
-          if (result.output) {
-            const output = (result.output as string).trimStart().trimEnd();
-            addLog("success", `${output}`);
-          } else {
-            addLog(
-              "info",
-              `Branch ${i + 1} completed successfully with no output`,
-            );
-          }
-        } else {
-          if (result.error) {
-            addLog("error", `${result.error}`);
-          } else {
-            addLog("error", `Branch ${i + 1} failed with no error message`);
-          }
-          pipelineFailed = true;
-        }
-      }
-
-      if (trackLineage && !wasCancelled) {
-        const headers = currentTab.headers || [];
-        const rows = currentTab.data || [];
-        trackLineage(currentPipeline, edges, headers, rows);
-      }
-
-      // Apply per-step execution errors so they render on the nodes
-      if (Object.keys(accumulatedErrors).length > 0) {
-        setTabs((prev) =>
-          prev.map((tab) =>
-            tab.id === selectedTabId
-              ? {
-                  ...tab,
-                  pipeline: tab.pipeline.map((step) => {
-                    const err = accumulatedErrors[step.id];
-                    if (err !== undefined) {
-                      return { ...step, error: err };
-                    }
-                    return step;
-                  }),
-                }
-              : tab,
-          ),
-        );
-      }
-
-      const successCount = allResults.filter((r) => r.success).length;
-      if (successCount === branches.length) {
-        addLog(
-          "success",
-          `All ${branches.length} branch(es) executed successfully`,
-        );
-        // Auto-save version on successful execution
-        try {
-          await saveVersion(`auto-generated`);
-        } catch (versionError) {
-          addLog("warning", `Failed to auto-save version: ${versionError}`);
-        }
-      }
-    } catch (error) {
-      addLog("error", `${error}`);
-    } finally {
-      setIsExecuting(false);
-      progressHideTimerRef.current = setTimeout(() => {
-        setShowProgressBar(false);
-        setBranchProgress(null);
-      }, 5000);
-    }
-  }, [
-    getCurrentPipeline,
-    getCurrentTab,
-    defaultDelimiter,
-    showToast,
-    addLog,
-    setIsExecuting,
-    setShowLogPanel,
-    setShowProgressBar,
-    setBranchProgress,
-    progressHideTimerRef,
-    buildExecutionBranches,
-    formatDateTime,
-    trackLineage,
-    setShowChartPanel,
-    setChartConfig,
-    setChartSeries,
-    setChartHeaders,
-    saveVersion,
-  ]);
+  const cancelVariables = useCallback(() => {
+    pendingRunRef.current = null;
+    setVariablePrompt(null);
+  }, []);
 
   const processChartData = useCallback(
     (
@@ -1411,7 +1841,101 @@ export function MainMenuHooks({
     [],
   );
 
+  /**
+   * Save the intermediate result of a step (input → target step, inclusive)
+   * as a full CSV file. Runs the prefix sub-chain WITHOUT the output-size cap
+   * so large results are written completely, then prompts for a save path.
+   */
+  const handleSaveIntermediateAsInput = useCallback(
+    async (stepId: string) => {
+      const currentTab = getCurrentTab();
+      const currentPipeline = currentTab.pipeline;
+      if (currentPipeline.length === 0) {
+        showToast("No pipeline to save", "warning");
+        return;
+      }
+      const inputFile = currentTab.inputFile || "";
+      if (!inputFile) {
+        showToast("Open an input file first", "warning");
+        return;
+      }
+
+      const target = currentPipeline.find((s) => s.id === stepId);
+      if (!target) {
+        showToast("Step not found", "error");
+        return;
+      }
+
+      const edges = currentTab.edges || [];
+      const prefix = buildPrefixToStep(currentPipeline, edges, stepId);
+      const executablePrefix = prefix.filter((s) => s.command.id !== "output");
+      if (executablePrefix.length === 0) {
+        showToast("No executable steps up to this step", "warning");
+        return;
+      }
+
+      // Resolve {{var}} placeholders with declared defaults (F3).
+      const values: Record<string, string> = {};
+      for (const v of currentTab.variables || []) {
+        values[v.name] = v.defaultValue ?? "";
+      }
+      const resolvedSteps = resolveStepPlaceholders(executablePrefix, values);
+
+      const commands = resolvedSteps.map((step) => {
+        let params = serializeStepParams(step);
+        if (step.command.name === "run") {
+          const mode = step.parameters.mode || "pipeline";
+          params = params.filter((param) => {
+            if (mode === "script" && param.name === "pipeline") return false;
+            if (mode === "pipeline" && param.name === "file") return false;
+            return true;
+          });
+        }
+        return {
+          name: step.command.name,
+          id: step.id,
+          parameters: params,
+        };
+      });
+
+      try {
+        // No maxOutputBytes: the intermediate must be written in full.
+        const result = await invoke<any>("execute_xan_pipeline", {
+          commands,
+          inputFile,
+          defaultDelimiter,
+        });
+        if (!result.success) {
+          showToast(`Failed: ${result.error || "execution error"}`, "error");
+          return;
+        }
+        const output = (result.output as string) || "";
+        if (!output.trim()) {
+          showToast("No output produced by these steps", "warning");
+          return;
+        }
+
+        const stepName = target.alias || target.command.name;
+        const filePath = await save({
+          filters: [{ name: "CSV", extensions: ["csv"] }],
+          defaultPath: `${currentTab.name}_${stepName}.csv`,
+        });
+        if (!filePath) return;
+
+        const encoder = new TextEncoder();
+        await writeFile(filePath, encoder.encode(output));
+        showToast(`Intermediate saved to: ${filePath}`, "success");
+      } catch (error) {
+        showToast(`Failed to save intermediate: ${error}`, "error");
+      }
+    },
+    [getCurrentTab, showToast, defaultDelimiter],
+  );
+
   const handleCancelExecution = useCallback(async () => {
+    // S7-1: signal the frontend batch loops (batch-filter / batch-from:batch-to)
+    // to stop at the next iteration boundary, in addition to the backend flag.
+    cancelRequestedRef.current = true;
     try {
       await invoke("set_pipeline_cancelled", { cancel: true });
       addLog("warning", "Cancelling execution...");
@@ -1419,6 +1943,19 @@ export function MainMenuHooks({
       addLog("error", `Failed to cancel execution: ${error}`);
     }
   }, [addLog]);
+
+  // S6: confirmed → proceed with the pending run while accepting the overwrite.
+  const confirmOverwriteExecution = useCallback(async () => {
+    setOverwriteConfirm(null);
+    const pending = pendingRunRef.current;
+    if (pending) {
+      await runNow(pendingRunValuesRef.current, { force: true });
+    }
+  }, [setOverwriteConfirm, pendingRunRef, runNow]);
+
+  const cancelOverwriteExecution = useCallback(() => {
+    setOverwriteConfirm(null);
+  }, [setOverwriteConfirm]);
 
   return {
     handleOpenFile,
@@ -1428,7 +1965,15 @@ export function MainMenuHooks({
     handleImportPipeline,
     handleExecute,
     handleCancelExecution,
+    handleSaveIntermediateAsInput,
     getCurrentPipeline,
     processChartData,
+    resultPreview,
+    overwriteConfirm,
+    confirmOverwriteExecution,
+    cancelOverwriteExecution,
+    variablePrompt,
+    confirmVariables,
+    cancelVariables,
   };
 }

@@ -212,7 +212,6 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
               variant="ghost"
               size="icon"
               onClick={onClose}
-              aria-label="Close"
             >
               <X className="h-4 w-4" />
             </Button>

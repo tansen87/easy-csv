@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { PipelineTab } from "@/types/xan";
+import { PanelDockState, PanelStates, PipelineTab } from "@/types/xan";
 import { deserializeTabSnapshot, serializeTabSnapshot } from "@/utils/session";
 
 const SAVE_DEBOUNCE_MS = 800;
@@ -14,6 +14,19 @@ export function useSession(
   const hydratedRef = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
 
+  // floating panel docking states (x/y/collapsed), persisted with the session.
+  const [panelStates, setPanelStates] = useState<PanelStates>({});
+
+  const updatePanelState = useCallback(
+    (key: string, patch: Partial<PanelDockState>) => {
+      setPanelStates((prev) => ({
+        ...prev,
+        [key]: { ...prev[key], ...patch },
+      }));
+    },
+    [],
+  );
+
   const markHydrated = useCallback(() => {
     hydratedRef.current = true;
   }, []);
@@ -24,8 +37,9 @@ export function useSession(
     invoke("save_session", {
       tabs: JSON.stringify(snapshots),
       selectedTabId,
+      panelStates: JSON.stringify(panelStates),
     }).catch((error) => console.error("Failed to save session:", error));
-  }, [tabs, selectedTabId]);
+  }, [tabs, selectedTabId, panelStates]);
 
   const restoreSession = useCallback(async (): Promise<PipelineTab[]> => {
     try {
@@ -33,7 +47,11 @@ export function useSession(
       const session = JSON.parse(content) as {
         tabs: any[];
         selectedTabId: string;
+        panelStates?: PanelStates;
       };
+      if (session.panelStates) {
+        setPanelStates(session.panelStates);
+      }
       const restored: PipelineTab[] = [];
       for (const snap of session.tabs || []) {
         const tab = deserializeTabSnapshot(snap);
@@ -70,7 +88,7 @@ export function useSession(
         window.clearTimeout(saveTimerRef.current);
       }
     };
-  }, [tabs, selectedTabId]);
+  }, [tabs, selectedTabId, panelStates]);
 
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -79,11 +97,18 @@ export function useSession(
       invoke("save_session", {
         tabs: JSON.stringify(snapshots),
         selectedTabId,
+        panelStates: JSON.stringify(panelStates),
       }).catch(() => {});
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [tabs, selectedTabId]);
+  }, [tabs, selectedTabId, panelStates]);
 
-  return { restoreSession, markHydrated };
+  return {
+    restoreSession,
+    markHydrated,
+    panelStates,
+    setPanelStates,
+    updatePanelState,
+  };
 }

@@ -46,6 +46,23 @@ export interface Translations {
   noLineageData: string;
   lineageForColumn: string;
 
+  // Variables (F3 pipeline parameterization)
+  variables: string;
+  variableName: string;
+  variableDefault: string;
+  variableType: string;
+  addVariable: string;
+  runWithVariables: string;
+  variableInputValue: string;
+  variableFillValues: string;
+  variablePlaceholderHint: string;
+  variableEmptyName: string;
+  variableDuplicateName: string;
+  noVariablesDetected: string;
+  deleteVariable: string;
+  clearAllVariables: string;
+  confirmClearAllVariables: string;
+
   // VersionControl
   save: string;
   saving: string;
@@ -78,6 +95,10 @@ export interface Translations {
   // ConfirmDialog
   refreshTitle: string;
   refreshMessage: string;
+  cycleRejected: string;
+  cycleDetected: string;
+  branchOverwriteTitle: string;
+  branchOverwriteMessage: string;
 
   // Settings
   general: string;
@@ -149,6 +170,9 @@ export interface Translations {
   daysAgo: string;
   saved: string;
   unsaved: string;
+  rightClickCutMode: string;
+  rightClickMenuMode: string;
+  saveIntermediateAsInput: string;
 
   // LogPanel
   logs: string;
@@ -159,8 +183,34 @@ export interface Translations {
   allLogs: string;
   copy: string;
   copied: string;
+  paste: string;
   scrollToBottom: string;
   noMatchingLogs: string;
+
+  // Floating panel docking
+  collapsePanel: string;
+  expandPanel: string;
+
+  // Execution history
+  executionHistory: string;
+  historyButton: string;
+  noHistoryYet: string;
+  historyLoading: string;
+  historySummaryHint: string;
+  historyColumns: string;
+  historyRows: string;
+  historyBytes: string;
+  historyDuration: string;
+  historyVersion: string;
+  historyStatusSuccess: string;
+  historyStatusError: string;
+  historyStatusCancelled: string;
+  clearExecutionHistory: string;
+
+  // Result preview
+  copyCsv: string;
+  copyMarkdown: string;
+  resultTruncated: string;
 
   // ChartPanel
   chart: string;
@@ -276,6 +326,25 @@ export interface Translations {
   success: string;
   sameEncoding: string;
   bytes: string;
+
+  // Pipeline Templates
+  newFromTemplate: string;
+  templateName: string;
+  templateSearchPlaceholder: string;
+  templateNoMatches: string;
+  templateDescriptionPlaceholder: string;
+  noTemplates: string;
+  templateApply: string;
+  templateRename: string;
+  templateDelete: string;
+  templateExport: string;
+  templateImport: string;
+  confirmDeleteTemplate: string;
+  templateSaved: string;
+  templateApplied: string;
+  templateNameRequired: string;
+  templateImportFailed: string;
+  paletteTemplates: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -326,6 +395,27 @@ export const translations: Record<Language, Translations> = {
     noLineageData: "Execute a pipeline to see data lineage",
     lineageForColumn: "Lineage for column:",
 
+    // Variables (F3)
+    variables: "Variables",
+    variableName: "Name",
+    variableDefault: "Default",
+    variableType: "Type",
+    addVariable: "Add variable",
+    runWithVariables: "Run with variables",
+    variableInputValue: "Value",
+    variableFillValues:
+      "Provide values for the pipeline variables below, then run.",
+    variablePlaceholderHint:
+      "Tip: type {{varName}} in a parameter value to reference a variable. Manage defaults in the Variables panel.",
+    variableEmptyName: "Variable name cannot be empty",
+    variableDuplicateName: "Variable name already exists",
+    noVariablesDetected:
+      "No variables yet. Type {{varName}} in a parameter value to create one.",
+    deleteVariable: "Delete variable",
+    clearAllVariables: "Clear all",
+    confirmClearAllVariables:
+      "Remove all declared variables? Referenced placeholders will keep working.",
+
     // VersionControl
     save: "Save",
     saving: "Saving...",
@@ -361,6 +451,12 @@ export const translations: Record<Language, Translations> = {
     refreshTitle: "Refresh Page",
     refreshMessage:
       "Are you sure you want to refresh the page? Unsaved changes will be lost.",
+    cycleRejected:
+      "Connection rejected: it would create a cycle in the pipeline.",
+    cycleDetected: "Detected a cycle in the pipeline",
+    branchOverwriteTitle: "Overwrite output file?",
+    branchOverwriteMessage:
+      "{count} branches will write to the same file; later writes overwrite earlier ones. Continue?",
 
     // Settings
     general: "General",
@@ -436,6 +532,9 @@ export const translations: Record<Language, Translations> = {
     daysAgo: "{n}d ago",
     saved: "Saved",
     unsaved: "Unsaved",
+    rightClickCutMode: "Right click: cut",
+    rightClickMenuMode: "Right click: menu",
+    saveIntermediateAsInput: "Save result up to this step as CSV",
 
     // LogPanel
     logs: "Logs",
@@ -446,8 +545,35 @@ export const translations: Record<Language, Translations> = {
     allLogs: "All",
     copy: "Copy",
     copied: "Copied",
+    paste: "Paste",
     scrollToBottom: "Scroll to bottom",
     noMatchingLogs: "No logs match this filter",
+
+    // Floating panel docking
+    collapsePanel: "Collapse",
+    expandPanel: "Expand",
+
+    // Execution history
+    executionHistory: "Execution History",
+    historyButton: "History",
+    noHistoryYet: "No execution history yet",
+    historyLoading: "Loading execution history...",
+    historySummaryHint: "Click a record to view its output summary",
+    historyColumns: "Columns",
+    historyRows: "Rows",
+    historyBytes: "Size",
+    historyDuration: "Duration",
+    historyVersion: "Version",
+    historyStatusSuccess: "Success",
+    historyStatusError: "Failed",
+    historyStatusCancelled: "Cancelled",
+    clearExecutionHistory: "Clear Execution History",
+
+    // Result preview (F1)
+    copyCsv: "Copy as CSV",
+    copyMarkdown: "Copy as Markdown table",
+    resultTruncated:
+      "Result truncated to first rows; use an output/to step to export the full data.",
 
     // ChartPanel
     chart: "Chart",
@@ -564,6 +690,27 @@ export const translations: Record<Language, Translations> = {
     success: "Conversion successful",
     sameEncoding: "Source and target encodings are the same",
     bytes: "bytes",
+
+    // Pipeline Templates
+    newFromTemplate: "New from Template",
+    templateName: "Template name",
+    templateSearchPlaceholder: "Search templates",
+    templateNoMatches: "No matching templates",
+    templateDescriptionPlaceholder: "Optional description",
+    noTemplates:
+      "No templates yet. Save the current pipeline as a template to reuse it.",
+    templateApply: "Apply",
+    templateRename: "Rename",
+    templateDelete: "Delete",
+    templateExport: "Export",
+    templateImport: "Import",
+    confirmDeleteTemplate: "Delete this template?",
+    templateSaved: "Pipeline saved as template",
+    templateApplied: "Pipeline created from template",
+    templateNameRequired:
+      "Add steps to the pipeline before saving as a template.",
+    templateImportFailed: "The selected file is not a valid template file.",
+    paletteTemplates: "Templates",
   },
   zh: {
     rows: "行数",
@@ -612,6 +759,25 @@ export const translations: Record<Language, Translations> = {
     noLineageData: "执行后可查看数据血缘",
     lineageForColumn: "列的血缘：",
 
+    // Variables (F3)
+    variables: "管道变量",
+    variableName: "名称",
+    variableDefault: "默认值",
+    variableType: "类型",
+    addVariable: "添加变量",
+    runWithVariables: "带变量运行",
+    variableInputValue: "值",
+    variableFillValues: "请为下方管道变量填写值后运行。",
+    variablePlaceholderHint:
+      "提示：在参数值中书写 {{变量名}} 即可引用变量，可在“管道变量”面板管理默认值。",
+    variableEmptyName: "变量名不能为空",
+    variableDuplicateName: "变量名已存在",
+    noVariablesDetected: "暂无变量。在参数值中书写 {{变量名}} 即可创建变量。",
+    deleteVariable: "删除变量",
+    clearAllVariables: "全部清除",
+    confirmClearAllVariables:
+      "确定移除所有已声明的变量？被引用的占位符仍会继续生效。",
+
     // VersionControl
     save: "保存",
     saving: "保存中...",
@@ -644,6 +810,11 @@ export const translations: Record<Language, Translations> = {
     // ConfirmDialog
     refreshTitle: "刷新页面",
     refreshMessage: "确定要刷新页面吗?未保存的更改将会丢失.",
+    cycleRejected: "连接被拒绝:该连接会引发生成环.",
+    cycleDetected: "检测到环",
+    branchOverwriteTitle: "覆盖输出文件?",
+    branchOverwriteMessage:
+      "{count} 条分支将写入同一文件,后写入会覆盖先写入.是否继续?",
 
     // Settings
     general: "通用",
@@ -716,6 +887,9 @@ export const translations: Record<Language, Translations> = {
     daysAgo: "{n} 天前",
     saved: "已保存",
     unsaved: "未保存",
+    rightClickCutMode: "右键: 划线",
+    rightClickMenuMode: "右键: 菜单",
+    saveIntermediateAsInput: "保存到该步的结果为CSV",
 
     // LogPanel
     logs: "日志",
@@ -726,8 +900,34 @@ export const translations: Record<Language, Translations> = {
     allLogs: "全部",
     copy: "复制",
     copied: "已复制",
+    paste: "粘贴",
     scrollToBottom: "滚动到底部",
     noMatchingLogs: "没有符合筛选条件的日志",
+
+    // Floating panel docking
+    collapsePanel: "折叠",
+    expandPanel: "展开",
+
+    // Execution history
+    executionHistory: "执行历史",
+    historyButton: "历史",
+    noHistoryYet: "暂无执行记录",
+    historyLoading: "正在加载执行历史...",
+    historySummaryHint: "点击记录查看输出摘要",
+    historyColumns: "列数",
+    historyRows: "行数",
+    historyBytes: "大小",
+    historyDuration: "耗时",
+    historyVersion: "版本",
+    historyStatusSuccess: "成功",
+    historyStatusError: "失败",
+    historyStatusCancelled: "已取消",
+    clearExecutionHistory: "清除执行历史",
+
+    // Result preview (F1)
+    copyCsv: "复制为 CSV",
+    copyMarkdown: "复制为 Markdown 表格",
+    resultTruncated: "结果已截断为前几行,请用 output/to 步骤导出完整数据.",
 
     // ChartPanel
     chart: "图表",
@@ -843,5 +1043,24 @@ export const translations: Record<Language, Translations> = {
     success: "转换成功",
     sameEncoding: "源编码与目标编码相同",
     bytes: "字节",
+
+    // Pipeline Templates
+    newFromTemplate: "从模板新建",
+    templateName: "模板名称",
+    templateSearchPlaceholder: "搜索模板",
+    templateNoMatches: "无匹配模板",
+    templateDescriptionPlaceholder: "可选描述",
+    noTemplates: "暂无模板,可将当前管道另存为模板以复用",
+    templateApply: "套用",
+    templateRename: "重命名",
+    templateDelete: "删除",
+    templateExport: "导出",
+    templateImport: "导入",
+    confirmDeleteTemplate: "确定删除该模板吗?",
+    templateSaved: "管道已保存为模板",
+    templateApplied: "已从模板创建新管道",
+    templateNameRequired: "请先在管道中添加步骤再另存为模板。",
+    templateImportFailed: "所选文件不是有效的模板文件。",
+    paletteTemplates: "模板",
   },
 };

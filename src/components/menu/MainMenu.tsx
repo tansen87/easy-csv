@@ -30,6 +30,7 @@ interface MainMenuProps {
   onSavePipeline: () => void;
   onImportPipeline: () => void;
   onExportPipeline: () => void;
+  onUseOrSaveTemplate: () => void;
   onHelp: () => void;
   onCheckUpdate: () => void;
   onShowSettings: () => void;
@@ -54,6 +55,8 @@ interface MainMenuProps {
   onToggleLineagePanel: () => void;
   showAIPanel: boolean;
   onToggleAIPanel: () => void;
+  showVariablePanel: boolean;
+  onToggleVariablePanel: () => void;
 }
 
 export const MainMenu = React.memo(function MainMenu({
@@ -71,6 +74,7 @@ export const MainMenu = React.memo(function MainMenu({
   onSavePipeline,
   onImportPipeline,
   onExportPipeline,
+  onUseOrSaveTemplate,
   onHelp,
   onCheckUpdate,
   onShowSettings,
@@ -95,6 +99,8 @@ export const MainMenu = React.memo(function MainMenu({
   onToggleLineagePanel,
   showAIPanel,
   onToggleAIPanel,
+  showVariablePanel,
+  onToggleVariablePanel,
 }: MainMenuProps) {
   const { t } = useLanguage();
 
@@ -122,7 +128,10 @@ export const MainMenu = React.memo(function MainMenu({
   }, [openMenu, closeDropdowns]);
 
   const anyCollapsedPanelOpen =
-    showDataProfile || showVersionPanel || showLineagePanel;
+    showDataProfile ||
+    showVersionPanel ||
+    showLineagePanel ||
+    showVariablePanel;
 
   const commandButtonClass = (active: boolean) =>
     cn(
@@ -226,6 +235,19 @@ export const MainMenu = React.memo(function MainMenu({
                 <span className="flex-1 text-left">{t.exportWorkflow}</span>
                 <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
                   Ctrl+E
+                </kbd>
+              </button>
+              <div className="border-t border-border my-1" />
+              <button
+                onClick={() => {
+                  onUseOrSaveTemplate();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                <span className="flex-1 text-left">{t.paletteTemplates}</span>
+                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                  Ctrl+T
                 </kbd>
               </button>
               <button
@@ -433,6 +455,22 @@ export const MainMenu = React.memo(function MainMenu({
                 >
                   <span className="whitespace-nowrap">{t.dataLineage}</span>
                 </button>
+                <button
+                  role="menuitemcheckbox"
+                  aria-checked={showVariablePanel}
+                  onClick={() => {
+                    onToggleVariablePanel();
+                    closeDropdowns();
+                  }}
+                  className={cn(
+                    "flex items-center gap-2 w-full px-3 py-2 text-xs font-medium rounded-md transition-colors",
+                    showVariablePanel
+                      ? "text-foreground hover:bg-accent"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                  )}
+                >
+                  <span className="whitespace-nowrap">{t.variables}</span>
+                </button>
                 <div className="border-t border-border my-1" />
                 <button
                   role="menuitem"
@@ -440,7 +478,6 @@ export const MainMenu = React.memo(function MainMenu({
                     onHelp();
                     closeDropdowns();
                   }}
-                  aria-label={t.helpCenter}
                   className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
                 >
                   <span className="whitespace-nowrap">{t.helpCenter}</span>

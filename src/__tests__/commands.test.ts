@@ -988,7 +988,6 @@ describe("All command IDs are defined", () => {
     "batch-filter",
     "batch-from",
     "batch-to",
-    "pinyin",
   ];
 
   it("should have all expected commands", () => {
@@ -1015,44 +1014,5 @@ describe("All command IDs are defined", () => {
         expect(typeof param.value).toBe("string");
       }
     }
-  });
-});
-
-// ========== Plugins ==========
-
-describe("Plugin commands", () => {
-  describe("pinyin", () => {
-    it("should build pinyin with defaults", () => {
-      const call = buildInvokeCall("pinyin", {});
-      expect(call.name).toBe("pinyin");
-      expect(call.parameters.find((p) => p.name === "columns")?.value).toBe("");
-      expect(call.parameters.find((p) => p.name === "style")?.value).toBe(
-        "plain",
-      );
-      expect(call.parameters.find((p) => p.name === "suffix")?.value).toBe("");
-    });
-
-    it("should override defaults with user values", () => {
-      const call = buildInvokeCall("pinyin", {
-        columns: "姓名,地址",
-        style: "upper",
-        suffix: "_py",
-      });
-      expect(call.parameters.find((p) => p.name === "columns")?.value).toBe(
-        "姓名,地址",
-      );
-      expect(call.parameters.find((p) => p.name === "style")?.value).toBe(
-        "upper",
-      );
-      expect(call.parameters.find((p) => p.name === "suffix")?.value).toBe(
-        "_py",
-      );
-    });
-
-    it("should be flagged as a plugin command", () => {
-      const cmd = xanCommands.find((c) => c.id === "pinyin");
-      expect(cmd?.plugin).toBe(true);
-      expect(cmd?.category).toBe("Plugins");
-    });
   });
 });

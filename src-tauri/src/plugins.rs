@@ -9,43 +9,42 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::get_resources_dir;
 
-/// Embed the default pinyin plugin binary at compile time (Windows only).
-#[cfg(target_os = "windows")]
-const PINYIN_EXE_BYTES: &[u8] = include_bytes!("../resources/plugins/pinyin.exe");
+/// Sub-directory under `<resources>/plugins/` where users drop their binaries,
+/// named after the compile target so a single data dir can host several
+/// platforms side by side.
+#[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+const PLATFORM_DIR: &str = "windows-x86_64";
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+const PLATFORM_DIR: &str = "macos-aarch64";
+#[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+const PLATFORM_DIR: &str = "macos-x86_64";
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+const PLATFORM_DIR: &str = "linux-x86_64-gnu";
+#[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+const PLATFORM_DIR: &str = "linux-aarch64-gnu";
+#[cfg(not(any(
+  all(target_os = "windows", target_arch = "x86_64"),
+  all(target_os = "macos", target_arch = "aarch64"),
+  all(target_os = "macos", target_arch = "x86_64"),
+  all(target_os = "linux", target_arch = "x86_64"),
+  all(target_os = "linux", target_arch = "aarch64"),
+)))]
+const PLATFORM_DIR: &str = "unsupported";
 
-/// Directory where plugin binaries live by default.
+/// Directory where users place plugin binaries: `<resources>/plugins/<target>/`.
+///
+/// `xan`/`pinyin` are NOT shipped with the application. The user drops
+/// `xan(.exe)` / `pinyin(.exe)` into this directory (or installs them on
+/// `PATH`); the app locates them at runtime.
 pub fn get_plugin_dir() -> std::path::PathBuf {
-  get_resources_dir().join("plugins")
+  get_resources_dir().join("plugins").join(PLATFORM_DIR)
 }
 
-/// Extract embedded plugin binaries to `<resources>/plugins/` on first use.
-#[cfg(target_os = "windows")]
-pub fn ensure_default_plugins_extracted() -> Result<String, String> {
-  let plugin_dir = get_plugin_dir();
-  let pinyin_path = plugin_dir.join("pinyin.exe");
-
-  if pinyin_path.exists()
-    && let Ok(metadata) = std::fs::metadata(&pinyin_path)
-    && metadata.len() == PINYIN_EXE_BYTES.len() as u64
-  {
-    return Ok(pinyin_path.to_string_lossy().to_string());
-  }
-
-  std::fs::create_dir_all(&plugin_dir)
-    .map_err(|e| format!("Failed to create plugin directory: {}", e))?;
-  std::fs::write(&pinyin_path, PINYIN_EXE_BYTES)
-    .map_err(|e| format!("Failed to extract pinyin plugin: {}", e))?;
-
-  Ok(pinyin_path.to_string_lossy().to_string())
-}
-
-/// Ensure the default plugin binaries (xan.exe + pinyin.exe) are present in
-/// `<resources>/plugins/`. Called proactively at startup so the folder is
-/// populated reliably, regardless of which lazy path runs first.
-pub fn ensure_plugins_extracted() {
-  #[cfg(target_os = "windows")]
-  let _ = ensure_default_plugins_extracted();
-  let _ = crate::xan::extract_xan_executable();
+/// Ensure the plugin directory exists so users have a place to drop binaries.
+/// Best-effort: callers do not require it, but a missing folder later shows a
+/// clearer "not found" error than a confusing permission issue.
+pub fn ensure_plugin_dir_exists() {
+  let _ = std::fs::create_dir_all(get_plugin_dir());
 }
 
 /// A registered CLI plugin. `name` is the command name used inside pipelines
@@ -119,8 +118,9 @@ fn get_db() -> Option<&'static DbState> {
       );
     }
 
-    // Extract the embedded default plugin binary so it is usable out of the box.
-    let _ = ensure_default_plugins_extracted();
+    // Make sure the plugin folder exists so users have a documented place to
+    // drop xan/pinyin binaries.
+    ensure_plugin_dir_exists();
 
     let state = DbState {
       conn: Mutex::new(conn),
@@ -315,7 +315,7 @@ mod tests {
 
   #[test]
   fn extra_dirs_are_searched_before_path() {
-    let dir = std::env::temp_dir().join("easy-csv-plugin-test-dir");
+    let dir = std::env::temp_dir().join("EasyCsv-plugin-test-dir");
     std::fs::create_dir_all(&dir).unwrap();
     #[cfg(target_os = "windows")]
     let file = dir.join("plugin-probe-xyz.exe");
@@ -339,12 +339,21 @@ mod tests {
     assert_eq!(exe, xan);
   }
 
-  #[cfg(target_os = "windows")]
   #[test]
-  fn extracts_default_plugin_to_plugin_dir() {
-    let path = ensure_default_plugins_extracted().expect("extraction should succeed");
-    assert!(Path::new(&path).is_file());
-    let resolved = resolve_plugin_executable("pinyin").expect("pinyin should resolve");
-    assert_eq!(resolved.to_string_lossy(), path);
+  fn user_placed_binary_in_plugin_dir_resolves() {
+    // With embedded extraction removed, a binary the user drops into the
+    // platform plugin sub-dir must still resolve by name.
+    let dir = get_plugin_dir();
+    std::fs::create_dir_all(&dir).unwrap();
+    #[cfg(target_os = "windows")]
+    let file = dir.join("pinyin.exe");
+    #[cfg(not(target_os = "windows"))]
+    let file = dir.join("pinyin");
+    std::fs::write(&file, b"probe").unwrap();
+
+    let resolved = resolve_plugin_executable("pinyin");
+    assert!(resolved.is_some());
+
+    let _ = std::fs::remove_file(&file);
   }
 }

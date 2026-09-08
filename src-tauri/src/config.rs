@@ -30,10 +30,34 @@ impl Default for AppConfig {
   }
 }
 
+/// Return the base directory that plugins and SQLite databases live under.
+///
+/// - Windows: `<exe_dir>\EasyCsv_resources` (unchanged, keeps existing user data).
+/// - macOS: `~/Library/Application Support/EasyCsv`
+/// - Linux: `~/.local/share/EasyCsv` (XDG)
+///
+/// All data dirs derive from this single function; plugin dir is derived via
+/// `plugins::get_plugin_dir()`.
 pub fn get_resources_dir() -> std::path::PathBuf {
-  let exe_path = std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("."));
-  let exe_dir = exe_path.parent().unwrap_or(std::path::Path::new("."));
-  exe_dir.join("easy-csv_resources")
+  #[cfg(target_os = "windows")]
+  {
+    let exe_path = std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("."));
+    let exe_dir = exe_path.parent().unwrap_or(std::path::Path::new("."));
+    return exe_dir.join("EasyCsv_resources");
+  }
+  #[cfg(not(target_os = "windows"))]
+  {
+    #[cfg(target_os = "macos")]
+    let app_dir = "EasyCsv";
+    #[cfg(target_os = "linux")]
+    let app_dir = "EasyCsv";
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    let app_dir = "EasyCsv";
+
+    dirs::data_dir()
+      .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")))
+      .join(app_dir)
+  }
 }
 
 struct DbState {
@@ -111,7 +135,7 @@ fn get_db() -> Option<&'static DbState> {
   })
 }
 
-const PEPPER: &str = "easy-csv-ai-key-2024";
+const PEPPER: &str = "EasyCsv-ai-key-2024";
 
 fn derive_key() -> [u8; 32] {
   let hostname = hostname::get()

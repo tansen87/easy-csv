@@ -30,7 +30,7 @@
 
 ## 2. 问题与方案
 
-### D1. 对话框体系统一(P0)
+### D1. 对话框体系统一(P0) (不做)
 
 **现状证据**:同为"命令参数配置"入口,`CommandDialog` 是居中模态(带 `bg-black/20` backdrop、`rounded-xl`),而 `FilterDialog` 等 11 个旧对话框仍是 `fixed` 浮动小窗(宽度 240~360px 硬编码、`rounded-lg`、`cursor-grab` 标题栏拖拽)。INDEX.md 显示旧对话框已是"薄包装器委托 `commands/` 表单"的过渡态,但外壳双轨未收敛。
 
@@ -68,23 +68,26 @@
 4. 所有浮动面板统一加折叠态(收为边缘胶囊),`useDraggable` 已有边界约束基建,补"贴近边缘吸附"即可。
 
 **验收清单**:
-- [ ] 全项目无裸 `z-[9999]`/`z-[60]`,层级由 token 定义;
-- [ ] 面板拖动位置跨会话保留;
-- [ ] AI 面板与 LogPanel 同开不互相遮挡(有明确避让行为);
-- [ ] 每个浮动面板可折叠为胶囊且可展开恢复;
-- [ ] 最小窗口尺寸(如 1024×640)下面板不越界。
+- [x] 全项目无裸 `z-[9999]`/`z-[60]`,层级由 token 定义;
+- [x] 面板拖动位置跨会话保留;
+- [x] AI 面板与 LogPanel 同开不互相遮挡(有明确避让行为);
+- [x] 每个浮动面板可折叠为胶囊且可展开恢复;
+- [x] 最小窗口尺寸(如 1024×640)下面板不越界。
+
+**落地状态**:`index.css` 定义 `--z-panel(10)/--z-floating(40)/--z-modal(50)/--z-toast(60)/--z-tooltip(9999)` 并注册 `@utility z-*`(替换 tooltip 的 `z-[9999]`、ExpressionEditor 自动补全的 `z-[60]`、VersionControlPanel 确认层的 `z-60`、四个浮动面板的 `z-40`);`session.rs` 的 `save_session/load_session` 新增 `panel_states`(session_meta 键,旧会话缺省 `{}` 向后兼容);`useSession` 暴露 `panelStates/updatePanelState` 并在定时/卸载时一并持久化;LogPanel/ChartPanel/CommandList 支持停靠位置持久化(拖拽结束回调 `onDockChange`)与折叠胶囊(标题条收起为边缘胶囊,点击展开),恢复位置经 `utils/panelDock.ts` 的 `clampPanelPosition` 钳制在窗口内(附 `src/__tests__/panelDock.test.ts` 用例);AIPanel 展开状态提升至 App(持久化 `aiPanel.collapsed`),AI 面板展开时 LogPanel 自动抬高避让(`calc(36vh + 96px)`),收起后回落;收起后的胶囊统一固定在右上角(头部 48px 之下),按 `logPanel → chartPanel → commandList` 固定顺序自上而下纵向堆叠(每格 44px,App 端 `collapsedStack` 计算),不再停留在拖拽位置。
 
 ### D3. 设计 token 收敛(P1)
 
 **现状证据**:字体 token(`--font-sans/mono`)、圆角 token(`--radius` 亮 0.625rem/暗 0.5rem)、字号档位齐备,但组件层大量绕过:`text-[10px]`×25、`text-[11px]`×9、圆角五档混用(同类按钮 `rounded-md` 与 `rounded-lg` 并存)。
 
 **问题**:
+
 - 任意值字号绕过主题体系,暗色模式下若调基准字号这些硬编码点不跟随;
 - 亮暗主题 `--radius` 不一致(0.625 vs 0.5rem)是有意设计还是漂移无文档说明;
 - 新组件照抄邻近代码,误差逐步累积(376 处 `rounded-md` 44 处 `rounded-lg` 说明已出现分叉)。
 
 **方案**:
-1. 制定并落档 **UI token 规范**(进本文档附录或独立 `docs/design/ui-tokens.md`):
+1. 制定并落档 **UI token 规范**(进本文档附录或独立 `docs/AI/ui-tokens.md`):
    - 字号仅允许 `text-xs / text-sm / text-base`(辅助信息 xs、正文 sm、标题 base+);`text-[10px]` 全部升为 `text-xs` 或以 `text-muted-foreground` 弱化替代"变小";
    - 圆角仅两档:控件 `rounded-md`(即 token 默认)、容器/模态 `rounded-xl`;`rounded-lg/2xl/full` 保留给特殊形态(胶囊、头像)并在文档列明白名单;
 2. 用脚本一次性盘点 + 批量替换任意值字号(纯 class 替换,风险低);
@@ -97,7 +100,7 @@
 - [ ] 亮暗主题切换后字号/圆角表现一致;
 - [ ] 抽查 5 个高频界面(命令面板、命令对话框、日志、表格节点、设置)视觉无回归。
 
-### D4. 键盘可达性补全(P0,低成本)
+### D4. 键盘可达性补全(P0,低成本) (不做)
 
 **现状证据**:Esc 处理仅覆盖 5 个模态对话框,11 个浮动小窗全部缺失;`CommandPalette`/搜索框有键盘导航(已有较好基建),但普通对话框内 Tab 顺序、focus trap 未系统性处理;部分组件已有 `aria-`(CommandList/CommandPalette 等 10 个文件),覆盖不全。
 
@@ -134,7 +137,7 @@
 
 **现状证据**:`TableNode`(5 行预览)与 `CsvDiffDialog` 已有 sticky 表头,但整体表格样式各自手写;数字列与文本列同字体渲染,宽表无横向滚动指引;这是 CSV 工具的**核心内容形态**,却没有统一的表格组件规范。
 
-**问题**:预览表、对比表、未来的结果预览表(F1)、概况统计表四处表格四套实现,对齐、空值显示(NULL/-/空)、数字右对齐等约定不一致。
+**问题**:预览表、对比表、结果预览表、概况统计表四处表格四套实现,对齐、空值显示(NULL/-/空)、数字右对齐等约定不一致。
 
 **方案**:
 1. 抽象 `CsvTable` 表格组件(sticky 表头 + 虚拟滚动可选 + 列宽拖拽 + 双语空值占位 `-`),`TableNode`/`CsvDiffDialog`/F1 `ResultPanel` 三处复用;

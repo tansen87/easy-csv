@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, Terminal, Table } from "lucide-react";
+import { Search, ListTree, Table } from "lucide-react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { commandIconMap } from "@/components/CommandList";
 import { PipelineStep } from "@/types/xan";
 import { useLanguage } from "@/i18n";
 
@@ -11,6 +10,7 @@ interface SearchResult {
   displayName: string;
   secondaryName: string | null;
   isTableNode?: boolean;
+  resultId?: string;
 }
 
 interface SearchOverlayProps {
@@ -21,7 +21,11 @@ interface SearchOverlayProps {
   onEnter: (index: number) => void;
   onOpenCommandPalette: () => void;
   searchResults: SearchResult[];
-  onResultClick: (step: PipelineStep | null, isTable?: boolean) => void;
+  onResultClick: (
+    step: PipelineStep | null,
+    isTable?: boolean,
+    resultId?: string,
+  ) => void;
   searchInputRef: React.RefObject<HTMLInputElement>;
 }
 
@@ -120,15 +124,21 @@ export function SearchOverlay({
           <ScrollArea className="h-[16vh]">
             <div className="py-1">
               {searchResults.map((result, index) => {
-                const CommandIcon = result.isTableNode
-                  ? Table
-                  : commandIconMap[result.step!.command.name] || Terminal;
+                const CommandIcon =
+                  result.isTableNode || result.resultId ? Table : ListTree;
                 const isActive = index === activeIndex;
                 return (
                   <button
-                    key={result.isTableNode ? "table-node" : result.step!.id}
+                    key={
+                      result.resultId ||
+                      (result.isTableNode ? "table-node" : result.step!.id)
+                    }
                     onClick={() =>
-                      onResultClick(result.step, result.isTableNode)
+                      onResultClick(
+                        result.step,
+                        result.isTableNode,
+                        result.resultId,
+                      )
                     }
                     onMouseEnter={() => setActiveIndex(index)}
                     className={`w-full px-3 py-2 text-left transition-colors flex items-center justify-between gap-2 ${

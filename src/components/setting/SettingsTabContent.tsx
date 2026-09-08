@@ -86,7 +86,7 @@ export function SettingsTabContent({
   const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { language, setLanguage, t } = useLanguage();
   const [clearTarget, setClearTarget] = useState<
-    "conversations" | "feedback" | "corrections" | null
+    "conversations" | "feedback" | "corrections" | "history" | null
   >(null);
   const [clearing, setClearing] = useState(false);
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
@@ -138,6 +138,7 @@ export function SettingsTabContent({
         conversations: "clear_conversations",
         feedback: "clear_feedback",
         corrections: "clear_corrections",
+        history: "clear_execution_history",
       };
       await invoke(cmdMap[clearTarget]);
     } catch (error) {
@@ -647,6 +648,15 @@ export function SettingsTabContent({
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     {t.aiClearCorrections}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setClearTarget("history")}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {t.clearExecutionHistory}
                   </Button>
                 </div>
               </div>

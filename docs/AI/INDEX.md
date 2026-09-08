@@ -78,7 +78,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `config.rs` | `AppConfig` 类型、SQLite 持久化(app_config/ai_config 表)、AES-256-GCM 加密存储 API Key、per-provider API Key 管理、自定义 AI provider 配置(provider=custom 时存 name/base_url/models)、配置相关命令 |
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
 | `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令、`set_pipeline_cancelled` 取消执行 |
-| `plugins.rs` | 外部 CLI 插件管理: `plugins` 表(plugins.db)持久化、`list_plugins`/`check_plugins` 命令、`command_executable` 按命令名解析可执行文件(插件命令走插件二进制,其余走 xan.exe)。`xan` 与 `pinyin` 默认注册进插件表,列表按 xan 置顶排序。插件二进制默认在 `<exe目录>/easy-csv_resources/plugins/`(`pinyin.exe`/`xan.exe` 编译期嵌入 `src-tauri/resources/plugins/`、首次自动解压),解析顺序: 路径 → `plugins/` 目录(含 `.exe` 补全)→ `PATH` |
+| `plugins.rs` | 外部 CLI 插件管理: `plugins` 表(plugins.db)持久化、`list_plugins`/`check_plugins` 命令、`command_executable` 按命令名解析可执行文件(插件命令走插件二进制,其余走 xan.exe)。`xan` 与 `pinyin` 默认注册进插件表,列表按 xan 置顶排序。插件二进制按平台编译期嵌入 `src-tauri/resources/plugins/<target>/`(`include_bytes!`)、首启自动解压到平台插件目录,Unix 下 `make_executable` 置 0o755。解压目录: Windows `<exe>/EasyCsv_resources/plugins/`,macOS `~/Library/Application Support/EasyCsv/resources/plugins/`,Linux `~/.local/share/EasyCsv/resources/plugins/`。解析顺序: 路径 → `plugins/` 目录(含 `.exe` 补全)→ `PATH` |
 | `csv.rs` | `CsvData` 类型、`read_csv_file`/`profile_csv`/`diff_csv_files`/`convert_csv_encoding` 命令 |
 | `storage.rs` | 历史记录、最近文件、数据概况缓存、版本/血缘存储、窗口标题、开发者工具命令 |
 | `ai.rs` | AI 对话代理: `call_ai` 命令,转发到 DeepSeek / Qwen / GLM |
@@ -94,7 +94,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 |------|------|
 | `AppConfig` 结构体 | `default_delimiter`, `no_headers`, `show_execution_notification`, `minimize_to_tray` |
 | `load_config()` / `save_config()` | JSON 配置文件读写 |
-| `get_resources_dir()` | 资源目录路径(可执行文件旁) |
+| `get_resources_dir()` | 资源/数据根目录。Windows: `<exe>/EasyCsv_resources`(不变);macOS: `~/Library/Application Support/EasyCsv`;Linux: `~/.local/share/EasyCsv`。所有 db 数据目录经它派生,插件目录经 `plugins::get_plugin_dir()` 派生 |
 | `get/set_default_delimiter` | 默认分隔符配置命令 |
 | `get/set_no_headers` | 无表头配置命令 |
 | `get/set_system_notification` | 系统通知配置命令 |
@@ -139,6 +139,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `load_profile_cache` / `save_profile_cache` | 数据概况缓存(LRU 淘汰,上限50条) |
 | `save_pipeline_versions` / `load_pipeline_versions` | 管道版本持久化 |
 | `save_lineage_data` / `load_lineage_data` | 数据血缘持久化 |
+| `save_execution_history` / `load_execution_history` / `clear_execution_history` | 执行历史持久化(SQLite `execution_history` 表,只存统计摘要,LRU 保留最近100条) |
 | `file_exists` | 文件存在性检查 |
 | `set_window_title` | 设置窗口标题 |
 | `toggle_devtools` | 切换开发者工具 |
@@ -148,9 +149,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | 内容 | 说明 |
 |------|------|
 | `tab_snapshots` 表 | 标签页快照(tab_id, snapshot, updated_time),每次保存先清空再写入 |
-| `session_meta` 表 | 会话元数据(selected_tab_id) |
-| `save_session` | 序列化全部标签页快照 + 选中标签 ID |
-| `load_session` | 恢复标签页快照列表 + 选中标签 ID |
+| `session_meta` 表 | 会话元数据(selected_tab_id、panel_states 面板停靠状态) |
+| `save_session` | 序列化全部标签页快照 + 选中标签 ID + 面板停靠状态 |
+| `load_session` | 恢复标签页快照列表 + 选中标签 ID + 面板停靠状态 |
 
 #### ai.rs — AI 对话代理
 
@@ -190,7 +191,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `get/set_minimize_to_tray` | config | 读写最小化到托盘配置 |
 | `get/set_ai_config` | config | 读写 AI 配置(provider/model/baseUrl/providerName/models) |
 | `save/load/delete/has_api_key` | config | Per-provider API Key 加密存储(AES-256-GCM) |
-| `save_session` / `load_session` | session | 会话快照保存/恢复(标签页 + 选中标签) |
+| `save_session` / `load_session` | session | 会话快照保存/恢复(标签页 + 选中标签 + 面板停靠状态 panel_states) |
 | `call_ai` | ai | 调用 AI 大模型代理(DeepSeek/Qwen/GLM) |
 | `save_conversation` | ai_memory | 保存对话历史 |
 | `load_conversation_history` | ai_memory | 加载对话历史 |
@@ -204,6 +205,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_recent_files` / `load_recent_files` | storage | 最近文件列表持久化 |
 | `save_pipeline_versions` / `load_pipeline_versions` | storage | 管道版本持久化 |
 | `save_lineage_data` / `load_lineage_data` | storage | 数据血缘持久化 |
+| `save_execution_history` / `load_execution_history` / `clear_execution_history` | storage | 执行历史持久化(SQLite,只存摘要,LRU 100条) |
 | `file_exists` | storage | 检查文件是否存在 |
 | `toggle_devtools` | storage | 切换开发者工具面板 |
 | `list_plugins` | plugins | 列出已注册的 CLI 插件 |

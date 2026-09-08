@@ -16,6 +16,7 @@ interface KeyboardShortcutCallbacks {
   onLogs: () => void;
   onAI: () => void;
   onCommandPalette: () => void;
+  onOpenTemplates: () => void;
 }
 
 interface KeyboardShortcutState {
@@ -86,6 +87,9 @@ export function useKeyboardShortcuts(
           !stateRef.current.isExecuting
         )
           callbacksRef.current.onExecute();
+      } else if (ctrl && key === "t") {
+        e.preventDefault();
+        callbacksRef.current.onOpenTemplates();
       } else if (shift && e.key === "h") {
         e.preventDefault();
         callbacksRef.current.onHelp();

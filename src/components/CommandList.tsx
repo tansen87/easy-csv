@@ -6,162 +6,17 @@ import {
   ChevronRight,
   ChevronDown,
   ListTree,
-  Sparkles,
   HelpCircle,
-  Eye,
-  List,
-  Hash,
-  ArrowDown,
-  BarChart3,
-  CheckCheck,
-  Trash2,
-  SquareFunction,
-  RefreshCw,
-  ListOrdered,
-  PaintBucket,
-  CheckCircle,
-  Columns3,
   Search,
-  Filter,
-  ArrowUp,
-  Scissors,
-  Trophy,
-  Dices,
-  ArrowUpDown,
-  Rows3,
-  Shuffle,
-  BarChart2,
-  Group,
-  Activity,
-  Sigma,
-  LayoutGrid,
-  PanelLeft,
-  Files,
-  GitMerge,
-  Merge,
-  Pencil,
-  Minus,
-  Ruler,
-  MoveRight,
-  MoveLeft,
-  Repeat,
-  Repeat2,
-  Grid3X3,
-  Table2,
-  TableRowsSplit,
-  Grid3x3,
-  Table,
-  Bug,
-  FileOutput,
   X,
-  LayersPlus,
-  LayersMinus,
-  FileInput,
-  ScanSearch,
-  Pickaxe,
-  ChartBar,
-  ChartLine,
-  FunnelPlus,
-  ArrowBigDownDash,
-  BrushCleaning,
-  FileCodeCorner,
-  Languages,
-  type LucideIcon,
+  ChevronUp,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { XanCommand } from "@/types/xan";
+import { Tooltip } from "@/components/ui/tooltip";
+import { XanCommand, PanelDockState } from "@/types/xan";
 import { commandCategories } from "@/data/commands";
 import { useLanguage } from "@/i18n";
-
-export const commandIconMap: Record<string, LucideIcon> = {
-  // Output
-  output: FileOutput,
-
-  // Explore & visualize
-  view: Eye,
-  headers: List,
-  count: Hash,
-  flatten: Minus,
-  hist: BarChart3,
-  plot: ChartBar,
-  chart: ChartLine,
-
-  // Add, transform, drop and move columns
-  select: CheckCheck,
-  drop: Trash2,
-  map: SquareFunction,
-  transform: RefreshCw,
-  enum: ListOrdered,
-  fill: PaintBucket,
-  complete: CheckCircle,
-  blank: ArrowBigDownDash,
-  separate: Columns3,
-
-  // Search & filter
-  search: Search,
-  filter: Filter,
-  head: ArrowUp,
-  tail: ArrowDown,
-  slice: Scissors,
-  top: Trophy,
-  sample: Dices,
-  bisect: ScanSearch,
-
-  // Sort & deduplicate
-  sort: ArrowUpDown,
-  dedup: Rows3,
-  shuffle: Shuffle,
-
-  // Aggregate
-  frequency: BarChart2,
-  groupby: Group,
-  stats: Activity,
-  agg: Sigma,
-  bins: LayoutGrid,
-  window: PanelLeft,
-
-  // Combine multiple CSV files
-  cat: Files,
-  join: GitMerge,
-  merge: Merge,
-
-  // Format, convert & recombobulate
-  rename: Pencil,
-  behead: Minus,
-  input: FileInput,
-  fixlengths: Ruler,
-  fmt: BrushCleaning,
-  explode: LayersPlus,
-  implode: LayersMinus,
-  scrape: Pickaxe,
-  to: MoveRight,
-  from: MoveLeft,
-  reverse: Repeat,
-  transpose: Repeat2,
-
-  // Transpose & pivot
-  pivot: Grid3X3,
-  unpivot: Table2,
-
-  // Split a CSV file into multiple
-  split: TableRowsSplit,
-  partition: Grid3x3,
-
-  // Generate CSV files
-  range: Table,
-
-  // Scripting
-  run: FileCodeCorner,
-  eval: Bug,
-
-  // Batch method
-  "batch-filter": FunnelPlus,
-  "batch-from": FileInput,
-  "batch-to": FileOutput,
-
-  // Plugins
-  pinyin: Languages,
-};
+import { clampPanelPosition } from "@/utils/panelDock";
 
 interface CommandListProps {
   commands: XanCommand[];
@@ -172,6 +27,12 @@ interface CommandListProps {
   onSearchChange: (query: string) => void;
   isVisible: boolean;
   onClose: () => void;
+  /** Persisted docking state (D2). */
+  dockState?: PanelDockState;
+  /** Report position/collapse changes for persistence (D2). */
+  onDockChange?: (patch: Partial<PanelDockState>) => void;
+  /** Top-right stack offset for the collapsed capsule (D2). */
+  capsuleY?: number;
 }
 
 export const CommandList = React.memo(function CommandList({
@@ -182,6 +43,9 @@ export const CommandList = React.memo(function CommandList({
   onSearchChange,
   isVisible,
   onClose,
+  dockState,
+  onDockChange,
+  capsuleY,
 }: CommandListProps) {
   const [expandedCategories, setExpandedCategories] = useState<
     Record<string, boolean>
@@ -195,6 +59,10 @@ export const CommandList = React.memo(function CommandList({
     ),
   );
   const [isDragging, setIsDragging] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(
+    dockState?.collapsed ?? false,
+  );
+  const [pos, setPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const dragStateRef = useRef({
     startX: 0,
     startY: 0,
@@ -302,6 +170,11 @@ export const CommandList = React.memo(function CommandList({
 
     const handleMouseUp = () => {
       setIsDragging(false);
+      if (panelRef.current) {
+        const rect = panelRef.current.getBoundingClientRect();
+        setPos({ x: rect.left, y: rect.top });
+        onDockChange?.({ x: rect.left, y: rect.top });
+      }
     };
 
     if (isDragging) {
@@ -317,25 +190,20 @@ export const CommandList = React.memo(function CommandList({
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
-  }, [isDragging]);
+  }, [isDragging, onDockChange]);
 
   useEffect(() => {
     if (isVisible && panelRef.current) {
-      const rect = panelRef.current.getBoundingClientRect();
-      const newX = Math.min(rect.left, window.innerWidth - 280);
-      const panelHeight = panelRef.current.offsetHeight;
-      const newY = Math.max(
-        100,
-        Math.min(
-          window.innerHeight - panelHeight,
-          (window.innerHeight - panelHeight) / 2,
-        ),
-      );
-      panelRef.current.style.left = `${newX}px`;
-      panelRef.current.style.top = `${newY}px`;
-      panelRef.current.style.transform = "none";
+      const panelWidth = panelRef.current.offsetWidth || 280;
+      const panelHeight = panelRef.current.offsetHeight || 500;
+      // Persisted position wins; otherwise default to the left-center.
+      const clamped = clampPanelPosition(dockState, {
+        width: panelWidth,
+        height: panelHeight,
+      });
+      setPos({ x: clamped.x, y: clamped.y });
     }
-  }, [isVisible]);
+  }, [isVisible, dockState?.x, dockState?.y]);
 
   useEffect(() => {
     setActiveIndex(0);
@@ -392,15 +260,34 @@ export const CommandList = React.memo(function CommandList({
 
   if (!isVisible) return null;
 
+  // collapsed capsule (edge pill) with one-click restore.
+  if (collapsed) {
+    return (
+      <div
+        className="fixed z-floating flex items-center gap-1.5 px-3 py-2 bg-background border border-border/50 rounded-full shadow-xl cursor-pointer select-none"
+        style={{ top: capsuleY ?? 56, right: 8 }}
+        role="button"
+        onContextMenu={(e) => e.preventDefault()}
+        onClick={() => {
+          setCollapsed(false);
+          onDockChange?.({ collapsed: false });
+        }}
+      >
+        <ListTree className="h-4 w-4 text-primary" />
+        <span className="text-xs font-medium">{t.cmds}</span>
+        <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div
       ref={panelRef}
       style={{
-        left: 0,
-        top: "50%",
-        transform: "translateY(-50%)",
+        left: pos.x,
+        top: pos.y,
       }}
-      className={`fixed w-[min(280px,calc(100vw-16px))] h-[min(500px,calc(100vh-80px))] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-40 ${isDragging ? "shadow-2xl" : ""}`}
+      className={`fixed w-[min(280px,calc(100vw-16px))] h-[min(500px,calc(100vh-80px))] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-floating ${isDragging ? "shadow-2xl" : ""}`}
       onContextMenu={(e) => e.preventDefault()}
       onMouseMove={() => setKeyboardNav(false)}
     >
@@ -424,6 +311,19 @@ export const CommandList = React.memo(function CommandList({
             className="w-full pl-8 pr-3 py-1.5 text-xs border border-border/50 rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
           />
         </div>
+        <Tooltip content={t.collapsePanel}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setCollapsed(true);
+              onDockChange?.({ collapsed: true });
+            }}
+            className="h-6 px-1.5 text-xs font-medium hover:bg-accent hover:text-foreground"
+          >
+            <ChevronDown className="h-3 w-3" />
+          </Button>
+        </Tooltip>
         <Button
           variant="ghost"
           size="sm"
@@ -460,8 +360,6 @@ export const CommandList = React.memo(function CommandList({
                 {(isSearching || expandedCategories[category]) && (
                   <div className="mt-2 space-y-1.5 px-1">
                     {categoryCommands.map((command) => {
-                      const CommandIcon =
-                        commandIconMap[command.name] || ListTree;
                       const isActive =
                         visibleIndexMap[command.id] === activeIndex;
                       return (
@@ -486,7 +384,6 @@ export const CommandList = React.memo(function CommandList({
                             <div className="flex items-center justify-between gap-3">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                  <CommandIcon className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
                                   <span className="font-semibold text-sm">
                                     {command.name}
                                   </span>
@@ -522,9 +419,6 @@ export const CommandList = React.memo(function CommandList({
           })}
           {filteredCommands.length === 0 && (
             <div className="text-center py-12 px-4">
-              <div className="w-12 h-12 mx-auto mb-3 bg-muted/50 rounded-xl flex items-center justify-center">
-                <Sparkles className="h-6 w-6 text-muted-foreground/50" />
-              </div>
               <p className="text-sm font-medium text-muted-foreground mb-1">
                 {t.noCommandsFound}
               </p>

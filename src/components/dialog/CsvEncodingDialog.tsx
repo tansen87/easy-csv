@@ -210,7 +210,6 @@ export function CsvEncodingDialog({
           <button
             onClick={onClose}
             className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
-            aria-label={t.close}
           >
             <X className="h-4 w-4" />
           </button>
