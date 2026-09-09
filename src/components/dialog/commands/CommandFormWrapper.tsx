@@ -103,6 +103,7 @@ export function CommandFormWrapper({
   const buttons = (
     <div className="flex justify-end gap-2 mt-2">
       <Button
+        type="button"
         variant="secondary"
         size="sm"
         onClick={() => setCommandDialog(null)}
@@ -110,6 +111,7 @@ export function CommandFormWrapper({
         Cancel
       </Button>
       <Button
+        type="button"
         variant="secondary"
         size="sm"
         onClick={() =>

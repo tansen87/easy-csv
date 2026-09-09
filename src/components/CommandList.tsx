@@ -228,6 +228,14 @@ export const CommandList = React.memo(function CommandList({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const inPanel = target ? panelRef.current?.contains(target) : false;
+      const isEditable = !!(
+        target &&
+        target.closest('textarea, input, select, [contenteditable="true"]')
+      );
+      if (!inPanel && isEditable) return;
+
       if (e.key === "Escape") {
         e.preventDefault();
         onClose();
@@ -308,6 +316,7 @@ export const CommandList = React.memo(function CommandList({
             placeholder={t.searchCommand}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
+            autoFocus
             className="w-full pl-8 pr-3 py-1.5 text-xs border border-border/50 rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
           />
         </div>

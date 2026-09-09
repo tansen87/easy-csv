@@ -76,4 +76,5 @@ export const COMMAND_LABELS: Record<CommandDialogType, string> = {
   "batch-from": "Batch From",
   "batch-to": "Batch To",
   pinyin: "Pinyin",
+  duckdb: "DuckDB SQL",
 };

@@ -63,7 +63,8 @@ export type CommandDialogType =
   | "batch-filter"
   | "batch-from"
   | "batch-to"
-  | "pinyin";
+  | "pinyin"
+  | "duckdb";
 
 export interface CommandDialogState {
   type: CommandDialogType;

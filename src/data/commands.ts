@@ -1848,7 +1848,7 @@ export const xanCommands: XanCommand[] = [
         description:
           "Evaluate an expression to decide whether to keep a newly seen row. Column names are prefixed with current_ and new_",
         descriptionCn:
-          "评估表达式以决定是否保留新看到的行。列名以current_和new_为前缀",
+          "评估表达式以决定是否保留新看到的行.列名以current_和new_为前缀",
         required: false,
       },
       {
@@ -1881,7 +1881,7 @@ export const xanCommands: XanCommand[] = [
         description:
           "Shuffle the file without buffering it into memory. Only works if target is seekable (no stdin etc.)",
         descriptionCn:
-          "在不将文件缓冲到内存的情况下打乱文件。仅在目标可寻址时有效(不支持stdin等)",
+          "在不将文件缓冲到内存的情况下打乱文件.仅在目标可寻址时有效(不支持stdin等)",
         required: false,
         default: false,
       },
@@ -2355,7 +2355,7 @@ export const xanCommands: XanCommand[] = [
         description:
           "When concatenating columns, this flag will cause all records to appear. It will pad each row if other CSV data isn't long enough.",
         descriptionCn:
-          "拼接列时,此标志将使所有记录出现。如果其他CSV数据不够长,将填充每行",
+          "拼接列时,此标志将使所有记录出现.如果其他CSV数据不够长,将填充每行",
         required: false,
         default: false,
       },
@@ -2365,7 +2365,7 @@ export const xanCommands: XanCommand[] = [
         description:
           "Compute the intersection of headers of all concatenated files and reorder columns accordingly. Incompatible with --union, preprocessing and --no-headers.",
         descriptionCn:
-          "计算所有拼接文件头的交集并相应地重新排列列。与--union、preprocessing和--no-headers不兼容",
+          "计算所有拼接文件头的交集并相应地重新排列列.与--union、preprocessing和--no-headers不兼容",
         required: false,
         default: false,
       },
@@ -2375,7 +2375,7 @@ export const xanCommands: XanCommand[] = [
         description:
           "Compute the union of headers of all concatenated files and reorder columns accordingly. Incompatible with --intersection, preprocessing and --no-headers.",
         descriptionCn:
-          "计算所有拼接文件头的并集并相应地重新排列列。与--intersection、preprocessing和--no-headers不兼容",
+          "计算所有拼接文件头的并集并相应地重新排列列.与--intersection、preprocessing和--no-headers不兼容",
         required: false,
         default: false,
       },
@@ -2418,7 +2418,7 @@ export const xanCommands: XanCommand[] = [
         description:
           "Preprocessing using only xan subcommands. See xan parallel -h for more information about preprocessing.",
         descriptionCn:
-          "仅使用xan子命令进行预处理。有关预处理的更多信息,请参阅xan parallel -h",
+          "仅使用xan子命令进行预处理.有关预处理的更多信息,请参阅xan parallel -h",
         required: false,
       },
       {
@@ -2427,7 +2427,7 @@ export const xanCommands: XanCommand[] = [
         description:
           "Run xan script at given path as preprocessing. See xan run -h for more information.",
         descriptionCn:
-          "运行给定路径的xan脚本作为预处理。有关更多信息,请参阅xan run -h",
+          "运行给定路径的xan脚本作为预处理.有关更多信息,请参阅xan run -h",
         required: false,
       },
       {
@@ -2436,7 +2436,7 @@ export const xanCommands: XanCommand[] = [
         description:
           "Preprocessing commands that will run directly in your own shell using the -c flag. See xan parallel -h for more information about preprocessing.",
         descriptionCn:
-          "将直接在您的shell中使用-c标志运行的预处理命令。有关预处理的更多信息,请参阅xan parallel -h",
+          "将直接在您的shell中使用-c标志运行的预处理命令.有关预处理的更多信息,请参阅xan parallel -h",
         required: false,
       },
       {
@@ -2445,7 +2445,7 @@ export const xanCommands: XanCommand[] = [
         description:
           "Concatenate files as fast as possible, while skipping subsequent files' headers. Will not normalize the CSV stream at all while doing so, nor verify columns alignment. Only use for performance, and if you know what you are doing.",
         descriptionCn:
-          "尽可能快地拼接文件,同时跳过后续文件的头。这样做时不会规范化CSV流,也不会验证列对齐。仅用于性能,且如果您知道自己在做什么",
+          "尽可能快地拼接文件,同时跳过后续文件的头.这样做时不会规范化CSV流,也不会验证列对齐.仅用于性能,且如果您知道自己在做什么",
         required: false,
         default: false,
       },
@@ -2862,7 +2862,7 @@ export const xanCommands: XanCommand[] = [
         type: "string",
         description:
           "New names for the exploded columns. Must be written in CSV format if exploding multiple columns",
-        descriptionCn: "展开列的新名称。如果展开多列,必须以CSV格式写入",
+        descriptionCn: "展开列的新名称.如果展开多列,必须以CSV格式写入",
         required: false,
       },
       {
@@ -2922,7 +2922,7 @@ export const xanCommands: XanCommand[] = [
         description:
           "Pluralize (supporting only very simple English-centric cases) the imploded column names. Does not work with -r, --rename.",
         descriptionCn:
-          "复数化合并的列名(仅支持非常简单的以英语为中心的情况)。不适用于-r, --rename",
+          "复数化合并的列名(仅支持非常简单的以英语为中心的情况).不适用于-r, --rename",
         required: false,
         default: false,
       },
@@ -2931,7 +2931,7 @@ export const xanCommands: XanCommand[] = [
         type: "string",
         description:
           "New name for the diverging column. Does not work with -P, --pluralize.",
-        descriptionCn: "差异列的新名称。不适用于-P, --pluralize",
+        descriptionCn: "差异列的新名称.不适用于-P, --pluralize",
         required: false,
       },
       {
@@ -3165,7 +3165,7 @@ export const xanCommands: XanCommand[] = [
         name: "encoding",
         type: "string",
         description: "Encoding to read on disk. Will default to utf-8",
-        descriptionCn: "磁盘上读取的编码。默认为utf-8",
+        descriptionCn: "磁盘上读取的编码.默认为utf-8",
         required: false,
         default: "utf-8",
       },
@@ -4146,6 +4146,33 @@ export const xanCommands: XanCommand[] = [
         description:
           "Append new columns named <col><SUFFIX> instead of replacing in place",
         descriptionCn: "保留原列,追加 <列名><后缀> 的新列;不填则原位替换",
+        required: false,
+      },
+    ],
+  },
+  {
+    id: "duckdb",
+    name: "duckdb",
+    description:
+      "Run a DuckDB SQL query. The piped CSV is available as the `input` relation; large joins/aggregates, Parquet/JSON reading supported",
+    descriptionCn:
+      "用 DuckDB 执行 SQL 查询.上游 CSV 作为虚拟表 `input` 使用;支持复杂聚合、多表、Parquet/JSON 读取",
+    category: "Plugins",
+    plugin: true,
+    parameters: [
+      {
+        name: "sql",
+        type: "string",
+        description:
+          "SQL query. The upstream CSV is exposed as the `input` virtual relation",
+        descriptionCn: "SQL 查询语句.上游 CSV 数据作为虚拟关系 `input` 提供",
+        required: true,
+      },
+      {
+        name: "noheader",
+        type: "flag",
+        description: "Emit output without a header row",
+        descriptionCn: "输出不包含表头行",
         required: false,
       },
     ],

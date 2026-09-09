@@ -79,7 +79,10 @@ import {
   BatchFromForm,
   BatchToForm,
 } from "@/components/dialog/commands/CustomForms";
-import { PinyinForm } from "@/components/dialog/commands/PluginForms";
+import {
+  PinyinForm,
+  DuckDBForm,
+} from "@/components/dialog/commands/PluginForms";
 
 export const COMMAND_FORMS: Record<
   CommandDialogType,
@@ -170,6 +173,7 @@ export const COMMAND_FORMS: Record<
 
   // Plugins
   pinyin: PinyinForm,
+  duckdb: DuckDBForm,
 };
 
 export { getParameterDescription } from "@/components/dialog/commands/parameterDescriptions";

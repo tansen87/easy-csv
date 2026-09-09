@@ -2,6 +2,7 @@ import { CommandFormProps } from "@/components/dialog/commands/types";
 import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { DuckdbEditor } from "@/components/expression/DuckdbEditor";
 import { useLanguage } from "@/i18n";
 
 export function PinyinForm(props: CommandFormProps) {
@@ -70,6 +71,50 @@ export function PinyinForm(props: CommandFormProps) {
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
+      </div>
+    </CommandFormWrapper>
+  );
+}
+
+export function DuckDBForm(props: CommandFormProps) {
+  const { commandDialog, setCommandDialog, headers } = props;
+  const { language } = useLanguage();
+  const isZh = language === "zh";
+  const sql = (commandDialog.params.sql as string) || "";
+
+  return (
+    <CommandFormWrapper {...props} disabled={!sql.trim()}>
+      <div className="space-y-3">
+        <div>
+          <label className="text-sm font-medium">
+            {isZh ? "SQL 查询" : "SQL Query"}
+          </label>
+          <DuckdbEditor
+            value={sql}
+            onChange={(v) =>
+              updateParam(commandDialog, setCommandDialog, "sql", v)
+            }
+            columns={headers ?? []}
+            autoFocus
+          />
+        </div>
+
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={commandDialog.params.noheader === true}
+            onChange={(e) =>
+              updateParam(
+                commandDialog,
+                setCommandDialog,
+                "noheader",
+                e.target.checked,
+              )
+            }
+            className="h-3.5 w-3.5 accent-foreground"
+          />
+          {isZh ? "输出不包含表头行" : "Emit output without a header row"}
+        </label>
       </div>
     </CommandFormWrapper>
   );

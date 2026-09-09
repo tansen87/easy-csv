@@ -7,5 +7,4 @@
 /gen/schemas
 
 # exe executable
-xan.exe
-pinyin.exe
+*.exe

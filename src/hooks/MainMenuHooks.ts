@@ -477,6 +477,16 @@ export function MainMenuHooks({
       );
 
       const pipelineLines = executableSteps.map((step, index) => {
+        // DuckDB steps are emitted as `duckdb -c "<sql>"` rather than a xan
+        // subcommand. The in-app `input` virtual relation has no standalone
+        // equivalent; exported scripts rely on the user adapting the data source.
+        if (step.command.id === "duckdb") {
+          const sql = String(step.parameters.sql || "").trim();
+          // DuckDB query results are always emitted as CSV (the only supported
+          // format); downstream xan steps consume CSV.
+          const noheader = step.parameters.noheader ? " -noheader" : "";
+          return `duckdb -c "${sql.replace(/"/g, '\\"')}" -csv${noheader}`.trim();
+        }
         // Promote first add-pattern to the positional pattern for search when
         // the main `pattern` is empty (keeps exported scripts consistent with
         // the multi-value execution path).

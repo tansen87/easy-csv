@@ -118,6 +118,23 @@ fn get_db() -> Option<&'static DbState> {
       );
     }
 
+    // DuckDB CLI (optional plugin, NOT bundled). Registering the mapping here
+    // lets `command_executable("duckdb")` route to the user-dropped binary; the
+    // binary itself must be placed in the platform plugin dir by the user.
+    let seeded_duckdb: i64 = conn
+      .query_row(
+        "SELECT COUNT(*) FROM plugins WHERE name = 'duckdb'",
+        [],
+        |row| row.get(0),
+      )
+      .unwrap_or(0);
+    if seeded_duckdb == 0 {
+      let _ = conn.execute(
+        "INSERT INTO plugins (name, executable) VALUES ('duckdb', 'duckdb')",
+        [],
+      );
+    }
+
     // Make sure the plugin folder exists so users have a documented place to
     // drop xan/pinyin binaries.
     ensure_plugin_dir_exists();
@@ -266,7 +283,14 @@ pub async fn check_plugins() -> Result<Vec<PluginStatus>, String> {
     let version = match &found {
       Some(path) => {
         let mut cmd = Command::new(path);
-        cmd.arg("--version");
+        // DuckDB's CLI reports its version with `-version` (SQLite shell style);
+        // xan/pinyin use the conventional `--version`.
+        let version_arg = if plugin.name == "duckdb" {
+          "-version"
+        } else {
+          "--version"
+        };
+        cmd.arg(version_arg);
         #[cfg(target_os = "windows")]
         {
           cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
