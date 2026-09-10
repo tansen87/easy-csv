@@ -189,7 +189,6 @@ export interface Translations {
 
   // Floating panel docking
   collapsePanel: string;
-  expandPanel: string;
 
   // Execution history
   executionHistory: string;
@@ -551,7 +550,6 @@ export const translations: Record<Language, Translations> = {
 
     // Floating panel docking
     collapsePanel: "Collapse",
-    expandPanel: "Expand",
 
     // Execution history
     executionHistory: "Execution History",
@@ -906,7 +904,6 @@ export const translations: Record<Language, Translations> = {
 
     // Floating panel docking
     collapsePanel: "折叠",
-    expandPanel: "展开",
 
     // Execution history
     executionHistory: "执行历史",

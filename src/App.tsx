@@ -152,7 +152,7 @@ function AppContent() {
   // D2: collapsed capsules stack in a fixed order at the top-right corner,
   // below the app header (48px), one slot per collapsed panel.
   const collapsedStack = useMemo(() => {
-    const order = ["logPanel", "chartPanel", "commandList"] as const;
+    const order = ["chartPanel"] as const;
     const result: Partial<Record<(typeof order)[number], number>> = {};
     let slot = 0;
     for (const key of order) {
@@ -162,11 +162,7 @@ function AppContent() {
       }
     }
     return result;
-  }, [
-    session.panelStates.logPanel?.collapsed,
-    session.panelStates.chartPanel?.collapsed,
-    session.panelStates.commandList?.collapsed,
-  ]);
+  }, [session.panelStates.chartPanel?.collapsed]);
 
   const progressHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -1531,7 +1527,6 @@ function AppContent() {
             onDockChange={(patch) =>
               session.updatePanelState("commandList", patch)
             }
-            capsuleY={collapsedStack.commandList}
           />
 
           <CommandPalette
@@ -1555,7 +1550,6 @@ function AppContent() {
               session.updatePanelState("logPanel", patch)
             }
             bottomOffset={aiBottomOffset}
-            capsuleY={collapsedStack.logPanel}
           />
 
           <ExecutionHistoryDialog

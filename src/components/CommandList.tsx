@@ -9,10 +9,8 @@ import {
   HelpCircle,
   Search,
   X,
-  ChevronUp,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { Tooltip } from "@/components/ui/tooltip";
 import { XanCommand, PanelDockState } from "@/types/xan";
 import { commandCategories } from "@/data/commands";
 import { useLanguage } from "@/i18n";
@@ -27,12 +25,10 @@ interface CommandListProps {
   onSearchChange: (query: string) => void;
   isVisible: boolean;
   onClose: () => void;
-  /** Persisted docking state (D2). */
+  /** Persisted docking state. */
   dockState?: PanelDockState;
-  /** Report position/collapse changes for persistence (D2). */
+  /** Report position changes for persistence. */
   onDockChange?: (patch: Partial<PanelDockState>) => void;
-  /** Top-right stack offset for the collapsed capsule (D2). */
-  capsuleY?: number;
 }
 
 export const CommandList = React.memo(function CommandList({
@@ -45,7 +41,6 @@ export const CommandList = React.memo(function CommandList({
   onClose,
   dockState,
   onDockChange,
-  capsuleY,
 }: CommandListProps) {
   const [expandedCategories, setExpandedCategories] = useState<
     Record<string, boolean>
@@ -59,9 +54,6 @@ export const CommandList = React.memo(function CommandList({
     ),
   );
   const [isDragging, setIsDragging] = useState(false);
-  const [collapsed, setCollapsed] = useState<boolean>(
-    dockState?.collapsed ?? false,
-  );
   const [pos, setPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const dragStateRef = useRef({
     startX: 0,
@@ -268,26 +260,6 @@ export const CommandList = React.memo(function CommandList({
 
   if (!isVisible) return null;
 
-  // collapsed capsule (edge pill) with one-click restore.
-  if (collapsed) {
-    return (
-      <div
-        className="fixed z-floating flex items-center gap-1.5 px-3 py-2 bg-background border border-border/50 rounded-full shadow-xl cursor-pointer select-none"
-        style={{ top: capsuleY ?? 56, right: 8 }}
-        role="button"
-        onContextMenu={(e) => e.preventDefault()}
-        onClick={() => {
-          setCollapsed(false);
-          onDockChange?.({ collapsed: false });
-        }}
-      >
-        <ListTree className="h-4 w-4 text-primary" />
-        <span className="text-xs font-medium">{t.cmds}</span>
-        <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
-      </div>
-    );
-  }
-
   return (
     <div
       ref={panelRef}
@@ -320,19 +292,6 @@ export const CommandList = React.memo(function CommandList({
             className="w-full pl-8 pr-3 py-1.5 text-xs border border-border/50 rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
           />
         </div>
-        <Tooltip content={t.collapsePanel}>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setCollapsed(true);
-              onDockChange?.({ collapsed: true });
-            }}
-            className="h-6 px-1.5 text-xs font-medium hover:bg-accent hover:text-foreground"
-          >
-            <ChevronDown className="h-3 w-3" />
-          </Button>
-        </Tooltip>
         <Button
           variant="ghost"
           size="sm"
