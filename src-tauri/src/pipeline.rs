@@ -1025,6 +1025,31 @@ fn pipeline_seq(
     let _ = std::fs::remove_file(t);
   }
 
+  // A duckdb step can't accept a xan-style `--output` flag; the frontend
+  // expresses "export to file" by appending an `output` param to the last step.
+  // When that final step is duckdb, write its captured CSV stdout to the target
+  // path here, so `[duckdb] -> [output]` works without an intermediate xan step.
+  if let Some(last) = commands.last() {
+    if is_duckdb(&last.name) {
+      if let Some(path) = last
+        .parameters
+        .iter()
+        .find(|p| p.name == "output" && !p.value.is_empty())
+        .map(|p| p.value.clone())
+      {
+        match std::fs::write(&path, &final_stdout) {
+          Ok(()) => final_stdout.clear(),
+          Err(e) => {
+            step_errors.insert(
+              last.id.clone().unwrap_or_default(),
+              format!("Failed to write output file: {}", e),
+            );
+          }
+        }
+      }
+    }
+  }
+
   let status = final_status.unwrap_or_else(|| std::process::Command::new("").status().unwrap());
   let mut combined_stderr = Vec::new();
   for (_, buf) in &raw_stderr {
