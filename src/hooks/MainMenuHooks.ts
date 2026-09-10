@@ -482,10 +482,14 @@ export function MainMenuHooks({
         // equivalent; exported scripts rely on the user adapting the data source.
         if (step.command.id === "duckdb") {
           const sql = String(step.parameters.sql || "").trim();
-          // DuckDB query results are always emitted as CSV (the only supported
-          // format); downstream xan steps consume CSV.
-          const noheader = step.parameters.noheader ? " -noheader" : "";
-          return `duckdb -c "${sql.replace(/"/g, '\\"')}" -csv${noheader}`.trim();
+          // DuckDB query results are always emitted as CSV (`-csv`) with a header
+          // row and bail-on-error enabled. `-separator` mirrors the app's default
+          // delimiter so the piped CSV matches the configured field separator.
+          const separator =
+            defaultDelimiter && defaultDelimiter.trim() !== ""
+              ? defaultDelimiter
+              : ",";
+          return `duckdb -c "${sql.replace(/"/g, '\\"')}" -csv -bail -separator "${separator}"`.trim();
         }
         // Promote first add-pattern to the positional pattern for search when
         // the main `pattern` is empty (keeps exported scripts consistent with
@@ -697,7 +701,7 @@ export function MainMenuHooks({
     } catch (error) {
       showToast(`Failed to save pipeline: ${error}`, "error");
     }
-  }, [getCurrentPipeline, getCurrentTab, showToast]);
+  }, [getCurrentPipeline, getCurrentTab, showToast, defaultDelimiter]);
 
   const handleExportPipeline = useCallback(async () => {
     const currentPipeline = getCurrentPipeline();

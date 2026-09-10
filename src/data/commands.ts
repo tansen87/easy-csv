@@ -4168,13 +4168,6 @@ export const xanCommands: XanCommand[] = [
         descriptionCn: "SQL 查询语句.上游 CSV 数据作为虚拟关系 `input` 提供",
         required: true,
       },
-      {
-        name: "noheader",
-        type: "flag",
-        description: "Emit output without a header row",
-        descriptionCn: "输出不包含表头行",
-        required: false,
-      },
     ],
   },
 ];

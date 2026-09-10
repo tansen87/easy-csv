@@ -772,17 +772,21 @@ fn make_temp_csv() -> PathBuf {
 /// user's SQL as the virtual relation `input`. Guarded by `<sql>` referencing
 /// `input`, we prepend a `CREATE VIEW` that materializes it via `read_csv_auto`.
 /// Non-`input` queries (e.g. reading external files, `SELECT 1`) are untouched.
-fn build_duckdb_args(cmd: &PipelineCommand, input_csv: &Path) -> Vec<String> {
+fn build_duckdb_args(
+  cmd: &PipelineCommand,
+  input_csv: &Path,
+  default_delimiter: &str,
+) -> Vec<String> {
   let mut map = HashMap::new();
   for p in &cmd.parameters {
     map.insert(p.name.clone(), p.value.clone());
   }
 
   let sql = map.get("sql").cloned().unwrap_or_default();
-  // DuckDB query results are always emitted as CSV (the only supported format);
-  // ignore any legacy `format` parameter.
-  let noheader = map.get("noheader").map(|v| v == "true").unwrap_or(false);
-
+  // DuckDB query results are always emitted as CSV (the only supported format),
+  // which by default includes a header row. `-bail` enables the stop-on-error
+  // behavior; `-separator` mirrors the app's default delimiter. Ignore any
+  // legacy `format`/`noheader` parameters.
   let mut args = Vec::new();
   args.push("-csv".to_string());
   if sql.references_input() {
@@ -799,9 +803,14 @@ fn build_duckdb_args(cmd: &PipelineCommand, input_csv: &Path) -> Vec<String> {
     args.push(sql);
   }
 
-  if noheader {
-    args.push("-noheader".to_string());
-  }
+  args.push("-bail".to_string());
+  let separator = if default_delimiter.is_empty() {
+    ","
+  } else {
+    default_delimiter
+  };
+  args.push("-separator".to_string());
+  args.push(separator.to_string());
   args
 }
 
@@ -889,7 +898,7 @@ fn pipeline_seq(
     let needs_file_path = matches!(name, "sort" | "dedup" | "shuffle" | "from");
 
     let argv: Vec<String> = if duckdb {
-      build_duckdb_args(cmd, &current_input)
+      build_duckdb_args(cmd, &current_input, default_delimiter)
     } else {
       let mut args = vec![name.to_string()];
       if i == 0 && no_headers {

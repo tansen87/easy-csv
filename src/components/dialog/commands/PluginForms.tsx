@@ -98,23 +98,6 @@ export function DuckDBForm(props: CommandFormProps) {
             autoFocus
           />
         </div>
-
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={commandDialog.params.noheader === true}
-            onChange={(e) =>
-              updateParam(
-                commandDialog,
-                setCommandDialog,
-                "noheader",
-                e.target.checked,
-              )
-            }
-            className="h-3.5 w-3.5 accent-foreground"
-          />
-          {isZh ? "输出不包含表头行" : "Emit output without a header row"}
-        </label>
       </div>
     </CommandFormWrapper>
   );
