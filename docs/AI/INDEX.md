@@ -431,7 +431,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | `scroll-area.tsx` | 滚动区域 |
 | `resize-handle.tsx` | 面板拖拽调整大小手柄 |
 | `tooltip.tsx` | Tooltip 提示组件,支持 top/bottom/left/right 定位 |
-| `SearchableSelect.tsx` | 可搜索下拉选择框 |
+| `Select.tsx` | 可搜索下拉选择框 |
 
 ---
 

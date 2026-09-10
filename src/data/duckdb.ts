@@ -322,37 +322,37 @@ export const duckdbTemplates: DuckdbTemplate[] = [
   {
     key: "select-all",
     label: "SELECT *",
-    sql: "SELECT * FROM input;\n",
+    sql: "SELECT * FROM input LIMIT 100;",
   },
   {
     key: "groupby",
     label: "GROUP BY",
-    sql: "SELECT\n  column1,\n  count(*) AS n\nFROM input\nGROUP BY column1\nORDER BY n DESC;\n",
+    sql: "SELECT\n  column1,\n  count(*) AS n\nFROM input\nGROUP BY column1\nORDER BY n DESC;",
   },
   {
     key: "filter",
     label: "WHERE",
-    sql: "SELECT *\nFROM input\nWHERE column1 IS NOT NULL AND column2 > 0;\n",
+    sql: "SELECT *\nFROM input\nWHERE column1 IS NOT NULL AND column2 > 0;",
   },
   {
     key: "join",
     label: "JOIN",
-    sql: "SELECT input.*, lookup.*\nFROM input\nJOIN read_csv_auto('C:/path/to/other.csv', header = true)\n  AS lookup ON input.key = lookup.key;\n",
+    sql: "SELECT input.*, lookup.*\nFROM input\nJOIN read_csv_auto('C:/path/to/other.csv', header = true)\n  AS lookup ON input.key = lookup.key;",
   },
   {
     key: "window",
     label: "WINDOW",
-    sql: "SELECT\n  column1,\n  row_number() OVER (PARTITION BY column2 ORDER BY column3) AS rn\nFROM input;\n",
+    sql: "SELECT\n  column1,\n  row_number() OVER (PARTITION BY column2 ORDER BY column3) AS rn\nFROM input;",
   },
   {
     key: "pivot",
     label: "PIVOT",
-    sql: "PIVOT input\nON category\nUSING sum(value)\nGROUP BY grouping_column;\n",
+    sql: "PIVOT input\nON category\nUSING sum(value)\nGROUP BY grouping_column;",
   },
   {
     key: "cte",
     label: "CTE",
-    sql: "WITH filtered AS (\n  SELECT * FROM input WHERE column1 IS NOT NULL\n)\nSELECT column1, count(*) AS n FROM filtered\nGROUP BY column1;\n",
+    sql: "WITH filtered AS (\n  SELECT * FROM input WHERE column1 IS NOT NULL\n)\nSELECT column1, count(*) AS n FROM filtered\nGROUP BY column1;",
   },
 ];
 

@@ -3,7 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { CommandFormProps } from "@/components/dialog/commands/types";
 import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { getParameterDescription } from "@/components/dialog/commands/parameterDescriptions";
 import { useLanguage } from "@/i18n";
@@ -53,7 +53,7 @@ export function BatchFilterForm(props: CommandFormProps) {
           </div>
           <div>
             <label className="text-sm font-medium">Filter Type</label>
-            <SearchableSelect
+            <Select
               value={commandDialog.params["filter-type"] || "text"}
               onChange={(value) => {
                 const newParams: Record<string, any> = {
@@ -88,7 +88,7 @@ export function BatchFilterForm(props: CommandFormProps) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium">Operator</label>
-            <SearchableSelect
+            <Select
               value={
                 commandDialog.params["text-operator"] ||
                 commandDialog.params["number-operator"] ||
@@ -139,7 +139,7 @@ export function BatchFilterForm(props: CommandFormProps) {
           </div>
           <div>
             <label className="text-sm font-medium">Value Source</label>
-            <SearchableSelect
+            <Select
               value={commandDialog.params["value-mode"] || "manual"}
               onChange={(value) => {
                 const newParams: Record<string, any> = {
@@ -332,7 +332,7 @@ export function BatchFromForm(props: CommandFormProps) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium">format</label>
-            <SearchableSelect
+            <Select
               value={commandDialog.params.format || ""}
               onChange={(value) =>
                 setCommandDialog({
@@ -599,7 +599,7 @@ export function BatchToForm(props: CommandFormProps) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium">format</label>
-            <SearchableSelect
+            <Select
               value={commandDialog.params.format || "xlsx"}
               onChange={(value) =>
                 setCommandDialog({

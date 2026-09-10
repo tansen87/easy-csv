@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronDown } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
+import { ScrollBar } from "@/components/ui/scroll-area";
 
-interface SearchableSelectProps {
+interface SelectProps {
   value: string;
   onChange: (value: string) => void;
   options: { label: string; value: string }[];
@@ -12,14 +13,14 @@ interface SearchableSelectProps {
   width?: string | number;
 }
 
-export function SearchableSelect({
+export function Select({
   value,
   onChange,
   options,
   placeholder = "Search or select...",
   size = "sm",
   width,
-}: SearchableSelectProps) {
+}: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -169,33 +170,36 @@ export function SearchableSelect({
           role="listbox"
           className="absolute z-50 w-full border rounded-md bg-background shadow-lg mt-1"
         >
-          <ScrollArea className="h-40 px-2">
-            <div className="p-1" ref={listRef}>
-              {filteredOptions.length > 0 ? (
-                filteredOptions.map((opt, index) => (
-                  <button
-                    key={opt.value}
-                    id={`ss-option-${index}`}
-                    role="option"
-                    aria-selected={activeIndex === index}
-                    onClick={() => handleSelect(opt.value)}
-                    onMouseEnter={() => setActiveIndex(index)}
-                    className={`w-full px-2 py-1.5 text-xs text-left transition-colors truncate rounded-md ${
-                      activeIndex === index
-                        ? "bg-accent text-accent-foreground"
-                        : "hover:bg-accent"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))
-              ) : (
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                  No options found
-                </div>
-              )}
-            </div>
-          </ScrollArea>
+          <ScrollAreaPrimitive.Root className="relative overflow-hidden">
+            <ScrollAreaPrimitive.Viewport className="w-full max-h-40 overflow-y-auto px-2 rounded-[inherit]">
+              <div className="p-1" ref={listRef}>
+                {filteredOptions.length > 0 ? (
+                  filteredOptions.map((opt, index) => (
+                    <button
+                      key={opt.value}
+                      id={`ss-option-${index}`}
+                      role="option"
+                      aria-selected={activeIndex === index}
+                      onClick={() => handleSelect(opt.value)}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      className={`w-full px-2 py-1.5 text-xs text-left transition-colors truncate rounded-md ${
+                        activeIndex === index
+                          ? "bg-accent text-accent-foreground"
+                          : "hover:bg-accent"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                    No options found
+                  </div>
+                )}
+              </div>
+            </ScrollAreaPrimitive.Viewport>
+            <ScrollBar />
+          </ScrollAreaPrimitive.Root>
         </div>
       )}
     </div>

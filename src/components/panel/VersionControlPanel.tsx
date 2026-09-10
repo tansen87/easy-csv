@@ -17,7 +17,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { Tooltip } from "@/components/ui/tooltip";
 import { ConfirmDialog } from "@/components/dialog/ConfirmDialog";
 import { PipelineVersion } from "@/types/xan";
@@ -576,7 +576,7 @@ export function VersionControlPanel({
                 <X className="h-3 w-3" />
               </button>
             </div>
-            <SearchableSelect
+            <Select
               value={compareTargetId}
               onChange={(v) => setCompareTargetId(v)}
               options={[

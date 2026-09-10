@@ -1,7 +1,7 @@
 import { CommandFormProps } from "@/components/dialog/commands/types";
 import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { DuckdbEditor } from "@/components/expression/DuckdbEditor";
 import { useLanguage } from "@/i18n";
 
@@ -38,7 +38,7 @@ export function PinyinForm(props: CommandFormProps) {
           <label className="text-sm font-medium">
             {isZh ? "拼音风格" : "Style"}
           </label>
-          <SearchableSelect
+          <Select
             value={commandDialog.params.style}
             onChange={(value) =>
               updateParam(commandDialog, setCommandDialog, "style", value)

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDraggable } from "@/hooks/useDraggable";
 import { XanCommand } from "@/types/xan";
@@ -203,7 +203,7 @@ export function BatchFilterDialog({
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
               Column
             </label>
-            <SearchableSelect
+            <Select
               value={selectedColumn}
               onChange={(v) => setSelectedColumn(v as string)}
               options={headers.map((header) => ({
@@ -242,7 +242,7 @@ export function BatchFilterDialog({
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
                 Operator
               </label>
-              <SearchableSelect
+              <Select
                 value={textOperator}
                 onChange={(v) => setTextOperator(v as TextOperator)}
                 options={textOperators}
@@ -254,7 +254,7 @@ export function BatchFilterDialog({
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
                 Operator
               </label>
-              <SearchableSelect
+              <Select
                 value={numberOperator}
                 onChange={(v) => setNumberOperator(v as NumberOperator)}
                 options={numberOperators}
@@ -335,7 +335,7 @@ export function BatchFilterDialog({
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">
                     Extract unique values from column
                   </label>
-                  <SearchableSelect
+                  <Select
                     value={extractColumn}
                     onChange={(v) => setExtractColumn(v as string)}
                     options={headers.map((header) => ({

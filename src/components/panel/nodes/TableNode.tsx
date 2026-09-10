@@ -2,7 +2,7 @@ import React, { useCallback, useState, useRef, useEffect } from "react";
 import { Handle, Position } from "reactflow";
 import { Table, Check, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/i18n";
 
@@ -196,7 +196,7 @@ export function TableNode({
         </div>
         <span className="font-semibold text-sm">Input Data</span>
         <div className="flex-1 nodrag nowheel">
-          <SearchableSelect
+          <Select
             value=""
             onChange={(value) => {
               const colIndex = headers.indexOf(value);

@@ -14,7 +14,7 @@ import {
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { useLanguage } from "@/i18n";
 
 export interface CsvDiffEntry {
@@ -450,7 +450,7 @@ export function CsvDiffDialog({
               {t.csvDelimiter}
             </label>
             <div className="w-32">
-              <SearchableSelect
+              <Select
                 value={delimiter}
                 onChange={setDelimiter}
                 options={DELIMITERS}

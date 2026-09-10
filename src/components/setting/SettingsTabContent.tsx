@@ -30,7 +30,7 @@ import { open } from "@tauri-apps/plugin-shell";
 import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { useLanguage } from "@/i18n";
 import {
   AIConfig,
@@ -175,6 +175,48 @@ export function SettingsTabContent({
         <div className="p-6">
           {activeTab === "general" && (
             <div className="space-y-6">
+              {/* Delimiter */}
+              <div className="w-1/3">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <SeparatorVertical className="h-4 w-4" />
+                  {t.csvDelimiter}
+                </h3>
+                <Select
+                  value={defaultDelimiter}
+                  onChange={onDefaultDelimiterChange}
+                  options={[
+                    { label: "Comma (,)", value: "," },
+                    { label: "Semicolon (;)", value: ";" },
+                    { label: "Tab (\\t)", value: "\t" },
+                    { label: "Pipe (|)", value: "|" },
+                    { label: "Caret (^)", value: "^" },
+                  ]}
+                  placeholder={t.selectDelimiter}
+                  size="sm"
+                />
+                <p className="text-sm text-muted-foreground">
+                  {t.delimiterDesc}
+                </p>
+              </div>
+              {/* No Headers */}
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <RectangleEllipsis className="h-4 w-4" />
+                  {t.noHeaders}
+                </h3>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={noHeaders}
+                    onChange={(e) => onNoHeadersChange(e.target.checked)}
+                    className="w-4 h-4 rounded border-input accent-foreground"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    {t.noHeadersDesc}
+                  </p>
+                </label>
+              </div>
+
               {/* Language */}
               <div>
                 <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -333,48 +375,6 @@ export function SettingsTabContent({
                   </div>
                 </label>
               </div>
-
-              {/* Delimiter */}
-              <div className="w-1/3">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <SeparatorVertical className="h-4 w-4" />
-                  {t.csvDelimiter}
-                </h3>
-                <SearchableSelect
-                  value={defaultDelimiter}
-                  onChange={onDefaultDelimiterChange}
-                  options={[
-                    { label: "Comma (,)", value: "," },
-                    { label: "Semicolon (;)", value: ";" },
-                    { label: "Tab (\\t)", value: "\t" },
-                    { label: "Pipe (|)", value: "|" },
-                    { label: "Caret (^)", value: "^" },
-                  ]}
-                  placeholder={t.selectDelimiter}
-                  size="sm"
-                />
-                <p className="text-sm text-muted-foreground">
-                  {t.delimiterDesc}
-                </p>
-              </div>
-              {/* No Headers */}
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <RectangleEllipsis className="h-4 w-4" />
-                  {t.noHeaders}
-                </h3>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={noHeaders}
-                    onChange={(e) => onNoHeadersChange(e.target.checked)}
-                    className="w-4 h-4 rounded border-input accent-foreground"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    {t.noHeadersDesc}
-                  </p>
-                </label>
-              </div>
             </div>
           )}
 
@@ -389,7 +389,7 @@ export function SettingsTabContent({
                 <p className="text-sm text-muted-foreground mb-3">
                   {t.aiProviderDesc}
                 </p>
-                <SearchableSelect
+                <Select
                   value={aiConfig.provider}
                   onChange={async (provider) => {
                     const typedProvider = provider as string;
@@ -432,7 +432,7 @@ export function SettingsTabContent({
                 <p className="text-sm text-muted-foreground mb-3">
                   {t.aiModelDesc}
                 </p>
-                <SearchableSelect
+                <Select
                   value={aiConfig.model}
                   onChange={(model) => onAIConfigChange({ ...aiConfig, model })}
                   options={

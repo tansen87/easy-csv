@@ -17,7 +17,7 @@
 - **Configurable history limit** setting.
 - **Execution notification toggle** in preference settings.
 - **Localized parameter descriptions** in `CommandDialog` forms.
-- **SearchableSelect**: keyboard navigation (ArrowUp/Down, Enter, Esc) with full ARIA attributes (combobox/listbox/option).
+- **Select**: keyboard navigation (ArrowUp/Down, Enter, Esc) with full ARIA attributes (combobox/listbox/option).
 - **UI polish**: backdrop blur on the settings dialog and `Esc` to close `CommandDialog`; refined command parameter descriptions.
 
 ### Changed

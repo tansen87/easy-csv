@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { useDraggable } from "@/hooks/useDraggable";
 
 interface WindowDialogState {
@@ -275,7 +275,7 @@ export function WindowDialog({
                       <label className="text-xs font-medium text-muted-foreground">
                         Expression
                       </label>
-                      <SearchableSelect
+                      <Select
                         value={entry.func}
                         onChange={(value) => updateEntry(index, "func", value)}
                         options={WINDOW_EXPRS.map((f) => ({

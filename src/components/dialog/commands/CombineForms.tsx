@@ -1,4 +1,4 @@
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { CommandFormProps } from "@/components/dialog/commands/types";
 import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
@@ -13,7 +13,7 @@ export function CatForm(props: CommandFormProps) {
     <CommandFormWrapper {...props} scrollHeight="28vh">
       <div>
         <label className="text-sm font-medium">Mode</label>
-        <SearchableSelect
+        <Select
           value={commandDialog.params.mode || "rows"}
           onChange={(value) =>
             updateParam(commandDialog, setCommandDialog, "mode", value)
@@ -338,7 +338,7 @@ export function JoinForm(props: CommandFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="text-sm font-medium">join-type</label>
-          <SearchableSelect
+          <Select
             value={commandDialog.params["join-type"] || "inner"}
             onChange={(value) =>
               updateParam(commandDialog, setCommandDialog, "join-type", value)
@@ -358,7 +358,7 @@ export function JoinForm(props: CommandFormProps) {
         </div>
         <div>
           <label className="text-sm font-medium">drop-key</label>
-          <SearchableSelect
+          <Select
             value={commandDialog.params["drop-key"] || "none"}
             onChange={(value) =>
               updateParam(commandDialog, setCommandDialog, "drop-key", value)

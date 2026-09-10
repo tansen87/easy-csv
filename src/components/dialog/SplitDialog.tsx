@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { useDraggable } from "@/hooks/useDraggable";
 import { VariableHint } from "@/components/dialog/commands/VariableHint";
 
@@ -194,7 +194,7 @@ export function SplitDialog({
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
               Column
             </label>
-            <SearchableSelect
+            <Select
               value={selectedColumn}
               onChange={setSelectedColumn}
               options={headers.map((header) => ({
@@ -209,7 +209,7 @@ export function SplitDialog({
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
               Operation Type
             </label>
-            <SearchableSelect
+            <Select
               value={sliceType}
               onChange={setSliceType}
               options={SLICE_TYPES}
@@ -282,7 +282,7 @@ export function SplitDialog({
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
                   Separator
                 </label>
-                <SearchableSelect
+                <Select
                   value={separator}
                   onChange={setSeparator}
                   options={SPLIT_SEPARATORS}

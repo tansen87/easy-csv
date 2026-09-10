@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { useDraggable } from "@/hooks/useDraggable";
 
 interface PadDialogState {
@@ -123,7 +123,7 @@ export function PadDialog({
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Column
           </label>
-          <SearchableSelect
+          <Select
             value={selectedColumn}
             onChange={setSelectedColumn}
             options={headers.map((header) => ({
@@ -137,7 +137,7 @@ export function PadDialog({
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Pad Type
           </label>
-          <SearchableSelect
+          <Select
             value={padType}
             onChange={setPadType}
             options={PAD_TYPES}

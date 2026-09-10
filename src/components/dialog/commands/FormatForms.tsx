@@ -1,7 +1,7 @@
 import { CommandFormProps } from "@/components/dialog/commands/types";
 import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { getParameterDescription } from "@/components/dialog/commands/parameterDescriptions";
 import { useLanguage } from "@/i18n";
 
@@ -345,7 +345,7 @@ export function FmtForm(props: CommandFormProps) {
       <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="text-sm font-medium">out-delimiter</label>
-          <SearchableSelect
+          <Select
             value={commandDialog.params["out-delimiter"] || ","}
             onChange={(value) =>
               updateParam(
@@ -660,7 +660,7 @@ export function FromForm(props: CommandFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="text-sm font-medium">format</label>
-          <SearchableSelect
+          <Select
             value={commandDialog.params.format || ""}
             onChange={(value) =>
               updateParam(commandDialog, setCommandDialog, "format", value)
@@ -869,7 +869,7 @@ export function ToForm(props: CommandFormProps) {
       <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="text-sm font-medium">format</label>
-          <SearchableSelect
+          <Select
             value={commandDialog.params.format || "xlsx"}
             onChange={(value) =>
               updateParam(commandDialog, setCommandDialog, "format", value)

@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { useDraggable } from "@/hooks/useDraggable";
 
 interface PivotDialogState {
@@ -317,7 +317,7 @@ export function PivotDialog({
               valueColumns.map((vc, index) => (
                 <div key={index} className="flex items-center gap-1">
                   <div className="relative flex-1 no-drag">
-                    <SearchableSelect
+                    <Select
                       value={vc.column}
                       onChange={(v) => updateValueColumn(index, "column", v)}
                       options={availableForValues.map((h) => ({
@@ -328,7 +328,7 @@ export function PivotDialog({
                     />
                   </div>
                   <div className="relative w-24 no-drag">
-                    <SearchableSelect
+                    <Select
                       value={vc.aggregation}
                       onChange={(v) =>
                         updateValueColumn(index, "aggregation", v)

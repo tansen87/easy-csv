@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { useDraggable } from "@/hooks/useDraggable";
 
 interface DateTransformDialogState {
@@ -164,7 +164,7 @@ export function DateTransformDialog({
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Column
           </label>
-          <SearchableSelect
+          <Select
             value={selectedColumn}
             onChange={setSelectedColumn}
             options={columnOptions}
@@ -176,7 +176,7 @@ export function DateTransformDialog({
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Input Format
           </label>
-          <SearchableSelect
+          <Select
             value={inputFormat}
             onChange={setInputFormat}
             options={DATE_FORMATS}
@@ -188,7 +188,7 @@ export function DateTransformDialog({
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Output Format
           </label>
-          <SearchableSelect
+          <Select
             value={outputFormat}
             onChange={setOutputFormat}
             options={DATE_FORMATS}

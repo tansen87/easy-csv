@@ -12,7 +12,7 @@ import {
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { useLanguage } from "@/i18n";
 import type { ToastType } from "@/components/setting/Toast";
 
@@ -272,7 +272,7 @@ export function CsvEncodingDialog({
               {t.sourceEncoding}
             </label>
             <div className="flex-1 min-w-0">
-              <SearchableSelect
+              <Select
                 value={sourceEncoding}
                 onChange={(v) => {
                   clearFeedback();
@@ -286,7 +286,7 @@ export function CsvEncodingDialog({
               {t.targetEncoding}
             </label>
             <div className="flex-1 min-w-0">
-              <SearchableSelect
+              <Select
                 value={targetEncoding}
                 onChange={(v) => {
                   clearFeedback();

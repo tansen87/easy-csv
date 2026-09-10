@@ -1,7 +1,7 @@
 import { CommandFormProps } from "@/components/dialog/commands/types";
 import { updateParam } from "@/components/dialog/commands/helpers";
 import { CommandFormWrapper } from "@/components/dialog/commands/CommandFormWrapper";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { getParameterDescription } from "@/components/dialog/commands/parameterDescriptions";
 import { useLanguage } from "@/i18n";
 
@@ -144,7 +144,7 @@ export function ViewForm(props: CommandFormProps) {
     <CommandFormWrapper {...props}>
       <div>
         <label className="text-sm font-medium">theme</label>
-        <SearchableSelect
+        <Select
           value={commandDialog.params.theme || "borderless"}
           onChange={(value) =>
             updateParam(commandDialog, setCommandDialog, "theme", value)
@@ -405,7 +405,7 @@ export function HistForm(props: CommandFormProps) {
     <CommandFormWrapper {...props}>
       <div>
         <label className="text-sm font-medium">bar-size</label>
-        <SearchableSelect
+        <Select
           value={commandDialog.params["bar-size"] ?? "medium"}
           onChange={(value) =>
             updateParam(commandDialog, setCommandDialog, "bar-size", value)
@@ -570,7 +570,7 @@ export function PlotForm(props: CommandFormProps) {
         </div>
         <div>
           <label className="text-sm font-medium">aggregate</label>
-          <SearchableSelect
+          <Select
             value={commandDialog.params.aggregate ?? ""}
             onChange={(value) =>
               updateParam(commandDialog, setCommandDialog, "aggregate", value)
@@ -587,7 +587,7 @@ export function PlotForm(props: CommandFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="text-sm font-medium">marker</label>
-          <SearchableSelect
+          <Select
             value={commandDialog.params.marker ?? "braille"}
             onChange={(value) =>
               updateParam(commandDialog, setCommandDialog, "marker", value)
@@ -605,7 +605,7 @@ export function PlotForm(props: CommandFormProps) {
         </div>
         <div>
           <label className="text-sm font-medium">granularity</label>
-          <SearchableSelect
+          <Select
             value={commandDialog.params.granularity ?? ""}
             onChange={(value) =>
               updateParam(commandDialog, setCommandDialog, "granularity", value)
@@ -626,7 +626,7 @@ export function PlotForm(props: CommandFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="text-sm font-medium">x-scale</label>
-          <SearchableSelect
+          <Select
             value={commandDialog.params["x-scale"] ?? "lin"}
             onChange={(value) =>
               updateParam(commandDialog, setCommandDialog, "x-scale", value)
@@ -645,7 +645,7 @@ export function PlotForm(props: CommandFormProps) {
         </div>
         <div>
           <label className="text-sm font-medium">y-scale</label>
-          <SearchableSelect
+          <Select
             value={commandDialog.params["y-scale"] ?? "lin"}
             onChange={(value) =>
               updateParam(commandDialog, setCommandDialog, "y-scale", value)
@@ -739,7 +739,7 @@ export function PlotForm(props: CommandFormProps) {
         </div>
         <div>
           <label className="text-sm font-medium">density-scale</label>
-          <SearchableSelect
+          <Select
             value={commandDialog.params["density-scale"] ?? "log"}
             onChange={(value) =>
               updateParam(
@@ -869,7 +869,7 @@ export function ChartForm(props: CommandFormProps) {
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="text-sm font-medium">chart-type</label>
-          <SearchableSelect
+          <Select
             value={commandDialog.params["chart-type"] ?? "line"}
             onChange={(value) =>
               updateParam(commandDialog, setCommandDialog, "chart-type", value)

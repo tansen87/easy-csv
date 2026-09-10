@@ -35,7 +35,7 @@
 
 - **Canvas moved to React Flow**: `screenToFlowPosition`, default connections, and per-tab input data.
 - **Command dialogs modularized**: `SortDialog`, `NumberTransform`, `TextTransform` split into individual components; `OperationDialog` removed.
-- **Unified UI components**: `SearchableSelect`, select dropdowns, and floating/draggable dialogs.
+- **Unified UI components**: `Select`, select dropdowns, and floating/draggable dialogs.
 - **Parameter handling**: uppercase → lowercase parameter names; `XanParameter` changed from flag to boolean; missing parameters added for `cat`, `count`, `search`, `to`, `plot`, etc.
 - **Auto-reload** current tab data when the delimiter changes.
 - **Retired commands consolidated**: `fuzzy-join` → `join`, `flatmap` → `explode -e`, `grep` → `search --fast-parser`.

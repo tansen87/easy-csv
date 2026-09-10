@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { X, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/dialog/ConfirmDialog";
 import {
   PipelineStep,
@@ -147,7 +147,7 @@ export function VariablePanel({
                     <span className="text-muted-foreground/50">{"}}"}</span>
                   </label>
                   <div className="flex items-center gap-1">
-                    <SearchableSelect
+                    <Select
                       value={v.type}
                       onChange={(ty) =>
                         setType(v.name, ty as PipelineVariableType)

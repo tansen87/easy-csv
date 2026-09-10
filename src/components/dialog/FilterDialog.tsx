@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Select } from "@/components/ui/select";
 import { MultiValueInput } from "@/components/ui/MultiValueInput";
 import { VariableHint } from "@/components/dialog/commands/VariableHint";
 import { useDraggable } from "@/hooks/useDraggable";
@@ -301,7 +301,7 @@ export function FilterDialog({
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Column
           </label>
-          <SearchableSelect
+          <Select
             value={selectedColumn}
             onChange={(v) => setSelectedColumn(v as string)}
             options={headers.map((header) => ({
@@ -318,7 +318,7 @@ export function FilterDialog({
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
                 Operator
               </label>
-              <SearchableSelect
+              <Select
                 value={textOperator}
                 onChange={(v) => setTextOperator(v as TextOperator)}
                 options={textOperators}
@@ -371,7 +371,7 @@ export function FilterDialog({
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
                 Operator
               </label>
-              <SearchableSelect
+              <Select
                 value={numberOperator}
                 onChange={(v) => setNumberOperator(v as NumberOperator)}
                 options={numberOperators}
