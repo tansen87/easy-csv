@@ -4153,19 +4153,16 @@ export const xanCommands: XanCommand[] = [
   {
     id: "duckdb",
     name: "duckdb",
-    description:
-      "Run a DuckDB SQL query. The piped CSV is available as the `input` relation; large joins/aggregates, Parquet/JSON reading supported",
-    descriptionCn:
-      "用 DuckDB 执行 SQL 查询.上游 CSV 作为虚拟表 `input` 使用;支持复杂聚合、多表、Parquet/JSON 读取",
+    description: "Run a DuckDB SQL query",
+    descriptionCn: "用 DuckDB 执行 SQL 查询",
     category: "Plugins",
     plugin: true,
     parameters: [
       {
         name: "sql",
         type: "string",
-        description:
-          "SQL query. The upstream CSV is exposed as the `input` virtual relation",
-        descriptionCn: "SQL 查询语句.上游 CSV 数据作为虚拟关系 `input` 提供",
+        description: "SQL query",
+        descriptionCn: "SQL 查询语句",
         required: true,
       },
     ],

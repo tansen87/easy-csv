@@ -214,6 +214,15 @@ export function DuckdbEditor({
     return () => ro.disconnect();
   }, [syncHighlight]);
 
+  // Auto-resize: grow the textarea from its content height up to `max` px,
+  // after which it scrolls internally. CSS `min-h` still enforces the 160px floor.
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = `${Math.min(ta.scrollHeight, 400)}px`;
+  }, [value]);
+
   const handleScroll = syncHighlight;
 
   return (
@@ -268,7 +277,7 @@ export function DuckdbEditor({
           spellCheck={false}
           autoCapitalize="off"
           autoComplete="off"
-          className="relative z-10 block w-full min-h-[160px] max-h-[240px] p-2 font-mono text-sm leading-relaxed resize-none bg-transparent text-transparent caret-black dark:caret-white border border-transparent rounded-md outline-none ring-0 whitespace-pre-wrap break-all tab-2 expr-editor-scrollbar"
+          className="relative z-10 block w-full min-h-[240px] p-2 font-mono text-sm leading-relaxed resize-none bg-transparent text-transparent caret-black dark:caret-white border border-transparent rounded-md outline-none ring-0 whitespace-pre-wrap break-all tab-2 expr-editor-scrollbar"
         />
 
         {/* Autocomplete dropdown */}
