@@ -13,6 +13,7 @@ import {
   NotebookTabs,
   ListTree,
   Zap,
+  LibraryBig,
 } from "lucide-react";
 
 import { LogPanel } from "@/components/panel/LogPanel";
@@ -1313,7 +1314,7 @@ function AppContent() {
       label: tpl.name,
       description: tpl.description || t.newFromTemplate,
       keywords: t.newFromTemplate,
-      icon: Zap,
+      groupIcon: LibraryBig,
       group: t.paletteTemplates,
       onSelect: () => void handleApplyTemplate(tpl.id),
     }));
@@ -1350,7 +1351,13 @@ function AppContent() {
       };
     });
 
-    return [...actionsWithSearch, ...tabs, ...recent, ...commands, ...templateItems];
+    return [
+      ...actionsWithSearch,
+      ...tabs,
+      ...recent,
+      ...commands,
+      ...templateItems,
+    ];
   }, [
     t,
     language,
