@@ -9,9 +9,6 @@ interface KeyboardShortcutCallbacks {
   onUndo: () => void;
   onRedo: () => void;
   onExecute: () => void;
-  onHelp: () => void;
-  onCheckUpdate: () => void;
-  onShowSettings: () => void;
   onCommands: () => void;
   onLogs: () => void;
   onAI: () => void;
@@ -39,7 +36,6 @@ export function useKeyboardShortcuts(
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const ctrl = e.ctrlKey || e.metaKey;
-      const shift = e.shiftKey;
       const alt = e.altKey;
       const key = e.key.toLowerCase();
 
@@ -90,15 +86,6 @@ export function useKeyboardShortcuts(
       } else if (ctrl && key === "t") {
         e.preventDefault();
         callbacksRef.current.onOpenTemplates();
-      } else if (shift && e.key === "h") {
-        e.preventDefault();
-        callbacksRef.current.onHelp();
-      } else if (shift && e.key === "c") {
-        e.preventDefault();
-        callbacksRef.current.onCheckUpdate();
-      } else if (shift && e.key === "s") {
-        e.preventDefault();
-        callbacksRef.current.onShowSettings();
       } else if (alt && key === "c") {
         e.preventDefault();
         callbacksRef.current.onCommands();

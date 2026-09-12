@@ -25,11 +25,9 @@ export const helpContentEn = `
 | \`Ctrl\` + \`Y\` | Redo |
 | \`Ctrl\` + \`R\` | Execute |
 | \`Ctrl\` + \`T\` | Templates |
-| \`Shift\` + \`H\` | Show help |
-| \`Shift\` + \`C\` | Check for updates |
-| \`Shift\` + \`S\` | Open settings |
 | \`Alt\` + \`C\` | Command |
 | \`Alt\` + \`Q\` | Logs |
 | \`Alt\` + \`A\` | AI Assistant |
 | \`F5\` | Refresh |
+| \`W\`/\`A\`/\`S\`/\`D\` or \`↑\`/\`↓\`/\`←\`/\`→\` | Pan canvas (hold \`Shift\` to speed up) |
 `;

@@ -21,6 +21,7 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import { nodeTypes } from "@/components/panel/nodes";
 import { CoordinateGrid } from "@/components/panel/CoordinateGrid";
+import { useCanvasKeyboardPan } from "@/components/panel/hooks/useCanvasKeyboardPan";
 import {
   getLayoutedElements,
   createEdgeConfig,
@@ -546,6 +547,9 @@ export function FlowPanel({
 
   // Click search result: jump to node and highlight
   const reactFlowInstance = useRef<any>(null);
+
+  // Canvas pan via WASD / arrow keys (see docs/design/013_canvas-keyboard-pan.md)
+  useCanvasKeyboardPan(reactFlowInstance, true);
 
   const handleSearchResultClick = useCallback(
     (step: PipelineStep | null, isTable?: boolean, resultId?: string) => {
@@ -1695,7 +1699,7 @@ export function FlowPanel({
 
       {/* Multi-select floating action bar */}
       {selectedNodeIds.size > 0 && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 bg-card border border-border/70 rounded-lg shadow-lg px-2 py-1.5">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-card border border-border/70 rounded-lg shadow-lg px-2 py-1.5">
           <span className="px-1.5 text-xs font-medium text-muted-foreground tabular-nums">
             {selectedNodeIds.size}
           </span>

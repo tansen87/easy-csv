@@ -277,7 +277,7 @@ export function DuckdbEditor({
           spellCheck={false}
           autoCapitalize="off"
           autoComplete="off"
-          className="relative z-10 block w-full min-h-[240px] p-2 font-mono text-sm leading-relaxed resize-none bg-transparent text-transparent caret-black dark:caret-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-ring whitespace-pre-wrap break-all tab-2 expr-editor-scrollbar"
+          className="relative z-10 block w-full min-h-[240px] p-2 font-mono text-sm leading-relaxed resize-none bg-transparent text-transparent caret-black dark:caret-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-ring whitespace-pre-wrap break-all expr-editor-scrollbar"
         />
 
         {/* Autocomplete dropdown */}

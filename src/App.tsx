@@ -892,7 +892,7 @@ function AppContent() {
     }
   }, [templateStore, showToast, t, formatDateTime]);
 
-  // Keyboard shortcuts (O-3: moved to App level)
+  // Keyboard shortcuts
   useKeyboardShortcuts(
     {
       onOpenFile: handleOpenFile,
@@ -909,13 +909,6 @@ function AppContent() {
         setSelectedStep(null);
       },
       onExecute: handleExecuteAndMarkSaved,
-      onHelp: () => {
-        ui.setHelpCommandName(language === "zh" ? "帮助" : "Help");
-        ui.setHelpContent(getHelpContent(language));
-        ui.setShowHelp(true);
-      },
-      onCheckUpdate: checkForUpdates,
-      onShowSettings: () => ui.setShowSettingsDialog(true),
       onCommands: () => ui.setShowCommandPanel(!ui.showCommandPanel),
       onLogs: () => ui.setShowLogPanel(!ui.showLogPanel),
       onAI: () => ui.setShowAIPanel(!ui.showAIPanel),
