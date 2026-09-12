@@ -179,7 +179,7 @@ export function BatchFilterForm(props: CommandFormProps) {
                 })
               }
               placeholder={"value1\nvalue2\nvalue3"}
-              className="w-full h-24 px-3 text-sm border rounded-md bg-background resize-none font-mono"
+              className="w-full h-24 px-3 text-sm border rounded-md bg-background resize-none font-mono  focus:outline-none focus:ring-2 focus:ring-ring expr-editor-scrollbar"
             />
           </div>
         ) : (

@@ -198,7 +198,7 @@ export function BatchFilterDialog({
       </div>
 
       <ScrollArea className="h-[34vh] no-drag">
-        <div className="p-3 space-y-3">
+        <div className="p-2 space-y-3">
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
               Column
@@ -327,7 +327,6 @@ export function BatchFilterDialog({
                         ? "regex1\nregex2"
                         : "value1\nvalue2\nvalue3"
                     }
-                    className="w-full h-24 px-3 py-2 text-sm border rounded-md bg-background resize-none font-mono"
                   />
                 </div>
               ) : (
