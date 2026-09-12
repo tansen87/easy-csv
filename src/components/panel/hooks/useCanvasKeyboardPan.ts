@@ -14,14 +14,19 @@ const PAN_KEYS: Record<string, [number, number]> = {
 const BASE_SPEED = 600; // px/s, Screen space
 const BOOST = 2; // Shift Acceleration Ratio
 
+export type PanKeysChangeHandler = (keys: string[], shift: boolean) => void;
+
 export function useCanvasKeyboardPan(
   instanceRef: RefObject<any>,
   enabled: boolean,
+  onChangeKeys?: PanKeysChangeHandler,
 ) {
   const pressed = useRef(new Set<string>());
   const shiftDown = useRef(false);
   const rafId = useRef(0);
   const lastTs = useRef(0);
+  const onChangeKeysRef = useRef(onChangeKeys);
+  onChangeKeysRef.current = onChangeKeys;
 
   useEffect(() => {
     if (!enabled) return;
@@ -29,6 +34,11 @@ export function useCanvasKeyboardPan(
       e.target instanceof HTMLInputElement ||
       e.target instanceof HTMLTextAreaElement ||
       (e.target as HTMLElement)?.isContentEditable;
+
+    // Notify the consumer only at change points (keydown/keyup/blur), i.e. at the
+    // same rate as key presses, so there is no per-frame React re-render.
+    const emit = () =>
+      onChangeKeysRef.current?.(Array.from(pressed.current), shiftDown.current);
 
     const tick = (ts: number) => {
       const inst = instanceRef.current;
@@ -62,12 +72,14 @@ export function useCanvasKeyboardPan(
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key === "Shift") {
         shiftDown.current = true;
+        emit();
         return;
       }
       const k = e.key.toLowerCase();
       if (PAN_KEYS[k] && !pressed.current.has(k)) {
         e.preventDefault(); // Prevent scrolling of nested scroll containers with arrow keys
         pressed.current.add(k);
+        emit();
         lastTs.current = performance.now();
         if (!rafId.current) rafId.current = requestAnimationFrame(tick);
       }
@@ -75,13 +87,16 @@ export function useCanvasKeyboardPan(
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.key === "Shift") {
         shiftDown.current = false;
+        emit();
         return;
       }
       pressed.current.delete(e.key.toLowerCase());
+      emit();
     };
     const onBlur = () => {
       pressed.current.clear();
       shiftDown.current = false;
+      emit();
     }; // Window focus fallback
 
     window.addEventListener("keydown", onKeyDown);

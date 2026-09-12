@@ -173,6 +173,9 @@ export interface Translations {
   rightClickCutMode: string;
   rightClickMenuMode: string;
   saveIntermediateAsInput: string;
+  mouseLeft: string;
+  mouseMiddle: string;
+  mouseRight: string;
 
   // LogPanel
   logs: string;
@@ -534,6 +537,9 @@ export const translations: Record<Language, Translations> = {
     rightClickCutMode: "Right click: cut",
     rightClickMenuMode: "Right click: menu",
     saveIntermediateAsInput: "Save result up to this step as CSV",
+    mouseLeft: "LMB",
+    mouseMiddle: "MMB",
+    mouseRight: "RMB",
 
     // LogPanel
     logs: "Logs",
@@ -888,6 +894,9 @@ export const translations: Record<Language, Translations> = {
     rightClickCutMode: "右键: 划线",
     rightClickMenuMode: "右键: 菜单",
     saveIntermediateAsInput: "保存到该步的结果为CSV",
+    mouseLeft: "左键",
+    mouseMiddle: "中键",
+    mouseRight: "右键",
 
     // LogPanel
     logs: "日志",

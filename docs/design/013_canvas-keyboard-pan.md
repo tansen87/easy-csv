@@ -157,7 +157,7 @@ export function useCanvasKeyboardPan(
 
 | 文件 | 改动 |
 |------|------|
-| `src/components/panel/hooks/useCanvasKeyboardPan.ts` | 新增：3.1 的平移 hook |
+| `src/components/panel/hooks/useCanvasKeyboardPan.ts` | 新增：3.1 的平移 hook（014 追加：签名增至三参 `onChangeKeys?`，发布按键集变化到 HUD，见 014 §3.1） |
 | `src/components/panel/FlowPanel.tsx` | 导入并调用 hook（一行 + import）；不改 ReactFlow 现有 props |
 | `src/components/help/HelpContent.ts` / `HelpContentCn.ts` | 快捷键说明补一条"WASD/方向键平移画布，Shift 加速" |
 | `src/__tests__/CanvasKeyboardPan.test.ts` | 新增：见 §5 |
@@ -181,10 +181,10 @@ mock：`instanceRef.current = { getViewport: () => ({x:0,y:0,zoom:1}), setViewpo
 
 ## 6. 验收标准
 
-- [ ] 按住 W/A/S/D 或四个方向键，画布按对应方向连续平滑平移，松开即停；
-- [ ] W+D 等斜向组合正常，速度不叠加超过单键；
-- [ ] Shift 按住时约 2 倍速；
-- [ ] 在命令对话框、表达式编辑器、命令面板等输入场景中按这些键不移动画布；
-- [ ] Ctrl+D / Alt+A / Shift+S 等全局快捷键行为不变；
-- [ ] 中键拖拽、Space+左键拖拽、Shift 框选、双击 fitView、切刀、右键连线均不受影响；
-- [ ] `pnpm test` 全量通过。
+- [x] 按住 W/A/S/D 或四个方向键，画布按对应方向连续平滑平移，松开即停；
+- [x] W+D 等斜向组合正常，速度不叠加超过单键；
+- [x] Shift 按住时约 2 倍速；
+- [x] 在命令对话框、表达式编辑器、命令面板等输入场景中按这些键不移动画布；
+- [x] Ctrl+D / Alt+A / Shift+S 等全局快捷键行为不变；
+- [x] 中键拖拽、Space+左键拖拽、Shift 框选、双击 fitView、切刀、右键连线均不受影响；
+- [x] `pnpm test` 全量通过。

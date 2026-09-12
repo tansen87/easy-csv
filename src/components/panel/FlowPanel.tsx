@@ -22,6 +22,7 @@ import "reactflow/dist/style.css";
 import { nodeTypes } from "@/components/panel/nodes";
 import { CoordinateGrid } from "@/components/panel/CoordinateGrid";
 import { useCanvasKeyboardPan } from "@/components/panel/hooks/useCanvasKeyboardPan";
+import { useCanvasPointerHud } from "@/components/panel/hooks/useCanvasPointerHud";
 import {
   getLayoutedElements,
   createEdgeConfig,
@@ -44,6 +45,7 @@ import {
 import { SearchOverlay } from "@/components/panel/overlays/SearchOverlay";
 import { CutVisualization } from "@/components/panel/overlays/CutVisualization";
 import { ConnectionVisualization } from "@/components/panel/overlays/ConnectionVisualization";
+import { KeyIndicatorOverlay } from "@/components/panel/overlays/KeyIndicatorOverlay";
 import { PipelineStep, PipelineEdge } from "@/types/xan";
 import { ContextMenu } from "@/components/menu/ContextMenu";
 import {
@@ -548,8 +550,32 @@ export function FlowPanel({
   // Click search result: jump to node and highlight
   const reactFlowInstance = useRef<any>(null);
 
+  // Canvas HUD state (pressed keys / mouse buttons / Space) fed by the two canvas
+  // hooks below. Only updated at key/mouse change points, see docs/design/014.
+  const [panKeys, setPanKeys] = useState<string[]>([]);
+  const [panShift, setPanShift] = useState(false);
+  const [mouseButtons, setMouseButtons] = useState<number[]>([]);
+  const [spaceDown, setSpaceDown] = useState(false);
+  const handlePanKeysChange = useCallback((keys: string[], shift: boolean) => {
+    setPanKeys(keys);
+    setPanShift(shift);
+  }, []);
+  const handlePointerChange = useCallback(
+    (buttons: number[], space: boolean) => {
+      setMouseButtons(buttons);
+      setSpaceDown(space);
+    },
+    [],
+  );
+
   // Canvas pan via WASD / arrow keys (see docs/design/013_canvas-keyboard-pan.md)
-  useCanvasKeyboardPan(reactFlowInstance, true);
+  useCanvasKeyboardPan(reactFlowInstance, true, handlePanKeysChange);
+
+  // Canvas mouse-button + Space tracker (see docs/design/014_canvas-key-indicator.md)
+  useCanvasPointerHud(
+    reactFlowWrapper as React.RefObject<HTMLElement>,
+    handlePointerChange,
+  );
 
   const handleSearchResultClick = useCallback(
     (step: PipelineStep | null, isTable?: boolean, resultId?: string) => {
@@ -1719,6 +1745,19 @@ export function FlowPanel({
           </button>
         </div>
       )}
+
+      {/* Canvas key / mouse HUD - just above the status indicator */}
+      <KeyIndicatorOverlay
+        keys={panKeys}
+        shift={panShift}
+        buttons={mouseButtons}
+        space={spaceDown}
+        labels={{
+          left: t.mouseLeft,
+          middle: t.mouseMiddle,
+          right: t.mouseRight,
+        }}
+      />
 
       {/* Canvas status indicator - Bottom-left */}
       <div
