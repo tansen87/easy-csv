@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDraggable } from "@/hooks/useDraggable";
+import { useLanguage } from "@/i18n";
 import { XanCommand } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 
@@ -30,28 +31,37 @@ type NumberOperator =
   | "greater_or_equal"
   | "less_or_equal";
 
-const textOperators: { value: TextOperator; label: string }[] = [
-  { value: "equals", label: "Equals" },
-  { value: "not_equals", label: "Not equals" },
-  { value: "starts_with", label: "Starts with" },
-  { value: "not_starts_with", label: "Not starts with" },
-  { value: "ends_with", label: "Ends with" },
-  { value: "not_ends_with", label: "Not ends with" },
-  { value: "contains", label: "Contains" },
-  { value: "not_contains", label: "Not contains" },
-  { value: "regex", label: "Regex" },
-  { value: "is_null", label: "Is null" },
-  { value: "is_not_null", label: "Is not null" },
+const textOperators: TextOperator[] = [
+  "equals",
+  "not_equals",
+  "starts_with",
+  "not_starts_with",
+  "ends_with",
+  "not_ends_with",
+  "contains",
+  "not_contains",
+  "regex",
+  "is_null",
+  "is_not_null",
 ];
 
-const numberOperators: { value: NumberOperator; label: string }[] = [
-  { value: "equals", label: "==" },
-  { value: "not_equals", label: "!=" },
-  { value: "greater_than", label: ">" },
-  { value: "greater_or_equal", label: "≥" },
-  { value: "less_than", label: "<" },
-  { value: "less_or_equal", label: "≤" },
+const numberOperators: NumberOperator[] = [
+  "equals",
+  "not_equals",
+  "greater_than",
+  "greater_or_equal",
+  "less_than",
+  "less_or_equal",
 ];
+
+const NUMBER_OPERATOR_LABELS: Record<NumberOperator, string> = {
+  equals: "==",
+  not_equals: "!=",
+  greater_than: ">",
+  greater_or_equal: "≥",
+  less_than: "<",
+  less_or_equal: "≤",
+};
 
 export interface BatchFilterConfig {
   column: string;
@@ -87,6 +97,20 @@ export function BatchFilterDialog({
   onAddCommand,
   onClose,
 }: BatchFilterDialogProps) {
+  const { t } = useLanguage();
+  const textOperatorLabels: Record<TextOperator, string> = {
+    equals: t.opEquals,
+    not_equals: t.opNotEquals,
+    starts_with: t.opStartsWith,
+    not_starts_with: t.opNotStartsWith,
+    ends_with: t.opEndsWith,
+    not_ends_with: t.opNotEndsWith,
+    contains: t.opContains,
+    not_contains: t.opNotContains,
+    regex: t.opRegex,
+    is_null: t.opIsNull,
+    is_not_null: t.opIsNotNull,
+  };
   const [filterType, setFilterType] = useState<FilterType>("text");
   const [textOperator, setTextOperator] = useState<TextOperator>("equals");
   const [numberOperator, setNumberOperator] =
@@ -168,7 +192,7 @@ export function BatchFilterDialog({
       parameters["output-dir"] = outputDir.trim();
     }
 
-    const alias = `Batch: ${selectedColumn} ${filterType === "text" ? textOperator : numberOperator}`;
+    const alias = `${t.batchFilter}: ${selectedColumn} ${filterType === "text" ? textOperator : numberOperator}`;
     onAddCommand(batchFilterCmd, parameters, alias);
     onClose();
   };
@@ -188,7 +212,7 @@ export function BatchFilterDialog({
         onMouseDown={handleMouseDown}
         className={`flex items-center justify-between px-3 py-2 border-b bg-muted/20 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       >
-        <span className="text-sm font-medium">Batch Filter</span>
+        <span className="text-sm font-medium">{t.batchFilter}</span>
         <button
           onClick={onClose}
           className="no-drag p-0.5 hover:bg-accent rounded transition-colors shrink-0 text-muted-foreground/70 hover:text-foreground"
@@ -201,7 +225,7 @@ export function BatchFilterDialog({
         <div className="p-2 space-y-3">
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
-              Column
+              {t.filterColumn}
             </label>
             <Select
               value={selectedColumn}
@@ -210,7 +234,7 @@ export function BatchFilterDialog({
                 value: header,
                 label: header,
               }))}
-              placeholder="Select column..."
+              placeholder={t.selectColumn}
             />
           </div>
 
@@ -223,7 +247,7 @@ export function BatchFilterDialog({
               }`}
               onClick={() => setFilterType("text")}
             >
-              Text
+              {t.text}
             </button>
             <button
               className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
@@ -233,32 +257,38 @@ export function BatchFilterDialog({
               }`}
               onClick={() => setFilterType("number")}
             >
-              Number
+              {t.number}
             </button>
           </div>
 
           {filterType === "text" ? (
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                Operator
+                {t.filterOperator}
               </label>
               <Select
                 value={textOperator}
                 onChange={(v) => setTextOperator(v as TextOperator)}
-                options={textOperators}
-                placeholder="Select operator..."
+                options={textOperators.map((value) => ({
+                  value,
+                  label: textOperatorLabels[value],
+                }))}
+                placeholder={t.selectOperator}
               />
             </div>
           ) : (
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                Operator
+                {t.filterOperator}
               </label>
               <Select
                 value={numberOperator}
                 onChange={(v) => setNumberOperator(v as NumberOperator)}
-                options={numberOperators}
-                placeholder="Select operator..."
+                options={numberOperators.map((value) => ({
+                  value,
+                  label: NUMBER_OPERATOR_LABELS[value],
+                }))}
+                placeholder={t.selectOperator}
               />
             </div>
           )}
@@ -276,7 +306,7 @@ export function BatchFilterDialog({
                 htmlFor="case-insensitive"
                 className="text-xs cursor-pointer"
               >
-                Ignore case
+                {t.ignoreCase}
               </label>
             </div>
           )}
@@ -285,7 +315,7 @@ export function BatchFilterDialog({
             <>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Value Source
+                  {t.valueSource}
                 </label>
                 <div className="flex bg-muted/50 rounded-lg p-0.5 border border-border/50">
                   <button
@@ -296,7 +326,7 @@ export function BatchFilterDialog({
                     }`}
                     onClick={() => setValueMode("manual")}
                   >
-                    Manual Input
+                    {t.manualInput}
                   </button>
                   <button
                     className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
@@ -309,7 +339,7 @@ export function BatchFilterDialog({
                       setValueMode("column");
                     }}
                   >
-                    From Column
+                    {t.fromColumn}
                   </button>
                 </div>
               </div>
@@ -317,7 +347,7 @@ export function BatchFilterDialog({
               {valueMode === "manual" ? (
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                    Values (one per line)
+                    {t.valuesOnePerLine}
                   </label>
                   <textarea
                     value={manualValues}
@@ -333,7 +363,7 @@ export function BatchFilterDialog({
               ) : (
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                    Extract unique values from column
+                    {t.extractUniqueValues}
                   </label>
                   <Select
                     value={extractColumn}
@@ -342,7 +372,7 @@ export function BatchFilterDialog({
                       value: header,
                       label: header,
                     }))}
-                    placeholder="Select column to extract values..."
+                    placeholder={t.selectColumn}
                   />
                 </div>
               )}
@@ -351,13 +381,13 @@ export function BatchFilterDialog({
 
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
-              Output Path (optional)
+              {t.outputPathOptional}
             </label>
             <input
               type="text"
               value={outputDir}
               onChange={(e) => setOutputDir(e.target.value)}
-              placeholder="leave empty to use source file dir"
+              placeholder={t.outputPathLeaveEmpty}
               className="w-full h-7 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -366,7 +396,7 @@ export function BatchFilterDialog({
 
       <div className="no-drag px-3 py-2 flex gap-2 justify-end">
         <Button variant="secondary" size="sm" onClick={onClose}>
-          Cancel
+          {t.cancel}
         </Button>
         <Button
           variant="secondary"
@@ -379,7 +409,7 @@ export function BatchFilterDialog({
             !manualValues.trim()
           }
         >
-          Apply
+          {t.apply}
         </Button>
       </div>
     </div>

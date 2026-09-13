@@ -6,6 +6,7 @@ import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useDraggable } from "@/hooks/useDraggable";
+import { useLanguage } from "@/i18n";
 
 interface WindowDialogState {
   col: number;
@@ -85,6 +86,7 @@ export function WindowDialog({
   onAddCommand,
   onClose,
 }: WindowDialogProps) {
+  const { t } = useLanguage();
   const [entries, setEntries] = useState<WindowEntry[]>([
     {
       column: headers[windowDialog.col] || "",
@@ -162,7 +164,7 @@ export function WindowDialog({
         groupby: groupby.trim() || undefined,
         output: "",
       },
-      "Window",
+      t.windowAliasName,
     );
     onClose();
   };
@@ -183,7 +185,7 @@ export function WindowDialog({
         className={`flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       >
         <div className="flex items-center gap-2">
-          <span className="text-base font-medium">Window Aggregation</span>
+          <span className="text-base font-medium">{t.windowAction}</span>
         </div>
         <button
           onClick={onClose}
@@ -197,13 +199,13 @@ export function WindowDialog({
         <div className="p-3 space-y-3">
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
-              GroupBy (optional)
+              {t.windowGroupBy}
             </label>
             <input
               type="text"
               value={groupby}
               onChange={(e) => setGroupby(e.target.value)}
-              placeholder="Column(s) to group by..."
+              placeholder={t.windowGroupByPlaceholder}
               className="w-full h-8 px-2 text-xs border rounded-md bg-background"
             />
           </div>
@@ -211,14 +213,14 @@ export function WindowDialog({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">
-                Expressions
+                {t.windowExpressions}
               </span>
               <button
                 onClick={addEntry}
                 className="flex items-center gap-1 px-2 py-0.5 text-xs hover:bg-accent rounded-md transition-colors text-muted-foreground"
               >
                 <Plus className="h-3 w-3" />
-                Add
+                {t.windowAdd}
               </button>
             </div>
 
@@ -232,7 +234,7 @@ export function WindowDialog({
                   <div className="flex gap-2 items-end">
                     <div className="flex-1 space-y-1">
                       <label className="text-xs font-medium text-muted-foreground">
-                        Column
+                        {t.windowColumn}
                       </label>
                       <input
                         type="text"
@@ -240,13 +242,13 @@ export function WindowDialog({
                         onChange={(e) =>
                           updateEntry(index, "column", e.target.value)
                         }
-                        placeholder="Column..."
+                        placeholder={t.windowColumnPlaceholder}
                         className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                       />
                     </div>
                     <div className="flex-1 space-y-1">
                       <label className="text-xs font-medium text-muted-foreground">
-                        Alias
+                        {t.windowAlias}
                       </label>
                       <input
                         type="text"
@@ -254,7 +256,7 @@ export function WindowDialog({
                         onChange={(e) =>
                           updateEntry(index, "alias", e.target.value)
                         }
-                        placeholder="Alias (Optional)"
+                        placeholder={t.windowAliasPlaceholder}
                         className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                       />
                     </div>
@@ -273,7 +275,7 @@ export function WindowDialog({
                   <div className="flex gap-2 items-end">
                     <div className="flex-1 space-y-1">
                       <label className="text-xs font-medium text-muted-foreground">
-                        Expression
+                        {t.windowExpression}
                       </label>
                       <Select
                         value={entry.func}
@@ -282,13 +284,13 @@ export function WindowDialog({
                           value: f.value,
                           label: f.label,
                         }))}
-                        placeholder="Select expression..."
+                        placeholder={t.windowSelectExpression}
                       />
                     </div>
                     {func?.hasWindowSize && (
                       <div className="flex-1 space-y-1">
                         <label className="text-xs font-medium text-muted-foreground">
-                          WinSize
+                          {t.windowWinSize}
                         </label>
                         <input
                           type="number"
@@ -317,7 +319,7 @@ export function WindowDialog({
           size="sm"
           onClick={onClose}
         >
-          Cancel
+          {t.cancel}
         </Button>
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
@@ -325,7 +327,7 @@ export function WindowDialog({
           size="sm"
           onClick={handleApply}
         >
-          Apply
+          {t.apply}
         </Button>
       </div>
     </div>

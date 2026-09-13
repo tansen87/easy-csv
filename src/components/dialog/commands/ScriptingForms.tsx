@@ -6,7 +6,7 @@ import { useLanguage } from "@/i18n";
 
 export function RunForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper
       {...props}
@@ -78,7 +78,11 @@ export function RunForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("run", "pipeline", language)}
+            placeholder={getParameterDescription(
+              "run",
+              "pipeline",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -97,7 +101,11 @@ export function RunForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("run", "file", language)}
+            placeholder={getParameterDescription(
+              "run",
+              "file",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -124,7 +132,7 @@ export function RunForm(props: CommandFormProps) {
 
 export function EvalForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -135,7 +143,11 @@ export function EvalForm(props: CommandFormProps) {
           onChange={(e) =>
             updateParam(commandDialog, setCommandDialog, "expr", e.target.value)
           }
-          placeholder={getParameterDescription("eval", "expr", language)}
+          placeholder={getParameterDescription(
+            "eval",
+            "expr",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -163,7 +175,11 @@ export function EvalForm(props: CommandFormProps) {
           onChange={(e) =>
             updateParam(commandDialog, setCommandDialog, "row", e.target.value)
           }
-          placeholder={getParameterDescription("eval", "row", language)}
+          placeholder={getParameterDescription(
+            "eval",
+            "row",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>

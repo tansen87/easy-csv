@@ -65,7 +65,7 @@ export const CommandList = React.memo(function CommandList({
   const [activeIndex, setActiveIndex] = useState(0);
   const [keyboardNav, setKeyboardNav] = useState(false);
   const activeCommandRef = useRef<HTMLDivElement>(null);
-  const { language, t } = useLanguage();
+  const { effectiveLanguage, t } = useLanguage();
 
   // Debounce search input 150ms
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
@@ -78,14 +78,16 @@ export const CommandList = React.memo(function CommandList({
     const query = debouncedQuery.toLowerCase();
     return commands.filter((command) => {
       const desc =
-        language === "zh" ? command.descriptionCn : command.description;
+        effectiveLanguage === "zh"
+          ? command.descriptionCn
+          : command.description;
       return (
         command.name.toLowerCase().includes(query) ||
         desc.toLowerCase().includes(query) ||
         command.category.toLowerCase().includes(query)
       );
     });
-  }, [commands, debouncedQuery, language]);
+  }, [commands, debouncedQuery, effectiveLanguage]);
 
   const groupedCommands = useMemo(() => {
     return commandCategories.reduce(
@@ -97,7 +99,7 @@ export const CommandList = React.memo(function CommandList({
       },
       {} as Record<string, XanCommand[]>,
     );
-  }, [filteredCommands, language]);
+  }, [filteredCommands, effectiveLanguage]);
 
   const isSearching = debouncedQuery.trim().length > 0;
 
@@ -357,7 +359,7 @@ export const CommandList = React.memo(function CommandList({
                                   </span>
                                 </div>
                                 <div className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2 mt-1">
-                                  {language === "zh"
+                                  {effectiveLanguage === "zh"
                                     ? command.descriptionCn
                                     : command.description}
                                 </div>

@@ -1,4 +1,5 @@
-export type Language = "en" | "zh";
+export type Language = "en" | "zh" | "system";
+export type EffectiveLanguage = "en" | "zh";
 
 export interface Translations {
   rows: string;
@@ -329,6 +330,201 @@ export interface Translations {
   sameEncoding: string;
   bytes: string;
 
+  // BatchFilterDialog
+  batchFilter: string;
+  filterColumn: string;
+  selectColumn: string;
+  text: string;
+  number: string;
+  filterOperator: string;
+  selectOperator: string;
+  ignoreCase: string;
+  valueSource: string;
+  manualInput: string;
+  fromColumn: string;
+  valuesOnePerLine: string;
+  extractUniqueValues: string;
+  outputPathOptional: string;
+  outputPathLeaveEmpty: string;
+  apply: string;
+  opEquals: string;
+  opNotEquals: string;
+  opStartsWith: string;
+  opNotStartsWith: string;
+  opEndsWith: string;
+  opNotEndsWith: string;
+  opContains: string;
+  opNotContains: string;
+  opRegex: string;
+  opIsNull: string;
+  opIsNotNull: string;
+  filterColumnToFilterOn: string;
+  filterType: string;
+  selectType: string;
+  selectSource: string;
+  extractColumn: string;
+  extractColumnPlaceholder: string;
+  outputDirectoryOptional: string;
+  sameAsSourceFile: string;
+
+  // ContextMenu
+  quickActions: string;
+  filterAction: string;
+  batchFilterAction: string;
+  replaceAction: string;
+
+  // FilterDialog
+  pattern: string;
+  value: string;
+  regexPatterns: string;
+  addValuesEnter: string;
+  searchNumber: string;
+
+  // PivotDialog
+  pivotAction: string;
+  pivotSearchColumns: string;
+  pivotColumns: string;
+  pivotRows: string;
+  pivotValues: string;
+  pivotNoMatches: string;
+  pivotAdd: string;
+  pivotClickToAdd: string;
+  pivotAggPlaceholder: string;
+  pivotColumnSeparator: string;
+  pivotColumnSeparatorPlaceholder: string;
+  pivotAggCount: string;
+  pivotAggSum: string;
+  pivotAggAvg: string;
+  pivotAggMin: string;
+  pivotAggMax: string;
+  pivotAggFirst: string;
+  pivotAggLast: string;
+  pivotAliasAgg: string;
+  pivotAliasGroupby: string;
+  pivotAliasPivot: string;
+
+  // DateTransformDialog
+  dateAction: string;
+  dateTransformSearchColumn: string;
+  inputFormat: string;
+  outputFormat: string;
+  dateTransformSearchInputFormat: string;
+  dateTransformSearchOutputFormat: string;
+  dateTransformAlias: string;
+  dateTransformAliasPlaceholder: string;
+  dateTransformAliasName: string;
+
+  // WindowDialog
+  windowAction: string;
+  windowGroupBy: string;
+  windowGroupByPlaceholder: string;
+  windowExpressions: string;
+  windowAdd: string;
+  windowColumn: string;
+  windowColumnPlaceholder: string;
+  windowAlias: string;
+  windowAliasPlaceholder: string;
+  windowExpression: string;
+  windowSelectExpression: string;
+  windowWinSize: string;
+  windowAliasName: string;
+
+  // TextTransformDialog
+  textTransformAction: string;
+  textTransformSearchColumns: string;
+  textTransformColumnsSelected: string;
+  textTransformNoMatches: string;
+  textTransformType: string;
+  textTransformLen: string;
+  textTransformLower: string;
+  textTransformUpper: string;
+  textTransformTrim: string;
+  textTransformLtrim: string;
+  textTransformRtrim: string;
+  textTransformStrip: string;
+  contextText: string;
+  contextNumber: string;
+  sliceLeft: string;
+  sliceRight: string;
+  sliceSlice: string;
+  sliceSplit: string;
+  slicePad: string;
+
+  // NumberTransformDialog
+  numTransformAction: string;
+  numTransformSearchColumns: string;
+  numTransformColumnsSelected: string;
+  numTransformNoMatches: string;
+  numTransformType: string;
+  numTransformAbs: string;
+  numTransformNeg: string;
+  numTransformFloor: string;
+  numTransformCeil: string;
+  numTransformInt: string;
+  numTransformFloat: string;
+  numTransformRound: string;
+
+  // SplitDialog
+  splitAction: string;
+  splitSearchColumn: string;
+  splitOperationType: string;
+  splitSelectOperation: string;
+  splitLength: string;
+  splitStartIndex: string;
+  splitEndIndex: string;
+  splitSeparator: string;
+  splitSelectSeparator: string;
+  splitCustomSeparator: string;
+  splitCustomSeparatorPlaceholder: string;
+  splitArrayIndices: string;
+  splitAddIndex: string;
+  splitJoinWith: string;
+  splitJoinWithPlaceholder: string;
+  splitAlias: string;
+  splitAliasPlaceholder: string;
+  splitCustom: string;
+  splitSpace: string;
+  splitTab: string;
+  splitComma: string;
+  splitSemicolon: string;
+  splitPipe: string;
+  splitHyphen: string;
+  splitUnderscore: string;
+  splitColon: string;
+  splitSlash: string;
+
+  // PadDialog
+  padAction: string;
+  padPadType: string;
+  padSelectType: string;
+  padWidth: string;
+  padWidthPlaceholder: string;
+  padCharacter: string;
+  padCharacterPlaceholder: string;
+  padTypePad: string;
+  padTypeLpad: string;
+  padTypeRpad: string;
+
+  // ReplaceDialog
+  replaceSearchColumn: string;
+  replacePairs: string;
+  replaceAdd: string;
+  replacePattern: string;
+  replaceReplacement: string;
+  replaceRegex: string;
+  replaceIgnoreCase: string;
+
+  // SortDialog
+  sortAction: string;
+  sortSearchColumns: string;
+  sortColumnsSelected: string;
+  sortNoMatches: string;
+  sortOrder: string;
+  sortNoColumnsSelected: string;
+  sortNumeric: string;
+  sortText: string;
+  sortAlias: string;
+
   // Pipeline Templates
   newFromTemplate: string;
   templateName: string;
@@ -349,7 +545,7 @@ export interface Translations {
   paletteTemplates: string;
 }
 
-export const translations: Record<Language, Translations> = {
+export const translations: Record<EffectiveLanguage, Translations> = {
   en: {
     rows: "Rows",
     confirm: "Confirm",
@@ -468,7 +664,7 @@ export const translations: Record<Language, Translations> = {
     system: "System",
     csvDelimiter: "Delimiter",
     noHeaders: "No Headers",
-    noHeadersDesc: "When set, the first row will not be interpreted as headers",
+    noHeadersDesc: "When enabled, the first row will not be interpreted as headers",
     systemNotification: "Notification",
     systemNotificationDesc:
       "When enabled, Show system notification when pipeline execution completes",
@@ -694,6 +890,201 @@ export const translations: Record<Language, Translations> = {
     success: "Conversion successful",
     sameEncoding: "Source and target encodings are the same",
     bytes: "bytes",
+
+    // BatchFilterDialog
+    batchFilter: "Batch Filter",
+    filterColumn: "Column",
+    selectColumn: "Select column",
+    text: "Text",
+    number: "Number",
+    filterOperator: "Operator",
+    selectOperator: "Select operator",
+    ignoreCase: "Ignore case",
+    valueSource: "Value Source",
+    manualInput: "Manual Input",
+    fromColumn: "From Column",
+    valuesOnePerLine: "Values (one per line)",
+    extractUniqueValues: "Extract unique values from column",
+    outputPathOptional: "Output Path (optional)",
+    outputPathLeaveEmpty: "leave empty to use source file dir",
+    apply: "Apply",
+    opEquals: "Equals",
+    opNotEquals: "Not equals",
+    opStartsWith: "Starts with",
+    opNotStartsWith: "Not starts with",
+    opEndsWith: "Ends with",
+    opNotEndsWith: "Not ends with",
+    opContains: "Contains",
+    opNotContains: "Not contains",
+    opRegex: "Regex",
+    opIsNull: "Is null",
+    opIsNotNull: "Is not null",
+    filterColumnToFilterOn: "Column to filter on",
+    filterType: "Filter Type",
+    selectType: "Select type",
+    selectSource: "Select source",
+    extractColumn: "Extract Column",
+    extractColumnPlaceholder: "Column to extract values from",
+    outputDirectoryOptional: "Output Directory (optional)",
+    sameAsSourceFile: "Same as source file",
+
+    // ContextMenu
+    quickActions: "Quick Actions",
+    filterAction: "Filter",
+    batchFilterAction: "Batch Filter",
+    replaceAction: "Replace",
+
+    // FilterDialog
+    pattern: "Pattern",
+    value: "Value",
+    regexPatterns: "Regex patterns",
+    addValuesEnter: "Add values, Enter to add",
+    searchNumber: "Search number",
+
+    // PivotDialog
+    pivotAction: "Pivot Table",
+    pivotSearchColumns: "Search columns",
+    pivotColumns: "Columns (pivot)",
+    pivotRows: "Row (groupby)",
+    pivotValues: "Values (agg)",
+    pivotNoMatches: "No matches",
+    pivotAdd: "Add",
+    pivotClickToAdd: "Click + to add value columns",
+    pivotAggPlaceholder: "Agg",
+    pivotColumnSeparator: "Column Separator",
+    pivotColumnSeparatorPlaceholder: "Characters for connecting columns (eg _)",
+    pivotAggCount: "Count",
+    pivotAggSum: "Sum",
+    pivotAggAvg: "Average",
+    pivotAggMin: "Min",
+    pivotAggMax: "Max",
+    pivotAggFirst: "First",
+    pivotAggLast: "Last",
+    pivotAliasAgg: "Agg",
+    pivotAliasGroupby: "Groupby",
+    pivotAliasPivot: "Pivot",
+
+    // DateTransformDialog
+    dateAction: "Date Transform",
+    dateTransformSearchColumn: "Search or select column",
+    inputFormat: "Input Format",
+    outputFormat: "Output Format",
+    dateTransformSearchInputFormat: "Search input format",
+    dateTransformSearchOutputFormat: "Search output format",
+    dateTransformAlias: "Alias (Optional)",
+    dateTransformAliasPlaceholder: "Leave blank to keep original",
+    dateTransformAliasName: "Date Transform",
+
+    // WindowDialog
+    windowAction: "Window Aggregation",
+    windowGroupBy: "GroupBy (optional)",
+    windowGroupByPlaceholder: "Column(s) to group by",
+    windowExpressions: "Expressions",
+    windowAdd: "Add",
+    windowColumn: "Column",
+    windowColumnPlaceholder: "Column",
+    windowAlias: "Alias",
+    windowAliasPlaceholder: "Alias (Optional)",
+    windowExpression: "Expression",
+    windowSelectExpression: "Select expression",
+    windowWinSize: "WinSize",
+    windowAliasName: "Window",
+
+    // TextTransformDialog
+    textTransformAction: "Text Transform",
+    textTransformSearchColumns: "Search columns",
+    textTransformColumnsSelected: "Columns ({count} selected)",
+    textTransformNoMatches: "No matches",
+    textTransformType: "Transform Type",
+    textTransformLen: "Len",
+    textTransformLower: "Lower",
+    textTransformUpper: "Upper",
+    textTransformTrim: "Trim",
+    textTransformLtrim: "Ltrim",
+    textTransformRtrim: "Rtrim",
+    textTransformStrip: "Strip",
+    contextText: "Text",
+    contextNumber: "Number",
+    sliceLeft: "Left",
+    sliceRight: "Right",
+    sliceSlice: "Slice",
+    sliceSplit: "Split",
+    slicePad: "Pad",
+
+    // NumberTransformDialog
+    numTransformAction: "Number Transform",
+    numTransformSearchColumns: "Search columns",
+    numTransformColumnsSelected: "Columns ({count} selected)",
+    numTransformNoMatches: "No matches",
+    numTransformType: "Transform Type",
+    numTransformAbs: "Abs",
+    numTransformNeg: "Negate",
+    numTransformFloor: "Floor",
+    numTransformCeil: "Ceil",
+    numTransformInt: "Integer",
+    numTransformFloat: "Float",
+    numTransformRound: "Round",
+
+    // SplitDialog
+    splitAction: "Slice",
+    splitSearchColumn: "Search or select column",
+    splitOperationType: "Operation Type",
+    splitSelectOperation: "Select operation",
+    splitLength: "Length",
+    splitStartIndex: "Start Index",
+    splitEndIndex: "End Index",
+    splitSeparator: "Separator",
+    splitSelectSeparator: "Select separator",
+    splitCustomSeparator: "Custom Separator",
+    splitCustomSeparatorPlaceholder: "Enter custom separator",
+    splitArrayIndices: "Array Indices (0-based)",
+    splitAddIndex: "Add Index",
+    splitJoinWith: "Join With (for multiple indices)",
+    splitJoinWithPlaceholder: "e.g., -, _, /, etc.",
+    splitAlias: "Alias (Optional)",
+    splitAliasPlaceholder: "Leave blank to keep original",
+    splitCustom: "Custom",
+    splitSpace: "Space",
+    splitTab: "Tab (\\t)",
+    splitComma: "Comma (,)",
+    splitSemicolon: "Semicolon (;)",
+    splitPipe: "Pipe (|)",
+    splitHyphen: "Hyphen (-)",
+    splitUnderscore: "Underscore (_)",
+    splitColon: "Colon (:)",
+    splitSlash: "Slash (/)",
+
+    // PadDialog
+    padAction: "Pad",
+    padPadType: "Pad Type",
+    padSelectType: "Select pad type",
+    padWidth: "Width",
+    padWidthPlaceholder: "Target width",
+    padCharacter: "Character (optional)",
+    padCharacterPlaceholder: "Space if blank",
+    padTypePad: "Pad",
+    padTypeLpad: "Left Pad",
+    padTypeRpad: "Right Pad",
+
+    // ReplaceDialog
+    replaceSearchColumn: "Search or select column",
+    replacePairs: "Replace Pairs",
+    replaceAdd: "Add",
+    replacePattern: "Pattern",
+    replaceReplacement: "Replacement",
+    replaceRegex: "Regex",
+    replaceIgnoreCase: "Ignore Case",
+
+    // SortDialog
+    sortAction: "Sort",
+    sortSearchColumns: "Search columns",
+    sortColumnsSelected: "Columns ({count} selected)",
+    sortNoMatches: "No matches",
+    sortOrder: "Sort Order",
+    sortNoColumnsSelected: "No columns selected",
+    sortNumeric: "Num",
+    sortText: "Text",
+    sortAlias: "Sort",
 
     // Pipeline Templates
     newFromTemplate: "New from Template",
@@ -1050,6 +1441,201 @@ export const translations: Record<Language, Translations> = {
     sameEncoding: "源编码与目标编码相同",
     bytes: "字节",
 
+    // BatchFilterDialog
+    batchFilter: "批量筛选",
+    filterColumn: "列",
+    selectColumn: "选择列",
+    text: "文本",
+    number: "数字",
+    filterOperator: "运算符",
+    selectOperator: "选择运算符",
+    ignoreCase: "忽略大小写",
+    valueSource: "值来源",
+    manualInput: "手动输入",
+    fromColumn: "从列提取",
+    valuesOnePerLine: "值(每行一个)",
+    extractUniqueValues: "从列中提取唯一值",
+    outputPathOptional: "输出路径(可选)",
+    outputPathLeaveEmpty: "留空则使用源文件目录",
+    apply: "应用",
+    opEquals: "等于",
+    opNotEquals: "不等于",
+    opStartsWith: "开头是",
+    opNotStartsWith: "开头不是",
+    opEndsWith: "结尾是",
+    opNotEndsWith: "结尾不是",
+    opContains: "包含",
+    opNotContains: "不包含",
+    opRegex: "正则",
+    opIsNull: "为空",
+    opIsNotNull: "不为空",
+    filterColumnToFilterOn: "要筛选的列",
+    filterType: "筛选类型",
+    selectType: "选择类型",
+    selectSource: "选择来源",
+    extractColumn: "提取列",
+    extractColumnPlaceholder: "从中提取值的列",
+    outputDirectoryOptional: "输出目录(可选)",
+    sameAsSourceFile: "与源文件相同",
+
+    // ContextMenu
+    quickActions: "快捷操作",
+    filterAction: "筛选",
+    batchFilterAction: "批量筛选",
+    replaceAction: "替换",
+
+    // FilterDialog
+    pattern: "模式",
+    value: "值",
+    regexPatterns: "正则模式",
+    addValuesEnter: "添加值,回车确认",
+    searchNumber: "搜索数字",
+
+    // PivotDialog
+    pivotAction: "透视表",
+    pivotSearchColumns: "搜索列",
+    pivotColumns: "列(透视)",
+    pivotRows: "行(分组)",
+    pivotValues: "值(聚合)",
+    pivotNoMatches: "无匹配",
+    pivotAdd: "添加",
+    pivotClickToAdd: "点击 + 添加值列",
+    pivotAggPlaceholder: "聚合",
+    pivotColumnSeparator: "列分隔符",
+    pivotColumnSeparatorPlaceholder: "连接列的字符(例如 _)",
+    pivotAggCount: "计数",
+    pivotAggSum: "求和",
+    pivotAggAvg: "平均值",
+    pivotAggMin: "最小值",
+    pivotAggMax: "最大值",
+    pivotAggFirst: "首个",
+    pivotAggLast: "末个",
+    pivotAliasAgg: "聚合",
+    pivotAliasGroupby: "分组",
+    pivotAliasPivot: "透视",
+
+    // DateTransformDialog
+    dateAction: "日期转换",
+    dateTransformSearchColumn: "搜索或选择列",
+    inputFormat: "输入格式",
+    outputFormat: "输出格式",
+    dateTransformSearchInputFormat: "搜索输入格式",
+    dateTransformSearchOutputFormat: "搜索输出格式",
+    dateTransformAlias: "别名(可选)",
+    dateTransformAliasPlaceholder: "留空则保留原值",
+    dateTransformAliasName: "日期转换",
+
+    // WindowDialog
+    windowAction: "窗口聚合",
+    windowGroupBy: "分组依据(可选)",
+    windowGroupByPlaceholder: "分组的列",
+    windowExpressions: "表达式",
+    windowAdd: "添加",
+    windowColumn: "列",
+    windowColumnPlaceholder: "列",
+    windowAlias: "别名",
+    windowAliasPlaceholder: "别名(可选)",
+    windowExpression: "表达式",
+    windowSelectExpression: "选择表达式",
+    windowWinSize: "窗口大小",
+    windowAliasName: "窗口",
+
+    // TextTransformDialog
+    textTransformAction: "文本转换",
+    textTransformSearchColumns: "搜索列",
+    textTransformColumnsSelected: "列(已选 {count} 列)",
+    textTransformNoMatches: "无匹配",
+    textTransformType: "转换类型",
+    textTransformLen: "长度",
+    textTransformLower: "小写",
+    textTransformUpper: "大写",
+    textTransformTrim: "去空白",
+    textTransformLtrim: "去左空白",
+    textTransformRtrim: "去右空白",
+    textTransformStrip: "去特殊符",
+    contextText: "文本",
+    contextNumber: "数字",
+    sliceLeft: "左侧切片",
+    sliceRight: "右侧切片",
+    sliceSlice: "任意切片",
+    sliceSplit: "按符拆分",
+    slicePad: "填充字符",
+
+    // NumberTransformDialog
+    numTransformAction: "数字转换",
+    numTransformSearchColumns: "搜索列",
+    numTransformColumnsSelected: "列(已选 {count} 列)",
+    numTransformNoMatches: "无匹配",
+    numTransformType: "转换类型",
+    numTransformAbs: "绝对值",
+    numTransformNeg: "取反",
+    numTransformFloor: "向下取整",
+    numTransformCeil: "向上取整",
+    numTransformInt: "整数",
+    numTransformFloat: "浮点",
+    numTransformRound: "四舍五入",
+
+    // SplitDialog
+    splitAction: "切片",
+    splitSearchColumn: "搜索或选择列",
+    splitOperationType: "操作类型",
+    splitSelectOperation: "选择操作",
+    splitLength: "长度",
+    splitStartIndex: "起始索引",
+    splitEndIndex: "结束索引",
+    splitSeparator: "分隔符",
+    splitSelectSeparator: "选择分隔符",
+    splitCustomSeparator: "自定义分隔符",
+    splitCustomSeparatorPlaceholder: "输入自定义分隔符",
+    splitArrayIndices: "数组索引(从 0 开始)",
+    splitAddIndex: "添加索引",
+    splitJoinWith: "连接符(用于多个索引)",
+    splitJoinWithPlaceholder: "例如 -, _, / 等",
+    splitAlias: "别名(可选)",
+    splitAliasPlaceholder: "留空则保留原值",
+    splitCustom: "自定义",
+    splitSpace: "空格",
+    splitTab: "制表符 (\\t)",
+    splitComma: "逗号 (,)",
+    splitSemicolon: "分号 (;)",
+    splitPipe: "竖线 (|)",
+    splitHyphen: "连字符 (-)",
+    splitUnderscore: "下划线 (_)",
+    splitColon: "冒号 (:)",
+    splitSlash: "斜杠 (/)",
+
+    // PadDialog
+    padAction: "填充",
+    padPadType: "填充类型",
+    padSelectType: "选择填充类型",
+    padWidth: "宽度",
+    padWidthPlaceholder: "目标宽度",
+    padCharacter: "字符(可选)",
+    padCharacterPlaceholder: "留空则用空格",
+    padTypePad: "填充",
+    padTypeLpad: "左侧填充",
+    padTypeRpad: "右侧填充",
+
+    // ReplaceDialog
+    replaceSearchColumn: "搜索或选择列",
+    replacePairs: "替换对",
+    replaceAdd: "添加",
+    replacePattern: "待替换的值",
+    replaceReplacement: "替换为",
+    replaceRegex: "正则",
+    replaceIgnoreCase: "忽略大小写",
+
+    // SortDialog
+    sortAction: "排序",
+    sortSearchColumns: "搜索列",
+    sortColumnsSelected: "列(已选 {count} 列)",
+    sortNoMatches: "无匹配",
+    sortOrder: "排序方式",
+    sortNoColumnsSelected: "未选中列",
+    sortNumeric: "数字",
+    sortText: "文本",
+    sortAlias: "排序",
+
     // Pipeline Templates
     newFromTemplate: "从模板新建",
     templateName: "模板名称",
@@ -1065,8 +1651,8 @@ export const translations: Record<Language, Translations> = {
     confirmDeleteTemplate: "确定删除该模板吗?",
     templateSaved: "管道已保存为模板",
     templateApplied: "已从模板创建新管道",
-    templateNameRequired: "请先在管道中添加步骤再另存为模板。",
-    templateImportFailed: "所选文件不是有效的模板文件。",
+    templateNameRequired: "请先在管道中添加步骤再另存为模板",
+    templateImportFailed: "所选文件不是有效的模板文件",
     paletteTemplates: "模板",
   },
 };

@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { useDraggable } from "@/hooks/useDraggable";
+import { useLanguage } from "@/i18n";
 
 interface SortDialogState {
   col: number;
@@ -29,6 +30,7 @@ export function SortDialog({
   onAddCommand,
   onClose,
 }: SortDialogProps) {
+  const { t } = useLanguage();
   const [selectedColumns, setSelectedColumns] = useState<string[]>(() => {
     const initialColumn = headers[sortDialog.col];
     return initialColumn ? [initialColumn] : [];
@@ -84,7 +86,7 @@ export function SortDialog({
       numeric: sortNumeric,
     };
 
-    onAddCommand(sortCommand, params, "Sort");
+    onAddCommand(sortCommand, params, t.sortAlias);
     onClose();
   };
 
@@ -104,7 +106,7 @@ export function SortDialog({
         className={`flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       >
         <div className="flex items-center gap-2">
-          <span className="text-base font-medium">Sort</span>
+          <span className="text-base font-medium">{t.sortAction}</span>
         </div>
         <button
           onClick={onClose}
@@ -120,7 +122,7 @@ export function SortDialog({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search columns..."
+            placeholder={t.sortSearchColumns}
             className="flex-1 h-7 px-2 text-xs border rounded-md bg-background"
           />
         </div>
@@ -129,13 +131,16 @@ export function SortDialog({
       <ScrollArea className="flex-1 p-3 no-drag">
         <div className="mb-3">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Columns ({selectedColumns.length} selected)
+            {t.sortColumnsSelected.replace(
+              "{count}",
+              String(selectedColumns.length),
+            )}
           </label>
           <ScrollArea className="h-[120px] border rounded-md bg-background">
             <div className="p-1.5 space-y-0.5">
               {filteredHeaders.length === 0 ? (
                 <span className="text-xs text-muted-foreground px-2 py-1.5">
-                  No matches
+                  {t.sortNoMatches}
                 </span>
               ) : (
                 filteredHeaders.map((header) => {
@@ -186,7 +191,7 @@ export function SortDialog({
 
         <div className="space-y-2">
           <div className="text-xs font-medium text-muted-foreground">
-            Sort Order
+            {t.sortOrder}
           </div>
           <ScrollArea className="h-[100px] border rounded-md bg-background p-2">
             <div className="space-y-0.5">
@@ -215,14 +220,14 @@ export function SortDialog({
                           : "bg-muted/50 text-muted-foreground"
                       }`}
                     >
-                      {sortNumeric ? "Num" : "Text"}
+                      {sortNumeric ? t.sortNumeric : t.sortText}
                     </button>
                   </div>
                 </div>
               ))}
               {selectedColumns.length === 0 && (
                 <span className="text-xs text-muted-foreground">
-                  No columns selected
+                  {t.sortNoColumnsSelected}
                 </span>
               )}
             </div>
@@ -237,7 +242,7 @@ export function SortDialog({
           size="sm"
           onClick={onClose}
         >
-          Cancel
+          {t.cancel}
         </Button>
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
@@ -246,7 +251,7 @@ export function SortDialog({
           onClick={handleApply}
           disabled={selectedColumns.length === 0}
         >
-          Apply
+          {t.apply}
         </Button>
       </div>
     </div>

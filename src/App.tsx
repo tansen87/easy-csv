@@ -89,7 +89,7 @@ function App() {
 }
 
 function AppContent() {
-  const { language, t } = useLanguage();
+  const { effectiveLanguage, t } = useLanguage();
 
   // Toast
   const { toasts, showToast, showToastRef, removeToastRef } = useToast();
@@ -352,7 +352,7 @@ function AppContent() {
   const handleHelpClick = useCallback(
     (command: XanCommand) => {
       ui.setShowHelp(true);
-      const docs = language === "zh" ? helpDocsZh : helpDocs;
+      const docs = effectiveLanguage === "zh" ? helpDocsZh : helpDocs;
       const helpText = docs[command.name];
       if (helpText) {
         ui.setHelpContent(helpText);
@@ -362,7 +362,7 @@ function AppContent() {
         ui.setHelpCommandName(command.name);
       }
     },
-    [language, ui],
+    [effectiveLanguage, ui],
   );
 
   // Step click
@@ -1033,10 +1033,10 @@ function AppContent() {
   );
 
   const onHelp = useCallback(() => {
-    ui.setHelpCommandName(language === "zh" ? "帮助" : "Help");
-    ui.setHelpContent(getHelpContent(language));
+    ui.setHelpCommandName(effectiveLanguage === "zh" ? "帮助" : "Help");
+    ui.setHelpContent(getHelpContent(effectiveLanguage));
     ui.setShowHelp(true);
-  }, [language, ui]);
+  }, [effectiveLanguage, ui]);
 
   const onToggleCommandPanel = useCallback(
     () => ui.setShowCommandPanel(!ui.showCommandPanel),
@@ -1334,7 +1334,8 @@ function AppContent() {
       return {
         id: `cmd-${cmd.id}`,
         label: cmd.name,
-        description: language === "zh" ? cmd.descriptionCn : cmd.description,
+        description:
+          effectiveLanguage === "zh" ? cmd.descriptionCn : cmd.description,
         // Include the English name, category and description so English input
         // still matches even while the UI (descriptions) is localized to zh.
         keywords: `${cmd.name} ${cmd.category} ${cmd.description}`,
@@ -1353,7 +1354,7 @@ function AppContent() {
     ];
   }, [
     t,
-    language,
+    effectiveLanguage,
     undoStackLength,
     redoStackLength,
     isExecuting,

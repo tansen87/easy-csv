@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useDraggable } from "@/hooks/useDraggable";
 import { VariableHint } from "@/components/dialog/commands/VariableHint";
+import { useLanguage } from "@/i18n";
 
 interface ReplaceDialogState {
   col: number;
@@ -38,6 +39,7 @@ export function ReplaceDialog({
   onAddCommand,
   onClose,
 }: ReplaceDialogProps) {
+  const { t } = useLanguage();
   const [selectedColumn, setSelectedColumn] = useState(
     headers[replaceDialog.col] || "",
   );
@@ -95,7 +97,7 @@ export function ReplaceDialog({
           overwrite: true,
           output: "",
         },
-        "Replace",
+        t.replaceAction,
       );
     }
     onClose();
@@ -138,7 +140,7 @@ export function ReplaceDialog({
         className={`flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       >
         <div className="flex items-center gap-2">
-          <span className="text-base font-medium">Replace</span>
+          <span className="text-base font-medium">{t.replaceAction}</span>
         </div>
         <button
           onClick={onClose}
@@ -149,27 +151,27 @@ export function ReplaceDialog({
       </div>
       <div className="px-3 py-2 shrink-0 no-drag">
         <label className="text-xs font-medium text-muted-foreground mb-1 block">
-          Column
+          {t.filterColumn}
         </label>
         <Select
           value={selectedColumn}
           onChange={setSelectedColumn}
           options={headers.map((header) => ({ label: header, value: header }))}
-          placeholder="Search or select column..."
+          placeholder={t.replaceSearchColumn}
         />
       </div>
       <ScrollArea className="flex-1 p-3 no-drag">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-xs font-medium text-muted-foreground">
-              Replace Pairs
+              {t.replacePairs}
             </label>
             <button
               onClick={addReplacePair}
               className="flex items-center gap-1 px-2 py-0.5 text-xs hover:bg-accent rounded-md transition-colors text-muted-foreground"
             >
               <Plus className="h-3.5 w-3.5" />
-              Add
+              {t.replaceAdd}
             </button>
           </div>
           <div className="space-y-2">
@@ -198,7 +200,7 @@ export function ReplaceDialog({
                     onChange={(e) =>
                       updateReplacePair(index, "pattern", e.target.value)
                     }
-                    placeholder="Pattern"
+                    placeholder={t.replacePattern}
                     className="flex-1 h-8 px-2 text-xs border rounded-md bg-background w-full"
                   />
                   <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
@@ -208,7 +210,7 @@ export function ReplaceDialog({
                     onChange={(e) =>
                       updateReplacePair(index, "replace", e.target.value)
                     }
-                    placeholder="Replacement"
+                    placeholder={t.replaceReplacement}
                     className="flex-1 h-8 px-2 text-xs border rounded-md bg-background w-full"
                   />
                 </div>
@@ -223,7 +225,7 @@ export function ReplaceDialog({
                       }
                       className="h-3 w-3 accent-foreground"
                     />
-                    Regex
+                    {t.replaceRegex}
                   </label>
                   <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                     <input
@@ -234,7 +236,7 @@ export function ReplaceDialog({
                       }
                       className="h-3 w-3 accent-foreground"
                     />
-                    Ignore Case
+                    {t.replaceIgnoreCase}
                   </label>
                 </div>
               </div>
@@ -250,7 +252,7 @@ export function ReplaceDialog({
           size="sm"
           onClick={onClose}
         >
-          Cancel
+          {t.cancel}
         </Button>
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
@@ -258,7 +260,7 @@ export function ReplaceDialog({
           size="sm"
           onClick={handleApply}
         >
-          Apply
+          {t.apply}
         </Button>
       </div>
     </div>

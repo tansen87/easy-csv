@@ -5,6 +5,7 @@ import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useDraggable } from "@/hooks/useDraggable";
+import { useLanguage } from "@/i18n";
 
 interface DateTransformDialogState {
   col: number;
@@ -75,6 +76,7 @@ export function DateTransformDialog({
   onAddCommand,
   onClose,
 }: DateTransformDialogProps) {
+  const { t } = useLanguage();
   const [inputFormat, setInputFormat] = useState("%Y%m%d");
   const [outputFormat, setOutputFormat] = useState("%d/%m/%Y");
   const [outputColumnName, setOutputColumnName] = useState("new_date");
@@ -129,7 +131,7 @@ export function DateTransformDialog({
         output: "",
         overwrite: isOverwrite,
       },
-      "Date Transform",
+      t.dateTransformAliasName,
     );
     onClose();
   };
@@ -150,7 +152,7 @@ export function DateTransformDialog({
         className={`flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       >
         <div className="flex items-center gap-2">
-          <span className="text-base font-medium">Date Transform</span>
+          <span className="text-base font-medium">{t.dateAction}</span>
         </div>
         <button
           onClick={onClose}
@@ -162,49 +164,49 @@ export function DateTransformDialog({
       <div className="p-3 space-y-3 no-drag">
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Column
+            {t.filterColumn}
           </label>
           <Select
             value={selectedColumn}
             onChange={setSelectedColumn}
             options={columnOptions}
-            placeholder="Search or select column..."
+            placeholder={t.dateTransformSearchColumn}
           />
         </div>
 
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Input Format
+            {t.inputFormat}
           </label>
           <Select
             value={inputFormat}
             onChange={setInputFormat}
             options={DATE_FORMATS}
-            placeholder="Search input format..."
+            placeholder={t.dateTransformSearchInputFormat}
           />
         </div>
 
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Output Format
+            {t.outputFormat}
           </label>
           <Select
             value={outputFormat}
             onChange={setOutputFormat}
             options={DATE_FORMATS}
-            placeholder="Search output format..."
+            placeholder={t.dateTransformSearchOutputFormat}
           />
         </div>
 
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Alias (Optional)
+            {t.dateTransformAlias}
           </label>
           <input
             type="text"
             value={outputColumnName}
             onChange={(e) => setOutputColumnName(e.target.value)}
-            placeholder="Leave blank to keep original"
+            placeholder={t.dateTransformAliasPlaceholder}
             className="w-full h-8 px-2 text-xs border rounded-md bg-background"
           />
         </div>
@@ -216,7 +218,7 @@ export function DateTransformDialog({
           size="sm"
           onClick={onClose}
         >
-          Cancel
+          {t.cancel}
         </Button>
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
@@ -224,7 +226,7 @@ export function DateTransformDialog({
           size="sm"
           onClick={handleApply}
         >
-          Apply
+          {t.apply}
         </Button>
       </div>
     </div>

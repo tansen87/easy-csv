@@ -40,8 +40,8 @@ export function DuckdbEditor({
   placeholder = "SELECT ... FROM input ...",
   autoFocus = false,
 }: DuckdbEditorProps) {
-  const { language } = useLanguage();
-  const isZh = language === "zh";
+  const { effectiveLanguage } = useLanguage();
+  const isZh = effectiveLanguage === "zh";
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);

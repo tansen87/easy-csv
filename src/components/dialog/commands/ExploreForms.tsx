@@ -7,7 +7,7 @@ import { useLanguage } from "@/i18n";
 
 export function CountForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div className="flex gap-16">
@@ -88,7 +88,11 @@ export function CountForm(props: CommandFormProps) {
             e.target.value,
           )
         }
-        placeholder={getParameterDescription("count", "threads", language)}
+        placeholder={getParameterDescription(
+          "count",
+          "threads",
+          effectiveLanguage,
+        )}
         className="h-8 px-3 w-full text-sm border rounded-md bg-background"
       />
     </CommandFormWrapper>
@@ -139,7 +143,7 @@ export function HeadersForm(props: CommandFormProps) {
 
 export function ViewForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -175,7 +179,11 @@ export function ViewForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("view", "limit", language)}
+          placeholder={getParameterDescription(
+            "view",
+            "limit",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md"
         />
       </div>
@@ -192,7 +200,11 @@ export function ViewForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("view", "select", language)}
+          placeholder={getParameterDescription(
+            "view",
+            "select",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           autoFocus
         />
@@ -266,7 +278,7 @@ export function ViewForm(props: CommandFormProps) {
 
 export function FlattenForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -282,7 +294,11 @@ export function FlattenForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("flatten", "select", language)}
+          placeholder={getParameterDescription(
+            "flatten",
+            "select",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -301,7 +317,11 @@ export function FlattenForm(props: CommandFormProps) {
                 parseInt(e.target.value) || undefined,
               )
             }
-            placeholder={getParameterDescription("flatten", "limit", language)}
+            placeholder={getParameterDescription(
+              "flatten",
+              "limit",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -321,7 +341,7 @@ export function FlattenForm(props: CommandFormProps) {
             placeholder={getParameterDescription(
               "flatten",
               "row-separator",
-              language,
+              effectiveLanguage,
             )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
@@ -341,7 +361,11 @@ export function FlattenForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("flatten", "split", language)}
+            placeholder={getParameterDescription(
+              "flatten",
+              "split",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -358,7 +382,11 @@ export function FlattenForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("flatten", "sep", language)}
+            placeholder={getParameterDescription(
+              "flatten",
+              "sep",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -400,7 +428,7 @@ export function FlattenForm(props: CommandFormProps) {
 
 export function HistForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -433,7 +461,11 @@ export function HistForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("hist", "name", language)}
+            placeholder={getParameterDescription(
+              "hist",
+              "name",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -450,7 +482,11 @@ export function HistForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("hist", "field", language)}
+            placeholder={getParameterDescription(
+              "hist",
+              "field",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -469,7 +505,11 @@ export function HistForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("hist", "label", language)}
+            placeholder={getParameterDescription(
+              "hist",
+              "label",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -486,7 +526,11 @@ export function HistForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("hist", "value", language)}
+            placeholder={getParameterDescription(
+              "hist",
+              "value",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -520,7 +564,7 @@ export function HistForm(props: CommandFormProps) {
 
 export function PlotForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props} scrollHeight="30vh">
       <div className="grid grid-cols-2 gap-4">
@@ -532,7 +576,11 @@ export function PlotForm(props: CommandFormProps) {
             onChange={(e) =>
               updateParam(commandDialog, setCommandDialog, "x", e.target.value)
             }
-            placeholder={getParameterDescription("plot", "x", language)}
+            placeholder={getParameterDescription(
+              "plot",
+              "x",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             autoFocus
           />
@@ -545,7 +593,11 @@ export function PlotForm(props: CommandFormProps) {
             onChange={(e) =>
               updateParam(commandDialog, setCommandDialog, "y", e.target.value)
             }
-            placeholder={getParameterDescription("plot", "y", language)}
+            placeholder={getParameterDescription(
+              "plot",
+              "y",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -564,7 +616,11 @@ export function PlotForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("plot", "category", language)}
+            placeholder={getParameterDescription(
+              "plot",
+              "category",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -673,7 +729,11 @@ export function PlotForm(props: CommandFormProps) {
               onChange={(e) =>
                 updateParam(commandDialog, setCommandDialog, n, e.target.value)
               }
-              placeholder={getParameterDescription("plot", n, language)}
+              placeholder={getParameterDescription(
+                "plot",
+                n,
+                effectiveLanguage,
+              )}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -693,7 +753,11 @@ export function PlotForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("plot", "x-ticks", language)}
+            placeholder={getParameterDescription(
+              "plot",
+              "x-ticks",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -710,7 +774,11 @@ export function PlotForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("plot", "y-ticks", language)}
+            placeholder={getParameterDescription(
+              "plot",
+              "y-ticks",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -732,7 +800,7 @@ export function PlotForm(props: CommandFormProps) {
             placeholder={getParameterDescription(
               "plot",
               "density-gradient",
-              language,
+              effectiveLanguage,
             )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
@@ -779,7 +847,7 @@ export function PlotForm(props: CommandFormProps) {
             placeholder={getParameterDescription(
               "plot",
               "small-multiples",
-              language,
+              effectiveLanguage,
             )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
@@ -797,7 +865,11 @@ export function PlotForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("plot", "timezone", language)}
+            placeholder={getParameterDescription(
+              "plot",
+              "timezone",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -862,7 +934,7 @@ export function PlotForm(props: CommandFormProps) {
 
 export function ChartForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   const chartType = (commandDialog.params["chart-type"] as string) || "line";
   return (
     <CommandFormWrapper {...props} scrollHeight="26vh">
@@ -895,7 +967,11 @@ export function ChartForm(props: CommandFormProps) {
             onChange={(e) =>
               updateParam(commandDialog, setCommandDialog, "x", e.target.value)
             }
-            placeholder={getParameterDescription("chart", "x", language)}
+            placeholder={getParameterDescription(
+              "chart",
+              "x",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             autoFocus
           />
@@ -921,7 +997,11 @@ export function ChartForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder={getParameterDescription("chart", "y", language)}
+              placeholder={getParameterDescription(
+                "chart",
+                "y",
+                effectiveLanguage,
+              )}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -942,7 +1022,7 @@ export function ChartForm(props: CommandFormProps) {
                 placeholder={getParameterDescription(
                   "chart",
                   "category",
-                  language,
+                  effectiveLanguage,
                 )}
                 className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
@@ -966,7 +1046,11 @@ export function ChartForm(props: CommandFormProps) {
                   parseInt(e.target.value) || 10,
                 )
               }
-              placeholder={getParameterDescription("chart", "bins", language)}
+              placeholder={getParameterDescription(
+                "chart",
+                "bins",
+                effectiveLanguage,
+              )}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -986,7 +1070,11 @@ export function ChartForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("chart", "title", language)}
+            placeholder={getParameterDescription(
+              "chart",
+              "title",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -1007,7 +1095,7 @@ export function ChartForm(props: CommandFormProps) {
               placeholder={getParameterDescription(
                 "chart",
                 "x-label",
-                language,
+                effectiveLanguage,
               )}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
@@ -1032,7 +1120,7 @@ export function ChartForm(props: CommandFormProps) {
               placeholder={getParameterDescription(
                 "chart",
                 "y-label",
-                language,
+                effectiveLanguage,
               )}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />

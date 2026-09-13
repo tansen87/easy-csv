@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useDraggable } from "@/hooks/useDraggable";
 import { VariableHint } from "@/components/dialog/commands/VariableHint";
+import { useLanguage } from "@/i18n";
 
 interface SplitDialogState {
   col: number;
@@ -26,24 +27,24 @@ interface SplitDialogProps {
   onClose: () => void;
 }
 
-const SPLIT_SEPARATORS = [
-  { label: "Custom", value: "custom" },
-  { label: "Space", value: " " },
-  { label: "Tab (\\t)", value: "\\t" },
-  { label: "Comma (,)", value: "," },
-  { label: "Semicolon (;)", value: ";" },
-  { label: "Pipe (|)", value: "|" },
-  { label: "Hyphen (-)", value: "-" },
-  { label: "Underscore (_)", value: "_" },
-  { label: "Colon (:)", value: ":" },
-  { label: "Slash (/)", value: "/" },
+const SPLIT_SEPARATORS: { value: string; labelKey: string }[] = [
+  { labelKey: "splitCustom", value: "custom" },
+  { labelKey: "splitSpace", value: " " },
+  { labelKey: "splitTab", value: "\\t" },
+  { labelKey: "splitComma", value: "," },
+  { labelKey: "splitSemicolon", value: ";" },
+  { labelKey: "splitPipe", value: "|" },
+  { labelKey: "splitHyphen", value: "-" },
+  { labelKey: "splitUnderscore", value: "_" },
+  { labelKey: "splitColon", value: ":" },
+  { labelKey: "splitSlash", value: "/" },
 ];
 
-const SLICE_TYPES = [
-  { label: "Left", value: "left" },
-  { label: "Right", value: "right" },
-  { label: "Slice", value: "slice" },
-  { label: "Split", value: "split" },
+const SLICE_TYPES: { value: string; labelKey: string }[] = [
+  { labelKey: "sliceLeft", value: "left" },
+  { labelKey: "sliceRight", value: "right" },
+  { labelKey: "sliceSlice", value: "slice" },
+  { labelKey: "sliceSplit", value: "split" },
 ];
 
 export function SplitDialog({
@@ -52,6 +53,7 @@ export function SplitDialog({
   onAddCommand,
   onClose,
 }: SplitDialogProps) {
+  const { t } = useLanguage();
   const [sliceType, setSliceType] = useState(splitDialog.sliceType || "split");
   const [separator, setSeparator] = useState("/");
   const [customSeparator, setCustomSeparator] = useState("");
@@ -179,7 +181,7 @@ export function SplitDialog({
         className={`flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       >
         <div className="flex items-center gap-2">
-          <span className="text-base font-medium">Slice</span>
+          <span className="text-base font-medium">{t.splitAction}</span>
         </div>
         <button
           onClick={onClose}
@@ -192,7 +194,7 @@ export function SplitDialog({
         <div className="p-3 space-y-3">
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
-              Column
+              {t.filterColumn}
             </label>
             <Select
               value={selectedColumn}
@@ -201,26 +203,29 @@ export function SplitDialog({
                 label: header,
                 value: header,
               }))}
-              placeholder="Search or select column..."
+              placeholder={t.splitSearchColumn}
             />
           </div>
 
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
-              Operation Type
+              {t.splitOperationType}
             </label>
             <Select
               value={sliceType}
               onChange={setSliceType}
-              options={SLICE_TYPES}
-              placeholder="Select operation..."
+              options={SLICE_TYPES.map((o) => ({
+                value: o.value,
+                label: t[o.labelKey as keyof typeof t] as string,
+              }))}
+              placeholder={t.splitSelectOperation}
             />
           </div>
 
           {sliceType === "left" && (
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                Length
+                {t.splitLength}
               </label>
               <input
                 type="number"
@@ -235,7 +240,7 @@ export function SplitDialog({
           {sliceType === "right" && (
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                Length
+                {t.splitLength}
               </label>
               <input
                 type="number"
@@ -251,7 +256,7 @@ export function SplitDialog({
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Start Index
+                  {t.splitStartIndex}
                 </label>
                 <input
                   type="number"
@@ -263,7 +268,7 @@ export function SplitDialog({
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  End Index
+                  {t.splitEndIndex}
                 </label>
                 <input
                   type="number"
@@ -280,26 +285,29 @@ export function SplitDialog({
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Separator
+                  {t.splitSeparator}
                 </label>
                 <Select
                   value={separator}
                   onChange={setSeparator}
-                  options={SPLIT_SEPARATORS}
-                  placeholder="Select separator..."
+                  options={SPLIT_SEPARATORS.map((o) => ({
+                    value: o.value,
+                    label: t[o.labelKey as keyof typeof t] as string,
+                  }))}
+                  placeholder={t.splitSelectSeparator}
                 />
               </div>
 
               {separator === "custom" && (
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                    Custom Separator
+                    {t.splitCustomSeparator}
                   </label>
                   <input
                     type="text"
                     value={customSeparator}
                     onChange={(e) => setCustomSeparator(e.target.value)}
-                    placeholder="Enter custom separator"
+                    placeholder={t.splitCustomSeparatorPlaceholder}
                     className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                   />
                   <VariableHint value={customSeparator} />
@@ -308,7 +316,7 @@ export function SplitDialog({
 
               <div className="space-y-3">
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Array Indices (0-based)
+                  {t.splitArrayIndices}
                 </label>
                 <div>
                   {indices.map((index, idx) => (
@@ -335,20 +343,20 @@ export function SplitDialog({
                     className="w-full h-8 px-2 text-xs border border-dashed rounded-md hover:border-accent transition-colors flex items-center justify-center gap-1"
                   >
                     <Plus className="h-3 w-3 text-muted-foreground" />
-                    Add Index
+                    {t.splitAddIndex}
                   </button>
                 </div>
               </div>
 
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Join With (for multiple indices)
+                  {t.splitJoinWith}
                 </label>
                 <input
                   type="text"
                   value={joinWith}
                   onChange={(e) => setJoinWith(e.target.value)}
-                  placeholder="e.g., -, _, /, etc."
+                  placeholder={t.splitJoinWithPlaceholder}
                   className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                 />
                 <VariableHint value={joinWith} />
@@ -358,13 +366,13 @@ export function SplitDialog({
 
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
-              Alias (Optional)
+              {t.splitAlias}
             </label>
             <input
               type="text"
               value={outputColumnName}
               onChange={(e) => setOutputColumnName(e.target.value)}
-              placeholder="Leave blank to keep original"
+              placeholder={t.splitAliasPlaceholder}
               className="w-full h-8 px-2 text-xs border rounded-md bg-background"
             />
           </div>
@@ -377,7 +385,7 @@ export function SplitDialog({
           size="sm"
           onClick={onClose}
         >
-          Cancel
+          {t.cancel}
         </Button>
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
@@ -391,7 +399,7 @@ export function SplitDialog({
               !customSeparator)
           }
         >
-          Apply
+          {t.apply}
         </Button>
       </div>
     </div>

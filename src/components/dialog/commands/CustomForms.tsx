@@ -10,7 +10,7 @@ import { useLanguage } from "@/i18n";
 
 export function OutputForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props} disabled={!commandDialog.params.path}>
       <div>
@@ -21,7 +21,11 @@ export function OutputForm(props: CommandFormProps) {
           onChange={(e) =>
             updateParam(commandDialog, setCommandDialog, "path", e.target.value)
           }
-          placeholder={getParameterDescription("output", "path", language)}
+          placeholder={getParameterDescription(
+            "output",
+            "path",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           autoFocus
         />
@@ -32,12 +36,13 @@ export function OutputForm(props: CommandFormProps) {
 
 export function BatchFilterForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
+  const { t } = useLanguage();
   return (
     <CommandFormWrapper {...props} disabled={!commandDialog.params.column}>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium">Column</label>
+            <label className="text-sm font-medium">{t.filterColumn}</label>
             <input
               type="text"
               value={commandDialog.params.column || ""}
@@ -47,12 +52,12 @@ export function BatchFilterForm(props: CommandFormProps) {
                   params: { ...commandDialog.params, column: e.target.value },
                 })
               }
-              placeholder="Column to filter on"
+              placeholder={t.filterColumnToFilterOn}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
           <div>
-            <label className="text-sm font-medium">Filter Type</label>
+            <label className="text-sm font-medium">{t.filterType}</label>
             <Select
               value={commandDialog.params["filter-type"] || "text"}
               onChange={(value) => {
@@ -78,16 +83,16 @@ export function BatchFilterForm(props: CommandFormProps) {
                 });
               }}
               options={[
-                { label: "Text", value: "text" },
-                { label: "Number", value: "number" },
+                { label: t.text, value: "text" },
+                { label: t.number, value: "number" },
               ]}
-              placeholder="Select type..."
+              placeholder={t.selectType}
             />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium">Operator</label>
+            <label className="text-sm font-medium">{t.filterOperator}</label>
             <Select
               value={
                 commandDialog.params["text-operator"] ||
@@ -121,24 +126,24 @@ export function BatchFilterForm(props: CommandFormProps) {
                       { label: "<=", value: "less_or_equal" },
                     ]
                   : [
-                      { label: "Equals", value: "equals" },
-                      { label: "Not equals", value: "not_equals" },
-                      { label: "Starts with", value: "starts_with" },
-                      { label: "Not starts with", value: "not_starts_with" },
-                      { label: "Ends with", value: "ends_with" },
-                      { label: "Not ends with", value: "not_ends_with" },
-                      { label: "Contains", value: "contains" },
-                      { label: "Not contains", value: "not_contains" },
-                      { label: "Regex", value: "regex" },
-                      { label: "Is null", value: "is_null" },
-                      { label: "Is not null", value: "is_not_null" },
+                      { label: t.opEquals, value: "equals" },
+                      { label: t.opNotEquals, value: "not_equals" },
+                      { label: t.opStartsWith, value: "starts_with" },
+                      { label: t.opNotStartsWith, value: "not_starts_with" },
+                      { label: t.opEndsWith, value: "ends_with" },
+                      { label: t.opNotEndsWith, value: "not_ends_with" },
+                      { label: t.opContains, value: "contains" },
+                      { label: t.opNotContains, value: "not_contains" },
+                      { label: t.opRegex, value: "regex" },
+                      { label: t.opIsNull, value: "is_null" },
+                      { label: t.opIsNotNull, value: "is_not_null" },
                     ]
               }
-              placeholder="Select operator..."
+              placeholder={t.selectOperator}
             />
           </div>
           <div>
-            <label className="text-sm font-medium">Value Source</label>
+            <label className="text-sm font-medium">{t.valueSource}</label>
             <Select
               value={commandDialog.params["value-mode"] || "manual"}
               onChange={(value) => {
@@ -157,16 +162,16 @@ export function BatchFilterForm(props: CommandFormProps) {
                 });
               }}
               options={[
-                { label: "Manual Input", value: "manual" },
-                { label: "From Column", value: "column" },
+                { label: t.manualInput, value: "manual" },
+                { label: t.fromColumn, value: "column" },
               ]}
-              placeholder="Select source..."
+              placeholder={t.selectSource}
             />
           </div>
         </div>
         {commandDialog.params["value-mode"] === "manual" ? (
           <div>
-            <label className="text-sm font-medium">Values (one per line)</label>
+            <label className="text-sm font-medium">{t.valuesOnePerLine}</label>
             <textarea
               value={commandDialog.params["manual-values"] || ""}
               onChange={(e) =>
@@ -184,7 +189,7 @@ export function BatchFilterForm(props: CommandFormProps) {
           </div>
         ) : (
           <div>
-            <label className="text-sm font-medium">Extract Column</label>
+            <label className="text-sm font-medium">{t.extractColumn}</label>
             <input
               type="text"
               value={commandDialog.params["extract-column"] || ""}
@@ -197,14 +202,14 @@ export function BatchFilterForm(props: CommandFormProps) {
                   },
                 })
               }
-              placeholder="Column to extract values from"
+              placeholder={t.extractColumnPlaceholder}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
         )}
         <div>
           <label className="text-sm font-medium">
-            Output Directory (optional)
+            {t.outputDirectoryOptional}
           </label>
           <input
             type="text"
@@ -218,7 +223,7 @@ export function BatchFilterForm(props: CommandFormProps) {
                 },
               })
             }
-            placeholder="Same as source file"
+            placeholder={t.sameAsSourceFile}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -237,7 +242,7 @@ export function BatchFilterForm(props: CommandFormProps) {
             }
             className="h-3.5 w-3.5 accent-foreground"
           />
-          Case insensitive
+          {t.ignoreCase}
         </label>
       </div>
     </CommandFormWrapper>

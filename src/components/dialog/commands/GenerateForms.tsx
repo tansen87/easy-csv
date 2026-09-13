@@ -6,7 +6,7 @@ import { useLanguage } from "@/i18n";
 
 export function RangeForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div className="grid grid-cols-4 gap-2">
@@ -19,7 +19,11 @@ export function RangeForm(props: CommandFormProps) {
               onChange={(e) =>
                 updateParam(commandDialog, setCommandDialog, n, e.target.value)
               }
-              placeholder={getParameterDescription("range", n, language)}
+              placeholder={getParameterDescription(
+                "range",
+                n,
+                effectiveLanguage,
+              )}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -37,7 +41,11 @@ export function RangeForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("range", "column-name", language)}
+            placeholder={getParameterDescription(
+              "range",
+              "column-name",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>

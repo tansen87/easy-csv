@@ -32,6 +32,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TextTransformType } from "@/components/dialog/TextTransformDialog";
 import { NumberTransformType } from "@/components/dialog/NumberTransformDialog";
+import { useLanguage } from "@/i18n";
 
 interface ContextMenuState {
   x: number;
@@ -86,6 +87,7 @@ export function ContextMenu({
   onOpenNumberTransformDialog,
   onOpenSortDialog,
 }: ContextMenuProps) {
+  const { t } = useLanguage();
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({
     x: contextMenu.x,
@@ -156,55 +158,63 @@ export function ContextMenu({
 
   const textTransformOptions = [
     {
-      label: "Len",
+      label: t.textTransformLen,
       icon: RulerDimensionLine,
       transformType: "len" as TextTransformType,
     },
     {
-      label: "Lowercase",
+      label: t.textTransformLower,
       icon: CaseLower,
       transformType: "lower" as TextTransformType,
     },
     {
-      label: "Uppercase",
+      label: t.textTransformUpper,
       icon: CaseUpper,
       transformType: "upper" as TextTransformType,
     },
     {
-      label: "Trim",
+      label: t.textTransformTrim,
       icon: AlignCenter,
       transformType: "trim" as TextTransformType,
     },
     {
-      label: "LTrim",
+      label: t.textTransformLtrim,
       icon: AlignLeft,
       transformType: "ltrim" as TextTransformType,
     },
     {
-      label: "RTrim",
+      label: t.textTransformRtrim,
       icon: AlignRight,
       transformType: "rtrim" as TextTransformType,
     },
     {
-      label: "Strip",
+      label: t.textTransformStrip,
       icon: Eraser,
       transformType: "strip" as TextTransformType,
     },
-    { label: "Left", icon: ArrowLeftFromLine, transformType: "splitLeft" },
-    { label: "Right", icon: ArrowRightFromLine, transformType: "splitRight" },
-    { label: "Slice", icon: Slice, transformType: "slice" },
-    { label: "Split", icon: Scissors, transformType: "split" },
-    { label: "Pad", icon: AlignCenter, transformType: "pad" },
+    { label: t.sliceLeft, icon: ArrowLeftFromLine, transformType: "splitLeft" },
+    {
+      label: t.sliceRight,
+      icon: ArrowRightFromLine,
+      transformType: "splitRight",
+    },
+    { label: t.sliceSlice, icon: Slice, transformType: "slice" },
+    { label: t.sliceSplit, icon: Scissors, transformType: "split" },
+    { label: t.slicePad, icon: AlignCenter, transformType: "pad" },
   ];
 
   const numberTransformOptions = [
-    { label: "Abs", icon: Plus, transformType: "abs" },
-    { label: "Neg", icon: Minus, transformType: "neg" },
-    { label: "Floor", icon: ArrowDown, transformType: "floor" },
-    { label: "Ceil", icon: ArrowUp, transformType: "ceil" },
-    { label: "Integer", icon: DecimalsArrowLeft, transformType: "int" },
-    { label: "Float", icon: Infinity, transformType: "float" },
-    { label: "Round", icon: DecimalsArrowRight, transformType: "round" },
+    { label: t.numTransformAbs, icon: Plus, transformType: "abs" },
+    { label: t.numTransformNeg, icon: Minus, transformType: "neg" },
+    { label: t.numTransformFloor, icon: ArrowDown, transformType: "floor" },
+    { label: t.numTransformCeil, icon: ArrowUp, transformType: "ceil" },
+    { label: t.numTransformInt, icon: DecimalsArrowLeft, transformType: "int" },
+    { label: t.numTransformFloat, icon: Infinity, transformType: "float" },
+    {
+      label: t.numTransformRound,
+      icon: DecimalsArrowRight,
+      transformType: "round",
+    },
   ];
 
   return (
@@ -215,7 +225,7 @@ export function ContextMenu({
       onClick={(e) => e.stopPropagation()}
     >
       <div className="px-3 py-1 text-xs font-semibold text-muted-foreground border-b mb-1">
-        Quick Actions
+        {t.quickActions}
       </div>
 
       <button
@@ -227,7 +237,7 @@ export function ContextMenu({
         }}
       >
         <Filter className="h-4 w-4 text-muted-foreground" />
-        Filter
+        {t.filterAction}
       </button>
 
       <button
@@ -239,7 +249,7 @@ export function ContextMenu({
         }}
       >
         <FunnelPlus className="h-4 w-4 text-muted-foreground" />
-        Batch Filter
+        {t.batchFilterAction}
       </button>
 
       <button
@@ -251,7 +261,7 @@ export function ContextMenu({
         }}
       >
         <Replace className="h-4 w-4 text-muted-foreground" />
-        Replace
+        {t.replaceAction}
       </button>
 
       <button
@@ -263,7 +273,7 @@ export function ContextMenu({
         }}
       >
         <Grid3X3 className="h-4 w-4 text-muted-foreground" />
-        Pivot Table
+        {t.pivotAction}
       </button>
 
       <button
@@ -279,7 +289,7 @@ export function ContextMenu({
         }}
       >
         <Calendar className="h-4 w-4 text-muted-foreground" />
-        Date
+        {t.dateAction}
       </button>
 
       <button
@@ -291,7 +301,7 @@ export function ContextMenu({
         }}
       >
         <LayoutGrid className="h-4 w-4 text-muted-foreground" />
-        Window
+        {t.windowAction}
       </button>
 
       <div className="relative group">
@@ -305,7 +315,7 @@ export function ContextMenu({
         >
           <div className="flex items-center gap-2">
             <Type className="h-4 w-4 text-muted-foreground" />
-            Text
+            {t.contextText}
           </div>
           <ChevronRight className="h-3 w-3 text-muted-foreground" />
         </button>
@@ -384,7 +394,7 @@ export function ContextMenu({
         >
           <div className="flex items-center gap-2">
             <Hash className="h-4 w-4 text-muted-foreground" />
-            Number
+            {t.contextNumber}
           </div>
           <ChevronRight className="h-3 w-3 text-muted-foreground" />
         </button>
@@ -434,7 +444,7 @@ export function ContextMenu({
         }}
       >
         <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-        Sort
+        {t.sortAction}
       </button>
     </div>
   );

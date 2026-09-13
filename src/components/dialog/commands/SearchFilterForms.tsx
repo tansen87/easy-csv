@@ -94,7 +94,7 @@ function PatternListInput({
 
 export function SearchForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { t, language } = useLanguage();
+  const { t, effectiveLanguage } = useLanguage();
 
   const rawAddPattern = commandDialog.params["add-pattern"];
   const hasMultiPattern = Array.isArray(rawAddPattern)
@@ -112,13 +112,21 @@ export function SearchForm(props: CommandFormProps) {
       <div className="grid grid-cols-2 gap-2">
         <TextField
           name="select"
-          placeholder={getParameterDescription("search", "select", language)}
+          placeholder={getParameterDescription(
+            "search",
+            "select",
+            effectiveLanguage,
+          )}
           commandDialog={commandDialog}
           setCommandDialog={setCommandDialog}
         />
         <TextField
           name="pattern"
-          placeholder={getParameterDescription("search", "pattern", language)}
+          placeholder={getParameterDescription(
+            "search",
+            "pattern",
+            effectiveLanguage,
+          )}
           commandDialog={commandDialog}
           setCommandDialog={setCommandDialog}
         />
@@ -154,13 +162,21 @@ export function SearchForm(props: CommandFormProps) {
       <div className="grid grid-cols-2 gap-2">
         <TextField
           name="flag"
-          placeholder={getParameterDescription("search", "boolean", language)}
+          placeholder={getParameterDescription(
+            "search",
+            "boolean",
+            effectiveLanguage,
+          )}
           commandDialog={commandDialog}
           setCommandDialog={setCommandDialog}
         />
         <TextField
           name="count"
-          placeholder={getParameterDescription("search", "count", language)}
+          placeholder={getParameterDescription(
+            "search",
+            "count",
+            effectiveLanguage,
+          )}
           commandDialog={commandDialog}
           setCommandDialog={setCommandDialog}
         />
@@ -169,14 +185,22 @@ export function SearchForm(props: CommandFormProps) {
         <TextField
           name="limit"
           type="number"
-          placeholder={getParameterDescription("search", "limit", language)}
+          placeholder={getParameterDescription(
+            "search",
+            "limit",
+            effectiveLanguage,
+          )}
           commandDialog={commandDialog}
           setCommandDialog={setCommandDialog}
         />
         <TextField
           name="threads"
           type="number"
-          placeholder={getParameterDescription("search", "threads", language)}
+          placeholder={getParameterDescription(
+            "search",
+            "threads",
+            effectiveLanguage,
+          )}
           commandDialog={commandDialog}
           setCommandDialog={setCommandDialog}
         />
@@ -188,7 +212,7 @@ export function SearchForm(props: CommandFormProps) {
           placeholder={getParameterDescription(
             "search",
             "levenshtein",
-            language,
+            effectiveLanguage,
           )}
           commandDialog={commandDialog}
           setCommandDialog={setCommandDialog}
@@ -199,7 +223,7 @@ export function SearchForm(props: CommandFormProps) {
           placeholder={getParameterDescription(
             "search",
             "damerau-levenshtein",
-            language,
+            effectiveLanguage,
           )}
           commandDialog={commandDialog}
           setCommandDialog={setCommandDialog}
@@ -208,13 +232,21 @@ export function SearchForm(props: CommandFormProps) {
       <div className="grid grid-cols-2 gap-2">
         <TextField
           name="replace"
-          placeholder={getParameterDescription("search", "replace", language)}
+          placeholder={getParameterDescription(
+            "search",
+            "replace",
+            effectiveLanguage,
+          )}
           commandDialog={commandDialog}
           setCommandDialog={setCommandDialog}
         />
         <TextField
           name="patterns"
-          placeholder={getParameterDescription("search", "patterns", language)}
+          placeholder={getParameterDescription(
+            "search",
+            "patterns",
+            effectiveLanguage,
+          )}
           commandDialog={commandDialog}
           setCommandDialog={setCommandDialog}
         />
@@ -225,14 +257,18 @@ export function SearchForm(props: CommandFormProps) {
           placeholder={getParameterDescription(
             "search",
             "unique-matches",
-            language,
+            effectiveLanguage,
           )}
           commandDialog={commandDialog}
           setCommandDialog={setCommandDialog}
         />
         <TextField
           name="sep"
-          placeholder={getParameterDescription("search", "sep", language)}
+          placeholder={getParameterDescription(
+            "search",
+            "sep",
+            effectiveLanguage,
+          )}
           commandDialog={commandDialog}
           setCommandDialog={setCommandDialog}
         />
@@ -243,7 +279,7 @@ export function SearchForm(props: CommandFormProps) {
           placeholder={getParameterDescription(
             "search",
             "pattern-column",
-            language,
+            effectiveLanguage,
           )}
           commandDialog={commandDialog}
           setCommandDialog={setCommandDialog}
@@ -253,7 +289,7 @@ export function SearchForm(props: CommandFormProps) {
           placeholder={getParameterDescription(
             "search",
             "replacement-column",
-            language,
+            effectiveLanguage,
           )}
           commandDialog={commandDialog}
           setCommandDialog={setCommandDialog}
@@ -261,7 +297,11 @@ export function SearchForm(props: CommandFormProps) {
       </div>
       <TextField
         name="name-column"
-        placeholder={getParameterDescription("search", "name-column", language)}
+        placeholder={getParameterDescription(
+          "search",
+          "name-column",
+          effectiveLanguage,
+        )}
         commandDialog={commandDialog}
         setCommandDialog={setCommandDialog}
       />
@@ -271,7 +311,7 @@ export function SearchForm(props: CommandFormProps) {
 
 export function FilterForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props} disabled={!commandDialog.params.expression}>
       <div>
@@ -290,7 +330,7 @@ export function FilterForm(props: CommandFormProps) {
           placeholder={getParameterDescription(
             "filter",
             "expression",
-            language,
+            effectiveLanguage,
           )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
@@ -339,7 +379,11 @@ export function FilterForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("filter", "threads", language)}
+          placeholder={getParameterDescription(
+            "filter",
+            "threads",
+            effectiveLanguage,
+          )}
           className="h-8 px-1 text-sm border rounded-md bg-background"
         />
         <input
@@ -354,7 +398,11 @@ export function FilterForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("filter", "limit", language)}
+          placeholder={getParameterDescription(
+            "filter",
+            "limit",
+            effectiveLanguage,
+          )}
           className="h-8 px-1 text-sm border rounded-md bg-background"
         />
       </div>
@@ -364,7 +412,7 @@ export function FilterForm(props: CommandFormProps) {
 
 export function HeadForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -381,7 +429,11 @@ export function HeadForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("head", "limit", language)}
+          placeholder={getParameterDescription(
+            "head",
+            "limit",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -391,7 +443,7 @@ export function HeadForm(props: CommandFormProps) {
 
 export function TailForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -408,7 +460,11 @@ export function TailForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("tail", "limit", language)}
+          placeholder={getParameterDescription(
+            "tail",
+            "limit",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -418,7 +474,7 @@ export function TailForm(props: CommandFormProps) {
 
 export function SliceForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div className="grid grid-cols-2 gap-4">
@@ -435,7 +491,11 @@ export function SliceForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("slice", "start", language)}
+            placeholder={getParameterDescription(
+              "slice",
+              "start",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -452,7 +512,11 @@ export function SliceForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("slice", "skip", language)}
+            placeholder={getParameterDescription(
+              "slice",
+              "skip",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -469,7 +533,11 @@ export function SliceForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("slice", "end", language)}
+            placeholder={getParameterDescription(
+              "slice",
+              "end",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -487,7 +555,11 @@ export function SliceForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("slice", "len", language)}
+            placeholder={getParameterDescription(
+              "slice",
+              "len",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -504,7 +576,11 @@ export function SliceForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("slice", "index", language)}
+            placeholder={getParameterDescription(
+              "slice",
+              "index",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -522,7 +598,11 @@ export function SliceForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("slice", "indices", language)}
+            placeholder={getParameterDescription(
+              "slice",
+              "indices",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -540,7 +620,11 @@ export function SliceForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("slice", "last", language)}
+            placeholder={getParameterDescription(
+              "slice",
+              "last",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -551,7 +635,7 @@ export function SliceForm(props: CommandFormProps) {
 
 export function TopForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div className="grid grid-cols-2 gap-4">
@@ -568,7 +652,11 @@ export function TopForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("top", "column", language)}
+            placeholder={getParameterDescription(
+              "top",
+              "column",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             autoFocus
           />
@@ -586,7 +674,11 @@ export function TopForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("top", "limit", language)}
+            placeholder={getParameterDescription(
+              "top",
+              "limit",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -605,7 +697,11 @@ export function TopForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("top", "groupby", language)}
+            placeholder={getParameterDescription(
+              "top",
+              "groupby",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -622,7 +718,11 @@ export function TopForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("top", "rank", language)}
+            placeholder={getParameterDescription(
+              "top",
+              "rank",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -656,7 +756,7 @@ export function TopForm(props: CommandFormProps) {
 
 export function SampleForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div className="grid grid-cols-2 gap-4">
@@ -677,7 +777,7 @@ export function SampleForm(props: CommandFormProps) {
             placeholder={getParameterDescription(
               "sample",
               "sample-size",
-              language,
+              effectiveLanguage,
             )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             autoFocus
@@ -696,7 +796,11 @@ export function SampleForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("sample", "seed", language)}
+            placeholder={getParameterDescription(
+              "sample",
+              "seed",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -715,7 +819,11 @@ export function SampleForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("sample", "weight", language)}
+            placeholder={getParameterDescription(
+              "sample",
+              "weight",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -732,7 +840,11 @@ export function SampleForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("sample", "groupby", language)}
+            placeholder={getParameterDescription(
+              "sample",
+              "groupby",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -766,7 +878,7 @@ export function SampleForm(props: CommandFormProps) {
 
 export function BisectForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper
       {...props}
@@ -786,7 +898,11 @@ export function BisectForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("bisect", "column", language)}
+            placeholder={getParameterDescription(
+              "bisect",
+              "column",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md"
           />
         </div>
@@ -803,7 +919,11 @@ export function BisectForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("bisect", "value", language)}
+            placeholder={getParameterDescription(
+              "bisect",
+              "value",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md"
           />
         </div>

@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { useDraggable } from "@/hooks/useDraggable";
+import { useLanguage } from "@/i18n";
 
 export type NumberTransformType =
   | "abs"
@@ -33,14 +34,14 @@ interface NumberTransformDialogProps {
   onClose: () => void;
 }
 
-const transformOptions: { value: NumberTransformType; label: string }[] = [
-  { value: "abs", label: "Abs" },
-  { value: "neg", label: "Negate" },
-  { value: "floor", label: "Floor" },
-  { value: "ceil", label: "Ceil" },
-  { value: "int", label: "Integer" },
-  { value: "float", label: "Float" },
-  { value: "round", label: "Round" },
+const transformOptions: NumberTransformType[] = [
+  "abs",
+  "neg",
+  "floor",
+  "ceil",
+  "int",
+  "float",
+  "round",
 ];
 
 export function NumberTransformDialog({
@@ -49,6 +50,16 @@ export function NumberTransformDialog({
   onAddCommand,
   onClose,
 }: NumberTransformDialogProps) {
+  const { t } = useLanguage();
+  const transformLabels: Record<NumberTransformType, string> = {
+    abs: t.numTransformAbs,
+    neg: t.numTransformNeg,
+    floor: t.numTransformFloor,
+    ceil: t.numTransformCeil,
+    int: t.numTransformInt,
+    float: t.numTransformFloat,
+    round: t.numTransformRound,
+  };
   const [selectedColumns, setSelectedColumns] = useState<string[]>(() => {
     const initialColumn = headers[numberTransformDialog.col];
     return initialColumn ? [initialColumn] : [];
@@ -109,9 +120,7 @@ export function NumberTransformDialog({
     const expressions = selectedColumns
       .map((col) => expressionMap[selectedTransform](col))
       .join(", ");
-    const alias =
-      transformOptions.find((opt) => opt.value === selectedTransform)?.label ||
-      selectedTransform;
+    const alias = transformLabels[selectedTransform] || selectedTransform;
 
     onAddCommand(
       mapCommand,
@@ -141,7 +150,7 @@ export function NumberTransformDialog({
         className={`flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       >
         <div className="flex items-center gap-2">
-          <span className="text-base font-medium">Number Transform</span>
+          <span className="text-base font-medium">{t.numTransformAction}</span>
         </div>
         <button
           onClick={onClose}
@@ -157,7 +166,7 @@ export function NumberTransformDialog({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search columns..."
+            placeholder={t.numTransformSearchColumns}
             className="flex-1 h-7 px-2 text-xs border rounded-md bg-background"
           />
         </div>
@@ -166,13 +175,16 @@ export function NumberTransformDialog({
       <ScrollArea className="flex-1 p-3 no-drag">
         <div className="mb-3">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Columns ({selectedColumns.length} selected)
+            {t.numTransformColumnsSelected.replace(
+              "{count}",
+              String(selectedColumns.length),
+            )}
           </label>
           <ScrollArea className="h-[120px] border rounded-md bg-background">
             <div className="p-1.5">
               {filteredHeaders.length === 0 ? (
                 <span className="text-xs text-muted-foreground px-2 py-0.5">
-                  No matches
+                  {t.numTransformNoMatches}
                 </span>
               ) : (
                 filteredHeaders.map((header) => (
@@ -220,21 +232,21 @@ export function NumberTransformDialog({
 
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Transform Type
+            {t.numTransformType}
           </label>
           <div className="border rounded-md bg-background p-1.5">
             <div className="flex flex-wrap -mx-0.5">
-              {transformOptions.map((option) => (
+              {transformOptions.map((value) => (
                 <button
-                  key={option.value}
-                  onClick={() => setSelectedTransform(option.value)}
+                  key={value}
+                  onClick={() => setSelectedTransform(value)}
                   className={`w-1/3 text-center px-1 py-1.5 text-xs rounded transition-colors ${
-                    selectedTransform === option.value
+                    selectedTransform === value
                       ? "bg-primary/10 text-primary"
                       : "hover:bg-accent"
                   }`}
                 >
-                  {option.label}
+                  {transformLabels[value]}
                 </button>
               ))}
             </div>
@@ -249,7 +261,7 @@ export function NumberTransformDialog({
           size="sm"
           onClick={onClose}
         >
-          Cancel
+          {t.cancel}
         </Button>
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
@@ -258,7 +270,7 @@ export function NumberTransformDialog({
           onClick={handleApply}
           disabled={selectedColumns.length === 0}
         >
-          Apply
+          {t.apply}
         </Button>
       </div>
     </div>

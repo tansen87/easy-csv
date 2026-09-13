@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/select";
 import { MultiValueInput } from "@/components/ui/MultiValueInput";
 import { VariableHint } from "@/components/dialog/commands/VariableHint";
 import { useDraggable } from "@/hooks/useDraggable";
+import { useLanguage } from "@/i18n";
 
 interface FilterDialogState {
   col: number;
@@ -48,28 +49,37 @@ type NumberOperator =
   | "greater_or_equal"
   | "less_or_equal";
 
-const textOperators: { value: TextOperator; label: string }[] = [
-  { value: "equals", label: "Equals" },
-  { value: "not_equals", label: "Not equals" },
-  { value: "starts_with", label: "Starts with" },
-  { value: "not_starts_with", label: "Not starts with" },
-  { value: "ends_with", label: "Ends with" },
-  { value: "not_ends_with", label: "Not ends with" },
-  { value: "contains", label: "Contains" },
-  { value: "not_contains", label: "Not contains" },
-  { value: "regex", label: "Regex" },
-  { value: "is_null", label: "Is null" },
-  { value: "is_not_null", label: "Is not null" },
+const textOperators: TextOperator[] = [
+  "equals",
+  "not_equals",
+  "starts_with",
+  "not_starts_with",
+  "ends_with",
+  "not_ends_with",
+  "contains",
+  "not_contains",
+  "regex",
+  "is_null",
+  "is_not_null",
 ];
 
-const numberOperators: { value: NumberOperator; label: string }[] = [
-  { value: "equals", label: "==" },
-  { value: "not_equals", label: "!=" },
-  { value: "greater_than", label: ">" },
-  { value: "greater_or_equal", label: "≥" },
-  { value: "less_than", label: "<" },
-  { value: "less_or_equal", label: "≤" },
+const numberOperators: NumberOperator[] = [
+  "equals",
+  "not_equals",
+  "greater_than",
+  "greater_or_equal",
+  "less_than",
+  "less_or_equal",
 ];
+
+const NUMBER_OPERATOR_LABELS: Record<NumberOperator, string> = {
+  equals: "==",
+  not_equals: "!=",
+  greater_than: ">",
+  greater_or_equal: "≥",
+  less_than: "<",
+  less_or_equal: "≤",
+};
 
 export function FilterDialog({
   filterDialog,
@@ -77,6 +87,20 @@ export function FilterDialog({
   onAddCommand,
   onClose,
 }: FilterDialogProps) {
+  const { t } = useLanguage();
+  const textOperatorLabels: Record<TextOperator, string> = {
+    equals: t.opEquals,
+    not_equals: t.opNotEquals,
+    starts_with: t.opStartsWith,
+    not_starts_with: t.opNotStartsWith,
+    ends_with: t.opEndsWith,
+    not_ends_with: t.opNotEndsWith,
+    contains: t.opContains,
+    not_contains: t.opNotContains,
+    regex: t.opRegex,
+    is_null: t.opIsNull,
+    is_not_null: t.opIsNotNull,
+  };
   const [filterType, setFilterType] = useState<FilterType>("text");
   const [textOperator, setTextOperator] = useState<TextOperator>("equals");
   const [numberOperator, setNumberOperator] =
@@ -263,7 +287,7 @@ export function FilterDialog({
         className={`flex items-center justify-between px-3 py-2 border-b bg-muted/20 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       >
         <div className="flex items-center gap-2">
-          <span className="text-base font-medium">Filter</span>
+          <span className="text-base font-medium">{t.filterAction}</span>
         </div>
         <button
           onClick={onClose}
@@ -283,7 +307,7 @@ export function FilterDialog({
             }`}
             onClick={() => setFilterType("text")}
           >
-            Text
+            {t.text}
           </button>
           <button
             className={`flex-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
@@ -293,13 +317,13 @@ export function FilterDialog({
             }`}
             onClick={() => setFilterType("number")}
           >
-            Number
+            {t.number}
           </button>
         </div>
 
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Column
+            {t.filterColumn}
           </label>
           <Select
             value={selectedColumn}
@@ -308,7 +332,7 @@ export function FilterDialog({
               value: header,
               label: header,
             }))}
-            placeholder="Select column..."
+            placeholder={t.selectColumn}
           />
         </div>
 
@@ -316,13 +340,16 @@ export function FilterDialog({
           <>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                Operator
+                {t.filterOperator}
               </label>
               <Select
                 value={textOperator}
                 onChange={(v) => setTextOperator(v as TextOperator)}
-                options={textOperators}
-                placeholder="Search operator..."
+                options={textOperators.map((value) => ({
+                  value,
+                  label: textOperatorLabels[value],
+                }))}
+                placeholder={t.selectOperator}
               />
             </div>
 
@@ -330,15 +357,15 @@ export function FilterDialog({
               <>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">
-                    {textOperator === "regex" ? "Pattern" : "Value"}
+                    {textOperator === "regex" ? t.pattern : t.value}
                   </label>
                   <MultiValueInput
                     values={textValues}
                     onChange={setTextValues}
                     placeholder={
                       textOperator === "regex"
-                        ? "Regex patterns..."
-                        : "Add values, Enter to add..."
+                        ? t.regexPatterns
+                        : t.addValuesEnter
                     }
                     className="mt-1"
                   />
@@ -357,7 +384,7 @@ export function FilterDialog({
                     htmlFor="case-insensitive"
                     className="text-xs cursor-pointer"
                   >
-                    Ignore case
+                    {t.ignoreCase}
                   </label>
                 </div>
               </>
@@ -369,25 +396,28 @@ export function FilterDialog({
           <>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                Operator
+                {t.filterOperator}
               </label>
               <Select
                 value={numberOperator}
                 onChange={(v) => setNumberOperator(v as NumberOperator)}
-                options={numberOperators}
-                placeholder="Search operator..."
+                options={numberOperators.map((value) => ({
+                  value,
+                  label: NUMBER_OPERATOR_LABELS[value],
+                }))}
+                placeholder={t.selectOperator}
               />
             </div>
 
             <div>
               <label className="text-xs font-medium text-muted-foreground">
-                Value
+                {t.value}
               </label>
               <input
                 type="number"
                 value={numberValue}
                 onChange={(e) => setNumberValue(e.target.value)}
-                placeholder="Search number..."
+                placeholder={t.searchNumber}
                 className="w-full h-7 px-3 text-sm border rounded-md bg-background"
               />
             </div>
@@ -402,7 +432,7 @@ export function FilterDialog({
           size="sm"
           onClick={onClose}
         >
-          Cancel
+          {t.cancel}
         </Button>
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
@@ -410,7 +440,7 @@ export function FilterDialog({
           size="sm"
           onClick={handleApply}
         >
-          Apply
+          {t.apply}
         </Button>
       </div>
     </div>

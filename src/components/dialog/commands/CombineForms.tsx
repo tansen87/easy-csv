@@ -8,7 +8,7 @@ import { useLanguage } from "@/i18n";
 
 export function CatForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props} scrollHeight="28vh">
       <div>
@@ -69,7 +69,11 @@ export function CatForm(props: CommandFormProps) {
                     e.target.value,
                   )
                 }
-                placeholder={getParameterDescription("cat", "inputs", language)}
+                placeholder={getParameterDescription(
+                  "cat",
+                  "inputs",
+                  effectiveLanguage,
+                )}
                 className="flex-1 h-8 px-3 text-sm border rounded-md bg-background"
               />
               <button
@@ -83,7 +87,12 @@ export function CatForm(props: CommandFormProps) {
                     ],
                   });
                   if (file) {
-                    updateParam(commandDialog, setCommandDialog, "inputs", file);
+                    updateParam(
+                      commandDialog,
+                      setCommandDialog,
+                      "inputs",
+                      file,
+                    );
                   }
                 }}
                 className="h-8 px-2 text-sm border rounded-md bg-background hover:bg-muted"
@@ -105,7 +114,11 @@ export function CatForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder={getParameterDescription("cat", "paths", language)}
+              placeholder={getParameterDescription(
+                "cat",
+                "paths",
+                effectiveLanguage,
+              )}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -122,7 +135,11 @@ export function CatForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder={getParameterDescription("cat", "path-column", language)}
+              placeholder={getParameterDescription(
+                "cat",
+                "path-column",
+                effectiveLanguage,
+              )}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -139,7 +156,11 @@ export function CatForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder={getParameterDescription("cat", "glob", language)}
+              placeholder={getParameterDescription(
+                "cat",
+                "glob",
+                effectiveLanguage,
+              )}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -156,7 +177,11 @@ export function CatForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder={getParameterDescription("cat", "source-column", language)}
+              placeholder={getParameterDescription(
+                "cat",
+                "source-column",
+                effectiveLanguage,
+              )}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -173,7 +198,11 @@ export function CatForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder={getParameterDescription("cat", "preprocess", language)}
+              placeholder={getParameterDescription(
+                "cat",
+                "preprocess",
+                effectiveLanguage,
+              )}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -191,7 +220,11 @@ export function CatForm(props: CommandFormProps) {
                     e.target.value,
                   )
                 }
-                placeholder={getParameterDescription("cat", "run", language)}
+                placeholder={getParameterDescription(
+                  "cat",
+                  "run",
+                  effectiveLanguage,
+                )}
                 className="flex-1 h-8 px-3 text-sm border rounded-md bg-background"
               />
               <button
@@ -227,7 +260,11 @@ export function CatForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder={getParameterDescription("cat", "shell-preprocess", language)}
+              placeholder={getParameterDescription(
+                "cat",
+                "shell-preprocess",
+                effectiveLanguage,
+              )}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -259,7 +296,7 @@ export function CatForm(props: CommandFormProps) {
 
 export function JoinForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props} scrollHeight="30vh">
       <div className="grid grid-cols-4 gap-4">
@@ -276,7 +313,11 @@ export function JoinForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("join", "columns", language)}
+            placeholder={getParameterDescription(
+              "join",
+              "columns",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             autoFocus
           />
@@ -294,7 +335,11 @@ export function JoinForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("join", "input1", language)}
+            placeholder={getParameterDescription(
+              "join",
+              "input1",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -313,7 +358,11 @@ export function JoinForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("join", "columns2", language)}
+            placeholder={getParameterDescription(
+              "join",
+              "columns2",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -330,7 +379,11 @@ export function JoinForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("join", "input2", language)}
+            placeholder={getParameterDescription(
+              "join",
+              "input2",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -387,7 +440,11 @@ export function JoinForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("join", "prefix-left", language)}
+            placeholder={getParameterDescription(
+              "join",
+              "prefix-left",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -404,7 +461,11 @@ export function JoinForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("join", "prefix-right", language)}
+            placeholder={getParameterDescription(
+              "join",
+              "prefix-right",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -488,7 +549,11 @@ export function JoinForm(props: CommandFormProps) {
                     e.target.value,
                   )
                 }
-                placeholder={getParameterDescription("join", "threads", language)}
+                placeholder={getParameterDescription(
+                  "join",
+                  "threads",
+                  effectiveLanguage,
+                )}
                 className="w-20 h-8 px-2 text-sm border rounded-md bg-background"
               />
             </div>
@@ -501,7 +566,7 @@ export function JoinForm(props: CommandFormProps) {
 
 export function MergeForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props} scrollHeight="30vh">
       <div>
@@ -517,7 +582,11 @@ export function MergeForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-            placeholder={getParameterDescription("merge", "inputs", language)}
+          placeholder={getParameterDescription(
+            "merge",
+            "inputs",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -534,7 +603,11 @@ export function MergeForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-            placeholder={getParameterDescription("merge", "select", language)}
+          placeholder={getParameterDescription(
+            "merge",
+            "select",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -551,7 +624,11 @@ export function MergeForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-            placeholder={getParameterDescription("merge", "paths", language)}
+          placeholder={getParameterDescription(
+            "merge",
+            "paths",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -568,7 +645,11 @@ export function MergeForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-            placeholder={getParameterDescription("merge", "path-column", language)}
+          placeholder={getParameterDescription(
+            "merge",
+            "path-column",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -585,7 +666,11 @@ export function MergeForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-            placeholder={getParameterDescription("merge", "source-column", language)}
+          placeholder={getParameterDescription(
+            "merge",
+            "source-column",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>

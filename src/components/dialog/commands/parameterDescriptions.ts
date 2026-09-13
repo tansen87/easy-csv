@@ -1,9 +1,10 @@
 import { xanCommands } from "@/data/commands";
+import type { EffectiveLanguage } from "@/i18n/translations";
 
 export function getParameterDescription(
   commandId: string,
   paramName: string,
-  language: "en" | "zh" = "en",
+  language: EffectiveLanguage = "en",
 ): string {
   const command = xanCommands.find((c) => c.id === commandId);
   if (!command) return "";

@@ -6,7 +6,7 @@ import { useLanguage } from "@/i18n";
 
 export function SortForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props} disabled={!commandDialog.params.select}>
       <div className="grid grid-cols-3 gap-4">
@@ -23,7 +23,11 @@ export function SortForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("sort", "select", language)}
+            placeholder={getParameterDescription(
+              "sort",
+              "select",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -40,7 +44,11 @@ export function SortForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("sort", "count", language)}
+            placeholder={getParameterDescription(
+              "sort",
+              "count",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -58,7 +66,11 @@ export function SortForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("sort", "memory-limit", language)}
+            placeholder={getParameterDescription(
+              "sort",
+              "memory-limit",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -109,7 +121,11 @@ export function SortForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("sort", "tmp-dir", language)}
+          placeholder={getParameterDescription(
+            "sort",
+            "tmp-dir",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -119,7 +135,7 @@ export function SortForm(props: CommandFormProps) {
 
 export function DedupForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -135,7 +151,11 @@ export function DedupForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("dedup", "select", language)}
+          placeholder={getParameterDescription(
+            "dedup",
+            "select",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -178,7 +198,11 @@ export function DedupForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("dedup", "choose", language)}
+            placeholder={getParameterDescription(
+              "dedup",
+              "choose",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -195,7 +219,11 @@ export function DedupForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("dedup", "boolean", language)}
+            placeholder={getParameterDescription(
+              "dedup",
+              "boolean",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -206,7 +234,7 @@ export function DedupForm(props: CommandFormProps) {
 
 export function ShuffleForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -217,7 +245,11 @@ export function ShuffleForm(props: CommandFormProps) {
           onChange={(e) =>
             updateParam(commandDialog, setCommandDialog, "seed", e.target.value)
           }
-          placeholder={getParameterDescription("shuffle", "seed", language)}
+          placeholder={getParameterDescription(
+            "shuffle",
+            "seed",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           autoFocus
         />

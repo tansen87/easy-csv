@@ -7,8 +7,8 @@ import { useLanguage } from "@/i18n";
 
 export function PinyinForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
-  const isZh = language === "zh";
+  const { effectiveLanguage } = useLanguage();
+  const isZh = effectiveLanguage === "zh";
 
   return (
     <CommandFormWrapper {...props} disabled={!commandDialog.params.columns}>
@@ -78,8 +78,8 @@ export function PinyinForm(props: CommandFormProps) {
 
 export function DuckDBForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog, headers } = props;
-  const { language } = useLanguage();
-  const isZh = language === "zh";
+  const { effectiveLanguage } = useLanguage();
+  const isZh = effectiveLanguage === "zh";
   const sql = (commandDialog.params.sql as string) || "";
 
   return (

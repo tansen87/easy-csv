@@ -64,6 +64,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 |------|------|
 | `docs/design/flow-top-bottom-connect.md` | 节点连接点支持上下方向(已实现): `resolveHandles` 四方向选择算法、Handle 命名扩展(`top-*`/`bottom-*`/`table-top-*`)、切割碰撞检测同步更新 |
 | `docs/design/right-click-connect-bezier.md` | 右键连线改为贝塞尔实时预览(方案 A 已实现): 复用 `getBezierPath` 使预览=最终边、`pickStartHandle`/`buildConnectPreviewPath`、坐标换算与迟滞防抖 |
+ `docs/design/follow-system-language.md` | 语言设置新增「跟随系统」选项(方案设计): `LanguagePreference` 偏好/生效语言分离、`resolveSystemLanguage()` 基于 `navigator.language`、设置页两段改三段、新用户默认跟随系统 |
 
 ---
 

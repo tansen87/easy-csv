@@ -6,6 +6,7 @@ import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useDraggable } from "@/hooks/useDraggable";
+import { useLanguage } from "@/i18n";
 
 interface PivotDialogState {
   x: number;
@@ -32,14 +33,14 @@ type AggregationType =
   | "first"
   | "last";
 
-const aggregationTypes: { value: AggregationType; label: string }[] = [
-  { value: "count", label: "Count" },
-  { value: "sum", label: "Sum" },
-  { value: "avg", label: "Average" },
-  { value: "min", label: "Min" },
-  { value: "max", label: "Max" },
-  { value: "first", label: "First" },
-  { value: "last", label: "Last" },
+const aggregationTypes: AggregationType[] = [
+  "count",
+  "sum",
+  "avg",
+  "min",
+  "max",
+  "first",
+  "last",
 ];
 
 interface ValueColumn {
@@ -53,6 +54,16 @@ export function PivotDialog({
   onAddCommand,
   onClose,
 }: PivotDialogProps) {
+  const { t } = useLanguage();
+  const aggregationLabels: Record<AggregationType, string> = {
+    count: t.pivotAggCount,
+    sum: t.pivotAggSum,
+    avg: t.pivotAggAvg,
+    min: t.pivotAggMin,
+    max: t.pivotAggMax,
+    first: t.pivotAggFirst,
+    last: t.pivotAggLast,
+  };
   const [selectedGroupBy, setSelectedGroupBy] = useState<string[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [valueColumns, setValueColumns] = useState<ValueColumn[]>([]);
@@ -160,7 +171,7 @@ export function PivotDialog({
             expression: columnsExpr,
             output: "",
           },
-          "Agg",
+          t.pivotAliasAgg,
         );
       }
     } else if (selectedColumns.length === 0) {
@@ -173,7 +184,7 @@ export function PivotDialog({
             expression: columnsExpr,
             output: "",
           },
-          "Groupby",
+          t.pivotAliasGroupby,
         );
       }
     } else {
@@ -191,7 +202,7 @@ export function PivotDialog({
             "column-sep": columnSep || "_",
             output: "",
           },
-          "Pivot",
+          t.pivotAliasPivot,
         );
       }
     }
@@ -214,7 +225,7 @@ export function PivotDialog({
         className={`flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       >
         <div className="flex items-center gap-2">
-          <span className="text-base font-medium">Pivot Table</span>
+          <span className="text-base font-medium">{t.pivotAction}</span>
         </div>
         <button
           onClick={onClose}
@@ -230,7 +241,7 @@ export function PivotDialog({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search columns..."
+            placeholder={t.pivotSearchColumns}
             className="flex-1 h-7 px-2 text-xs border rounded-md bg-background"
           />
         </div>
@@ -239,13 +250,13 @@ export function PivotDialog({
       <ScrollArea className="flex-1 p-3 no-drag">
         <div className="mb-3">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Columns (pivot)
+            {t.pivotColumns}
           </label>
           <ScrollArea>
             <div className="flex flex-wrap gap-1 p-1.5 border rounded-md bg-background">
               {filteredHeaders.length === 0 ? (
                 <span className="text-xs text-muted-foreground px-2 py-0.5">
-                  No matches
+                  {t.pivotNoMatches}
                 </span>
               ) : (
                 filteredHeaders.map((header) => (
@@ -268,13 +279,13 @@ export function PivotDialog({
 
         <div className="mb-3">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Row (groupby)
+            {t.pivotRows}
           </label>
           <ScrollArea>
             <div className="flex flex-wrap gap-1 p-1.5 border rounded-md bg-background">
               {filteredHeaders.length === 0 ? (
                 <span className="text-xs text-muted-foreground px-2 py-0.5">
-                  No matches
+                  {t.pivotNoMatches}
                 </span>
               ) : (
                 filteredHeaders.map((header) => (
@@ -298,20 +309,20 @@ export function PivotDialog({
         <div className="mb-3">
           <div className="flex items-center justify-between mb-1">
             <label className="text-xs font-medium text-muted-foreground">
-              Values (agg)
+              {t.pivotValues}
             </label>
             <button
               onClick={addValueColumn}
               className="flex items-center gap-1 px-2 py-0.5 text-xs hover:bg-accent rounded-md transition-colors text-muted-foreground"
             >
               <Plus className="h-3.5 w-3.5" />
-              Add
+              {t.pivotAdd}
             </button>
           </div>
           <div className="space-y-1.5">
             {valueColumns.length === 0 ? (
               <div className="p-2 border rounded-md bg-muted/30 text-xs text-muted-foreground text-center">
-                Click + to add value columns
+                {t.pivotClickToAdd}
               </div>
             ) : (
               valueColumns.map((vc, index) => (
@@ -324,7 +335,7 @@ export function PivotDialog({
                         label: h,
                         value: h,
                       }))}
-                      placeholder="Select column..."
+                      placeholder={t.selectColumn}
                     />
                   </div>
                   <div className="relative w-24 no-drag">
@@ -333,8 +344,11 @@ export function PivotDialog({
                       onChange={(v) =>
                         updateValueColumn(index, "aggregation", v)
                       }
-                      options={aggregationTypes}
-                      placeholder="Agg..."
+                      options={aggregationTypes.map((value) => ({
+                        value,
+                        label: aggregationLabels[value],
+                      }))}
+                      placeholder={t.pivotAggPlaceholder}
                     />
                   </div>
                   <button
@@ -351,13 +365,13 @@ export function PivotDialog({
 
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Column Separator
+            {t.pivotColumnSeparator}
           </label>
           <input
             type="text"
             value={columnSep}
             onChange={(e) => setColumnSep(e.target.value)}
-            placeholder="Characters for connecting columns (eg _)"
+            placeholder={t.pivotColumnSeparatorPlaceholder}
             className="w-full h-7 px-2 text-xs border rounded-md bg-background"
             maxLength={1}
           />
@@ -371,7 +385,7 @@ export function PivotDialog({
           size="sm"
           onClick={onClose}
         >
-          Cancel
+          {t.cancel}
         </Button>
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
@@ -380,7 +394,7 @@ export function PivotDialog({
           onClick={handleApply}
           disabled={valueColumns.length === 0}
         >
-          Apply
+          {t.apply}
         </Button>
       </div>
     </div>

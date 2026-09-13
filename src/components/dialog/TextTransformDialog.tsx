@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { xanCommands } from "@/data/commands";
 import { XanCommand } from "@/types/xan";
 import { useDraggable } from "@/hooks/useDraggable";
+import { useLanguage } from "@/i18n";
 
 export type TextTransformType =
   | "len"
@@ -33,14 +34,14 @@ interface TextTransformDialogProps {
   onClose: () => void;
 }
 
-const transformOptions: { value: TextTransformType; label: string }[] = [
-  { value: "len", label: "Len" },
-  { value: "lower", label: "Lower" },
-  { value: "upper", label: "Upper" },
-  { value: "trim", label: "Trim" },
-  { value: "ltrim", label: "Ltrim" },
-  { value: "rtrim", label: "Rtrim" },
-  { value: "strip", label: "Strip" },
+const transformOptions: TextTransformType[] = [
+  "len",
+  "lower",
+  "upper",
+  "trim",
+  "ltrim",
+  "rtrim",
+  "strip",
 ];
 
 export function TextTransformDialog({
@@ -49,6 +50,16 @@ export function TextTransformDialog({
   onAddCommand,
   onClose,
 }: TextTransformDialogProps) {
+  const { t } = useLanguage();
+  const transformLabels: Record<TextTransformType, string> = {
+    len: t.textTransformLen,
+    lower: t.textTransformLower,
+    upper: t.textTransformUpper,
+    trim: t.textTransformTrim,
+    ltrim: t.textTransformLtrim,
+    rtrim: t.textTransformRtrim,
+    strip: t.textTransformStrip,
+  };
   const [selectedColumns, setSelectedColumns] = useState<string[]>(() => {
     const initialColumn = headers[textTransformDialog.col];
     return initialColumn ? [initialColumn] : [];
@@ -109,9 +120,7 @@ export function TextTransformDialog({
     const expressions = selectedColumns
       .map((col) => expressionMap[selectedTransform](col))
       .join(", ");
-    const alias =
-      transformOptions.find((opt) => opt.value === selectedTransform)?.label ||
-      selectedTransform;
+    const alias = transformLabels[selectedTransform] || selectedTransform;
 
     onAddCommand(
       mapCommand,
@@ -141,7 +150,7 @@ export function TextTransformDialog({
         className={`flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       >
         <div className="flex items-center gap-2">
-          <span className="text-base font-medium">Text Transform</span>
+          <span className="text-base font-medium">{t.textTransformAction}</span>
         </div>
         <button
           onClick={onClose}
@@ -157,7 +166,7 @@ export function TextTransformDialog({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search columns..."
+            placeholder={t.textTransformSearchColumns}
             className="flex-1 h-7 px-2 text-xs border rounded-md bg-background"
           />
         </div>
@@ -166,13 +175,16 @@ export function TextTransformDialog({
       <ScrollArea className="flex-1 p-3 no-drag">
         <div className="mb-3">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Columns ({selectedColumns.length} selected)
+            {t.textTransformColumnsSelected.replace(
+              "{count}",
+              String(selectedColumns.length),
+            )}
           </label>
           <ScrollArea className="h-[120px] border rounded-md bg-background">
             <div className="p-1.5">
               {filteredHeaders.length === 0 ? (
                 <span className="text-xs text-muted-foreground px-2 py-0.5">
-                  No matches
+                  {t.textTransformNoMatches}
                 </span>
               ) : (
                 filteredHeaders.map((header) => (
@@ -220,21 +232,21 @@ export function TextTransformDialog({
 
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Transform Type
+            {t.textTransformType}
           </label>
           <div className="border rounded-md bg-background p-1.5">
             <div className="flex flex-wrap -mx-0.5">
-              {transformOptions.map((option) => (
+              {transformOptions.map((value) => (
                 <button
-                  key={option.value}
-                  onClick={() => setSelectedTransform(option.value)}
+                  key={value}
+                  onClick={() => setSelectedTransform(value)}
                   className={`w-1/3 text-center px-1 py-1.5 text-xs rounded transition-colors ${
-                    selectedTransform === option.value
+                    selectedTransform === value
                       ? "bg-primary/10 text-primary"
                       : "hover:bg-accent"
                   }`}
                 >
-                  {option.label}
+                  {transformLabels[value]}
                 </button>
               ))}
             </div>
@@ -249,7 +261,7 @@ export function TextTransformDialog({
           size="sm"
           onClick={onClose}
         >
-          Cancel
+          {t.cancel}
         </Button>
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
@@ -258,7 +270,7 @@ export function TextTransformDialog({
           onClick={handleApply}
           disabled={selectedColumns.length === 0}
         >
-          Apply
+          {t.apply}
         </Button>
       </div>
     </div>

@@ -1,8 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import {
-  Sun,
-  Moon,
-  Monitor,
   Save,
   RotateCcw,
   Languages,
@@ -223,22 +220,26 @@ export function SettingsTabContent({
                   <Languages className="h-4 w-4" />
                   {t.language}
                 </h3>
-                <div className="grid grid-cols-2 bg-muted/50 rounded-md p-0.5 border border-border/50 relative w-[200px]">
+                <div className="grid grid-cols-3 bg-muted/50 rounded-md border border-border/50 relative w-[300px]">
                   <div
                     className={`absolute top-0.5 bottom-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${
-                      language === "zh" ? "left-[calc(50%+1px)]" : "left-0.5"
+                      language === "zh"
+                        ? "left-[calc(33.333%+1px)]"
+                        : language === "en"
+                          ? "left-[calc(66.666%)]"
+                          : "left-0.5"
                     }`}
-                    style={{ width: "calc(50% - 1px)" }}
+                    style={{ width: "calc(33.333% - 1px)" }}
                   />
                   <button
                     className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
-                      language === "en"
+                      language === "system"
                         ? "text-primary-foreground"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
-                    onClick={() => setLanguage("en")}
+                    onClick={() => setLanguage("system")}
                   >
-                    English
+                    {t.system}
                   </button>
                   <button
                     className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
@@ -249,6 +250,16 @@ export function SettingsTabContent({
                     onClick={() => setLanguage("zh")}
                   >
                     中文
+                  </button>
+                  <button
+                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
+                      language === "en"
+                        ? "text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setLanguage("en")}
+                  >
+                    English
                   </button>
                 </div>
               </div>
@@ -262,14 +273,25 @@ export function SettingsTabContent({
                 <div className="grid grid-cols-3 bg-muted/50 rounded-md border border-border/50 relative w-[300px]">
                   <div
                     className={`absolute top-0.5 bottom-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${
-                      theme === "dark"
+                      theme === "light"
                         ? "left-[calc(33.333%+1px)]"
-                        : theme === "system"
+                        : theme === "dark"
                           ? "left-[calc(66.666%)]"
                           : "left-0.5"
                     }`}
                     style={{ width: "calc(33.333% - 1px)" }}
                   />
+                  <button
+                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
+                      theme === "system"
+                        ? "text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    } ${isThemeTransitioning ? "pointer-events-none opacity-60" : ""}`}
+                    onClick={() => handleThemeChange("system")}
+                    disabled={isThemeTransitioning}
+                  >
+                    {t.system}
+                  </button>
                   <button
                     className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
                       theme === "light"
@@ -279,7 +301,6 @@ export function SettingsTabContent({
                     onClick={() => handleThemeChange("light")}
                     disabled={isThemeTransitioning}
                   >
-                    <Sun className="h-4 w-4" />
                     {t.light}
                   </button>
                   <button
@@ -291,20 +312,7 @@ export function SettingsTabContent({
                     onClick={() => handleThemeChange("dark")}
                     disabled={isThemeTransitioning}
                   >
-                    <Moon className="h-4 w-4" />
                     {t.dark}
-                  </button>
-                  <button
-                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
-                      theme === "system"
-                        ? "text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    } ${isThemeTransitioning ? "pointer-events-none opacity-60" : ""}`}
-                    onClick={() => handleThemeChange("system")}
-                    disabled={isThemeTransitioning}
-                  >
-                    <Monitor className="h-4 w-4" />
-                    {t.system}
                   </button>
                 </div>
               </div>

@@ -6,7 +6,7 @@ import { useLanguage } from "@/i18n";
 
 export function SplitForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -22,7 +22,11 @@ export function SplitForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("split", "out-dir", language)}
+          placeholder={getParameterDescription(
+            "split",
+            "out-dir",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -35,7 +39,11 @@ export function SplitForm(props: CommandFormProps) {
           onChange={(e) =>
             updateParam(commandDialog, setCommandDialog, "size", e.target.value)
           }
-          placeholder={getParameterDescription("split", "size", language)}
+          placeholder={getParameterDescription(
+            "split",
+            "size",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -53,7 +61,11 @@ export function SplitForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("split", "chunks", language)}
+          placeholder={getParameterDescription(
+            "split",
+            "chunks",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -70,7 +82,11 @@ export function SplitForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("split", "filename", language)}
+          placeholder={getParameterDescription(
+            "split",
+            "filename",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -96,7 +112,7 @@ export function SplitForm(props: CommandFormProps) {
 
 export function PartitionForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -112,7 +128,11 @@ export function PartitionForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("partition", "column", language)}
+          placeholder={getParameterDescription(
+            "partition",
+            "column",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -132,7 +152,7 @@ export function PartitionForm(props: CommandFormProps) {
           placeholder={getParameterDescription(
             "partition",
             "out-dir",
-            language,
+            effectiveLanguage,
           )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
@@ -153,7 +173,7 @@ export function PartitionForm(props: CommandFormProps) {
           placeholder={getParameterDescription(
             "partition",
             "filename",
-            language,
+            effectiveLanguage,
           )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
@@ -174,7 +194,7 @@ export function PartitionForm(props: CommandFormProps) {
           placeholder={getParameterDescription(
             "partition",
             "prefix-length",
-            language,
+            effectiveLanguage,
           )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />

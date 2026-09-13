@@ -1,8 +1,14 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { translations, type Language, type Translations } from "./translations";
+import {
+  translations,
+  type Language,
+  type EffectiveLanguage,
+  type Translations,
+} from "./translations";
 
 interface LanguageContextType {
   language: Language;
+  effectiveLanguage: EffectiveLanguage;
   setLanguage: (lang: Language) => void;
   t: Translations;
 }
@@ -11,16 +17,24 @@ const LanguageContext = createContext<LanguageContextType | null>(null);
 
 const STORAGE_KEY = "easy-csv-language";
 
+export function resolveSystemLanguage(): EffectiveLanguage {
+  const raw = typeof navigator !== "undefined" ? navigator.language || "" : "";
+  return raw.toLowerCase().startsWith("zh") ? "zh" : "en";
+}
+
 function getInitialLanguage(): Language {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === "en" || saved === "zh") return saved;
+    if (saved === "en" || saved === "zh" || saved === "system") return saved;
   } catch {}
-  return "en";
+  return "system";
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(getInitialLanguage);
+
+  const effectiveLanguage: EffectiveLanguage =
+    language === "system" ? resolveSystemLanguage() : language;
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
@@ -29,10 +43,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     } catch {}
   };
 
-  const t = translations[language];
+  const t = translations[effectiveLanguage];
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider
+      value={{ language, effectiveLanguage, setLanguage, t }}
+    >
       {children}
     </LanguageContext.Provider>
   );

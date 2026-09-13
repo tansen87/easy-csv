@@ -33,7 +33,7 @@ export function BeheadForm(props: CommandFormProps) {
 
 export function RenameForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div>
@@ -49,7 +49,11 @@ export function RenameForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("rename", "select", language)}
+          placeholder={getParameterDescription(
+            "rename",
+            "select",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -66,7 +70,11 @@ export function RenameForm(props: CommandFormProps) {
               e.target.value,
             )
           }
-          placeholder={getParameterDescription("rename", "columns", language)}
+          placeholder={getParameterDescription(
+            "rename",
+            "columns",
+            effectiveLanguage,
+          )}
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
@@ -84,7 +92,11 @@ export function RenameForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("rename", "prefix", language)}
+            placeholder={getParameterDescription(
+              "rename",
+              "prefix",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -101,7 +113,11 @@ export function RenameForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("rename", "suffix", language)}
+            placeholder={getParameterDescription(
+              "rename",
+              "suffix",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -135,7 +151,7 @@ export function RenameForm(props: CommandFormProps) {
 
 export function InputForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { language } = useLanguage();
+  const { effectiveLanguage } = useLanguage();
   return (
     <CommandFormWrapper {...props}>
       <div className="grid grid-cols-3 gap-2">
@@ -152,7 +168,11 @@ export function InputForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("input", "quote", language)}
+            placeholder={getParameterDescription(
+              "input",
+              "quote",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -169,7 +189,11 @@ export function InputForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("input", "escape", language)}
+            placeholder={getParameterDescription(
+              "input",
+              "escape",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -186,7 +210,11 @@ export function InputForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("input", "comment", language)}
+            placeholder={getParameterDescription(
+              "input",
+              "comment",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -206,7 +234,11 @@ export function InputForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("input", "skip-lines", language)}
+            placeholder={getParameterDescription(
+              "input",
+              "skip-lines",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -223,7 +255,11 @@ export function InputForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("input", "skip-until", language)}
+            placeholder={getParameterDescription(
+              "input",
+              "skip-until",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
@@ -240,7 +276,11 @@ export function InputForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription("input", "skip-while", language)}
+            placeholder={getParameterDescription(
+              "input",
+              "skip-while",
+              effectiveLanguage,
+            )}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>

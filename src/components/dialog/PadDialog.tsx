@@ -5,6 +5,7 @@ import { XanCommand } from "@/types/xan";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useDraggable } from "@/hooks/useDraggable";
+import { useLanguage } from "@/i18n";
 
 interface PadDialogState {
   col: number;
@@ -24,10 +25,10 @@ interface PadDialogProps {
   onClose: () => void;
 }
 
-const PAD_TYPES = [
-  { label: "Pad", value: "pad" },
-  { label: "Left Pad", value: "lpad" },
-  { label: "Right Pad", value: "rpad" },
+const PAD_TYPES: { value: string; labelKey: string }[] = [
+  { labelKey: "padTypePad", value: "pad" },
+  { labelKey: "padTypeLpad", value: "lpad" },
+  { labelKey: "padTypeRpad", value: "rpad" },
 ];
 
 export function PadDialog({
@@ -36,6 +37,7 @@ export function PadDialog({
   onAddCommand,
   onClose,
 }: PadDialogProps) {
+  const { t } = useLanguage();
   const [selectedColumn, setSelectedColumn] = useState(
     headers[padDialog.col] || "",
   );
@@ -109,7 +111,7 @@ export function PadDialog({
         className={`flex items-center justify-between px-3 py-2 border-b bg-muted/20 shrink-0 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       >
         <div className="flex items-center gap-2">
-          <span className="text-base font-medium">Pad</span>
+          <span className="text-base font-medium">{t.padAction}</span>
         </div>
         <button
           onClick={onClose}
@@ -121,7 +123,7 @@ export function PadDialog({
       <div className="p-3 space-y-3 no-drag">
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Column
+            {t.filterColumn}
           </label>
           <Select
             value={selectedColumn}
@@ -130,42 +132,45 @@ export function PadDialog({
               value: header,
               label: header,
             }))}
-            placeholder="Search or select column..."
+            placeholder={t.dateTransformSearchColumn}
           />
         </div>
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Pad Type
+            {t.padPadType}
           </label>
           <Select
             value={padType}
             onChange={setPadType}
-            options={PAD_TYPES}
-            placeholder="Select pad type..."
+            options={PAD_TYPES.map((o) => ({
+              value: o.value,
+              label: t[o.labelKey as keyof typeof t] as string,
+            }))}
+            placeholder={t.padSelectType}
           />
         </div>
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Width
+            {t.padWidth}
           </label>
           <input
             type="number"
             value={width}
             onChange={(e) => setWidth(e.target.value)}
-            placeholder="Target width"
+            placeholder={t.padWidthPlaceholder}
             className="w-full h-8 px-2 text-xs border rounded-md bg-background"
             min="1"
           />
         </div>
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Character (optional)
+            {t.padCharacter}
           </label>
           <input
             type="text"
             value={char}
             onChange={(e) => setChar(e.target.value)}
-            placeholder="Space if blank"
+            placeholder={t.padCharacterPlaceholder}
             className="w-full h-8 px-2 text-xs border rounded-md bg-background"
             maxLength={1}
           />
@@ -179,7 +184,7 @@ export function PadDialog({
           size="sm"
           onClick={onClose}
         >
-          Cancel
+          {t.cancel}
         </Button>
         <Button
           className="flex-1 px-2 py-1.5 rounded-md"
@@ -187,7 +192,7 @@ export function PadDialog({
           size="sm"
           onClick={handleApply}
         >
-          Apply
+          {t.apply}
         </Button>
       </div>
     </div>

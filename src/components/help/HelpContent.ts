@@ -1,6 +1,8 @@
 import { helpContentCn } from "./HelpContentCn";
+import type { EffectiveLanguage } from "@/i18n/translations";
 
-export const getHelpContent = (lang: "en" | "zh") => lang === "zh" ? helpContentCn : helpContentEn;
+export const getHelpContent = (lang: EffectiveLanguage) =>
+  lang === "zh" ? helpContentCn : helpContentEn;
 
 export const helpContentEn = `
 ### Mouse Operations
