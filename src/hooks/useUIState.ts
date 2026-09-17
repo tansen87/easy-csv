@@ -47,6 +47,10 @@ export function useUIState() {
   const [csvEncodingInitialInput, setCsvEncodingInitialInput] = useState<
     string | undefined
   >(undefined);
+  const [showSeparateCsv, setShowSeparateCsv] = useState(false);
+  const [separateCsvInitialInput, setSeparateCsvInitialInput] = useState<
+    string | undefined
+  >(undefined);
 
   return {
     showHelp,
@@ -107,5 +111,9 @@ export function useUIState() {
     setShowCsvEncoding,
     csvEncodingInitialInput,
     setCsvEncodingInitialInput,
+    showSeparateCsv,
+    setShowSeparateCsv,
+    separateCsvInitialInput,
+    setSeparateCsvInitialInput,
   };
 }

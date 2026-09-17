@@ -330,6 +330,21 @@ export interface Translations {
   sameEncoding: string;
   bytes: string;
 
+  // SeparateGoodBad
+  separateGoodBad: string;
+  outputDir: string;
+  expectedColumns: string;
+  expectedColumnsHint: string;
+  skiprows: string;
+  quoting: string;
+  separateStart: string;
+  separating: string;
+  separateNoResult: string;
+  goodRows: string;
+  badRows: string;
+  separateSelectFile: string;
+  separateComplete: string;
+
   // BatchFilterDialog
   batchFilter: string;
   filterColumn: string;
@@ -891,6 +906,22 @@ export const translations: Record<EffectiveLanguage, Translations> = {
     sameEncoding: "Source and target encodings are the same",
     bytes: "bytes",
 
+    // SeparateGoodBad
+    separateGoodBad: "Separate Good/Bad Rows",
+    outputDir: "Output",
+    expectedColumns: "Expected columns",
+    expectedColumnsHint: "Blank (from header)",
+    skiprows: "Skip first N rows",
+    quoting: "Enable quoting",
+    separateStart: "Separate",
+    separating: "Separating...",
+    separateNoResult:
+      "Pick a CSV file and click Separate to split good rows (matching column count) from bad rows. Output files are written next to the input as *_good.csv and *_bad.csv.",
+    goodRows: "good rows",
+    badRows: "bad rows",
+    separateSelectFile: "Please select an input file",
+    separateComplete: "Separation complete",
+
     // BatchFilterDialog
     batchFilter: "Batch Filter",
     filterColumn: "Column",
@@ -1440,6 +1471,22 @@ export const translations: Record<EffectiveLanguage, Translations> = {
     success: "转换成功",
     sameEncoding: "源编码与目标编码相同",
     bytes: "字节",
+
+    // SeparateGoodBad
+    separateGoodBad: "拆分好/坏行",
+    outputDir: "输出目录",
+    expectedColumns: "期望列数",
+    expectedColumnsHint: "留空自动(= 表头列数)",
+    skiprows: "跳过前 N 行",
+    quoting: "启用引号",
+    separateStart: "开始拆分",
+    separating: "拆分中...",
+    separateNoResult:
+      "选择 CSV 文件后点击开始拆分,按列数据将好行(列数匹配)与坏行分开。输出为输入旁的 *_good.csv 与 *_bad.csv",
+    goodRows: "好行数",
+    badRows: "坏行数",
+    separateSelectFile: "请选择输入文件",
+    separateComplete: "拆分完成",
 
     // BatchFilterDialog
     batchFilter: "批量筛选",

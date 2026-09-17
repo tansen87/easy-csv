@@ -37,6 +37,7 @@ interface MainMenuProps {
   onOpenPalette: () => void;
   onOpenCsvDiff: () => void;
   onOpenCsvEncoding: () => void;
+  onOpenSeparateCsv: () => void;
   isExecuting: boolean;
   isCheckingUpdate: boolean;
   hasUpdate: boolean;
@@ -81,6 +82,7 @@ export const MainMenu = React.memo(function MainMenu({
   onOpenPalette,
   onOpenCsvDiff,
   onOpenCsvEncoding,
+  onOpenSeparateCsv,
   isExecuting,
   isCheckingUpdate,
   hasUpdate,
@@ -267,6 +269,16 @@ export const MainMenu = React.memo(function MainMenu({
                 className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
                 {t.csvEncoding}
+              </button>
+              <div className="border-t border-border my-1" />
+              <button
+                onClick={() => {
+                  onOpenSeparateCsv();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                {t.separateGoodBad}
               </button>
             </div>
           )}

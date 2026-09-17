@@ -131,6 +131,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `profile_csv` | 调用 `xan stats` 生成数据概况统计 |
 | `diff_csv_files` | 双文件对比(共享内存 Table + 字符串驻留 + Myers diff,`spawn_blocking` 防阻塞) |
 | `convert_csv_encoding` | 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1,64KB 分块流式转码) |
+| `separate_csv` | 将 CSV 拆分为 good/bad 两文件(共享 `flexible(true)` reader/writer 重新序列化,坏行不丢失;支持 expected_columns 覆盖 / skiprows / quoting / out_dir) |
 
 #### storage.rs — 持久化存储
 
@@ -174,7 +175,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_correction` | 保存纠正规则 |
 | `clear_conversations` / `clear_feedback` / `clear_corrections` | 清除对应表全部数据 |
 
-### Tauri 命令清单(前端可调用,共 50 个)
+### Tauri 命令清单(前端可调用,共 51 个)
 
 | 命令 | 模块 | 功能 |
 |------|------|------|
@@ -184,6 +185,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `profile_csv` | csv | 调用 `xan stats` 生成数据概况统计 |
 | `diff_csv_files` | csv | 对比两个 CSV 文件(Myers diff,分页返回) |
 | `convert_csv_encoding` | csv | 转换 CSV 文件编码(64KB 流式转码) |
+| `separate_csv` | 将 CSV 拆分为 good/bad 两文件(共享 `flexible(true)` reader/writer 重新序列化,坏行不丢失;后续连续坏行会连同前一合法行一并进 bad;支持 expected_columns 覆盖 / skiprows / quoting / out_dir)。设计:`docs/design/016_separate-good-bad-rows.md` |
 | `load_profile_cache` / `save_profile_cache` | storage | 数据概况缓存(基于文件 mtime,LRU 淘汰,上限50条) |
 | `check_xan_installed` | xan | 检查 xan.exe 是否已解压 |
 | `get/set_default_delimiter` | config | 读写默认分隔符配置 |

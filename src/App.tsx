@@ -31,6 +31,7 @@ import { VariablePanel } from "@/components/panel/VariablePanel";
 import { BatchFilterDialog } from "@/components/dialog/BatchFilterDialog";
 import { CsvDiffDialog } from "@/components/dialog/CsvDiffDialog";
 import { CsvEncodingDialog } from "@/components/dialog/CsvEncodingDialog";
+import { SeparateCSVDialog } from "@/components/dialog/SeparateCSVDialog";
 import { DataProfilePanel } from "@/components/panel/DataProfilePanel";
 import { AIPanel } from "@/components/panel/AIPanel";
 import { ToastContainer } from "@/components/setting/Toast";
@@ -1263,6 +1264,19 @@ function AppContent() {
         },
       },
       {
+        id: "separate-good-bad",
+        label: t.separateGoodBad,
+        description: t.separateNoResult,
+        group: t.paletteActions,
+        groupIcon: Zap,
+        onSelect: () => {
+          ui.setSeparateCsvInitialInput(
+            tabsHook.getCurrentTab()?.inputFile || undefined,
+          );
+          ui.setShowSeparateCsv(true);
+        },
+      },
+      {
         id: "use-or-save-template",
         label: t.paletteTemplates,
         group: t.paletteActions,
@@ -1295,6 +1309,7 @@ function AppContent() {
       "toggle-ai-panel": "ai",
       "csv-diff": "csvDiff",
       "csv-encoding": "csvEncoding",
+      "separate-good-bad": "separateGoodBad",
       "use-or-save-template": "paletteTemplates",
     };
     const actionsWithSearch: PaletteItem[] = actions.map((a) => {
@@ -1429,6 +1444,12 @@ function AppContent() {
                   tabsHook.getCurrentTab()?.inputFile || undefined,
                 );
                 ui.setShowCsvEncoding(true);
+              }}
+              onOpenSeparateCsv={() => {
+                ui.setSeparateCsvInitialInput(
+                  tabsHook.getCurrentTab()?.inputFile || undefined,
+                );
+                ui.setShowSeparateCsv(true);
               }}
               isExecuting={isExecuting}
               isCheckingUpdate={ui.isCheckingUpdate}
@@ -1687,6 +1708,14 @@ function AppContent() {
             isOpen={ui.showCsvEncoding}
             onClose={() => ui.setShowCsvEncoding(false)}
             initialInputFile={ui.csvEncodingInitialInput}
+            onShowToast={showToast}
+          />
+
+          <SeparateCSVDialog
+            isOpen={ui.showSeparateCsv}
+            onClose={() => ui.setShowSeparateCsv(false)}
+            initialInputFile={ui.separateCsvInitialInput}
+            defaultDelimiter={settings.defaultDelimiter}
             onShowToast={showToast}
           />
 

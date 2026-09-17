@@ -39,6 +39,7 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     csv::profile_csv,
     csv::diff_csv_files,
     csv::convert_csv_encoding,
+    csv::separate_csv,
     pipeline::execute_xan_pipeline,
     pipeline::set_pipeline_cancelled,
     plugins::list_plugins,
