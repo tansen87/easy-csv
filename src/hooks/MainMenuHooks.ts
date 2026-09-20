@@ -15,9 +15,9 @@ import {
   ExecutionHistoryStatus,
 } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
-import { BatchFilterConfig } from "@/components/dialog/BatchFilterDialog";
-import { BatchFilterHooks } from "@/hooks/BatchFilterHooks";
-import { BatchConvertHooks } from "@/hooks/BatchConvertHooks";
+import { BatchFilterConfig } from "@/types/xan";
+import { useBatchFilter } from "@/hooks/useBatchFilter";
+import { useBatchConvert } from "@/hooks/useBatchConvert";
 import { parseCsvString } from "@/utils/csv";
 import { stripStepCommand } from "@/utils/session";
 import {
@@ -304,7 +304,7 @@ export function MainMenuHooks({
   );
 
   const { executeBatchFilterDirect, executeBatchFilterWithData } =
-    BatchFilterHooks({
+    useBatchFilter({
       defaultDelimiter: resolveRunDelimiter(),
       addLog,
       setBranchProgress,
@@ -312,7 +312,7 @@ export function MainMenuHooks({
       isCancelRequested: () => cancelRequestedRef.current,
     });
 
-  const { executeBatchConvert } = BatchConvertHooks({
+  const { executeBatchConvert } = useBatchConvert({
     defaultDelimiter: resolveRunDelimiter(),
     addLog,
     setBranchProgress,

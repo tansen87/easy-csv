@@ -54,22 +54,23 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | 目录 | 职责 |
 |------|------|
-| `pinyin-cli/` | 独立 Rust CLI(二进制名 `pinyin`):中文转拼音,支持 stdin/stdout,可与 xan 命令组合成管道。参考 `src/pinyin.rs` 逻辑。已接入前端命令面板/命令列表 + 设置中的插件管理页签。设计文档:`docs/plugins/pinyin-cli.md` |
+| `pinyin-cli/` | 独立 Rust CLI(二进制名 `pinyin`):中文转拼音,支持 stdin/stdout,可与 xan 命令组合成管道。参考 `src-tauri/src/plugins.rs`。已接入前端命令面板/命令列表 + 设置中的插件管理页签。实现见 `plugins/pinyin-cli/`(crate 源码) |
 
-前端插件命令定义位于 `src/data/commands.ts`(`pinyin`,`plugin: true`,category `Plugins`),表单位于 `src/components/dialog/commands/PluginForms.tsx`。
+前端插件命令定义位于 `src/data/commands/index.ts`(`pinyin`,`plugin: true`,category `Plugins`),表单位于 `src/modules/dialogs/command/forms/pinyin.tsx`。
 
 ### 设计文档 (`docs/design/`)
 
 | 文件 | 内容 |
 |------|------|
-| `docs/design/flow-top-bottom-connect.md` | 节点连接点支持上下方向(已实现): `resolveHandles` 四方向选择算法、Handle 命名扩展(`top-*`/`bottom-*`/`table-top-*`)、切割碰撞检测同步更新 |
-| `docs/design/right-click-connect-bezier.md` | 右键连线改为贝塞尔实时预览(方案 A 已实现): 复用 `getBezierPath` 使预览=最终边、`pickStartHandle`/`buildConnectPreviewPath`、坐标换算与迟滞防抖 |
-| `docs/design/follow-system-language.md` | 语言设置新增「跟随系统」选项(方案设计): `LanguagePreference` 偏好/生效语言分离、`resolveSystemLanguage()` 基于 `navigator.language`、设置页两段改三段、新用户默认跟随系统 |
+| `docs/design/001_flow-top-bottom-connect.md` | 节点连接点支持上下方向(已实现): `resolveHandles` 四方向选择算法、Handle 命名扩展(`top-*`/`bottom-*`/`table-top-*`)、切割碰撞检测同步更新 |
+| `docs/design/002_right-click-connect-bezier.md` | 右键连线改为贝塞尔实时预览(方案 A 已实现): 复用 `getBezierPath` 使预览=最终边、`pickStartHandle`/`buildConnectPreviewPath`、坐标换算与迟滞防抖 |
+| `docs/design/015_follow-system-language.md` | 语言设置新增「跟随系统」选项(方案设计): `LanguagePreference` 偏好/生效语言分离、`resolveSystemLanguage()` 基于 `navigator.language`、设置页两段改三段、新用户默认跟随系统 |
 | `docs/design/016_separate-good-bad-rows.md` | 拆分好/坏行(已实现): 共享 `flexible(true)` reader/writer 重序列化、坏行向前归并、streaming 常量内存大文件方案 |
 | `docs/design/017_separate-dialog-ux.md` | 拆分对话框体验优化(已实现): `probe_csv_file` 首次行列数/表头预览、分隔符检测算法(表头权重 60 > 正文 30)、上次结果 localStorage、`reveal_paths` |
 | `docs/design/018_open-file-delimiter-detection.md` | 打开文件的分隔符自动检测 + 自动检测总开关(已实现): `read_csv_file` 支持自动检测并回传 `delimiter_source`、标签页记录解析值、输入节点分隔符徽标、执行侧改用标签页解析值("所见即所跑");设置页与输入节点徽标**共用同一个 `DelimiterModeSelect`**(自动检测 / 5 个分隔符),双向同步 + 即时落库(`auto_detect_delimiter` 配置项) |
+| `docs/design/019_frontend-structure-refactor.md` | 前端目录结构与巨型文件重构方案(**阶段 0/1 已实施 + 阶段 3.1–3.4/3.8 已实施;阶段 2 与 3.5–3.7 未实施**): 已完成——类型下沉到 `types/dialog.ts` 解除循环依赖、`VariableHint` 移入 `ui/`、11 个旧浮动对话框收敛为 `openCommandFromContext()` → `buildCommandInitialParams()`(纯函数,配单测) → `CommandDialog` 并删除、`components/dialog/**` 四分为 `modules/dialogs/{command,file,app,common}`、命令表单一命令一文件(`forms/<命令id>.tsx`)、`data/commands.ts` 拆为 `data/commands/` 目录、`i18n/translations.ts` 拆为 `{en,zh}/<domain>.ts`、`components/panel/**` 迁往 `modules/{pipeline,data-preview,ai,variables,logs}`、`ui/` 统一 PascalCase、`hooks/` 统一 `useXxx`、ESLint 安全网(`import/no-cycle` + `import/parsers`)。未完成——`MainMenuHooks`/`FlowPanel`/`App.tsx`/`ChartPanel` 拆分、HomeView Props 收敛、`SettingsTabContent`/`ai/context.ts` 等中型拆分、`setting/` 三个文件迁往 `app/providers` 与 `ui/`、`max-lines`/CI 门禁、`scripts/check-index.ts` |
 
-> `docs/design/001`–`015` 尚未逐条登记于本表(内容以目录内文件为准)。
+> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–019 已登记。
 
 ---
 
@@ -257,32 +258,55 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `TableNodeDelimiter.test.tsx` | 输入节点分隔符徽标(设计 018): 未读文件时不渲染、显示分隔符与置信度/锁定提示、展开共用控件并回调 | 5 |
 | `delimiterMode.test.ts` | 分隔符单一状态的换算(设计 018 §3.9): 设置 ⇄ 界面值、六种模式往返一致(锁住设置页与输入节点不漂移) | 6 |
 | `SettingsDelimiterControl.test.tsx` | 设置页分隔符控件(设计 018 §3.9): auto/锁定两种显示、6 个选项与顺序、选择回调、「恢复默认」复位为 auto | 6 |
+| `initialParams.test.ts` | 命令入口预填参数纯函数 `buildCommandInitialParams`(设计 019 §3.1): 各画布入口(筛选/排序/文本/数值/切割/补位/替换/日期)与旧对话框默认输出一致、无列时不猜 | 28 |
+| `csv.test.ts` | CSV 工具函数 |  |
+| `versionDiff.test.ts` | 版本差异计算 |  |
+| `executionHistory.test.ts` | 执行历史持久化 |  |
+| `panelDock.test.ts` | 面板停靠状态 |  |
+| `params.test.ts` | 参数构造工具 |  |
+| `separateHistory.test.ts` | 拆分结果 localStorage |  |
+| `SeparateCSVDialog.test.tsx` | 拆分好/坏行对话框(设计 016/017): 流式选项、探测、上次结果、打开路径 |  |
 
-> 本表未覆盖全部测试文件(另有 `commands` / `csv` / `versionDiff` / `executionHistory` / `panelDock` / `params` / `SeparateCSVDialog` / `separateHistory` 等),全量以 `pnpm test` 为准;`CsvDiffDialog.test.tsx` 已不存在。
+> 全量以 `pnpm test` 为准(当前 23 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
 
 ---
 
 ## React 前端 (`src/`)
+
+> **019 重构后**目录按「业务模块 `modules/` / 通用件 `components/`」分层;业务代码进 `src/modules/<功能域>/`,零业务语义的基础件留在 `src/components/ui/`,跨域共享类型放 `src/types/`。
+> 行数标注已移除(易漂移,见 019 §4.4);**结构快照:2026-09-20**。验证命令:`pnpm typecheck` / `pnpm lint` / `pnpm test`。
+
+### 业务模块总览 (`modules/`)
+
+| 目录 | 职责 |
+|------|------|
+| `modules/pipeline/` | 管道画布域: `FlowPanel`、`nodes/`、`overlays/`、`hooks/`、`lib/`(布局/切割几何)、`panels/`(版本控制/血缘) |
+| `modules/data-preview/` | 数据查看域: `HomeView`(主工作区)、`DataProfilePanel`、`charts/ChartPanel` |
+| `modules/dialogs/` | 对话框域,四分: `command/`(统一命令入口 + 61 个表单)、`file/`、`app/`、`common/` |
+| `modules/ai/` | AI 助手面板 |
+| `modules/variables/` | 变量管理面板 |
+| `modules/logs/` | 日志面板、命令列表、全局命令面板 |
 
 ### 入口与全局
 
 | 文件 | 职责 |
 |------|------|
 | `main.tsx` | 应用入口,包裹 ThemeProvider 和 LanguageProvider |
-| `App.tsx` | **根组件**(1290行) 管理所有状态: 标签页、管道、撤销/重做、日志、配置、历史记录、更新检查、拖拽打开、数据概况、历史记录上限、AI 面板、版本控制、数据血缘、会话恢复、命令面板、CSV 对比/编码转换 |
+| `App.tsx` | **根组件**,管理所有状态: 标签页、管道、撤销/重做、日志、配置、历史记录、更新检查、拖拽打开、数据概况、历史记录上限、AI 面板、版本控制、数据血缘、会话恢复、命令面板、CSV 对比/编码转换 |
 | `index.css` | 全局 CSS,定义亮色/暗色主题变量、动画关键帧 |
 
 ### 数据与类型 (`data/` · `types/` · `utils/`)
 
 | 文件 | 职责 |
 |------|------|
-| `data/commands.ts` | **所有 xan 命令定义**(4134行),59个命令,含参数、分类、中英文描述 |
-| `data/functions.ts` | xan 表达式函数定义(200+,321行),含分类(string/number/array/date/aggregation/window/web/fuzzy/io/hashing)、关键字、运算符,供表达式编辑器补全和高亮使用 |
-| `types/xan.ts` | 核心类型: `XanCommand`, `XanParameter`, `PipelineStep`, `StoredPipelineStep`, `PipelineEdge`, `LogEntry`, `PipelineTab`, `PipelineVersion`, `StepLineage`, `ColumnSchema`, `Transformation`, `ColumnLineagePath`, `ChartType`, `ChartConfig`, `ChartDataPoint`, `ChartSeries` |
-| `generated/help-docs.ts` | 自动生成的命令帮助文档(中英文),由 `scripts/generate-help-docs.js` 生成 |
-| `utils/format.ts` | `formatDateTime()` 时间格式化工具 |
-| `utils/delimiterMode.ts` | 分隔符单一状态的两个换算:`delimiterModeFromSettings(autoDetect, delimiter)`(设置 → 界面值)与 `settingsPatchForMode(mode)`(界面值 → 要落库的设置),保证设置页与输入节点徽标不会各自漂移 |
-| `utils/session.ts` | 会话快照序列化: `stripStepCommand`/`reconstructStep`/`serializeTabSnapshot`/`deserializeTabSnapshot`(与 `usePipelineVersions` 共用) |
+| `data/commands/index.ts` | **聚合出口** `xanCommands`(61 个命令)+ `commandCategories`;13 个分类文件(`explore`/`searchFilter`/`sortDedup`/`aggregate`/`combine`/`transform`/`format`/`transposePivot`/`partition`/`generate`/`scripting`/`custom`/`plugins`)按 019 §4.5 拆出,`commands.test.ts` 经此出口覆盖全部命令 |
+| `data/functions.ts` | xan 表达式函数定义(200+),含分类、关键字、运算符,供表达式编辑器补全和高亮使用 |
+| `types/xan.ts` | 核心类型: `XanCommand`, `XanParameter`, `PipelineStep`, `PipelineEdge`, `LogEntry`, `PipelineTab`, `PipelineVersion`, `DelimiterSource`, `DelimiterMode`, `CsvReadResult`, `ChartType`, `ChartConfig`, **`BatchFilterConfig` 及其运算符类型**(019 §1.7 从被删的 BatchFilterDialog 迁入) |
+| `types/dialog.ts` | **对话框共享类型**(019 §3.2 下沉,解除 `CommandDialog` ⇄ `commands/` 循环依赖): `CommandDialogType`(61 个命令联合类型)、`CommandDialogState`、`CommandFormProps`、`COMMAND_LABELS`;以及画布入口上下文 `CommandEntryContext` 与 `TextTransformKind`/`NumberTransformKind`/`SliceKind`/`PadKind`/`MapScaffold` |
+| `generated/help-docs.ts` | 自动生成的命令帮助文档(中英文),由 `scripts/generate-help-docs.js` 生成,**禁止手改** |
+| `utils/delimiterMode.ts` | 分隔符单一状态的两个换算: `delimiterModeFromSettings(autoDetect, delimiter)`(设置 → 界面值)与 `settingsPatchForMode(mode)`(界面值 → 要落库的设置) |
+| `utils/session.ts` | 会话快照序列化: `stripStepCommand`/`reconstructStep`/`serializeTabSnapshot`/`deserializeTabSnapshot` |
+| `utils/format.ts` · `utils/params.ts` · `utils/platform.ts` · `utils/separateHistory.ts` · `utils/executionHistory.ts` · `utils/versionDiff.ts` · `utils/panelDock.ts` · `utils/csv.ts` | 其余纯函数工具(时间格式化、参数构造、平台判断、拆分结果/执行历史持久化、版本差异、面板停靠、CSV 工具) |
 
 ### 服务层 (`services/ai/`)
 
@@ -291,37 +315,43 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 文件 | 职责 |
 |------|------|
 | `services/ai/index.ts` | `sendAIMessage()` 入口: 校验 API Key、加载纠正规则、澄清检测、构建消息、调用 `callAI`; 对话历史/反馈/纠正规则 CRUD; Per-provider API Key 管理 |
-| `services/ai/context.ts` | **提示词工程核心**(918行): 意图路由(含同义词)、命令索引、RAG 检索、模糊匹配、纠正规则加权、意图澄清检测、对话历史上下文注入 |
+| `services/ai/context.ts` | **提示词工程核心**: 意图路由(含同义词)、命令索引、RAG 检索、模糊匹配、纠正规则加权、意图澄清检测、对话历史上下文注入 |
 | `services/ai/api.ts` | `callAI()` 各 provider 调用 + `parseJSONBlock()` 多行编号JSON解析器 |
 | `services/ai/types.ts` | `AIConfig`/`AIMessage`/`AIResponse`/`AICommand`/`AIFeedback`/`CorrectionRule` 类型 + provider/模型常量 |
 
 ### Hooks (`hooks/`)
 
-状态管理已从 App.tsx 拆分为多个 hook:
+跨功能域共享的 hook,统一 `useXxx` 命名(019 §5.1):
 
 | 文件 | 职责 |
 |------|------|
-| `MainMenuHooks.ts` | 主菜单业务逻辑(1299行): 文件打开、保存、导入/导出管道(含导出为 .sh/.ps1 xan 脚本)、撤销/重做、执行管道(DFS 构建分支)、取消执行、图表执行;`resolveRunDelimiter()` 让 `execute_xan_pipeline`/导出脚本/批量工具统一使用**当前标签页解析出的分隔符**(标签页无值时回落全局默认) |
-| `useSession.ts` | 会话持久化(89行): 启动恢复标签页、防抖自动保存(800ms)、beforeunload 兜底保存 |
-| `useTabs.ts` | 标签页管理: 标签增删改、当前标签、管道状态读写(`getCurrentPipeline`/`getCurrentTab`/`setTabs`)、**文件读取的分隔符解析**: `loadCsvData(tabId, path, forcedDelimiter?)` —— 第三参为一次性覆盖(导入管道/模板),否则按全局模式(`useTabs(delimiter, addLog, autoDetectDelimiter)`)决定「检测」或「锁定用该分隔符」;全局模式变化时重读当前标签。设计:`docs/design/018_open-file-delimiter-detection.md` |
-| `usePipelineState.ts` | 管道状态(194行): `updateTabPipeline` 单点更新管道+edges,撤销/重做状态管理 |
-| `usePipelineVersions.ts` | 管道版本控制(236行): 保存/恢复/删除版本、标签管理、步骤序列化与重建(复用 `utils/session.ts`) |
-| `useDataLineage.ts` | 数据血缘(677行): 列类型推断、变换分析、血缘图数据构建与持久化 |
-| `useAppSettings.ts` | 应用配置(87行): 分隔符、无表头、通知、历史上限、托盘设置 |
-| `useToast.ts` | Toast 通知(29行) |
-| `useLogs.ts` | 执行日志(26行) |
-| `useUIState.ts` | UI 状态(111行): 对话框/面板开关(含命令面板、CSV 对比、编码转换) |
-| `BatchFilterHooks.ts` | Batch Filter 执行逻辑(621行): 文件名清理、正则构建、批量筛选执行(直接/带数据) |
-| `BatchConvertHooks.ts` | 批量格式转换(305行): globToRegex、getBaseName、getOutputDir、CSV↔XLSX↔JSON 转换 invoke 调用 |
-| `useDraggable.ts` | 通用拖拽 hook(91行): 管理拖拽位置、边界约束,用于命令面板和日志面板 |
-| `KeyboardShortcuts.ts` | 全局快捷键注册(121行): Ctrl+K(命令面板)、Ctrl+D(CSV 对比)、Ctrl+O/N/S/I/E/Z/Y/R、Alt+C/Q/D/A、Shift+H/C/S |
+| `MainMenuHooks.ts` | 主菜单业务逻辑(**尚未拆分**,见 019 §4.2 计划): 文件打开、保存、导入/导出管道(含导出为 .sh/.ps1 xan 脚本)、撤销/重做、执行管道(DFS 构建分支)、取消执行、图表执行;`resolveRunDelimiter()` 让 `execute_xan_pipeline`/导出脚本/批量工具统一使用**当前标签页解析出的分隔符** |
+| `useSession.ts` | 会话持久化: 启动恢复标签页、防抖自动保存(800ms)、beforeunload 兜底保存 |
+| `useTabs.ts` | 标签页管理: 标签增删改、当前标签、管道状态读写、**文件读取的分隔符解析**: `loadCsvData(tabId, path, forcedDelimiter?)`。设计: `docs/design/018_open-file-delimiter-detection.md` |
+| `usePipelineState.ts` | 管道状态: `updateTabPipeline` 单点更新管道+edges,撤销/重做状态管理 |
+| `usePipelineVersions.ts` | 管道版本控制: 保存/恢复/删除版本、标签管理、步骤序列化与重建 |
+| `usePipelineTemplates.ts` | 管道模板库(F4) |
+| `useDataLineage.ts` | 数据血缘: 列类型推断、变换分析、血缘图数据构建与持久化 |
+| `useExecutionHistory.ts` | 执行历史(F6) |
+| `useAppSettings.ts` | 应用配置: 分隔符、无表头、通知、历史上限、托盘设置 |
+| `useCsvProbe.ts` | 拆分对话框的文件探测(防抖 + 过期响应丢弃) |
+| `useToast.ts` | Toast 通知 |
+| `useLogs.ts` | 执行日志 |
+| `useUIState.ts` | UI 状态: 对话框/面板开关(含命令面板、CSV 对比、编码转换) |
+| `useBatchFilter.ts` | Batch Filter 执行逻辑(原 `BatchFilterHooks.ts`,019 §5.1 改名): 文件名清理、正则构建、批量筛选执行 |
+| `useBatchConvert.ts` | 批量格式转换(原 `BatchConvertHooks.ts`): globToRegex、getBaseName、CSV↔XLSX↔JSON 转换 invoke 调用 |
+| `useKeyboardShortcuts.ts` | 全局快捷键(原 `KeyboardShortcuts.ts`): Ctrl+K、Ctrl+D、Ctrl+O/N/S/I/E/Z/Y/R、Alt+C/Q/D/A、Shift+H/C/S |
+| `useDraggable.ts` | 通用拖拽 hook — **019 §3.1 后已无引用,待删除** |
 
 ### 国际化 (`i18n/`)
 
 | 文件 | 职责 |
 |------|------|
 | `i18n/index.tsx` | 语言上下文 Provider,持久化到 localStorage |
-| `i18n/translations.ts` | 中英文翻译字符串(860行,含 AI 面板、反馈、澄清、版本控制、血缘、命令面板、CSV 对比/编码转换相关 key) |
+| `i18n/translations/types.ts` | `Language`/`EffectiveLanguage`/`Translations` 接口(504 key 的类型契约) |
+| `i18n/translations/{en,zh}/<domain>.ts` | 按域拆分的字符串(019 §4.6): `common`/`pipeline`/`canvas`/`dialog`/`ai`/`settings`/`help`,各域 `satisfies Partial<Translations>` |
+| `i18n/translations/{en,zh}/index.ts` | 合并回一个扁平对象,类型为 `Translations`(缺 key 直接编译报错) |
+| `i18n/translations/index.ts` | `translations` 聚合出口,`@/i18n/translations` 路径不变 |
 
 ### 工具函数 (`lib/`)
 
@@ -329,133 +359,110 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 |------|------|
 | `lib/utils.ts` | `cn()` — 合并 Tailwind CSS 类名 |
 
-### 组件 — 核心视图
+### 业务模块 — 管道画布 (`modules/pipeline/`)
 
 | 文件 | 职责 |
 |------|------|
-| `components/HomeView.tsx` | **主工作区**(854行),管理所有对话框状态、标签页、右键菜单、表格列重命名 |
-| `components/CommandList.tsx` | **命令面板**(454行),可拖拽浮动面板,按分类展示命令,支持搜索和历史记录 |
-| `components/CommandPalette.tsx` | **全局命令面板**(243行, Ctrl/Cmd+K): 可搜索、键盘导航的动作/标签/最近文件/xan 命令列表 |
+| `pipeline/FlowPanel.tsx` | **可视化管道编辑器主组件**,组合子组件,管理状态和事件处理;右键拖拽连线(贝塞尔实时预览)、切刀、节点拖拽 |
+| `pipeline/nodes/TableNode.tsx` | 输入数据表格节点,支持表头重命名和右键菜单;四方向连接点;表头行的**分隔符徽标**(设计 018) |
+| `pipeline/nodes/PipelineStepNode.tsx` | 管道步骤节点,支持别名编辑、参数展示、切割动画 |
+| `pipeline/nodes/ResultTableNode.tsx` | 结果表节点(F1) |
+| `pipeline/nodes/index.ts` | 节点类型注册表(nodeTypes) |
+| `pipeline/lib/layout.ts` | dagre 自动布局 + 节点/边生成与连接方向解析(`getLayoutedElements`/`createEdgeConfig`/`resolveHandles`/`handleAnchor`/`pickStartHandle`/`buildConnectPreviewPath`/`transformBezierPath`) |
+| `pipeline/lib/cutGeometry.ts` | 切割几何计算: 交点检测、clip-path 生成、坠落方向 |
+| `pipeline/hooks/useCanvasKeyboardPan.ts` | 画布键盘平移 |
+| `pipeline/hooks/useCanvasPointerHud.ts` | 画布指针 HUD |
+| `pipeline/overlays/SearchOverlay.tsx` | 画布搜索框 UI(Ctrl+F) |
+| `pipeline/overlays/CutVisualization.tsx` | 切刀轨迹 SVG 渲染 |
+| `pipeline/overlays/ConnectionVisualization.tsx` | 右键连线贝塞尔实时预览 SVG |
+| `pipeline/overlays/KeyIndicatorOverlay.tsx` | 关键指标浮层 |
+| `pipeline/CoordinateGrid.tsx` | ReactFlow 画布坐标网格背景 |
+| `pipeline/panels/VersionControlPanel.tsx` | 管道版本控制面板: 版本列表、保存/恢复/删除、标签管理 |
+| `pipeline/panels/DataLineagePanel.tsx` | 数据血缘面板: 列级血缘追踪、变换类型图标、保存血缘 |
+| `pipeline/panels/LineageGraph.tsx` | 血缘关系图渲染: ReactFlow 列节点、类型配色、高亮/置灰联动 |
 
-### 组件 — 管道编辑 (`panel/`)
-
-| 文件 | 职责 |
-|------|------|
-| `panel/FlowPanel.tsx` | **可视化管道编辑器主组件**(1241行),组合子组件,管理状态和事件处理;右键拖拽连线(贝塞尔实时预览)、切刀、节点拖拽 |
-| `panel/AIPanel.tsx` | **AI 助手面板**(590行): 聊天 UI、命令生成、一键插入管道、👍/👎反馈(可切换)、意图澄清对话框、对话历史加载 |
-| `panel/VersionControlPanel.tsx` | 管道版本控制面板(302行): 版本列表、保存/恢复/删除、标签管理 |
-| `panel/DataLineagePanel.tsx` | 数据血缘面板(421行): 列级血缘追踪、变换类型图标、保存血缘 |
-| `panel/LineageGraph.tsx` | 血缘关系图渲染(341行): ReactFlow 列节点、类型配色、高亮/置灰联动 |
-| `panel/nodes/TableNode.tsx` | 输入数据表格节点,支持表头重命名和右键菜单;四方向连接点(带 `table-` 前缀);表头行的**分隔符徽标**(显示解析出的分隔符 + 来源/置信度圆点 + 锁图标,点击展开 `DelimiterModeSelect`,与设置页共用同一个值,见设计 018) |
-| `panel/nodes/PipelineStepNode.tsx` | 管道步骤节点,支持别名编辑、参数展示、切割动画;左右/上下四方向连接点 |
-| `panel/nodes/index.ts` | 节点类型注册表(nodeTypes) |
-| `panel/utils/cutGeometry.ts` | 切割几何计算:交点检测、clip-path 生成、坠落方向 |
-| `panel/utils/layout.ts` | dagre 自动布局算法 + 节点/边生成与连接方向解析(`getLayoutedElements`/`createEdgeConfig`/`resolveHandles`/`handleAnchor`/`getEdgeEndpoints`/`pickStartHandle`/`buildConnectPreviewPath`/`transformBezierPath`) |
-| `panel/overlays/SearchOverlay.tsx` | 画布搜索框 UI(Ctrl+F) |
-| `panel/overlays/CutVisualization.tsx` | 切刀轨迹 SVG 渲染 |
-| `panel/overlays/ConnectionVisualization.tsx` | 右键连线贝塞尔实时预览 SVG 渲染(渐变 + 箭头 + 起点圆点) |
-| `panel/CoordinateGrid.tsx` | ReactFlow 画布的坐标网格背景 |
-| `panel/LogPanel.tsx` | 浮动日志面板,显示执行结果,支持拖拽和复制 |
-| `panel/DataProfilePanel.tsx` | 数据概况右侧栏,展示字段统计(计数/空值/极值/均值等),支持固定搜索框 |
-| `panel/ChartPanel.tsx` | 图表面板(recharts),支持折线/散点/柱状/直方图/饼图/词云/热力图,支持拖拽、最大化/还原、SVG导出、dark mode |
-
-### 组件 — 对话框 (`dialog/`)
-
-每个对话框生成对应的 xan 命令参数: 
-
-| 文件 | 功能 | 生成的命令 |
-|------|------|-----------|
-| `CommandDialog.tsx` | 通用命令配置对话框,薄包装器: 渲染标题栏+可拖拽容器,委托 `commands/` 目录下的表单组件 | 各种命令 |
-| `FilterDialog.tsx` | 列筛选(文本/数值模式) | `search` / `filter` |
-| `SortDialog.tsx` | 多列排序 | `sort` |
-| `PivotDialog.tsx` | 透视表构建 | `pivot` / `groupby` / `agg` |
-| `DateTransformDialog.tsx` | 日期格式转换(30+格式) | `map` (strftime) |
-| `TextTransformDialog.tsx` | 文本变换(Len/Lower/Upper/Trim等) | `map` (字符串方法) |
-| `NumberTransformDialog.tsx` | 数值变换(Abs/Floor/Ceil等) | `map` (数学函数) |
-| `SplitDialog.tsx` | 字符串切割/分片 | `map` (slice/split) |
-| `PadDialog.tsx` | 字符串填充 | `map` (pad) |
-| `ReplaceDialog.tsx` | 查找替换(支持正则) | `map` (replace) |
-| `WindowDialog.tsx` | 窗口函数(19种: rank/lag/lead/rolling等) | `window` |
-| `BatchFilterDialog.tsx` | 批量筛选(按列值拆分为多个文件) | `batch-filter` |
-| `CsvDiffDialog.tsx` | CSV 双文件对比(Ctrl+D),对齐展示增删改行 + 相同行摘要,分页避免卡顿 | 直接调用 `diff_csv_files` |
-| `CsvEncodingDialog.tsx` | CSV 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1) | 直接调用 `convert_csv_encoding` |
-| `SeparateCSVDialog.tsx` | 拆分好/坏行:输入文件探测(第一行列数 + 表头预览)、分隔符自动检测/手选/一键设为默认、期望列数/跳过行/引号/流式、上次结果与完成时间(localStorage)+ 打开路径 | 直接调用 `probe_csv_file` / `separate_csv` / `reveal_paths` |
-| `UpdateDialog.tsx` | 应用更新通知 |  |
-| `ConfirmDialog.tsx` | 通用确认对话框(F5 刷新等场景) |  |
-
-#### 命令表单组件 (`dialog/commands/`)
-
-所有命令类型的专属表单从 `CommandDialog.tsx` 拆分到独立目录,按 xan 命令分类组织: 
-
-| 文件 | 职责 | 包含的命令 |
-|------|------|-----------|
-| `types.ts` | `CommandFormProps` 接口定义 + `COMMAND_LABELS` 标签映射(59个命令) |  |
-| `index.ts` | `COMMAND_FORMS` 映射表(命令类型→表单组件),统一导出 | 全部命令 |
-| `CommandFormWrapper.tsx` | 可复用表单包装器: ScrollArea + Cancel/Add/Update 按钮 + `handleCommandSubmit` 调用 |  |
-| `helpers.ts` | `handleCommandSubmit()` 提交处理 + `updateParam()` 参数更新工具函数 |  |
-| `parameterDescriptions.ts` | `getParameterDescription()` 参数描述查询,支持中英文 |  |
-| `ExploreForms.tsx` | 数据探索表单 | `count`, `headers`, `view`, `flatten`, `hist`, `plot`, `chart` |
-| `SearchFilterForms.tsx` | 搜索筛选表单 | `search`, `filter`, `head`, `tail`, `slice`, `top`, `sample`, `bisect` |
-| `SortDedupForms.tsx` | 排序去重表单 | `sort`, `dedup`, `shuffle` |
-| `AggregateForms.tsx` | 聚合统计表单 | `frequency`, `groupby`, `stats`, `agg`, `bins`, `window` |
-| `CombineForms.tsx` | 多文件合并表单 | `cat`, `join`, `merge` |
-| `TransformForms.tsx` | 列变换表单 | `select`, `drop`, `map`, `transform`, `enum`, `fill`, `complete`, `separate`, `blank` |
-| `FormatForms.tsx` | 格式转换表单 | `behead`, `rename`, `input`, `fixlengths`, `fmt`, `explode`, `implode`, `from`, `to`, `scrape`, `reverse` |
-| `TransposePivotForms.tsx` | 转置透视表单 | `transpose`, `pivot`, `unpivot` |
-| `PartitionForms.tsx` | 分割拆分表单 | `split`, `partition` |
-| `GenerateForms.tsx` | 生成 CSV 表单 | `range` |
-| `ScriptingForms.tsx` | 脚本执行表单 | `run`, `eval` |
-| `CustomForms.tsx` | 自定义扩展表单 | `output`, `batch-filter`, `batch-from`, `batch-to` |
-
-### 组件 — 表达式编辑器 (`expression/`)
-
-为 xan moonblade 表达式提供语法高亮和自动补全: 
+### 业务模块 — 其他域 (`modules/`)
 
 | 文件 | 职责 |
 |------|------|
-| `ExpressionEditor.tsx` | 主组件: textarea + 同步高亮层 + 自动补全下拉,用于 map/filter/agg 等命令 |
-| `highlight.ts` | 表达式语法高亮: 分词器(tokenizer) + HTML 生成,支持关键字/函数/字符串/数字/运算符/列引用/注释 |
-| `autocomplete.ts` | 自动补全引擎: 函数/关键字/列名/运算符建议,支持键盘导航(↑↓/Enter/Tab/Esc) |
-| `data/functions.ts` | 200+ xan 函数定义(字符串/数值/数组/日期/聚合/窗口/Web/Fuzzy/IO/Hashing 等分类) |
+| `data-preview/HomeView.tsx` | **主工作区**,管理命令对话框状态、标签页、右键菜单、表格列重命名 |
+| `data-preview/DataProfilePanel.tsx` | 数据概况右侧栏,展示字段统计,支持固定搜索框 |
+| `data-preview/charts/ChartPanel.tsx` | 图表面板(recharts),折线/散点/柱状/直方图/饼图/词云/热力图,支持拖拽、最大化/还原、SVG 导出、dark mode |
+| `ai/AIPanel.tsx` | **AI 助手面板**: 聊天 UI、命令生成、一键插入管道、👍/👎反馈、意图澄清对话框、对话历史加载 |
+| `variables/VariablePanel.tsx` | 变量管理面板(F3 管道参数化) |
+| `logs/LogPanel.tsx` | 浮动日志面板,显示执行结果,支持拖拽和复制 |
+| `logs/CommandList.tsx` | **命令面板**,可拖拽浮动面板,按分类展示命令,支持搜索和历史记录 |
+| `logs/CommandPalette.tsx` | **全局命令面板**(Ctrl/Cmd+K): 可搜索、键盘导航的动作/标签/最近文件/xan 命令列表 |
 
-### 组件 — 菜单 (`menu/`)
+### 业务模块 — 对话框 (`modules/dialogs/`)
 
-| 文件 | 职责 |
-|------|------|
-| `MainMenu.tsx` | 顶部工具栏: 文件菜单(打开/保存/导入/导出脚本/编码转换)、撤销/重做、执行按钮、命令面板按钮、帮助/设置 |
-| `ContextMenu.tsx` | 表格列右键菜单: 快速筛选、替换、透视、日期/文本/数值变换、排序 |
+按 019 §3.3 四分:**命令参数配置 / 文件级操作 / 应用级 / 通用原子**。
 
-### 组件 — 设置与主题 (`setting/`)
-
-| 文件 | 职责 |
-|------|------|
-| `ThemeProvider.tsx` | 主题上下文,管理 dark/light/system 模式 |
-| `SettingsDialog.tsx` | 设置对话框容器 |
-| `SettingsTabContent.tsx` | 设置内容: 语言、主题、**分隔符(自动检测总开关 + 具体分隔符,共用 `DelimiterModeSelect`,与输入节点同步)**、无表头选项、执行通知开关、历史记录条数上限、AI 配置(provider/model/apiKey)、AI 学习数据管理(清除对话/反馈/纠正规则) |
-| `Toast.tsx` | Toast 通知系统(顶部居中) |
-
-### 组件 — 帮助 (`help/`)
+#### `command/` — 统一命令入口
 
 | 文件 | 职责 |
 |------|------|
-| `HelpContent.ts` | 英文帮助内容(Markdown) |
-| `HelpContentCn.ts` | 中文帮助内容 |
-| `HelpDialog.tsx` | 帮助对话框,支持 Ctrl+F 搜索 |
-| `HelpMarkdown.tsx` | 自定义 Markdown 渲染器,支持搜索高亮 |
+| `command/CommandDialog.tsx` | **统一入口**: 居中外壳 + Esc/焦点圈闭,按 `commandDialog.type` 从 `COMMAND_FORMS` 取表单渲染 |
+| `command/CommandFormShell.tsx` | 可复用表单包装器(原 `CommandFormWrapper.tsx`): ScrollArea + Cancel/Add/Update 按钮 + `handleCommandSubmit` |
+| `command/index.ts` | `COMMAND_FORMS` 映射表(命令 id → 表单组件)+ 桶文件导出 |
+| `command/lib/initialParams.ts` | **`buildCommandInitialParams()` 纯函数**(019 §3.1): 把右键菜单上下文换算成预填参数,消除 11 个旧对话框的手工拼参(双实现);配 `__tests__/initialParams.test.ts` |
+| `command/lib/helpers.ts` | `handleCommandSubmit()` 提交处理 + `updateParam()` |
+| `command/lib/parameterDescriptions.ts` | `getParameterDescription()` 参数描述查询,支持中英文 |
+| `command/forms/<命令 id>.tsx` | **61 个命令表单,一个命令一个文件**(019 §3.4),文件名即命令 id;`_shared.tsx` 收纳 `SearchForm` 专用的 `Checkbox`/`TextField`/`PatternListInput` |
 
-### 组件 — UI 基础组件 (`ui/`)
+> 019 §3.1 后,画布右键的筛选/排序/透视/日期/文本/数值/切割/补位/替换/窗口/批量筛选入口全部经 `HomeView.openCommandFromContext()` → `buildCommandInitialParams()` → `CommandDialog`,**每个命令只有一处参数构建实现**;原有的 11 个浮动小窗已删除。
+
+#### `file/` · `app/` · `common/`
 
 | 文件 | 职责 |
 |------|------|
-| `button.tsx` | 按钮 |
-| `card.tsx` | 卡片容器 |
-| `input.tsx` | 输入框 |
-| `textarea.tsx` | 多行文本域 |
-| `scroll-area.tsx` | 滚动区域 |
-| `resize-handle.tsx` | 面板拖拽调整大小手柄 |
-| `tooltip.tsx` | Tooltip 提示组件,支持 top/bottom/left/right 定位 |
+| `file/SeparateCSVDialog.tsx` | 拆分好/坏行: 输入探测、分隔符自动检测/手选/设为默认、期望列数/跳过行/引号/流式、上次结果(localStorage)+ 打开路径 |
+| `file/CsvDiffDialog.tsx` | CSV 双文件对比(Ctrl+D),分页避免卡顿 |
+| `file/CsvEncodingDialog.tsx` | CSV 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1) |
+| `file/PipelineTemplateDialog.tsx` | 管道模板库对话框(F4) |
+| `app/ExecutionHistoryDialog.tsx` | 执行历史(F6) |
+| `app/UpdateDialog.tsx` | 应用更新通知 |
+| `common/ConfirmDialog.tsx` | 通用确认对话框 |
+| `common/VariableValuesDialog.tsx` | 管道变量取值对话框(F3) |
+
+### 通用组件 (`components/`)
+
+零业务语义,禁止 import `modules/`、`data/`、`services/`(019 §5.2)。
+
+#### `ui/` — 基础件(已统一 PascalCase)
+
+| 文件 | 职责 |
+|------|------|
+| `Button.tsx` | 按钮 |
+| `Card.tsx` | 卡片容器 |
+| `Input.tsx` | 输入框 |
+| `Textarea.tsx` | 多行文本域 |
+| `ScrollArea.tsx` | 滚动区域 |
+| `ResizeHandle.tsx` | 面板拖拽调整大小手柄 |
+| `Tooltip.tsx` | Tooltip 提示组件 |
 | `Select.tsx` | 可搜索下拉选择框 |
-| `DelimiterModeSelect.tsx` | 分隔符控件(6 项:自动检测 + `, ; \t \| ^`),**设置页与输入节点徽标共用**,保证两处永远显示同一个值(设计 018 §3.9) |
+| `MultiValueInput.tsx` | 多值输入(标签式) |
+| `DelimiterModeSelect.tsx` | 分隔符控件(6 项: 自动检测 + `, ; \t \| ^`),**设置页与输入节点徽标共用**(设计 018 §3.9) |
+| `VariableHint.tsx` | `{{var}}` 提示(019 §3.3 从 `commands/` 迁入,属通用 UI) |
+
+#### `expression/` · `menu/` · `setting/` · `help/`
+
+| 文件 | 职责 |
+|------|------|
+| `expression/ExpressionEditor.tsx` | 主组件: textarea + 同步高亮层 + 自动补全下拉 |
+| `expression/highlight.ts` · `autocomplete.ts` | 语法高亮分词器 / 补全引擎 |
+| `menu/MainMenu.tsx` | 顶部工具栏: 文件菜单、撤销/重做、执行、命令面板、帮助/设置 |
+| `menu/ContextMenu.tsx` | 表格列右键菜单: 快速筛选、替换、透视、变换、排序(019 §3.1 后只**报告**上下文,不再自己拼参数) |
+| `menu/CanvasContextMenu.tsx` | 画布空白处右键菜单 |
+| `setting/ThemeProvider.tsx` | 主题上下文(dark/light/system)— 019 §2.1 计划迁往 `app/providers/` |
+| `setting/SettingsDialog.tsx` | 设置对话框容器 — 019 §2.1 计划迁往 `modules/dialogs/app/` |
+| `setting/SettingsTabContent.tsx` | 设置内容: 语言、主题、分隔符(自动检测总开关)、无表头、通知、历史上限、AI 配置、AI 学习数据管理 |
+| `setting/Toast.tsx` | Toast 通知系统 — 019 §2.1 计划迁往 `components/ui/` |
+| `help/HelpContent.ts` · `HelpContentCn.ts` | 英文/中文帮助内容(Markdown) |
+| `help/HelpDialog.tsx` | 帮助对话框,支持 Ctrl+F 搜索 |
+| `help/HelpMarkdown.tsx` | 自定义 Markdown 渲染器,支持搜索高亮 |
+
+> `setting/` 的三个文件按 019 §2.1 属 P1 迁移项,与 `app/` 装配层(§4.4 `App.tsx` 拆分)一并落地。
 
 ---
 
@@ -463,36 +470,36 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 
 | 我想修改… | 看这些文件 |
 |-----------|-----------|
-| 新增/修改 xan 命令定义 | `src/data/commands.ts` |
+| 新增/修改 xan 命令定义 | `src/data/commands/index.ts` |
 | 新增/修改命令参数类型 | `src/types/xan.ts` |
-| 新增/修改命令表单 | `src/components/dialog/commands/` 目录,按分类选择对应 Form 文件,在 `index.ts` 注册到 `COMMAND_FORMS` |
-| 修改命令参数描述 | `src/components/dialog/commands/parameterDescriptions.ts` + `src/data/commands.ts`(参数 description 字段) |
-| 新增对话框 | 参考 `src/components/dialog/FilterDialog.tsx`,并在 `HomeView.tsx` 中注册状态和渲染 |
+| 新增/修改命令表单 | `src/modules/dialogs/command/` 目录,按分类选择对应 Form 文件,在 `index.ts` 注册到 `COMMAND_FORMS` |
+| 修改命令参数描述 | `src/modules/dialogs/command/lib/parameterDescriptions.ts` + `src/data/commands/index.ts`(参数 description 字段) |
+| 新增对话框 | 参考 `src/modules/dialogs/command/CommandDialog.tsx`,并在 `HomeView.tsx` 中注册状态和渲染 |
 | 修改管道执行逻辑 | `src-tauri/src/pipeline.rs` 中的 `execute_xan_pipeline` 函数 |
 | 修改管道执行取消 | `src-tauri/src/pipeline.rs`(`set_pipeline_cancelled` + `wait_with_cancel`) + `src/hooks/MainMenuHooks.ts`(取消按钮) |
 | 修改 CSV 预览读取 | `src-tauri/src/csv.rs` 中的 `read_csv_file` 函数 |
-| 修改打开文件的分隔符检测(工作流输入节点) | `src-tauri/src/csv.rs`(`read_csv_file` 的 `resolve_read_delimiter`/`read_csv_sync`)+ `src/hooks/useTabs.ts`(`loadCsvData` + 全局模式重载规则)+ `src/components/ui/DelimiterModeSelect.tsx`(共用控件)+ `src/components/panel/nodes/TableNode.tsx`(徽标)+ `src/components/panel/FlowPanel.tsx`/`src/components/HomeView.tsx`/`src/App.tsx`(透传)+ `src/utils/delimiterMode.ts`(设置 ⇄ 界面值换算)+ `src/hooks/MainMenuHooks.ts`(`resolveRunDelimiter`,保证执行与预览同源)。设计:`docs/design/018_open-file-delimiter-detection.md` |
+| 修改打开文件的分隔符检测(工作流输入节点) | `src-tauri/src/csv.rs`(`read_csv_file` 的 `resolve_read_delimiter`/`read_csv_sync`)+ `src/hooks/useTabs.ts`(`loadCsvData` + 全局模式重载规则)+ `src/components/ui/DelimiterModeSelect.tsx`(共用控件)+ `src/modules/pipeline/nodes/TableNode.tsx`(徽标)+ `src/modules/pipeline/FlowPanel.tsx`/`src/modules/data-preview/HomeView.tsx`/`src/App.tsx`(透传)+ `src/utils/delimiterMode.ts`(设置 ⇄ 界面值换算)+ `src/hooks/MainMenuHooks.ts`(`resolveRunDelimiter`,保证执行与预览同源)。设计:`docs/design/018_open-file-delimiter-detection.md` |
 | 修改分隔符自动检测总开关 / 默认分隔符(设置页 ⇄ 输入节点同步) | `src-tauri/src/config.rs`(`auto_detect_delimiter` + `get/set_auto_detect_delimiter`、`get/set_default_delimiter`)+ `src/hooks/useAppSettings.ts` + `src/components/setting/SettingsTabContent.tsx`(分隔符区块)+ `src/components/ui/DelimiterModeSelect.tsx` + `src/App.tsx`(`delimiterMode`/`onDelimiterModeChange`,含即时落库)。设计:`docs/design/018_open-file-delimiter-detection.md` §3.9 |
-| 修改 CSV 对比功能 | `src/components/dialog/CsvDiffDialog.tsx` + `src-tauri/src/csv.rs`(`diff_csv_files`) |
-| 修改 CSV 编码转换 | `src/components/dialog/CsvEncodingDialog.tsx` + `src-tauri/src/csv.rs`(`convert_csv_encoding`) |
-| 修改拆分好/坏行 | `src/components/dialog/SeparateCSVDialog.tsx` + `src-tauri/src/csv.rs`(`separate_csv`/`separate_stream`/`probe_csv_file`)+ `src/hooks/useCsvProbe.ts` + `src/utils/separateHistory.ts` + `src-tauri/src/storage.rs`(`reveal_paths`) |
+| 修改 CSV 对比功能 | `src/modules/dialogs/file/CsvDiffDialog.tsx` + `src-tauri/src/csv.rs`(`diff_csv_files`) |
+| 修改 CSV 编码转换 | `src/modules/dialogs/file/CsvEncodingDialog.tsx` + `src-tauri/src/csv.rs`(`convert_csv_encoding`) |
+| 修改拆分好/坏行 | `src/modules/dialogs/file/SeparateCSVDialog.tsx` + `src-tauri/src/csv.rs`(`separate_csv`/`separate_stream`/`probe_csv_file`)+ `src/hooks/useCsvProbe.ts` + `src/utils/separateHistory.ts` + `src-tauri/src/storage.rs`(`reveal_paths`) |
 | 修改会话保存/恢复 | `src/hooks/useSession.ts` + `src/utils/session.ts` + `src-tauri/src/session.rs` |
-| 修改命令面板 | `src/components/CommandPalette.tsx` + `src/hooks/useUIState.ts` + `src/hooks/KeyboardShortcuts.ts`(Ctrl+K) |
-| 修改管道可视化布局 | `src/components/panel/FlowPanel.tsx`(主逻辑) + `panel/utils/layout.ts`(布局) + `panel/nodes/`(节点样式) |
-| 修改连线方向/锚点(上下/左右连接点) | `src/components/panel/utils/layout.ts`(`resolveHandles`/`handleAnchor`) + `panel/nodes/`(Handle 定义) |
-| 修改右键连线交互/预览 | `src/components/panel/FlowPanel.tsx`(`handleCutStart`/`handleCutMove`/`handleCutEnd`) + `panel/overlays/ConnectionVisualization.tsx`(贝塞尔渲染) + `layout.ts`(`pickStartHandle`/`buildConnectPreviewPath`/`transformBezierPath`) |
-| 修改菜单/快捷键 | `src/components/menu/MainMenu.tsx` + `src/hooks/KeyboardShortcuts.ts` |
+| 修改命令面板 | `src/modules/logs/CommandPalette.tsx` + `src/hooks/useUIState.ts` + `src/hooks/useKeyboardShortcuts.ts`(Ctrl+K) |
+| 修改管道可视化布局 | `src/modules/pipeline/FlowPanel.tsx`(主逻辑) + `pipeline/lib/layout.ts`(布局) + `pipeline/nodes/`(节点样式) |
+| 修改连线方向/锚点(上下/左右连接点) | `src/modules/pipeline/lib/layout.ts`(`resolveHandles`/`handleAnchor`) + `pipeline/nodes/`(Handle 定义) |
+| 修改右键连线交互/预览 | `src/modules/pipeline/FlowPanel.tsx`(`handleCutStart`/`handleCutMove`/`handleCutEnd`) + `pipeline/overlays/ConnectionVisualization.tsx`(贝塞尔渲染) + `layout.ts`(`pickStartHandle`/`buildConnectPreviewPath`/`transformBezierPath`) |
+| 修改菜单/快捷键 | `src/components/menu/MainMenu.tsx` + `src/hooks/useKeyboardShortcuts.ts` |
 | 修改右键菜单 | `src/components/menu/ContextMenu.tsx` |
 | 修改主题/样式 | `src/index.css` + `src/components/setting/ThemeProvider.tsx` |
 | 修改设置选择器样式 | `src/components/setting/SettingsTabContent.tsx` |
-| 修改国际化文本 | `src/i18n/translations.ts` |
+| 修改国际化文本 | `src/i18n/translations/` |
 | 修改设置项 | `src/components/setting/SettingsTabContent.tsx` |
 | 修改应用配置持久化 | `src-tauri/src/config.rs` 中的 `load_config`/`save_config` 函数 |
-| 修改 Batch Filter 功能 | `src/hooks/BatchFilterHooks.ts` + `src/components/dialog/BatchFilterDialog.tsx` + `src/data/commands.ts` |
-| 修改 Batch Convert 功能 | `src/hooks/BatchConvertHooks.ts` + `src/hooks/MainMenuHooks.ts` |
+| 修改 Batch Filter 功能 | `src/hooks/useBatchFilter.ts` + `src/modules/dialogs/command/forms/batch-filter.tsx` + `src/data/commands/index.ts` |
+| 修改 Batch Convert 功能 | `src/hooks/useBatchConvert.ts` + `src/hooks/MainMenuHooks.ts` |
 | 修改导出管道脚本 (.sh/.ps1) | `src/hooks/MainMenuHooks.ts`(导出保存对话框逻辑) |
-| 修改 AI 面板 UI/交互 | `src/components/panel/AIPanel.tsx` |
-| 修改 AI 反馈/澄清逻辑 | `src/components/panel/AIPanel.tsx` + `src/services/ai/index.ts` |
+| 修改 AI 面板 UI/交互 | `src/modules/ai/AIPanel.tsx` |
+| 修改 AI 反馈/澄清逻辑 | `src/modules/ai/AIPanel.tsx` + `src/services/ai/index.ts` |
 | 修改 AI 提示词/意图路由 | `src/services/ai/context.ts`(`INTENT_ROUTES`/`retrieveRelevantCommands`/`buildSystemPrompt`) |
 | 修改 AI 模糊匹配/同义词 | `src/services/ai/context.ts`(`fuzzyMatch`/`expandWithSynonyms`) |
 | 修改 AI 纠正规则逻辑 | `src/services/ai/context.ts` + `src/services/ai/index.ts` + `src-tauri/src/ai_memory.rs` |
@@ -506,28 +513,28 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改命令使用文档 | `docs/AI_usage/*.md`(生成源: `scripts/generate-ai-usage-docs.ts`) / 合并版: `docs/AI/USAGE.md` |
 | 修改命令帮助文档(英文) | `src/docs/cmd/*.md` |
 | 修改命令帮助文档(中文) | `docs/cmd_zh/*.md` |
-| 修改管道版本控制 | `src/hooks/usePipelineVersions.ts` + `src/components/panel/VersionControlPanel.tsx` + `src-tauri/src/storage.rs` |
-| 修改数据血缘 | `src/hooks/useDataLineage.ts` + `src/components/panel/DataLineagePanel.tsx` + `src/components/panel/LineageGraph.tsx` + `src-tauri/src/storage.rs` |
-| 修改血缘图渲染 | `src/components/panel/LineageGraph.tsx` |
+| 修改管道版本控制 | `src/hooks/usePipelineVersions.ts` + `src/modules/pipeline/panels/VersionControlPanel.tsx` + `src-tauri/src/storage.rs` |
+| 修改数据血缘 | `src/hooks/useDataLineage.ts` + `src/modules/pipeline/panels/DataLineagePanel.tsx` + `src/modules/pipeline/panels/LineageGraph.tsx` + `src-tauri/src/storage.rs` |
+| 修改血缘图渲染 | `src/modules/pipeline/panels/LineageGraph.tsx` |
 | 修改帮助内容 | `src/components/help/HelpContent.ts` (英文) / `HelpContentCn.ts` (中文) |
 | 修改命令帮助文档 | 运行 `node scripts/generate-help-docs.js` 重新生成 |
 | 修改 Tauri 插件/权限 | `src-tauri/tauri.conf.json` + `src-tauri/capabilities/default.json` |
 | 修改系统托盘/窗口行为 | `src-tauri/src/main.rs` 中的 `setup()` 和 `on_window_event` |
-| 修改数据概况功能 | `src/components/panel/DataProfilePanel.tsx` + `src-tauri/src/csv.rs` 中的 `profile_csv` + `src-tauri/src/storage.rs` 中的缓存函数 |
-| 修改图表功能 | `src/components/panel/ChartPanel.tsx`(图表渲染+拖拽+导出) + `src/components/dialog/commands/ExploreForms.tsx`(ChartForm) + `src/hooks/MainMenuHooks.ts`(chart执行逻辑) + `src/types/xan.ts`(ChartConfig等类型) |
+| 修改数据概况功能 | `src/modules/data-preview/DataProfilePanel.tsx` + `src-tauri/src/csv.rs` 中的 `profile_csv` + `src-tauri/src/storage.rs` 中的缓存函数 |
+| 修改图表功能 | `src/modules/data-preview/charts/ChartPanel.tsx`(图表渲染+拖拽+导出) + `src/modules/dialogs/command/forms/`(ChartForm) + `src/hooks/MainMenuHooks.ts`(chart执行逻辑) + `src/types/xan.ts`(ChartConfig等类型) |
 | 修改图表命令文档 | `src/docs/cmd/chart.md`(英文) / `docs/cmd_zh/chart.md`(中文) |
-| 管道步骤复制粘贴 | `src/components/panel/FlowPanel.tsx` 中的 `handleCopyStep`/`handlePasteStep` |
+| 管道步骤复制粘贴 | `src/modules/pipeline/FlowPanel.tsx` 中的 `handleCopyStep`/`handlePasteStep` |
 | 管道步骤自动连线 | `src/App.tsx` 中的 `handleCommandClick`(仅 AI 添加时 `autoConnect=true` 自动连线) |
 | 修改表达式编辑器 | `src/components/expression/` 目录: `ExpressionEditor.tsx`(主组件) + `highlight.ts`(高亮) + `autocomplete.ts`(补全) |
 | 修改函数定义/补全列表 | `src/data/functions.ts`(200+函数定义) |
-| 修改拖拽交互行为 | `src/components/panel/FlowPanel.tsx`(管道节点拖拽) + `src/components/CommandList.tsx`(命令面板拖拽) + `src/hooks/useDraggable.ts`(通用拖拽逻辑) |
+| 修改拖拽交互行为 | `src/modules/pipeline/FlowPanel.tsx`(管道节点拖拽) + `src/modules/logs/CommandList.tsx`(命令面板拖拽) + `src/hooks/useDraggable.ts`(通用拖拽逻辑) |
 | 修改右键菜单选项/行为 | `src/components/menu/ContextMenu.tsx` |
 | 修改动画/过渡效果 | `src/index.css`(关键帧定义) + 各组件内联动画逻辑 |
 | 修改 Toast/通知样式 | `src/components/setting/Toast.tsx` |
-| 修改 Tooltip 组件 | `src/components/ui/tooltip.tsx` |
-| 修改表格列交互(重命名/右键) | `src/components/HomeView.tsx` |
-| 修改管道节点样式 | `src/components/panel/nodes/PipelineStepNode.tsx` |
-| 修改切割动画效果 | `src/components/panel/utils/cutGeometry.ts` + `src/components/panel/overlays/CutVisualization.tsx` |
+| 修改 Tooltip 组件 | `src/components/ui/Tooltip.tsx` |
+| 修改表格列交互(重命名/右键) | `src/modules/data-preview/HomeView.tsx` |
+| 修改管道节点样式 | `src/modules/pipeline/nodes/PipelineStepNode.tsx` |
+| 修改切割动画效果 | `src/modules/pipeline/lib/cutGeometry.ts` + `src/modules/pipeline/overlays/CutVisualization.tsx` |
 | 修改 xan.exe 解压/查找 | `src-tauri/src/xan.rs` |
 | 新增/修改前端测试 | `src/__tests__/` 目录 + `vitest.config.ts` + `src/test/setup.ts` |
 | 测试 xan 命令参数正确性 | `src/__tests__/commands.test.ts` |
@@ -535,9 +542,9 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 测试 Batch Filter 逻辑 | `src/__tests__/BatchFilterHooks.test.ts` |
 | 测试 Batch Convert 逻辑 | `src/__tests__/BatchConvertHooks.test.ts` |
 | 测试命令面板 | `src/__tests__/CommandPalette.test.tsx` |
-| 测试 CSV 对比对话框 | `src/__tests__/CsvDiffDialog.test.tsx` |
+| 测试 CSV 对比对话框 | `src/__tests__/initialParams.test.ts` |
 | 测试编码转换对话框 | `src/__tests__/CsvEncodingDialog.test.tsx` |
 | 修改测试 mock/setup | `src/test/setup.ts` |
 | 修改 vitest 配置 | `vitest.config.ts` |
-| 新增/修改 CLI 插件 | `plugins/<name>/`(独立 crate)+ `src/data/commands.ts`(命令定义)+ `src/components/dialog/commands/PluginForms.tsx`(表单)+ `src-tauri/src/plugins.rs`(后端注册)+ `src/docs/cmd/<name>.md` 与 `docs/cmd_zh/<name>.md`(帮助文档,改后跑 `pnpm generate-help`) |
+| 新增/修改 CLI 插件 | `plugins/<name>/`(独立 crate)+ `src/data/commands/index.ts`(命令定义)+ `src/modules/dialogs/command/forms/pinyin.tsx`(表单)+ `src-tauri/src/plugins.rs`(后端注册)+ `src/docs/cmd/<name>.md` 与 `docs/cmd_zh/<name>.md`(帮助文档,改后跑 `pnpm generate-help`) |
 | 修改插件管理设置页 | `src/components/setting/SettingsTabContent.tsx`(Plugins 页签)+ `src-tauri/src/plugins.rs` |

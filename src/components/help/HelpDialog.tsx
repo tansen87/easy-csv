@@ -5,9 +5,9 @@ import React, {
   useMemo,
   useCallback,
 } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { ScrollArea } from "@/components/ui/ScrollArea";
 import { HelpMarkdown, getSearchMatches } from "@/components/help/HelpMarkdown";
 import { X, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { useLanguage } from "@/i18n";

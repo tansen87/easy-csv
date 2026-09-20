@@ -1,0 +1,343 @@
+import { XanCommand } from "@/types/xan";
+
+/** Add, transform, drop and move columns (design 019 §4.5). */
+export const transformCommands: XanCommand[] = [
+{
+    id: "select",
+    name: "select",
+    description: "Select columns from a CSV file",
+    descriptionCn: "从 CSV 文件中选择列",
+    category: "Add, transform, drop and move columns",
+    parameters: [
+      {
+        name: "selection",
+        type: "string",
+        description: "Selection expression",
+        descriptionCn: "选择表达式",
+        required: true,
+        isPositional: true,
+      },
+      {
+        name: "evaluate",
+        type: "flag",
+        description:
+          "Toggle expression evaluation rather than using the shorthand selection notation",
+        descriptionCn: "切换表达式评估而不是使用简写选择符号",
+        required: false,
+        default: false,
+      },
+      {
+        name: "evaluate-file",
+        type: "string",
+        description: "Read evaluation expression from a file instead",
+        descriptionCn: "从文件读取评估表达式",
+        required: false,
+      },
+    ],
+  },
+{
+    id: "drop",
+    name: "drop",
+    description: "Drop columns from a CSV file",
+    descriptionCn: "从 CSV 文件中删除列",
+    category: "Add, transform, drop and move columns",
+    parameters: [
+      {
+        name: "selection",
+        type: "string",
+        description: "Columns to drop (comma-separated)",
+        descriptionCn: "要删除的列 (用逗号分隔)",
+        required: true,
+        isPositional: true,
+      },
+    ],
+  },
+{
+    id: "map",
+    name: "map",
+    description: "Create new columns by evaluating expressions",
+    descriptionCn: "通过计算表达式创建新列",
+    category: "Add, transform, drop and move columns",
+    parameters: [
+      {
+        name: "expression",
+        type: "string",
+        description: "Expression to evaluate",
+        descriptionCn: "要评估的表达式",
+        required: true,
+        isPositional: true,
+      },
+      {
+        name: "evaluate-file",
+        type: "string",
+        description: "Read evaluation expression from a file instead",
+        descriptionCn: "从文件读取评估表达式",
+        required: false,
+      },
+      {
+        name: "overwrite",
+        type: "flag",
+        description:
+          "If set, expressions named with a column already existing in the file will be overwritten with the result of the expression instead of adding a new column at the end",
+        descriptionCn:
+          "如果设置,与文件中已存在列同名的表达式将被覆盖,而不是在末尾添加新列",
+        required: false,
+        default: false,
+      },
+      {
+        name: "filter",
+        type: "flag",
+        description:
+          "If given, will not write rows in the output if all results of evaluated expression are falsey",
+        descriptionCn: "如果提供,当评估表达式的所有结果为假值时,将不写入输出行",
+        required: false,
+        default: false,
+      },
+      {
+        name: "parallel",
+        type: "flag",
+        description: "Use parallelization acceleration",
+        descriptionCn: "使用并行化加速",
+        required: false,
+        default: false,
+      },
+      {
+        name: "threads",
+        type: "number",
+        description: "Number of threads used",
+        descriptionCn: "使用的线程数",
+        required: false,
+      },
+    ],
+  },
+{
+    id: "transform",
+    name: "transform",
+    description: "Transform a column by evaluating an expression",
+    descriptionCn: "通过计算表达式转换列",
+    category: "Add, transform, drop and move columns",
+    parameters: [
+      {
+        name: "column",
+        type: "string",
+        description: "Column to transform",
+        descriptionCn: "要转换的列",
+        required: true,
+        isPositional: true,
+      },
+      {
+        name: "expression",
+        type: "string",
+        description: "Expression to evaluate",
+        descriptionCn: "要评估的表达式",
+        required: true,
+        isPositional: true,
+      },
+      {
+        name: "threads",
+        type: "number",
+        description: "Number of threads to use",
+        descriptionCn: "使用的线程数",
+        required: false,
+      },
+    ],
+  },
+{
+    id: "enum",
+    name: "enum",
+    description: "Enumerate CSV file by prepending an index column",
+    descriptionCn: "通过添加索引列来枚举 CSV 文件",
+    category: "Add, transform, drop and move columns",
+    parameters: [
+      {
+        name: "column-name",
+        type: "string",
+        description:
+          "Name of the column to prepend. Will default to 'index', or 'byte_offset' when -B, --byte-offset is given",
+        descriptionCn:
+          "要添加的列名,默认为'index',或使用-B/--byte-offset时为'byte_offset'",
+        required: false,
+      },
+      {
+        name: "start",
+        type: "number",
+        description: "Number to count from",
+        descriptionCn: "计数起始数字",
+        required: false,
+        default: 0,
+      },
+      {
+        name: "byte-offset",
+        type: "flag",
+        description:
+          "Whether to indicate the byte offset of the row in the file instead",
+        descriptionCn: "是否改为指示行在文件中的字节偏移量",
+        required: false,
+        default: false,
+      },
+      {
+        name: "accumulate",
+        type: "flag",
+        description:
+          "Similar to -B/--byte-offset but will accumulate the written offset size in bytes",
+        descriptionCn:
+          "类似于-B/--byte-offset,但将累加写入的偏移量大小(以字节为单位)",
+        required: false,
+        default: false,
+      },
+    ],
+  },
+{
+    id: "fill",
+    name: "fill",
+    description: "Fill empty cells",
+    descriptionCn: "填充空值",
+    category: "Add, transform, drop and move columns",
+    parameters: [
+      {
+        name: "select",
+        type: "string",
+        description: "Selection of columns to fill",
+        descriptionCn: "要填充的列选择",
+        required: false,
+      },
+      {
+        name: "value",
+        type: "string",
+        description:
+          "Fill empty cells using provided value instead of using last non-empty value",
+        descriptionCn: "使用提供的值填充空单元格,而不是使用最后一个非空值",
+        required: false,
+      },
+    ],
+  },
+{
+    id: "complete",
+    name: "complete",
+    description: "Complete missing values in a range",
+    descriptionCn: "补全范围内的缺失值",
+    category: "Add, transform, drop and move columns",
+    parameters: [
+      {
+        name: "column",
+        type: "string",
+        description: "Column to complete",
+        descriptionCn: "要补全的列",
+        required: true,
+        isPositional: true,
+      },
+      {
+        name: "check",
+        type: "flag",
+        description: "Check that the input is complete",
+        descriptionCn: "检查输入是否完整",
+        required: false,
+        default: false,
+      },
+      {
+        name: "min",
+        type: "string",
+        description: "Minimum value of range to complete",
+        descriptionCn: "要补全范围的最小值",
+        required: false,
+      },
+      {
+        name: "max",
+        type: "string",
+        description: "Maximum value of range to complete",
+        descriptionCn: "要补全范围的最大值",
+        required: false,
+      },
+      {
+        name: "dates",
+        type: "flag",
+        description: "Set to indicate your values are dates",
+        descriptionCn: "设置以指示您的值是日期",
+        required: false,
+        default: false,
+      },
+      {
+        name: "sorted",
+        type: "flag",
+        description: "Indicate that the input is already sorted",
+        descriptionCn: "指示输入已排序",
+        required: false,
+        default: false,
+      },
+      {
+        name: "reverse",
+        type: "flag",
+        description: "Whether to consider the data in reverse order",
+        descriptionCn: "是否以相反顺序考虑数据",
+        required: false,
+        default: false,
+      },
+      {
+        name: "groupby",
+        type: "string",
+        description: "Select columns to group by",
+        descriptionCn: "选择分组列",
+        required: false,
+      },
+    ],
+  },
+{
+    id: "separate",
+    name: "separate",
+    description: "Split a single column into multiple ones",
+    descriptionCn: "将单列拆分为多列",
+    category: "Add, transform, drop and move columns",
+    parameters: [
+      {
+        name: "column",
+        type: "string",
+        description: "Column to split",
+        descriptionCn: "要拆分的列",
+        required: true,
+        isPositional: true,
+      },
+      {
+        name: "separator",
+        type: "string",
+        description: "Separator to use",
+        descriptionCn: "要使用的分隔符",
+        required: true,
+        isPositional: true,
+      },
+      {
+        name: "lines",
+        type: "flag",
+        description:
+          "Indicate that input should be considered as text lines instead of CSV data",
+        descriptionCn: "指示输入应被视为文本行而不是CSV数据",
+        required: false,
+        default: false,
+      },
+    ],
+  },
+{
+    id: "blank",
+    name: "blank",
+    description: "Blank down selected columns of a CSV file",
+    descriptionCn: "将选定列中的连续相同单元格清空",
+    category: "Add, transform, drop and move columns",
+    parameters: [
+      {
+        name: "select",
+        type: "string",
+        description: "Selection of columns to blank down",
+        descriptionCn: "要清空的列选择",
+        required: true,
+        isPositional: true,
+      },
+      {
+        name: "redact",
+        type: "string",
+        description:
+          "Redact the blanked down values using the provided replacement string",
+        descriptionCn: "使用提供的替换字符串编辑清空的值",
+        required: false,
+      },
+    ],
+  },
+];

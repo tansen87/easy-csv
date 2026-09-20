@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, fireEvent } from "@testing-library/react";
 import { LanguageProvider } from "@/i18n";
-import { CommandPalette, type PaletteItem } from "@/components/CommandPalette";
+import { CommandPalette, type PaletteItem } from "@/modules/logs/CommandPalette";
 import { FileText, FolderOpen, Play } from "lucide-react";
 
 function makeItems(): PaletteItem[] {

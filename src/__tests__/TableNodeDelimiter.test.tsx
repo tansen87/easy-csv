@@ -5,7 +5,7 @@ import { LanguageProvider } from "@/i18n";
 import {
   TableNode,
   type TableNodeData,
-} from "@/components/panel/nodes/TableNode";
+} from "@/modules/pipeline/nodes/TableNode";
 
 // Design 018 §3.7: the input node shows the delimiter the file was read with,
 // how it was resolved, and lets the user override it (auto / locked).

@@ -25,9 +25,9 @@ import {
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-shell";
 import { invoke } from "@tauri-apps/api/core";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/Button";
+import { ScrollArea } from "@/components/ui/ScrollArea";
+import { Select } from "@/components/ui/Select";
 import { DelimiterModeSelect } from "@/components/ui/DelimiterModeSelect";
 import type { DelimiterMode } from "@/types/xan";
 import { useLanguage } from "@/i18n";

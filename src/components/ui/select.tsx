@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronDown } from "lucide-react";
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
-import { ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollBar } from "@/components/ui/ScrollArea";
 
 interface SelectProps {
   value: string;

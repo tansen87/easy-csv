@@ -29,9 +29,13 @@ import {
   Plus,
   Minus,
 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { TextTransformType } from "@/components/dialog/TextTransformDialog";
-import { NumberTransformType } from "@/components/dialog/NumberTransformDialog";
+import { ScrollArea } from "@/components/ui/ScrollArea";
+import type {
+  NumberTransformKind,
+  PadKind,
+  SliceKind,
+  TextTransformKind,
+} from "@/types/dialog";
 import { useLanguage } from "@/i18n";
 
 interface ContextMenuState {
@@ -44,32 +48,22 @@ interface ContextMenuState {
 interface ContextMenuProps {
   contextMenu: ContextMenuState;
   onClose: () => void;
-  onOpenFilterDialog: (col: number, x: number, y: number) => void;
-  onOpenBatchFilter: (x: number, y: number) => void;
-  onOpenPivotDialog: (x: number, y: number) => void;
-  onOpenDateTransformDialog: (col: number, x: number, y: number) => void;
-  onOpenTextTransformDialog: (
-    col: number,
-    x: number,
-    y: number,
-    transformType?: TextTransformType,
-  ) => void;
-  onOpenSliceDialog: (
-    col: number,
-    x: number,
-    y: number,
-    sliceType?: string,
-  ) => void;
-  onOpenReplaceDialog: (col: number, x: number, y: number) => void;
-  onOpenWindowDialog: (col: number, x: number, y: number) => void;
-  onOpenPadDialog: (col: number, x: number, y: number, padType: string) => void;
+  // Entries report what was clicked; the floating dialogs they used to open —
+  // and therefore their x/y — are gone (design 019 §3.1).
+  onOpenFilterDialog: (col: number) => void;
+  onOpenBatchFilter: () => void;
+  onOpenPivotDialog: () => void;
+  onOpenDateTransformDialog: (col: number) => void;
+  onOpenTextTransformDialog: (col: number, transformType: TextTransformKind) => void;
+  onOpenSliceDialog: (col: number, sliceType: SliceKind) => void;
+  onOpenReplaceDialog: (col: number) => void;
+  onOpenWindowDialog: (col: number) => void;
+  onOpenPadDialog: (col: number, padType: PadKind) => void;
   onOpenNumberTransformDialog: (
     col: number,
-    x: number,
-    y: number,
-    transformType?: NumberTransformType,
+    transformType: NumberTransformKind,
   ) => void;
-  onOpenSortDialog: (col: number, x: number, y: number) => void;
+  onOpenSortDialog: (col: number) => void;
 }
 
 export function ContextMenu({
@@ -160,37 +154,37 @@ export function ContextMenu({
     {
       label: t.textTransformLen,
       icon: RulerDimensionLine,
-      transformType: "len" as TextTransformType,
+      transformType: "len" as TextTransformKind,
     },
     {
       label: t.textTransformLower,
       icon: CaseLower,
-      transformType: "lower" as TextTransformType,
+      transformType: "lower" as TextTransformKind,
     },
     {
       label: t.textTransformUpper,
       icon: CaseUpper,
-      transformType: "upper" as TextTransformType,
+      transformType: "upper" as TextTransformKind,
     },
     {
       label: t.textTransformTrim,
       icon: AlignCenter,
-      transformType: "trim" as TextTransformType,
+      transformType: "trim" as TextTransformKind,
     },
     {
       label: t.textTransformLtrim,
       icon: AlignLeft,
-      transformType: "ltrim" as TextTransformType,
+      transformType: "ltrim" as TextTransformKind,
     },
     {
       label: t.textTransformRtrim,
       icon: AlignRight,
-      transformType: "rtrim" as TextTransformType,
+      transformType: "rtrim" as TextTransformKind,
     },
     {
       label: t.textTransformStrip,
       icon: Eraser,
-      transformType: "strip" as TextTransformType,
+      transformType: "strip" as TextTransformKind,
     },
     { label: t.sliceLeft, icon: ArrowLeftFromLine, transformType: "splitLeft" },
     {
@@ -233,7 +227,7 @@ export function ContextMenu({
         onClick={(e) => {
           e.stopPropagation();
           onClose();
-          onOpenFilterDialog(contextMenu.col, contextMenu.x, contextMenu.y);
+          onOpenFilterDialog(contextMenu.col);
         }}
       >
         <Filter className="h-4 w-4 text-muted-foreground" />
@@ -245,7 +239,7 @@ export function ContextMenu({
         onClick={(e) => {
           e.stopPropagation();
           onClose();
-          onOpenBatchFilter(contextMenu.x, contextMenu.y);
+          onOpenBatchFilter();
         }}
       >
         <FunnelPlus className="h-4 w-4 text-muted-foreground" />
@@ -257,7 +251,7 @@ export function ContextMenu({
         onClick={(e) => {
           e.stopPropagation();
           onClose();
-          onOpenReplaceDialog(contextMenu.col, contextMenu.x, contextMenu.y);
+          onOpenReplaceDialog(contextMenu.col);
         }}
       >
         <Replace className="h-4 w-4 text-muted-foreground" />
@@ -269,7 +263,7 @@ export function ContextMenu({
         onClick={(e) => {
           e.stopPropagation();
           onClose();
-          onOpenPivotDialog(contextMenu.x, contextMenu.y);
+          onOpenPivotDialog();
         }}
       >
         <Grid3X3 className="h-4 w-4 text-muted-foreground" />
@@ -281,11 +275,7 @@ export function ContextMenu({
         onClick={(e) => {
           e.stopPropagation();
           onClose();
-          onOpenDateTransformDialog(
-            contextMenu.col,
-            contextMenu.x,
-            contextMenu.y,
-          );
+          onOpenDateTransformDialog(contextMenu.col);
         }}
       >
         <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -297,7 +287,7 @@ export function ContextMenu({
         onClick={(e) => {
           e.stopPropagation();
           onClose();
-          onOpenWindowDialog(contextMenu.col, contextMenu.x, contextMenu.y);
+          onOpenWindowDialog(contextMenu.col);
         }}
       >
         <LayoutGrid className="h-4 w-4 text-muted-foreground" />
@@ -340,35 +330,26 @@ export function ContextMenu({
                     onClick={(e) => {
                       e.stopPropagation();
                       onClose();
-                      if (
-                        option.transformType.startsWith("split") ||
-                        option.transformType === "slice"
-                      ) {
-                        let sliceType = option.transformType;
-                        if (sliceType.startsWith("split")) {
-                          sliceType = sliceType
-                            .replace("split", "")
-                            .toLowerCase();
-                        }
-                        onOpenSliceDialog(
-                          contextMenu.col,
-                          contextMenu.x,
-                          contextMenu.y,
-                          sliceType,
-                        );
-                      } else if (option.transformType === "pad") {
-                        onOpenPadDialog(
-                          contextMenu.col,
-                          contextMenu.x,
-                          contextMenu.y,
-                          "pad",
-                        );
+                      // Map the menu entry onto its canvas action. Previously
+                      // this sniffed `transformType.startsWith("split")` and
+                      // stripped the prefix, which turned the plain `split`
+                      // entry into an empty string; the mapping is explicit
+                      // now, and the remaining entries are text transforms.
+                      const value = option.transformType;
+                      if (value === "splitLeft") {
+                        onOpenSliceDialog(contextMenu.col, "left");
+                      } else if (value === "splitRight") {
+                        onOpenSliceDialog(contextMenu.col, "right");
+                      } else if (value === "slice") {
+                        onOpenSliceDialog(contextMenu.col, "slice");
+                      } else if (value === "split") {
+                        onOpenSliceDialog(contextMenu.col, "split");
+                      } else if (value === "pad") {
+                        onOpenPadDialog(contextMenu.col, "pad");
                       } else {
                         onOpenTextTransformDialog(
                           contextMenu.col,
-                          contextMenu.x,
-                          contextMenu.y,
-                          option.transformType as TextTransformType,
+                          value as TextTransformKind,
                         );
                       }
                     }}
@@ -420,9 +401,7 @@ export function ContextMenu({
                     onClose();
                     onOpenNumberTransformDialog(
                       contextMenu.col,
-                      contextMenu.x,
-                      contextMenu.y,
-                      option.transformType as NumberTransformType,
+                      option.transformType as NumberTransformKind,
                     );
                   }}
                 >
@@ -440,7 +419,7 @@ export function ContextMenu({
         onClick={(e) => {
           e.stopPropagation();
           onClose();
-          onOpenSortDialog(contextMenu.col, contextMenu.x, contextMenu.y);
+          onOpenSortDialog(contextMenu.col);
         }}
       >
         <ArrowUpDown className="h-4 w-4 text-muted-foreground" />

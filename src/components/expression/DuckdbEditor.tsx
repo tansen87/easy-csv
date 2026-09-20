@@ -5,7 +5,7 @@ import {
   duckdbTableFunctions,
   duckdbTemplates,
 } from "@/data/duckdb";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/ScrollArea";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n";
 

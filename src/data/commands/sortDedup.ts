@@ -1,0 +1,235 @@
+import { XanCommand } from "@/types/xan";
+
+/** Sort & deduplicate (design 019 §4.5). */
+export const sortDedupCommands: XanCommand[] = [
+{
+    id: "sort",
+    name: "sort",
+    description: "Sort CSV data",
+    descriptionCn: "排序 CSV 数据",
+    category: "Sort & deduplicate",
+    parameters: [
+      {
+        name: "select",
+        type: "string",
+        description: "Select a subset of columns to sort by",
+        descriptionCn: "选择要排序的列子集",
+        required: true,
+        isPositional: false,
+      },
+      {
+        name: "reverse",
+        type: "flag",
+        description: "Reverse sort order, i.e. descending order",
+        descriptionCn: "反转排序顺序,即降序",
+        required: false,
+        default: false,
+      },
+      {
+        name: "numeric",
+        type: "flag",
+        description: "Compare according to the numerical value of cells",
+        descriptionCn: "根据单元格的数值进行比较",
+        required: false,
+        default: false,
+      },
+      {
+        name: "check",
+        type: "flag",
+        description: "Verify whether the file is already sorted",
+        descriptionCn: "验证文件是否已排序",
+        required: false,
+        default: false,
+      },
+      {
+        name: "count",
+        type: "string",
+        description: "Number of times the line was consecutively duplicated",
+        descriptionCn: "行连续重复的次数",
+        required: false,
+      },
+      {
+        name: "uniq",
+        type: "flag",
+        description: "Drop identical consecutive lines",
+        descriptionCn: "删除相同的连续行",
+        required: false,
+        default: false,
+      },
+      {
+        name: "unstable",
+        type: "flag",
+        description: "Unstable sort. Can improve performance",
+        descriptionCn: "不稳定排序,可以提高性能",
+        required: false,
+        default: false,
+      },
+      {
+        name: "parallel",
+        type: "flag",
+        description: "Use parallelization acceleration",
+        descriptionCn: "使用并行化加速",
+        required: false,
+        default: false,
+      },
+      {
+        name: "threads",
+        type: "number",
+        description: "Number of threads used",
+        descriptionCn: "使用的线程数",
+        required: false,
+      },
+      {
+        name: "external",
+        type: "flag",
+        description:
+          "Whether to use external sorting if you cannot fit the whole file in memory",
+        descriptionCn: "如果无法将整个文件放入内存,是否使用外部排序",
+        required: false,
+        default: false,
+      },
+      {
+        name: "tmp-dir",
+        type: "string",
+        description: "Directory where external sorting chunks will be written",
+        descriptionCn: "写入外部排序块的目录",
+        required: false,
+      },
+      {
+        name: "memory-limit",
+        type: "number",
+        description:
+          "Maximum allowed memory when using external sorting, in megabytes",
+        descriptionCn: "使用外部排序时允许的最大内存(以MB为单位)",
+        required: false,
+        default: 512,
+      },
+      {
+        name: "compress",
+        type: "flag",
+        description: "When using --external, compress temporary chunks on disk",
+        descriptionCn: "使用--external时,压缩磁盘上的临时块",
+        required: false,
+        default: false,
+      },
+      {
+        name: "columns",
+        type: "flag",
+        description: "Sort selected columns alphabetically by their names",
+        descriptionCn: "按列名按字母顺序排序选定的列",
+        required: false,
+        default: false,
+      },
+      {
+        name: "cells",
+        type: "flag",
+        description: "Sort the selected cell values instead of the file itself",
+        descriptionCn: "排序选定的单元格值,而不是文件本身",
+        required: false,
+        default: false,
+      },
+    ],
+  },
+{
+    id: "dedup",
+    name: "dedup",
+    description: "Deduplicate a CSV file",
+    descriptionCn: "去重 CSV 文件",
+    category: "Sort & deduplicate",
+    parameters: [
+      {
+        name: "select",
+        type: "string",
+        description: "Select a subset of columns to on which to deduplicate",
+        descriptionCn: "选择要去重的列子集",
+        required: false,
+      },
+      {
+        name: "check",
+        type: "flag",
+        description: "Verify whether the selection has any duplicates",
+        descriptionCn: "验证选择是否有重复项",
+        required: false,
+        default: false,
+      },
+      {
+        name: "sorted",
+        type: "flag",
+        description:
+          "Use if you know your file is already sorted on the deduplication selection",
+        descriptionCn: "如果您知道文件已按去重选择排序,请使用此选项",
+        required: false,
+        default: false,
+      },
+      {
+        name: "keep-last",
+        type: "flag",
+        description:
+          "Keep the last row having a specific identity, rather than the first one",
+        descriptionCn: "保留具有特定身份的最后一行,而不是第一行",
+        required: false,
+        default: false,
+      },
+      {
+        name: "external",
+        type: "flag",
+        description:
+          "Use an external btree index to keep the index on disk and avoid overflowing RAM",
+        descriptionCn: "使用外部B树索引将索引保留在磁盘上,避免内存溢出",
+        required: false,
+        default: false,
+      },
+      {
+        name: "keep-duplicates",
+        type: "flag",
+        description: "Emit only the duplicated rows",
+        descriptionCn: "仅输出重复的行",
+        required: false,
+        default: false,
+      },
+      {
+        name: "choose",
+        type: "string",
+        description:
+          "Evaluate an expression to decide whether to keep a newly seen row. Column names are prefixed with current_ and new_",
+        descriptionCn:
+          "评估表达式以决定是否保留新看到的行.列名以current_和new_为前缀",
+        required: false,
+      },
+      {
+        name: "boolean",
+        type: "string",
+        description:
+          "Add a column with given name indicating whether a row is duplicated",
+        descriptionCn: "添加一个给定名称的列,指示行是否重复",
+        required: false,
+      },
+    ],
+  },
+{
+    id: "shuffle",
+    name: "shuffle",
+    description: "Shuffle CSV data",
+    descriptionCn: "打乱 CSV 数据顺序",
+    category: "Sort & deduplicate",
+    parameters: [
+      {
+        name: "seed",
+        type: "number",
+        description: "RNG seed",
+        descriptionCn: "随机数生成器种子",
+        required: false,
+      },
+      {
+        name: "external",
+        type: "flag",
+        description:
+          "Shuffle the file without buffering it into memory. Only works if target is seekable (no stdin etc.)",
+        descriptionCn:
+          "在不将文件缓冲到内存的情况下打乱文件.仅在目标可寻址时有效(不支持stdin等)",
+        required: false,
+        default: false,
+      },
+    ],
+  },
+];

@@ -56,6 +56,17 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
+      # 019 §6 stage 4.2 / 005 B: lint + typecheck gate before anything else,
+      # so a broken refactor fails fast instead of at cargo test time.
+      - name: Lint frontend
+        run: pnpm lint
+
+      - name: Typecheck frontend
+        run: pnpm typecheck
+
+      - name: Check module index paths
+        run: pnpm check:index
+
       - name: Run frontend tests
         run: pnpm test
 

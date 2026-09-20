@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { LanguageProvider } from "@/i18n";
-import { CsvEncodingDialog } from "@/components/dialog/CsvEncodingDialog";
-import type { CsvEncodingResult } from "@/components/dialog/CsvEncodingDialog";
+import { CsvEncodingDialog } from "@/modules/dialogs/file/CsvEncodingDialog";
+import type { CsvEncodingResult } from "@/modules/dialogs/file/CsvEncodingDialog";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 

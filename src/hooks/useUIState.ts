@@ -21,10 +21,6 @@ export function useUIState() {
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [showDataProfile, setShowDataProfile] = useState(false);
   const [showRefreshDialog, setShowRefreshDialog] = useState(false);
-  const [batchFilterDialog, setBatchFilterDialog] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
   const [updateInfo, setUpdateInfo] = useState<{
     hasUpdate: boolean;
     latestVersion: string;
@@ -81,8 +77,6 @@ export function useUIState() {
     setShowDataProfile,
     showRefreshDialog,
     setShowRefreshDialog,
-    batchFilterDialog,
-    setBatchFilterDialog,
     updateInfo,
     setUpdateInfo,
     isCheckingUpdate,

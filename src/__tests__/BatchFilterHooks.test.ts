@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 
-// BatchFilterHooks internal logic tests.
+// useBatchFilter internal logic tests.
 // sanitizeFileName and buildRegexPattern are internal, so we test their behavior
 // by reproducing the logic and verifying the invoke call patterns.
 
-describe("BatchFilterHooks command building", () => {
+describe("useBatchFilter command building", () => {
   const mockInvoke = vi.mocked(invoke);
 
   beforeEach(() => {

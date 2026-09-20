@@ -1,5 +1,5 @@
 import { useLanguage } from "@/i18n";
-import { Select } from "@/components/ui/select";
+import { Select } from "@/components/ui/Select";
 import type { DelimiterMode } from "@/types/xan";
 
 export interface DelimiterModeSelectProps {

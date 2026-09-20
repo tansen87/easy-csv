@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 
-// Replicate pure functions from BatchConvertHooks.ts
+// Replicate pure functions from useBatchConvert.ts
 const globToRegex = (pattern: string): RegExp => {
   const regexStr = pattern
     .replace(/\./g, "\\.")
@@ -122,7 +122,7 @@ describe("getOutputDir", () => {
   });
 });
 
-describe("BatchConvertHooks invoke patterns", () => {
+describe("useBatchConvert invoke patterns", () => {
   const mockInvoke = vi.mocked(invoke);
 
   beforeEach(() => {

@@ -16,27 +16,26 @@ import {
   LibraryBig,
 } from "lucide-react";
 
-import { LogPanel } from "@/components/panel/LogPanel";
-import { ChartPanel } from "@/components/panel/ChartPanel";
+import { LogPanel } from "@/modules/logs/LogPanel";
+import { ChartPanel } from "@/modules/data-preview/charts/ChartPanel";
 import { SettingsDialog } from "@/components/setting/SettingsDialog";
-import { HomeView } from "@/components/HomeView";
+import { HomeView } from "@/modules/data-preview/HomeView";
 import { HelpDialog } from "@/components/help/HelpDialog";
 import { getHelpContent } from "@/components/help/HelpContent";
-import { UpdateDialog } from "@/components/dialog/UpdateDialog";
-import { ConfirmDialog } from "@/components/dialog/ConfirmDialog";
-import { PipelineTemplateDialog } from "@/components/dialog/PipelineTemplateDialog";
-import { VariableValuesDialog } from "@/components/dialog/VariableValuesDialog";
-import { ExecutionHistoryDialog } from "@/components/dialog/ExecutionHistoryDialog";
-import { VariablePanel } from "@/components/panel/VariablePanel";
-import { BatchFilterDialog } from "@/components/dialog/BatchFilterDialog";
-import { CsvDiffDialog } from "@/components/dialog/CsvDiffDialog";
-import { CsvEncodingDialog } from "@/components/dialog/CsvEncodingDialog";
-import { SeparateCSVDialog } from "@/components/dialog/SeparateCSVDialog";
-import { DataProfilePanel } from "@/components/panel/DataProfilePanel";
-import { AIPanel } from "@/components/panel/AIPanel";
+import { UpdateDialog } from "@/modules/dialogs/app/UpdateDialog";
+import { ConfirmDialog } from "@/modules/dialogs/common/ConfirmDialog";
+import { PipelineTemplateDialog } from "@/modules/dialogs/file/PipelineTemplateDialog";
+import { VariableValuesDialog } from "@/modules/dialogs/common/VariableValuesDialog";
+import { ExecutionHistoryDialog } from "@/modules/dialogs/app/ExecutionHistoryDialog";
+import { VariablePanel } from "@/modules/variables/VariablePanel";
+import { CsvDiffDialog } from "@/modules/dialogs/file/CsvDiffDialog";
+import { CsvEncodingDialog } from "@/modules/dialogs/file/CsvEncodingDialog";
+import { SeparateCSVDialog } from "@/modules/dialogs/file/SeparateCSVDialog";
+import { DataProfilePanel } from "@/modules/data-preview/DataProfilePanel";
+import { AIPanel } from "@/modules/ai/AIPanel";
 import { ToastContainer } from "@/components/setting/Toast";
-import { CommandList } from "@/components/CommandList";
-import { CommandPalette, type PaletteItem } from "@/components/CommandPalette";
+import { CommandList } from "@/modules/logs/CommandList";
+import { CommandPalette, type PaletteItem } from "@/modules/logs/CommandPalette";
 import { xanCommands } from "@/data/commands";
 import { helpDocs, helpDocsZh } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
@@ -54,7 +53,7 @@ import { usePipelineTemplates } from "@/hooks/usePipelineTemplates";
 import { useDataLineage } from "@/hooks/useDataLineage";
 import { useSession } from "@/hooks/useSession";
 import { useExecutionHistory } from "@/hooks/useExecutionHistory";
-import { useKeyboardShortcuts } from "@/hooks/KeyboardShortcuts";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { formatDateTime } from "@/utils/format";
 import {
   delimiterModeFromSettings,
@@ -1025,11 +1024,6 @@ function AppContent() {
   // Stable HomeView callbacks so the memoized HomeView (and the React Flow
   // canvas beneath it) do not re-render on unrelated context changes (theme,
   // language). Inline arrows below would otherwise defeat React.memo.
-  const onOpenBatchFilter = useCallback(
-    (x: number, y: number) => ui.setBatchFilterDialog({ x, y }),
-    [ui],
-  );
-
   const onToggleVersionPanel = useCallback(
     () => ui.setShowVersionPanel(!ui.showVersionPanel),
     [ui.showVersionPanel],
@@ -1547,7 +1541,6 @@ function AppContent() {
                 onInputPositionChange={onInputPositionChange}
                 onOpenFile={handleOpenFile}
                 onImportPipeline={handleImportPipeline}
-                onOpenBatchFilter={onOpenBatchFilter}
                 onOpenUrl={handleOpenUrl}
                 branchProgress={ui.branchProgress}
                 showProgressBar={ui.showProgressBar}
@@ -1742,14 +1735,6 @@ function AppContent() {
             onCancel={() => setTemplateToDelete(null)}
           />
 
-          {ui.batchFilterDialog && (
-            <BatchFilterDialog
-              state={ui.batchFilterDialog}
-              headers={tabsHook.getCurrentTab()?.headers || []}
-              onAddCommand={handleCommandClick}
-              onClose={() => ui.setBatchFilterDialog(null)}
-            />
-          )}
 
           <CsvDiffDialog
             isOpen={ui.showCsvDiff}

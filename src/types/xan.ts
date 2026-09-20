@@ -112,6 +112,48 @@ export interface ExecutionHistoryInput {
 /** Where a tab's delimiter came from. */
 export type DelimiterSource = "detected" | "forced" | "fallback" | "global";
 
+// --- batch filter -----------------------------------------------------------
+//
+// Moved here from the deleted `BatchFilterDialog` (design 019 §1.7). It is the
+// runtime configuration of the `batch-filter` command — built by
+// MainMenuHooks from the command's parameters and consumed by
+// useBatchFilter — so it belongs with the command types, not with a dialog.
+
+export type BatchFilterType = "text" | "number";
+
+export type BatchFilterTextOperator =
+  | "equals"
+  | "not_equals"
+  | "starts_with"
+  | "not_starts_with"
+  | "ends_with"
+  | "not_ends_with"
+  | "contains"
+  | "not_contains"
+  | "regex"
+  | "is_null"
+  | "is_not_null";
+
+export type BatchFilterNumberOperator =
+  | "equals"
+  | "not_equals"
+  | "greater_than"
+  | "less_than"
+  | "greater_or_equal"
+  | "less_or_equal";
+
+export interface BatchFilterConfig {
+  column: string;
+  filterType: BatchFilterType;
+  textOperator?: BatchFilterTextOperator;
+  numberOperator?: BatchFilterNumberOperator;
+  valueMode: "manual" | "column";
+  manualValues?: string;
+  extractColumn?: string;
+  caseInsensitive?: boolean;
+  outputDir?: string;
+}
+
 /** `"auto"` = re-detect on every read; any other value is a locked delimiter. */
 export type DelimiterMode = "auto" | string;
 

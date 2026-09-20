@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { LanguageProvider } from "@/i18n";
-import { SeparateCSVDialog } from "@/components/dialog/SeparateCSVDialog";
+import { SeparateCSVDialog } from "@/modules/dialogs/file/SeparateCSVDialog";
 import { invoke } from "@tauri-apps/api/core";
 import {
   SEPARATE_HISTORY_KEY,

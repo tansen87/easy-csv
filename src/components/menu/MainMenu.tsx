@@ -12,7 +12,7 @@ import {
 
 import { PipelineStep } from "@/types/xan";
 import { useLanguage } from "@/i18n";
-import { Tooltip } from "@/components/ui/tooltip";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/utils";
 
 interface MainMenuProps {
