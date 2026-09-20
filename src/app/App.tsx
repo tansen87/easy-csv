@@ -6,8 +6,6 @@ import {
   save as saveDialog,
 } from "@tauri-apps/plugin-dialog";
 import { readFile, writeFile } from "@tauri-apps/plugin-fs";
-import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { sendNotification } from "@tauri-apps/plugin-notification";
 import {
   FileClock,
   NotebookTabs,
@@ -35,11 +33,21 @@ import { DataProfilePanel } from "@/modules/data-preview/DataProfilePanel";
 import { AIPanel } from "@/modules/ai/AIPanel";
 import { ToastContainer } from "@/components/setting/Toast";
 import { CommandList } from "@/modules/logs/CommandList";
-import { CommandPalette, type PaletteItem } from "@/modules/logs/CommandPalette";
+import {
+  CommandPalette,
+  type PaletteItem,
+} from "@/modules/logs/CommandPalette";
 import { xanCommands } from "@/data/commands";
 import { helpDocs, helpDocsZh } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
-import { MainMenuHooks } from "@/hooks/MainMenuHooks";
+import { usePipelineTabs } from "@/hooks/usePipelineTabs";
+import { useFileOpen } from "@/hooks/fileIO/useFileOpen";
+import { useFileSave } from "@/hooks/fileIO/useFileSave";
+import { useImportExport } from "@/hooks/fileIO/useImportExport";
+import { useExecution } from "@/hooks/execution/useExecution";
+import { useSaveIntermediate } from "@/hooks/execution/useSaveIntermediate";
+import { useAppBootstrap } from "@/hooks/useAppBootstrap";
+import { useDialogStack } from "@/hooks/useDialogStack";
 import { useLanguage } from "@/i18n";
 import { translations } from "@/i18n/translations";
 import { useToast } from "@/hooks/useToast";
@@ -74,7 +82,7 @@ import {
 } from "@/types/xan";
 import { AIConfig, DEFAULT_AI_CONFIG } from "@/services/ai/types";
 import { loadAIConfig, saveAIConfig, setAIConfig } from "@/services/ai/index";
-import pkg from "../package.json";
+import pkg from "../../package.json";
 
 function compareVersions(a: string, b: string): number {
   const aParts = a.split(".").map(Number);
@@ -216,11 +224,12 @@ function AppContent() {
   const reactFlowInstanceRef = useRef<any>(null);
   const currentVersion = pkg.version;
 
+  // Unified dialog switch stack for App-local dialogs (019 §4.4). The ui.*
+  // switches migrate over in batches; these are the first adopters.
+  const dialogs = useDialogStack<"history" | "templates">();
+
   // Selected step
   const [selectedStep, setSelectedStep] = useState<PipelineStep | null>(null);
-
-  // Execution history dialog (F6)
-  const [showHistoryDialog, setShowHistoryDialog] = useState(false);
 
   // Executing state
   const [isExecuting, setIsExecuting] = useState(false);
@@ -574,124 +583,28 @@ function AppContent() {
     [showToastRef],
   );
 
-  // Initialize app
-  useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        await invoke("check_xan_installed");
-        await settings.loadAll();
-        await tabsHook.loadRecentFiles();
-      } catch (error) {
-        console.error("Initialization failed:", error);
-      }
-    };
-    initializeApp().finally(() => {
-      const restoreAndLoadVersions = async () => {
-        const restoredTabs = await session.restoreSession();
-        const tabsToLoad =
-          restoredTabs.length > 0 ? restoredTabs : tabsHook.tabs;
-        for (const tab of tabsToLoad) {
-          await versionsHook.loadVersions(tab.id);
-        }
-      };
-      restoreAndLoadVersions().finally(() => session.markHydrated());
-    });
-  }, []);
+  // App bootstrap & global listeners — owned by useAppBootstrap
+  const initializeApp = useCallback(async () => {
+    await invoke("check_xan_installed");
+    await settings.loadAll();
+    await tabsHook.loadRecentFiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.loadAll, tabsHook.loadRecentFiles]);
 
-  // Load versions when tab changes
-  useEffect(() => {
-    if (tabsHook.selectedTabId) {
-      versionsHook.loadVersions(tabsHook.selectedTabId);
-    }
-  }, [tabsHook.selectedTabId]);
-
-  // F12/F5 handling
-  useEffect(() => {
-    const handleKeyDown = async (event: KeyboardEvent) => {
-      if (event.key === "F12") {
-        event.preventDefault();
-        try {
-          await invoke("toggle_devtools");
-        } catch (error) {
-          console.error("Failed to toggle DevTools:", error);
-        }
-      }
-      if (event.key === "F5") {
-        event.preventDefault();
-        event.stopPropagation();
-        ui.setShowRefreshDialog(true);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown, true);
-    return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [ui]);
-
-  // Drag-and-drop file opening
-  useEffect(() => {
-    const webview = getCurrentWebview();
-    let unlisten: (() => void) | undefined;
-
-    const setupDragDrop = async () => {
-      unlisten = await webview.onDragDropEvent((event) => {
-        if (event.payload.type === "drop") {
-          const paths = event.payload.paths;
-          if (paths.length > 0) {
-            const filePath = paths[0];
-            const ext = filePath.split(".").pop()?.toLowerCase();
-            if (ext === "xanflow") {
-              handleImportPipelineFromPath(filePath);
-            } else {
-              tabsHook.loadCsvData(tabsHook.selectedTabId, filePath);
-            }
-          }
-        }
-      });
-    };
-
-    setupDragDrop();
-    return () => {
-      unlisten?.();
-    };
-  }, [
-    tabsHook.selectedTabId,
-    tabsHook.loadCsvData,
-    handleImportPipelineFromPath,
-  ]);
-
-  // System notification on pipeline complete
-  const prevExecutingRef = useRef(isExecuting);
-  useEffect(() => {
-    if (
-      prevExecutingRef.current &&
-      !isExecuting &&
-      settings.systemNotification
-    ) {
-      const now = new Date();
-      const time = now.toLocaleTimeString();
-      sendNotification({
-        title: "Easy CSV",
-        body: `Pipeline execution completed at ${time}`,
-      });
-    }
-    prevExecutingRef.current = isExecuting;
-  }, [isExecuting, settings.systemNotification]);
-
-  // Window title
-  useEffect(() => {
-    const updateTitle = async () => {
-      const currentTab = tabsHook.tabs.find(
-        (tab) => tab.id === tabsHook.selectedTabId,
-      );
-      const inputFile = currentTab?.inputFile || "";
-      try {
-        const title = inputFile ? `${inputFile} - Easy Csv` : "Easy Csv";
-        await invoke("set_window_title", { title });
-      } catch (error) {
-        showToastRef.current(`Failed to set window title: ${error}`, "error");
-      }
-    };
-    updateTitle();
-  }, [tabsHook.selectedTabId, tabsHook.tabs, showToastRef]);
+  useAppBootstrap({
+    initialize: initializeApp,
+    restoreSession: session.restoreSession,
+    onRestoreComplete: session.markHydrated,
+    loadVersions: versionsHook.loadVersions,
+    selectedTabId: tabsHook.selectedTabId,
+    loadCsvData: tabsHook.loadCsvData,
+    importPipelineFromPath: handleImportPipelineFromPath,
+    showRefreshDialog: () => ui.setShowRefreshDialog(true),
+    systemNotification: settings.systemNotification,
+    isExecuting,
+    tabs: tabsHook.tabs,
+    showToastRef,
+  });
 
   // Click outside menu
   useEffect(() => {
@@ -708,16 +621,46 @@ function AppContent() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [ui.activeMenu]);
 
-  // MainMenuHooks
+  // Pipeline tab helpers (split from former MainMenuHooks)
+  const tabsCtl = usePipelineTabs({
+    tabs: tabsHook.tabs,
+    selectedTabId: tabsHook.selectedTabId,
+    defaultDelimiter: settings.defaultDelimiter,
+    setTabs: tabsHook.setTabs,
+    setSelectedTabId: tabsHook.setSelectedTabId,
+    setUndoStack: pipeline.setUndoStack,
+    setRedoStack: pipeline.setRedoStack,
+    setSelectedStep,
+    formatDateTime,
+  });
+
+  const { handleOpenFile, handleOpenNewTabWithFile } = useFileOpen({
+    selectedTabId: tabsHook.selectedTabId,
+    addNewTab: tabsCtl.addNewTab,
+    loadCsvData: tabsHook.loadCsvData,
+  });
+
+  const { handleSavePipeline } = useFileSave({
+    getCurrentPipeline: tabsCtl.getCurrentPipeline,
+    getCurrentTab: tabsCtl.getCurrentTab,
+    resolveRunDelimiter: tabsCtl.resolveRunDelimiter,
+    showToast,
+  });
+
+  const { handleExportPipeline, handleImportPipeline } = useImportExport({
+    getCurrentPipeline: tabsCtl.getCurrentPipeline,
+    getCurrentTab: tabsCtl.getCurrentTab,
+    resolveRunDelimiter: tabsCtl.resolveRunDelimiter,
+    showToast,
+    formatDateTime,
+    updateTabPipeline: tabsCtl.updateTabPipeline,
+    loadCsvData: tabsHook.loadCsvData,
+    selectedTabId: tabsHook.selectedTabId,
+  });
+
   const {
-    handleOpenFile,
-    handleOpenNewTabWithFile,
-    handleSavePipeline,
-    handleExportPipeline,
-    handleImportPipeline,
     handleExecute,
     handleCancelExecution,
-    handleSaveIntermediateAsInput,
     resultPreview,
     overwriteConfirm,
     confirmOverwriteExecution,
@@ -725,24 +668,19 @@ function AppContent() {
     variablePrompt,
     confirmVariables,
     cancelVariables,
-  } = MainMenuHooks({
-    tabs: tabsHook.tabs,
+  } = useExecution({
     selectedTabId: tabsHook.selectedTabId,
     defaultDelimiter: settings.defaultDelimiter,
-    setDefaultDelimiter: settings.setDefaultDelimiter,
+    getCurrentTab: tabsCtl.getCurrentTab,
+    getCurrentPipeline: tabsCtl.getCurrentPipeline,
     showToast,
     addLog,
     setTabs: tabsHook.setTabs,
-    setSelectedTabId: tabsHook.setSelectedTabId,
-    setUndoStack: pipeline.setUndoStack,
-    setRedoStack: pipeline.setRedoStack,
-    setSelectedStep,
     setIsExecuting,
     setShowLogPanel: ui.setShowLogPanel,
     setShowProgressBar: ui.setShowProgressBar,
     setBranchProgress: ui.setBranchProgress,
     progressHideTimerRef,
-    loadCsvData: tabsHook.loadCsvData,
     formatDateTime,
     trackLineage: lineageHook.trackLineage,
     setShowChartPanel: ui.setShowChartPanel,
@@ -751,6 +689,12 @@ function AppContent() {
     setChartHeaders: ui.setChartHeaders,
     saveVersion: versionsHook.saveVersion,
     saveExecutionHistory: executionHistory.saveEntry,
+  });
+
+  const { handleSaveIntermediateAsInput } = useSaveIntermediate({
+    getCurrentTab: tabsCtl.getCurrentTab,
+    resolveRunDelimiter: tabsCtl.resolveRunDelimiter,
+    showToast,
   });
 
   // Wrap save/execute/export callbacks to update pipeline save timestamp
@@ -780,7 +724,8 @@ function AppContent() {
 
   // ── Pipeline templates (F4) ───────────────────────────────────────────────
   const templateStore = usePipelineTemplates();
-  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const showTemplateDialog = dialogs.isOpen("templates");
+  const openTemplates = useCallback(() => dialogs.open("templates"), [dialogs]);
   const [templateToDelete, setTemplateToDelete] =
     useState<PipelineTemplate | null>(null);
 
@@ -957,7 +902,7 @@ function AppContent() {
       onLogs: () => ui.setShowLogPanel(!ui.showLogPanel),
       onAI: () => ui.setShowAIPanel(!ui.showAIPanel),
       onCommandPalette: () => ui.setShowCommandPalette(!ui.showCommandPalette),
-      onOpenTemplates: () => setShowTemplateDialog(true),
+      onOpenTemplates: openTemplates,
     },
     {
       undoStackLength: pipeline.undoStack.length,
@@ -1323,7 +1268,7 @@ function AppContent() {
         group: t.paletteActions,
         groupIcon: Zap,
         shortcut: "Ctrl+T",
-        onSelect: () => setShowTemplateDialog(true),
+        onSelect: openTemplates,
       },
     ];
 
@@ -1469,7 +1414,7 @@ function AppContent() {
               onSavePipeline={handleSavePipelineAndMarkSaved}
               onImportPipeline={handleImportPipeline}
               onExportPipeline={handleExportPipelineAndMarkSaved}
-              onUseOrSaveTemplate={() => setShowTemplateDialog(true)}
+              onUseOrSaveTemplate={openTemplates}
               onHelp={onHelp}
               onCheckUpdate={checkForUpdates}
               onShowSettings={onShowSettings}
@@ -1611,7 +1556,7 @@ function AppContent() {
             isVisible={ui.showLogPanel}
             onClose={() => ui.setShowLogPanel(false)}
             onShowHistory={() => {
-              setShowHistoryDialog(true);
+              dialogs.open("history");
               executionHistory.loadHistory();
             }}
             dockState={session.panelStates.logPanel}
@@ -1622,8 +1567,8 @@ function AppContent() {
           />
 
           <ExecutionHistoryDialog
-            isOpen={showHistoryDialog}
-            onClose={() => setShowHistoryDialog(false)}
+            isOpen={dialogs.isOpen("history")}
+            onClose={() => dialogs.close("history")}
             history={executionHistory.history}
             loading={executionHistory.loading}
             onRefresh={executionHistory.loadHistory}
@@ -1704,7 +1649,7 @@ function AppContent() {
 
           <PipelineTemplateDialog
             isOpen={showTemplateDialog}
-            onClose={() => setShowTemplateDialog(false)}
+            onClose={() => dialogs.close("templates")}
             templates={templateStore.templates}
             canSave={currentPipelineLength > 0}
             defaultName={tabsHook.getCurrentTab()?.name || "Pipeline"}
@@ -1734,7 +1679,6 @@ function AppContent() {
             onConfirm={confirmDeleteTemplate}
             onCancel={() => setTemplateToDelete(null)}
           />
-
 
           <CsvDiffDialog
             isOpen={ui.showCsvDiff}

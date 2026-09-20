@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
 import { DelimiterModeSelect } from "@/components/ui/DelimiterModeSelect";
 import { ScrollArea } from "@/components/ui/ScrollArea";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { useLanguage } from "@/i18n";
 import { DelimiterMode, DelimiterSource } from "@/types/xan";
 import { delimiterLabel } from "@/utils/separateHistory";
@@ -264,23 +265,23 @@ export function TableNode({
                 width={150}
               />
             ) : (
-              <button
-                type="button"
-                onClick={() => setDelimiterOpen(true)}
-                aria-label={t.delimiterForThisFile}
-                title={delimiterTitle}
-                className="flex items-center gap-1 h-6 px-1.5 rounded-md border bg-background hover:bg-accent transition-colors"
-              >
-                {delimiterLocked && (
-                  <Lock className="h-3 w-3 text-muted-foreground" />
-                )}
-                <span className="font-mono text-xs">
-                  {delimiterLabel(delimiter)}
-                </span>
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${delimiterDotClass}`}
-                />
-              </button>
+              <Tooltip content={delimiterTitle}>
+                <button
+                  type="button"
+                  onClick={() => setDelimiterOpen(true)}
+                  className="flex items-center gap-1 h-6 px-1.5 rounded-md border bg-background hover:bg-accent transition-colors"
+                >
+                  {delimiterLocked && (
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                  )}
+                  <span className="font-mono text-xs">
+                    {delimiterLabel(delimiter)}
+                  </span>
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${delimiterDotClass}`}
+                  />
+                </button>
+              </Tooltip>
             )}
           </div>
         )}

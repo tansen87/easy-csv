@@ -37,7 +37,7 @@ interface HomeViewProps {
   onTabChange: (tabId: string) => void;
   onRemoveTab: (tabId: string) => void;
   onRenameTab: (tabId: string, name: string) => void;
-  resultPreview?: import("@/hooks/MainMenuHooks").ResultPreview[];
+  resultPreview?: import("@/types/execution").ResultPreview[];
   onAddCommand: (
     command: XanCommand,
     initialParameters?: Record<string, any>,

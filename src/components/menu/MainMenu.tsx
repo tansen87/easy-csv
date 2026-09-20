@@ -336,7 +336,7 @@ export const MainMenu = React.memo(function MainMenu({
 
         {/* Right side buttons */}
         <div ref={rightRef} className="flex items-center rounded-md gap-0.5">
-          {/* ── Group 1: Command entry ─────────────────────────────── */}
+          {/* Group 1: Command entry */}
           <Tooltip content={t.commandPalette}>
             <button
               onClick={onOpenPalette}
@@ -348,7 +348,7 @@ export const MainMenu = React.memo(function MainMenu({
 
           <div className="w-px h-4 bg-border mx-1.5" />
 
-          {/* ── Group 2: High-frequency panel toggles ──────────────── */}
+          {/* Group 2: High-frequency panel toggles */}
           <Tooltip content={t.commandPanel}>
             <button
               onClick={onToggleCommandPanel}

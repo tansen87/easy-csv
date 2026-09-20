@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { VariablePrompt } from "@/hooks/MainMenuHooks";
+import { VariablePrompt } from "@/types/execution";
 import { useLanguage } from "@/i18n";
 
 interface VariableValuesDialogProps {

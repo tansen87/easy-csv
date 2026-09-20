@@ -17,7 +17,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 ```
 ┌─────────────────────────────────────────────────────┐
 │              Frontend (React + TypeScript)          │
-│  src/App.tsx · components/ · hooks/ · services/     │
+│  src/app/App.tsx · components/ · hooks/ · services/│
 │  可视化管道编辑器 (ReactFlow) · CSV 预览表              │
 │  命令配置 UI (shadcn) · i18n (中/英)                  │
 │  表达式编辑器 (语法高亮 + 自动补全)                     │
@@ -68,7 +68,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `docs/design/016_separate-good-bad-rows.md` | 拆分好/坏行(已实现): 共享 `flexible(true)` reader/writer 重序列化、坏行向前归并、streaming 常量内存大文件方案 |
 | `docs/design/017_separate-dialog-ux.md` | 拆分对话框体验优化(已实现): `probe_csv_file` 首次行列数/表头预览、分隔符检测算法(表头权重 60 > 正文 30)、上次结果 localStorage、`reveal_paths` |
 | `docs/design/018_open-file-delimiter-detection.md` | 打开文件的分隔符自动检测 + 自动检测总开关(已实现): `read_csv_file` 支持自动检测并回传 `delimiter_source`、标签页记录解析值、输入节点分隔符徽标、执行侧改用标签页解析值("所见即所跑");设置页与输入节点徽标**共用同一个 `DelimiterModeSelect`**(自动检测 / 5 个分隔符),双向同步 + 即时落库(`auto_detect_delimiter` 配置项) |
-| `docs/design/019_frontend-structure-refactor.md` | 前端目录结构与巨型文件重构方案(**阶段 0/1 已实施 + 阶段 3.1–3.4/3.8 已实施;阶段 2 与 3.5–3.7 未实施**): 已完成——类型下沉到 `types/dialog.ts` 解除循环依赖、`VariableHint` 移入 `ui/`、11 个旧浮动对话框收敛为 `openCommandFromContext()` → `buildCommandInitialParams()`(纯函数,配单测) → `CommandDialog` 并删除、`components/dialog/**` 四分为 `modules/dialogs/{command,file,app,common}`、命令表单一命令一文件(`forms/<命令id>.tsx`)、`data/commands.ts` 拆为 `data/commands/` 目录、`i18n/translations.ts` 拆为 `{en,zh}/<domain>.ts`、`components/panel/**` 迁往 `modules/{pipeline,data-preview,ai,variables,logs}`、`ui/` 统一 PascalCase、`hooks/` 统一 `useXxx`、ESLint 安全网(`import/no-cycle` + `import/parsers`)。未完成——`MainMenuHooks`/`FlowPanel`/`App.tsx`/`ChartPanel` 拆分、HomeView Props 收敛、`SettingsTabContent`/`ai/context.ts` 等中型拆分、`setting/` 三个文件迁往 `app/providers` 与 `ui/`、`max-lines`/CI 门禁、`scripts/check-index.ts` |
+| `docs/design/019_frontend-structure-refactor.md` | 前端目录结构与巨型文件重构方案(**阶段 0/1 已实施 + 2.1–2.4/2.7 与 3.1–3.4/3.8 已实施;2.2/2.3 为部分实施,2.5/2.6 与 3.5–3.7 未实施**): 已完成——类型下沉到 `types/dialog.ts` 解除循环依赖、`VariableHint` 移入 `ui/`、11 个旧浮动对话框收敛为 `openCommandFromContext()` → `buildCommandInitialParams()`(纯函数,配单测) → `CommandDialog` 并删除、`components/dialog/**` 四分为 `modules/dialogs/{command,file,app,common}`、命令表单一命令一文件(`forms/<命令id>.tsx`)、`data/commands.ts` 拆为 `data/commands/` 目录、`i18n/translations.ts` 拆为 `{en,zh}/<domain>.ts`、`components/panel/**` 迁往 `modules/{pipeline,data-preview,ai,variables,logs}`、`ui/` 统一 PascalCase、`hooks/` 统一 `useXxx`、ESLint 安全网(`import/no-cycle` + `import/parsers`)。未完成——`FlowPanel` JSX 再拆(≤600 目标未达)、`AppLayout`/`useDialogStack` 全量接入(`App.tsx` 已迁 `src/app/`)、`ChartPanel` 拆分、HomeView Props 收敛、`SettingsTabContent`/`ai/context.ts` 等中型拆分、`setting/` 三个文件迁往 `app/providers` 与 `ui/`、`max-lines`/CI 门禁、`scripts/check-index.ts` |
 
 > 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–019 已登记。
 
@@ -325,7 +325,10 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 
 | 文件 | 职责 |
 |------|------|
-| `MainMenuHooks.ts` | 主菜单业务逻辑(**尚未拆分**,见 019 §4.2 计划): 文件打开、保存、导入/导出管道(含导出为 .sh/.ps1 xan 脚本)、撤销/重做、执行管道(DFS 构建分支)、取消执行、图表执行;`resolveRunDelimiter()` 让 `execute_xan_pipeline`/导出脚本/批量工具统一使用**当前标签页解析出的分隔符** |
+| `usePipelineTabs.ts` | 原 `MainMenuHooks.ts`(019 §4.2 已拆分删除)的标签页/管道状态助手: getCurrentTab、getCurrentPipeline、resolveRunDelimiter、updateTabPipeline、addNewTab |
+| `hooks/execution/` | 执行引擎: `useExecution`(装配)+ `runPipeline`/`executeBranch`(依赖显式注入)+ `buildBranches`/`buildPrefixToStep`/`serializeStepParams`/`resolveDelimiter` 纯函数(+`buildBranches.test.ts`) |
+| `hooks/fileIO/` | `useFileOpen`/`useFileSave`/`useImportExport` + `pipelineScript.ts`(.sh/.ps1 内容纯函数生成) |
+| `hooks/charts/processChartData.ts` | 图表数据后处理纯函数 |
 | `useSession.ts` | 会话持久化: 启动恢复标签页、防抖自动保存(800ms)、beforeunload 兜底保存 |
 | `useTabs.ts` | 标签页管理: 标签增删改、当前标签、管道状态读写、**文件读取的分隔符解析**: `loadCsvData(tabId, path, forcedDelimiter?)`。设计: `docs/design/018_open-file-delimiter-detection.md` |
 | `usePipelineState.ts` | 管道状态: `updateTabPipeline` 单点更新管道+edges,撤销/重做状态管理 |
@@ -476,10 +479,10 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改命令参数描述 | `src/modules/dialogs/command/lib/parameterDescriptions.ts` + `src/data/commands/index.ts`(参数 description 字段) |
 | 新增对话框 | 参考 `src/modules/dialogs/command/CommandDialog.tsx`,并在 `HomeView.tsx` 中注册状态和渲染 |
 | 修改管道执行逻辑 | `src-tauri/src/pipeline.rs` 中的 `execute_xan_pipeline` 函数 |
-| 修改管道执行取消 | `src-tauri/src/pipeline.rs`(`set_pipeline_cancelled` + `wait_with_cancel`) + `src/hooks/MainMenuHooks.ts`(取消按钮) |
+| 修改管道执行取消 | `src-tauri/src/pipeline.rs`(`set_pipeline_cancelled` + `wait_with_cancel`) + `src/hooks/execution/useExecution.ts`(`handleCancelExecution`) |
 | 修改 CSV 预览读取 | `src-tauri/src/csv.rs` 中的 `read_csv_file` 函数 |
-| 修改打开文件的分隔符检测(工作流输入节点) | `src-tauri/src/csv.rs`(`read_csv_file` 的 `resolve_read_delimiter`/`read_csv_sync`)+ `src/hooks/useTabs.ts`(`loadCsvData` + 全局模式重载规则)+ `src/components/ui/DelimiterModeSelect.tsx`(共用控件)+ `src/modules/pipeline/nodes/TableNode.tsx`(徽标)+ `src/modules/pipeline/FlowPanel.tsx`/`src/modules/data-preview/HomeView.tsx`/`src/App.tsx`(透传)+ `src/utils/delimiterMode.ts`(设置 ⇄ 界面值换算)+ `src/hooks/MainMenuHooks.ts`(`resolveRunDelimiter`,保证执行与预览同源)。设计:`docs/design/018_open-file-delimiter-detection.md` |
-| 修改分隔符自动检测总开关 / 默认分隔符(设置页 ⇄ 输入节点同步) | `src-tauri/src/config.rs`(`auto_detect_delimiter` + `get/set_auto_detect_delimiter`、`get/set_default_delimiter`)+ `src/hooks/useAppSettings.ts` + `src/components/setting/SettingsTabContent.tsx`(分隔符区块)+ `src/components/ui/DelimiterModeSelect.tsx` + `src/App.tsx`(`delimiterMode`/`onDelimiterModeChange`,含即时落库)。设计:`docs/design/018_open-file-delimiter-detection.md` §3.9 |
+| 修改打开文件的分隔符检测(工作流输入节点) | `src-tauri/src/csv.rs`(`read_csv_file` 的 `resolve_read_delimiter`/`read_csv_sync`)+ `src/hooks/useTabs.ts`(`loadCsvData` + 全局模式重载规则)+ `src/components/ui/DelimiterModeSelect.tsx`(共用控件)+ `src/modules/pipeline/nodes/TableNode.tsx`(徽标)+ `src/modules/pipeline/FlowPanel.tsx`/`src/modules/data-preview/HomeView.tsx`/`src/app/App.tsx`(透传)+ `src/utils/delimiterMode.ts`(设置 ⇄ 界面值换算)+ `src/hooks/execution/resolveDelimiter.ts` + `src/hooks/usePipelineTabs.ts`(`resolveRunDelimiter`,保证执行与预览同源)。设计:`docs/design/018_open-file-delimiter-detection.md` |
+| 修改分隔符自动检测总开关 / 默认分隔符(设置页 ⇄ 输入节点同步) | `src-tauri/src/config.rs`(`auto_detect_delimiter` + `get/set_auto_detect_delimiter`、`get/set_default_delimiter`)+ `src/hooks/useAppSettings.ts` + `src/components/setting/SettingsTabContent.tsx`(分隔符区块)+ `src/components/ui/DelimiterModeSelect.tsx` + `src/app/App.tsx`(`delimiterMode`/`onDelimiterModeChange`,含即时落库)。设计:`docs/design/018_open-file-delimiter-detection.md` §3.9 |
 | 修改 CSV 对比功能 | `src/modules/dialogs/file/CsvDiffDialog.tsx` + `src-tauri/src/csv.rs`(`diff_csv_files`) |
 | 修改 CSV 编码转换 | `src/modules/dialogs/file/CsvEncodingDialog.tsx` + `src-tauri/src/csv.rs`(`convert_csv_encoding`) |
 | 修改拆分好/坏行 | `src/modules/dialogs/file/SeparateCSVDialog.tsx` + `src-tauri/src/csv.rs`(`separate_csv`/`separate_stream`/`probe_csv_file`)+ `src/hooks/useCsvProbe.ts` + `src/utils/separateHistory.ts` + `src-tauri/src/storage.rs`(`reveal_paths`) |
@@ -496,8 +499,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改设置项 | `src/components/setting/SettingsTabContent.tsx` |
 | 修改应用配置持久化 | `src-tauri/src/config.rs` 中的 `load_config`/`save_config` 函数 |
 | 修改 Batch Filter 功能 | `src/hooks/useBatchFilter.ts` + `src/modules/dialogs/command/forms/batch-filter.tsx` + `src/data/commands/index.ts` |
-| 修改 Batch Convert 功能 | `src/hooks/useBatchConvert.ts` + `src/hooks/MainMenuHooks.ts` |
-| 修改导出管道脚本 (.sh/.ps1) | `src/hooks/MainMenuHooks.ts`(导出保存对话框逻辑) |
+| 修改 Batch Convert 功能 | `src/hooks/useBatchConvert.ts` + `src/hooks/execution/`(deps 注入 `executeBatchConvert`) |
+| 修改导出管道脚本 (.sh/.ps1) | `src/hooks/fileIO/useFileSave.ts` + `src/hooks/fileIO/pipelineScript.ts`(脚本内容纯函数) |
 | 修改 AI 面板 UI/交互 | `src/modules/ai/AIPanel.tsx` |
 | 修改 AI 反馈/澄清逻辑 | `src/modules/ai/AIPanel.tsx` + `src/services/ai/index.ts` |
 | 修改 AI 提示词/意图路由 | `src/services/ai/context.ts`(`INTENT_ROUTES`/`retrieveRelevantCommands`/`buildSystemPrompt`) |
@@ -521,10 +524,10 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改 Tauri 插件/权限 | `src-tauri/tauri.conf.json` + `src-tauri/capabilities/default.json` |
 | 修改系统托盘/窗口行为 | `src-tauri/src/main.rs` 中的 `setup()` 和 `on_window_event` |
 | 修改数据概况功能 | `src/modules/data-preview/DataProfilePanel.tsx` + `src-tauri/src/csv.rs` 中的 `profile_csv` + `src-tauri/src/storage.rs` 中的缓存函数 |
-| 修改图表功能 | `src/modules/data-preview/charts/ChartPanel.tsx`(图表渲染+拖拽+导出) + `src/modules/dialogs/command/forms/`(ChartForm) + `src/hooks/MainMenuHooks.ts`(chart执行逻辑) + `src/types/xan.ts`(ChartConfig等类型) |
+| 修改图表功能 | `src/modules/data-preview/charts/ChartPanel.tsx`(图表渲染+拖拽+导出) + `src/modules/dialogs/command/forms/`(ChartForm) + `src/hooks/execution/executeBranch.ts`(chart 分支)+ `src/hooks/charts/processChartData.ts` + `src/types/xan.ts`(ChartConfig等类型) |
 | 修改图表命令文档 | `src/docs/cmd/chart.md`(英文) / `docs/cmd_zh/chart.md`(中文) |
 | 管道步骤复制粘贴 | `src/modules/pipeline/FlowPanel.tsx` 中的 `handleCopyStep`/`handlePasteStep` |
-| 管道步骤自动连线 | `src/App.tsx` 中的 `handleCommandClick`(仅 AI 添加时 `autoConnect=true` 自动连线) |
+| 管道步骤自动连线 | `src/app/App.tsx` 中的 `handleCommandClick`(仅 AI 添加时 `autoConnect=true` 自动连线) |
 | 修改表达式编辑器 | `src/components/expression/` 目录: `ExpressionEditor.tsx`(主组件) + `highlight.ts`(高亮) + `autocomplete.ts`(补全) |
 | 修改函数定义/补全列表 | `src/data/functions.ts`(200+函数定义) |
 | 修改拖拽交互行为 | `src/modules/pipeline/FlowPanel.tsx`(管道节点拖拽) + `src/modules/logs/CommandList.tsx`(命令面板拖拽) + `src/hooks/useDraggable.ts`(通用拖拽逻辑) |

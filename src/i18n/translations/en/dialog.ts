@@ -51,7 +51,7 @@ export const enDialog = {
   detectConfidenceHigh: "high confidence",
   detectConfidenceLow: "low confidence, please verify",
   detectFailed: "No delimiter detected; using the default",
-  delimiterForThisFile: "Delimiter for this file",
+  delimiterForThisFile: "Delimiter",
   delimiterModeLocked: "Locked",
   detectQuotingHint:
     "Only detected without quote parsing — consider turning quoting off",

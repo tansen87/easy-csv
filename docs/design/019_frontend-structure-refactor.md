@@ -15,16 +15,16 @@
 | 1.5 VariableHint | ✅ 已实施 | → `components/ui/VariableHint.tsx` |
 | 1.6 表单一命令一文件 | ✅ 已实施 | 13 个聚合文件(最大 1351 行)→ 61 个 `forms/<命令id>.tsx` + `_shared.tsx`(最大 376 行);61 个命令,非本文档所称 59 |
 | 1.7 删除旧文件 | ✅ 已实施 | 11 个旧对话框 + `command/legacy/` 删除;`BatchFilterConfig` 迁往 `types/xan.ts` |
-| 2.1 MainMenuHooks | ⬜ 未实施 | 实测为**单个 1752 行函数**(`runNow` 574 行是最大块,`handleExecute` 仅 90 行),与本文 §4.2 的行数画像有出入 |
-| 2.2 FlowPanel | ⬜ 未实施 | |
-| 2.3 App.tsx | ⬜ 未实施 | |
+| 2.1 MainMenuHooks | ✅ 已实施 | 拆为 `hooks/execution/`(useExecution + runPipeline + executeBranch + buildBranches/buildPrefixToStep/serializeStepParams/resolveDelimiter)+ `hooks/fileIO/`(useFileOpen/useFileSave/useImportExport + pipelineScript)+ `hooks/charts/processChartData` + `hooks/usePipelineTabs`;纯函数依赖显式化,`buildBranches.test.ts` 新增(线性/分支/环/S1-4);MainMenuHooks.ts 删除,共享类型下沉 `types/execution.ts` |
+| 2.2 FlowPanel | 🔶 基本实施 | 抽出 `pipeline/hooks/`:useCanvasSearch、useStepClipboard、useNodeHitTest、useCutTool、useConnectGesture、usePipelineLayout;FlowPanel 1,834 → 999 行( JSX/props/onConnect 留守,≤ 600 目标未达);交互 hook 均经 onStepsChange/onEdgesChange,撤销栈语义不变 |
+| 2.3 App.tsx | 🔶 部分实施 | `src/App.tsx` → `src/app/App.tsx`,`src/app/providers/AppProviders.tsx` 收拢 Provider;`useAppBootstrap`(启动初始化/会话恢复/F12·F5/拖拽打开/完成通知/窗口标题)与 `useDialogStack`(Esc 只关最上层,history/templates 两对话框已接入)落地;1,827 → 1,769 行,AppLayout JSX 拆分与 `ui.*` 31 个开关全量迁移未做 |
 | 2.4 data/commands | ✅ 已实施 | `data/commands/` 目录,13 个分类文件,聚合出口不变,**`commands.test.ts` 零修改全绿**;校验过分类在原数组中是连续段,命令顺序不变 |
 | 2.5 ChartPanel | ⬜ 未实施 | 图表渲染是散在 39 个 return 里的内联 JSX,抽取成 7 个组件需逐段精读 + 人工看渲染结果 |
 | 2.6 HomeView Props | ⬜ 未实施 | 实测 54 个字段;分组到 ~13 个顶层字段可行,但分组对象需 `useMemo` 否则破坏 React.memo |
 | 2.7 translations | ✅ 已实施 | `translations/{en,zh}/<domain>.ts`(7 域)+ `types.ts` + 聚合出口;`@/i18n/translations` 路径不变,`i18n.test.tsx` 全绿 |
 | 3.1/3.2 目录搬迁 | ✅ 已实施 | `components/panel/**` + 3 个裸组件 → `modules/{pipeline,data-preview,ai,variables,logs}`;`panel/utils/` → `pipeline/lib/` |
 | 3.3 ui/ 命名 | ✅ 已实施 | 8 个小写 → PascalCase(Windows 上需两步改名) |
-| 3.4 hooks/ 命名 | 🔶 部分实施 | `useBatchFilter`/`useBatchConvert`/`useKeyboardShortcuts` 已改;`MainMenuHooks` 留待 2.1 |
+| 3.4 hooks/ 命名 | ✅ 已实施 | `useBatchFilter`/`useBatchConvert`/`useKeyboardShortcuts` 已改;`MainMenuHooks` 随 2.1 拆分删除 |
 | 3.5–3.7 中型拆分 | ⬜ 未实施 | |
 | 3.8 INDEX.md | ✅ 已实施 | 前端章节按新结构重写、移除易漂移行数、补测试清单、修正 8 处失效路径;`pnpm check:index` 校验 |
 | 4.1 规则固化 | 🔶 部分实施 | `max-lines`(400/数据与测试 800)与「components 禁引业务代码」已上,均为 `warn`;`modules/` 互引用本地规则 `warn`(HomeView 仍是装配根,待 005 A2) |
@@ -32,7 +32,7 @@
 | 4.3 check-index | ✅ 已实施 | `scripts/check-index.ts`(剥离代码块后校验 99 个路径) |
 | 4.4 行数标注 | ✅ 已实施 | 前端章节已移除,标注结构快照日期 |
 
-**验证基线(每次阶段后全跑)**:`tsc --noEmit` 0 错;`vitest` 23 文件 / 347 用例全绿;`vite build` 成功;`eslint` 13 个 error 全为重构前既有。
+**验证基线(每次阶段后全跑)**:`tsc --noEmit` 0 错;`vitest` 24 文件 / 359 用例全绿;`vite build` 成功;`eslint` 13 个 error 全为重构前既有;`check:index` 107 路径全通过。
 
 **顺带修复的真 bug**:① `CommandDialog` 在 hooks 之前 `return null`(违反 rules-of-hooks);② `TextTransformDialog` 的 `strip` 在模板字面量里写 `\r\t\n`,JS 展开成裸控制字符塞进生成的正则;③ `ContextMenu` 用 `startsWith("split")` 推 slice 类型,纯 `split` 项被判成空串;④ `TableNode` 分隔符徽标缺 `title`。
 
@@ -85,6 +85,8 @@
 | `src/types/` | 1 | 279 | 干净 |
 
 ### 1.3 超 400 行文件清单(按行数降序)
+
+> 本表为**重构起点基线快照**。阶段 3 目录搬迁后部分路径已变(`FlowPanel.tsx` → `modules/pipeline/`、`HomeView.tsx` → `modules/data-preview/` 等),2.1/2.2/2.3 三个文件的最新实测见 §4.2–4.4;其余行数以 `pnpm lint` 的 `max-lines` warning 为准。
 
 | 行数 | 文件 | 类别 |
 |-----:|------|------|
@@ -490,8 +492,8 @@ forms/
 | 优先级 | 文件 | 行数 | 理由 |
 |--------|-----:|------|------|
 | **P0** | `hooks/MainMenuHooks.ts` | **2,007** | 全项目最大逻辑文件,含执行引擎、文件 IO、导入导出、图表处理四类职责 |
-| **P0** | `components/panel/FlowPanel.tsx` | **1,835** | 画布核心,切刀/连线/搜索/复制粘贴全在一个组件 |
-| **P0** | `App.tsx` | **1,842** | 全应用状态中枢,11 组对话框 state + 20+ 回调 |
+| **P0** | `modules/pipeline/FlowPanel.tsx` | **1,834** | 画布核心,切刀/连线/搜索/复制粘贴全在一个组件 |
+| **P0** | `App.tsx` | **1,827** | 全应用状态中枢,对话框/面板开关散在 `useUIState` + 本地 state,20+ 回调 |
 | **P1** | `data/commands.ts` | **4,187** | 数据文件,但单文件过大影响编辑与 diff |
 | **P1** | `components/panel/ChartPanel.tsx` | **1,404** | 7 种图表 + 拖拽 + 导出 + 最大化 |
 | **P1** | `components/HomeView.tsx` | **903** | 61 个 props + 11 组对话框 state |
@@ -506,9 +508,57 @@ forms/
 
 > **豁免**:`data/commands.ts`、`i18n/translations.ts`、`generated/help-docs.ts` 属**数据文件**,可放宽行数约束,但需按 §4.5/§4.6 做结构拆分。
 
-### 4.2 `MainMenuHooks.ts`(2,007 行) —— ⬜ 未实施
+### 4.2 `hooks/MainMenuHooks.ts`(2,007 行) —— ✅ 已实施(2.1)
 
-**现状**:单文件混合四类职责,`handleExecute` 单函数 500+ 行(DFS 分支构建 + 进程调度 + 日志回填 + 图表后处理)。
+**现状(2026-09-20 按搬迁后代码回写)**:全文件约 2007 行,结构如下:
+
+| 行段 | 内容 | 性质 |
+|------|------|------|
+| 1–83 | import + 常量(`MAX_OUTPUT_BYTES` 等) | — |
+| 84–143 | `serializeStepParams`(~60 行) | **模块级纯函数,可直接搬** |
+| 145–254 | `buildPrefixToStep`(~110 行) | **模块级纯函数,可直接搬** |
+| 256–2007 | `export function MainMenuHooks({...})` | **单个约 1750 行的函数**,全部逻辑都在这一个函数体里 |
+
+函数体内部的大块(均为 `useCallback`,行号为实测):
+
+| 行段 | 回调 | 规模 | 职责 |
+|------|------|------|------|
+| 437–471 | `handleOpenFile` / `handleOpenNewTabWithFile` | ~35 行 | 文件打开 |
+| 472–719 | `handleSavePipeline` | **~248 行** | 保存/另存 |
+| 720–766 | `handleExportPipeline` | ~47 行 | 管道导出 |
+| 767–846 | `handleImportPipeline` | ~80 行 | 管道导入 + 脚本生成 |
+| 847–934 | `buildExecutionBranches` | ~88 行 | DFS 分支构建(useCallback 包裹,**需抽成模块级纯函数**) |
+| 935–1509 | `runNow` | **~575 行** | 单分支执行编排 + 进程调度 + 日志回填 + 图表后处理,全文件最大块 |
+| 1510–1600 | `handleExecute` | ~90 行 | 薄封装,取参数后调 `runNow` |
+| 1640–1876 | `processChartData` | **~237 行** | 图表数据后处理 |
+| 1877–1962 | `handleSaveIntermediateAsInput` | ~86 行 | 中间结果落盘 |
+| 1963–1975 | `handleCancelExecution` | ~13 行 | 取消 |
+
+> 注意:本文初稿称"`handleExecute` 单函数 500+ 行",与实测不符 —— 大块在 `runNow`,见 §0 表 2.1。
+
+**实施结果(2026-09-20)**:目标结构落地为——
+
+```
+src/hooks/
+├── usePipelineTabs.ts            # getCurrentTab / getCurrentPipeline / resolveRunDelimiter / updateTabPipeline / addNewTab
+├── execution/
+│   ├── useExecution.ts           # 装配层:run/cancel、变量提示、S6 覆盖门、resultPreview(365 行)
+│   ├── runPipeline.ts            # runNow 主体,依赖显式化为 RunPipelineDeps(294 行)
+│   ├── executeBranch.ts          # 单分支执行:batch 配对/batch-filter/chart 分派(359 行)
+│   ├── runPipelineDeps.ts        # RunPipelineDeps / BranchProgressState / MAX_OUTPUT_BYTES
+│   ├── buildBranches.ts          # 【纯函数】由 buildExecutionBranches 抽出
+│   ├── buildPrefixToStep.ts      # 【纯函数】
+│   ├── serializeStepParams.ts    # 【纯函数】
+│   ├── resolveDelimiter.ts       # resolveRunDelimiter 纯函数化(名称/行为不变,018)
+│   └── buildBranches.test.ts     # 线性/分支/环/S1-4/fallback,005 C2
+├── fileIO/
+│   ├── useFileOpen.ts  useFileSave.ts  useImportExport.ts
+│   └── pipelineScript.ts         # 【纯函数】CLI 行生成 + ps1/sh 内容生成
+└── charts/
+    └── processChartData.ts       # 【纯函数】
+```
+
+共享类型 `OverwriteConfirm`/`ResultPreview`/`VariablePrompt`/`PendingRun` 下沉 `src/types/execution.ts`。App.tsx 直接组合各 hook(原 17 项返回值逐一对应)。`serializeStepParams` 已是纯函数、`processChartData` 依赖为空,与计划一致;`runNow` 无法做到"无 React 依赖"入参,改为 deps 显式注入(无 hook 调用,仍是可测的普通 async 函数)。
 
 **拆法**:
 
@@ -516,36 +566,49 @@ forms/
 src/hooks/
 ├── execution/
 │   ├── useExecution.ts          # handleExecute / handleCancel(装配层)
-│   ├── buildBranches.ts         # 【纯函数】DFS 分支构建 → 可单测
-│   ├── runPipeline.ts           # 【纯函数】单分支执行编排
+│   ├── buildBranches.ts         # 【纯函数】由 buildExecutionBranches 抽出 → 可单测
+│   ├── runPipeline.ts           # 【纯函数】由 runNow 主体抽出
 │   └── resolveDelimiter.ts      # resolveRunDelimiter
 ├── fileIO/
-│   ├── useFileOpen.ts           # 打开/最近文件/拖拽
-│   ├── useFileSave.ts           # 保存/另存
-│   └── useImportExport.ts       # 管道导入导出 + .sh/.ps1 脚本生成
+│   ├── useFileOpen.ts           # handleOpenFile / handleOpenNewTabWithFile
+│   ├── useFileSave.ts           # handleSavePipeline(248 行,独立成 hook 的理由充分)
+│   └── useImportExport.ts       # handleExportPipeline + handleImportPipeline
 └── charts/
-    └── processChartData.ts      # 【纯函数】图表数据后处理
+    └── processChartData.ts      # 【纯函数】由 processChartData 抽出
 ```
 
 **关键约束**:
+- `serializeStepParams`、`buildPrefixToStep` 已是模块级纯函数,机械搬运即可,零逻辑风险;
+- `buildExecutionBranches`、`runNow` 主体、`processChartData` 目前闭包了大量 state/setter,抽出时需把依赖显式化为参数 —— 这三块是本次拆分的真正工作量所在;
 - `buildBranches.ts`、`runPipeline.ts`、`processChartData.ts` **必须是无 React 依赖的纯函数**,补 `execution/buildBranches.test.ts`(线性/分支/环状异常三类用例,对应 005 C2);
-- `handleExecute` 拆分后主流程 ≤ 100 行;
+- `handleExecute` 实测仅 90 行,拆分后自然满足 ≤ 100 行,主流程不再是风险点;
 - `resolveRunDelimiter` 涉及"所见即所跑"语义(设计 018),搬迁时保持导出名与行为不变。
 
-### 4.3 `FlowPanel.tsx`(1,835 行) —— ⬜ 未实施
+### 4.3 `FlowPanel.tsx`(1,834 行) —— 🔶 已实施(2.2,1,834 → 999 行)
 
-**现状**:切刀三段回调(`handleCutStart/Move/End` + 几何,约 300 行)、右键连线预览(约 200 行)、搜索、复制粘贴、双击、节点/边管理全部耦合。
+**现状(2026-09-20 回写)**:文件已随 3.1 迁至 `src/modules/pipeline/FlowPanel.tsx`,1,834 行。切刀三段回调、右键连线、搜索、复制粘贴全部内联在组件里,行号段实测如下:
 
-**拆法**:
+| 行段 | 内容 | 规模 |
+|------|------|------|
+| 266–272, 368–386 | 搜索 state + Ctrl+F 拦截 + 输入框聚焦 | ~40 行 |
+| 540–587 | `searchResults` 计算(useMemo) | ~48 行 |
+| 589–645 | 搜索结果跳转与高亮 | ~57 行 |
+| 934–969 | `handleCutStart` | ~36 行 |
+| 970–1182 | `handleCutMove` | **~213 行** |
+| 1183–1347 | `handleCutEnd` | **~165 行** |
+| 1348–1480 | `onConnect` 右键连线 | **~133 行** |
+| 1481–1548 | `handleCopySelected` / `handlePasteClipboard`(`clipboardRef`) | ~68 行 |
+
+**拆法**(目标路径不变,`modules/pipeline/` 已就位):
 
 ```
 src/modules/pipeline/
 ├── FlowPanel.tsx                # 仅保留装配与 props 透传
 ├── hooks/
-│   ├── useCutTool.ts            # 切刀 start/move/end + 坠落动画
-│   ├── useConnectGesture.ts     # 右键连线拖拽 + 预览路径
-│   ├── useStepClipboard.ts      # handleCopyStep / handlePasteStep
-│   ├── useCanvasSearch.ts       # Ctrl+F 搜索
+│   ├── useCutTool.ts            # handleCutStart/Move/End + 坠落动画(合计 ~415 行)
+│   ├── useConnectGesture.ts     # onConnect 右键连线拖拽 + 预览路径(~133 行)
+│   ├── useStepClipboard.ts      # handleCopySelected / handlePasteClipboard
+│   ├── useCanvasSearch.ts       # 【新】搜索 state + Ctrl+F + 结果跳转(~145 行)
 │   ├── useCanvasKeyboardPan.ts  # 已有
 │   └── useCanvasPointerHud.ts   # 已有
 ├── lib/
@@ -558,9 +621,31 @@ src/modules/pipeline/
 - 几何/算法留在 `lib/`,`layout.test.ts` 用例随路径更新但不断言逻辑变化;
 - 拆分后 `FlowPanel.tsx` 目标 ≤ 600 行。
 
-### 4.4 `App.tsx`(1,842 行) —— ⬜ 未实施
+**实施结果(2026-09-20)**:拆出 `modules/pipeline/hooks/` 6 个 hook——
 
-**现状**:管理标签页、管道、撤销/重做、日志、配置、历史、更新检查、拖拽打开、数据概况、AI 面板、版本控制、血缘、会话恢复、命令面板、CSV 对比/编码转换等,外加 **11 组对话框 state + 11 个 close 回调**(见 `HomeView.tsx:191-301`)。
+| Hook | 承接内容 | 行数 |
+|------|---------|-----:|
+| `useCanvasSearch` | 搜索 state + Ctrl+F + searchResults + 跳转高亮 | 157 |
+| `useStepClipboard` | `clipboardRef` + 复制/粘贴(经 onStepsChange/onEdgesChange) | 86 |
+| `useNodeHitTest` | `getNodeRect` / `getNodeAtPosition`(切刀/连线/右键菜单共用) | 87 |
+| `useCutTool` | 切刀三段回调 + 碰撞删除 + 坠落动画 + 切割视觉 effect | 521 |
+| `useConnectGesture` | 右键连线 state + 预览路径 + `createEdge` | 192 |
+| `usePipelineLayout` | 布局 effect + F1 结果节点注入 + 选中/高亮 effect | ~230 |
+
+FlowPanel 留守:props、装配、右键模式栏、onConnect(环检测 + 拓扑重排)、菜单与 JSX,共 999 行——**≤ 600 目标未达**,缺口主要是 ~470 行 JSX 与 ~150 行 props/上下文菜单,需拆出 AppLayout 式子组件,留待后续。切刀 start/move/end 在 FlowPanel 收敛为三个薄分发器,按 `rightClickMode` 与手势状态分派到对应 hook。
+
+### 4.4 `App.tsx`(1,827 行) —— 🔶 部分实施(2.3,1,827 → 1,769 行)
+
+**现状(2026-09-20 回写)**:`src/App.tsx` 仍 1,827 行(`src/app/` 未创建),管理标签页、管道、撤销/重做、日志、配置、历史、更新检查、拖拽打开、会话恢复、命令面板等,41 个 `handle*`/`useCallback`。
+
+**与本文初稿的差异**:初稿所称「11 组对话框 state + 11 个 close 回调」已随 1.3/1.7 收敛删除(命令对话框统一为 HomeView 的 `commandDialog` 单 state + `openCommandFromContext()`)。当前对话框/面板开关散落两处:
+
+| 位置 | 内容 | 规模 |
+|------|------|------|
+| `hooks/useUIState.ts` | 面板与对话框开关(`showSettingsDialog`/`showUpdateDialog`/`showRefreshDialog`/`showCsvDiff`/`showCsvEncoding`/`showSeparateCsv`/各面板 show*、进度、图表配置等) | **31 个 `useState`**,113 行 |
+| `App.tsx` 本地 | `selectedStep`、`showHistoryDialog`、`isExecuting`、`showVariablePanel`、`pipelineSavedAt`、`aiConfig`、`showTemplateDialog`、`editingTemplate` | 8 个 `useState` |
+
+问题从「state 太多集中一处」变成「同一类开关分裂两处」:`App.tsx` 与 `useUIState` 各管一摊,`Esc` 关闭、互斥(如同时开两个面板)没有统一语义。
 
 **拆法**:
 
@@ -577,13 +662,20 @@ src/app/
     └── useAppBootstrap.ts       # 会话恢复 + 更新检查 + 拖拽打开
 ```
 
-**`useDialogStack` 是关键收敛点**(同时解决 007 D4):
-- 用 `Record<DialogKind, DialogState>` 单一 state 替代 11 组 `useState`;
+**`useDialogStack` 是关键收敛点**(同时解决 007 D4),收敛对象按现状调整为:
+- 吸收 `useUIState` 的 31 个开关 + App 本地的 `showHistoryDialog`/`showTemplateDialog` 等对话框类 state(纯面板开关如 `showLogPanel` 可先并入或保留,以互斥/Esc 语义需要为准);
+- 用 `Record<DialogKind, DialogState>` 单一 state 替代散落开关;
 - 提供 `openDialog(kind, payload)` / `closeDialog(kind)` / `closeTop()` / `closeAll()`;
 - 按打开顺序维护栈,`Esc` 只关最上层;
-- 对外仍暴露 `closeFilterDialog` 等兼容名,HomeView 可分批改造。
+- 对外兼容:保留 `ui.setShowXxx` 同名转发或 `closeXxxDialog` 兼容名,调用方可分批改造。
 
 拆分后 `App.tsx` 目标 ≤ 400 行。
+
+**实施结果(2026-09-20,部分)**:
+- `src/App.tsx` → `src/app/App.tsx`(git mv,main.tsx 改走 `@/app/App`);`src/app/providers/AppProviders.tsx` 收拢 ThemeProvider + LanguageProvider,main.tsx 只剩组合;
+- `hooks/useAppBootstrap.ts` 落地:启动初始化(check_xan + 设置 + 最近文件)、会话恢复 + markHydrated、tab 切换预热版本、F12/F5、拖拽打开(.xanflow 分流)、完成系统通知、窗口标题,6 个 effect 出走,App 内收敛为一个 hook 调用;
+- `hooks/useDialogStack.ts` 落地:`Record<DialogKind, DialogState>` + open/close/closeTop/closeAll + **Esc 只关最上层**(007 D4);执行历史与模板两个 App 本地对话框已接入,`ui.*` 31 个开关按文档"分批改造"原则留待后续;
+- 未做:`AppLayout.tsx` JSX 骨架拆分(~700 行 JSX 留在 App.tsx)、`ui.*` 全量迁移,故 1,769 行仍远超 400 行目标——这两项与 2.6(HomeView props 分组,005 A2)耦合,一并后置。
 
 ### 4.5 `data/commands.ts`(4,187 行) —— ✅ 已实施
 
@@ -728,9 +820,9 @@ app/  →  modules/  →  components/ (ui, layout)
 
 | 批次 | 内容 | 验证 | 状态 |
 |------|------|------|------|
-| 2.1 | `MainMenuHooks.ts` → `hooks/execution` + `fileIO` + `charts` | `buildBranches.test.ts` 新增;执行/取消/导出冒烟 | ⬜ 实测画像与本文有出入:整个 hook 是**单个 1752 行函数**,最大块是 `runNow`(574 行)而非 `handleExecute`(实测 90 行);模块级 `serializeStepParams`/`buildPrefixToStep` 是现成纯函数可直接搬 |
-| 2.2 | `FlowPanel.tsx` → 交互 hook 化 | `layout.test.ts` 全绿;切刀/连线/复制粘贴冒烟 | ⬜ |
-| 2.3 | `App.tsx` → `useDialogStack` + `AppLayout` | 11 个对话框开关行为一致;Esc 只关一层 | ⬜ |
+| 2.1 | `MainMenuHooks.ts` → `hooks/execution` + `fileIO` + `charts` | `buildBranches.test.ts` 新增;执行/取消/导出冒烟 | ✅ 13 个新文件全 ≤ 400 行;`buildBranches.test.ts` 10 例;MainMenuHooks.ts 删除,共享类型下沉 `types/execution.ts` |
+| 2.2 | `FlowPanel.tsx` → 交互 hook 化 | `layout.test.ts` 全绿;切刀/连线/复制粘贴冒烟 | 🔶 6 个 hook 抽出(搜索/剪贴板/命中测试/切刀/连线/布局),1,834 → 999 行;≤ 600 未达(JSX 留守);手工冒烟待做 |
+| 2.3 | `App.tsx` → `useDialogStack` + `AppLayout` | 对话框开关行为一致;Esc 只关一层 | 🔶 `src/app/` + AppProviders + useAppBootstrap + useDialogStack(history/templates 接入,Esc 语义生效);AppLayout JSX 拆分与 ui.* 迁移未做,1,769 行 |
 | 2.4 | `data/commands.ts` → `data/commands/` 目录 | **`commands.test.ts` 不改一行全绿** | ✅ 13 个分类文件;先断言分类在原数组是连续段,保证命令顺序不变;命令实际 61 个 |
 | 2.5 | `ChartPanel.tsx` → `charts/` 7 组件 + `chartTheme` | 7 种图表 + SVG 导出 + dark mode 冒烟 | ⬜ 图表渲染散在 **39 个 return** 的内联 JSX,需逐段精读 + 人工看渲染 |
 | 2.6 | `HomeView.tsx` props 分组(005 A2) | `HomeViewProps` ≤ 30 字段 | ⬜ 实测 54 字段,分组到 ~13 个可行;**分组对象必须 `useMemo`**,否则破坏 HomeView 的 React.memo |
@@ -743,7 +835,7 @@ app/  →  modules/  →  components/ (ui, layout)
 | 3.1 | `components/panel/` → `modules/pipeline/` + `modules/data-preview/` | ✅ `panel/utils/` → `pipeline/lib/`,`panels/` 收纳版本控制/血缘 |
 | 3.2 | `HomeView.tsx`、`CommandList`、`CommandPalette` → `modules/` | ✅ 分别落 `data-preview/`、`logs/` |
 | 3.3 | `ui/` 命名统一(8 个小写 → PascalCase) | ✅ Windows 大小写不敏感,需两步改名 |
-| 3.4 | `hooks/` 命名统一为 `useXxx` | 🔶 `useBatchFilter`/`useBatchConvert`/`useKeyboardShortcuts` 已改;`MainMenuHooks` 留待 2.1 |
+| 3.4 | `hooks/` 命名统一为 `useXxx` | ✅ 2.1 随拆分完成:`MainMenuHooks.ts` 删除,职责落 `usePipelineTabs`/`useExecution` 等 use* 文件 |
 | 3.5 | `SettingsTabContent.tsx` 按页签拆 | ⬜ |
 | 3.6 | `services/ai/context.ts` 按职责拆 | ⬜ |
 | 3.7 | `VersionControlPanel`、`useDataLineage`、`AIPanel`、`SeparateCSVDialog`、`BatchFilterHooks` 拆分 | ⬜ |
@@ -776,10 +868,10 @@ app/  →  modules/  →  components/ (ui, layout)
 ### 7.2 全局
 
 - [ ] 单文件 ≤ 400 行(数据文件 ≤ 800,`generated/` 豁免) —— **20 个文件超预算**,见 `pnpm lint` 的 `max-lines` warning
-- [ ] `App.tsx` ≤ 400 行、`FlowPanel.tsx` ≤ 600 行、`MainMenuHooks` 拆分后无单文件 > 400 行 —— 待 2.1/2.2/2.3
+- [ ] `App.tsx` ≤ 400 行、`FlowPanel.tsx` ≤ 600 行、`MainMenuHooks` 拆分后无单文件 > 400 行 —— 2.1 完成(MainMenuHooks 已拆尽,新文件均 ≤ 400);2.2/2.3 部分:FlowPanel 999、App.tsx 1,769,JSX 拆分后置
 - [ ] `modules/` 之间无互相 import —— 现有 7 处(`data-preview/HomeView` → `pipeline|dialogs`、`pipeline/panels/VersionControlPanel` → `dialogs`、`variables/VariablePanel` → `dialogs`),HomeView 仍是装配根,待 005 A2
 - [x] `components/` 无业务依赖 —— 已固化为 error;`expression/`、`setting/` 为 §2.1 P3 已知例外(warn)
-- [ ] Hook 全部 `useXxx` 命名,组件全部 PascalCase —— 仅剩 `MainMenuHooks.ts`(留待 2.1 改名/拆分)
+- [x] Hook 全部 `useXxx` 命名,组件全部 PascalCase —— `MainMenuHooks.ts` 已随 2.1 拆分删除
 - [x] `ui/` 无大小写重名文件 —— 已统一 PascalCase
 - [x] 每目录 ≤ 2 层子目录
 

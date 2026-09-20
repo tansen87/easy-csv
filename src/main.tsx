@@ -2,17 +2,14 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import "@fontsource-variable/inter/index.css";
 import "@fontsource/jetbrains-mono/index.css";
-import App from "./App.tsx";
+import App from "@/app/App";
 import "./index.css";
-import { ThemeProvider } from "@/components/setting/ThemeProvider.tsx";
-import { LanguageProvider } from "@/i18n";
+import { AppProviders } from "@/app/providers/AppProviders";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-      <LanguageProvider>
-        <App />
-      </LanguageProvider>
-    </ThemeProvider>
+    <AppProviders>
+      <App />
+    </AppProviders>
   </React.StrictMode>,
 );
