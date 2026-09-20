@@ -109,6 +109,24 @@ export interface ExecutionHistoryInput {
   startedAt: string;
 }
 
+/** Where a tab's delimiter came from. */
+export type DelimiterSource = "detected" | "forced" | "fallback" | "global";
+
+/** `"auto"` = re-detect on every read; any other value is a locked delimiter. */
+export type DelimiterMode = "auto" | string;
+
+/** Delimiter resolution reported by the `read_csv_file` command. */
+export interface CsvReadResult {
+  headers: string[];
+  rows: string[][];
+  /** Delimiter the file was actually parsed with. */
+  delimiter: string;
+  delimiter_source: DelimiterSource;
+  delimiter_confidence: "high" | "low" | "none";
+  /** Field count of the header row. */
+  columns: number;
+}
+
 export interface PipelineTab {
   id: string;
   name: string;
@@ -119,6 +137,15 @@ export interface PipelineTab {
   headers?: string[];
   inputFile?: string;
   defaultDelimiter?: string;
+  /** How the delimiter was resolved when the file was last read. */
+  delimiterSource?: DelimiterSource;
+  /** Detection confidence: `"none"` means the fallback delimiter was used. */
+  delimiterConfidence?: "high" | "low" | "none";
+  /**
+   * `"auto"` = re-detect on every read (the default when a file is opened);
+   * a concrete delimiter = locked, never re-detected.
+   */
+  delimiterMode?: DelimiterMode;
   edges?: PipelineEdge[];
   inputPosition?: { x: number; y: number };
   isSettings?: boolean;

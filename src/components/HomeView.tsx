@@ -9,6 +9,8 @@ import {
   PipelineVersion,
   StepLineage,
   StoredPipelineStep,
+  DelimiterMode,
+  DelimiterSource,
 } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 import { useLanguage } from "@/i18n";
@@ -112,6 +114,12 @@ interface HomeViewProps {
   onOpenCommandPalette?: () => void;
   onSaveIntermediate?: (stepId: string) => void;
   pipelineSavedAt?: number;
+  /** Delimiter the selected tab's input file was read with (design 018). */
+  delimiter?: string;
+  delimiterMode?: DelimiterMode;
+  delimiterSource?: DelimiterSource;
+  delimiterConfidence?: "high" | "low" | "none";
+  onDelimiterChange?: (mode: DelimiterMode) => void;
 }
 
 export const HomeView = React.memo(function HomeView({
@@ -165,6 +173,11 @@ export const HomeView = React.memo(function HomeView({
   onOpenCommandPalette,
   onSaveIntermediate,
   pipelineSavedAt,
+  delimiter,
+  delimiterMode,
+  delimiterSource,
+  delimiterConfidence,
+  onDelimiterChange,
 }: HomeViewProps) {
   const { t } = useLanguage();
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
@@ -568,6 +581,11 @@ export const HomeView = React.memo(function HomeView({
           onSavePipeline={onSavePipeline}
           onOpenCommandPalette={onOpenCommandPalette}
           onSaveIntermediate={onSaveIntermediate}
+          delimiter={delimiter}
+          delimiterMode={delimiterMode}
+          delimiterSource={delimiterSource}
+          delimiterConfidence={delimiterConfidence}
+          onDelimiterChange={onDelimiterChange}
         />
       </div>
 

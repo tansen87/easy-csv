@@ -293,9 +293,19 @@ export function MainMenuHooks({
     return tabs.find((tab) => tab.id === selectedTabId) || tabs[0];
   }, [tabs, selectedTabId]);
 
+  /**
+   * Delimiter a run should use. The tab's own resolved delimiter wins — it is
+   * what the preview table was read with — and the global setting only covers
+   * tabs that were never read. Keeps "what you see is what runs" (design 018).
+   */
+  const resolveRunDelimiter = useCallback(
+    () => getCurrentTab()?.defaultDelimiter || defaultDelimiter,
+    [getCurrentTab, defaultDelimiter],
+  );
+
   const { executeBatchFilterDirect, executeBatchFilterWithData } =
     BatchFilterHooks({
-      defaultDelimiter,
+      defaultDelimiter: resolveRunDelimiter(),
       addLog,
       setBranchProgress,
       getCurrentTab,
@@ -303,7 +313,7 @@ export function MainMenuHooks({
     });
 
   const { executeBatchConvert } = BatchConvertHooks({
-    defaultDelimiter,
+    defaultDelimiter: resolveRunDelimiter(),
     addLog,
     setBranchProgress,
     getCurrentTab,
@@ -476,6 +486,10 @@ export function MainMenuHooks({
         (step) => step.command.id !== "output",
       );
 
+      // Scripts must mirror the delimiter the tab was actually read with, not
+      // the global fallback setting (design 018 §3.5).
+      const exportDelimiter = resolveRunDelimiter() || ",";
+
       const pipelineLines = executableSteps.map((step, index) => {
         // DuckDB steps are emitted as `duckdb -c "<sql>"` rather than a xan
         // subcommand. The in-app `input` virtual relation has no standalone
@@ -483,11 +497,11 @@ export function MainMenuHooks({
         if (step.command.id === "duckdb") {
           const sql = String(step.parameters.sql || "").trim();
           // DuckDB query results are always emitted as CSV (`-csv`) with a header
-          // row and bail-on-error enabled. `-separator` mirrors the app's default
-          // delimiter so the piped CSV matches the configured field separator.
+          // row and bail-on-error enabled. `-separator` mirrors the delimiter the
+          // tab is actually read with, so the piped CSV matches it.
           const separator =
-            defaultDelimiter && defaultDelimiter.trim() !== ""
-              ? defaultDelimiter
+            exportDelimiter && exportDelimiter.trim() !== ""
+              ? exportDelimiter
               : ",";
           return `duckdb -c "${sql.replace(/"/g, '\\"')}" -csv -bail -separator "${separator}"`.trim();
         }
@@ -701,7 +715,7 @@ export function MainMenuHooks({
     } catch (error) {
       showToast(`Failed to save pipeline: ${error}`, "error");
     }
-  }, [getCurrentPipeline, getCurrentTab, showToast, defaultDelimiter]);
+  }, [getCurrentPipeline, getCurrentTab, showToast, resolveRunDelimiter]);
 
   const handleExportPipeline = useCallback(async () => {
     const currentPipeline = getCurrentPipeline();
@@ -722,7 +736,7 @@ export function MainMenuHooks({
           position: step.position,
         })),
         inputFile: currentTab.inputFile || "",
-        defaultDelimiter,
+        defaultDelimiter: resolveRunDelimiter(),
         edges: currentTab.edges || [],
         inputPosition: currentTab.inputPosition,
         created: formatDateTime(new Date()),
@@ -745,7 +759,7 @@ export function MainMenuHooks({
   }, [
     getCurrentPipeline,
     getCurrentTab,
-    defaultDelimiter,
+    resolveRunDelimiter,
     showToast,
     formatDateTime,
   ]);
@@ -1126,7 +1140,7 @@ export function MainMenuHooks({
               const preResult = await invoke<any>("execute_xan_pipeline", {
                 commands: preCommands,
                 inputFile,
-                defaultDelimiter,
+                defaultDelimiter: resolveRunDelimiter(),
                 maxOutputBytes: MAX_OUTPUT_BYTES,
               });
 
@@ -1206,7 +1220,7 @@ export function MainMenuHooks({
                 const preResult = await invoke<any>("execute_xan_pipeline", {
                   commands: preCommands,
                   inputFile,
-                  defaultDelimiter,
+                  defaultDelimiter: resolveRunDelimiter(),
                   maxOutputBytes: MAX_OUTPUT_BYTES,
                 });
 
@@ -1214,7 +1228,7 @@ export function MainMenuHooks({
                   // Parse CSV output
                   const lines = (preResult.output as string).trim().split("\n");
                   if (lines.length > 0) {
-                    const delimiter = defaultDelimiter || ",";
+                    const delimiter = resolveRunDelimiter() || ",";
                     headers = lines[0]
                       .split(delimiter)
                       .map((h: string) => h.trim().replace(/^"|"$/g, ""));
@@ -1236,7 +1250,7 @@ export function MainMenuHooks({
                   const text = new TextDecoder().decode(csvContent);
                   const lines = text.trim().split("\n");
                   if (lines.length > 0) {
-                    const delimiter = defaultDelimiter || ",";
+                    const delimiter = resolveRunDelimiter() || ",";
                     headers = lines[0]
                       .split(delimiter)
                       .map((h: string) => h.trim().replace(/^"|"$/g, ""));
@@ -1306,7 +1320,7 @@ export function MainMenuHooks({
             result = await invoke<any>("execute_xan_pipeline", {
               commands,
               inputFile,
-              defaultDelimiter,
+              defaultDelimiter: resolveRunDelimiter(),
               maxOutputBytes: MAX_OUTPUT_BYTES,
             });
           }
@@ -1473,7 +1487,7 @@ export function MainMenuHooks({
     [
       getCurrentPipeline,
       getCurrentTab,
-      defaultDelimiter,
+      resolveRunDelimiter,
       showToast,
       addLog,
       setIsExecuting,
@@ -1917,7 +1931,7 @@ export function MainMenuHooks({
         const result = await invoke<any>("execute_xan_pipeline", {
           commands,
           inputFile,
-          defaultDelimiter,
+          defaultDelimiter: resolveRunDelimiter(),
         });
         if (!result.success) {
           showToast(`Failed: ${result.error || "execution error"}`, "error");
@@ -1943,7 +1957,7 @@ export function MainMenuHooks({
         showToast(`Failed to save intermediate: ${error}`, "error");
       }
     },
-    [getCurrentTab, showToast, defaultDelimiter],
+    [getCurrentTab, showToast, resolveRunDelimiter],
   );
 
   const handleCancelExecution = useCallback(async () => {

@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { PipelineTab } from "@/types/xan";
+import { CsvReadResult, PipelineTab } from "@/types/xan";
 import { formatDateTime } from "@/utils/format";
+import { delimiterLabel } from "@/utils/separateHistory";
 
 export interface RecentFile {
   path: string;
@@ -20,6 +21,12 @@ export function useTabs(
     type: "info" | "success" | "error" | "warning",
     message: string,
   ) => void,
+  /**
+   * The delimiter master switch (settings page). `true` detects the delimiter
+   * of every opened file; `false` reads every file with `defaultDelimiter`.
+   * Shared with the input node's badge, so both sides stay in sync.
+   */
+  autoDetectDelimiter = true,
 ) {
   const [tabs, setTabs] = useState<PipelineTab[]>([
     {
@@ -96,8 +103,17 @@ export function useTabs(
     }
   }, []);
 
+  /**
+   * Read a CSV file into a tab.
+   *
+   * The delimiter comes from the app-wide mode: auto-detected when the
+   * auto-detection switch is on, otherwise the configured delimiter.
+   * `forcedDelimiter` is a one-shot override carried in by an imported pipeline
+   * or template (that read only — the next reload follows the global mode
+   * again).
+   */
   const loadCsvData = useCallback(
-    async (tabId: string, filePath: string, customDelimiter?: string) => {
+    async (tabId: string, filePath: string, forcedDelimiter?: string) => {
       if (!filePath) {
         setTabs((prev) =>
           prev.map((tab) =>
@@ -151,23 +167,30 @@ export function useTabs(
         return;
       }
 
+      // An explicit argument (import / template) wins for this read; otherwise
+      // the global mode decides: detect, or lock to the configured delimiter.
+      const explicit = forcedDelimiter?.trim() ? forcedDelimiter : undefined;
+      const locked =
+        explicit ?? (autoDetectDelimiter ? undefined : defaultDelimiter);
+
       try {
-        const delimiter = customDelimiter || defaultDelimiter;
-        const data = await invoke<{ headers: string[]; rows: string[][] }>(
-          "read_csv_file",
-          {
-            filePath,
-            delimiter,
-            limit: 31,
-          },
-        );
+        const data = await invoke<CsvReadResult>("read_csv_file", {
+          filePath,
+          delimiter: locked ?? null,
+          fallbackDelimiter: defaultDelimiter,
+          limit: 31,
+        });
+        const resolvedDelimiter = data.delimiter || locked || defaultDelimiter;
         setTabs((prev) =>
           prev.map((tab) =>
             tab.id === tabId
               ? {
                   ...tab,
                   data: data.rows,
-                  defaultDelimiter: delimiter,
+                  defaultDelimiter: resolvedDelimiter,
+                  delimiterSource: data.delimiter_source,
+                  delimiterConfidence: data.delimiter_confidence,
+                  delimiterMode: locked ?? "auto",
                   headers: data.headers,
                   inputFile: filePath,
                   updatedAt: formatDateTime(new Date()),
@@ -175,20 +198,31 @@ export function useTabs(
               : tab,
           ),
         );
+
+        // Only speak up when detection disagreed with the configured default —
+        // the common case (the file really is comma separated) stays quiet.
+        if (!locked && resolvedDelimiter !== defaultDelimiter) {
+          addLog(
+            "info",
+            `Auto-detected delimiter "${delimiterLabel(resolvedDelimiter)}" for ${fileName}`,
+          );
+        }
       } catch (error) {
         addLog("error", `Failed to read CSV: ${error}`);
       }
     },
-    [defaultDelimiter, addLog, saveRecentFiles],
+    [defaultDelimiter, autoDetectDelimiter, addLog, saveRecentFiles],
   );
 
-  // Automatically reload the data of the current tab when the delimiter changes
+  // Reload the current tab's data when the app-wide delimiter mode changes
+  // (either from the settings page or from the input node's badge) or when the
+  // selected tab changes. Both controls edit the same state, so every tab
+  // follows it: no per-tab divergence to reconcile.
   useEffect(() => {
     const currentTab = tabs.find((t) => t.id === selectedTabId);
-    if (currentTab?.inputFile && isCsvFile(currentTab.inputFile)) {
-      loadCsvData(selectedTabId, currentTab.inputFile, defaultDelimiter);
-    }
-  }, [defaultDelimiter, selectedTabId]);
+    if (!currentTab?.inputFile || !isCsvFile(currentTab.inputFile)) return;
+    loadCsvData(selectedTabId, currentTab.inputFile);
+  }, [defaultDelimiter, autoDetectDelimiter, selectedTabId]);
 
   // Load recent files during initialization
   useEffect(() => {

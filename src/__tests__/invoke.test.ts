@@ -11,38 +11,59 @@ describe("App.tsx invoke call patterns", () => {
   });
 
   describe("read_csv_file", () => {
-    it("should call with correct params", async () => {
+    it("should call with auto-detection params (design 018)", async () => {
       mockInvoke.mockResolvedValue({
         headers: ["name", "age"],
         rows: [["Alice", "30"]],
+        delimiter: ",",
+        delimiter_source: "detected",
+        delimiter_confidence: "high",
+        columns: 2,
       });
 
-      const result = await invoke<{ headers: string[]; rows: string[][] }>(
-        "read_csv_file",
-        { filePath: "/test.csv", delimiter: ",", limit: 31 },
-      );
+      const result = await invoke<{
+        headers: string[];
+        rows: string[][];
+        delimiter: string;
+      }>("read_csv_file", {
+        filePath: "/test.csv",
+        delimiter: null,
+        fallbackDelimiter: ",",
+        limit: 31,
+      });
 
       expect(result.headers).toEqual(["name", "age"]);
       expect(result.rows).toHaveLength(1);
+      expect(result.delimiter).toBe(",");
       expect(mockInvoke).toHaveBeenCalledWith("read_csv_file", {
         filePath: "/test.csv",
-        delimiter: ",",
+        delimiter: null,
+        fallbackDelimiter: ",",
         limit: 31,
       });
     });
 
-    it("should pass custom delimiter", async () => {
-      mockInvoke.mockResolvedValue({ headers: [], rows: [] });
+    it("should pass a forced delimiter as-is", async () => {
+      mockInvoke.mockResolvedValue({
+        headers: [],
+        rows: [],
+        delimiter: "\t",
+        delimiter_source: "forced",
+        delimiter_confidence: "high",
+        columns: 0,
+      });
 
       await invoke("read_csv_file", {
         filePath: "/test.tsv",
         delimiter: "\t",
+        fallbackDelimiter: ",",
         limit: 31,
       });
 
       expect(mockInvoke).toHaveBeenCalledWith("read_csv_file", {
         filePath: "/test.tsv",
         delimiter: "\t",
+        fallbackDelimiter: ",",
         limit: 31,
       });
     });

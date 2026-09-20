@@ -46,7 +46,12 @@ import { SearchOverlay } from "@/components/panel/overlays/SearchOverlay";
 import { CutVisualization } from "@/components/panel/overlays/CutVisualization";
 import { ConnectionVisualization } from "@/components/panel/overlays/ConnectionVisualization";
 import { KeyIndicatorOverlay } from "@/components/panel/overlays/KeyIndicatorOverlay";
-import { PipelineStep, PipelineEdge } from "@/types/xan";
+import {
+  PipelineStep,
+  PipelineEdge,
+  DelimiterMode,
+  DelimiterSource,
+} from "@/types/xan";
 import { ContextMenu } from "@/components/menu/ContextMenu";
 import {
   CanvasContextMenu,
@@ -132,6 +137,13 @@ interface FlowPanelProps {
   onSavePipeline?: () => void;
   onOpenCommandPalette?: () => void;
   onSaveIntermediate?: (stepId: string) => void;
+  /** Delimiter the input file was read with, plus how it was resolved. */
+  delimiter?: string;
+  delimiterMode?: DelimiterMode;
+  delimiterSource?: DelimiterSource;
+  delimiterConfidence?: "high" | "low" | "none";
+  /** `"auto"` re-detects the delimiter, any other value locks it. */
+  onDelimiterChange?: (mode: DelimiterMode) => void;
 }
 
 export function FlowPanel({
@@ -168,6 +180,11 @@ export function FlowPanel({
   doubleClickFitView = true,
   onOpenCommandPalette,
   onSaveIntermediate,
+  delimiter,
+  delimiterMode,
+  delimiterSource,
+  delimiterConfidence,
+  onDelimiterChange,
 }: FlowPanelProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
@@ -185,6 +202,8 @@ export function FlowPanel({
   onTableRenameRef.current = onTableRename;
   const onTableDeleteRef = useRef(onTableDelete);
   onTableDeleteRef.current = onTableDelete;
+  const onDelimiterChangeRef = useRef(onDelimiterChange);
+  onDelimiterChangeRef.current = onDelimiterChange;
 
   // Save status tracking
   const savedStepsRef = useRef<string>(JSON.stringify(steps));
@@ -416,14 +435,31 @@ export function FlowPanel({
 
     const updatedNodes = layoutedNodes.map((newNode) => {
       const existingNode = nodes.find((n) => n.id === newNode.id);
-      if (existingNode && existingNode.position) {
+      const withPosition =
+        existingNode && existingNode.position
+          ? {
+              ...newNode,
+              position: existingNode.position,
+              selected: existingNode.selected,
+            }
+          : newNode;
+
+      // The input node renders the delimiter badge, so its data is enriched
+      // here instead of threading it through `getLayoutedElements`.
+      if (withPosition.type === "tableNode") {
         return {
-          ...newNode,
-          position: existingNode.position,
-          selected: existingNode.selected,
+          ...withPosition,
+          data: {
+            ...withPosition.data,
+            delimiter,
+            delimiterMode,
+            delimiterSource,
+            delimiterConfidence,
+            onDelimiterChange: onDelimiterChangeRef.current,
+          },
         };
       }
-      return newNode;
+      return withPosition;
     });
 
     // Inject result preview nodes (F1) to the right of the pipeline graph.
@@ -481,6 +517,10 @@ export function FlowPanel({
     savedInputPosition,
     resultPreview,
     dismissedResults,
+    delimiter,
+    delimiterMode,
+    delimiterSource,
+    delimiterConfidence,
   ]);
 
   // Apply selection/highlight as visual-only properties (no layout recompute)

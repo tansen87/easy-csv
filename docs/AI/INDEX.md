@@ -64,7 +64,12 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 |------|------|
 | `docs/design/flow-top-bottom-connect.md` | 节点连接点支持上下方向(已实现): `resolveHandles` 四方向选择算法、Handle 命名扩展(`top-*`/`bottom-*`/`table-top-*`)、切割碰撞检测同步更新 |
 | `docs/design/right-click-connect-bezier.md` | 右键连线改为贝塞尔实时预览(方案 A 已实现): 复用 `getBezierPath` 使预览=最终边、`pickStartHandle`/`buildConnectPreviewPath`、坐标换算与迟滞防抖 |
- `docs/design/follow-system-language.md` | 语言设置新增「跟随系统」选项(方案设计): `LanguagePreference` 偏好/生效语言分离、`resolveSystemLanguage()` 基于 `navigator.language`、设置页两段改三段、新用户默认跟随系统 |
+| `docs/design/follow-system-language.md` | 语言设置新增「跟随系统」选项(方案设计): `LanguagePreference` 偏好/生效语言分离、`resolveSystemLanguage()` 基于 `navigator.language`、设置页两段改三段、新用户默认跟随系统 |
+| `docs/design/016_separate-good-bad-rows.md` | 拆分好/坏行(已实现): 共享 `flexible(true)` reader/writer 重序列化、坏行向前归并、streaming 常量内存大文件方案 |
+| `docs/design/017_separate-dialog-ux.md` | 拆分对话框体验优化(已实现): `probe_csv_file` 首次行列数/表头预览、分隔符检测算法(表头权重 60 > 正文 30)、上次结果 localStorage、`reveal_paths` |
+| `docs/design/018_open-file-delimiter-detection.md` | 打开文件的分隔符自动检测 + 自动检测总开关(已实现): `read_csv_file` 支持自动检测并回传 `delimiter_source`、标签页记录解析值、输入节点分隔符徽标、执行侧改用标签页解析值("所见即所跑");设置页与输入节点徽标**共用同一个 `DelimiterModeSelect`**(自动检测 / 5 个分隔符),双向同步 + 即时落库(`auto_detect_delimiter` 配置项) |
+
+> `docs/design/001`–`015` 尚未逐条登记于本表(内容以目录内文件为准)。
 
 ---
 
@@ -75,12 +80,12 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | 文件 | 职责 |
 |------|------|
 | `main.rs` | 二进制入口,注册插件(opener/dialog/fs/shell/window_state/notification/http/prevent_default),系统托盘,窗口事件处理 |
-| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 56 个命令) |
+| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 58 个命令) |
 | `config.rs` | `AppConfig` 类型、SQLite 持久化(app_config/ai_config 表)、AES-256-GCM 加密存储 API Key、per-provider API Key 管理、自定义 AI provider 配置(provider=custom 时存 name/base_url/models)、配置相关命令 |
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
 | `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令、`set_pipeline_cancelled` 取消执行 |
 | `plugins.rs` | 外部 CLI 插件管理: `plugins` 表(plugins.db)持久化、`list_plugins`/`check_plugins` 命令、`command_executable` 按命令名解析可执行文件(插件命令走插件二进制,其余走 xan.exe)。`xan` 与 `pinyin` 默认注册进插件表,列表按 xan 置顶排序。插件二进制按平台编译期嵌入 `src-tauri/resources/plugins/<target>/`(`include_bytes!`)、首启自动解压到平台插件目录,Unix 下 `make_executable` 置 0o755。解压目录: Windows `<exe>/EasyCsv_resources/plugins/`,macOS `~/Library/Application Support/EasyCsv/resources/plugins/`,Linux `~/.local/share/EasyCsv/resources/plugins/`。解析顺序: 路径 → `plugins/` 目录(含 `.exe` 补全)→ `PATH` |
-| `csv.rs` | `CsvData` 类型、`read_csv_file`/`profile_csv`/`diff_csv_files`/`convert_csv_encoding`/`separate_csv`/`probe_csv_file` 命令 |
+| `csv.rs` | `CsvData` 类型、`read_csv_file`(自动检测分隔符)/`profile_csv`/`diff_csv_files`/`convert_csv_encoding`/`separate_csv`/`probe_csv_file` 命令 |
 | `storage.rs` | 历史记录、最近文件、数据概况缓存、版本/血缘存储、窗口标题、开发者工具命令 |
 | `ai.rs` | AI 对话代理: `call_ai` 命令,转发到 DeepSeek / Qwen / GLM |
 | `ai_memory.rs` | AI 记忆持久化(SQLite): 对话历史、反馈记录、纠正规则的 CRUD + 清除 |
@@ -93,11 +98,12 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | 内容 | 说明 |
 |------|------|
-| `AppConfig` 结构体 | `default_delimiter`, `no_headers`, `show_execution_notification`, `minimize_to_tray` |
+| `AppConfig` 结构体 | `default_delimiter`, `no_headers`, `auto_detect_delimiter`(默认 `true`,打开文件时是否自动检测分隔符), `show_execution_notification`, `minimize_to_tray` |
 | `load_config()` / `save_config()` | JSON 配置文件读写 |
 | `get_resources_dir()` | 资源/数据根目录。Windows: `<exe>/EasyCsv_resources`(不变);macOS: `~/Library/Application Support/EasyCsv`;Linux: `~/.local/share/EasyCsv`。所有 db 数据目录经它派生,插件目录经 `plugins::get_plugin_dir()` 派生 |
-| `get/set_default_delimiter` | 默认分隔符配置命令 |
+| `get/set_default_delimiter` | 默认分隔符配置命令(自动检测关闭时读取文件使用,也是检测失败时的兜底值) |
 | `get/set_no_headers` | 无表头配置命令 |
+| `get/set_auto_detect_delimiter` | 分隔符自动检测总开关(设置页与输入节点徽标共用同一个值) |
 | `get/set_system_notification` | 系统通知配置命令 |
 | `get/set_minimize_to_tray` | 最小化到托盘配置命令 |
 | `get_ai_config()` / `set_ai_config()` | AI 配置读写(provider、model、baseUrl、providerName、models) |
@@ -126,8 +132,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | 内容 | 说明 |
 |------|------|
-| `CsvData` | CSV 数据类型(headers + rows) |
-| `read_csv_file` | 读取 CSV 文件,返回表头 + 前51行预览 |
+| `CsvData` | CSV 数据类型(headers + rows + `delimiter`/`delimiter_source`/`delimiter_confidence`/`columns`) |
+| `read_csv_file` | 读取 CSV 文件,返回表头 + 前51行预览。`delimiter` 为 `null`/空串时**自动检测分隔符**(只采样 64 KiB),并回传 `delimiter`/`delimiter_source`/`delimiter_confidence`/`columns`,供输入节点展示与执行复用。设计:`docs/design/018_open-file-delimiter-detection.md` |
+| `resolve_read_delimiter` / `read_csv_sync` | 内部分隔符决策(强制 → 检测 → 兜底)与可单测的同步读取体;检测复用 `read_head_sample` + `detect_delimiter_with_fallback`(与 `probe_csv_file` 同源) |
 | `profile_csv` | 调用 `xan stats` 生成数据概况统计 |
 | `diff_csv_files` | 双文件对比(共享内存 Table + 字符串驻留 + Myers diff,`spawn_blocking` 防阻塞) |
 | `convert_csv_encoding` | 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1,64KB 分块流式转码) |
@@ -182,7 +189,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | 命令 | 模块 | 功能 |
 |------|------|------|
-| `read_csv_file` | csv | 读取 CSV 文件,返回表头 + 前51行预览 |
+| `read_csv_file` | csv | 读取 CSV 文件,返回表头 + 前51行预览;`delimiter` 为空时自动检测分隔符并回传来源/置信度/列数。设计:`docs/design/018_open-file-delimiter-detection.md` |
 | `execute_xan_pipeline` | pipeline | 执行多步骤 xan 管道(核心命令) |
 | `set_pipeline_cancelled` | pipeline | 取消正在执行的管道(全局标志 + kill 子进程) |
 | `profile_csv` | csv | 调用 `xan stats` 生成数据概况统计 |
@@ -192,8 +199,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `probe_csv_file` | csv | 探测文件头部(64 KiB):自动检测分隔符 + 返回第一行列数与表头预览,供拆分对话框显示文件信息。设计:`docs/design/017_separate-dialog-ux.md` |
 | `load_profile_cache` / `save_profile_cache` | storage | 数据概况缓存(基于文件 mtime,LRU 淘汰,上限50条) |
 | `check_xan_installed` | xan | 检查 xan.exe 是否已解压 |
-| `get/set_default_delimiter` | config | 读写默认分隔符配置 |
+| `get/set_default_delimiter` | config | 读写默认分隔符配置(检测关闭时使用 / 检测失败时兜底) |
 | `get/set_no_headers` | config | 读写无表头配置 |
+| `get/set_auto_detect_delimiter` | config | 读写分隔符自动检测总开关。设计:`docs/design/018_open-file-delimiter-detection.md` |
 | `get/set_system_notification` | config | 读写系统通知配置 |
 | `get/set_minimize_to_tray` | config | 读写最小化到托盘配置 |
 | `get/set_ai_config` | config | 读写 AI 配置(provider/model/baseUrl/providerName/models) |
@@ -241,11 +249,16 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `BatchFilterHooks.test.ts` | Batch Filter 执行逻辑: 文件名清理、正则构建、文本/数值筛选 invoke 形状、频率提取、多值批处理 | ~31 |
 | `BatchConvertHooks.test.ts` | 批量格式转换: globToRegex、getBaseName、getOutputDir、CSV↔XLSX↔JSON 转换 invoke 模式 | ~37 |
 | `CommandPalette.test.tsx` | 命令面板: 搜索过滤、键盘导航、选中执行、Esc 关闭 | ~11 |
-| `CsvDiffDialog.test.tsx` | CSV 对比对话框: 结果解析、分页渲染、键列匹配 | ~4 |
 | `CsvEncodingDialog.test.tsx` | 编码转换对话框: 编码选择、invoke 形状、结果摘要 | ~5 |
 | `HelpDialog.test.tsx` | 帮助对话框搜索与打开 | ~2 |
 | `HelpMarkdown.test.tsx` | 自定义 Markdown 渲染器 | ~3 |
 | `layout.test.ts` | 连线布局工具: `resolveHandles` 四方向选择、`handleAnchor`/`getEdgeEndpoints`、`pickStartHandle`、`buildConnectPreviewPath`(贝塞尔预览)、`transformBezierPath` | ~27 |
+| `useTabsDelimiter.test.ts` | 打开文件的分隔符解析(设计 018): 自动检测开关的开/关、模式变化后重读当前标签、导入分隔符一次性覆盖、非 CSV 不读 | 6 |
+| `TableNodeDelimiter.test.tsx` | 输入节点分隔符徽标(设计 018): 未读文件时不渲染、显示分隔符与置信度/锁定提示、展开共用控件并回调 | 5 |
+| `delimiterMode.test.ts` | 分隔符单一状态的换算(设计 018 §3.9): 设置 ⇄ 界面值、六种模式往返一致(锁住设置页与输入节点不漂移) | 6 |
+| `SettingsDelimiterControl.test.tsx` | 设置页分隔符控件(设计 018 §3.9): auto/锁定两种显示、6 个选项与顺序、选择回调、「恢复默认」复位为 auto | 6 |
+
+> 本表未覆盖全部测试文件(另有 `commands` / `csv` / `versionDiff` / `executionHistory` / `panelDock` / `params` / `SeparateCSVDialog` / `separateHistory` 等),全量以 `pnpm test` 为准;`CsvDiffDialog.test.tsx` 已不存在。
 
 ---
 
@@ -268,6 +281,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `types/xan.ts` | 核心类型: `XanCommand`, `XanParameter`, `PipelineStep`, `StoredPipelineStep`, `PipelineEdge`, `LogEntry`, `PipelineTab`, `PipelineVersion`, `StepLineage`, `ColumnSchema`, `Transformation`, `ColumnLineagePath`, `ChartType`, `ChartConfig`, `ChartDataPoint`, `ChartSeries` |
 | `generated/help-docs.ts` | 自动生成的命令帮助文档(中英文),由 `scripts/generate-help-docs.js` 生成 |
 | `utils/format.ts` | `formatDateTime()` 时间格式化工具 |
+| `utils/delimiterMode.ts` | 分隔符单一状态的两个换算:`delimiterModeFromSettings(autoDetect, delimiter)`(设置 → 界面值)与 `settingsPatchForMode(mode)`(界面值 → 要落库的设置),保证设置页与输入节点徽标不会各自漂移 |
 | `utils/session.ts` | 会话快照序列化: `stripStepCommand`/`reconstructStep`/`serializeTabSnapshot`/`deserializeTabSnapshot`(与 `usePipelineVersions` 共用) |
 
 ### 服务层 (`services/ai/`)
@@ -287,9 +301,9 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 
 | 文件 | 职责 |
 |------|------|
-| `MainMenuHooks.ts` | 主菜单业务逻辑(1299行): 文件打开、保存、导入/导出管道(含导出为 .sh/.ps1 xan 脚本)、撤销/重做、执行管道(DFS 构建分支)、取消执行、图表执行 |
+| `MainMenuHooks.ts` | 主菜单业务逻辑(1299行): 文件打开、保存、导入/导出管道(含导出为 .sh/.ps1 xan 脚本)、撤销/重做、执行管道(DFS 构建分支)、取消执行、图表执行;`resolveRunDelimiter()` 让 `execute_xan_pipeline`/导出脚本/批量工具统一使用**当前标签页解析出的分隔符**(标签页无值时回落全局默认) |
 | `useSession.ts` | 会话持久化(89行): 启动恢复标签页、防抖自动保存(800ms)、beforeunload 兜底保存 |
-| `useTabs.ts` | 标签页管理(221行): 标签增删改、当前标签、管道状态读写(`getCurrentPipeline`/`getCurrentTab`/`setTabs`) |
+| `useTabs.ts` | 标签页管理: 标签增删改、当前标签、管道状态读写(`getCurrentPipeline`/`getCurrentTab`/`setTabs`)、**文件读取的分隔符解析**: `loadCsvData(tabId, path, forcedDelimiter?)` —— 第三参为一次性覆盖(导入管道/模板),否则按全局模式(`useTabs(delimiter, addLog, autoDetectDelimiter)`)决定「检测」或「锁定用该分隔符」;全局模式变化时重读当前标签。设计:`docs/design/018_open-file-delimiter-detection.md` |
 | `usePipelineState.ts` | 管道状态(194行): `updateTabPipeline` 单点更新管道+edges,撤销/重做状态管理 |
 | `usePipelineVersions.ts` | 管道版本控制(236行): 保存/恢复/删除版本、标签管理、步骤序列化与重建(复用 `utils/session.ts`) |
 | `useDataLineage.ts` | 数据血缘(677行): 列类型推断、变换分析、血缘图数据构建与持久化 |
@@ -332,7 +346,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | `panel/VersionControlPanel.tsx` | 管道版本控制面板(302行): 版本列表、保存/恢复/删除、标签管理 |
 | `panel/DataLineagePanel.tsx` | 数据血缘面板(421行): 列级血缘追踪、变换类型图标、保存血缘 |
 | `panel/LineageGraph.tsx` | 血缘关系图渲染(341行): ReactFlow 列节点、类型配色、高亮/置灰联动 |
-| `panel/nodes/TableNode.tsx` | 输入数据表格节点,支持表头重命名和右键菜单;四方向连接点(带 `table-` 前缀) |
+| `panel/nodes/TableNode.tsx` | 输入数据表格节点,支持表头重命名和右键菜单;四方向连接点(带 `table-` 前缀);表头行的**分隔符徽标**(显示解析出的分隔符 + 来源/置信度圆点 + 锁图标,点击展开 `DelimiterModeSelect`,与设置页共用同一个值,见设计 018) |
 | `panel/nodes/PipelineStepNode.tsx` | 管道步骤节点,支持别名编辑、参数展示、切割动画;左右/上下四方向连接点 |
 | `panel/nodes/index.ts` | 节点类型注册表(nodeTypes) |
 | `panel/utils/cutGeometry.ts` | 切割几何计算:交点检测、clip-path 生成、坠落方向 |
@@ -417,7 +431,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 |------|------|
 | `ThemeProvider.tsx` | 主题上下文,管理 dark/light/system 模式 |
 | `SettingsDialog.tsx` | 设置对话框容器 |
-| `SettingsTabContent.tsx` | 设置内容: 语言、主题、分隔符、无表头选项、执行通知开关、历史记录条数上限、AI 配置(provider/model/apiKey)、AI 学习数据管理(清除对话/反馈/纠正规则) |
+| `SettingsTabContent.tsx` | 设置内容: 语言、主题、**分隔符(自动检测总开关 + 具体分隔符,共用 `DelimiterModeSelect`,与输入节点同步)**、无表头选项、执行通知开关、历史记录条数上限、AI 配置(provider/model/apiKey)、AI 学习数据管理(清除对话/反馈/纠正规则) |
 | `Toast.tsx` | Toast 通知系统(顶部居中) |
 
 ### 组件 — 帮助 (`help/`)
@@ -441,6 +455,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | `resize-handle.tsx` | 面板拖拽调整大小手柄 |
 | `tooltip.tsx` | Tooltip 提示组件,支持 top/bottom/left/right 定位 |
 | `Select.tsx` | 可搜索下拉选择框 |
+| `DelimiterModeSelect.tsx` | 分隔符控件(6 项:自动检测 + `, ; \t \| ^`),**设置页与输入节点徽标共用**,保证两处永远显示同一个值(设计 018 §3.9) |
 
 ---
 
@@ -456,6 +471,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改管道执行逻辑 | `src-tauri/src/pipeline.rs` 中的 `execute_xan_pipeline` 函数 |
 | 修改管道执行取消 | `src-tauri/src/pipeline.rs`(`set_pipeline_cancelled` + `wait_with_cancel`) + `src/hooks/MainMenuHooks.ts`(取消按钮) |
 | 修改 CSV 预览读取 | `src-tauri/src/csv.rs` 中的 `read_csv_file` 函数 |
+| 修改打开文件的分隔符检测(工作流输入节点) | `src-tauri/src/csv.rs`(`read_csv_file` 的 `resolve_read_delimiter`/`read_csv_sync`)+ `src/hooks/useTabs.ts`(`loadCsvData` + 全局模式重载规则)+ `src/components/ui/DelimiterModeSelect.tsx`(共用控件)+ `src/components/panel/nodes/TableNode.tsx`(徽标)+ `src/components/panel/FlowPanel.tsx`/`src/components/HomeView.tsx`/`src/App.tsx`(透传)+ `src/utils/delimiterMode.ts`(设置 ⇄ 界面值换算)+ `src/hooks/MainMenuHooks.ts`(`resolveRunDelimiter`,保证执行与预览同源)。设计:`docs/design/018_open-file-delimiter-detection.md` |
+| 修改分隔符自动检测总开关 / 默认分隔符(设置页 ⇄ 输入节点同步) | `src-tauri/src/config.rs`(`auto_detect_delimiter` + `get/set_auto_detect_delimiter`、`get/set_default_delimiter`)+ `src/hooks/useAppSettings.ts` + `src/components/setting/SettingsTabContent.tsx`(分隔符区块)+ `src/components/ui/DelimiterModeSelect.tsx` + `src/App.tsx`(`delimiterMode`/`onDelimiterModeChange`,含即时落库)。设计:`docs/design/018_open-file-delimiter-detection.md` §3.9 |
 | 修改 CSV 对比功能 | `src/components/dialog/CsvDiffDialog.tsx` + `src-tauri/src/csv.rs`(`diff_csv_files`) |
 | 修改 CSV 编码转换 | `src/components/dialog/CsvEncodingDialog.tsx` + `src-tauri/src/csv.rs`(`convert_csv_encoding`) |
 | 修改拆分好/坏行 | `src/components/dialog/SeparateCSVDialog.tsx` + `src-tauri/src/csv.rs`(`separate_csv`/`separate_stream`/`probe_csv_file`)+ `src/hooks/useCsvProbe.ts` + `src/utils/separateHistory.ts` + `src-tauri/src/storage.rs`(`reveal_paths`) |

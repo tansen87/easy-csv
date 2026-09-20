@@ -57,6 +57,10 @@ import { useExecutionHistory } from "@/hooks/useExecutionHistory";
 import { useKeyboardShortcuts } from "@/hooks/KeyboardShortcuts";
 import { formatDateTime } from "@/utils/format";
 import {
+  delimiterModeFromSettings,
+  settingsPatchForMode,
+} from "@/utils/delimiterMode";
+import {
   stripStepCommand,
   serializeTabSnapshot,
   deserializeTabSnapshot,
@@ -67,6 +71,7 @@ import {
   PipelineEdge,
   PipelineVariable,
   PipelineTemplate,
+  DelimiterMode,
 } from "@/types/xan";
 import { AIConfig, DEFAULT_AI_CONFIG } from "@/services/ai/types";
 import { loadAIConfig, saveAIConfig, setAIConfig } from "@/services/ai/index";
@@ -105,7 +110,46 @@ function AppContent() {
   const settings = useAppSettings(showToastRef);
 
   // Tabs + CSV loading
-  const tabsHook = useTabs(settings.defaultDelimiter, addLog);
+  const tabsHook = useTabs(
+    settings.defaultDelimiter,
+    addLog,
+    settings.autoDetectDelimiter,
+  );
+
+  /**
+   * The app-wide delimiter mode, edited from two places that are mirrors of each
+   * other: the settings page and the input node's badge (design 018 §3.9).
+   */
+  const delimiterMode: DelimiterMode = delimiterModeFromSettings(
+    settings.autoDetectDelimiter,
+    settings.defaultDelimiter,
+  );
+
+  const onDelimiterModeChange = useCallback(
+    (mode: DelimiterMode) => {
+      const patch = settingsPatchForMode(mode);
+      if (patch.delimiter !== undefined) {
+        settings.setDefaultDelimiter(patch.delimiter);
+      }
+      settings.setAutoDetectDelimiter(patch.autoDetectDelimiter);
+      // Persist right away: the change also reloads the open tabs, so it must
+      // survive a restart even when it was made outside the settings dialog.
+      invoke("set_auto_detect_delimiter", {
+        enabled: patch.autoDetectDelimiter,
+      }).catch((error) =>
+        showToastRef.current(
+          `Failed to save delimiter setting: ${error}`,
+          "error",
+        ),
+      );
+      if (patch.delimiter !== undefined) {
+        invoke("set_default_delimiter", { delimiter: patch.delimiter }).catch(
+          () => {},
+        );
+      }
+    },
+    [settings.setDefaultDelimiter, settings.setAutoDetectDelimiter],
+  );
 
   // Pipeline state (undo/redo + updateTabPipeline)
   const pipeline = usePipelineState(
@@ -1059,6 +1103,9 @@ function AppContent() {
       await invoke("set_default_delimiter", {
         delimiter: settings.defaultDelimiter,
       });
+      await invoke("set_auto_detect_delimiter", {
+        enabled: settings.autoDetectDelimiter,
+      });
       await invoke("set_no_headers", { noHeaders: settings.noHeaders });
       await invoke("set_system_notification", {
         show: settings.systemNotification,
@@ -1532,6 +1579,13 @@ function AppContent() {
                 onSavePipeline={handleSavePipelineAndMarkSaved}
                 onOpenCommandPalette={onOpenCommandPalette}
                 onSaveIntermediate={handleSaveIntermediateAsInput}
+                delimiter={tabsHook.getCurrentTab()?.defaultDelimiter}
+                delimiterMode={delimiterMode}
+                delimiterSource={tabsHook.getCurrentTab()?.delimiterSource}
+                delimiterConfidence={
+                  tabsHook.getCurrentTab()?.delimiterConfidence
+                }
+                onDelimiterChange={onDelimiterModeChange}
               />
             </div>
           </main>
@@ -1606,8 +1660,8 @@ function AppContent() {
           <SettingsDialog
             isOpen={ui.showSettingsDialog}
             onClose={() => ui.setShowSettingsDialog(false)}
-            defaultDelimiter={settings.defaultDelimiter}
-            onDefaultDelimiterChange={settings.setDefaultDelimiter}
+            delimiterMode={delimiterMode}
+            onDelimiterModeChange={onDelimiterModeChange}
             noHeaders={settings.noHeaders}
             onNoHeadersChange={settings.setNoHeaders}
             systemNotification={settings.systemNotification}

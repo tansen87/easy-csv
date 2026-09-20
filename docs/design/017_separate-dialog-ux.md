@@ -279,6 +279,8 @@ score = 60 * [header_fields > 1]                  // 表头是最可靠的信号
 
 本次不做的原因:它要同时改设置页语义、`useTabs`、`DataProfilePanel`(`App.tsx:1732` 传的就是 `settings.defaultDelimiter`)、`CsvDiffDialog` 等多处,并需要定义「用户显式设过分隔符」的优先级规则;而诉求 3 的痛点(**拆分对话框被迫去设置页改**)在 §3.4.3 已经解决。建议作为独立文档(018)推进。
 
+> **后续(2026-09-20)**:已按此建议落地 → `docs/design/018_open-file-delimiter-detection.md`(已实现)。打开文件走 `read_csv_file` 自动检测 + 标签页 `delimiterMode`(auto/锁定)+ 输入节点分隔符徽标,执行侧改用标签页解析值;`DataProfilePanel` / `CsvDiffDialog` / `CsvEncodingDialog` 仍用全局默认(列为 018 §6 的已知限制)。
+
 #### 3.4.5 风险与取舍
 
 | 风险 | 缓解 |

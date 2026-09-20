@@ -13,6 +13,9 @@ use sha2::{Digest, Sha256};
 pub struct AppConfig {
   pub default_delimiter: Option<String>,
   pub no_headers: Option<bool>,
+  /// Master switch for opening files: `true` (default) auto-detects the
+  /// delimiter, `false` reads every file with `default_delimiter` as-is.
+  pub auto_detect_delimiter: Option<bool>,
   pub show_execution_notification: Option<bool>,
   pub minimize_to_tray: Option<bool>,
   pub double_click_fit_view: Option<bool>,
@@ -23,6 +26,7 @@ impl Default for AppConfig {
     Self {
       default_delimiter: None,
       no_headers: None,
+      auto_detect_delimiter: Some(true),
       show_execution_notification: None,
       minimize_to_tray: None,
       double_click_fit_view: Some(true),
@@ -225,6 +229,8 @@ pub fn load_config() -> Result<AppConfig, String> {
 
   let default_delimiter = get_config_string("default_delimiter");
   let no_headers = get_config_string("no_headers").and_then(|v| v.parse().ok());
+  let auto_detect_delimiter =
+    get_config_string("auto_detect_delimiter").and_then(|v| v.parse().ok());
   let show_execution_notification =
     get_config_string("show_execution_notification").and_then(|v| v.parse().ok());
   let minimize_to_tray = get_config_string("minimize_to_tray").and_then(|v| v.parse().ok());
@@ -234,6 +240,7 @@ pub fn load_config() -> Result<AppConfig, String> {
   Ok(AppConfig {
     default_delimiter: default_delimiter.or(default.default_delimiter),
     no_headers: no_headers.or(default.no_headers),
+    auto_detect_delimiter: auto_detect_delimiter.or(default.auto_detect_delimiter),
     show_execution_notification: show_execution_notification
       .or(default.show_execution_notification),
     minimize_to_tray: minimize_to_tray.or(default.minimize_to_tray),
@@ -247,6 +254,9 @@ pub fn save_config(config: &AppConfig) -> Result<(), String> {
   }
   if let Some(v) = config.no_headers {
     set_config_string("no_headers", &v.to_string())?;
+  }
+  if let Some(v) = config.auto_detect_delimiter {
+    set_config_string("auto_detect_delimiter", &v.to_string())?;
   }
   if let Some(v) = config.show_execution_notification {
     set_config_string("show_execution_notification", &v.to_string())?;
@@ -399,6 +409,18 @@ pub async fn get_no_headers() -> Option<bool> {
 pub async fn set_no_headers(no_headers: bool) -> Result<(), String> {
   let mut config = load_config()?;
   config.no_headers = Some(no_headers);
+  save_config(&config)
+}
+
+#[tauri::command]
+pub async fn get_auto_detect_delimiter() -> Option<bool> {
+  load_config().unwrap_or_default().auto_detect_delimiter
+}
+
+#[tauri::command]
+pub async fn set_auto_detect_delimiter(enabled: bool) -> Result<(), String> {
+  let mut config = load_config()?;
+  config.auto_detect_delimiter = Some(enabled);
   save_config(&config)
 }
 

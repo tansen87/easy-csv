@@ -1,4 +1,6 @@
 import {
+  DelimiterMode,
+  DelimiterSource,
   PipelineEdge,
   PipelineStep,
   PipelineTab,
@@ -40,6 +42,9 @@ export interface TabSnapshot {
   updated: string;
   inputFile?: string;
   defaultDelimiter?: string;
+  delimiterSource?: DelimiterSource;
+  delimiterConfidence?: "high" | "low" | "none";
+  delimiterMode?: DelimiterMode;
   headers?: string[];
   data?: string[][];
   inputPosition?: { x: number; y: number };
@@ -59,6 +64,9 @@ export function serializeTabSnapshot(tab: PipelineTab): TabSnapshot {
     updated: tab.updated,
     inputFile: tab.inputFile,
     defaultDelimiter: tab.defaultDelimiter,
+    delimiterSource: tab.delimiterSource,
+    delimiterConfidence: tab.delimiterConfidence,
+    delimiterMode: tab.delimiterMode,
     headers: tab.headers,
     data: tab.data,
     inputPosition: tab.inputPosition,
@@ -86,6 +94,13 @@ export function deserializeTabSnapshot(snap: any): PipelineTab | null {
     headers: snap.headers,
     inputFile: snap.inputFile,
     defaultDelimiter: snap.defaultDelimiter,
+    // Sessions saved before delimiter detection existed have no `delimiterMode`:
+    // keep their stored delimiter and lock it, which is the old behaviour.
+    delimiterSource: snap.delimiterSource,
+    delimiterConfidence: snap.delimiterConfidence,
+    delimiterMode:
+      snap.delimiterMode ??
+      (snap.defaultDelimiter ? (snap.defaultDelimiter as string) : undefined),
     edges: snap.edges || [],
     inputPosition: snap.inputPosition,
     isSettings: snap.isSettings,

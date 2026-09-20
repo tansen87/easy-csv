@@ -344,6 +344,8 @@ export interface Translations {
   detectConfidenceHigh: string;
   detectConfidenceLow: string;
   detectFailed: string;
+  delimiterForThisFile: string;
+  delimiterModeLocked: string;
   detectQuotingHint: string;
   setAsDefaultDelimiter: string;
   firstRowColumns: string;
@@ -941,6 +943,8 @@ export const translations: Record<EffectiveLanguage, Translations> = {
     detectConfidenceHigh: "high confidence",
     detectConfidenceLow: "low confidence, please verify",
     detectFailed: "No delimiter detected; using the default",
+    delimiterForThisFile: "Delimiter for this file",
+    delimiterModeLocked: "Locked",
     detectQuotingHint:
       "Only detected without quote parsing — consider turning quoting off",
     setAsDefaultDelimiter: "Set as default",
@@ -1528,6 +1532,8 @@ export const translations: Record<EffectiveLanguage, Translations> = {
     detectConfidenceHigh: "置信度高",
     detectConfidenceLow: "置信度低,请复核",
     detectFailed: "未能识别分隔符,已使用默认值",
+    delimiterForThisFile: "本文件分隔符",
+    delimiterModeLocked: "已锁定",
     detectQuotingHint: "仅在未启用引号解析时识别成功,建议关闭「启用引号」",
     setAsDefaultDelimiter: "设为默认",
     firstRowColumns: "第一行",

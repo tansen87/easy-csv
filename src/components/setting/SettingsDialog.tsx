@@ -4,12 +4,14 @@ import { SettingsTabContent } from "@/components/setting/SettingsTabContent";
 import { useLanguage } from "@/i18n";
 import { useTheme } from "@/components/setting/ThemeProvider";
 import { AIConfig } from "@/services/ai/types";
+import type { DelimiterMode } from "@/types/xan";
 
 interface SettingsDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  defaultDelimiter: string;
-  onDefaultDelimiterChange: (delimiter: string) => void;
+  /** `"auto"` = detect on open; a concrete delimiter turns detection off. */
+  delimiterMode: DelimiterMode;
+  onDelimiterModeChange: (mode: DelimiterMode) => void;
   noHeaders: boolean;
   onNoHeadersChange: (value: boolean) => void;
   systemNotification: boolean;
@@ -26,8 +28,8 @@ interface SettingsDialogProps {
 export function SettingsDialog({
   isOpen,
   onClose,
-  defaultDelimiter,
-  onDefaultDelimiterChange,
+  delimiterMode,
+  onDelimiterModeChange,
   noHeaders,
   onNoHeadersChange,
   systemNotification,
@@ -159,8 +161,8 @@ export function SettingsDialog({
             activeTab={activeTab}
             theme={theme}
             onThemeChange={setTheme}
-            defaultDelimiter={defaultDelimiter}
-            onDefaultDelimiterChange={onDefaultDelimiterChange}
+            delimiterMode={delimiterMode}
+            onDelimiterModeChange={onDelimiterModeChange}
             noHeaders={noHeaders}
             onNoHeadersChange={onNoHeadersChange}
             systemNotification={systemNotification}

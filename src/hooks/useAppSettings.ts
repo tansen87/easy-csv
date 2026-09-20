@@ -7,6 +7,7 @@ export function useAppSettings(
   >,
 ) {
   const [defaultDelimiter, setDefaultDelimiter] = useState(",");
+  const [autoDetectDelimiter, setAutoDetectDelimiter] = useState(true);
   const [noHeaders, setNoHeaders] = useState(false);
   const [systemNotification, setSystemNotification] = useState(true);
   const [minimizeToTray, setMinimizeToTray] = useState(true);
@@ -19,6 +20,18 @@ export function useAppSettings(
     } catch (error) {
       showToastRef.current(
         `Failed to load default delimiter: ${error}`,
+        "error",
+      );
+    }
+  }, [showToastRef]);
+
+  const loadAutoDetectDelimiter = useCallback(async () => {
+    try {
+      const saved = await invoke<boolean | null>("get_auto_detect_delimiter");
+      if (saved !== null) setAutoDetectDelimiter(saved);
+    } catch (error) {
+      showToastRef.current(
+        `Failed to load auto-detect delimiter setting: ${error}`,
         "error",
       );
     }
@@ -75,6 +88,7 @@ export function useAppSettings(
   const loadAll = useCallback(async () => {
     await Promise.all([
       loadDefaultDelimiter(),
+      loadAutoDetectDelimiter(),
       loadNoHeaders(),
       loadSystemNotification(),
       loadMinimizeToTray(),
@@ -82,6 +96,7 @@ export function useAppSettings(
     ]);
   }, [
     loadDefaultDelimiter,
+    loadAutoDetectDelimiter,
     loadNoHeaders,
     loadSystemNotification,
     loadMinimizeToTray,
@@ -91,6 +106,8 @@ export function useAppSettings(
   return {
     defaultDelimiter,
     setDefaultDelimiter,
+    autoDetectDelimiter,
+    setAutoDetectDelimiter,
     noHeaders,
     setNoHeaders,
     systemNotification,

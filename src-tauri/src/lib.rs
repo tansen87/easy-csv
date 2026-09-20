@@ -23,6 +23,8 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     config::set_default_delimiter,
     config::get_no_headers,
     config::set_no_headers,
+    config::get_auto_detect_delimiter,
+    config::set_auto_detect_delimiter,
     config::get_system_notification,
     config::set_system_notification,
     config::get_minimize_to_tray,

@@ -1,10 +1,13 @@
 import React, { useCallback, useState, useRef, useEffect } from "react";
 import { Handle, Position } from "reactflow";
-import { Table, Check, X } from "lucide-react";
+import { Table, Check, X, Lock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
+import { DelimiterModeSelect } from "@/components/ui/DelimiterModeSelect";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/i18n";
+import { DelimiterMode, DelimiterSource } from "@/types/xan";
+import { delimiterLabel } from "@/utils/separateHistory";
 
 export interface TableNodeData {
   headers: string[];
@@ -14,6 +17,12 @@ export interface TableNodeData {
   onRename: (col: number, newName: string) => void;
   onSave: () => void;
   onDelete?: () => void;
+  /** Delimiter the file was read with, and how it was resolved (design 018). */
+  delimiter?: string;
+  delimiterMode?: DelimiterMode;
+  delimiterSource?: DelimiterSource;
+  delimiterConfidence?: "high" | "low" | "none";
+  onDelimiterChange?: (mode: DelimiterMode) => void;
 }
 
 export function TableNode({
@@ -23,6 +32,7 @@ export function TableNode({
   data: TableNodeData;
   selected: boolean;
 }) {
+  const { t } = useLanguage();
   const {
     headers,
     rows,
@@ -31,11 +41,27 @@ export function TableNode({
     onRename,
     onSave,
     onDelete,
+    delimiter,
+    delimiterMode,
+    delimiterSource,
+    delimiterConfidence,
+    onDelimiterChange,
   } = data;
   const [editingCol, setEditingCol] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
   const [showSaveButton, setShowSaveButton] = useState(false);
+  const [delimiterOpen, setDelimiterOpen] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Delimiter badge: a compact readout that opens the shared delimiter control
+  // on click (design 018 §3.7/§3.9). The control edits the app-wide mode, so
+  // the settings page shows the very same value.
+  const delimiterLocked = !!delimiterMode && delimiterMode !== "auto";
+  const delimiterDotClass = delimiterLocked
+    ? "bg-muted-foreground"
+    : delimiterSource === "fallback" || delimiterConfidence === "low"
+      ? "bg-amber-500"
+      : "bg-green-500";
 
   const duplicateCounts = headers.reduce<Record<string, number>>((acc, h) => {
     acc[h] = (acc[h] || 0) + 1;
@@ -123,8 +149,6 @@ export function TableNode({
     }
   };
 
-  const { t } = useLanguage();
-
   return (
     <Card
       className={`w-[500px] overflow-hidden transition-all duration-200 ${
@@ -208,6 +232,38 @@ export function TableNode({
             placeholder={t.headerRename}
           />
         </div>
+        {delimiter !== undefined && delimiter !== "" && (
+          <div className="nodrag nowheel shrink-0">
+            {delimiterOpen ? (
+              <DelimiterModeSelect
+                value={delimiterMode || "auto"}
+                onChange={(value) => {
+                  setDelimiterOpen(false);
+                  onDelimiterChange?.(value);
+                }}
+                placeholder={t.csvDelimiter}
+                width={150}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setDelimiterOpen(true)}
+                aria-label={t.delimiterForThisFile}
+                className="flex items-center gap-1 h-6 px-1.5 rounded-md border bg-background hover:bg-accent transition-colors"
+              >
+                {delimiterLocked && (
+                  <Lock className="h-3 w-3 text-muted-foreground" />
+                )}
+                <span className="font-mono text-xs">
+                  {delimiterLabel(delimiter)}
+                </span>
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${delimiterDotClass}`}
+                />
+              </button>
+            )}
+          </div>
+        )}
         <span className="text-xs text-muted-foreground ml-auto">
           5 rows x {headers.length} cols
         </span>

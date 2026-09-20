@@ -9,10 +9,23 @@ use serde::{Deserialize, Serialize};
 
 use crate::xan::find_xan_executable;
 
+/// Result of reading a CSV file for preview.
+///
+/// `delimiter` / `delimiter_source` / `delimiter_confidence` describe the
+/// delimiter that was actually used, so the UI can show what was picked and the
+/// pipeline can run with the very same value ("what you see is what runs").
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CsvData {
   pub headers: Vec<String>,
   pub rows: Vec<Vec<String>>,
+  /// Delimiter the file was parsed with (single byte).
+  pub delimiter: String,
+  /// [`PROBE_SOURCE_DETECTED`], [`PROBE_SOURCE_FORCED`] or [`PROBE_SOURCE_FALLBACK`].
+  pub delimiter_source: String,
+  /// `"high"` | `"low"` | `"none"` (always `"high"` when forced).
+  pub delimiter_confidence: String,
+  /// Field count of the header row.
+  pub columns: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,19 +51,62 @@ pub struct CsvDiffResult {
   pub modified_count: usize,
 }
 
-#[tauri::command]
-pub async fn read_csv_file(
-  file_path: String,
-  delimiter: String,
+/// Resolve which delimiter a file should be read with, and how that choice was
+/// made. `delimiter = Some(_)` forces the value and skips detection entirely;
+/// otherwise the head of the file is sampled (64 KiB, see [`read_head_sample`])
+/// and scored by [`detect_delimiter_with_fallback`]. When detection is
+/// inconclusive the caller-supplied fallback (default `,`) is used.
+fn resolve_read_delimiter(
+  file_path: &str,
+  delimiter: Option<&str>,
+  fallback_delimiter: Option<&str>,
+) -> Result<(u8, &'static str, &'static str), String> {
+  let forced = delimiter
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+    .map(|s| s.as_bytes()[0]);
+  if let Some(d) = forced {
+    return Ok((d, PROBE_SOURCE_FORCED, "high"));
+  }
+
+  let fallback = fallback_delimiter
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+    .map(|s| s.as_bytes()[0])
+    .unwrap_or(b',');
+
+  let (sample, _truncated) = read_head_sample(file_path)?;
+  if sample.is_empty() {
+    // Nothing to detect from: let the reader below report the real problem.
+    return Ok((fallback, PROBE_SOURCE_FALLBACK, "none"));
+  }
+
+  let (best, _candidates, confidence, _quoting_used) =
+    detect_delimiter_with_fallback(&sample, true, 0);
+  match best {
+    Some(d) => Ok((d, PROBE_SOURCE_DETECTED, confidence)),
+    None => Ok((fallback, PROBE_SOURCE_FALLBACK, "none")),
+  }
+}
+
+/// Synchronous body of [`read_csv_file`], kept separate so the delimiter
+/// resolution logic can be unit tested without an async runtime.
+fn read_csv_sync(
+  file_path: &str,
+  delimiter: Option<&str>,
+  fallback_delimiter: Option<&str>,
   limit: Option<usize>,
 ) -> Result<CsvData, String> {
-  let file = File::open(&file_path).map_err(|e| format!("Failed to open file: {}", e))?;
+  let (delimiter, source, confidence) =
+    resolve_read_delimiter(file_path, delimiter, fallback_delimiter)?;
+
+  let file = File::open(file_path).map_err(|e| format!("Failed to open file: {}", e))?;
 
   let mut rdr = csv::ReaderBuilder::new()
-    .delimiter(delimiter.as_bytes()[0])
+    .delimiter(delimiter)
     .from_reader(BufReader::new(file));
 
-  let headers = rdr
+  let headers: Vec<String> = rdr
     .headers()
     .map_err(|e| format!("Failed to read headers: {}", e))?
     .iter()
@@ -67,7 +123,41 @@ pub async fn read_csv_file(
     rows.push(record.iter().map(|s| s.to_string()).collect());
   }
 
-  Ok(CsvData { headers, rows })
+  let columns = headers.len();
+  Ok(CsvData {
+    headers,
+    rows,
+    delimiter: (delimiter as char).to_string(),
+    delimiter_source: source.to_string(),
+    delimiter_confidence: confidence.to_string(),
+    columns,
+  })
+}
+
+/// Read a CSV file for preview, resolving the delimiter on the way.
+///
+/// `delimiter = None` (or an empty string) turns auto-detection on: only the
+/// first 64 KiB are sampled, so this stays fast on huge files. When detection is
+/// inconclusive the delimiter falls back to `fallback_delimiter` (default `,`)
+/// and `delimiter_confidence` is `"none"`. The resolved delimiter is returned so
+/// the caller can display it and run the pipeline with the same value.
+#[tauri::command]
+pub async fn read_csv_file(
+  file_path: String,
+  delimiter: Option<String>,
+  fallback_delimiter: Option<String>,
+  limit: Option<usize>,
+) -> Result<CsvData, String> {
+  tokio::task::spawn_blocking(move || {
+    read_csv_sync(
+      &file_path,
+      delimiter.as_deref(),
+      fallback_delimiter.as_deref(),
+      limit,
+    )
+  })
+  .await
+  .map_err(|e| format!("Task join error: {e}"))?
 }
 
 /// Interner for cell strings: each unique string maps to a stable u32 id and
@@ -2512,5 +2602,130 @@ mod tests {
     assert_eq!(probe.sampled_records, PROBE_SAMPLE_RECORDS);
 
     let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn read_csv_auto_detects_the_delimiter() {
+    let path = temp_csv("read_auto_semicolon", "a;b;c\n1;2;3\n4;5;6\n");
+    let data = read_csv_sync(path.to_str().unwrap(), None, None, None).unwrap();
+
+    assert_eq!(data.delimiter, ";");
+    assert_eq!(data.delimiter_source, PROBE_SOURCE_DETECTED);
+    assert_eq!(data.delimiter_confidence, "high");
+    assert_eq!(data.columns, 3);
+    assert_eq!(data.headers, vec!["a", "b", "c"]);
+    assert_eq!(data.rows.len(), 2);
+    assert_eq!(data.rows[0], vec!["1", "2", "3"]);
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn read_csv_forced_delimiter_skips_detection() {
+    // Comma separated content read with a forced `;`: detection must not
+    // override the caller, even though the sample clearly says `,`.
+    let path = temp_csv("read_forced", "a,b\n1,2\n");
+    let data = read_csv_sync(path.to_str().unwrap(), Some(";"), None, None).unwrap();
+
+    assert_eq!(data.delimiter_source, PROBE_SOURCE_FORCED);
+    assert_eq!(data.delimiter_confidence, "high");
+    assert_eq!(data.delimiter, ";");
+    assert_eq!(data.columns, 1);
+    assert_eq!(data.headers, vec!["a,b"]);
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn read_csv_empty_delimiter_falls_back_to_detection() {
+    // Regression: an empty delimiter used to index `as_bytes()[0]` and panic.
+    let path = temp_csv("read_empty_delim", "a;b\n1;2\n");
+    let data = read_csv_sync(path.to_str().unwrap(), Some(""), Some(","), None).unwrap();
+
+    assert_eq!(data.delimiter, ";");
+    assert_eq!(data.delimiter_source, PROBE_SOURCE_DETECTED);
+    assert_eq!(data.columns, 2);
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn read_csv_falls_back_when_detection_is_inconclusive() {
+    let path = temp_csv("read_fallback", "name\nAlice\nBob\n");
+
+    // Explicit fallback wins over the built-in `,`.
+    let data = read_csv_sync(path.to_str().unwrap(), None, Some(";"), None).unwrap();
+    assert_eq!(data.delimiter_source, PROBE_SOURCE_FALLBACK);
+    assert_eq!(data.delimiter_confidence, "none");
+    assert_eq!(data.delimiter, ";");
+    assert_eq!(data.columns, 1);
+
+    // No fallback given → comma.
+    let data = read_csv_sync(path.to_str().unwrap(), None, None, None).unwrap();
+    assert_eq!(data.delimiter, ",");
+    assert_eq!(data.delimiter_source, PROBE_SOURCE_FALLBACK);
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn read_csv_delimiter_matches_probe_csv_file() {
+    // Both entry points must resolve the same file to the same delimiter, or
+    // the split dialog and the preview table would disagree.
+    for (tag, contents, expected) in [
+      ("same_comma", "a,b\n1,2\n", ","),
+      ("same_semicolon", "a;b\n1;2\n", ";"),
+      ("same_tab", "a\tb\n1\t2\n", "\t"),
+      ("same_single", "name\nAlice\n", ","),
+    ] {
+      let path = temp_csv(tag, contents);
+      let data = read_csv_sync(path.to_str().unwrap(), None, None, None).unwrap();
+      let probe = probe_csv_sync(path.to_str().unwrap(), None, None, 0, true, None).unwrap();
+
+      assert_eq!(data.delimiter, expected, "{tag}");
+      assert_eq!(probe.delimiter, data.delimiter, "{tag}");
+      assert_eq!(probe.columns, data.columns, "{tag}");
+
+      let _ = std::fs::remove_file(&path);
+    }
+  }
+
+  #[test]
+  fn read_csv_rejects_ragged_rows() {
+    // Known limitation (design 018 §6): the preview reader is rigid, so a file
+    // whose rows do not match the header's field count fails to preview even
+    // though the delimiter was detected correctly. Locked in so a future change
+    // to `flexible(true)` is a deliberate one.
+    let path = temp_csv("read_ragged", "age,name,gender\n1,tom,man\n2\n2.1\n");
+    let err = read_csv_sync(path.to_str().unwrap(), None, None, None).unwrap_err();
+    assert!(err.contains("Failed to read row"), "{err}");
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn read_csv_honours_the_row_limit() {
+    let path = temp_csv("read_limit", "a,b\n1,2\n3,4\n5,6\n");
+
+    let head_only = read_csv_sync(path.to_str().unwrap(), None, None, Some(0)).unwrap();
+    assert_eq!(head_only.headers, vec!["a", "b"]);
+    assert!(head_only.rows.is_empty());
+
+    let limited = read_csv_sync(path.to_str().unwrap(), None, None, Some(2)).unwrap();
+    assert_eq!(limited.rows.len(), 2);
+
+    // Default limit is 51 rows.
+    let default_limited = read_csv_sync(path.to_str().unwrap(), None, None, None).unwrap();
+    assert_eq!(default_limited.rows.len(), 3);
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn read_csv_reports_a_missing_file() {
+    let missing = std::env::temp_dir().join("easy_csv_read_missing_file.csv");
+    let _ = std::fs::remove_file(&missing);
+    let err = read_csv_sync(missing.to_str().unwrap(), None, None, None).unwrap_err();
+    assert!(err.contains("Failed to open"), "{err}");
   }
 }
