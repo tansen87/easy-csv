@@ -1716,6 +1716,7 @@ function AppContent() {
             onClose={() => ui.setShowSeparateCsv(false)}
             initialInputFile={ui.separateCsvInitialInput}
             defaultDelimiter={settings.defaultDelimiter}
+            onDefaultDelimiterChange={settings.setDefaultDelimiter}
             onShowToast={showToast}
           />
 

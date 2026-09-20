@@ -75,12 +75,12 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | 文件 | 职责 |
 |------|------|
 | `main.rs` | 二进制入口,注册插件(opener/dialog/fs/shell/window_state/notification/http/prevent_default),系统托盘,窗口事件处理 |
-| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 50 个命令) |
+| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 56 个命令) |
 | `config.rs` | `AppConfig` 类型、SQLite 持久化(app_config/ai_config 表)、AES-256-GCM 加密存储 API Key、per-provider API Key 管理、自定义 AI provider 配置(provider=custom 时存 name/base_url/models)、配置相关命令 |
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
 | `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令、`set_pipeline_cancelled` 取消执行 |
 | `plugins.rs` | 外部 CLI 插件管理: `plugins` 表(plugins.db)持久化、`list_plugins`/`check_plugins` 命令、`command_executable` 按命令名解析可执行文件(插件命令走插件二进制,其余走 xan.exe)。`xan` 与 `pinyin` 默认注册进插件表,列表按 xan 置顶排序。插件二进制按平台编译期嵌入 `src-tauri/resources/plugins/<target>/`(`include_bytes!`)、首启自动解压到平台插件目录,Unix 下 `make_executable` 置 0o755。解压目录: Windows `<exe>/EasyCsv_resources/plugins/`,macOS `~/Library/Application Support/EasyCsv/resources/plugins/`,Linux `~/.local/share/EasyCsv/resources/plugins/`。解析顺序: 路径 → `plugins/` 目录(含 `.exe` 补全)→ `PATH` |
-| `csv.rs` | `CsvData` 类型、`read_csv_file`/`profile_csv`/`diff_csv_files`/`convert_csv_encoding`/`separate_csv` 命令 |
+| `csv.rs` | `CsvData` 类型、`read_csv_file`/`profile_csv`/`diff_csv_files`/`convert_csv_encoding`/`separate_csv`/`probe_csv_file` 命令 |
 | `storage.rs` | 历史记录、最近文件、数据概况缓存、版本/血缘存储、窗口标题、开发者工具命令 |
 | `ai.rs` | AI 对话代理: `call_ai` 命令,转发到 DeepSeek / Qwen / GLM |
 | `ai_memory.rs` | AI 记忆持久化(SQLite): 对话历史、反馈记录、纠正规则的 CRUD + 清除 |
@@ -132,6 +132,8 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `diff_csv_files` | 双文件对比(共享内存 Table + 字符串驻留 + Myers diff,`spawn_blocking` 防阻塞) |
 | `convert_csv_encoding` | 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1,64KB 分块流式转码) |
 | `separate_csv` | 将 CSV 拆分为 good/bad 两文件(共享 `flexible(true)` reader/writer 重新序列化,坏行不丢失;支持 expected_columns 覆盖 / skiprows / quoting / out_dir / streaming)。`streaming=true` 走 `separate_stream` + `separate_csv_to_files` 的 `BufReader`/`BufWriter` 单趟常量内存实现(超大文件),默认 false 为整文件读入内存 |
+| `CsvProbe` / `DelimiterCandidate` | 文件探测结果(第一行列数、表头预览、实际分隔符、`source`: detected/forced/fallback、`confidence`、各候选得分) |
+| `probe_csv_file` | 探测文件头部:只读 64 KiB,自动检测分隔符(`,` `;` `\t` `\|` `^`,表头权重 60 > 正文一致度 30)并返回第一行列数/表头预览;`delimiter=None` 检测、`Some` 强制;检测不出时用 `fallback_delimiter` 且 `confidence="none"` |
 
 #### storage.rs — 持久化存储
 
@@ -143,6 +145,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_lineage_data` / `load_lineage_data` | 数据血缘持久化 |
 | `save_execution_history` / `load_execution_history` / `clear_execution_history` | 执行历史持久化(SQLite `execution_history` 表,只存统计摘要,LRU 保留最近100条) |
 | `file_exists` | 文件存在性检查 |
+| `reveal_paths` | 在系统文件管理器中定位一个或多个路径(过滤已不存在的路径后交给 `tauri_plugin_opener::reveal_items_in_dir`) |
 | `set_window_title` | 设置窗口标题 |
 | `toggle_devtools` | 切换开发者工具 |
 
@@ -186,6 +189,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `diff_csv_files` | csv | 对比两个 CSV 文件(Myers diff,分页返回) |
 | `convert_csv_encoding` | csv | 转换 CSV 文件编码(64KB 流式转码) |
 | `separate_csv` | 将 CSV 拆分为 good/bad 两文件(共享 `flexible(true)` reader/writer 重新序列化,坏行不丢失;后续连续坏行会连同前一合法行一并进 bad;支持 expected_columns 覆盖 / skiprows / quoting / out_dir / streaming;核心为泛型 `separate_stream`,默认内存路径与 `streaming` 流式路径共用同一逻辑)。设计:`docs/design/016_separate-good-bad-rows.md` |
+| `probe_csv_file` | csv | 探测文件头部(64 KiB):自动检测分隔符 + 返回第一行列数与表头预览,供拆分对话框显示文件信息。设计:`docs/design/017_separate-dialog-ux.md` |
 | `load_profile_cache` / `save_profile_cache` | storage | 数据概况缓存(基于文件 mtime,LRU 淘汰,上限50条) |
 | `check_xan_installed` | xan | 检查 xan.exe 是否已解压 |
 | `get/set_default_delimiter` | config | 读写默认分隔符配置 |
@@ -210,6 +214,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_lineage_data` / `load_lineage_data` | storage | 数据血缘持久化 |
 | `save_execution_history` / `load_execution_history` / `clear_execution_history` | storage | 执行历史持久化(SQLite,只存摘要,LRU 100条) |
 | `file_exists` | storage | 检查文件是否存在 |
+| `reveal_paths` | storage | 在系统文件管理器中定位路径(拆分结果「打开路径」按钮用) |
 | `toggle_devtools` | storage | 切换开发者工具面板 |
 | `list_plugins` | plugins | 列出已注册的 CLI 插件 |
 | `check_plugins` | plugins | 检查插件可执行文件是否可用(解析 PATH + 读取 `--version`) |
@@ -360,6 +365,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | `BatchFilterDialog.tsx` | 批量筛选(按列值拆分为多个文件) | `batch-filter` |
 | `CsvDiffDialog.tsx` | CSV 双文件对比(Ctrl+D),对齐展示增删改行 + 相同行摘要,分页避免卡顿 | 直接调用 `diff_csv_files` |
 | `CsvEncodingDialog.tsx` | CSV 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1) | 直接调用 `convert_csv_encoding` |
+| `SeparateCSVDialog.tsx` | 拆分好/坏行:输入文件探测(第一行列数 + 表头预览)、分隔符自动检测/手选/一键设为默认、期望列数/跳过行/引号/流式、上次结果与完成时间(localStorage)+ 打开路径 | 直接调用 `probe_csv_file` / `separate_csv` / `reveal_paths` |
 | `UpdateDialog.tsx` | 应用更新通知 |  |
 | `ConfirmDialog.tsx` | 通用确认对话框(F5 刷新等场景) |  |
 
@@ -452,6 +458,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改 CSV 预览读取 | `src-tauri/src/csv.rs` 中的 `read_csv_file` 函数 |
 | 修改 CSV 对比功能 | `src/components/dialog/CsvDiffDialog.tsx` + `src-tauri/src/csv.rs`(`diff_csv_files`) |
 | 修改 CSV 编码转换 | `src/components/dialog/CsvEncodingDialog.tsx` + `src-tauri/src/csv.rs`(`convert_csv_encoding`) |
+| 修改拆分好/坏行 | `src/components/dialog/SeparateCSVDialog.tsx` + `src-tauri/src/csv.rs`(`separate_csv`/`separate_stream`/`probe_csv_file`)+ `src/hooks/useCsvProbe.ts` + `src/utils/separateHistory.ts` + `src-tauri/src/storage.rs`(`reveal_paths`) |
 | 修改会话保存/恢复 | `src/hooks/useSession.ts` + `src/utils/session.ts` + `src-tauri/src/session.rs` |
 | 修改命令面板 | `src/components/CommandPalette.tsx` + `src/hooks/useUIState.ts` + `src/hooks/KeyboardShortcuts.ts`(Ctrl+K) |
 | 修改管道可视化布局 | `src/components/panel/FlowPanel.tsx`(主逻辑) + `panel/utils/layout.ts`(布局) + `panel/nodes/`(节点样式) |

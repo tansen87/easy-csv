@@ -338,6 +338,25 @@ export interface Translations {
   skiprows: string;
   quoting: string;
   streaming: string;
+  delimiter: string;
+  delimiterAuto: string;
+  detectedDelimiter: string;
+  detectConfidenceHigh: string;
+  detectConfidenceLow: string;
+  detectFailed: string;
+  detectQuotingHint: string;
+  setAsDefaultDelimiter: string;
+  firstRowColumns: string;
+  headerPreview: string;
+  probeFailed: string;
+  probeLoading: string;
+  lastResult: string;
+  separateCompleteNow: string;
+  finishedAt: string;
+  elapsed: string;
+  openPath: string;
+  clearRecord: string;
+  lastResultNoOutput: string;
   separateStart: string;
   separating: string;
   separateNoResult: string;
@@ -914,8 +933,28 @@ export const translations: Record<EffectiveLanguage, Translations> = {
     expectedColumns: "Expected columns",
     expectedColumnsHint: "Blank (from header)",
     skiprows: "Skip first N rows",
-    quoting: "Enable quoting",
+    quoting: "Ignore quoting",
     streaming: "Streaming (large files)",
+    delimiter: "Delimiter",
+    delimiterAuto: "Auto-detect",
+    detectedDelimiter: "Detected",
+    detectConfidenceHigh: "high confidence",
+    detectConfidenceLow: "low confidence, please verify",
+    detectFailed: "No delimiter detected; using the default",
+    detectQuotingHint:
+      "Only detected without quote parsing — consider turning quoting off",
+    setAsDefaultDelimiter: "Set as default",
+    firstRowColumns: "First row",
+    headerPreview: "Header",
+    probeFailed: "Failed to read file info",
+    probeLoading: "Reading file info...",
+    lastResult: "Last run",
+    separateCompleteNow: "Completed",
+    finishedAt: "Finished at",
+    elapsed: "Took",
+    openPath: "Open path",
+    clearRecord: "Clear record",
+    lastResultNoOutput: "Output file no longer exists",
     separateStart: "Separate",
     separating: "Separating...",
     separateNoResult:
@@ -1481,8 +1520,27 @@ export const translations: Record<EffectiveLanguage, Translations> = {
     expectedColumns: "期望列数",
     expectedColumnsHint: "留空自动(= 表头列数)",
     skiprows: "跳过前 N 行",
-    quoting: "启用引号",
+    quoting: "忽略引号",
     streaming: "流式(大文件)",
+    delimiter: "分隔符",
+    delimiterAuto: "自动检测",
+    detectedDelimiter: "已识别为",
+    detectConfidenceHigh: "置信度高",
+    detectConfidenceLow: "置信度低,请复核",
+    detectFailed: "未能识别分隔符,已使用默认值",
+    detectQuotingHint: "仅在未启用引号解析时识别成功,建议关闭「启用引号」",
+    setAsDefaultDelimiter: "设为默认",
+    firstRowColumns: "第一行",
+    headerPreview: "表头",
+    probeFailed: "读取文件信息失败",
+    probeLoading: "读取文件信息中...",
+    lastResult: "上次拆分",
+    separateCompleteNow: "已完成",
+    finishedAt: "完成时间",
+    elapsed: "耗时",
+    openPath: "打开路径",
+    clearRecord: "清除记录",
+    lastResultNoOutput: "输出文件已不存在",
     separateStart: "开始拆分",
     separating: "拆分中...",
     separateNoResult:
