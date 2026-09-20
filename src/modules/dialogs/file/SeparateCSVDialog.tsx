@@ -68,6 +68,7 @@ export function SeparateCSVDialog({
   const [outputDir, setOutputDir] = useState("");
   const [delimiterMode, setDelimiterMode] = useState(AUTO_DELIMITER);
   const [quoting, setQuoting] = useState(true);
+  const [noHeaders, setNoHeaders] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [expectedColumns, setExpectedColumns] = useState("");
   const [skiprows, setSkiprows] = useState("0");
@@ -96,6 +97,7 @@ export function SeparateCSVDialog({
       setOutputDir("");
       setDelimiterMode(AUTO_DELIMITER);
       setQuoting(true);
+      setNoHeaders(false);
       setStreaming(false);
       setExpectedColumns("");
       setSkiprows("0");
@@ -264,6 +266,7 @@ export function SeparateCSVDialog({
         skiprows: skip,
         outDir: outputDir.trim() === "" ? null : outputDir.trim(),
         streaming,
+        noHeaders,
       });
       const stored: StoredSeparateResult = {
         goodPath: data.good_path,
@@ -276,6 +279,7 @@ export function SeparateCSVDialog({
         inputFile: inputFile.trim(),
         delimiter: effectiveDelimiter,
         quoting,
+        noHeaders,
         skiprows: skip,
         streaming,
         expectedColumnsInput: expectedColumns.trim(),
@@ -296,6 +300,7 @@ export function SeparateCSVDialog({
     outputDir,
     effectiveDelimiter,
     quoting,
+    noHeaders,
     streaming,
     expectedColumns,
     skiprows,
@@ -545,6 +550,20 @@ export function SeparateCSVDialog({
               />
               {t.quoting}
             </label>
+            <label
+              className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0"
+            >
+              <input
+                type="checkbox"
+                checked={noHeaders}
+                onChange={(e) => {
+                  clearFeedback();
+                  setNoHeaders(e.target.checked);
+                }}
+                className="accent-primary"
+              />
+              {t.noHeaders}
+            </label>
             <label className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
               <input
                 type="checkbox"
@@ -599,6 +618,7 @@ export function SeparateCSVDialog({
                     {lastResult.badRows} · {t.expectedColumns}:{" "}
                     {lastResult.expectedColumns} · {t.delimiter}:{" "}
                     {delimiterLabel(lastResult.delimiter)}
+                    {lastResult.noHeaders ? ` · ${t.noHeaders}` : ""}
                     {lastResult.streaming ? ` · ${t.streaming}` : ""}
                   </p>
                   <div className="space-y-1.5">

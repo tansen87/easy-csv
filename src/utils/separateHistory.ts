@@ -24,6 +24,8 @@ export interface StoredSeparateResult {
   inputFile: string;
   delimiter: string;
   quoting: boolean;
+  /** Optional so records stored before this option existed still load. */
+  noHeaders?: boolean;
   skiprows: number;
   streaming: boolean;
   expectedColumnsInput: string;

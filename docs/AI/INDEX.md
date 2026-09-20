@@ -139,7 +139,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `profile_csv` | 调用 `xan stats` 生成数据概况统计 |
 | `diff_csv_files` | 双文件对比(共享内存 Table + 字符串驻留 + Myers diff,`spawn_blocking` 防阻塞) |
 | `convert_csv_encoding` | 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1,64KB 分块流式转码) |
-| `separate_csv` | 将 CSV 拆分为 good/bad 两文件(共享 `flexible(true)` reader/writer 重新序列化,坏行不丢失;支持 expected_columns 覆盖 / skiprows / quoting / out_dir / streaming)。`streaming=true` 走 `separate_stream` + `separate_csv_to_files` 的 `BufReader`/`BufWriter` 单趟常量内存实现(超大文件),默认 false 为整文件读入内存 |
+| `separate_csv` | 将 CSV 拆分为 good/bad 两文件(共享 `flexible(true)` reader/writer 重新序列化,坏行不丢失;支持 expected_columns 覆盖 / skiprows / quoting / out_dir / streaming / no_headers)。`streaming=true` 走 `separate_stream` + `separate_csv_to_files` 的 `BufReader`/`BufWriter` 单趟常量内存实现(超大文件),默认 false 为整文件读入内存;`no_headers=true` 视为无表头文件:首行按普通数据行分类、两输出均不写表头行(默认 false,首行作为表头复制进两个输出) |
 | `CsvProbe` / `DelimiterCandidate` | 文件探测结果(第一行列数、表头预览、实际分隔符、`source`: detected/forced/fallback、`confidence`、各候选得分) |
 | `probe_csv_file` | 探测文件头部:只读 64 KiB,自动检测分隔符(`,` `;` `\t` `\|` `^`,表头权重 60 > 正文一致度 30)并返回第一行列数/表头预览;`delimiter=None` 检测、`Some` 强制;检测不出时用 `fallback_delimiter` 且 `confidence="none"` |
 
@@ -196,7 +196,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `profile_csv` | csv | 调用 `xan stats` 生成数据概况统计 |
 | `diff_csv_files` | csv | 对比两个 CSV 文件(Myers diff,分页返回) |
 | `convert_csv_encoding` | csv | 转换 CSV 文件编码(64KB 流式转码) |
-| `separate_csv` | 将 CSV 拆分为 good/bad 两文件(共享 `flexible(true)` reader/writer 重新序列化,坏行不丢失;后续连续坏行会连同前一合法行一并进 bad;支持 expected_columns 覆盖 / skiprows / quoting / out_dir / streaming;核心为泛型 `separate_stream`,默认内存路径与 `streaming` 流式路径共用同一逻辑)。设计:`docs/design/016_separate-good-bad-rows.md` |
+| `separate_csv` | 将 CSV 拆分为 good/bad 两文件(共享 `flexible(true)` reader/writer 重新序列化,坏行不丢失;后续连续坏行会连同前一合法行一并进 bad;支持 expected_columns 覆盖 / skiprows / quoting / out_dir / streaming / no_headers;核心为泛型 `separate_stream`,默认内存路径与 `streaming` 流式路径共用同一逻辑)。设计:`docs/design/016_separate-good-bad-rows.md` |
 | `probe_csv_file` | csv | 探测文件头部(64 KiB):自动检测分隔符 + 返回第一行列数与表头预览,供拆分对话框显示文件信息。设计:`docs/design/017_separate-dialog-ux.md` |
 | `load_profile_cache` / `save_profile_cache` | storage | 数据概况缓存(基于文件 mtime,LRU 淘汰,上限50条) |
 | `check_xan_installed` | xan | 检查 xan.exe 是否已解压 |
@@ -255,7 +255,6 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `HelpMarkdown.test.tsx` | 自定义 Markdown 渲染器 | ~3 |
 | `layout.test.ts` | 连线布局工具: `resolveHandles` 四方向选择、`handleAnchor`/`getEdgeEndpoints`、`pickStartHandle`、`buildConnectPreviewPath`(贝塞尔预览)、`transformBezierPath` | ~27 |
 | `useTabsDelimiter.test.ts` | 打开文件的分隔符解析(设计 018): 自动检测开关的开/关、模式变化后重读当前标签、导入分隔符一次性覆盖、非 CSV 不读 | 6 |
-| `TableNodeDelimiter.test.tsx` | 输入节点分隔符徽标(设计 018): 未读文件时不渲染、显示分隔符与置信度/锁定提示、展开共用控件并回调 | 5 |
 | `delimiterMode.test.ts` | 分隔符单一状态的换算(设计 018 §3.9): 设置 ⇄ 界面值、六种模式往返一致(锁住设置页与输入节点不漂移) | 6 |
 | `SettingsDelimiterControl.test.tsx` | 设置页分隔符控件(设计 018 §3.9): auto/锁定两种显示、6 个选项与顺序、选择回调、「恢复默认」复位为 auto | 6 |
 | `initialParams.test.ts` | 命令入口预填参数纯函数 `buildCommandInitialParams`(设计 019 §3.1): 各画布入口(筛选/排序/文本/数值/切割/补位/替换/日期)与旧对话框默认输出一致、无列时不猜 | 28 |
@@ -265,7 +264,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `panelDock.test.ts` | 面板停靠状态 |  |
 | `params.test.ts` | 参数构造工具 |  |
 | `separateHistory.test.ts` | 拆分结果 localStorage |  |
-| `SeparateCSVDialog.test.tsx` | 拆分好/坏行对话框(设计 016/017): 流式选项、探测、上次结果、打开路径 |  |
+| `SeparateCSVDialog.test.tsx` | 拆分好/坏行对话框(设计 016/017): 流式/无表头选项、探测、上次结果、打开路径 |  |
 
 > 全量以 `pnpm test` 为准(当前 23 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
 
@@ -419,7 +418,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 
 | 文件 | 职责 |
 |------|------|
-| `file/SeparateCSVDialog.tsx` | 拆分好/坏行: 输入探测、分隔符自动检测/手选/设为默认、期望列数/跳过行/引号/流式、上次结果(localStorage)+ 打开路径 |
+| `file/SeparateCSVDialog.tsx` | 拆分好/坏行: 输入探测、分隔符自动检测/手选/设为默认、期望列数/跳过行/引号/无表头/流式、上次结果(localStorage)+ 打开路径 |
 | `file/CsvDiffDialog.tsx` | CSV 双文件对比(Ctrl+D),分页避免卡顿 |
 | `file/CsvEncodingDialog.tsx` | CSV 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1) |
 | `file/PipelineTemplateDialog.tsx` | 管道模板库对话框(F4) |

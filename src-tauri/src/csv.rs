@@ -874,6 +874,10 @@ struct SeparateCounts {
 /// `n > 0`; otherwise the header's column count is used. `skiprows` records
 /// before the header are discarded.
 ///
+/// `no_headers` treats the first record as a data row: no header row is
+/// written to either output and the first record itself is classified
+/// normally (seeding the reach-back slot when it matches `expected`).
+///
 /// Classification uses reach-back grouping: a run of under-column rows collects
 /// the immediately preceding valid-looking row into the same bad group. For
 /// rows `X` (3 cols), `Y` (1 col), `Z` (1 col) all three go to bad, because a
@@ -890,6 +894,7 @@ fn separate_stream<R, GW, BW>(
   quoting: bool,
   expected_columns: Option<usize>,
   skiprows: usize,
+  no_headers: bool,
   good_out: GW,
   bad_out: BW,
 ) -> Result<SeparateCounts, String>
@@ -959,15 +964,26 @@ where
       .quote_style(quote_style)
       .from_writer(bad_out);
 
-    gw.write_byte_record(&good_hdr)
-      .map_err(|e| format!("Failed to write good header: {e}"))?;
-    bw.write_byte_record(&header_rec)
-      .map_err(|e| format!("Failed to write bad header: {e}"))?;
-
-    // Reach-back grouping, streamed. `pending_good` holds the last
-    // valid-looking row: it goes to good as soon as another valid row shows up,
-    // and to bad as soon as a malformed row shows up.
     let mut pending_good: Option<csv::ByteRecord> = None;
+
+    if no_headers {
+      // Headerless input: the first record is data, not a header. Neither
+      // output gets a header row; the first record joins the normal
+      // classification — seeding the reach-back slot when it matches
+      // `expected`, falling to bad when it does not.
+      if header_rec.len() == expected {
+        pending_good = Some(header_rec);
+      } else {
+        bw.write_byte_record(&header_rec)
+          .map_err(|e| format!("Failed to write bad row: {e}"))?;
+        bad_rows += 1;
+      }
+    } else {
+      gw.write_byte_record(&good_hdr)
+        .map_err(|e| format!("Failed to write good header: {e}"))?;
+      bw.write_byte_record(&header_rec)
+        .map_err(|e| format!("Failed to write bad header: {e}"))?;
+    }
 
     loop {
       match rdr.read_byte_record(&mut rec) {
@@ -1043,6 +1059,7 @@ fn separate_csv_inner(
   quoting: bool,
   expected_columns: Option<usize>,
   skiprows: usize,
+  no_headers: bool,
 ) -> Result<SeparateOutput, String> {
   let mut good = Vec::with_capacity(input.len() / 2);
   let mut bad = Vec::with_capacity(input.len() / 2);
@@ -1053,6 +1070,7 @@ fn separate_csv_inner(
     quoting,
     expected_columns,
     skiprows,
+    no_headers,
     &mut good,
     &mut bad,
   )?;
@@ -1108,6 +1126,7 @@ fn separate_csv_to_files(
   quoting: bool,
   expected_columns: Option<usize>,
   skiprows: usize,
+  no_headers: bool,
 ) -> Result<SeparateCounts, String> {
   /// Buffer size for both ends of the streaming path.
   const STREAM_BUF_SIZE: usize = 1 << 20; // 1 MiB
@@ -1123,6 +1142,7 @@ fn separate_csv_to_files(
     quoting,
     expected_columns,
     skiprows,
+    no_headers,
     BufWriter::with_capacity(STREAM_BUF_SIZE, good_file),
     BufWriter::with_capacity(STREAM_BUF_SIZE, bad_file),
   )
@@ -1136,6 +1156,11 @@ fn separate_csv_to_files(
 /// `streaming` (opt-in, default `false`) selects the constant-memory single-pass
 /// implementation for very large files; by default the whole input is read into
 /// memory, which is faster for small and medium files.
+///
+/// `no_headers` (opt-in, default `false`) treats the file as headerless: the
+/// first record is classified as a data row and no header line is emitted to
+/// either output. Without it the first row is copied into both files as the
+/// header row.
 #[tauri::command]
 pub async fn separate_csv(
   path: String,
@@ -1145,6 +1170,7 @@ pub async fn separate_csv(
   skiprows: usize,
   out_dir: Option<String>,
   streaming: Option<bool>,
+  no_headers: Option<bool>,
 ) -> Result<SeparateResult, String> {
   tokio::task::spawn_blocking(move || -> Result<SeparateResult, String> {
     let started = std::time::Instant::now();
@@ -1167,13 +1193,14 @@ pub async fn separate_csv(
         .map_err(|e| format!("Failed to create output directory: {e}"))?;
     }
 
+    let no_headers = no_headers.unwrap_or(false);
     let counts = if streaming.unwrap_or(false) {
       separate_csv_to_files(
-        &path, &good_path, &bad_path, delim, quoting, expected, skiprows,
+        &path, &good_path, &bad_path, delim, quoting, expected, skiprows, no_headers,
       )?
     } else {
       let input = std::fs::read(&path).map_err(|e| format!("Failed to read input file: {e}"))?;
-      let out = separate_csv_inner(&input, delim, quoting, expected, skiprows)?;
+      let out = separate_csv_inner(&input, delim, quoting, expected, skiprows, no_headers)?;
       std::fs::write(&good_path, &out.good)
         .map_err(|e| format!("Failed to write good file: {e}"))?;
       std::fs::write(&bad_path, &out.bad).map_err(|e| format!("Failed to write bad file: {e}"))?;
@@ -1998,7 +2025,7 @@ mod tests {
     assert!(resolve_encoding("bogus").is_err());
   }
 
-  // ── separate_csv_inner ──────────────────────────────────────────────
+  // separate_csv_inner
 
   #[test]
   fn separate_all_bad_rows_written_together() {
@@ -2006,7 +2033,7 @@ mod tests {
     // rows. `1,tom,man` is followed only by under-column rows, so the whole
     // run (including `1,tom,man`) lands in bad.
     let input = "age,name,gender\n1,tom,man\n2\n2.1\n2.3\n3,jerry\n4\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.expected_columns, 3);
     assert_eq!(out.good_rows, 0);
@@ -2023,7 +2050,7 @@ mod tests {
     // A quoted embedded newline is one record; since every record is clean,
     // everything stays good.
     let input = "a,b\n1,x\n2,\"hello\nworld\"\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.good_rows, 2);
     assert_eq!(out.bad_rows, 0);
@@ -2035,7 +2062,7 @@ mod tests {
     // Unterminated quote at EOF: the reader swallows to EOF as a single bad
     // record, which also pulls the preceding clean `1,2` into bad.
     let input = "a,b\n1,2\n\"oops\nx,ok\nlast,row\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.good_rows, 0);
     assert_eq!(out.bad_rows, 2);
@@ -2047,7 +2074,7 @@ mod tests {
     // csv treats blank lines as non-records; trailing empty lines are simply
     // skipped, not classified as bad.
     let input = "a,b\n1,2\n\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.good_rows, 1);
     assert_eq!(out.bad_rows, 0);
@@ -2056,7 +2083,7 @@ mod tests {
   #[test]
   fn separate_handles_crlf() {
     let input = "a,b\r\n1,2\r\n3,4\r\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.good_rows, 2);
     assert_eq!(out.bad_rows, 0);
@@ -2066,7 +2093,7 @@ mod tests {
 
   #[test]
   fn separate_empty_file_errors() {
-    let err = separate_csv_inner(b"", b',', true, None, 0).unwrap_err();
+    let err = separate_csv_inner(b"", b',', true, None, 0, false).unwrap_err();
     assert!(err.contains("empty") || err.contains("header"));
   }
 
@@ -2076,7 +2103,7 @@ mod tests {
     // (3 cols) is a malformed run that pulls `1,2` into bad too. The good
     // header is rebuilt to `expected` (truncate 3 → 2).
     let input = "a,b,c\n1,2\nx,y,z\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, Some(2), 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, Some(2), 0, false).unwrap();
 
     assert_eq!(out.expected_columns, 2);
     assert_eq!(out.good_rows, 0);
@@ -2088,7 +2115,7 @@ mod tests {
   #[test]
   fn separate_skiprows_discards_junk_before_header() {
     let input = "junk line\nage,name\n1,tom\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 1).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 1, false).unwrap();
 
     assert_eq!(out.expected_columns, 2);
     assert_eq!(out.good_rows, 1);
@@ -2098,7 +2125,7 @@ mod tests {
   #[test]
   fn separate_tsv_delimiter() {
     let input = "a\tb\n1\t2\n3\n";
-    let out = separate_csv_inner(input.as_bytes(), b'\t', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b'\t', true, None, 0, false).unwrap();
 
     // `3` is a malformed run that pulls the preceding `1,2` into bad too.
     assert_eq!(out.good_rows, 0);
@@ -2122,7 +2149,7 @@ mod tests {
     // group_bad=true and rows X(3), Y(1), Z(1): the clean-looking X is
     // immediately followed only by malformed rows, so X,Y,Z all go to bad.
     let input = "a,b,c\nx,1,2\ny\nz\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.good_rows, 0);
     assert_eq!(out.bad_rows, 3);
@@ -2135,7 +2162,7 @@ mod tests {
     // After the bad run, a new clean row that is followed by another clean row
     // stays good: X(3),Y(1),Z(1) -> bad; D(3),E(3) -> good.
     let input = "a,b,c\nx,1,2\ny\nz\nd,1,2\ne,3,4\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.good_rows, 2);
     assert_eq!(out.bad_rows, 3);
@@ -2148,7 +2175,7 @@ mod tests {
     // The user's example: `1,tom,man` is followed only by malformed rows, so
     // every data row goes to bad and only the header stays in good.
     let input = "age,name,gender\n1,tom,man\n2\n2.1\n2.3\n3,jerry\n4\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.good_rows, 0);
     assert_eq!(out.bad_rows, 6);
@@ -2164,7 +2191,7 @@ mod tests {
     // A fully clean file (every row matches, each followed by another match)
     // sends every row to good.
     let input = "a,b,c\n1,2,3\n4,5,6\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.good_rows, 2);
     assert_eq!(out.bad_rows, 0);
@@ -2175,7 +2202,8 @@ mod tests {
   #[test]
   fn separate_group_bad_single_bad_taints_preceding() {
     // A malformed `x,y` pulls the preceding clean `1,2,3` into bad too.
-    let out = separate_csv_inner("a,b,c\n1,2,3\nx,y\n".as_bytes(), b',', true, None, 0).unwrap();
+    let out =
+      separate_csv_inner("a,b,c\n1,2,3\nx,y\n".as_bytes(), b',', true, None, 0, false).unwrap();
     assert_eq!(out.good_rows, 0);
     assert_eq!(out.bad_rows, 2);
     assert_eq!(out.bad, "a,b,c\n1,2,3\nx,y\n".as_bytes());
@@ -2189,6 +2217,7 @@ mod tests {
     input: &[u8],
     expected: Option<usize>,
     skiprows: usize,
+    no_headers: bool,
   ) -> (Vec<u8>, Vec<u8>, usize, usize, usize) {
     let mut good: Vec<u8> = Vec::new();
     let mut bad: Vec<u8> = Vec::new();
@@ -2198,6 +2227,7 @@ mod tests {
       true,
       expected,
       skiprows,
+      no_headers,
       &mut good,
       &mut bad,
     )
@@ -2212,10 +2242,16 @@ mod tests {
   }
 
   /// The streaming path must be byte-for-byte equivalent to the in-memory path.
-  fn assert_stream_matches_inner(input: &str, expected: Option<usize>, skiprows: usize) {
-    let mem = separate_csv_inner(input.as_bytes(), b',', true, expected, skiprows).unwrap();
+  fn assert_stream_matches_inner(
+    input: &str,
+    expected: Option<usize>,
+    skiprows: usize,
+    no_headers: bool,
+  ) {
+    let mem =
+      separate_csv_inner(input.as_bytes(), b',', true, expected, skiprows, no_headers).unwrap();
     let (good, bad, good_rows, bad_rows, expected_columns) =
-      separate_via_stream(input.as_bytes(), expected, skiprows);
+      separate_via_stream(input.as_bytes(), expected, skiprows, no_headers);
     assert_eq!(good, mem.good, "good bytes differ for {input:?}");
     assert_eq!(bad, mem.bad, "bad bytes differ for {input:?}");
     assert_eq!(good_rows, mem.good_rows, "good_rows differ for {input:?}");
@@ -2251,10 +2287,10 @@ mod tests {
       "a,b,c\n",
     ];
     for input in cases {
-      assert_stream_matches_inner(input, None, 0);
+      assert_stream_matches_inner(input, None, 0, false);
     }
-    assert_stream_matches_inner("junk line\nage,name\n1,tom\n", None, 1);
-    assert_stream_matches_inner("a,b,c\n1,2\nx,y,z\n", Some(2), 0);
+    assert_stream_matches_inner("junk line\nage,name\n1,tom\n", None, 1, false);
+    assert_stream_matches_inner("a,b,c\n1,2\nx,y,z\n", Some(2), 0, false);
   }
 
   #[test]
@@ -2271,7 +2307,7 @@ mod tests {
         _ => input.push_str(&format!("{i},\"x\ny\",z\n")),
       }
     }
-    assert_stream_matches_inner(&input, None, 0);
+    assert_stream_matches_inner(&input, None, 0, false);
   }
 
   #[test]
@@ -2282,6 +2318,7 @@ mod tests {
       true,
       None,
       0,
+      false,
       Vec::<u8>::new(),
       Vec::<u8>::new(),
     )
@@ -2295,6 +2332,7 @@ mod tests {
       true,
       None,
       2,
+      false,
       Vec::<u8>::new(),
       Vec::<u8>::new(),
     )
@@ -2319,6 +2357,7 @@ mod tests {
       true,
       None,
       0,
+      false,
     )
     .unwrap();
 
@@ -2348,7 +2387,7 @@ mod tests {
       input.push_str(&format!("{i},\"x\ny\",z\n")); // good, embedded newline
       input.push_str(&format!("{i}\n")); // under-column
     }
-    let mem = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let mem = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     let dir = std::env::temp_dir();
     let tag = format!("easy_csv_sep_big_{}", std::process::id());
@@ -2365,6 +2404,7 @@ mod tests {
       true,
       None,
       0,
+      false,
     )
     .unwrap();
 
@@ -2379,7 +2419,60 @@ mod tests {
     }
   }
 
-  // ── detect_delimiter / probe_csv_file ───────────────────────────────
+  #[test]
+  fn separate_no_headers_treats_first_row_as_data() {
+    // No header row is emitted; the first record joins normal classification.
+    // `1,2` is followed only by the malformed `3`, so reach-back pulls it into
+    // bad as well; `4,5` survives as good.
+    let input = "1,2\n3\n4,5\n";
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, true).unwrap();
+
+    assert_eq!(out.expected_columns, 2);
+    assert_eq!(out.good_rows, 1);
+    assert_eq!(out.bad_rows, 2);
+    assert_eq!(out.good, "4,5\n".as_bytes());
+    assert_eq!(out.bad, "1,2\n3\n".as_bytes());
+  }
+
+  #[test]
+  fn separate_no_headers_clean_file_all_good() {
+    let input = "1,2,3\n4,5,6\n5,6,7\n";
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, true).unwrap();
+
+    assert_eq!(out.good_rows, 3);
+    assert_eq!(out.bad_rows, 0);
+    assert_eq!(out.good, "1,2,3\n4,5,6\n5,6,7\n".as_bytes());
+    assert_eq!(out.bad, "".as_bytes());
+  }
+
+  #[test]
+  fn separate_no_headers_with_expected_columns_override() {
+    // expected=2 while the first (data) row has 3 columns: it goes to bad
+    // directly; `1,2` stays good.
+    let input = "x,y,z\n1,2\n";
+    let out = separate_csv_inner(input.as_bytes(), b',', true, Some(2), 0, true).unwrap();
+
+    assert_eq!(out.expected_columns, 2);
+    assert_eq!(out.good_rows, 1);
+    assert_eq!(out.bad_rows, 1);
+    assert_eq!(out.good, "1,2\n".as_bytes());
+    assert_eq!(out.bad, "x,y,z\n".as_bytes());
+  }
+
+  #[test]
+  fn separate_no_headers_streaming_matches_in_memory() {
+    let input = "1,2\n3\n4,5\n";
+    let mem = separate_csv_inner(input.as_bytes(), b',', true, None, 0, true).unwrap();
+    let (good, bad, good_rows, bad_rows, expected_columns) =
+      separate_via_stream(input.as_bytes(), None, 0, true);
+    assert_eq!(good, mem.good);
+    assert_eq!(bad, mem.bad);
+    assert_eq!(good_rows, mem.good_rows);
+    assert_eq!(bad_rows, mem.bad_rows);
+    assert_eq!(expected_columns, mem.expected_columns);
+  }
+
+  // detect_delimiter / probe_csv_file
 
   fn detect(sample: &str, skiprows: usize) -> (Option<String>, String) {
     let (best, _, confidence, _) =
@@ -2529,7 +2622,7 @@ mod tests {
     assert!(probe.quoting_used);
 
     // Same source of truth as the split's automatic `expected`.
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
     assert_eq!(out.expected_columns, probe.columns);
 
     let _ = std::fs::remove_file(&path);

@@ -121,8 +121,8 @@ describe("SeparateCSVDialog streaming option", () => {
     ) as HTMLInputElement;
     expect(streamingBox).toBeInTheDocument();
     expect(streamingBox.checked).toBe(false);
-    // quoting is the first checkbox, streaming the second
-    expect(checkboxes[1]).toBe(streamingBox);
+    // quoting is the first checkbox, no-headers the second, streaming the third
+    expect(checkboxes[2]).toBe(streamingBox);
 
     fireEvent.click(screen.getByRole("button", { name: "Separate" }));
 
@@ -185,6 +185,83 @@ describe("SeparateCSVDialog streaming option", () => {
     );
 
     expect(streamingBox().checked).toBe(false);
+  });
+});
+
+describe("SeparateCSVDialog no-headers option", () => {
+  it("defaults to no-headers off and passes noHeaders: false", async () => {
+    renderDialog();
+
+    const noHeadersBox = screen.getByLabelText(
+      "No headers",
+    ) as HTMLInputElement;
+    expect(noHeadersBox).toBeInTheDocument();
+    expect(noHeadersBox.checked).toBe(false);
+    // sits between quoting (first) and streaming (third)
+    const checkboxes = screen.getAllByRole("checkbox");
+    expect(checkboxes[1]).toBe(noHeadersBox);
+
+    fireEvent.click(screen.getByRole("button", { name: "Separate" }));
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith(
+        "separate_csv",
+        expect.objectContaining({ noHeaders: false }),
+      );
+    });
+  });
+
+  it("sends noHeaders: true once the checkbox is ticked", async () => {
+    renderDialog();
+
+    const noHeadersBox = screen.getByLabelText(
+      "No headers",
+    ) as HTMLInputElement;
+    fireEvent.click(noHeadersBox);
+    expect(noHeadersBox.checked).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Separate" }));
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith(
+        "separate_csv",
+        expect.objectContaining({ noHeaders: true }),
+      );
+    });
+
+    const raw = window.localStorage.getItem(SEPARATE_HISTORY_KEY);
+    expect(JSON.parse(raw as string)).toMatchObject({ noHeaders: true });
+  });
+
+  it("resets no-headers to off when the dialog is reopened", async () => {
+    const { rerender } = renderDialog();
+
+    const noHeadersBox = () =>
+      screen.getByLabelText("No headers") as HTMLInputElement;
+
+    fireEvent.click(noHeadersBox());
+    expect(noHeadersBox().checked).toBe(true);
+
+    rerender(
+      <LanguageProvider>
+        <SeparateCSVDialog
+          isOpen={false}
+          onClose={vi.fn()}
+          initialInputFile="/tmp/input.csv"
+        />
+      </LanguageProvider>,
+    );
+    rerender(
+      <LanguageProvider>
+        <SeparateCSVDialog
+          isOpen
+          onClose={vi.fn()}
+          initialInputFile="/tmp/input.csv"
+        />
+      </LanguageProvider>,
+    );
+
+    expect(noHeadersBox().checked).toBe(false);
   });
 });
 

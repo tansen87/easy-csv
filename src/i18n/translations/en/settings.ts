@@ -8,7 +8,7 @@ export const enSettings = {
   dark: "Dark",
   system: "System",
   csvDelimiter: "Delimiter",
-  noHeaders: "No Headers",
+  noHeaders: "No headers",
   noHeadersDesc:
     "When enabled, the first row will not be interpreted as headers",
   systemNotification: "Notification",
