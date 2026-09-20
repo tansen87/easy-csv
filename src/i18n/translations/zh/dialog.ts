@@ -1,6 +1,6 @@
 import type { Translations } from "../types";
 
-/** SearchForm (009 S1 multi-pattern) · CsvDiff · CsvEncoding · SeparateGoodBad · BatchFilterDialog · FilterDialog · PivotDialog · DateTransformDialog · WindowDialog · TextTransformDialog · NumberTransformDialog · SplitDialog · PadDialog · ReplaceDialog · SortDialog */
+/** SearchForm · CsvDiff · CsvEncoding · SeparateGoodBad · BatchFilterDialog · FilterDialog · PivotDialog · DateTransformDialog · WindowDialog · TextTransformDialog · NumberTransformDialog · SplitDialog · PadDialog · ReplaceDialog · SortDialog */
 export const zhDialog = {
   searchMultiPatternPlaceholder: "添加搜索值,回车添加",
   searchPatternConflictWarning:
@@ -41,7 +41,7 @@ export const zhDialog = {
   separateGoodBad: "拆分好/坏行",
   outputDir: "输出目录",
   expectedColumns: "期望列数",
-  expectedColumnsHint: "留空自动(= 表头列数)",
+  expectedColumnsHint: "留空 (表头列数)",
   skiprows: "跳过前 N 行",
   quoting: "忽略引号",
   streaming: "流式(大文件)",

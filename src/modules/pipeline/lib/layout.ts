@@ -304,8 +304,10 @@ export function getLayoutedElements(
         onSave,
         onDelete: onTableDelete,
       },
+      // Keep selectable so React Flow's elevateNodesOnSelect lifts the node
+      // to the top layer while selected (matches result-table behavior);
+      // selection callbacks filter this id out, so panel logic is unaffected.
       selected: false,
-      selectable: false,
       dragHandle: ".table-node-header",
       width: 520,
       height: 260,

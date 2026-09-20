@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
 import { DelimiterModeSelect } from "@/components/ui/DelimiterModeSelect";
 import { ScrollArea } from "@/components/ui/ScrollArea";
-import { Tooltip } from "@/components/ui/Tooltip";
 import { useLanguage } from "@/i18n";
 import { DelimiterMode, DelimiterSource } from "@/types/xan";
 import { delimiterLabel } from "@/utils/separateHistory";
@@ -63,25 +62,6 @@ export function TableNode({
     : delimiterSource === "fallback" || delimiterConfidence === "low"
       ? "bg-amber-500"
       : "bg-green-500";
-
-  // The badge is icon+glyph only, so the full explanation lives in `title`:
-  // which delimiter was used, whether it was detected or forced, and how much
-  // the detection can be trusted.
-  const delimiterTitle = (() => {
-    const parts = [
-      `${t.delimiterForThisFile}: ${delimiterLabel(delimiter ?? "")}`,
-    ];
-    if (delimiterLocked) {
-      parts.push(t.delimiterModeLocked);
-    } else if (delimiterSource === "detected") {
-      parts.push(t.detectedDelimiter);
-      if (delimiterConfidence === "high") parts.push(t.detectConfidenceHigh);
-      else if (delimiterConfidence === "low") parts.push(t.detectConfidenceLow);
-    } else if (delimiterSource === "fallback") {
-      parts.push(t.detectFailed);
-    }
-    return parts.join(" · ");
-  })();
 
   const duplicateCounts = headers.reduce<Record<string, number>>((acc, h) => {
     acc[h] = (acc[h] || 0) + 1;
@@ -265,23 +245,21 @@ export function TableNode({
                 width={150}
               />
             ) : (
-              <Tooltip content={delimiterTitle}>
-                <button
-                  type="button"
-                  onClick={() => setDelimiterOpen(true)}
-                  className="flex items-center gap-1 h-6 px-1.5 rounded-md border bg-background hover:bg-accent transition-colors"
-                >
-                  {delimiterLocked && (
-                    <Lock className="h-3 w-3 text-muted-foreground" />
-                  )}
-                  <span className="font-mono text-xs">
-                    {delimiterLabel(delimiter)}
-                  </span>
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${delimiterDotClass}`}
-                  />
-                </button>
-              </Tooltip>
+              <button
+                type="button"
+                onClick={() => setDelimiterOpen(true)}
+                className="flex items-center gap-1 h-6 px-1.5 rounded-md border bg-background hover:bg-accent transition-colors"
+              >
+                {delimiterLocked && (
+                  <Lock className="h-3 w-3 text-muted-foreground" />
+                )}
+                <span className="font-mono text-xs">
+                  {delimiterLabel(delimiter)}
+                </span>
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${delimiterDotClass}`}
+                />
+              </button>
             )}
           </div>
         )}

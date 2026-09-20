@@ -98,7 +98,7 @@ export function ResultTableNode({
         className="opacity-0"
         style={{ opacity: 0, pointerEvents: "none" }}
       />
-      <div className="result-node-header px-2 py-1 bg-muted/50 flex items-center gap-2 select-none cursor-grab">
+      <div className="result-node-header px-2 py-1 bg-muted/50 flex items-center gap-2 select-none cursor-grab active:cursor-grabbing">
         <div className="w-6 h-6 bg-gradient-to-br from-indigo-500/25 to-indigo-500/10 rounded-md flex items-center justify-center">
           <Table className="h-3 w-3 text-indigo-600" />
         </div>
