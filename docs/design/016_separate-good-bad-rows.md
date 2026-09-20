@@ -2,6 +2,7 @@
 
 > 状态: 已实现
 > 日期: 2026-09-17
+> 更新: 2026-09-20 新增「流式(streaming)」大文件方案(见 §3.1b)+ 前端勾选项,原 §6 中「超大文件未处理」的限制已消除
 > 关联: `docs/AI/INDEX.md` → Rust 后端 `csv.rs` / 修改菜单(File 菜单子菜单)/ 修改国际化文本
 > 参考: `docs/sep.rs`(初版方案,存在缺陷,本文档按经验实测结果重写核心逻辑)
 > 验收数据:
@@ -96,6 +97,7 @@ pub async fn separate_csv(
   expected_columns: String, // "": 自动(等于表头列数);正整数: 覆盖
   skiprows: usize,          // 表头前要跳过的记录数
   out_dir: Option<String>,  // 输出目录,默认与输入同目录
+  streaming: Option<bool>,  // true: 走 §3.1b 大文件流式方案;默认 false
 ) -> Result<SeparateResult, String>
 ```
 
@@ -134,6 +136,33 @@ pub async fn separate_csv(
 `1,tom,man`(合法)后紧跟 `2/2.1/2.3/3,jerry/4` 全部非合法 → `1,tom,man` 被连同拉入 bad,**整份数据进 bad**,仅表头留在 good。
 更精密的例子: `X(3)、Y(1)、Z(1)、D(3)、E(3)` → `X、Y、Z` 一起进 bad,`D、E` 各自为 good。
 
+### 3.1b 大文件流式方案(streaming,可勾选)
+
+默认路径把整个输入读进内存(`std::fs::read`)再在内存里拼出两份输出,峰值内存约为输入文件大小的 2 倍,只适合中小文件。勾选 **流式(streaming)** 后改走**单趟、常量内存**实现:
+
+```rust
+fn separate_stream<R, GW, BW>(
+  input: R,                  // 读端: BufReader<File>(1 MiB)
+  delimiter: u8,
+  quoting: bool,
+  expected_columns: Option<usize>,
+  skiprows: usize,
+  good_out: GW,              // 写端 1: BufWriter<File>(1 MiB)
+  bad_out: BW,               // 写端 2: BufWriter<File>(1 MiB)
+) -> Result<SeparateCounts, String>
+where R: Read, GW: Write, BW: Write
+```
+
+要点:
+
+1. **一次遍历**:表头与数据行由**同一个** `csv::Reader` 顺序读出(默认路径为了取表头会开两个 reader、跳过两遍),输入只读一遍。
+2. **读到即写**:每条记录分类后立刻经 `flexible(true)` csv Writer 写入对应输出文件(而不是先攒进 `Vec<u8>` 再整体落盘),输入与两份输出都不驻留内存。
+3. **常量内存的关键**:§3.1a 的「坏行向前归并」原本需要把整段坏行累积到 `bad_buf` 再落盘,最坏情况(超长连续坏行)会吃掉整个文件大小的内存。流式实现利用「坏行一旦出现就无法被推翻」这一性质——首个非合法行到达时,待定合法行即确定进 bad,于是**两条记录都能立刻写盘**,不再需要 `bad_buf`;任一时刻内存里最多只有 1 条待定记录(pending),外加固定缓冲区。两种写法输出**逐字节一致**(见 §5 的等价性测试)。
+4. 分类语义、`expected_columns` 覆盖、`skiprows`、quoting、CRLF/LF 归一、空行跳过等行为与默认路径**完全相同**。
+5. 实现位于 `separate_csv_to_files`(打开 `File` + `BufReader`/`BufWriter`,1 MiB 缓冲),默认路径复用同一个 `separate_stream`(以 `Cursor<&[u8]>` 与 `&mut Vec<u8>` 作为读写端),两条路径共用同一套分类逻辑,避免行为漂移。
+
+取舍:流式模式**输出文件是边解析边写入的**(不写临时文件再改名),因此中途报错会留下不完整(被截断)的输出文件,需要删除后重试;默认路径则是全部成功后才落盘。
+
 ### 3.2 命令注册
 
 `src-tauri/src/lib.rs` 的 `invoke_handler()` 追加 `csv::separate_csv`(并更新 `docs/AI/INDEX.md` 中后台命令/模块职责小节)。
@@ -148,6 +177,7 @@ pub async fn separate_csv(
   - 期望列数(留空 = 自动);
   - 引号模式(复选框);
   - 跳过前 N 行(数字,默认 0);
+  - **流式(大文件)(复选框,默认关闭)**→ `streaming` 参数;悬停显示 `t.streamingHint` 说明;每次打开对话框重置为关闭;
   - 「开始拆分」→ `invoke("separate_csv", ...)` → 展示 good/bad 路径与行数。
 - 状态与接线:
   - `useUIState.ts` 增加 `showSeparateCsv` / `separateCsvInitialInput`。
@@ -163,6 +193,8 @@ pub async fn separate_csv(
 | `expectedColumns` | Expected columns (blank = auto) | 期望列数(留空自动) |
 | `skiprows` | Skip first N rows | 跳过前 N 行 |
 | `quoting` | Enable quoting | 启用引号 |
+| `streaming` | Streaming (large files) | 流式(大文件) |
+| `streamingHint` | Read and write record by record with constant memory use. Slower, but handles files too large to fit in memory. | 逐条读写,内存占用恒定;速度略慢,适合超出内存的超大文件。 |
 | `separateStart` | Separate | 开始拆分 |
 | `separating` | Separating... | 拆分中... |
 | `separateNoResult` | Pick a CSV file and click Separate… | 选择 CSV 文件后点击开始拆分… |
@@ -186,6 +218,7 @@ pub async fn separate_csv(
 | expected 覆盖 > 表头列数 | good 表头补空列 | 保证 good 文件列数自洽 |
 | expected 覆盖 < 表头列数 | good 表头截断 | 同上 |
 | 分隔符 | 单字节(与 `read_csv_file` 一致) | csv crate 限制 |
+| 勾选 streaming | 输出与默认路径逐字节一致,峰值内存与文件大小无关 | 单趟流式读写;中途报错会留下不完整输出文件 |
 
 ---
 
@@ -193,11 +226,11 @@ pub async fn separate_csv(
 
 | 文件 | 改动 |
 |------|------|
-| `src-tauri/src/csv.rs` | 新增 `SeparateResult`、`separate_csv`(spawn_blocking)+ 核心纯函数 + 单元测试 |
-| `src-tauri/src/lib.rs` | 注册 `csv::separate_csv` |
-| `src/i18n/translations.ts` | 新增 `Separate` 相关 key(en/zh) |
+| `src-tauri/src/csv.rs` | 新增 `SeparateResult`、`separate_csv`(spawn_blocking)+ 核心纯函数 + 单元测试;2026-09-20 抽出泛型流式核心 `separate_stream` + `SeparateCounts`,新增 `separate_csv_to_files`(大文件路径),`separate_csv_inner` 改为其内存包装 |
+| `src-tauri/src/lib.rs` | 注册 `csv::separate_csv`(本次无需改动) |
+| `src/i18n/translations.ts` | 新增 `Separate` 相关 key(en/zh);2026-09-20 增加 `streaming` / `streamingHint` |
 | `src/hooks/useUIState.ts` | 新增 `showSeparateCsv` / `separateCsvInitialInput` |
-| `src/components/dialog/SeparateCSVDialog.tsx` | 新增对话框(参照 CsvEncodingDialog 结构) |
+| `src/components/dialog/SeparateCSVDialog.tsx` | 新增对话框(参照 CsvEncodingDialog 结构);2026-09-20 增加「流式(大文件)」复选框(默认关闭)与 `streaming` 参数 |
 | `src/components/menu/MainMenu.tsx` | File 下拉新增「拆分好/坏行」子菜单项 |
 | `src/App.tsx` | `onOpenSeparateCsv` 处理器 + 渲染对话框 + CommandPalette 条目(含英文别名映射) |
 | `docs/AI/INDEX.md` | 补充后台命令/模块说明 |
@@ -215,14 +248,19 @@ pub async fn separate_csv(
 5. CRLF: 行数与 good/bad 判定正确,输出规范化为 LF。
 6. `expected_columns` 覆盖: 按覆盖值分类,good 表头列数自洽(补空列或截断)。
 7. 坏行向前归并(固定): 后续连续坏行把紧邻的上一合法行一并拉入 bad;其后隔开的独立合法行保持 good。
+8. 流式路径等价性(2026-09-20 新增): 在同一组边界用例(验收数据 / 多物理行 / 未闭合引号 / 空行 / CRLF / `expected_columns` 覆盖 / `skiprows` / 空表头)与一份 5000 行混合数据上,`separate_stream` 与 `separate_csv_inner` 的 good/bad **字节与行数完全一致**。
+9. 流式错误与落盘:`separate_stream` 对空文件、`skiprows` 后无记录返回错误;`separate_csv_to_files` 直写磁盘后两份输出文件内容与内存路径一致。
+10. 流式跨缓冲边界(2026-09-20 新增): 构造 >3 MiB、跨越 1 MiB 读写缓冲的输入(含引号内换行恰好落在分块边界的情况),`separate_csv_to_files` 落盘的两份文件与内存路径**逐字节相同**。
 
 ### 前端
 
-- 更新 `docs/AI/INDEX.md`;可选新增 `src/__tests__/SeparateCSVDialog.test.tsx` 验证 `invoke("separate_csv")` 参数形态。
+- 更新 `docs/AI/INDEX.md`;新增 `src/__tests__/SeparateCSVDialog.test.tsx` 验证 `invoke("separate_csv")` 参数形态(默认为 `streaming: false`、勾选后为 `streaming: true`、重开对话框复位为关闭)。
 - 静态检查: `npx tsc --noEmit`;现有 vitest 回归保持全绿。
 
 ## 6. 已知限制
 
 - `skiprows` 按**记录**计(而非物理行),与 csv 语义一致;若杂散行本身含未闭合引号,跳过逻辑会按引号合并到 EOF 之外的部分,属 csv 正常行为。
 - 输出采用**重新序列化(规范化)**: 换行统一为 LF、仅必要字段加引号,**不逐字节保留输入原文**;可读性好且对 CRLF/多物理行等边界稳定,代价是坏行的精确原字符(如自定义引号风格)会被归一。若未来需字节级保留,可改回字节切片方案并额外修复 CRLF 的 `Position` 偏差。
-- 全文件一次读入内存(`std::fs::read`),目标是中等规模清洗场景;超大文件可后续改为 `BufReader + File::try_clone()` 双句柄按记录 seek,本方案不引入该复杂度。
+- ~~全文件一次读入内存(`std::fs::read`),目标是中等规模清洗场景~~ → 已于 2026-09-20 解决:勾选 **streaming** 走 §3.1b 的 `BufReader + BufWriter` 单趟常量内存实现,内存占用与文件大小无关,不再受内存限制。(原计划中的 `File::try_clone()` 双句柄方案并未采用:单 reader 一次遍历即可同时完成表头与数据行,无需双句柄。)
+- 流式模式的输出是**边解析边写盘**的(不做临时文件 + 原子改名),因此中途失败会留下不完整的 `_good`/`_bad` 文件;默认(非流式)模式仍然是全部成功后一次性写盘,失败时不会产生半成品(但会占用约 2× 文件大小的内存)。
+- 流式模式相较默认模式多一次写盘调度、少一次内存拷贝,但两者时间复杂度相同,小文件上差异不明显;因此默认仍关闭,由用户在确有大文件需求时手动开启。

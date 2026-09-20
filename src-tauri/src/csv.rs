@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, Cursor, Read, Write};
+use std::io::{BufReader, BufWriter, Cursor, Read, Write};
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 use std::process::Command;
@@ -753,9 +753,22 @@ struct SeparateOutput {
   expected_columns: usize,
 }
 
-/// Split `input` into good rows (matching the expected column count, including
-/// for the header) and bad rows (everything else), re-serializing every record
-/// so no row is ever dropped.
+/// Row counts produced by [`separate_stream`].
+#[derive(Debug)]
+struct SeparateCounts {
+  good_rows: usize,
+  bad_rows: usize,
+  expected_columns: usize,
+}
+
+/// Streaming core of the good/bad split: reads one record at a time from
+/// `input` and writes each record to `good_out` / `bad_out` the moment it is
+/// classified.
+///
+/// Memory stays O(1) with respect to the input size — at most one record (the
+/// "pending" valid-looking row of the reach-back rule) is held back, so this is
+/// the path used for very large files. [`separate_csv_inner`] wraps it with
+/// in-memory sinks for the default (whole-file-in-memory) mode.
 ///
 /// A single shared `flexible(true)` reader is used so that column-count
 /// mismatches are *not* promoted into parse errors (which would lose the bad
@@ -766,63 +779,66 @@ struct SeparateOutput {
 /// to silently drop bad rows; enabling `flexible` on both fixes the bug.
 ///
 /// `expected_columns` overrides the column count only when `Some(n)` with
-/// `n > 0`; otherwise the header's column count is used. `skiprows` physical
-/// records before the header are discarded.
+/// `n > 0`; otherwise the header's column count is used. `skiprows` records
+/// before the header are discarded.
 ///
 /// Classification uses reach-back grouping: a run of under-column rows collects
 /// the immediately preceding valid-looking row into the same bad group. For
 /// rows `X` (3 cols), `Y` (1 col), `Z` (1 col) all three go to bad, because a
 /// clean row directly followed only by malformed rows is itself suspect; an
 /// independent clean row that is directly followed by another clean row stays
-/// good.
-fn separate_csv_inner(
-  input: &[u8],
+/// good. A malformed row can never be "un-followed", so the moment one arrives
+/// the pending row is committed to bad and both records can be written out
+/// immediately — which is what makes this single-pass form equivalent to
+/// buffering the whole bad group (and keeps memory constant even when a huge
+/// run of malformed rows occurs).
+fn separate_stream<R, GW, BW>(
+  input: R,
   delimiter: u8,
   quoting: bool,
   expected_columns: Option<usize>,
   skiprows: usize,
-) -> Result<SeparateOutput, String> {
+  good_out: GW,
+  bad_out: BW,
+) -> Result<SeparateCounts, String>
+where
+  R: Read,
+  GW: Write,
+  BW: Write,
+{
   let quote_style = if quoting {
     csv::QuoteStyle::Necessary
   } else {
     csv::QuoteStyle::Never
   };
 
-  // Read the header record once (skipping `skiprows` junk lines first).
-  fn read_header(
-    input: &[u8],
-    delimiter: u8,
-    quoting: bool,
-    skiprows: usize,
-  ) -> Result<csv::ByteRecord, String> {
-    let mut rdr = csv::ReaderBuilder::new()
-      .has_headers(false)
-      .delimiter(delimiter)
-      .flexible(true)
-      .quoting(quoting)
-      .from_reader(Cursor::new(input));
-    let mut rec = csv::ByteRecord::new();
-    for _ in 0..skiprows {
-      match rdr.read_byte_record(&mut rec) {
-        Ok(false) => return Err("No rows remain after skipping the requested rows".to_string()),
-        Err(e) => return Err(format!("Failed to skip rows before header: {e}")),
-        Ok(true) => {}
-      }
-    }
-    if rdr
-      .read_byte_record(&mut rec)
-      .map_err(|e| format!("Failed to parse header line: {e}"))?
-    {
-      return Ok(rec);
-    }
-    Err("Input file is empty (missing header)".to_string())
-  }
+  let mut rdr = csv::ReaderBuilder::new()
+    .has_headers(false)
+    .delimiter(delimiter)
+    .flexible(true)
+    .quoting(quoting)
+    .from_reader(input);
 
-  let header_rec = read_header(input, delimiter, quoting, skiprows)?;
-  let header_len = header_rec.len();
+  // Read the header record once (skipping `skiprows` junk records first). The
+  // same reader then continues with the data records: one pass over the input.
+  let mut rec = csv::ByteRecord::new();
+  for _ in 0..skiprows {
+    match rdr.read_byte_record(&mut rec) {
+      Ok(false) => return Err("No rows remain after skipping the requested rows".to_string()),
+      Err(e) => return Err(format!("Failed to skip rows before header: {e}")),
+      Ok(true) => {}
+    }
+  }
+  if !rdr
+    .read_byte_record(&mut rec)
+    .map_err(|e| format!("Failed to parse header line: {e}"))?
+  {
+    return Err("Input file is empty (missing header)".to_string());
+  }
+  let header_rec = rec.clone();
   let expected = match expected_columns {
     Some(n) if n > 0 => n,
-    _ => header_len,
+    _ => header_rec.len(),
   };
 
   // The good header is aligned to `expected` columns (pad empty fields or
@@ -836,8 +852,6 @@ fn separate_csv_inner(
     good_hdr.push_field(b"");
   }
 
-  let mut good = Vec::with_capacity(input.len() / 2);
-  let mut bad = Vec::with_capacity(input.len() / 2);
   let mut good_rows = 0usize;
   let mut bad_rows = 0usize;
 
@@ -846,61 +860,46 @@ fn separate_csv_inner(
       .delimiter(delimiter)
       .flexible(true)
       .quote_style(quote_style)
-      .from_writer(&mut good);
+      .from_writer(good_out);
     let mut bw = csv::WriterBuilder::new()
       .delimiter(delimiter)
       .flexible(true)
       .quote_style(quote_style)
-      .from_writer(&mut bad);
+      .from_writer(bad_out);
 
     gw.write_byte_record(&good_hdr)
       .map_err(|e| format!("Failed to write good header: {e}"))?;
     bw.write_byte_record(&header_rec)
       .map_err(|e| format!("Failed to write bad header: {e}"))?;
 
-    let mut rdr = csv::ReaderBuilder::new()
-      .has_headers(false)
-      .delimiter(delimiter)
-      .flexible(true)
-      .quoting(quoting)
-      .from_reader(Cursor::new(input));
-    let mut rec = csv::ByteRecord::new();
-    for _ in 0..skiprows {
-      let _ = rdr.read_byte_record(&mut rec);
-    }
-    let _ = rdr.read_byte_record(&mut rec); // header
-
-    // Reach-back grouping buffers rows so a valid-looking row can be pulled
-    // into bad when it is immediately followed only by malformed rows.
+    // Reach-back grouping, streamed. `pending_good` holds the last
+    // valid-looking row: it goes to good as soon as another valid row shows up,
+    // and to bad as soon as a malformed row shows up.
     let mut pending_good: Option<csv::ByteRecord> = None;
-    let mut bad_buf: Vec<csv::ByteRecord> = Vec::new();
 
     loop {
       match rdr.read_byte_record(&mut rec) {
         Ok(true) => {
           if rec.len() == expected {
-            // This clean row is preceded by (a) an independent clean row and
-            // (b) no pending bad group, so finalize both before holding it.
+            // The held row is now known to be followed by another clean row,
+            // so it is confirmed good.
             if let Some(pg) = pending_good.take() {
               gw.write_byte_record(&pg)
                 .map_err(|e| format!("Failed to write good row: {e}"))?;
               good_rows += 1;
             }
-            if !bad_buf.is_empty() {
-              for r in bad_buf.drain(..) {
-                bw.write_byte_record(&r)
-                  .map_err(|e| format!("Failed to write bad row: {e}"))?;
-                bad_rows += 1;
-              }
-            }
             pending_good = Some(rec.clone());
           } else {
-            // Under-column row: reach back, pull any pending clean row into the
-            // bad group, and keep extending the group.
+            // Under/over-column row: reach back, pull the pending clean row
+            // into the bad group, then write both out (order preserved).
             if let Some(pg) = pending_good.take() {
-              bad_buf.push(pg);
+              bw.write_byte_record(&pg)
+                .map_err(|e| format!("Failed to write bad row: {e}"))?;
+              bad_rows += 1;
             }
-            bad_buf.push(rec.clone());
+            bw.write_byte_record(&rec)
+              .map_err(|e| format!("Failed to write bad row: {e}"))?;
+            bad_rows += 1;
           }
         }
         Ok(false) => break,
@@ -908,23 +907,22 @@ fn separate_csv_inner(
           // A parse error (e.g. an unterminated quote) yields no usable record;
           // it also pulls the pending clean row into the bad group.
           if let Some(pg) = pending_good.take() {
-            bad_buf.push(pg);
+            bw.write_byte_record(&pg)
+              .map_err(|e| format!("Failed to write bad row: {e}"))?;
+            bad_rows += 1;
           }
-          bad_buf.push(rec.clone());
+          bw.write_byte_record(&rec)
+            .map_err(|e| format!("Failed to write bad row: {e}"))?;
+          bad_rows += 1;
         }
       }
     }
 
-    // EOF: finalize whatever is still pending.
+    // EOF: a trailing valid row was never followed by anything, so it is good.
     if let Some(pg) = pending_good.take() {
       gw.write_byte_record(&pg)
         .map_err(|e| format!("Failed to write good row: {e}"))?;
       good_rows += 1;
-    }
-    for r in bad_buf.drain(..) {
-      bw.write_byte_record(&r)
-        .map_err(|e| format!("Failed to write bad row: {e}"))?;
-      bad_rows += 1;
     }
 
     gw.flush()
@@ -933,12 +931,46 @@ fn separate_csv_inner(
       .map_err(|e| format!("Failed to flush bad file: {e}"))?;
   }
 
-  Ok(SeparateOutput {
-    good,
-    bad,
+  Ok(SeparateCounts {
     good_rows,
     bad_rows,
     expected_columns: expected,
+  })
+}
+
+/// In-memory wrapper around [`separate_stream`]: splits `input` into good rows
+/// (matching the expected column count, including for the header) and bad rows
+/// (everything else), re-serializing every record so no row is ever dropped.
+///
+/// The whole input and both outputs live in memory, which is the fast path for
+/// small and medium files; [`separate_stream`] is the constant-memory variant
+/// used for very large files.
+fn separate_csv_inner(
+  input: &[u8],
+  delimiter: u8,
+  quoting: bool,
+  expected_columns: Option<usize>,
+  skiprows: usize,
+) -> Result<SeparateOutput, String> {
+  let mut good = Vec::with_capacity(input.len() / 2);
+  let mut bad = Vec::with_capacity(input.len() / 2);
+
+  let counts = separate_stream(
+    Cursor::new(input),
+    delimiter,
+    quoting,
+    expected_columns,
+    skiprows,
+    &mut good,
+    &mut bad,
+  )?;
+
+  Ok(SeparateOutput {
+    good,
+    bad,
+    good_rows: counts.good_rows,
+    bad_rows: counts.bad_rows,
+    expected_columns: counts.expected_columns,
   })
 }
 
@@ -970,10 +1002,48 @@ fn separate_output_paths(
   )
 }
 
+/// Streaming (constant-memory) variant of the split, used for very large files.
+///
+/// The input is read through a `BufReader` and both outputs are written through
+/// `BufWriter`s, so neither the input nor either output is ever held in memory.
+/// The output files are written directly (no temporary file + rename), so an
+/// error raised after the first write leaves a partial output file behind.
+fn separate_csv_to_files(
+  path: &str,
+  good_path: &std::path::Path,
+  bad_path: &std::path::Path,
+  delimiter: u8,
+  quoting: bool,
+  expected_columns: Option<usize>,
+  skiprows: usize,
+) -> Result<SeparateCounts, String> {
+  /// Buffer size for both ends of the streaming path.
+  const STREAM_BUF_SIZE: usize = 1 << 20; // 1 MiB
+
+  let input = File::open(path).map_err(|e| format!("Failed to open input file: {e}"))?;
+  let good_file =
+    File::create(good_path).map_err(|e| format!("Failed to create good file: {e}"))?;
+  let bad_file = File::create(bad_path).map_err(|e| format!("Failed to create bad file: {e}"))?;
+
+  separate_stream(
+    BufReader::with_capacity(STREAM_BUF_SIZE, input),
+    delimiter,
+    quoting,
+    expected_columns,
+    skiprows,
+    BufWriter::with_capacity(STREAM_BUF_SIZE, good_file),
+    BufWriter::with_capacity(STREAM_BUF_SIZE, bad_file),
+  )
+}
+
 /// Split a CSV file into a `_good` rows file and a `_bad` rows file. The good
 /// file keeps independent complete records; a run of under-column rows is
 /// grouped with the immediately preceding valid-looking row into the bad file.
 /// The bad file receives every other record verbatim.
+///
+/// `streaming` (opt-in, default `false`) selects the constant-memory single-pass
+/// implementation for very large files; by default the whole input is read into
+/// memory, which is faster for small and medium files.
 #[tauri::command]
 pub async fn separate_csv(
   path: String,
@@ -982,9 +1052,9 @@ pub async fn separate_csv(
   expected_columns: Option<String>,
   skiprows: usize,
   out_dir: Option<String>,
+  streaming: Option<bool>,
 ) -> Result<SeparateResult, String> {
   tokio::task::spawn_blocking(move || -> Result<SeparateResult, String> {
-    let input = std::fs::read(&path).map_err(|e| format!("Failed to read input file: {e}"))?;
     let delim = if delimiter.is_empty() {
       b','
     } else {
@@ -1004,16 +1074,29 @@ pub async fn separate_csv(
         .map_err(|e| format!("Failed to create output directory: {e}"))?;
     }
 
-    let out = separate_csv_inner(&input, delim, quoting, expected, skiprows)?;
-    std::fs::write(&good_path, &out.good).map_err(|e| format!("Failed to write good file: {e}"))?;
-    std::fs::write(&bad_path, &out.bad).map_err(|e| format!("Failed to write bad file: {e}"))?;
+    let counts = if streaming.unwrap_or(false) {
+      separate_csv_to_files(
+        &path, &good_path, &bad_path, delim, quoting, expected, skiprows,
+      )?
+    } else {
+      let input = std::fs::read(&path).map_err(|e| format!("Failed to read input file: {e}"))?;
+      let out = separate_csv_inner(&input, delim, quoting, expected, skiprows)?;
+      std::fs::write(&good_path, &out.good)
+        .map_err(|e| format!("Failed to write good file: {e}"))?;
+      std::fs::write(&bad_path, &out.bad).map_err(|e| format!("Failed to write bad file: {e}"))?;
+      SeparateCounts {
+        good_rows: out.good_rows,
+        bad_rows: out.bad_rows,
+        expected_columns: out.expected_columns,
+      }
+    };
 
     Ok(SeparateResult {
       good_path: good_path.to_string_lossy().into_owned(),
       bad_path: bad_path.to_string_lossy().into_owned(),
-      good_rows: out.good_rows,
-      bad_rows: out.bad_rows,
-      expected_columns: out.expected_columns,
+      good_rows: counts.good_rows,
+      bad_rows: counts.bad_rows,
+      expected_columns: counts.expected_columns,
     })
   })
   .await
@@ -1617,5 +1700,203 @@ mod tests {
     assert_eq!(out.good_rows, 0);
     assert_eq!(out.bad_rows, 2);
     assert_eq!(out.bad, "a,b,c\n1,2,3\nx,y\n".as_bytes());
+  }
+
+  // ── separate_stream (streaming / large-file path) ────────────────────
+
+  /// Run the streaming core into byte buffers so it can be compared with the
+  /// in-memory core.
+  fn separate_via_stream(
+    input: &[u8],
+    expected: Option<usize>,
+    skiprows: usize,
+  ) -> (Vec<u8>, Vec<u8>, usize, usize, usize) {
+    let mut good: Vec<u8> = Vec::new();
+    let mut bad: Vec<u8> = Vec::new();
+    let counts = separate_stream(
+      Cursor::new(input),
+      b',',
+      true,
+      expected,
+      skiprows,
+      &mut good,
+      &mut bad,
+    )
+    .unwrap();
+    (
+      good,
+      bad,
+      counts.good_rows,
+      counts.bad_rows,
+      counts.expected_columns,
+    )
+  }
+
+  /// The streaming path must be byte-for-byte equivalent to the in-memory path.
+  fn assert_stream_matches_inner(input: &str, expected: Option<usize>, skiprows: usize) {
+    let mem = separate_csv_inner(input.as_bytes(), b',', true, expected, skiprows).unwrap();
+    let (good, bad, good_rows, bad_rows, expected_columns) =
+      separate_via_stream(input.as_bytes(), expected, skiprows);
+    assert_eq!(good, mem.good, "good bytes differ for {input:?}");
+    assert_eq!(bad, mem.bad, "bad bytes differ for {input:?}");
+    assert_eq!(good_rows, mem.good_rows, "good_rows differ for {input:?}");
+    assert_eq!(bad_rows, mem.bad_rows, "bad_rows differ for {input:?}");
+    assert_eq!(
+      expected_columns, mem.expected_columns,
+      "expected_columns differ for {input:?}"
+    );
+  }
+
+  #[test]
+  fn separate_stream_matches_in_memory_on_edge_cases() {
+    let cases = [
+      // Acceptance data: the whole run lands in bad.
+      "age,name,gender\n1,tom,man\n2\n2.1\n2.3\n3,jerry\n4\n",
+      // Quoted embedded newline stays one record.
+      "a,b\n1,x\n2,\"hello\nworld\"\n",
+      // Unterminated quote swallowed to EOF.
+      "a,b\n1,2\n\"oops\nx,ok\nlast,row\n",
+      // Blank / trailing blank lines are not records.
+      "a,b\n1,2\n\n",
+      // CRLF input, LF output.
+      "a,b\r\n1,2\r\n3,4\r\n",
+      // Bad run then independent clean rows.
+      "a,b,c\nx,1,2\ny\nz\nd,1,2\ne,3,4\n",
+      // Junk line before the header (skiprows=1 below).
+      "junk line\nage,name\n1,tom\n",
+      // expected_columns override (Some(2) below).
+      "a,b,c\n1,2\nx,y,z\n",
+      // Single bad row taints the preceding clean row.
+      "a,b,c\n1,2,3\nx,y\n",
+      // Clean file, no data behind the header.
+      "a,b,c\n",
+    ];
+    for input in cases {
+      assert_stream_matches_inner(input, None, 0);
+    }
+    assert_stream_matches_inner("junk line\nage,name\n1,tom\n", None, 1);
+    assert_stream_matches_inner("a,b,c\n1,2\nx,y,z\n", Some(2), 0);
+  }
+
+  #[test]
+  fn separate_stream_matches_in_memory_on_large_input() {
+    // ~5000 data rows mixing clean rows, under/over-column rows and quoted
+    // embedded newlines: the two implementations must agree exactly.
+    let mut input = String::from("a,b,c\n");
+    for i in 0..5000 {
+      match i % 5 {
+        0 => input.push_str(&format!("{i},x,y\n")),
+        1 => input.push_str(&format!("{i}\n")),
+        2 => input.push_str(&format!("{i},x\n")),
+        3 => input.push_str(&format!("{i},x,y,z\n")),
+        _ => input.push_str(&format!("{i},\"x\ny\",z\n")),
+      }
+    }
+    assert_stream_matches_inner(&input, None, 0);
+  }
+
+  #[test]
+  fn separate_stream_empty_file_errors() {
+    let err = separate_stream(
+      Cursor::new(b"".as_slice()),
+      b',',
+      true,
+      None,
+      0,
+      Vec::<u8>::new(),
+      Vec::<u8>::new(),
+    )
+    .unwrap_err();
+    assert!(err.contains("empty") || err.contains("header"));
+
+    // Nothing left after skipping is an error too.
+    let err = separate_stream(
+      Cursor::new(b"junk\n".as_slice()),
+      b',',
+      true,
+      None,
+      2,
+      Vec::<u8>::new(),
+      Vec::<u8>::new(),
+    )
+    .unwrap_err();
+    assert!(err.contains("skipping"), "{err}");
+  }
+
+  #[test]
+  fn separate_stream_to_files_writes_both_outputs() {
+    let dir = std::env::temp_dir();
+    let tag = format!("easy_csv_sep_{}", std::process::id());
+    let input_path = dir.join(format!("{tag}_in.csv"));
+    let good_path = dir.join(format!("{tag}_good.csv"));
+    let bad_path = dir.join(format!("{tag}_bad.csv"));
+    std::fs::write(&input_path, "a,b\n1,2\n3\n").unwrap();
+
+    let counts = separate_csv_to_files(
+      input_path.to_str().unwrap(),
+      &good_path,
+      &bad_path,
+      b',',
+      true,
+      None,
+      0,
+    )
+    .unwrap();
+
+    // `1,2` is followed only by the malformed `3`, so both go to bad.
+    assert_eq!(counts.good_rows, 0);
+    assert_eq!(counts.bad_rows, 2);
+    assert_eq!(counts.expected_columns, 2);
+    assert_eq!(std::fs::read_to_string(&good_path).unwrap(), "a,b\n");
+    assert_eq!(std::fs::read_to_string(&bad_path).unwrap(), "a,b\n1,2\n3\n");
+
+    for p in [&input_path, &good_path, &bad_path] {
+      let _ = std::fs::remove_file(p);
+    }
+  }
+
+  #[test]
+  fn separate_stream_to_files_matches_in_memory_across_buffer_boundaries() {
+    // Build an input larger than the 1 MiB streaming buffer so records are read
+    // through several `BufReader` refills — including quoted fields whose
+    // embedded newline straddles a chunk boundary — and check that both output
+    // files are byte-identical to the in-memory implementation.
+    let mut input = String::from("a,b,c\n");
+    while input.len() < 3 << 20 {
+      let i = input.len();
+      input.push_str(&format!("{i},x,y\n")); // good
+      input.push_str(&format!("{i},x,y,z\n")); // over-column
+      input.push_str(&format!("{i},\"x\ny\",z\n")); // good, embedded newline
+      input.push_str(&format!("{i}\n")); // under-column
+    }
+    let mem = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+
+    let dir = std::env::temp_dir();
+    let tag = format!("easy_csv_sep_big_{}", std::process::id());
+    let input_path = dir.join(format!("{tag}_in.csv"));
+    let good_path = dir.join(format!("{tag}_good.csv"));
+    let bad_path = dir.join(format!("{tag}_bad.csv"));
+    std::fs::write(&input_path, &input).unwrap();
+
+    let counts = separate_csv_to_files(
+      input_path.to_str().unwrap(),
+      &good_path,
+      &bad_path,
+      b',',
+      true,
+      None,
+      0,
+    )
+    .unwrap();
+
+    assert_eq!(counts.good_rows, mem.good_rows);
+    assert_eq!(counts.bad_rows, mem.bad_rows);
+    assert_eq!(counts.expected_columns, mem.expected_columns);
+    assert_eq!(std::fs::read(&good_path).unwrap(), mem.good);
+    assert_eq!(std::fs::read(&bad_path).unwrap(), mem.bad);
+
+    for p in [&input_path, &good_path, &bad_path] {
+      let _ = std::fs::remove_file(p);
+    }
   }
 }

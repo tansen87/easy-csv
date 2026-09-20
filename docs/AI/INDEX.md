@@ -80,7 +80,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
 | `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令、`set_pipeline_cancelled` 取消执行 |
 | `plugins.rs` | 外部 CLI 插件管理: `plugins` 表(plugins.db)持久化、`list_plugins`/`check_plugins` 命令、`command_executable` 按命令名解析可执行文件(插件命令走插件二进制,其余走 xan.exe)。`xan` 与 `pinyin` 默认注册进插件表,列表按 xan 置顶排序。插件二进制按平台编译期嵌入 `src-tauri/resources/plugins/<target>/`(`include_bytes!`)、首启自动解压到平台插件目录,Unix 下 `make_executable` 置 0o755。解压目录: Windows `<exe>/EasyCsv_resources/plugins/`,macOS `~/Library/Application Support/EasyCsv/resources/plugins/`,Linux `~/.local/share/EasyCsv/resources/plugins/`。解析顺序: 路径 → `plugins/` 目录(含 `.exe` 补全)→ `PATH` |
-| `csv.rs` | `CsvData` 类型、`read_csv_file`/`profile_csv`/`diff_csv_files`/`convert_csv_encoding` 命令 |
+| `csv.rs` | `CsvData` 类型、`read_csv_file`/`profile_csv`/`diff_csv_files`/`convert_csv_encoding`/`separate_csv` 命令 |
 | `storage.rs` | 历史记录、最近文件、数据概况缓存、版本/血缘存储、窗口标题、开发者工具命令 |
 | `ai.rs` | AI 对话代理: `call_ai` 命令,转发到 DeepSeek / Qwen / GLM |
 | `ai_memory.rs` | AI 记忆持久化(SQLite): 对话历史、反馈记录、纠正规则的 CRUD + 清除 |
@@ -131,7 +131,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `profile_csv` | 调用 `xan stats` 生成数据概况统计 |
 | `diff_csv_files` | 双文件对比(共享内存 Table + 字符串驻留 + Myers diff,`spawn_blocking` 防阻塞) |
 | `convert_csv_encoding` | 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1,64KB 分块流式转码) |
-| `separate_csv` | 将 CSV 拆分为 good/bad 两文件(共享 `flexible(true)` reader/writer 重新序列化,坏行不丢失;支持 expected_columns 覆盖 / skiprows / quoting / out_dir) |
+| `separate_csv` | 将 CSV 拆分为 good/bad 两文件(共享 `flexible(true)` reader/writer 重新序列化,坏行不丢失;支持 expected_columns 覆盖 / skiprows / quoting / out_dir / streaming)。`streaming=true` 走 `separate_stream` + `separate_csv_to_files` 的 `BufReader`/`BufWriter` 单趟常量内存实现(超大文件),默认 false 为整文件读入内存 |
 
 #### storage.rs — 持久化存储
 
@@ -185,7 +185,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `profile_csv` | csv | 调用 `xan stats` 生成数据概况统计 |
 | `diff_csv_files` | csv | 对比两个 CSV 文件(Myers diff,分页返回) |
 | `convert_csv_encoding` | csv | 转换 CSV 文件编码(64KB 流式转码) |
-| `separate_csv` | 将 CSV 拆分为 good/bad 两文件(共享 `flexible(true)` reader/writer 重新序列化,坏行不丢失;后续连续坏行会连同前一合法行一并进 bad;支持 expected_columns 覆盖 / skiprows / quoting / out_dir)。设计:`docs/design/016_separate-good-bad-rows.md` |
+| `separate_csv` | 将 CSV 拆分为 good/bad 两文件(共享 `flexible(true)` reader/writer 重新序列化,坏行不丢失;后续连续坏行会连同前一合法行一并进 bad;支持 expected_columns 覆盖 / skiprows / quoting / out_dir / streaming;核心为泛型 `separate_stream`,默认内存路径与 `streaming` 流式路径共用同一逻辑)。设计:`docs/design/016_separate-good-bad-rows.md` |
 | `load_profile_cache` / `save_profile_cache` | storage | 数据概况缓存(基于文件 mtime,LRU 淘汰,上限50条) |
 | `check_xan_installed` | xan | 检查 xan.exe 是否已解压 |
 | `get/set_default_delimiter` | config | 读写默认分隔符配置 |

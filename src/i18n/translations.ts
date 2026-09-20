@@ -337,6 +337,7 @@ export interface Translations {
   expectedColumnsHint: string;
   skiprows: string;
   quoting: string;
+  streaming: string;
   separateStart: string;
   separating: string;
   separateNoResult: string;
@@ -679,7 +680,8 @@ export const translations: Record<EffectiveLanguage, Translations> = {
     system: "System",
     csvDelimiter: "Delimiter",
     noHeaders: "No Headers",
-    noHeadersDesc: "When enabled, the first row will not be interpreted as headers",
+    noHeadersDesc:
+      "When enabled, the first row will not be interpreted as headers",
     systemNotification: "Notification",
     systemNotificationDesc:
       "When enabled, Show system notification when pipeline execution completes",
@@ -913,6 +915,7 @@ export const translations: Record<EffectiveLanguage, Translations> = {
     expectedColumnsHint: "Blank (from header)",
     skiprows: "Skip first N rows",
     quoting: "Enable quoting",
+    streaming: "Streaming (large files)",
     separateStart: "Separate",
     separating: "Separating...",
     separateNoResult:
@@ -1479,6 +1482,7 @@ export const translations: Record<EffectiveLanguage, Translations> = {
     expectedColumnsHint: "留空自动(= 表头列数)",
     skiprows: "跳过前 N 行",
     quoting: "启用引号",
+    streaming: "流式(大文件)",
     separateStart: "开始拆分",
     separating: "拆分中...",
     separateNoResult:

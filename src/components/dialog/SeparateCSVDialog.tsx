@@ -42,6 +42,7 @@ export function SeparateCSVDialog({
   const [outputDir, setOutputDir] = useState("");
   const [delimiter, setDelimiter] = useState(",");
   const [quoting, setQuoting] = useState(true);
+  const [streaming, setStreaming] = useState(false);
   const [expectedColumns, setExpectedColumns] = useState("");
   const [skiprows, setSkiprows] = useState("0");
   const [isSeparating, setIsSeparating] = useState(false);
@@ -60,6 +61,7 @@ export function SeparateCSVDialog({
       setOutputDir("");
       setDelimiter(defaultDelimiter || ",");
       setQuoting(true);
+      setStreaming(false);
       setExpectedColumns("");
       setSkiprows("0");
       setResult(null);
@@ -129,6 +131,7 @@ export function SeparateCSVDialog({
           expectedColumns.trim() === "" ? null : expectedColumns.trim(),
         skiprows: skip,
         outDir: outputDir.trim() === "" ? null : outputDir.trim(),
+        streaming,
       });
       setResult(data);
     } catch (err) {
@@ -144,6 +147,7 @@ export function SeparateCSVDialog({
     outputDir,
     delimiter,
     quoting,
+    streaming,
     expectedColumns,
     skiprows,
     t,
@@ -280,6 +284,20 @@ export function SeparateCSVDialog({
                 className="accent-primary"
               />
               {t.quoting}
+            </label>
+            <label
+              className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0"
+            >
+              <input
+                type="checkbox"
+                checked={streaming}
+                onChange={(e) => {
+                  clearFeedback();
+                  setStreaming(e.target.checked);
+                }}
+                className="accent-primary"
+              />
+              {t.streaming}
             </label>
             <div className="flex-1" />
             <Button

@@ -41,3 +41,4 @@ coverage/
 # ai agent
 /.mimocode/
 .box-agent
+.workbuddy
