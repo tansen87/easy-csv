@@ -688,6 +688,8 @@ pub struct CsvEncodingResult {
   pub output_path: String,
   pub bytes_read: usize,
   pub bytes_written: usize,
+  /// Wall-clock duration of the conversion itself (excludes IPC/render time).
+  pub elapsed_ms: u64,
 }
 
 /// Common encodings supported by the conversion dialog.
@@ -714,6 +716,7 @@ pub async fn convert_csv_encoding(
   tokio::task::spawn_blocking(move || -> Result<CsvEncodingResult, String> {
     const CHUNK_SIZE: usize = 64 * 1024;
 
+    let started = std::time::Instant::now();
     let source = resolve_encoding(&source_encoding)?;
     let target = resolve_encoding(&target_encoding)?;
 
@@ -730,6 +733,7 @@ pub async fn convert_csv_encoding(
       output_path,
       bytes_read,
       bytes_written,
+      elapsed_ms: started.elapsed().as_millis() as u64,
     })
   })
   .await

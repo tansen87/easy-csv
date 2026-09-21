@@ -38,6 +38,7 @@ export const enDialog = {
   success: "Conversion successful",
   sameEncoding: "Source and target encodings are the same",
   bytes: "bytes",
+  csvEncodingLastResult: "Last conversion",
   separateGoodBad: "Separate Good/Bad Rows",
   outputDir: "Output",
   expectedColumns: "Expected columns",

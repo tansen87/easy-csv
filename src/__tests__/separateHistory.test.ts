@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { formatElapsed } from "@/utils/format";
 import {
   SEPARATE_HISTORY_KEY,
   clearLastSeparateResult,
   delimiterLabel,
-  formatElapsed,
   loadLastSeparateResult,
   saveLastSeparateResult,
   type StoredSeparateResult,

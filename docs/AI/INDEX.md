@@ -70,7 +70,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `docs/design/018_open-file-delimiter-detection.md` | 打开文件的分隔符自动检测 + 自动检测总开关(已实现): `read_csv_file` 支持自动检测并回传 `delimiter_source`、标签页记录解析值、输入节点分隔符徽标、执行侧改用标签页解析值("所见即所跑");设置页与输入节点徽标**共用同一个 `DelimiterModeSelect`**(自动检测 / 5 个分隔符),双向同步 + 即时落库(`auto_detect_delimiter` 配置项) |
 | `docs/design/019_frontend-structure-refactor.md` | 前端目录结构与巨型文件重构方案(**阶段 0/1 已实施 + 2.1–2.4/2.7 与 3.1–3.4/3.8 已实施;2.2/2.3 为部分实施,2.5/2.6 与 3.5–3.7 未实施**): 已完成——类型下沉到 `types/dialog.ts` 解除循环依赖、`VariableHint` 移入 `ui/`、11 个旧浮动对话框收敛为 `openCommandFromContext()` → `buildCommandInitialParams()`(纯函数,配单测) → `CommandDialog` 并删除、`components/dialog/**` 四分为 `modules/dialogs/{command,file,app,common}`、命令表单一命令一文件(`forms/<命令id>.tsx`)、`data/commands.ts` 拆为 `data/commands/` 目录、`i18n/translations.ts` 拆为 `{en,zh}/<domain>.ts`、`components/panel/**` 迁往 `modules/{pipeline,data-preview,ai,variables,logs}`、`ui/` 统一 PascalCase、`hooks/` 统一 `useXxx`、ESLint 安全网(`import/no-cycle` + `import/parsers`)。未完成——`FlowPanel` JSX 再拆(≤600 目标未达)、`AppLayout`/`useDialogStack` 全量接入(`App.tsx` 已迁 `src/app/`)、`ChartPanel` 拆分、HomeView Props 收敛、`SettingsTabContent`/`ai/context.ts` 等中型拆分、`setting/` 三个文件迁往 `app/providers` 与 `ui/`、`max-lines`/CI 门禁、`scripts/check-index.ts` |
 
-> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–019 已登记。
+| `docs/design/020_encoding-conversion-history.md` | CSV 编码转换保留上次记录(已实现): 复用 017 的「上次结果」模式——`easy-csv-encoding-last` 持久化(输出路径/字节数/完成时间/耗时)、打开时回填输入输出路径与源/目标编码、「打开路径」(`reveal_paths`)与「清除记录」、输出文件被删则置灰提示;后端 `CsvEncodingResult` 增加 `elapsed_ms`;`formatElapsed` 由 `utils/separateHistory.ts` 上提到 `utils/format.ts` |
+
+> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–020 已登记。
 
 ---
 
@@ -195,7 +197,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `set_pipeline_cancelled` | pipeline | 取消正在执行的管道(全局标志 + kill 子进程) |
 | `profile_csv` | csv | 调用 `xan stats` 生成数据概况统计 |
 | `diff_csv_files` | csv | 对比两个 CSV 文件(Myers diff,分页返回) |
-| `convert_csv_encoding` | csv | 转换 CSV 文件编码(64KB 流式转码) |
+| `convert_csv_encoding` | csv | 转换 CSV 文件编码(64KB 流式转码),返回输出路径/读写字节数/后端耗时 |
 | `separate_csv` | 将 CSV 拆分为 good/bad 两文件(共享 `flexible(true)` reader/writer 重新序列化,坏行不丢失;后续连续坏行会连同前一合法行一并进 bad;支持 expected_columns 覆盖 / skiprows / quoting / out_dir / streaming / no_headers;核心为泛型 `separate_stream`,默认内存路径与 `streaming` 流式路径共用同一逻辑)。设计:`docs/design/016_separate-good-bad-rows.md` |
 | `probe_csv_file` | csv | 探测文件头部(64 KiB):自动检测分隔符 + 返回第一行列数与表头预览,供拆分对话框显示文件信息。设计:`docs/design/017_separate-dialog-ux.md` |
 | `load_profile_cache` / `save_profile_cache` | storage | 数据概况缓存(基于文件 mtime,LRU 淘汰,上限50条) |
@@ -266,7 +268,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `separateHistory.test.ts` | 拆分结果 localStorage |  |
 | `SeparateCSVDialog.test.tsx` | 拆分好/坏行对话框(设计 016/017): 流式/无表头选项、探测、上次结果、打开路径 |  |
 
-> 全量以 `pnpm test` 为准(当前 23 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
+> 全量以 `pnpm test` 为准(当前 24 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
 
 ---
 
@@ -420,7 +422,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 |------|------|
 | `file/SeparateCSVDialog.tsx` | 拆分好/坏行: 输入探测、分隔符自动检测/手选/设为默认、期望列数/跳过行/引号/无表头/流式、上次结果(localStorage)+ 打开路径 |
 | `file/CsvDiffDialog.tsx` | CSV 双文件对比(Ctrl+D),分页避免卡顿 |
-| `file/CsvEncodingDialog.tsx` | CSV 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1) |
+| `file/CsvEncodingDialog.tsx` | CSV 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1);上次记录(完成时间/耗时/编码对/字节数 + 打开路径 + 清除记录 + 输出文件失效提示),打开时回填输入输出路径与源/目标编码。设计:`docs/design/020_encoding-conversion-history.md` |
 | `file/PipelineTemplateDialog.tsx` | 管道模板库对话框(F4) |
 | `app/ExecutionHistoryDialog.tsx` | 执行历史(F6) |
 | `app/UpdateDialog.tsx` | 应用更新通知 |
@@ -483,7 +485,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改打开文件的分隔符检测(工作流输入节点) | `src-tauri/src/csv.rs`(`read_csv_file` 的 `resolve_read_delimiter`/`read_csv_sync`)+ `src/hooks/useTabs.ts`(`loadCsvData` + 全局模式重载规则)+ `src/components/ui/DelimiterModeSelect.tsx`(共用控件)+ `src/modules/pipeline/nodes/TableNode.tsx`(徽标)+ `src/modules/pipeline/FlowPanel.tsx`/`src/modules/data-preview/HomeView.tsx`/`src/app/App.tsx`(透传)+ `src/utils/delimiterMode.ts`(设置 ⇄ 界面值换算)+ `src/hooks/execution/resolveDelimiter.ts` + `src/hooks/usePipelineTabs.ts`(`resolveRunDelimiter`,保证执行与预览同源)。设计:`docs/design/018_open-file-delimiter-detection.md` |
 | 修改分隔符自动检测总开关 / 默认分隔符(设置页 ⇄ 输入节点同步) | `src-tauri/src/config.rs`(`auto_detect_delimiter` + `get/set_auto_detect_delimiter`、`get/set_default_delimiter`)+ `src/hooks/useAppSettings.ts` + `src/components/setting/SettingsTabContent.tsx`(分隔符区块)+ `src/components/ui/DelimiterModeSelect.tsx` + `src/app/App.tsx`(`delimiterMode`/`onDelimiterModeChange`,含即时落库)。设计:`docs/design/018_open-file-delimiter-detection.md` §3.9 |
 | 修改 CSV 对比功能 | `src/modules/dialogs/file/CsvDiffDialog.tsx` + `src-tauri/src/csv.rs`(`diff_csv_files`) |
-| 修改 CSV 编码转换 | `src/modules/dialogs/file/CsvEncodingDialog.tsx` + `src-tauri/src/csv.rs`(`convert_csv_encoding`) |
+| 修改 CSV 编码转换 | `src/modules/dialogs/file/CsvEncodingDialog.tsx` + `src-tauri/src/csv.rs`(`convert_csv_encoding`)+ `src/utils/encodingHistory.ts`(上次记录持久化)。设计:`docs/design/020_encoding-conversion-history.md` |
 | 修改拆分好/坏行 | `src/modules/dialogs/file/SeparateCSVDialog.tsx` + `src-tauri/src/csv.rs`(`separate_csv`/`separate_stream`/`probe_csv_file`)+ `src/hooks/useCsvProbe.ts` + `src/utils/separateHistory.ts` + `src-tauri/src/storage.rs`(`reveal_paths`) |
 | 修改会话保存/恢复 | `src/hooks/useSession.ts` + `src/utils/session.ts` + `src-tauri/src/session.rs` |
 | 修改命令面板 | `src/modules/logs/CommandPalette.tsx` + `src/hooks/useUIState.ts` + `src/hooks/useKeyboardShortcuts.ts`(Ctrl+K) |

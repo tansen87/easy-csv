@@ -8,11 +8,10 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { useLanguage } from "@/i18n";
 import { useCsvProbe } from "@/hooks/useCsvProbe";
-import { formatDateTime } from "@/utils/format";
+import { formatDateTime, formatElapsed } from "@/utils/format";
 import {
   clearLastSeparateResult,
   delimiterLabel,
-  formatElapsed,
   loadLastSeparateResult,
   saveLastSeparateResult,
   type StoredSeparateResult,
@@ -550,9 +549,7 @@ export function SeparateCSVDialog({
               />
               {t.quoting}
             </label>
-            <label
-              className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0"
-            >
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
               <input
                 type="checkbox"
                 checked={noHeaders}

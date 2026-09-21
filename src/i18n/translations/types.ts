@@ -334,6 +334,7 @@ export interface Translations {
   success: string;
   sameEncoding: string;
   bytes: string;
+  csvEncodingLastResult: string;
 
   // SeparateGoodBad
   separateGoodBad: string;

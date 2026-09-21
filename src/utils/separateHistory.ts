@@ -72,13 +72,6 @@ export function clearLastSeparateResult(): void {
   }
 }
 
-/** `"820 ms"` / `"1.4 s"`; empty string when unknown. */
-export function formatElapsed(ms: number | undefined): string {
-  if (ms === undefined || !Number.isFinite(ms) || ms < 0) return "";
-  if (ms < 1000) return `${Math.round(ms)} ms`;
-  return `${(ms / 1000).toFixed(1)} s`;
-}
-
 /** Human-readable label for a raw one-character delimiter. */
 export function delimiterLabel(delimiter: string): string {
   switch (delimiter) {

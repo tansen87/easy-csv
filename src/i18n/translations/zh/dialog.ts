@@ -38,6 +38,7 @@ export const zhDialog = {
   success: "转换成功",
   sameEncoding: "源编码与目标编码相同",
   bytes: "字节",
+  csvEncodingLastResult: "上次转换",
   separateGoodBad: "拆分好/坏行",
   outputDir: "输出目录",
   expectedColumns: "期望列数",
