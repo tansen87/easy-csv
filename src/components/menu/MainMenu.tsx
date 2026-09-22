@@ -38,6 +38,7 @@ interface MainMenuProps {
   onOpenCsvDiff: () => void;
   onOpenCsvEncoding: () => void;
   onOpenSeparateCsv: () => void;
+  onOpenSplitLines: () => void;
   isExecuting: boolean;
   isCheckingUpdate: boolean;
   hasUpdate: boolean;
@@ -83,6 +84,7 @@ export const MainMenu = React.memo(function MainMenu({
   onOpenCsvDiff,
   onOpenCsvEncoding,
   onOpenSeparateCsv,
+  onOpenSplitLines,
   isExecuting,
   isCheckingUpdate,
   hasUpdate,
@@ -279,6 +281,15 @@ export const MainMenu = React.memo(function MainMenu({
                 className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
                 {t.separateGoodBad}
+              </button>
+              <button
+                onClick={() => {
+                  onOpenSplitLines();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                {t.splitLines}
               </button>
             </div>
           )}

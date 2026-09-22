@@ -373,6 +373,19 @@ export interface Translations {
   separateSelectFile: string;
   separateComplete: string;
 
+  // SplitLinesDialog (line-count split, design 021)
+  splitLines: string;
+  linesPerFile: string;
+  linesPerFileHint: string;
+  splitLinesStart: string;
+  splitting: string;
+  splitLinesLastResult: string;
+  splitLinesFileCount: string;
+  splitLinesTotalRows: string;
+  splitLinesHeaderCopied: string;
+  splitLinesNoResult: string;
+  splitLinesInvalidLinesPerFile: string;
+
   // BatchFilterDialog
   batchFilter: string;
   filterColumn: string;

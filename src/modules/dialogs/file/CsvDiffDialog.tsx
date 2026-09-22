@@ -1,16 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import {
-  X,
-  FolderOpen,
-  GitCompareArrows,
-  RefreshCw,
-  Plus,
-  Minus,
-  Pencil,
-  AlertCircle,
-} from "lucide-react";
+import { X, RefreshCw, Plus, Minus, Pencil, AlertCircle } from "lucide-react";
 
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
@@ -355,7 +346,6 @@ export function CsvDiffDialog({
       >
         <div className="flex items-center justify-between px-4 py-3 bg-muted/20 shrink-0">
           <div className="flex items-center gap-2">
-            <GitCompareArrows className="h-4 w-4 text-primary" />
             <h3 className="text-sm font-semibold text-foreground">
               {t.csvDiff}
             </h3>
@@ -388,7 +378,6 @@ export function CsvDiffDialog({
               className="shrink-0"
               onClick={() => browseFile("a")}
             >
-              <FolderOpen className="h-3.5 w-3.5" />
               {t.open}
             </Button>
           </div>
@@ -410,7 +399,6 @@ export function CsvDiffDialog({
               className="shrink-0"
               onClick={() => browseFile("b")}
             >
-              <FolderOpen className="h-3.5 w-3.5" />
               {t.open}
             </Button>
           </div>
@@ -490,10 +478,8 @@ export function CsvDiffDialog({
               disabled={isComparing}
               className="ml-auto"
             >
-              {isComparing ? (
+              {isComparing && (
                 <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <GitCompareArrows className="h-3.5 w-3.5" />
               )}
               {t.compare}
             </Button>

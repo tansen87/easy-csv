@@ -1,15 +1,5 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from "react";
-import {
-  X,
-  Save,
-  Check,
-  Play,
-  Pencil,
-  Trash2,
-  Download,
-  Upload,
-  Search,
-} from "lucide-react";
+import { X, Check, Play, Pencil, Trash2, Download, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ScrollArea } from "@/components/ui/ScrollArea";
@@ -166,7 +156,6 @@ export function PipelineTemplateDialog({
               disabled={!canSave || !newName.trim()}
               onClick={handleSave}
             >
-              <Save className="h-3.5 w-3.5 mr-1" />
               {t.save}
             </Button>
           </div>
@@ -324,7 +313,6 @@ export function PipelineTemplateDialog({
 
         <div className="flex items-center justify-between px-4 py-3 bg-muted/20">
           <Button variant="secondary" size="sm" onClick={onImport}>
-            <Upload className="h-3.5 w-3.5 mr-1" />
             {t.templateImport}
           </Button>
           <Button variant="secondary" size="sm" onClick={onClose}>

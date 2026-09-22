@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Cursor, Read, Write};
+use std::io::{BufRead, BufReader, BufWriter, Cursor, Read, Write};
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 use std::process::Command;
@@ -1228,7 +1228,276 @@ pub async fn separate_csv(
   .map_err(|e| format!("Task join error: {e}"))?
 }
 
-// ── File probing: first-row columns + delimiter detection ─────────────
+// ── Splitting a text file into N-line parts ──────────────────────────
+
+/// Result of splitting a text file into parts of at most N lines each.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SplitLinesResult {
+  /// Directory every part was written to (equals the input's directory when
+  /// `out_dir` was omitted).
+  pub output_dir: String,
+  /// `{stem}_part1{ext}`, `{stem}_part2{ext}`, … in order.
+  pub output_paths: Vec<String>,
+  pub file_count: usize,
+  /// Requested maximum number of data rows per part.
+  pub lines_per_file: usize,
+  /// Data rows written across all parts (excludes the header when it is
+  /// treated as a header).
+  pub total_rows: usize,
+  /// Whether the first line was copied into every part as a header row.
+  pub header_written: bool,
+  /// Wall-clock duration of the split itself (excludes IPC/render time).
+  pub elapsed_ms: u64,
+}
+
+/// Outcome of [`split_lines_stream`] (used for unit testing and reporting).
+#[derive(Debug, PartialEq, Eq)]
+struct SplitLinesCounts {
+  file_count: usize,
+  total_rows: usize,
+}
+
+/// Buffer size for the line-splitting reader and writers.
+const SPLIT_LINES_BUF_SIZE: usize = 1 << 20; // 1 MiB
+
+/// Resolve the directory the parts go to plus the input's stem/extension.
+///
+/// The extension is preserved (a `.txt` input yields `.txt` parts) because —
+/// unlike [`separate_csv`] — this splitter never parses CSV and works on any
+/// line-based text file.
+fn split_lines_target(path: &str, out_dir: Option<&str>) -> (std::path::PathBuf, String, String) {
+  let p = std::path::Path::new(path);
+  let stem = p
+    .file_stem()
+    .map(|s| s.to_string_lossy().into_owned())
+    .unwrap_or_default();
+  let ext = p
+    .extension()
+    .map(|e| format!(".{}", e.to_string_lossy()))
+    .unwrap_or_default();
+  let dir = match out_dir {
+    Some(d) if !d.trim().is_empty() => std::path::PathBuf::from(d),
+    _ => p
+      .parent()
+      .map(std::path::Path::to_path_buf)
+      .unwrap_or_default(),
+  };
+  (dir, stem, ext)
+}
+
+/// Path of part `index` (1-based) inside `dir`.
+fn split_part_path(
+  dir: &std::path::Path,
+  stem: &str,
+  ext: &str,
+  index: usize,
+) -> std::path::PathBuf {
+  dir.join(format!("{stem}_part{index}{ext}"))
+}
+
+/// Split a line-based text file into parts of at most `lines_per_file` rows.
+///
+/// The input is read as **raw lines** through a `BufReader` and each line is
+/// written out byte-for-byte as it is read, so neither the input nor any output
+/// part is ever held in memory (constant memory for arbitrarily large files)
+/// and line terminators (`\n` / `\r\n`) are preserved as-is.
+///
+/// `no_headers` (opt-in, default `false`) treats the first line as a data row:
+/// it joins part 1 and no header line is written. Without it the first line is
+/// remembered as the header and copied into the top of every part, so each part
+/// stays self-describing.
+///
+/// Parts are named `{stem}_part{N}{ext}` starting at `N = 1`; the input's
+/// extension is preserved. A non-empty input always produces at least one part,
+/// even when it holds fewer rows than `lines_per_file`.
+fn split_lines_stream<R, W, F>(
+  input: R,
+  lines_per_file: usize,
+  no_headers: bool,
+  mut new_part: F,
+) -> Result<SplitLinesCounts, String>
+where
+  R: BufRead,
+  W: Write,
+  F: FnMut(usize) -> Result<W, String>,
+{
+  if lines_per_file == 0 {
+    return Err("Lines per file must be at least 1".to_string());
+  }
+
+  let mut reader = input;
+  let mut line: Vec<u8> = Vec::new();
+  let mut header: Option<Vec<u8>> = None;
+  let mut writer: Option<W> = None;
+  let mut rows_in_part = 0usize;
+  let mut counts = SplitLinesCounts {
+    file_count: 0,
+    total_rows: 0,
+  };
+  let mut is_first_line = true;
+
+  loop {
+    line.clear();
+    let read = reader
+      .read_until(b'\n', &mut line)
+      .map_err(|e| format!("Failed to read input: {e}"))?;
+    if read == 0 {
+      break;
+    }
+    if is_first_line {
+      is_first_line = false;
+      if !no_headers {
+        // The first line is the header: held back and replayed into every
+        // part. It is not part of any row count.
+        header = Some(line.clone());
+        continue;
+      }
+    }
+
+    // Open a new part when starting out or when the current one is full.
+    if writer.is_none() || rows_in_part == lines_per_file {
+      if let Some(mut previous) = writer.take() {
+        previous
+          .flush()
+          .map_err(|e| format!("Failed to flush output part: {e}"))?;
+      }
+      let index = counts.file_count + 1;
+      let mut next = new_part(index)?;
+      if let Some(h) = &header {
+        next
+          .write_all(h)
+          .map_err(|e| format!("Failed to write header row: {e}"))?;
+      }
+      writer = Some(next);
+      counts.file_count = index;
+      rows_in_part = 0;
+    }
+
+    {
+      let out = writer.as_mut().expect("a writer was opened above");
+      out
+        .write_all(&line)
+        .map_err(|e| format!("Failed to write row: {e}"))?;
+      if !line.ends_with(b"\n") {
+        // The last line of the input carried no terminator; terminate it so
+        // every part is a well-formed text file.
+        out
+          .write_all(b"\n")
+          .map_err(|e| format!("Failed to write row: {e}"))?;
+      }
+    }
+    rows_in_part += 1;
+    counts.total_rows += 1;
+  }
+
+  if is_first_line {
+    return Err("Input file is empty (no lines to split)".to_string());
+  }
+
+  if writer.is_none() {
+    // Header-only input: still produce one part so the run leaves a file behind.
+    let mut only = new_part(1)?;
+    if let Some(h) = &header {
+      only
+        .write_all(h)
+        .map_err(|e| format!("Failed to write header row: {e}"))?;
+    }
+    writer = Some(only);
+    counts.file_count = 1;
+  }
+
+  if let Some(mut out) = writer.take() {
+    out
+      .flush()
+      .map_err(|e| format!("Failed to flush output part: {e}"))?;
+  }
+
+  Ok(counts)
+}
+
+/// Streaming implementation behind [`split_lines`]: reads `path` as raw lines
+/// and writes `{stem}_part{N}{ext}` parts into `out_dir` (or next to the input).
+///
+/// The output directory is created if needed. Parts are written directly (no
+/// temporary file + rename), so a mid-run failure leaves the parts already
+/// written on disk.
+fn split_lines_to_files(
+  path: &str,
+  out_dir: Option<&str>,
+  lines_per_file: usize,
+  no_headers: bool,
+) -> Result<(std::path::PathBuf, String, String, SplitLinesCounts), String> {
+  let (dir, stem, ext) = split_lines_target(path, out_dir);
+  std::fs::create_dir_all(&dir).map_err(|e| format!("Failed to create output directory: {e}"))?;
+
+  let input = File::open(path).map_err(|e| format!("Failed to open input file: {e}"))?;
+
+  let counts = {
+    let dir = dir.clone();
+    let stem = stem.clone();
+    let ext = ext.clone();
+    split_lines_stream(
+      BufReader::with_capacity(SPLIT_LINES_BUF_SIZE, input),
+      lines_per_file,
+      no_headers,
+      |index| {
+        let part = split_part_path(&dir, &stem, &ext, index);
+        let file = File::create(&part).map_err(|e| format!("Failed to create output part: {e}"))?;
+        Ok(BufWriter::with_capacity(SPLIT_LINES_BUF_SIZE, file))
+      },
+    )?
+  };
+
+  Ok((dir, stem, ext, counts))
+}
+
+/// Split a text file into parts of at most `lines_per_file` rows each.
+///
+/// Lines are treated as raw text, not as CSV records: the file is never parsed
+/// and no delimiter is involved, so this works on any line-based file (`.csv`,
+/// `.txt`, logs) and is safe for very large inputs — memory stays constant.
+///
+/// `no_headers` (opt-in, default `false`) treats the first line as data. By
+/// default the first line is treated as a header row and copied into every
+/// part. Output files are named `{stem}_part{N}{ext}` (N from 1) and written
+/// next to the input, or into `out_dir` when given. Existing parts from an
+/// earlier run are not deleted.
+#[tauri::command]
+pub async fn split_lines(
+  path: String,
+  lines_per_file: usize,
+  out_dir: Option<String>,
+  no_headers: Option<bool>,
+) -> Result<SplitLinesResult, String> {
+  tokio::task::spawn_blocking(move || -> Result<SplitLinesResult, String> {
+    let started = std::time::Instant::now();
+    let no_headers = no_headers.unwrap_or(false);
+    let (dir, stem, ext, counts) =
+      split_lines_to_files(&path, out_dir.as_deref(), lines_per_file, no_headers)?;
+
+    let output_paths = (1..=counts.file_count)
+      .map(|index| {
+        split_part_path(&dir, &stem, &ext, index)
+          .to_string_lossy()
+          .into_owned()
+      })
+      .collect();
+
+    Ok(SplitLinesResult {
+      output_dir: dir.to_string_lossy().into_owned(),
+      output_paths,
+      file_count: counts.file_count,
+      lines_per_file,
+      total_rows: counts.total_rows,
+      header_written: !no_headers,
+      elapsed_ms: started.elapsed().as_millis() as u64,
+    })
+  })
+  .await
+  .map_err(|e| format!("Task join error: {e}"))?
+}
+
+// File probing: first-row columns + delimiter detection
 
 /// Candidate delimiters for automatic detection, mirroring the list offered in
 /// the app settings (`src/components/setting/SettingsTabContent.tsx`).
@@ -2474,6 +2743,264 @@ mod tests {
     assert_eq!(good_rows, mem.good_rows);
     assert_eq!(bad_rows, mem.bad_rows);
     assert_eq!(expected_columns, mem.expected_columns);
+  }
+
+  // split_lines (line-count split into *_partN files)
+
+  /// In-memory `Write` that keeps its bytes in a shared buffer so a test can
+  /// read back what [`split_lines_stream`] wrote to a part.
+  #[derive(Clone, Default)]
+  struct SharedBuf(std::rc::Rc<std::cell::RefCell<Vec<u8>>>);
+
+  impl SharedBuf {
+    fn text(&self) -> String {
+      String::from_utf8(self.0.borrow().clone()).unwrap()
+    }
+  }
+
+  impl Write for SharedBuf {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+      self.0.borrow_mut().extend_from_slice(buf);
+      Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+      Ok(())
+    }
+  }
+
+  /// Run the splitter in memory, collecting every part's content.
+  fn split_lines_in_memory(
+    input: &[u8],
+    lines_per_file: usize,
+    no_headers: bool,
+  ) -> (Vec<String>, SplitLinesCounts) {
+    let mut parts: Vec<SharedBuf> = Vec::new();
+    let counts = split_lines_stream(Cursor::new(input), lines_per_file, no_headers, |index| {
+      assert_eq!(index, parts.len() + 1, "parts must be numbered from 1");
+      let buf = SharedBuf::default();
+      parts.push(buf.clone());
+      Ok(buf)
+    })
+    .unwrap();
+    (parts.iter().map(SharedBuf::text).collect(), counts)
+  }
+
+  #[test]
+  fn split_lines_writes_every_n_rows_and_copies_the_header() {
+    let input = "id,name\n1,a\n2,b\n3,c\n4,d\n5,e\n";
+    let (parts, counts) = split_lines_in_memory(input.as_bytes(), 2, false);
+
+    assert_eq!(counts.file_count, 3);
+    assert_eq!(counts.total_rows, 5);
+    assert_eq!(
+      parts,
+      vec![
+        "id,name\n1,a\n2,b\n".to_string(),
+        "id,name\n3,c\n4,d\n".to_string(),
+        "id,name\n5,e\n".to_string(),
+      ]
+    );
+  }
+
+  #[test]
+  fn split_lines_no_headers_treats_the_first_line_as_data() {
+    let input = "id,name\n1,a\n2,b\n3,c\n4,d\n5,e\n";
+    let (parts, counts) = split_lines_in_memory(input.as_bytes(), 2, true);
+
+    // Six data rows now (the first line counts), so 3 parts of 2 rows each.
+    assert_eq!(counts.file_count, 3);
+    assert_eq!(counts.total_rows, 6);
+    assert_eq!(
+      parts,
+      vec![
+        "id,name\n1,a\n".to_string(),
+        "2,b\n3,c\n".to_string(),
+        "4,d\n5,e\n".to_string(),
+      ]
+    );
+  }
+
+  #[test]
+  fn split_lines_keeps_exactly_n_rows_per_part() {
+    let (parts, counts) = split_lines_in_memory(b"h\n1\n2\n3\n4\n", 2, false);
+
+    assert_eq!(counts.file_count, 2);
+    assert_eq!(counts.total_rows, 4);
+    assert_eq!(
+      parts,
+      vec!["h\n1\n2\n".to_string(), "h\n3\n4\n".to_string()]
+    );
+  }
+
+  #[test]
+  fn split_lines_single_part_when_rows_fit() {
+    let (parts, counts) = split_lines_in_memory(b"h\n1\n2\n", 1000, false);
+
+    assert_eq!(counts.file_count, 1);
+    assert_eq!(counts.total_rows, 2);
+    assert_eq!(parts, vec!["h\n1\n2\n".to_string()]);
+  }
+
+  #[test]
+  fn split_lines_preserves_crlf_and_terminates_a_missing_final_newline() {
+    let (parts, counts) = split_lines_in_memory(b"h\r\n1\r\n2", 5, false);
+
+    assert_eq!(counts.file_count, 1);
+    assert_eq!(counts.total_rows, 2);
+    // CRLF survives; the unterminated last line gets a terminator.
+    assert_eq!(parts, vec!["h\r\n1\r\n2\n".to_string()]);
+  }
+
+  #[test]
+  fn split_lines_header_only_input_still_writes_one_part() {
+    let (parts, counts) = split_lines_in_memory(b"id,name\n", 10, false);
+
+    assert_eq!(counts.file_count, 1);
+    assert_eq!(counts.total_rows, 0);
+    assert_eq!(parts, vec!["id,name\n".to_string()]);
+  }
+
+  #[test]
+  fn split_lines_rejects_degenerate_input() {
+    let zero = split_lines_stream(Cursor::new(b"h\n1\n".as_slice()), 0, false, |_| {
+      Ok(Vec::<u8>::new())
+    })
+    .unwrap_err();
+    assert!(zero.contains("at least 1"), "{zero}");
+
+    let empty = split_lines_stream(Cursor::new(b"".as_slice()), 10, false, |_| {
+      Ok(Vec::<u8>::new())
+    })
+    .unwrap_err();
+    assert!(empty.contains("empty"), "{empty}");
+  }
+
+  #[test]
+  fn split_lines_reads_across_buffer_boundaries() {
+    // A tiny `BufReader` capacity forces many refills, so lines are reassembled
+    // from several reads.
+    let mut input = String::from("h\n");
+    for i in 0..500 {
+      input.push_str(&format!("row-{i},aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"));
+    }
+
+    let mut parts: Vec<SharedBuf> = Vec::new();
+    let counts = split_lines_stream(
+      BufReader::with_capacity(16, Cursor::new(input.as_bytes())),
+      128,
+      false,
+      |_| {
+        let buf = SharedBuf::default();
+        parts.push(buf.clone());
+        Ok(buf)
+      },
+    )
+    .unwrap();
+
+    assert_eq!(counts.total_rows, 500);
+    assert_eq!(counts.file_count, 4);
+    // Reassembling the parts (minus the header copied into each one) must give
+    // back every row exactly once, in order.
+    let joined: String = parts
+      .iter()
+      .map(|p| p.text().replace("h\n", ""))
+      .collect::<Vec<_>>()
+      .join("");
+    let expected: String = input.lines().skip(1).map(|l| format!("{l}\n")).collect();
+    assert_eq!(joined, expected);
+  }
+
+  #[test]
+  fn split_lines_part_naming_preserves_the_extension() {
+    assert_eq!(
+      split_part_path(std::path::Path::new("/tmp/out"), "log", ".txt", 2)
+        .to_string_lossy()
+        .replace('\\', "/"),
+      "/tmp/out/log_part2.txt"
+    );
+    assert_eq!(
+      split_part_path(std::path::Path::new("/tmp/out"), "data", "", 1)
+        .to_string_lossy()
+        .replace('\\', "/"),
+      "/tmp/out/data_part1"
+    );
+  }
+
+  #[test]
+  fn split_lines_target_defaults_next_to_the_input() {
+    let (dir, stem, ext) = split_lines_target("/data/a/b.csv", None);
+    assert_eq!(dir.to_string_lossy().replace('\\', "/"), "/data/a");
+    assert_eq!(stem, "b");
+    assert_eq!(ext, ".csv");
+
+    let (dir, stem, ext) = split_lines_target("/data/a/b.txt", Some("/out"));
+    assert_eq!(dir.to_string_lossy().replace('\\', "/"), "/out");
+    assert_eq!(stem, "b");
+    assert_eq!(ext, ".txt");
+  }
+
+  #[test]
+  fn split_lines_to_files_matches_the_in_memory_layout() {
+    let dir = std::env::temp_dir();
+    let tag = format!("easy_csv_split_{}", std::process::id());
+    let stem = format!("{tag}_in");
+    let input_path = dir.join(format!("{stem}.txt"));
+    std::fs::write(&input_path, "h\n1\n2\n3\n4\n5\n").unwrap();
+
+    let (out_dir, resolved_stem, ext, counts) =
+      split_lines_to_files(input_path.to_str().unwrap(), None, 2, false).unwrap();
+
+    assert_eq!(counts.file_count, 3);
+    assert_eq!(counts.total_rows, 5);
+    assert_eq!(out_dir, dir);
+    assert_eq!(resolved_stem, stem);
+    assert_eq!(ext, ".txt");
+
+    let first = split_part_path(&dir, &stem, ".txt", 1);
+    assert_eq!(std::fs::read_to_string(&first).unwrap(), "h\n1\n2\n");
+    let third = split_part_path(&dir, &stem, ".txt", 3);
+    assert_eq!(std::fs::read_to_string(&third).unwrap(), "h\n5\n");
+
+    for index in 1..=3 {
+      let _ = std::fs::remove_file(split_part_path(&dir, &stem, ".txt", index));
+    }
+    let _ = std::fs::remove_file(&input_path);
+  }
+
+  #[test]
+  fn split_lines_to_files_honours_out_dir_and_no_headers() {
+    let dir = std::env::temp_dir();
+    let tag = format!("easy_csv_split_out_{}", std::process::id());
+    let stem = format!("{tag}_in");
+    let input_path = dir.join(format!("{stem}.csv"));
+    let out_dir = dir.join(format!("{tag}_out"));
+    std::fs::write(&input_path, "1,a\n2,b\n3,c\n").unwrap();
+
+    let (written_to, resolved_stem, ext, counts) = split_lines_to_files(
+      input_path.to_str().unwrap(),
+      Some(out_dir.to_str().unwrap()),
+      2,
+      true,
+    )
+    .unwrap();
+
+    assert_eq!(written_to, out_dir);
+    assert_eq!(resolved_stem, stem);
+    assert_eq!(ext, ".csv");
+    assert_eq!(counts.file_count, 2);
+    assert_eq!(counts.total_rows, 3);
+    assert_eq!(
+      std::fs::read_to_string(split_part_path(&out_dir, &stem, ".csv", 1)).unwrap(),
+      "1,a\n2,b\n"
+    );
+    assert_eq!(
+      std::fs::read_to_string(split_part_path(&out_dir, &stem, ".csv", 2)).unwrap(),
+      "3,c\n"
+    );
+
+    let _ = std::fs::remove_dir_all(&out_dir);
+    let _ = std::fs::remove_file(&input_path);
   }
 
   // detect_delimiter / probe_csv_file

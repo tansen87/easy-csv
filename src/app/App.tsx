@@ -29,6 +29,7 @@ import { VariablePanel } from "@/modules/variables/VariablePanel";
 import { CsvDiffDialog } from "@/modules/dialogs/file/CsvDiffDialog";
 import { CsvEncodingDialog } from "@/modules/dialogs/file/CsvEncodingDialog";
 import { SeparateCSVDialog } from "@/modules/dialogs/file/SeparateCSVDialog";
+import { SplitLinesDialog } from "@/modules/dialogs/file/SplitLinesDialog";
 import { DataProfilePanel } from "@/modules/data-preview/DataProfilePanel";
 import { AIPanel } from "@/modules/ai/AIPanel";
 import { ToastContainer } from "@/components/setting/Toast";
@@ -1263,6 +1264,19 @@ function AppContent() {
         },
       },
       {
+        id: "split-lines",
+        label: t.splitLines,
+        description: t.linesPerFileHint,
+        group: t.paletteActions,
+        groupIcon: Zap,
+        onSelect: () => {
+          ui.setSplitLinesInitialInput(
+            tabsHook.getCurrentTab()?.inputFile || undefined,
+          );
+          ui.setShowSplitLines(true);
+        },
+      },
+      {
         id: "use-or-save-template",
         label: t.paletteTemplates,
         group: t.paletteActions,
@@ -1436,6 +1450,12 @@ function AppContent() {
                   tabsHook.getCurrentTab()?.inputFile || undefined,
                 );
                 ui.setShowSeparateCsv(true);
+              }}
+              onOpenSplitLines={() => {
+                ui.setSplitLinesInitialInput(
+                  tabsHook.getCurrentTab()?.inputFile || undefined,
+                );
+                ui.setShowSplitLines(true);
               }}
               isExecuting={isExecuting}
               isCheckingUpdate={ui.isCheckingUpdate}
@@ -1700,6 +1720,13 @@ function AppContent() {
             initialInputFile={ui.separateCsvInitialInput}
             defaultDelimiter={settings.defaultDelimiter}
             onDefaultDelimiterChange={settings.setDefaultDelimiter}
+            onShowToast={showToast}
+          />
+
+          <SplitLinesDialog
+            isOpen={ui.showSplitLines}
+            onClose={() => ui.setShowSplitLines(false)}
+            initialInputFile={ui.splitLinesInitialInput}
             onShowToast={showToast}
           />
 

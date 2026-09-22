@@ -71,8 +71,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `docs/design/019_frontend-structure-refactor.md` | 前端目录结构与巨型文件重构方案(**阶段 0/1 已实施 + 2.1–2.4/2.7 与 3.1–3.4/3.8 已实施;2.2/2.3 为部分实施,2.5/2.6 与 3.5–3.7 未实施**): 已完成——类型下沉到 `types/dialog.ts` 解除循环依赖、`VariableHint` 移入 `ui/`、11 个旧浮动对话框收敛为 `openCommandFromContext()` → `buildCommandInitialParams()`(纯函数,配单测) → `CommandDialog` 并删除、`components/dialog/**` 四分为 `modules/dialogs/{command,file,app,common}`、命令表单一命令一文件(`forms/<命令id>.tsx`)、`data/commands.ts` 拆为 `data/commands/` 目录、`i18n/translations.ts` 拆为 `{en,zh}/<domain>.ts`、`components/panel/**` 迁往 `modules/{pipeline,data-preview,ai,variables,logs}`、`ui/` 统一 PascalCase、`hooks/` 统一 `useXxx`、ESLint 安全网(`import/no-cycle` + `import/parsers`)。未完成——`FlowPanel` JSX 再拆(≤600 目标未达)、`AppLayout`/`useDialogStack` 全量接入(`App.tsx` 已迁 `src/app/`)、`ChartPanel` 拆分、HomeView Props 收敛、`SettingsTabContent`/`ai/context.ts` 等中型拆分、`setting/` 三个文件迁往 `app/providers` 与 `ui/`、`max-lines`/CI 门禁、`scripts/check-index.ts` |
 
 | `docs/design/020_encoding-conversion-history.md` | CSV 编码转换保留上次记录(已实现): 复用 017 的「上次结果」模式——`easy-csv-encoding-last` 持久化(输出路径/字节数/完成时间/耗时)、打开时回填输入输出路径与源/目标编码、「打开路径」(`reveal_paths`)与「清除记录」、输出文件被删则置灰提示;后端 `CsvEncodingResult` 增加 `elapsed_ms`;`formatElapsed` 由 `utils/separateHistory.ts` 上提到 `utils/format.ts` |
+| `docs/design/021_split-lines-by-line-count.md` | 按行拆分(已实现): 移植上游 `split_lines`(来源文件已删除,节选见该设计文档 §2)—— 不解析 CSV 的**原始行**切分(`read_until(b'\n')` 字节保真、常量内存、可处理超大文件),`no_headers` 选项(首行按数据行),输出 `{stem}_part{N}{ext}`(N 从 1、保留扩展名);File 菜单「拆分好/坏行」下方新入口 + `easy-csv-split-lines-last` 上次记录(存输出目录而非全部分片路径) |
 
-> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–020 已登记。
+> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–021 已登记。
 
 ---
 
@@ -188,7 +189,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_correction` | 保存纠正规则 |
 | `clear_conversations` / `clear_feedback` / `clear_corrections` | 清除对应表全部数据 |
 
-### Tauri 命令清单(前端可调用,共 51 个)
+### Tauri 命令清单(前端可调用,共 58 个)
 
 | 命令 | 模块 | 功能 |
 |------|------|------|
@@ -199,6 +200,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `diff_csv_files` | csv | 对比两个 CSV 文件(Myers diff,分页返回) |
 | `convert_csv_encoding` | csv | 转换 CSV 文件编码(64KB 流式转码),返回输出路径/读写字节数/后端耗时 |
 | `separate_csv` | 将 CSV 拆分为 good/bad 两文件(共享 `flexible(true)` reader/writer 重新序列化,坏行不丢失;后续连续坏行会连同前一合法行一并进 bad;支持 expected_columns 覆盖 / skiprows / quoting / out_dir / streaming / no_headers;核心为泛型 `separate_stream`,默认内存路径与 `streaming` 流式路径共用同一逻辑)。设计:`docs/design/016_separate-good-bad-rows.md` |
+| `split_lines` | 按**原始行**把文本文件切成 `{stem}_part{N}{ext}`(N 从 1、保留输入扩展名;不解析 CSV、不涉及分隔符,`read_until(b'\n')` 字节保真 + 常量内存,可处理超大文件);返回 `SplitLinesResult`(output_dir/output_paths/file_count/lines_per_file/total_rows/header_written/elapsed_ms);`no_headers=true` 时首行按数据行、输出不写表头,默认首行作为表头复制进每一份。核心 `split_lines_stream`(泛型 writer 工厂)、`split_lines_to_files`、`split_part_path`/`split_lines_target`。设计:`docs/design/021_split-lines-by-line-count.md` |
 | `probe_csv_file` | csv | 探测文件头部(64 KiB):自动检测分隔符 + 返回第一行列数与表头预览,供拆分对话框显示文件信息。设计:`docs/design/017_separate-dialog-ux.md` |
 | `load_profile_cache` / `save_profile_cache` | storage | 数据概况缓存(基于文件 mtime,LRU 淘汰,上限50条) |
 | `check_xan_installed` | xan | 检查 xan.exe 是否已解压 |
@@ -267,8 +269,10 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `params.test.ts` | 参数构造工具 |  |
 | `separateHistory.test.ts` | 拆分结果 localStorage |  |
 | `SeparateCSVDialog.test.tsx` | 拆分好/坏行对话框(设计 016/017): 流式/无表头选项、探测、上次结果、打开路径 |  |
+| `splitLinesHistory.test.ts` | 按行拆分结果 localStorage(设计 021): 往返、坏 JSON / 缺选项字段 / 类型不符、超长跳过、清除 | 6 |
+| `SplitLinesDialog.test.tsx` | 按行拆分对话框(设计 021): 行数/无表头/输出目录选项、校验拦截、上次记录回填与展示、打开路径、目录失效 | 9 |
 
-> 全量以 `pnpm test` 为准(当前 24 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
+> 全量以 `pnpm test` 为准(当前 26 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
 
 ---
 
@@ -421,6 +425,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 文件 | 职责 |
 |------|------|
 | `file/SeparateCSVDialog.tsx` | 拆分好/坏行: 输入探测、分隔符自动检测/手选/设为默认、期望列数/跳过行/引号/无表头/流式、上次结果(localStorage)+ 打开路径 |
+| `file/SplitLinesDialog.tsx` | 按行拆分(设计 021): 输入文件、输出目录、每个文件行数、无表头、上次记录(回填选项 + 打开输出目录 + 清除记录 + 目录失效提示);不解析 CSV,故无分隔符/探测选项 |
 | `file/CsvDiffDialog.tsx` | CSV 双文件对比(Ctrl+D),分页避免卡顿 |
 | `file/CsvEncodingDialog.tsx` | CSV 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1);上次记录(完成时间/耗时/编码对/字节数 + 打开路径 + 清除记录 + 输出文件失效提示),打开时回填输入输出路径与源/目标编码。设计:`docs/design/020_encoding-conversion-history.md` |
 | `file/PipelineTemplateDialog.tsx` | 管道模板库对话框(F4) |
@@ -487,6 +492,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改 CSV 对比功能 | `src/modules/dialogs/file/CsvDiffDialog.tsx` + `src-tauri/src/csv.rs`(`diff_csv_files`) |
 | 修改 CSV 编码转换 | `src/modules/dialogs/file/CsvEncodingDialog.tsx` + `src-tauri/src/csv.rs`(`convert_csv_encoding`)+ `src/utils/encodingHistory.ts`(上次记录持久化)。设计:`docs/design/020_encoding-conversion-history.md` |
 | 修改拆分好/坏行 | `src/modules/dialogs/file/SeparateCSVDialog.tsx` + `src-tauri/src/csv.rs`(`separate_csv`/`separate_stream`/`probe_csv_file`)+ `src/hooks/useCsvProbe.ts` + `src/utils/separateHistory.ts` + `src-tauri/src/storage.rs`(`reveal_paths`) |
+| 修改按行拆分(按行数切成多份) | `src/modules/dialogs/file/SplitLinesDialog.tsx` + `src-tauri/src/csv.rs`(`split_lines`/`split_lines_stream`/`split_lines_to_files`)+ `src/utils/splitLinesHistory.ts` + `src/components/menu/MainMenu.tsx`(File 菜单入口)+ `src-tauri/src/storage.rs`(`reveal_paths`)。设计:`docs/design/021_split-lines-by-line-count.md` |
 | 修改会话保存/恢复 | `src/hooks/useSession.ts` + `src/utils/session.ts` + `src-tauri/src/session.rs` |
 | 修改命令面板 | `src/modules/logs/CommandPalette.tsx` + `src/hooks/useUIState.ts` + `src/hooks/useKeyboardShortcuts.ts`(Ctrl+K) |
 | 修改管道可视化布局 | `src/modules/pipeline/FlowPanel.tsx`(主逻辑) + `pipeline/lib/layout.ts`(布局) + `pipeline/nodes/`(节点样式) |
