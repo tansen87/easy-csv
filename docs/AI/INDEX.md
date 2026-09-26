@@ -105,7 +105,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 |------|------|
 | `AppConfig` 结构体 | `default_delimiter`, `no_headers`, `auto_detect_delimiter`(默认 `true`,打开文件时是否自动检测分隔符), `show_execution_notification`, `minimize_to_tray`, `double_click_fit_view`, `auto_check_update`(默认 `true`,启动后静默检查更新) |
 | `load_config()` / `save_config()` | JSON 配置文件读写 |
-| `get_resources_dir()` | 资源/数据根目录,**三平台统一为 `<用户本地数据目录>/EasyCsv`**(用 `dirs::data_local_dir()`:Windows `%LOCALAPPDATA%\EasyCsv`、macOS `~/Library/Application Support/EasyCsv`、Linux `~/.local/share/EasyCsv`)。结果用 `OnceLock` 记忆。**与安装目录解耦**是「免管理员权限」的前提(装到 `Program Files` 时旧路径不可写 → `get_db()` 静默失败)。所有 db 数据目录经它派生,插件目录经 `plugins::get_plugin_dir()` 派生。设计:`docs/design/022_...md` |
+| `get_resources_dir()` | 资源/数据根目录,**三平台统一为 `<用户本地数据目录>/EasyCsv`**(用 `dirs::data_local_dir()`:Windows `%LOCALAPPDATA%\EasyCsv`、macOS `~/Library/Application Support/EasyCsv`、Linux `~/.local/share/EasyCsv`)。结果用 `OnceLock` 记忆。**与安装目录解耦**是「免管理员权限」的前提(装到 `Program Files` 时旧路径不可写 → `get_db()` 静默失败)。所有 db 数据目录经它派生,插件目录经 `plugins::get_plugin_dir()` 派生。设计:`docs/design/022_github-auto-update-and-admin-free-install.md` |
 | 旧路径迁移 | `#[cfg(windows)]`:新目录无标记且旧目录 `<exe>/EasyCsv_resources` 存在时,递归复制(含 `data/`、`plugins/`)后写 `.migrated-from-exe-dir` 标记;失败则继续用旧路径(不删旧目录)。若新目录已有 `data/config.db` 则只补标记、不覆盖 |
 | `get/set_default_delimiter` | 默认分隔符配置命令(自动检测关闭时读取文件使用,也是检测失败时的兜底值) |
 | `get/set_no_headers` | 无表头配置命令 |
@@ -234,7 +234,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `list_plugins` | plugins | 列出已注册的 CLI 插件 |
 | `check_plugins` | plugins | 检查插件可执行文件是否可用(解析 PATH + 读取 `--version`) |
 | `get_install_form` | update | 返回运行形态(`InstallForm`)与 `can_self_update`:按 `current_exe()` 路径与 `APPIMAGE` 环境变量判定,用于对 deb / `/Applications` 下的安装**禁用一键更新**。设计:`docs/design/022_github-auto-update-and-admin-free-install.md` |
-| `get/set_auto_check_update` | config | 启动后静默检查更新的总开关(默认开;只提示,不自动安装)。设计:`docs/design/022_...md` |
+| `get/set_auto_check_update` | config | 启动后静默检查更新的总开关(默认开;只提示,不自动安装)。设计:`docs/design/022_github-auto-update-and-admin-free-install.md` |
 
 ---
 
@@ -320,7 +320,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 ### 服务层 (`services/`)
 
-**`services/update/index.ts`** — 自动更新(设计 `docs/design/022_...md`)。唯一直接 import `@tauri-apps/plugin-updater` / `plugin-process` 的地方:
+**`services/update/index.ts`** — 自动更新(设计 `docs/design/022_github-auto-update-and-admin-free-install.md`)。唯一直接 import `@tauri-apps/plugin-updater` / `plugin-process` 的地方:
 
 | 导出 | 职责 |
 |------|------|
@@ -358,7 +358,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `usePipelineTemplates.ts` | 管道模板库(F4) |
 | `useDataLineage.ts` | 数据血缘: 列类型推断、变换分析、血缘图数据构建与持久化 |
 | `useExecutionHistory.ts` | 执行历史(F6) |
-| `useUpdater.ts` | 自动更新状态机: 静默/交互检查、下载进度、安装交接(`beforeInstall` 先落盘会话)、错误态;对话框可见性留在调用方(静默检查不得自己弹窗)。设计: `docs/design/022_...md` |
+| `useUpdater.ts` | 自动更新状态机: 静默/交互检查、下载进度、安装交接(`beforeInstall` 先落盘会话)、错误态;对话框可见性留在调用方(静默检查不得自己弹窗)。设计: `docs/design/022_github-auto-update-and-admin-free-install.md` |
 | `useAppSettings.ts` | 应用配置: 分隔符、无表头、通知、历史上限、托盘设置 |
 | `useCsvProbe.ts` | 拆分对话框的文件探测(防抖 + 过期响应丢弃) |
 | `useToast.ts` | Toast 通知 |
