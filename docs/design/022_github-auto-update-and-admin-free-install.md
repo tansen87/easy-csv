@@ -496,6 +496,42 @@ node -e 'const m=require("/tmp/latest.json");console.log(m.version, Object.keys(
 # 3) 真正的验收:装 0.5.0 → 应用内「检查更新」→ 下载安装 → 重启后版本变 0.6.0(§8 V5)
 ```
 
+#### ⚠️ 实测踩坑:改 Release 的说明正文,应用里**不会**跟着变
+
+**成因**:应用读的是 `latest.json` 的 `notes` 字段,而它由 `tauri-action` 在**构建时**从
+`release.yml` 的 `releaseBody` 写死(所以 manifest 里的 `pub_date` 也是那一刻)。
+GitHub Release 页面上显示的「描述正文」是**另一份独立副本**,之后在网页上编辑它
+**不会回写 manifest** → 应用永远显示构建时那版说明。
+
+验证方式(两处内容一对比就清楚):
+
+```bash
+# 应用实际读到的说明
+curl -sS -L https://github.com/tansen87/easy-csv/releases/latest/download/latest.json \
+  | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).notes))'
+# 网页上显示的正文
+gh release view v0.6.0 --repo tansen87/easy-csv --json body -q .body
+```
+
+**改说明的正确做法:直接替换 manifest 资产里的 `notes`**(不必重跑 20 分钟的构建):
+
+```bash
+cd /tmp
+gh release download v0.6.0 --repo tansen87/easy-csv --pattern latest.json --clobber
+# 只改 notes 字段的内容(用编辑器或 node 改写),其余部分逐字节保持原样
+gh release upload v0.6.0 latest.json --repo tansen87/easy-csv --clobber
+# 复查
+curl -sS -L https://github.com/tansen87/easy-csv/releases/latest/download/latest.json | head -c 300
+```
+
+⚠️ **只改 `notes` 是安全的**:签名(`signature`)校验的是各平台条目里的安装包,`notes`
+不在校验范围内 —— 但不许动 `platforms` 里的 `url` / `signature`,那会让所有平台的更新一起失效。
+上传后 CDN 可能缓存几分钟;应用下一次检查就会拿到新文案。
+
+**避免反复改的写法**:既然 `notes` 在构建时就冻结了,`releaseBody` 里就别放"以后想改"的长文案 ——
+改成一句指向仓库内 changelog 的说明(那份文件随时可改,且应用里能点开),例如
+「See docs/changelog/CHANGELOG-<version>.md for details.」
+
 ---
 
 ## 5. 前端与 UI 变更
