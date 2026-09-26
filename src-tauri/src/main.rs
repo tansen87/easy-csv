@@ -79,6 +79,8 @@ fn main() {
     .plugin(tauri_plugin_window_state::Builder::new().build())
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_http::init())
+    .plugin(tauri_plugin_updater::Builder::new().build())
+    .plugin(tauri_plugin_process::init())
     .plugin({
       let builder = PreventDefaultBuilder::new().with_flags(Flags::empty());
       // PlatformOptions (browser accelerator key handling) is Windows-only in

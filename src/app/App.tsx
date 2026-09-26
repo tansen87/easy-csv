@@ -63,6 +63,10 @@ import { useDataLineage } from "@/hooks/useDataLineage";
 import { useSession } from "@/hooks/useSession";
 import { useExecutionHistory } from "@/hooks/useExecutionHistory";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useUpdater } from "@/hooks/useUpdater";
+
+/** Delay before the silent startup update check, in ms (design 022 §5.4). */
+const AUTO_UPDATE_CHECK_DELAY_MS = 5000;
 import { formatDateTime } from "@/utils/format";
 import {
   delimiterModeFromSettings,
@@ -83,20 +87,6 @@ import {
 } from "@/types/xan";
 import { AIConfig, DEFAULT_AI_CONFIG } from "@/services/ai/types";
 import { loadAIConfig, saveAIConfig, setAIConfig } from "@/services/ai/index";
-import pkg from "../../package.json";
-
-function compareVersions(a: string, b: string): number {
-  const aParts = a.split(".").map(Number);
-  const bParts = b.split(".").map(Number);
-  const len = Math.max(aParts.length, bParts.length);
-  for (let i = 0; i < len; i++) {
-    const aNum = aParts[i] || 0;
-    const bNum = bParts[i] || 0;
-    if (aNum > bNum) return 1;
-    if (aNum < bNum) return -1;
-  }
-  return 0;
-}
 
 function App() {
   return <AppContent />;
@@ -191,6 +181,13 @@ function AppContent() {
   // Execution history
   const executionHistory = useExecutionHistory();
 
+  // Auto-update (design 022). `beforeInstall` flushes the session because the
+  // Windows installer quits the app before replacing it.
+  const updater = useUpdater({
+    showToast,
+    beforeInstall: () => session.flushSession(),
+  });
+
   // AI panel expanded state is derived from the persisted panel state
   // (default: collapsed strip), and drives the LogPanel avoidance offset.
   const aiPanelExpanded =
@@ -223,7 +220,6 @@ function AppContent() {
   );
   const headerRef = useRef<HTMLDivElement>(null);
   const reactFlowInstanceRef = useRef<any>(null);
-  const currentVersion = pkg.version;
 
   // Unified dialog switch stack for App-local dialogs (019 §4.4). The ui.*
   // switches migrate over in batches; these are the first adopters.
@@ -262,36 +258,41 @@ function AppContent() {
     setAIConfig(config);
   }, []);
 
-  // Check for updates
-  const checkForUpdates = useCallback(async () => {
-    ui.setIsCheckingUpdate(true);
-    try {
-      const response = await fetch(
-        "https://api.github.com/repos/tansen87/easy-csv/releases/latest",
-      );
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error(`Expected JSON response, got: ${contentType}`);
-      }
-      const data = await response.json();
-      const latestVersionRaw = data.tag_name || "";
-      const latestVersion = latestVersionRaw.replace(/^v/, "");
-      const changelog = data.body || "";
-      const hasUpdate =
-        currentVersion &&
-        latestVersion &&
-        compareVersions(latestVersion, currentVersion) > 0;
+  // Check for updates. Interactive checks always surface the dialog; the
+  // caller decides, because a silent startup check must not pop one open.
+  const checkForUpdates = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const result = await updater.check(options);
+      if (!options?.silent) ui.setShowUpdateDialog(true);
+      return result;
+    },
+    [updater, ui],
+  );
 
-      ui.setUpdateInfo({ hasUpdate, latestVersion, changelog });
-      ui.setShowUpdateDialog(true);
-    } catch (error) {
-      showToastRef.current(`Failed to check for updates: ${error}`, "error");
-    } finally {
-      ui.setIsCheckingUpdate(false);
-    }
-  }, [ui, showToastRef, currentVersion]);
+  // Silent update check shortly after launch (design 022 §5.4). Delayed so it
+  // never competes with session restore or the first paint, and it only ever
+  // flags availability — installing stays a user action.
+  const checkForUpdatesRef = useRef(checkForUpdates);
+  checkForUpdatesRef.current = checkForUpdates;
+  const autoCheckStartedRef = useRef(false);
+  useEffect(() => {
+    if (autoCheckStartedRef.current) return;
+    autoCheckStartedRef.current = true;
+    let timer: number | undefined;
+    void (async () => {
+      // Read the persisted preference directly: this effect runs before
+      // `settings.loadAll()` resolves, so the state value would still be the
+      // default and a user who turned the check off would be ignored.
+      const enabled = await invoke<boolean | null>("get_auto_check_update");
+      if (enabled === false) return;
+      timer = window.setTimeout(() => {
+        void checkForUpdatesRef.current({ silent: true });
+      }, AUTO_UPDATE_CHECK_DELAY_MS);
+    })();
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, []);
 
   // Command click handler
   const handleCommandClick = useCallback(
@@ -1056,6 +1057,9 @@ function AppContent() {
       await invoke("set_double_click_fit_view", {
         enabled: settings.doubleClickFitView,
       });
+      await invoke("set_auto_check_update", {
+        enabled: settings.autoCheckUpdate,
+      });
     } catch (error) {
       showToastRef.current(`Failed to save settings: ${error}`, "error");
     }
@@ -1430,7 +1434,7 @@ function AppContent() {
               onExportPipeline={handleExportPipelineAndMarkSaved}
               onUseOrSaveTemplate={openTemplates}
               onHelp={onHelp}
-              onCheckUpdate={checkForUpdates}
+              onCheckUpdate={() => void checkForUpdates()}
               onShowSettings={onShowSettings}
               onOpenPalette={() => ui.setShowCommandPalette(true)}
               onOpenCsvDiff={() => {
@@ -1458,8 +1462,8 @@ function AppContent() {
                 ui.setShowSplitLines(true);
               }}
               isExecuting={isExecuting}
-              isCheckingUpdate={ui.isCheckingUpdate}
-              hasUpdate={!!ui.updateInfo?.hasUpdate}
+              isCheckingUpdate={updater.isChecking}
+              hasUpdate={!!updater.updateInfo?.available}
               showLogErrorBadge={
                 !ui.showLogPanel && logs.some((l) => l.type === "error")
               }
@@ -1628,6 +1632,8 @@ function AppContent() {
             onMinimizeToTrayChange={settings.setMinimizeToTray}
             doubleClickFitView={settings.doubleClickFitView}
             onDoubleClickFitViewChange={settings.setDoubleClickFitView}
+            autoCheckUpdate={settings.autoCheckUpdate}
+            onAutoCheckUpdateChange={settings.setAutoCheckUpdate}
             onSave={handleSaveSettings}
             aiConfig={aiConfig}
             onAIConfigChange={handleAIConfigChange}
@@ -1636,8 +1642,12 @@ function AppContent() {
           <UpdateDialog
             isOpen={ui.showUpdateDialog}
             onClose={() => ui.setShowUpdateDialog(false)}
-            updateInfo={ui.updateInfo}
-            currentVersion={currentVersion}
+            updateInfo={updater.updateInfo}
+            installForm={updater.installForm}
+            isInstalling={updater.isInstalling}
+            progress={updater.progress}
+            error={updater.error}
+            onInstall={() => void updater.install()}
           />
 
           <ConfirmDialog

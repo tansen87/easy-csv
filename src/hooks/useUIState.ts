@@ -21,12 +21,8 @@ export function useUIState() {
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [showDataProfile, setShowDataProfile] = useState(false);
   const [showRefreshDialog, setShowRefreshDialog] = useState(false);
-  const [updateInfo, setUpdateInfo] = useState<{
-    hasUpdate: boolean;
-    latestVersion: string;
-    changelog: string;
-  } | null>(null);
-  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  // Update check/install state lives in `useUpdater`; only dialog visibility is
+  // pure UI state.
   const [showVersionPanel, setShowVersionPanel] = useState(false);
   const [showLineagePanel, setShowLineagePanel] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
@@ -81,10 +77,6 @@ export function useUIState() {
     setShowDataProfile,
     showRefreshDialog,
     setShowRefreshDialog,
-    updateInfo,
-    setUpdateInfo,
-    isCheckingUpdate,
-    setIsCheckingUpdate,
     showVersionPanel,
     setShowVersionPanel,
     showLineagePanel,

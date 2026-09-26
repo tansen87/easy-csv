@@ -35,6 +35,8 @@ function renderSettings(
         onMinimizeToTrayChange={vi.fn()}
         doubleClickFitView={true}
         onDoubleClickFitViewChange={vi.fn()}
+        autoCheckUpdate={true}
+        onAutoCheckUpdateChange={vi.fn()}
         onSave={vi.fn()}
         aiConfig={aiConfig}
         onAIConfigChange={vi.fn()}

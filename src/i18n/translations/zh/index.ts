@@ -6,6 +6,7 @@ import { zhDialog } from "./dialog";
 import { zhAi } from "./ai";
 import { zhSettings } from "./settings";
 import { zhHelp } from "./help";
+import { zhUpdate } from "./update";
 
 /**
  * Every zh string, merged back into one flat object.
@@ -22,4 +23,5 @@ export const zh: Translations = {
   ...zhAi,
   ...zhSettings,
   ...zhHelp,
+  ...zhUpdate,
 };

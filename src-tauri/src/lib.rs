@@ -6,6 +6,7 @@ pub mod pipeline;
 pub mod plugins;
 pub mod session;
 pub mod storage;
+pub mod update;
 pub mod xan;
 
 pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync> {
@@ -31,6 +32,8 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     config::set_minimize_to_tray,
     config::get_double_click_fit_view,
     config::set_double_click_fit_view,
+    config::get_auto_check_update,
+    config::set_auto_check_update,
     config::get_ai_config,
     config::set_ai_config,
     config::save_api_key,
@@ -68,6 +71,7 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     storage::load_lineage_data,
     storage::save_execution_history,
     storage::load_execution_history,
-    storage::clear_execution_history
+    storage::clear_execution_history,
+    update::get_install_form
   ])
 }

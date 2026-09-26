@@ -12,6 +12,7 @@ export function useAppSettings(
   const [systemNotification, setSystemNotification] = useState(true);
   const [minimizeToTray, setMinimizeToTray] = useState(true);
   const [doubleClickFitView, setDoubleClickFitView] = useState(true);
+  const [autoCheckUpdate, setAutoCheckUpdate] = useState(true);
 
   const loadDefaultDelimiter = useCallback(async () => {
     try {
@@ -85,6 +86,18 @@ export function useAppSettings(
     }
   }, [showToastRef]);
 
+  const loadAutoCheckUpdate = useCallback(async () => {
+    try {
+      const saved = await invoke<boolean | null>("get_auto_check_update");
+      if (saved !== null) setAutoCheckUpdate(saved);
+    } catch (error) {
+      showToastRef.current(
+        `Failed to load update check setting: ${error}`,
+        "error",
+      );
+    }
+  }, [showToastRef]);
+
   const loadAll = useCallback(async () => {
     await Promise.all([
       loadDefaultDelimiter(),
@@ -93,6 +106,7 @@ export function useAppSettings(
       loadSystemNotification(),
       loadMinimizeToTray(),
       loadDoubleClickFitView(),
+      loadAutoCheckUpdate(),
     ]);
   }, [
     loadDefaultDelimiter,
@@ -101,6 +115,7 @@ export function useAppSettings(
     loadSystemNotification,
     loadMinimizeToTray,
     loadDoubleClickFitView,
+    loadAutoCheckUpdate,
   ]);
 
   return {
@@ -116,6 +131,8 @@ export function useAppSettings(
     setMinimizeToTray,
     doubleClickFitView,
     setDoubleClickFitView,
+    autoCheckUpdate,
+    setAutoCheckUpdate,
     loadAll,
   };
 }

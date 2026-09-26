@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { ExecutionHistoryEntry, ExecutionHistoryStatus } from "@/types/xan";
 import { useLanguage } from "@/i18n";
+import { formatBytes } from "@/utils/format";
 
 interface ExecutionHistoryDialogProps {
   isOpen: boolean;
@@ -32,12 +33,6 @@ function parseSummary(raw: string): ParsedSummary {
   } catch {
     return { columns: 0, rows: 0, bytes: 0, preview: [] };
   }
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function statusClass(status: ExecutionHistoryStatus): string {

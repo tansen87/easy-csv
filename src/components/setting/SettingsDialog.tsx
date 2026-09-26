@@ -20,6 +20,8 @@ interface SettingsDialogProps {
   onMinimizeToTrayChange: (value: boolean) => void;
   doubleClickFitView: boolean;
   onDoubleClickFitViewChange: (value: boolean) => void;
+  autoCheckUpdate: boolean;
+  onAutoCheckUpdateChange: (value: boolean) => void;
   onSave: () => void;
   aiConfig: AIConfig;
   onAIConfigChange: (config: AIConfig) => void;
@@ -38,6 +40,8 @@ export function SettingsDialog({
   onMinimizeToTrayChange,
   doubleClickFitView,
   onDoubleClickFitViewChange,
+  autoCheckUpdate,
+  onAutoCheckUpdateChange,
   onSave,
   aiConfig,
   onAIConfigChange,
@@ -171,6 +175,8 @@ export function SettingsDialog({
             onMinimizeToTrayChange={onMinimizeToTrayChange}
             doubleClickFitView={doubleClickFitView}
             onDoubleClickFitViewChange={onDoubleClickFitViewChange}
+            autoCheckUpdate={autoCheckUpdate}
+            onAutoCheckUpdateChange={onAutoCheckUpdateChange}
             onSave={onSave}
             aiConfig={aiConfig}
             onAIConfigChange={onAIConfigChange}

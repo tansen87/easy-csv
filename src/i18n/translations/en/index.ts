@@ -6,6 +6,7 @@ import { enDialog } from "./dialog";
 import { enAi } from "./ai";
 import { enSettings } from "./settings";
 import { enHelp } from "./help";
+import { enUpdate } from "./update";
 
 /**
  * Every en string, merged back into one flat object.
@@ -22,4 +23,5 @@ export const en: Translations = {
   ...enAi,
   ...enSettings,
   ...enHelp,
+  ...enUpdate,
 };

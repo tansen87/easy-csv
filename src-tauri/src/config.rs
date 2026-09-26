@@ -1,4 +1,5 @@
-use std::sync::Mutex;
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 
 use aes_gcm::{
   Aes256Gcm, Nonce,
@@ -19,6 +20,9 @@ pub struct AppConfig {
   pub show_execution_notification: Option<bool>,
   pub minimize_to_tray: Option<bool>,
   pub double_click_fit_view: Option<bool>,
+  /// Master switch for the silent update check that runs shortly after launch
+  /// (design 022). Checking never installs anything by itself.
+  pub auto_check_update: Option<bool>,
 }
 
 impl Default for AppConfig {
@@ -30,38 +34,146 @@ impl Default for AppConfig {
       show_execution_notification: None,
       minimize_to_tray: None,
       double_click_fit_view: Some(true),
+      auto_check_update: Some(true),
     }
   }
 }
 
+/// Legacy Windows layout: user data used to live next to the executable, which
+/// made the data directory unwritable whenever the app was installed under
+/// `Program Files` (see docs/design/022 §3.2).
+#[cfg(target_os = "windows")]
+const LEGACY_DIR_NAME: &str = "EasyCsv_resources";
+
+/// Marker written into the new data directory once a legacy → new migration has
+/// completed, so later starts neither migrate again nor resurrect data the user
+/// deliberately removed from the old location.
+const MIGRATION_MARKER: &str = ".migrated-from-exe-dir";
+
+/// Resolved once per process: the path is stable, and resolving it may run a
+/// one-time migration that must not be repeated on every call.
+static RESOURCES_DIR: OnceLock<PathBuf> = OnceLock::new();
+
 /// Return the base directory that plugins and SQLite databases live under.
 ///
-/// - Windows: `<exe_dir>\EasyCsv_resources` (unchanged, keeps existing user data).
+/// Always `<user-local-data>/EasyCsv`:
+/// - Windows: `%LOCALAPPDATA%\EasyCsv`
 /// - macOS: `~/Library/Application Support/EasyCsv`
-/// - Linux: `~/.local/share/EasyCsv` (XDG)
+/// - Linux: `~/.local/share/EasyCsv`
+///
+/// Deliberately decoupled from the install directory: the app must keep working
+/// when installed read-only (`Program Files`, `/Applications`, a `.app` bundle)
+/// and when the updater replaces the executable in place. `data_local_dir()` is
+/// used instead of `data_dir()` because the only platform where they differ is
+/// Windows — `%LOCALAPPDATA%` vs the roaming `%APPDATA%` — and roaming profiles
+/// must not carry SQLite databases. On macOS/Linux both resolve to the same
+/// path, so existing users there are unaffected.
 ///
 /// All data dirs derive from this single function; plugin dir is derived via
 /// `plugins::get_plugin_dir()`.
-pub fn get_resources_dir() -> std::path::PathBuf {
+pub fn get_resources_dir() -> PathBuf {
+  RESOURCES_DIR.get_or_init(resolve_resources_dir).clone()
+}
+
+fn resolve_resources_dir() -> PathBuf {
+  let new_dir = dirs::data_local_dir()
+    .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
+    .join("EasyCsv");
+
   #[cfg(target_os = "windows")]
   {
-    let exe_path = std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("."));
-    let exe_dir = exe_path.parent().unwrap_or(std::path::Path::new("."));
-    return exe_dir.join("EasyCsv_resources");
+    // Migration failed → keep using the old location rather than losing data.
+    if let Some(legacy) = migrate_legacy_resources_dir(&new_dir) {
+      return legacy;
+    }
   }
-  #[cfg(not(target_os = "windows"))]
-  {
-    #[cfg(target_os = "macos")]
-    let app_dir = "EasyCsv";
-    #[cfg(target_os = "linux")]
-    let app_dir = "EasyCsv";
-    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
-    let app_dir = "EasyCsv";
 
-    dirs::data_dir()
-      .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")))
-      .join(app_dir)
+  new_dir
+}
+
+#[cfg(target_os = "windows")]
+fn legacy_resources_dir() -> PathBuf {
+  let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("."));
+  let exe_dir = exe_path.parent().unwrap_or_else(|| Path::new("."));
+  exe_dir.join(LEGACY_DIR_NAME)
+}
+
+/// One-time move of `<exe_dir>\EasyCsv_resources` into the new data directory.
+///
+/// Returns `Some(legacy_dir)` only when the copy failed and the app must stay on
+/// the old directory; `None` means "use the new directory".
+///
+/// The copy is additive and never deletes the source, so a failure — or a user
+/// who wants to roll back to an older build — always still has the data. The
+/// two markers (`MIGRATION_MARKER`, and the presence of a real `data/config.db`
+/// in the new location) keep this safe to call on every start.
+#[cfg(target_os = "windows")]
+fn migrate_legacy_resources_dir(new_dir: &Path) -> Option<PathBuf> {
+  // Already migrated (or already new-layout).
+  if new_dir.join(MIGRATION_MARKER).exists() {
+    return None;
   }
+
+  let legacy = legacy_resources_dir();
+  if !legacy.is_dir() {
+    // Nothing to migrate — fresh install on the new layout.
+    return None;
+  }
+
+  // A real database already lives in the new location: this install has been
+  // used with the new layout before, so copying the legacy tree over it would
+  // clobber newer data. Treat as migrated and leave the legacy dir alone.
+  if new_dir.join("data").join("config.db").exists() {
+    let _ = std::fs::write(new_dir.join(MIGRATION_MARKER), "existing new-layout data\n");
+    return None;
+  }
+
+  match copy_dir_recursive(&legacy, new_dir) {
+    Ok(copied) => {
+      let _ = std::fs::write(
+        new_dir.join(MIGRATION_MARKER),
+        format!("migrated from {}\n", legacy.display()),
+      );
+      eprintln!(
+        "[EasyCsv] migrated {copied} file(s) from {} to {}",
+        legacy.display(),
+        new_dir.display()
+      );
+      None
+    }
+    Err(error) => {
+      // Stay on the legacy dir; the next start retries the copy. Partial
+      // leftovers in `new_dir` are harmless because the marker is what decides,
+      // and a retry overwrites them from the still-intact source.
+      eprintln!(
+        "[EasyCsv] could not migrate {} to {} ({error}); continuing to use the old location",
+        legacy.display(),
+        new_dir.display()
+      );
+      Some(legacy)
+    }
+  }
+}
+
+/// Recursively copy `from` into `to`, returning the number of files copied.
+///
+/// `std::fs` has no recursive copy. Existing files are overwritten, which makes
+/// a retry after a partial failure self-healing.
+#[cfg(target_os = "windows")]
+fn copy_dir_recursive(from: &Path, to: &Path) -> std::io::Result<usize> {
+  std::fs::create_dir_all(to)?;
+  let mut copied = 0usize;
+  for entry in std::fs::read_dir(from)? {
+    let entry = entry?;
+    let target = to.join(entry.file_name());
+    if entry.file_type()?.is_dir() {
+      copied += copy_dir_recursive(&entry.path(), &target)?;
+    } else {
+      std::fs::copy(entry.path(), &target)?;
+      copied += 1;
+    }
+  }
+  Ok(copied)
 }
 
 struct DbState {
@@ -236,6 +348,7 @@ pub fn load_config() -> Result<AppConfig, String> {
   let minimize_to_tray = get_config_string("minimize_to_tray").and_then(|v| v.parse().ok());
   let double_click_fit_view =
     get_config_string("double_click_fit_view").and_then(|v| v.parse().ok());
+  let auto_check_update = get_config_string("auto_check_update").and_then(|v| v.parse().ok());
 
   Ok(AppConfig {
     default_delimiter: default_delimiter.or(default.default_delimiter),
@@ -245,6 +358,7 @@ pub fn load_config() -> Result<AppConfig, String> {
       .or(default.show_execution_notification),
     minimize_to_tray: minimize_to_tray.or(default.minimize_to_tray),
     double_click_fit_view: double_click_fit_view.or(default.double_click_fit_view),
+    auto_check_update: auto_check_update.or(default.auto_check_update),
   })
 }
 
@@ -266,6 +380,9 @@ pub fn save_config(config: &AppConfig) -> Result<(), String> {
   }
   if let Some(v) = config.double_click_fit_view {
     set_config_string("double_click_fit_view", &v.to_string())?;
+  }
+  if let Some(v) = config.auto_check_update {
+    set_config_string("auto_check_update", &v.to_string())?;
   }
   Ok(())
 }
@@ -459,6 +576,18 @@ pub async fn get_double_click_fit_view() -> Option<bool> {
 pub async fn set_double_click_fit_view(enabled: bool) -> Result<(), String> {
   let mut config = load_config()?;
   config.double_click_fit_view = Some(enabled);
+  save_config(&config)
+}
+
+#[tauri::command]
+pub async fn get_auto_check_update() -> Option<bool> {
+  load_config().unwrap_or_default().auto_check_update
+}
+
+#[tauri::command]
+pub async fn set_auto_check_update(enabled: bool) -> Result<(), String> {
+  let mut config = load_config()?;
+  config.auto_check_update = Some(enabled);
   save_config(&config)
 }
 

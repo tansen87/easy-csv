@@ -9,6 +9,14 @@ build/
 # Tauri
 src-tauri/target/
 
+# Updater signing keys — must never be committed.
+# The real key lives outside the repo (~/.tauri/); these patterns are a safety
+# net against someone copying it in. Losing the private key means existing
+# installs can never auto-update again (see docs/design/022).
+*.key
+*.key.pub
+src-tauri/*.sig
+
 # CLI plugins (cargo build outputs)
 plugins/*/target/
 

@@ -37,7 +37,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 │  storage.rs · ai.rs · ai_memory.rs · session.rs     │
 │  AI 对话持久化 (ai_memory.db) · AI 配置 (config.db)     │
 │  会话快照持久化 (session.db) · API Key 加密存储          │
-│  (AES-256-GCM) · 50 个 Tauri 命令                    │
+│  (AES-256-GCM) · 61 个 Tauri 命令                    │
 │  CSV 读取 (csv crate) · CSV 对比 · 编码转换            │
 │  管道执行 (进程管理 + 取消) · AI 代理 (DeepSeek/       │
 │  Qwen/GLM) · AI 记忆持久化 · 数据概况缓存              │
@@ -72,8 +72,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | `docs/design/020_encoding-conversion-history.md` | CSV 编码转换保留上次记录(已实现): 复用 017 的「上次结果」模式——`easy-csv-encoding-last` 持久化(输出路径/字节数/完成时间/耗时)、打开时回填输入输出路径与源/目标编码、「打开路径」(`reveal_paths`)与「清除记录」、输出文件被删则置灰提示;后端 `CsvEncodingResult` 增加 `elapsed_ms`;`formatElapsed` 由 `utils/separateHistory.ts` 上提到 `utils/format.ts` |
 | `docs/design/021_split-lines-by-line-count.md` | 按行拆分(已实现): 移植上游 `split_lines`(来源文件已删除,节选见该设计文档 §2)—— 不解析 CSV 的**原始行**切分(`read_until(b'\n')` 字节保真、常量内存、可处理超大文件),`no_headers` 选项(首行按数据行),输出 `{stem}_part{N}{ext}`(N 从 1、保留扩展名);File 菜单「拆分好/坏行」下方新入口 + `easy-csv-split-lines-last` 上次记录(存输出目录而非全部分片路径) |
+| `docs/design/022_github-auto-update-and-admin-free-install.md` | GitHub 自动更新 + **免管理员权限安装**(**P0+P1 已实现**;端到端更新链路待真实发布验证): ①免提权——Windows 收敛为只出 NSIS + `installMode: "currentUser"`(去掉默认要 UAC 的 MSI)、数据目录由 `<exe目录>\EasyCsv_resources` 改为 `dirs::data_local_dir()/EasyCsv` 并做旧路径迁移(含 `plugins/`)、macOS 需装 `~/Applications`、Linux 限 AppImage;②自动更新——单渠道固定 GitHub Releases,`plugins.updater.endpoints` **配置驱动**(无需后端胶水,前端 `fetch` GitHub API 改为官方 `check()` / `downloadAndInstall()`),仅新增一个 `get_install_form` 命令用于按运行形态禁用一键更新;③签名私钥为单点(丢失不可逆)。**关键结论**:`endpoints` 数组只在非 2XX 时回退,大陆访问 GitHub 的失败是超时,**不要**加 Gitee 地址做兜底;单渠道的代价是国内自动更新成功率不可保证 |
 
-> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–021 已登记。
+> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–022 已登记。
 
 ---
 
@@ -84,7 +85,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | 文件 | 职责 |
 |------|------|
 | `main.rs` | 二进制入口,注册插件(opener/dialog/fs/shell/window_state/notification/http/prevent_default),系统托盘,窗口事件处理 |
-| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 58 个命令) |
+| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 61 个命令) |
 | `config.rs` | `AppConfig` 类型、SQLite 持久化(app_config/ai_config 表)、AES-256-GCM 加密存储 API Key、per-provider API Key 管理、自定义 AI provider 配置(provider=custom 时存 name/base_url/models)、配置相关命令 |
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
 | `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令、`set_pipeline_cancelled` 取消执行 |
@@ -102,9 +103,10 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | 内容 | 说明 |
 |------|------|
-| `AppConfig` 结构体 | `default_delimiter`, `no_headers`, `auto_detect_delimiter`(默认 `true`,打开文件时是否自动检测分隔符), `show_execution_notification`, `minimize_to_tray` |
+| `AppConfig` 结构体 | `default_delimiter`, `no_headers`, `auto_detect_delimiter`(默认 `true`,打开文件时是否自动检测分隔符), `show_execution_notification`, `minimize_to_tray`, `double_click_fit_view`, `auto_check_update`(默认 `true`,启动后静默检查更新) |
 | `load_config()` / `save_config()` | JSON 配置文件读写 |
-| `get_resources_dir()` | 资源/数据根目录。Windows: `<exe>/EasyCsv_resources`(不变);macOS: `~/Library/Application Support/EasyCsv`;Linux: `~/.local/share/EasyCsv`。所有 db 数据目录经它派生,插件目录经 `plugins::get_plugin_dir()` 派生 |
+| `get_resources_dir()` | 资源/数据根目录,**三平台统一为 `<用户本地数据目录>/EasyCsv`**(用 `dirs::data_local_dir()`:Windows `%LOCALAPPDATA%\EasyCsv`、macOS `~/Library/Application Support/EasyCsv`、Linux `~/.local/share/EasyCsv`)。结果用 `OnceLock` 记忆。**与安装目录解耦**是「免管理员权限」的前提(装到 `Program Files` 时旧路径不可写 → `get_db()` 静默失败)。所有 db 数据目录经它派生,插件目录经 `plugins::get_plugin_dir()` 派生。设计:`docs/design/022_...md` |
+| 旧路径迁移 | `#[cfg(windows)]`:新目录无标记且旧目录 `<exe>/EasyCsv_resources` 存在时,递归复制(含 `data/`、`plugins/`)后写 `.migrated-from-exe-dir` 标记;失败则继续用旧路径(不删旧目录)。若新目录已有 `data/config.db` 则只补标记、不覆盖 |
 | `get/set_default_delimiter` | 默认分隔符配置命令(自动检测关闭时读取文件使用,也是检测失败时的兜底值) |
 | `get/set_no_headers` | 无表头配置命令 |
 | `get/set_auto_detect_delimiter` | 分隔符自动检测总开关(设置页与输入节点徽标共用同一个值) |
@@ -189,7 +191,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_correction` | 保存纠正规则 |
 | `clear_conversations` / `clear_feedback` / `clear_corrections` | 清除对应表全部数据 |
 
-### Tauri 命令清单(前端可调用,共 58 个)
+### Tauri 命令清单(前端可调用,共 61 个)
 
 | 命令 | 模块 | 功能 |
 |------|------|------|
@@ -231,6 +233,8 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `toggle_devtools` | storage | 切换开发者工具面板 |
 | `list_plugins` | plugins | 列出已注册的 CLI 插件 |
 | `check_plugins` | plugins | 检查插件可执行文件是否可用(解析 PATH + 读取 `--version`) |
+| `get_install_form` | update | 返回运行形态(`InstallForm`)与 `can_self_update`:按 `current_exe()` 路径与 `APPIMAGE` 环境变量判定,用于对 deb / `/Applications` 下的安装**禁用一键更新**。设计:`docs/design/022_github-auto-update-and-admin-free-install.md` |
+| `get/set_auto_check_update` | config | 启动后静默检查更新的总开关(默认开;只提示,不自动安装)。设计:`docs/design/022_...md` |
 
 ---
 
@@ -311,11 +315,24 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `generated/help-docs.ts` | 自动生成的命令帮助文档(中英文),由 `scripts/generate-help-docs.js` 生成,**禁止手改** |
 | `utils/delimiterMode.ts` | 分隔符单一状态的两个换算: `delimiterModeFromSettings(autoDetect, delimiter)`(设置 → 界面值)与 `settingsPatchForMode(mode)`(界面值 → 要落库的设置) |
 | `utils/session.ts` | 会话快照序列化: `stripStepCommand`/`reconstructStep`/`serializeTabSnapshot`/`deserializeTabSnapshot` |
-| `utils/format.ts` · `utils/params.ts` · `utils/platform.ts` · `utils/separateHistory.ts` · `utils/executionHistory.ts` · `utils/versionDiff.ts` · `utils/panelDock.ts` · `utils/csv.ts` | 其余纯函数工具(时间格式化、参数构造、平台判断、拆分结果/执行历史持久化、版本差异、面板停靠、CSV 工具) |
+| `utils/format.ts` | `formatDateTime` / `formatElapsed` / `formatBytes`(后两者由 020、022 从业务文件上提复用) |
+| `utils/params.ts` · `utils/platform.ts` · `utils/separateHistory.ts` · `utils/executionHistory.ts` · `utils/versionDiff.ts` · `utils/panelDock.ts` · `utils/csv.ts` | 其余纯函数工具(参数构造、平台判断、拆分结果/执行历史持久化、版本差异、面板停靠、CSV 工具) |
 
-### 服务层 (`services/ai/`)
+### 服务层 (`services/`)
 
-AI 助手前端逻辑,RAG 检索与提示词构建:
+**`services/update/index.ts`** — 自动更新(设计 `docs/design/022_...md`)。唯一直接 import `@tauri-apps/plugin-updater` / `plugin-process` 的地方:
+
+| 导出 | 职责 |
+|------|------|
+| `checkForUpdate()` | 调官方 `check({ timeout: 30_000 })`,返回 `UpdateSession`(`available` / `version` / `currentVersion` / `notes` / `date` / `update` 句柄);无更新不是错误 |
+| `installUpdate(session, onProgress)` | 下载并安装,把插件事件归一成 `UpdateProgress`(started / downloading / installing) |
+| `getInstallForm()` | 调后端 `get_install_form`,拿到运行形态与 `canSelfUpdate` |
+| `relaunchApp()` | 安装后重启(`plugin-process` 的 `relaunch`) |
+| `RELEASES_PAGE_URL` | 手动下载兜底页地址 |
+
+更新源固定为 GitHub Releases(端点在 `tauri.conf.json` 的 `plugins.updater.endpoints`),**不做渠道切换**。
+
+AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 
 | 文件 | 职责 |
 |------|------|
@@ -334,13 +351,14 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | `hooks/execution/` | 执行引擎: `useExecution`(装配)+ `runPipeline`/`executeBranch`(依赖显式注入)+ `buildBranches`/`buildPrefixToStep`/`serializeStepParams`/`resolveDelimiter` 纯函数(+`buildBranches.test.ts`) |
 | `hooks/fileIO/` | `useFileOpen`/`useFileSave`/`useImportExport` + `pipelineScript.ts`(.sh/.ps1 内容纯函数生成) |
 | `hooks/charts/processChartData.ts` | 图表数据后处理纯函数 |
-| `useSession.ts` | 会话持久化: 启动恢复标签页、防抖自动保存(800ms)、beforeunload 兜底保存 |
+| `useSession.ts` | 会话持久化: 启动恢复标签页、防抖自动保存(800ms)、beforeunload 兜底保存;导出 `flushSession()`(跳过防抖,更新安装前调用) |
 | `useTabs.ts` | 标签页管理: 标签增删改、当前标签、管道状态读写、**文件读取的分隔符解析**: `loadCsvData(tabId, path, forcedDelimiter?)`。设计: `docs/design/018_open-file-delimiter-detection.md` |
 | `usePipelineState.ts` | 管道状态: `updateTabPipeline` 单点更新管道+edges,撤销/重做状态管理 |
 | `usePipelineVersions.ts` | 管道版本控制: 保存/恢复/删除版本、标签管理、步骤序列化与重建 |
 | `usePipelineTemplates.ts` | 管道模板库(F4) |
 | `useDataLineage.ts` | 数据血缘: 列类型推断、变换分析、血缘图数据构建与持久化 |
 | `useExecutionHistory.ts` | 执行历史(F6) |
+| `useUpdater.ts` | 自动更新状态机: 静默/交互检查、下载进度、安装交接(`beforeInstall` 先落盘会话)、错误态;对话框可见性留在调用方(静默检查不得自己弹窗)。设计: `docs/design/022_...md` |
 | `useAppSettings.ts` | 应用配置: 分隔符、无表头、通知、历史上限、托盘设置 |
 | `useCsvProbe.ts` | 拆分对话框的文件探测(防抖 + 过期响应丢弃) |
 | `useToast.ts` | Toast 通知 |
@@ -494,6 +512,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建:
 | 修改拆分好/坏行 | `src/modules/dialogs/file/SeparateCSVDialog.tsx` + `src-tauri/src/csv.rs`(`separate_csv`/`separate_stream`/`probe_csv_file`)+ `src/hooks/useCsvProbe.ts` + `src/utils/separateHistory.ts` + `src-tauri/src/storage.rs`(`reveal_paths`) |
 | 修改按行拆分(按行数切成多份) | `src/modules/dialogs/file/SplitLinesDialog.tsx` + `src-tauri/src/csv.rs`(`split_lines`/`split_lines_stream`/`split_lines_to_files`)+ `src/utils/splitLinesHistory.ts` + `src/components/menu/MainMenu.tsx`(File 菜单入口)+ `src-tauri/src/storage.rs`(`reveal_paths`)。设计:`docs/design/021_split-lines-by-line-count.md` |
 | 修改会话保存/恢复 | `src/hooks/useSession.ts` + `src/utils/session.ts` + `src-tauri/src/session.rs` |
+| 修改自动更新 / 免提权安装 | `src-tauri/tauri.conf.json`(`bundle.targets`/`installMode`/`createUpdaterArtifacts`/`plugins.updater`)+ `src-tauri/src/update.rs`(`get_install_form`)+ `src-tauri/src/config.rs`(`get_resources_dir` 与旧路径迁移)+ `src/services/update/index.ts` + `src/hooks/useUpdater.ts` + `src/modules/dialogs/app/UpdateDialog.tsx` + `src/hooks/useSession.ts`(`flushSession`)+ `.github/workflows/release.yml`。设计:`docs/design/022_github-auto-update-and-admin-free-install.md` |
 | 修改命令面板 | `src/modules/logs/CommandPalette.tsx` + `src/hooks/useUIState.ts` + `src/hooks/useKeyboardShortcuts.ts`(Ctrl+K) |
 | 修改管道可视化布局 | `src/modules/pipeline/FlowPanel.tsx`(主逻辑) + `pipeline/lib/layout.ts`(布局) + `pipeline/nodes/`(节点样式) |
 | 修改连线方向/锚点(上下/左右连接点) | `src/modules/pipeline/lib/layout.ts`(`resolveHandles`/`handleAnchor`) + `pipeline/nodes/`(Handle 定义) |

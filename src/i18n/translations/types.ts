@@ -159,6 +159,29 @@ export interface Translations {
   cancel: string;
   update: string;
 
+  // UpdateDialog — install / progress / install-form gating (design 022).
+  // Values live in `{zh,en}/update.ts`.
+  updateDownloadAndInstall: string;
+  updateDownloading: string;
+  updateInstalling: string;
+  updateReleaseNotes: string;
+  updateSource: string;
+  updatePublishedAt: string;
+  updateCheckFailed: string;
+  updateInstallFailed: string;
+  updateManualDownload: string;
+  updateManualDownloadHint: string;
+  updateFormUserScoped: string;
+  updateFormMachineScoped: string;
+  updateFormAppBundleUser: string;
+  updateFormAppBundleSystem: string;
+  updateFormAppImage: string;
+  updateFormDebOrUnpacked: string;
+  updateFormUnknown: string;
+  updateSection: string;
+  settingsAutoCheckUpdate: string;
+  settingsAutoCheckUpdateDesc: string;
+
   // HelpDialog
   searchPlaceholder: string;
   searchShortcut: string;
