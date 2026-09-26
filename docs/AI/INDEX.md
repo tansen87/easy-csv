@@ -458,6 +458,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 
 #### `ui/` — 基础件(已统一 PascalCase)
 
+> ⚠️ **文件名必须与 import 的大小写完全一致。** Windows 文件系统不区分大小写,两者不一致时本地照样能解析、`vite build` 也照常通过,但 **`tsc` 会报 `TS1261 Already included file name ... differs ... only in casing`,而 Linux/macOS 上会直接找不到模块**。2026-09-26 这 6 个 shadcn 来源的文件(`button`/`card`/`input`/`select`/`textarea`/`tooltip`)在 git 里是小写、导入却写 PascalCase(且 git 在 Windows 上看不出大小写差异),导致 `pnpm build` 失败;已用 `git mv` 全部对齐为 PascalCase。**改这类文件前先确认 `git ls-files` 记录的名字。**
+
 | 文件 | 职责 |
 |------|------|
 | `Button.tsx` | 按钮 |
