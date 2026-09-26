@@ -367,6 +367,31 @@ gh secret set TAURI_PRIVATE_KEY --repo tansen87/easy-csv < ~/.tauri/easycsv-upda
 > - 缺 `TAURI_SIGNING_PRIVATE_KEY` → **立即报错**(8 秒),信息明确。
 > - 只缺 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`(密钥无密码也必须给空串)→ **永久挂起**(见文末「构建验证」)。
 
+#### 实测结果:修完这两处之后,`build.yml` 往前走了一步,又露出一道**既有的**红灯
+
+2026-09-26 推送 `71e423e` 后的运行(3686…/36211904423)结果:
+
+| 步骤 | 修前(`ddc15e2`) | 修后(`71e423e`) |
+|------|------------------|-----------------|
+| `Install frontend dependencies` | ✗ 三平台全红 | **✓ 三平台全绿** |
+| `Lint frontend`(`pnpm lint`) | · 未执行(被上一步挡住) | **✗ 三平台全红** |
+
+`pnpm lint` = `eslint src --ext .ts,.tsx`,而**本地也一直是失败的**(13 个 error,退出码非 0)。
+`git blame` 确认这些 error 全部来自 `2026-05-15` / `2026-07-16` / `2026-08-29` 的提交,
+**与 022 无关**:pnpm 12 的问题一直遮着它们,把安装修好之后才轮到它们暴露。
+
+| 位置 | 规则 | 数量 | 性质 |
+|------|------|------|------|
+| `src/services/ai/context.ts:733,736` | `no-useless-escape` | 7 | 一行里的多余转义(该规则只报**无效果**的转义,删掉即等价) |
+| `src/app/App.tsx:1014` · `src/i18n/index.tsx:29,43` | `no-empty` | 3 | `catch {}` 之类空块;**块内加一行注释即可**,不必改逻辑 |
+| `src/__tests__/BatchFilterHooks.test.ts:17` · `src/hooks/useBatchFilter.ts:34` | `no-control-regex` | 2 | 匹配 `\x00-\x1f` 是**有意为之**,应加带理由的 `eslint-disable-next-line` |
+| `src/components/menu/ContextMenu.tsx:24` | `no-shadow-restricted-names` | 1 | 遮蔽了全局 `Infinity`,需改名 |
+
+→ **要让 `build.yml` 真正转绿,必须另外清掉这 13 个既有 error**,它不在本设计的范围内。
+
+> 注意:**`build.yml` 红不影响发版**。`release.yml` 是独立工作流、只由 tag 触发,
+> 所以 `build.yml` 挂着也照样能发 0.6.0 —— 但带着红灯发版会掩盖后续问题,建议先清干净。
+
 > ⚠️ **draft 陷阱**:当前 `releaseDraft: true`。**draft release 的 assets 在正式发布前不是公开可访问的**,`/releases/latest/download/...` 也只指向**已发布**的 release。所以「发布」这一步必须真的执行,否则更新器 404。这也意味着 draft 期间无法端到端测更新链路 —— 测试要用一个**临时的预发布 tag**,测完再删。
 
 ### 4.5 更新清单 `latest.json`:不用手写,但要懂它
