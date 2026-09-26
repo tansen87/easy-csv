@@ -21,16 +21,8 @@ export function useUIState() {
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [showDataProfile, setShowDataProfile] = useState(false);
   const [showRefreshDialog, setShowRefreshDialog] = useState(false);
-  const [batchFilterDialog, setBatchFilterDialog] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-  const [updateInfo, setUpdateInfo] = useState<{
-    hasUpdate: boolean;
-    latestVersion: string;
-    changelog: string;
-  } | null>(null);
-  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  // Update check/install state lives in `useUpdater`; only dialog visibility is
+  // pure UI state.
   const [showVersionPanel, setShowVersionPanel] = useState(false);
   const [showLineagePanel, setShowLineagePanel] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
@@ -49,6 +41,10 @@ export function useUIState() {
   >(undefined);
   const [showSeparateCsv, setShowSeparateCsv] = useState(false);
   const [separateCsvInitialInput, setSeparateCsvInitialInput] = useState<
+    string | undefined
+  >(undefined);
+  const [showSplitLines, setShowSplitLines] = useState(false);
+  const [splitLinesInitialInput, setSplitLinesInitialInput] = useState<
     string | undefined
   >(undefined);
 
@@ -81,12 +77,6 @@ export function useUIState() {
     setShowDataProfile,
     showRefreshDialog,
     setShowRefreshDialog,
-    batchFilterDialog,
-    setBatchFilterDialog,
-    updateInfo,
-    setUpdateInfo,
-    isCheckingUpdate,
-    setIsCheckingUpdate,
     showVersionPanel,
     setShowVersionPanel,
     showLineagePanel,
@@ -115,5 +105,9 @@ export function useUIState() {
     setShowSeparateCsv,
     separateCsvInitialInput,
     setSeparateCsvInitialInput,
+    showSplitLines,
+    setShowSplitLines,
+    splitLinesInitialInput,
+    setSplitLinesInitialInput,
   };
 }

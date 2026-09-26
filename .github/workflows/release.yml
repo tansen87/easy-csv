@@ -96,12 +96,42 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Updater signing key (design 022). `bundle.createUpdaterArtifacts` is
+          # enabled in tauri.conf.json, so a release build FAILS without a valid
+          # key here. The generated key has no password, so the password secret
+          # may be empty. Rotating this key locks every existing install out of
+          # automatic updates — back it up before changing it.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
           releaseName: "EasyCsv v__VERSION__"
-          releaseBody: "See the assets to download this version and install."
+          releaseBody: |
+            See the assets to download and install this version.
+
+            In-app updates resolve `latest.json` from GitHub Releases, so this
+            release has to be **published** rather than left as a draft: assets
+            of a draft are not served by `/releases/latest/download/`.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+          # Generates `latest.json` and uploads it (plus the .sig files) as
+          # release assets. That asset IS the updater's update source: the app
+          # reads `.../releases/latest/download/latest.json`. It is on by
+          # default; kept explicit because a silent regression here would only
+          # show up as "no updates ever" in the field. See design 022 §4.5.
+          uploadUpdaterJson: true
+
+      # `createUpdaterArtifacts` silently produces nothing when no key reaches
+      # the bundler, which is only noticed much later as updates that fail
+      # signature verification. Fail the release instead. The bundle layout
+      # differs per platform/target, so search the whole target directory.
+      - name: Verify updater artifacts
+        shell: bash
+        run: |
+          echo "Updater artifacts produced by this build:"
+          find src-tauri/target -name '*.sig' -not -path '*/deps/*' -print
+          if ! find src-tauri/target -name '*.sig' -not -path '*/deps/*' | grep -q .; then
+            echo "::error::No .sig produced. createUpdaterArtifacts is enabled, so the signing key is missing or invalid (check TAURI_PRIVATE_KEY)."
+            exit 1
+          fi

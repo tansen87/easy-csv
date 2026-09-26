@@ -107,6 +107,12 @@ export function useSession(
   return {
     restoreSession,
     markHydrated,
+    /**
+     * Persist immediately, skipping the debounce. Used before an action that
+     * may terminate the process — the updater on Windows quits the app before
+     * installing (design 022 §3.3), where a pending debounce would be lost.
+     */
+    flushSession: persistSession,
     panelStates,
     setPanelStates,
     updatePanelState,

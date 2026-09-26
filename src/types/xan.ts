@@ -109,6 +109,66 @@ export interface ExecutionHistoryInput {
   startedAt: string;
 }
 
+/** Where a tab's delimiter came from. */
+export type DelimiterSource = "detected" | "forced" | "fallback" | "global";
+
+// --- batch filter -----------------------------------------------------------
+//
+// Moved here from the deleted `BatchFilterDialog` (design 019 §1.7). It is the
+// runtime configuration of the `batch-filter` command — built by
+// MainMenuHooks from the command's parameters and consumed by
+// useBatchFilter — so it belongs with the command types, not with a dialog.
+
+export type BatchFilterType = "text" | "number";
+
+export type BatchFilterTextOperator =
+  | "equals"
+  | "not_equals"
+  | "starts_with"
+  | "not_starts_with"
+  | "ends_with"
+  | "not_ends_with"
+  | "contains"
+  | "not_contains"
+  | "regex"
+  | "is_null"
+  | "is_not_null";
+
+export type BatchFilterNumberOperator =
+  | "equals"
+  | "not_equals"
+  | "greater_than"
+  | "less_than"
+  | "greater_or_equal"
+  | "less_or_equal";
+
+export interface BatchFilterConfig {
+  column: string;
+  filterType: BatchFilterType;
+  textOperator?: BatchFilterTextOperator;
+  numberOperator?: BatchFilterNumberOperator;
+  valueMode: "manual" | "column";
+  manualValues?: string;
+  extractColumn?: string;
+  caseInsensitive?: boolean;
+  outputDir?: string;
+}
+
+/** `"auto"` = re-detect on every read; any other value is a locked delimiter. */
+export type DelimiterMode = "auto" | string;
+
+/** Delimiter resolution reported by the `read_csv_file` command. */
+export interface CsvReadResult {
+  headers: string[];
+  rows: string[][];
+  /** Delimiter the file was actually parsed with. */
+  delimiter: string;
+  delimiter_source: DelimiterSource;
+  delimiter_confidence: "high" | "low" | "none";
+  /** Field count of the header row. */
+  columns: number;
+}
+
 export interface PipelineTab {
   id: string;
   name: string;
@@ -119,6 +179,15 @@ export interface PipelineTab {
   headers?: string[];
   inputFile?: string;
   defaultDelimiter?: string;
+  /** How the delimiter was resolved when the file was last read. */
+  delimiterSource?: DelimiterSource;
+  /** Detection confidence: `"none"` means the fallback delimiter was used. */
+  delimiterConfidence?: "high" | "low" | "none";
+  /**
+   * `"auto"` = re-detect on every read (the default when a file is opened);
+   * a concrete delimiter = locked, never re-detected.
+   */
+  delimiterMode?: DelimiterMode;
   edges?: PipelineEdge[];
   inputPosition?: { x: number; y: number };
   isSettings?: boolean;

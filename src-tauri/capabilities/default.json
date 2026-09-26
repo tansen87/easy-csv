@@ -32,6 +32,8 @@
     "notification:default",
     "notification:allow-notify",
     "core:tray:default",
-    "http:default"
+    "http:default",
+    "updater:default",
+    "process:default"
   ]
 }

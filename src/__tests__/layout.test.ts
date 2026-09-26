@@ -9,7 +9,7 @@ import {
   transformBezierPath,
   sideToPosition,
   oppositePosition,
-} from "@/components/panel/utils/layout";
+} from "@/modules/pipeline/lib/layout";
 
 function node(_id: string, x: number, y: number, width = 220, height = 90) {
   return { position: { x, y }, width, height };

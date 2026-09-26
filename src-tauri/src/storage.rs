@@ -292,6 +292,33 @@ pub async fn file_exists(file_path: String) -> Result<bool, String> {
   Ok(std::path::Path::new(&file_path).exists())
 }
 
+/// Reveal one or more paths in the system file manager (Explorer / Finder /
+/// the Linux file-manager portal), selecting the given items when the platform
+/// supports it.
+///
+/// Paths that no longer exist are skipped (the opener canonicalizes and checks
+/// existence), so revealing a pair where only one output survived still works;
+/// when none of them exist this returns an error.
+#[tauri::command]
+pub async fn reveal_paths(paths: Vec<String>) -> Result<(), String> {
+  tokio::task::spawn_blocking(move || {
+    let existing = paths
+      .into_iter()
+      .filter(|p| !p.trim().is_empty())
+      .map(std::path::PathBuf::from)
+      .filter(|p| p.exists())
+      .collect::<Vec<_>>();
+
+    if existing.is_empty() {
+      return Err("Path does not exist".to_string());
+    }
+
+    tauri_plugin_opener::reveal_items_in_dir(existing).map_err(|e| e.to_string())
+  })
+  .await
+  .map_err(|e| format!("Task join error: {e}"))?
+}
+
 #[tauri::command]
 pub async fn toggle_devtools(window: tauri::Window) -> Result<(), String> {
   let webviews = window.webviews();

@@ -6,6 +6,7 @@ pub mod pipeline;
 pub mod plugins;
 pub mod session;
 pub mod storage;
+pub mod update;
 pub mod xan;
 
 pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync> {
@@ -23,12 +24,16 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     config::set_default_delimiter,
     config::get_no_headers,
     config::set_no_headers,
+    config::get_auto_detect_delimiter,
+    config::set_auto_detect_delimiter,
     config::get_system_notification,
     config::set_system_notification,
     config::get_minimize_to_tray,
     config::set_minimize_to_tray,
     config::get_double_click_fit_view,
     config::set_double_click_fit_view,
+    config::get_auto_check_update,
+    config::set_auto_check_update,
     config::get_ai_config,
     config::set_ai_config,
     config::save_api_key,
@@ -40,6 +45,8 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     csv::diff_csv_files,
     csv::convert_csv_encoding,
     csv::separate_csv,
+    csv::split_lines,
+    csv::probe_csv_file,
     pipeline::execute_xan_pipeline,
     pipeline::set_pipeline_cancelled,
     plugins::list_plugins,
@@ -54,6 +61,7 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     storage::set_window_title,
     storage::toggle_devtools,
     storage::file_exists,
+    storage::reveal_paths,
     storage::save_pipeline_versions,
     storage::load_pipeline_versions,
     storage::save_pipeline_template,
@@ -63,6 +71,7 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     storage::load_lineage_data,
     storage::save_execution_history,
     storage::load_execution_history,
-    storage::clear_execution_history
+    storage::clear_execution_history,
+    update::get_install_form
   ])
 }

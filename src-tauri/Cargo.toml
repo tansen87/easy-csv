@@ -1,6 +1,6 @@
 [package]
 name = "easy-csv"
-version = "0.5.0"
+version = "0.6.0"
 description = "Handle CSV data in a modular way"
 authors = ["tansen"]
 edition = "2024"
@@ -30,6 +30,11 @@ tauri-plugin-fs = "^2"
 tauri-plugin-window-state = "^2"
 tauri-plugin-notification = "^2"
 tauri-plugin-http = { version = "^2", features = ["default"] }
+# In-app updates (design 022). `createUpdaterArtifacts` is enabled in
+# tauri.conf.json, so release builds REQUIRE a signing key in the environment:
+#   TAURI_SIGNING_PRIVATE_KEY (or _PATH) + optional TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+tauri-plugin-updater = "^2"
+tauri-plugin-process = "^2"
 # NOTE: tauri-plugin-prevent-default v5 only exposes the `platform-windows`
 # feature (no platform-linux/macos feature exists as of 5.0.2), so the macOS/
 # Linux interception ideas from design 012 W4 are not applicable.

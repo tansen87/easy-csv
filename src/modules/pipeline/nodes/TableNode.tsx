@@ -1,0 +1,367 @@
+import React, { useCallback, useState, useRef, useEffect } from "react";
+import { Handle, Position } from "reactflow";
+import { Table, Check, X, Lock } from "lucide-react";
+import { Card } from "@/components/ui/Card";
+import { Select } from "@/components/ui/Select";
+import { DelimiterModeSelect } from "@/components/ui/DelimiterModeSelect";
+import { ScrollArea } from "@/components/ui/ScrollArea";
+import { useLanguage } from "@/i18n";
+import { DelimiterMode, DelimiterSource } from "@/types/xan";
+import { delimiterLabel } from "@/utils/separateHistory";
+
+export interface TableNodeData {
+  headers: string[];
+  rows: string[][];
+  columnWidths: Record<number, number>;
+  onContextMenu: (col: number, x: number, y: number) => void;
+  onRename: (col: number, newName: string) => void;
+  onSave: () => void;
+  onDelete?: () => void;
+  /** Delimiter the file was read with, and how it was resolved (design 018). */
+  delimiter?: string;
+  delimiterMode?: DelimiterMode;
+  delimiterSource?: DelimiterSource;
+  delimiterConfidence?: "high" | "low" | "none";
+  onDelimiterChange?: (mode: DelimiterMode) => void;
+}
+
+export function TableNode({
+  data,
+  selected,
+}: {
+  data: TableNodeData;
+  selected: boolean;
+}) {
+  const { t } = useLanguage();
+  const {
+    headers,
+    rows,
+    columnWidths,
+    onContextMenu,
+    onRename,
+    onSave,
+    onDelete,
+    delimiter,
+    delimiterMode,
+    delimiterSource,
+    delimiterConfidence,
+    onDelimiterChange,
+  } = data;
+  const [editingCol, setEditingCol] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [showSaveButton, setShowSaveButton] = useState(false);
+  const [delimiterOpen, setDelimiterOpen] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Delimiter badge: a compact readout that opens the shared delimiter control
+  // on click (design 018 §3.7/§3.9). The control edits the app-wide mode, so
+  // the settings page shows the very same value.
+  const delimiterLocked = !!delimiterMode && delimiterMode !== "auto";
+  const delimiterDotClass = delimiterLocked
+    ? "bg-muted-foreground"
+    : delimiterSource === "fallback" || delimiterConfidence === "low"
+      ? "bg-amber-500"
+      : "bg-green-500";
+
+  const duplicateCounts = headers.reduce<Record<string, number>>((acc, h) => {
+    acc[h] = (acc[h] || 0) + 1;
+    return acc;
+  }, {});
+  const duplicateHeaders = Object.entries(duplicateCounts).filter(
+    ([_, count]) => count > 1,
+  );
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  useEffect(() => {
+    const viewport = scrollContainerRef.current?.closest(
+      "[data-radix-scroll-area-viewport]",
+    ) as HTMLElement | null;
+    if (!viewport) return;
+
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) return;
+      e.preventDefault();
+      viewport.scrollLeft += e.deltaY + e.deltaX;
+    };
+    viewport.addEventListener("wheel", onWheel, { passive: false });
+    return () => viewport.removeEventListener("wheel", onWheel);
+  }, []);
+
+  const handleTableMouseDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+  }, []);
+
+  const handleTableMouseMove = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  const handleTableMouseUp = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  const handleStartEdit = (col: number, currentValue: string) => {
+    setEditingCol(col);
+    setEditValue(currentValue);
+    setShowSaveButton(true);
+    if (scrollContainerRef.current) {
+      const colWidth = columnWidths[col] || 100;
+      const containerWidth = scrollContainerRef.current.clientWidth;
+      const targetScroll = col * colWidth - containerWidth / 2 + colWidth / 2;
+      scrollContainerRef.current.scrollLeft = Math.max(0, targetScroll);
+    }
+  };
+
+  const handleHeaderSelect = (colIndex: number) => {
+    setEditingCol(colIndex);
+    setEditValue(headers[colIndex]);
+    setShowSaveButton(true);
+    if (scrollContainerRef.current) {
+      const colWidth = columnWidths[colIndex] || 100;
+      const containerWidth = scrollContainerRef.current.clientWidth;
+      const targetScroll =
+        colIndex * colWidth - containerWidth / 2 + colWidth / 2;
+      scrollContainerRef.current.scrollLeft = Math.max(0, targetScroll);
+    }
+  };
+
+  const handleFinishEdit = () => {
+    if (
+      editingCol !== null &&
+      editValue.trim() &&
+      editValue !== headers[editingCol]
+    ) {
+      onRename(editingCol, editValue.trim());
+    }
+    setEditingCol(null);
+    setEditValue("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleFinishEdit();
+    } else if (e.key === "Escape") {
+      setEditingCol(null);
+      setEditValue("");
+    }
+  };
+
+  return (
+    <Card
+      className={`w-[500px] overflow-hidden transition-all duration-200 ${
+        selected
+          ? "border-primary/50 shadow-lg ring-2 ring-primary/20"
+          : "border-border/60 hover:border-primary/30"
+      }`}
+    >
+      {/* TableNode 的双向 Handle */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="table-right-source"
+        className="opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="table-left-target"
+        className="opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="table-left-source"
+        className="opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="table-right-target"
+        className="opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="table-top-source"
+        className="opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="table-top-target"
+        className="opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="table-bottom-source"
+        className="opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="table-bottom-target"
+        className="opacity-0"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+      <div className="table-node-header px-2 py-1 bg-muted/50 flex items-center gap-2">
+        <div className="w-6 h-6 bg-gradient-to-br from-green-500/25 to-green-500/10 rounded-md flex items-center justify-center">
+          <Table className="h-3 w-3 text-green-600" />
+        </div>
+        <span className="font-semibold text-sm">Input Data</span>
+        <div className="flex-1 nodrag nowheel">
+          <Select
+            value=""
+            onChange={(value) => {
+              const colIndex = headers.indexOf(value);
+              if (colIndex !== -1) {
+                handleHeaderSelect(colIndex);
+              }
+            }}
+            options={headers.map((h, _i) => ({ label: h, value: h }))}
+            placeholder={t.headerRename}
+          />
+        </div>
+        {delimiter !== undefined && delimiter !== "" && (
+          <div className="nodrag nowheel shrink-0">
+            {delimiterOpen ? (
+              <DelimiterModeSelect
+                value={delimiterMode || "auto"}
+                onChange={(value) => {
+                  setDelimiterOpen(false);
+                  onDelimiterChange?.(value);
+                }}
+                placeholder={t.csvDelimiter}
+                width={150}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setDelimiterOpen(true)}
+                className="flex items-center gap-1 h-6 px-1.5 rounded-md border bg-background hover:bg-accent transition-colors"
+              >
+                {delimiterLocked && (
+                  <Lock className="h-3 w-3 text-muted-foreground" />
+                )}
+                <span className="font-mono text-xs">
+                  {delimiterLabel(delimiter)}
+                </span>
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${delimiterDotClass}`}
+                />
+              </button>
+            )}
+          </div>
+        )}
+        <span className="text-xs text-muted-foreground ml-auto">
+          5 rows x {headers.length} cols
+        </span>
+        {showSaveButton && (
+          <button
+            onClick={() => {
+              onSave();
+              setShowSaveButton(false);
+            }}
+            className="nodrag w-5 h-5 rounded-md flex items-center justify-center hover:bg-primary/10"
+          >
+            <Check className="h-3 w-3 text-green-500" />
+          </button>
+        )}
+        <button
+          onClick={() => onDelete?.()}
+          className="nodrag w-5 h-5 rounded-md flex items-center justify-center hover:bg-primary/10 transition-colors"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+      <ScrollArea
+        className="nodrag nowheel cursor-default"
+        style={{ cursor: "default" }}
+        onWheel={handleWheel}
+        onMouseDown={handleTableMouseDown}
+        onMouseMove={handleTableMouseMove}
+        onMouseUp={handleTableMouseUp}
+      >
+        <div className="min-w-max h-41" ref={scrollContainerRef}>
+          <table className="border-collapse">
+            <colgroup>
+              {headers.map((_, colIndex) => (
+                <col
+                  key={colIndex}
+                  style={{ width: columnWidths[colIndex] || 100 }}
+                />
+              ))}
+            </colgroup>
+            <thead className="bg-muted/30 sticky top-0">
+              <tr>
+                {headers.map((header, colIndex) => (
+                  <th
+                    key={colIndex}
+                    className="border border-border/30 px-2 py-1.5 text-xs font-semibold text-left truncate min-w-[100px]"
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onContextMenu(colIndex, e.clientX, e.clientY);
+                    }}
+                    onDoubleClick={() => handleStartEdit(colIndex, header)}
+                  >
+                    {editingCol === colIndex ? (
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={handleFinishEdit}
+                        onKeyDown={handleKeyDown}
+                        className="w-full bg-background px-1 py-0.5 text-xs border border-primary rounded"
+                        autoFocus
+                      />
+                    ) : (
+                      header
+                    )}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.slice(0, 5).map((row, rowIndex) => (
+                <tr key={rowIndex} className="hover:bg-muted/20">
+                  {headers.map((_, colIndex) => (
+                    <td
+                      key={colIndex}
+                      className="border border-border/30 px-2 py-1 text-xs truncate min-w-[100px]"
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onContextMenu(colIndex, e.clientX, e.clientY);
+                      }}
+                    >
+                      {row[colIndex] || ""}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </ScrollArea>
+      {duplicateHeaders.length > 0 && (
+        <div className="px-3 py-1.5 bg-orange-50 border-orange-200 text-xs text-orange-600">
+          duplicate column:{" "}
+          {duplicateHeaders
+            .map(([name, count]) => `${name}(${count})`)
+            .join(", ")}
+        </div>
+      )}
+    </Card>
+  );
+}

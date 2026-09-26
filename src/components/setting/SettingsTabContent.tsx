@@ -22,12 +22,15 @@ import {
   MousePointer2,
   SeparatorVertical,
   RectangleEllipsis,
+  CloudDownload,
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-shell";
 import { invoke } from "@tauri-apps/api/core";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/Button";
+import { ScrollArea } from "@/components/ui/ScrollArea";
+import { Select } from "@/components/ui/Select";
+import { DelimiterModeSelect } from "@/components/ui/DelimiterModeSelect";
+import type { DelimiterMode } from "@/types/xan";
 import { useLanguage } from "@/i18n";
 import {
   AIConfig,
@@ -42,8 +45,9 @@ interface SettingsTabContentProps {
   activeTab: "general" | "ai" | "plugins";
   theme: "dark" | "light" | "system";
   onThemeChange: (theme: "dark" | "light" | "system") => void;
-  defaultDelimiter: string;
-  onDefaultDelimiterChange: (delimiter: string) => void;
+  /** `"auto"` = detect on open; a concrete delimiter turns detection off. */
+  delimiterMode: DelimiterMode;
+  onDelimiterModeChange: (mode: DelimiterMode) => void;
   noHeaders: boolean;
   onNoHeadersChange: (value: boolean) => void;
   systemNotification: boolean;
@@ -52,6 +56,8 @@ interface SettingsTabContentProps {
   onMinimizeToTrayChange: (value: boolean) => void;
   doubleClickFitView: boolean;
   onDoubleClickFitViewChange: (value: boolean) => void;
+  autoCheckUpdate: boolean;
+  onAutoCheckUpdateChange: (value: boolean) => void;
   onSave: () => void;
   aiConfig: AIConfig;
   onAIConfigChange: (config: AIConfig) => void;
@@ -61,8 +67,8 @@ export function SettingsTabContent({
   activeTab,
   theme,
   onThemeChange,
-  defaultDelimiter,
-  onDefaultDelimiterChange,
+  delimiterMode,
+  onDelimiterModeChange,
   noHeaders,
   onNoHeadersChange,
   systemNotification,
@@ -71,6 +77,8 @@ export function SettingsTabContent({
   onMinimizeToTrayChange,
   doubleClickFitView,
   onDoubleClickFitViewChange,
+  autoCheckUpdate,
+  onAutoCheckUpdateChange,
   onSave,
   aiConfig,
   onAIConfigChange,
@@ -172,22 +180,16 @@ export function SettingsTabContent({
         <div className="p-6">
           {activeTab === "general" && (
             <div className="space-y-6">
-              {/* Delimiter */}
+              {/* Delimiter: auto-detection master switch + delimiter, shared
+                  with the input node's badge (design 018 §3.9). */}
               <div className="w-1/3">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <SeparatorVertical className="h-4 w-4" />
                   {t.csvDelimiter}
                 </h3>
-                <Select
-                  value={defaultDelimiter}
-                  onChange={onDefaultDelimiterChange}
-                  options={[
-                    { label: "Comma (,)", value: "," },
-                    { label: "Semicolon (;)", value: ";" },
-                    { label: "Tab (\\t)", value: "\t" },
-                    { label: "Pipe (|)", value: "|" },
-                    { label: "Caret (^)", value: "^" },
-                  ]}
+                <DelimiterModeSelect
+                  value={delimiterMode}
+                  onChange={onDelimiterModeChange}
                   placeholder={t.selectDelimiter}
                   size="sm"
                 />
@@ -379,6 +381,30 @@ export function SettingsTabContent({
                   <div className="text-left">
                     <p className="text-sm text-muted-foreground">
                       {t.doubleClickFitViewDesc}
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Automatic update check on launch (design 022). */}
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <CloudDownload className="h-4 w-4" />
+                  {t.updateSection}
+                </h3>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoCheckUpdate}
+                    onChange={(e) => onAutoCheckUpdateChange(e.target.checked)}
+                    className="w-4 h-4 rounded border-input accent-foreground"
+                  />
+                  <div className="text-left">
+                    <p className="text-sm text-foreground">
+                      {t.settingsAutoCheckUpdate}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {t.settingsAutoCheckUpdateDesc}
                     </p>
                   </div>
                 </label>
@@ -735,7 +761,7 @@ export function SettingsTabContent({
           variant="secondary"
           onClick={() => {
             onThemeChange("light");
-            onDefaultDelimiterChange(",");
+            onDelimiterModeChange("auto");
             onNoHeadersChange(false);
             onSystemNotificationChange(true);
             onMinimizeToTrayChange(true);

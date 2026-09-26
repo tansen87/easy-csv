@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, fireEvent, screen, act } from "@testing-library/react";
 import type { RefObject } from "react";
-import { useCanvasKeyboardPan } from "@/components/panel/hooks/useCanvasKeyboardPan";
-import { useCanvasPointerHud } from "@/components/panel/hooks/useCanvasPointerHud";
-import { KeyIndicatorOverlay } from "@/components/panel/overlays/KeyIndicatorOverlay";
+import { useCanvasKeyboardPan } from "@/modules/pipeline/hooks/useCanvasKeyboardPan";
+import { useCanvasPointerHud } from "@/modules/pipeline/hooks/useCanvasPointerHud";
+import { KeyIndicatorOverlay } from "@/modules/pipeline/overlays/KeyIndicatorOverlay";
 
 type Viewport = { x: number; y: number; zoom: number };
 

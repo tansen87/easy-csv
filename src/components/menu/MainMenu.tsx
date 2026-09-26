@@ -12,7 +12,7 @@ import {
 
 import { PipelineStep } from "@/types/xan";
 import { useLanguage } from "@/i18n";
-import { Tooltip } from "@/components/ui/tooltip";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/utils";
 
 interface MainMenuProps {
@@ -38,6 +38,7 @@ interface MainMenuProps {
   onOpenCsvDiff: () => void;
   onOpenCsvEncoding: () => void;
   onOpenSeparateCsv: () => void;
+  onOpenSplitLines: () => void;
   isExecuting: boolean;
   isCheckingUpdate: boolean;
   hasUpdate: boolean;
@@ -83,6 +84,7 @@ export const MainMenu = React.memo(function MainMenu({
   onOpenCsvDiff,
   onOpenCsvEncoding,
   onOpenSeparateCsv,
+  onOpenSplitLines,
   isExecuting,
   isCheckingUpdate,
   hasUpdate,
@@ -192,6 +194,18 @@ export const MainMenu = React.memo(function MainMenu({
                   Ctrl+N
                 </kbd>
               </button>
+              <button
+                onClick={() => {
+                  onUseOrSaveTemplate();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                <span className="flex-1 text-left">{t.paletteTemplates}</span>
+                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                  Ctrl+T
+                </kbd>
+              </button>
               <div className="border-t border-border my-1" />
               <button
                 onClick={() => {
@@ -242,18 +256,6 @@ export const MainMenu = React.memo(function MainMenu({
               <div className="border-t border-border my-1" />
               <button
                 onClick={() => {
-                  onUseOrSaveTemplate();
-                  setActiveMenu(null);
-                }}
-                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              >
-                <span className="flex-1 text-left">{t.paletteTemplates}</span>
-                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
-                  Ctrl+T
-                </kbd>
-              </button>
-              <button
-                onClick={() => {
                   onOpenCsvDiff();
                   setActiveMenu(null);
                 }}
@@ -270,7 +272,6 @@ export const MainMenu = React.memo(function MainMenu({
               >
                 {t.csvEncoding}
               </button>
-              <div className="border-t border-border my-1" />
               <button
                 onClick={() => {
                   onOpenSeparateCsv();
@@ -279,6 +280,15 @@ export const MainMenu = React.memo(function MainMenu({
                 className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
                 {t.separateGoodBad}
+              </button>
+              <button
+                onClick={() => {
+                  onOpenSplitLines();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                {t.splitLines}
               </button>
             </div>
           )}
@@ -336,7 +346,7 @@ export const MainMenu = React.memo(function MainMenu({
 
         {/* Right side buttons */}
         <div ref={rightRef} className="flex items-center rounded-md gap-0.5">
-          {/* ── Group 1: Command entry ─────────────────────────────── */}
+          {/* Group 1: Command entry */}
           <Tooltip content={t.commandPalette}>
             <button
               onClick={onOpenPalette}
@@ -348,7 +358,7 @@ export const MainMenu = React.memo(function MainMenu({
 
           <div className="w-px h-4 bg-border mx-1.5" />
 
-          {/* ── Group 2: High-frequency panel toggles ──────────────── */}
+          {/* Group 2: High-frequency panel toggles */}
           <Tooltip content={t.commandPanel}>
             <button
               onClick={onToggleCommandPanel}

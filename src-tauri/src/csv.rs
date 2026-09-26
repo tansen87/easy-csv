@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Cursor, Read, Write};
+use std::io::{BufRead, BufReader, BufWriter, Cursor, Read, Write};
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 use std::process::Command;
@@ -9,10 +9,23 @@ use serde::{Deserialize, Serialize};
 
 use crate::xan::find_xan_executable;
 
+/// Result of reading a CSV file for preview.
+///
+/// `delimiter` / `delimiter_source` / `delimiter_confidence` describe the
+/// delimiter that was actually used, so the UI can show what was picked and the
+/// pipeline can run with the very same value ("what you see is what runs").
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CsvData {
   pub headers: Vec<String>,
   pub rows: Vec<Vec<String>>,
+  /// Delimiter the file was parsed with (single byte).
+  pub delimiter: String,
+  /// [`PROBE_SOURCE_DETECTED`], [`PROBE_SOURCE_FORCED`] or [`PROBE_SOURCE_FALLBACK`].
+  pub delimiter_source: String,
+  /// `"high"` | `"low"` | `"none"` (always `"high"` when forced).
+  pub delimiter_confidence: String,
+  /// Field count of the header row.
+  pub columns: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,19 +51,62 @@ pub struct CsvDiffResult {
   pub modified_count: usize,
 }
 
-#[tauri::command]
-pub async fn read_csv_file(
-  file_path: String,
-  delimiter: String,
+/// Resolve which delimiter a file should be read with, and how that choice was
+/// made. `delimiter = Some(_)` forces the value and skips detection entirely;
+/// otherwise the head of the file is sampled (64 KiB, see [`read_head_sample`])
+/// and scored by [`detect_delimiter_with_fallback`]. When detection is
+/// inconclusive the caller-supplied fallback (default `,`) is used.
+fn resolve_read_delimiter(
+  file_path: &str,
+  delimiter: Option<&str>,
+  fallback_delimiter: Option<&str>,
+) -> Result<(u8, &'static str, &'static str), String> {
+  let forced = delimiter
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+    .map(|s| s.as_bytes()[0]);
+  if let Some(d) = forced {
+    return Ok((d, PROBE_SOURCE_FORCED, "high"));
+  }
+
+  let fallback = fallback_delimiter
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+    .map(|s| s.as_bytes()[0])
+    .unwrap_or(b',');
+
+  let (sample, _truncated) = read_head_sample(file_path)?;
+  if sample.is_empty() {
+    // Nothing to detect from: let the reader below report the real problem.
+    return Ok((fallback, PROBE_SOURCE_FALLBACK, "none"));
+  }
+
+  let (best, _candidates, confidence, _quoting_used) =
+    detect_delimiter_with_fallback(&sample, true, 0);
+  match best {
+    Some(d) => Ok((d, PROBE_SOURCE_DETECTED, confidence)),
+    None => Ok((fallback, PROBE_SOURCE_FALLBACK, "none")),
+  }
+}
+
+/// Synchronous body of [`read_csv_file`], kept separate so the delimiter
+/// resolution logic can be unit tested without an async runtime.
+fn read_csv_sync(
+  file_path: &str,
+  delimiter: Option<&str>,
+  fallback_delimiter: Option<&str>,
   limit: Option<usize>,
 ) -> Result<CsvData, String> {
-  let file = File::open(&file_path).map_err(|e| format!("Failed to open file: {}", e))?;
+  let (delimiter, source, confidence) =
+    resolve_read_delimiter(file_path, delimiter, fallback_delimiter)?;
+
+  let file = File::open(file_path).map_err(|e| format!("Failed to open file: {}", e))?;
 
   let mut rdr = csv::ReaderBuilder::new()
-    .delimiter(delimiter.as_bytes()[0])
+    .delimiter(delimiter)
     .from_reader(BufReader::new(file));
 
-  let headers = rdr
+  let headers: Vec<String> = rdr
     .headers()
     .map_err(|e| format!("Failed to read headers: {}", e))?
     .iter()
@@ -67,7 +123,41 @@ pub async fn read_csv_file(
     rows.push(record.iter().map(|s| s.to_string()).collect());
   }
 
-  Ok(CsvData { headers, rows })
+  let columns = headers.len();
+  Ok(CsvData {
+    headers,
+    rows,
+    delimiter: (delimiter as char).to_string(),
+    delimiter_source: source.to_string(),
+    delimiter_confidence: confidence.to_string(),
+    columns,
+  })
+}
+
+/// Read a CSV file for preview, resolving the delimiter on the way.
+///
+/// `delimiter = None` (or an empty string) turns auto-detection on: only the
+/// first 64 KiB are sampled, so this stays fast on huge files. When detection is
+/// inconclusive the delimiter falls back to `fallback_delimiter` (default `,`)
+/// and `delimiter_confidence` is `"none"`. The resolved delimiter is returned so
+/// the caller can display it and run the pipeline with the same value.
+#[tauri::command]
+pub async fn read_csv_file(
+  file_path: String,
+  delimiter: Option<String>,
+  fallback_delimiter: Option<String>,
+  limit: Option<usize>,
+) -> Result<CsvData, String> {
+  tokio::task::spawn_blocking(move || {
+    read_csv_sync(
+      &file_path,
+      delimiter.as_deref(),
+      fallback_delimiter.as_deref(),
+      limit,
+    )
+  })
+  .await
+  .map_err(|e| format!("Task join error: {e}"))?
 }
 
 /// Interner for cell strings: each unique string maps to a stable u32 id and
@@ -598,6 +688,8 @@ pub struct CsvEncodingResult {
   pub output_path: String,
   pub bytes_read: usize,
   pub bytes_written: usize,
+  /// Wall-clock duration of the conversion itself (excludes IPC/render time).
+  pub elapsed_ms: u64,
 }
 
 /// Common encodings supported by the conversion dialog.
@@ -624,6 +716,7 @@ pub async fn convert_csv_encoding(
   tokio::task::spawn_blocking(move || -> Result<CsvEncodingResult, String> {
     const CHUNK_SIZE: usize = 64 * 1024;
 
+    let started = std::time::Instant::now();
     let source = resolve_encoding(&source_encoding)?;
     let target = resolve_encoding(&target_encoding)?;
 
@@ -640,6 +733,7 @@ pub async fn convert_csv_encoding(
       output_path,
       bytes_read,
       bytes_written,
+      elapsed_ms: started.elapsed().as_millis() as u64,
     })
   })
   .await
@@ -741,6 +835,8 @@ pub struct SeparateResult {
   pub good_rows: usize,
   pub bad_rows: usize,
   pub expected_columns: usize,
+  /// Wall-clock duration of the split itself (excludes IPC/render time).
+  pub elapsed_ms: u64,
 }
 
 /// In-memory outcome of the core separation logic (used for unit testing).
@@ -782,6 +878,10 @@ struct SeparateCounts {
 /// `n > 0`; otherwise the header's column count is used. `skiprows` records
 /// before the header are discarded.
 ///
+/// `no_headers` treats the first record as a data row: no header row is
+/// written to either output and the first record itself is classified
+/// normally (seeding the reach-back slot when it matches `expected`).
+///
 /// Classification uses reach-back grouping: a run of under-column rows collects
 /// the immediately preceding valid-looking row into the same bad group. For
 /// rows `X` (3 cols), `Y` (1 col), `Z` (1 col) all three go to bad, because a
@@ -798,6 +898,7 @@ fn separate_stream<R, GW, BW>(
   quoting: bool,
   expected_columns: Option<usize>,
   skiprows: usize,
+  no_headers: bool,
   good_out: GW,
   bad_out: BW,
 ) -> Result<SeparateCounts, String>
@@ -867,15 +968,26 @@ where
       .quote_style(quote_style)
       .from_writer(bad_out);
 
-    gw.write_byte_record(&good_hdr)
-      .map_err(|e| format!("Failed to write good header: {e}"))?;
-    bw.write_byte_record(&header_rec)
-      .map_err(|e| format!("Failed to write bad header: {e}"))?;
-
-    // Reach-back grouping, streamed. `pending_good` holds the last
-    // valid-looking row: it goes to good as soon as another valid row shows up,
-    // and to bad as soon as a malformed row shows up.
     let mut pending_good: Option<csv::ByteRecord> = None;
+
+    if no_headers {
+      // Headerless input: the first record is data, not a header. Neither
+      // output gets a header row; the first record joins the normal
+      // classification — seeding the reach-back slot when it matches
+      // `expected`, falling to bad when it does not.
+      if header_rec.len() == expected {
+        pending_good = Some(header_rec);
+      } else {
+        bw.write_byte_record(&header_rec)
+          .map_err(|e| format!("Failed to write bad row: {e}"))?;
+        bad_rows += 1;
+      }
+    } else {
+      gw.write_byte_record(&good_hdr)
+        .map_err(|e| format!("Failed to write good header: {e}"))?;
+      bw.write_byte_record(&header_rec)
+        .map_err(|e| format!("Failed to write bad header: {e}"))?;
+    }
 
     loop {
       match rdr.read_byte_record(&mut rec) {
@@ -951,6 +1063,7 @@ fn separate_csv_inner(
   quoting: bool,
   expected_columns: Option<usize>,
   skiprows: usize,
+  no_headers: bool,
 ) -> Result<SeparateOutput, String> {
   let mut good = Vec::with_capacity(input.len() / 2);
   let mut bad = Vec::with_capacity(input.len() / 2);
@@ -961,6 +1074,7 @@ fn separate_csv_inner(
     quoting,
     expected_columns,
     skiprows,
+    no_headers,
     &mut good,
     &mut bad,
   )?;
@@ -1016,6 +1130,7 @@ fn separate_csv_to_files(
   quoting: bool,
   expected_columns: Option<usize>,
   skiprows: usize,
+  no_headers: bool,
 ) -> Result<SeparateCounts, String> {
   /// Buffer size for both ends of the streaming path.
   const STREAM_BUF_SIZE: usize = 1 << 20; // 1 MiB
@@ -1031,6 +1146,7 @@ fn separate_csv_to_files(
     quoting,
     expected_columns,
     skiprows,
+    no_headers,
     BufWriter::with_capacity(STREAM_BUF_SIZE, good_file),
     BufWriter::with_capacity(STREAM_BUF_SIZE, bad_file),
   )
@@ -1044,6 +1160,11 @@ fn separate_csv_to_files(
 /// `streaming` (opt-in, default `false`) selects the constant-memory single-pass
 /// implementation for very large files; by default the whole input is read into
 /// memory, which is faster for small and medium files.
+///
+/// `no_headers` (opt-in, default `false`) treats the file as headerless: the
+/// first record is classified as a data row and no header line is emitted to
+/// either output. Without it the first row is copied into both files as the
+/// header row.
 #[tauri::command]
 pub async fn separate_csv(
   path: String,
@@ -1053,8 +1174,10 @@ pub async fn separate_csv(
   skiprows: usize,
   out_dir: Option<String>,
   streaming: Option<bool>,
+  no_headers: Option<bool>,
 ) -> Result<SeparateResult, String> {
   tokio::task::spawn_blocking(move || -> Result<SeparateResult, String> {
+    let started = std::time::Instant::now();
     let delim = if delimiter.is_empty() {
       b','
     } else {
@@ -1074,13 +1197,14 @@ pub async fn separate_csv(
         .map_err(|e| format!("Failed to create output directory: {e}"))?;
     }
 
+    let no_headers = no_headers.unwrap_or(false);
     let counts = if streaming.unwrap_or(false) {
       separate_csv_to_files(
-        &path, &good_path, &bad_path, delim, quoting, expected, skiprows,
+        &path, &good_path, &bad_path, delim, quoting, expected, skiprows, no_headers,
       )?
     } else {
       let input = std::fs::read(&path).map_err(|e| format!("Failed to read input file: {e}"))?;
-      let out = separate_csv_inner(&input, delim, quoting, expected, skiprows)?;
+      let out = separate_csv_inner(&input, delim, quoting, expected, skiprows, no_headers)?;
       std::fs::write(&good_path, &out.good)
         .map_err(|e| format!("Failed to write good file: {e}"))?;
       std::fs::write(&bad_path, &out.bad).map_err(|e| format!("Failed to write bad file: {e}"))?;
@@ -1097,7 +1221,662 @@ pub async fn separate_csv(
       good_rows: counts.good_rows,
       bad_rows: counts.bad_rows,
       expected_columns: counts.expected_columns,
+      elapsed_ms: started.elapsed().as_millis() as u64,
     })
+  })
+  .await
+  .map_err(|e| format!("Task join error: {e}"))?
+}
+
+// ── Splitting a text file into N-line parts ──────────────────────────
+
+/// Result of splitting a text file into parts of at most N lines each.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SplitLinesResult {
+  /// Directory every part was written to (equals the input's directory when
+  /// `out_dir` was omitted).
+  pub output_dir: String,
+  /// `{stem}_part1{ext}`, `{stem}_part2{ext}`, … in order.
+  pub output_paths: Vec<String>,
+  pub file_count: usize,
+  /// Requested maximum number of data rows per part.
+  pub lines_per_file: usize,
+  /// Data rows written across all parts (excludes the header when it is
+  /// treated as a header).
+  pub total_rows: usize,
+  /// Whether the first line was copied into every part as a header row.
+  pub header_written: bool,
+  /// Wall-clock duration of the split itself (excludes IPC/render time).
+  pub elapsed_ms: u64,
+}
+
+/// Outcome of [`split_lines_stream`] (used for unit testing and reporting).
+#[derive(Debug, PartialEq, Eq)]
+struct SplitLinesCounts {
+  file_count: usize,
+  total_rows: usize,
+}
+
+/// Buffer size for the line-splitting reader and writers.
+const SPLIT_LINES_BUF_SIZE: usize = 1 << 20; // 1 MiB
+
+/// Resolve the directory the parts go to plus the input's stem/extension.
+///
+/// The extension is preserved (a `.txt` input yields `.txt` parts) because —
+/// unlike [`separate_csv`] — this splitter never parses CSV and works on any
+/// line-based text file.
+fn split_lines_target(path: &str, out_dir: Option<&str>) -> (std::path::PathBuf, String, String) {
+  let p = std::path::Path::new(path);
+  let stem = p
+    .file_stem()
+    .map(|s| s.to_string_lossy().into_owned())
+    .unwrap_or_default();
+  let ext = p
+    .extension()
+    .map(|e| format!(".{}", e.to_string_lossy()))
+    .unwrap_or_default();
+  let dir = match out_dir {
+    Some(d) if !d.trim().is_empty() => std::path::PathBuf::from(d),
+    _ => p
+      .parent()
+      .map(std::path::Path::to_path_buf)
+      .unwrap_or_default(),
+  };
+  (dir, stem, ext)
+}
+
+/// Path of part `index` (1-based) inside `dir`.
+fn split_part_path(
+  dir: &std::path::Path,
+  stem: &str,
+  ext: &str,
+  index: usize,
+) -> std::path::PathBuf {
+  dir.join(format!("{stem}_part{index}{ext}"))
+}
+
+/// Split a line-based text file into parts of at most `lines_per_file` rows.
+///
+/// The input is read as **raw lines** through a `BufReader` and each line is
+/// written out byte-for-byte as it is read, so neither the input nor any output
+/// part is ever held in memory (constant memory for arbitrarily large files)
+/// and line terminators (`\n` / `\r\n`) are preserved as-is.
+///
+/// `no_headers` (opt-in, default `false`) treats the first line as a data row:
+/// it joins part 1 and no header line is written. Without it the first line is
+/// remembered as the header and copied into the top of every part, so each part
+/// stays self-describing.
+///
+/// Parts are named `{stem}_part{N}{ext}` starting at `N = 1`; the input's
+/// extension is preserved. A non-empty input always produces at least one part,
+/// even when it holds fewer rows than `lines_per_file`.
+fn split_lines_stream<R, W, F>(
+  input: R,
+  lines_per_file: usize,
+  no_headers: bool,
+  mut new_part: F,
+) -> Result<SplitLinesCounts, String>
+where
+  R: BufRead,
+  W: Write,
+  F: FnMut(usize) -> Result<W, String>,
+{
+  if lines_per_file == 0 {
+    return Err("Lines per file must be at least 1".to_string());
+  }
+
+  let mut reader = input;
+  let mut line: Vec<u8> = Vec::new();
+  let mut header: Option<Vec<u8>> = None;
+  let mut writer: Option<W> = None;
+  let mut rows_in_part = 0usize;
+  let mut counts = SplitLinesCounts {
+    file_count: 0,
+    total_rows: 0,
+  };
+  let mut is_first_line = true;
+
+  loop {
+    line.clear();
+    let read = reader
+      .read_until(b'\n', &mut line)
+      .map_err(|e| format!("Failed to read input: {e}"))?;
+    if read == 0 {
+      break;
+    }
+    if is_first_line {
+      is_first_line = false;
+      if !no_headers {
+        // The first line is the header: held back and replayed into every
+        // part. It is not part of any row count.
+        header = Some(line.clone());
+        continue;
+      }
+    }
+
+    // Open a new part when starting out or when the current one is full.
+    if writer.is_none() || rows_in_part == lines_per_file {
+      if let Some(mut previous) = writer.take() {
+        previous
+          .flush()
+          .map_err(|e| format!("Failed to flush output part: {e}"))?;
+      }
+      let index = counts.file_count + 1;
+      let mut next = new_part(index)?;
+      if let Some(h) = &header {
+        next
+          .write_all(h)
+          .map_err(|e| format!("Failed to write header row: {e}"))?;
+      }
+      writer = Some(next);
+      counts.file_count = index;
+      rows_in_part = 0;
+    }
+
+    {
+      let out = writer.as_mut().expect("a writer was opened above");
+      out
+        .write_all(&line)
+        .map_err(|e| format!("Failed to write row: {e}"))?;
+      if !line.ends_with(b"\n") {
+        // The last line of the input carried no terminator; terminate it so
+        // every part is a well-formed text file.
+        out
+          .write_all(b"\n")
+          .map_err(|e| format!("Failed to write row: {e}"))?;
+      }
+    }
+    rows_in_part += 1;
+    counts.total_rows += 1;
+  }
+
+  if is_first_line {
+    return Err("Input file is empty (no lines to split)".to_string());
+  }
+
+  if writer.is_none() {
+    // Header-only input: still produce one part so the run leaves a file behind.
+    let mut only = new_part(1)?;
+    if let Some(h) = &header {
+      only
+        .write_all(h)
+        .map_err(|e| format!("Failed to write header row: {e}"))?;
+    }
+    writer = Some(only);
+    counts.file_count = 1;
+  }
+
+  if let Some(mut out) = writer.take() {
+    out
+      .flush()
+      .map_err(|e| format!("Failed to flush output part: {e}"))?;
+  }
+
+  Ok(counts)
+}
+
+/// Streaming implementation behind [`split_lines`]: reads `path` as raw lines
+/// and writes `{stem}_part{N}{ext}` parts into `out_dir` (or next to the input).
+///
+/// The output directory is created if needed. Parts are written directly (no
+/// temporary file + rename), so a mid-run failure leaves the parts already
+/// written on disk.
+fn split_lines_to_files(
+  path: &str,
+  out_dir: Option<&str>,
+  lines_per_file: usize,
+  no_headers: bool,
+) -> Result<(std::path::PathBuf, String, String, SplitLinesCounts), String> {
+  let (dir, stem, ext) = split_lines_target(path, out_dir);
+  std::fs::create_dir_all(&dir).map_err(|e| format!("Failed to create output directory: {e}"))?;
+
+  let input = File::open(path).map_err(|e| format!("Failed to open input file: {e}"))?;
+
+  let counts = {
+    let dir = dir.clone();
+    let stem = stem.clone();
+    let ext = ext.clone();
+    split_lines_stream(
+      BufReader::with_capacity(SPLIT_LINES_BUF_SIZE, input),
+      lines_per_file,
+      no_headers,
+      |index| {
+        let part = split_part_path(&dir, &stem, &ext, index);
+        let file = File::create(&part).map_err(|e| format!("Failed to create output part: {e}"))?;
+        Ok(BufWriter::with_capacity(SPLIT_LINES_BUF_SIZE, file))
+      },
+    )?
+  };
+
+  Ok((dir, stem, ext, counts))
+}
+
+/// Split a text file into parts of at most `lines_per_file` rows each.
+///
+/// Lines are treated as raw text, not as CSV records: the file is never parsed
+/// and no delimiter is involved, so this works on any line-based file (`.csv`,
+/// `.txt`, logs) and is safe for very large inputs — memory stays constant.
+///
+/// `no_headers` (opt-in, default `false`) treats the first line as data. By
+/// default the first line is treated as a header row and copied into every
+/// part. Output files are named `{stem}_part{N}{ext}` (N from 1) and written
+/// next to the input, or into `out_dir` when given. Existing parts from an
+/// earlier run are not deleted.
+#[tauri::command]
+pub async fn split_lines(
+  path: String,
+  lines_per_file: usize,
+  out_dir: Option<String>,
+  no_headers: Option<bool>,
+) -> Result<SplitLinesResult, String> {
+  tokio::task::spawn_blocking(move || -> Result<SplitLinesResult, String> {
+    let started = std::time::Instant::now();
+    let no_headers = no_headers.unwrap_or(false);
+    let (dir, stem, ext, counts) =
+      split_lines_to_files(&path, out_dir.as_deref(), lines_per_file, no_headers)?;
+
+    let output_paths = (1..=counts.file_count)
+      .map(|index| {
+        split_part_path(&dir, &stem, &ext, index)
+          .to_string_lossy()
+          .into_owned()
+      })
+      .collect();
+
+    Ok(SplitLinesResult {
+      output_dir: dir.to_string_lossy().into_owned(),
+      output_paths,
+      file_count: counts.file_count,
+      lines_per_file,
+      total_rows: counts.total_rows,
+      header_written: !no_headers,
+      elapsed_ms: started.elapsed().as_millis() as u64,
+    })
+  })
+  .await
+  .map_err(|e| format!("Task join error: {e}"))?
+}
+
+// File probing: first-row columns + delimiter detection
+
+/// Candidate delimiters for automatic detection, mirroring the list offered in
+/// the app settings (`src/components/setting/SettingsTabContent.tsx`).
+const DELIMITER_CANDIDATES: [u8; 5] = [b',', b';', b'\t', b'|', b'^'];
+
+/// Maximum number of bytes read from the head of a file when probing it.
+const PROBE_SAMPLE_BYTES: usize = 64 * 1024;
+
+/// Maximum number of records considered when scoring a delimiter candidate.
+const PROBE_SAMPLE_RECORDS: usize = 200;
+
+/// How a delimiter was resolved by [`probe_csv_sync`].
+pub const PROBE_SOURCE_DETECTED: &str = "detected";
+pub const PROBE_SOURCE_FORCED: &str = "forced";
+pub const PROBE_SOURCE_FALLBACK: &str = "fallback";
+
+/// Score of a candidate delimiter over a sampled head.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DelimiterCandidate {
+  /// The delimiter itself, as a one-character string (`"\t"` for tab).
+  pub delimiter: String,
+  /// Field count of the first record (header) under this delimiter.
+  pub header_fields: usize,
+  /// Dominant field count of the sampled body (excluding the header).
+  pub fields: usize,
+  /// Whether `fields` covers at least 90% of the sampled records.
+  pub consistent: bool,
+  /// Composite score; `-1` means the candidate cannot explain the sample.
+  pub score: i32,
+}
+
+/// Result of probing the head of a CSV file.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CsvProbe {
+  pub path: String,
+  /// Delimiter used for `columns` / `header` / `sample_rows`.
+  pub delimiter: String,
+  /// [`PROBE_SOURCE_DETECTED`], [`PROBE_SOURCE_FORCED`] or [`PROBE_SOURCE_FALLBACK`].
+  pub source: String,
+  /// `"high"` | `"low"` | `"none"` (always `"high"` when forced).
+  pub confidence: String,
+  /// Field count of the first record — "the first row's column count".
+  pub columns: usize,
+  /// First record's fields (capped at [`PROBE_HEADER_FIELDS`]).
+  pub header: Vec<String>,
+  /// The next few records, for preview.
+  pub sample_rows: Vec<Vec<String>>,
+  /// Number of records the detection saw.
+  pub sampled_records: usize,
+  /// Whether the sample was cut off by [`PROBE_SAMPLE_BYTES`].
+  pub truncated: bool,
+  /// Quoting mode the detection settled on; `false` means the quoting-enabled
+  /// pass found nothing and a second pass without quoting was used.
+  pub quoting_used: bool,
+  /// Every candidate's score, for diagnostics / UI.
+  pub candidates: Vec<DelimiterCandidate>,
+}
+
+/// First-record fields kept in [`CsvProbe::header`].
+const PROBE_HEADER_FIELDS: usize = 50;
+
+/// Convention priority used to break ties between equally plausible delimiters
+/// (same order as the settings UI: comma, tab, semicolon, pipe, caret).
+fn delimiter_priority(delimiter: u8) -> i32 {
+  match delimiter {
+    b',' => 5,
+    b'\t' => 4,
+    b';' => 3,
+    b'|' => 2,
+    b'^' => 1,
+    _ => 0,
+  }
+}
+
+/// Read at most [`PROBE_SAMPLE_BYTES`] (plus one byte, to detect truncation)
+/// from the head of `path`. When the head was cut off, drop everything after
+/// the last newline so no half-parsed record reaches the detectors.
+fn read_head_sample(path: &str) -> Result<(Vec<u8>, bool), String> {
+  let file = File::open(path).map_err(|e| format!("Failed to open file: {e}"))?;
+  let mut buf = Vec::with_capacity(PROBE_SAMPLE_BYTES);
+  BufReader::with_capacity(PROBE_SAMPLE_BYTES, file)
+    .take(PROBE_SAMPLE_BYTES as u64 + 1)
+    .read_to_end(&mut buf)
+    .map_err(|e| format!("Failed to read file: {e}"))?;
+
+  let truncated = buf.len() > PROBE_SAMPLE_BYTES;
+  if truncated {
+    buf.truncate(PROBE_SAMPLE_BYTES);
+    if let Some(last_newline) = buf.iter().rposition(|&b| b == b'\n') {
+      buf.truncate(last_newline + 1);
+    }
+  }
+  Ok((buf, truncated))
+}
+
+/// Parse at most `max_records` records out of `sample`, discarding `skiprows`
+/// records first. Best effort: a parse error simply ends the iteration (the
+/// caller only uses these records for statistics and preview).
+fn parse_sample(
+  sample: &[u8],
+  delimiter: u8,
+  quoting: bool,
+  skiprows: usize,
+  max_records: usize,
+) -> Vec<csv::ByteRecord> {
+  let mut rdr = csv::ReaderBuilder::new()
+    .has_headers(false)
+    .delimiter(delimiter)
+    .flexible(true)
+    .quoting(quoting)
+    .from_reader(Cursor::new(sample));
+
+  let mut out = Vec::new();
+  let mut rec = csv::ByteRecord::new();
+  for _ in 0..skiprows {
+    match rdr.read_byte_record(&mut rec) {
+      Ok(true) => {}
+      _ => return out,
+    }
+  }
+  while out.len() < max_records {
+    match rdr.read_byte_record(&mut rec) {
+      Ok(true) => out.push(rec.clone()),
+      _ => break,
+    }
+  }
+  out
+}
+
+/// Convert a record to owned strings (lossy: probing must never fail on
+/// non-UTF-8 input, the split itself is byte level).
+fn record_to_strings(rec: &csv::ByteRecord) -> Vec<String> {
+  rec
+    .iter()
+    .map(|field| String::from_utf8_lossy(field).into_owned())
+    .collect()
+}
+
+/// The header's first field may still carry a BOM; hide it from the preview.
+fn strip_bom(fields: &mut [String]) {
+  if let Some(first) = fields.first_mut() {
+    *first = first.trim_start_matches('\u{feff}').to_string();
+  }
+}
+
+/// Score every candidate delimiter over the sampled head.
+///
+/// The header's field count is weighted higher (60) than body consistency (30)
+/// on purpose: this tool is fed *dirty* files, where the body frequently has a
+/// dominant field count of 1 and only the header still identifies the delimiter
+/// (see the acceptance data in design 016). Candidates whose score stays `-1`
+/// cannot explain the sample at all.
+///
+/// Only the sample's *content* is considered: the file extension deliberately
+/// carries no weight, because plenty of CSVs are named `.csv` while using `;`,
+/// `\t` or any other delimiter.
+fn score_delimiters(sample: &[u8], quoting: bool, skiprows: usize) -> Vec<DelimiterCandidate> {
+  let mut candidates = Vec::with_capacity(DELIMITER_CANDIDATES.len());
+
+  for &delimiter in DELIMITER_CANDIDATES.iter() {
+    let records = parse_sample(sample, delimiter, quoting, skiprows, PROBE_SAMPLE_RECORDS);
+    if records.is_empty() {
+      candidates.push(DelimiterCandidate {
+        delimiter: (delimiter as char).to_string(),
+        header_fields: 0,
+        fields: 0,
+        consistent: false,
+        score: -1,
+      });
+      continue;
+    }
+
+    let header_fields = records[0].len();
+    let mut histogram: HashMap<usize, usize> = HashMap::new();
+    for rec in &records {
+      *histogram.entry(rec.len()).or_insert(0) += 1;
+    }
+    // Dominant body field count, ignoring single-field records: `> 1` is what
+    // makes a delimiter plausible at all.
+    let (body_mode, body_count) = histogram
+      .iter()
+      .filter(|(fields, _)| **fields > 1)
+      .max_by_key(|(fields, count)| (**count, **fields))
+      .map(|(fields, count)| (*fields, *count))
+      .unwrap_or((1, *histogram.get(&1).unwrap_or(&0)));
+    let body_ratio = body_count as f64 / records.len() as f64;
+    let consistent = body_ratio >= 0.9;
+
+    if header_fields <= 1 && body_mode <= 1 {
+      candidates.push(DelimiterCandidate {
+        delimiter: (delimiter as char).to_string(),
+        header_fields,
+        fields: body_mode,
+        consistent,
+        score: -1,
+      });
+      continue;
+    }
+
+    let score = 60 * i32::from(header_fields > 1)
+      + (30.0 * body_ratio) as i32
+      + body_mode.min(20) as i32
+      + delimiter_priority(delimiter);
+
+    candidates.push(DelimiterCandidate {
+      delimiter: (delimiter as char).to_string(),
+      header_fields,
+      fields: body_mode,
+      consistent,
+      score,
+    });
+  }
+
+  candidates
+}
+
+/// Pick the winning candidate out of [`score_delimiters`]' output.
+///
+/// Returns `(winner, candidates, confidence)`. Ties are broken by, in order:
+/// score, dominant body field count, convention priority.
+fn detect_delimiter(
+  sample: &[u8],
+  quoting: bool,
+  skiprows: usize,
+) -> (Option<u8>, Vec<DelimiterCandidate>, &'static str) {
+  let candidates = score_delimiters(sample, quoting, skiprows);
+  let viable: Vec<&DelimiterCandidate> = candidates.iter().filter(|c| c.score >= 0).collect();
+  if viable.is_empty() {
+    return (None, candidates, "none");
+  }
+
+  let best_score = viable.iter().map(|c| c.score).max().unwrap_or(0);
+  let tied = viable.iter().filter(|c| c.score == best_score).count();
+  let Some(best) = viable.iter().max_by_key(|c| {
+    (
+      c.score,
+      c.fields as i32,
+      delimiter_priority(c.delimiter.as_bytes().first().copied().unwrap_or(0)),
+    )
+  }) else {
+    return (None, candidates, "none");
+  };
+
+  // A unique winner backed by the header is trustworthy; body-only evidence or
+  // a tie gets a "please verify" confidence.
+  let confidence = if tied == 1 && best.header_fields > 1 {
+    "high"
+  } else {
+    "low"
+  };
+  (Some(best.delimiter.as_bytes()[0]), candidates, confidence)
+}
+
+/// [`detect_delimiter`] plus the quoting fallback: if the quoting-enabled pass
+/// finds nothing at all, retry with quoting disabled (files whose fields carry
+/// bare delimiters can confuse the quoting-aware parser). Returns the resolved
+/// quoting mode alongside the usual tuple.
+fn detect_delimiter_with_fallback(
+  sample: &[u8],
+  quoting: bool,
+  skiprows: usize,
+) -> (Option<u8>, Vec<DelimiterCandidate>, &'static str, bool) {
+  let (best, candidates, confidence) = detect_delimiter(sample, quoting, skiprows);
+  if best.is_none() && quoting {
+    let (best, candidates, confidence) = detect_delimiter(sample, false, skiprows);
+    return (best, candidates, confidence, false);
+  }
+  (best, candidates, confidence, quoting)
+}
+
+/// Synchronous body of [`probe_csv_file`] (kept separate so it can be unit
+/// tested without an async runtime).
+fn probe_csv_sync(
+  path: &str,
+  delimiter: Option<&str>,
+  fallback_delimiter: Option<&str>,
+  skiprows: usize,
+  quoting: bool,
+  preview_rows: Option<usize>,
+) -> Result<CsvProbe, String> {
+  let preview = preview_rows.unwrap_or(3).min(20);
+  let (sample, truncated) = read_head_sample(path)?;
+  if sample.is_empty() {
+    return Err("Input file is empty (missing header)".to_string());
+  }
+
+  let forced = delimiter
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+    .map(|s| s.as_bytes()[0]);
+  let fallback = fallback_delimiter
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+    .map(|s| s.as_bytes()[0])
+    .unwrap_or(b',');
+
+  let (delimiter, source, confidence, candidates, quoting_used) = match forced {
+    Some(d) => (d, PROBE_SOURCE_FORCED, "high", Vec::new(), quoting),
+    None => {
+      let (best, candidates, confidence, quoting_used) =
+        detect_delimiter_with_fallback(&sample, quoting, skiprows);
+      match best {
+        Some(d) => (
+          d,
+          PROBE_SOURCE_DETECTED,
+          confidence,
+          candidates,
+          quoting_used,
+        ),
+        None => (
+          fallback,
+          PROBE_SOURCE_FALLBACK,
+          "none",
+          candidates,
+          quoting_used,
+        ),
+      }
+    }
+  };
+
+  // The header/preview always use the *caller's* quoting mode, so what the UI
+  // shows is what the split will compute (both derive `expected` the same way).
+  let records = parse_sample(&sample, delimiter, quoting, skiprows, PROBE_SAMPLE_RECORDS);
+  if records.is_empty() {
+    return Err("No rows remain after skipping the requested rows".to_string());
+  }
+
+  let columns = records[0].len();
+  let mut header = record_to_strings(&records[0]);
+  header.truncate(PROBE_HEADER_FIELDS);
+  strip_bom(&mut header);
+  let sample_rows = records
+    .iter()
+    .skip(1)
+    .take(preview)
+    .map(record_to_strings)
+    .collect();
+
+  Ok(CsvProbe {
+    path: path.to_string(),
+    delimiter: (delimiter as char).to_string(),
+    source: source.to_string(),
+    confidence: confidence.to_string(),
+    columns,
+    header,
+    sample_rows,
+    sampled_records: records.len(),
+    truncated,
+    quoting_used,
+    candidates,
+  })
+}
+
+/// Inspect the head of a CSV file: resolve the delimiter (auto-detected unless
+/// `delimiter` is given), report the first row's column count and return a small
+/// preview.
+///
+/// Only [`PROBE_SAMPLE_BYTES`] are read from disk, so this stays fast on huge
+/// files. `delimiter = None` turns detection on; when detection is inconclusive
+/// the delimiter falls back to `fallback_delimiter` (default `,`) and reports
+/// `confidence = "none"`.
+#[tauri::command]
+pub async fn probe_csv_file(
+  path: String,
+  delimiter: Option<String>,
+  fallback_delimiter: Option<String>,
+  skiprows: usize,
+  quoting: bool,
+  preview_rows: Option<usize>,
+) -> Result<CsvProbe, String> {
+  tokio::task::spawn_blocking(move || {
+    probe_csv_sync(
+      &path,
+      delimiter.as_deref(),
+      fallback_delimiter.as_deref(),
+      skiprows,
+      quoting,
+      preview_rows,
+    )
   })
   .await
   .map_err(|e| format!("Task join error: {e}"))?
@@ -1519,7 +2298,7 @@ mod tests {
     assert!(resolve_encoding("bogus").is_err());
   }
 
-  // ── separate_csv_inner ──────────────────────────────────────────────
+  // separate_csv_inner
 
   #[test]
   fn separate_all_bad_rows_written_together() {
@@ -1527,7 +2306,7 @@ mod tests {
     // rows. `1,tom,man` is followed only by under-column rows, so the whole
     // run (including `1,tom,man`) lands in bad.
     let input = "age,name,gender\n1,tom,man\n2\n2.1\n2.3\n3,jerry\n4\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.expected_columns, 3);
     assert_eq!(out.good_rows, 0);
@@ -1544,7 +2323,7 @@ mod tests {
     // A quoted embedded newline is one record; since every record is clean,
     // everything stays good.
     let input = "a,b\n1,x\n2,\"hello\nworld\"\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.good_rows, 2);
     assert_eq!(out.bad_rows, 0);
@@ -1556,7 +2335,7 @@ mod tests {
     // Unterminated quote at EOF: the reader swallows to EOF as a single bad
     // record, which also pulls the preceding clean `1,2` into bad.
     let input = "a,b\n1,2\n\"oops\nx,ok\nlast,row\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.good_rows, 0);
     assert_eq!(out.bad_rows, 2);
@@ -1568,7 +2347,7 @@ mod tests {
     // csv treats blank lines as non-records; trailing empty lines are simply
     // skipped, not classified as bad.
     let input = "a,b\n1,2\n\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.good_rows, 1);
     assert_eq!(out.bad_rows, 0);
@@ -1577,7 +2356,7 @@ mod tests {
   #[test]
   fn separate_handles_crlf() {
     let input = "a,b\r\n1,2\r\n3,4\r\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.good_rows, 2);
     assert_eq!(out.bad_rows, 0);
@@ -1587,7 +2366,7 @@ mod tests {
 
   #[test]
   fn separate_empty_file_errors() {
-    let err = separate_csv_inner(b"", b',', true, None, 0).unwrap_err();
+    let err = separate_csv_inner(b"", b',', true, None, 0, false).unwrap_err();
     assert!(err.contains("empty") || err.contains("header"));
   }
 
@@ -1597,7 +2376,7 @@ mod tests {
     // (3 cols) is a malformed run that pulls `1,2` into bad too. The good
     // header is rebuilt to `expected` (truncate 3 → 2).
     let input = "a,b,c\n1,2\nx,y,z\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, Some(2), 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, Some(2), 0, false).unwrap();
 
     assert_eq!(out.expected_columns, 2);
     assert_eq!(out.good_rows, 0);
@@ -1609,7 +2388,7 @@ mod tests {
   #[test]
   fn separate_skiprows_discards_junk_before_header() {
     let input = "junk line\nage,name\n1,tom\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 1).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 1, false).unwrap();
 
     assert_eq!(out.expected_columns, 2);
     assert_eq!(out.good_rows, 1);
@@ -1619,7 +2398,7 @@ mod tests {
   #[test]
   fn separate_tsv_delimiter() {
     let input = "a\tb\n1\t2\n3\n";
-    let out = separate_csv_inner(input.as_bytes(), b'\t', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b'\t', true, None, 0, false).unwrap();
 
     // `3` is a malformed run that pulls the preceding `1,2` into bad too.
     assert_eq!(out.good_rows, 0);
@@ -1643,7 +2422,7 @@ mod tests {
     // group_bad=true and rows X(3), Y(1), Z(1): the clean-looking X is
     // immediately followed only by malformed rows, so X,Y,Z all go to bad.
     let input = "a,b,c\nx,1,2\ny\nz\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.good_rows, 0);
     assert_eq!(out.bad_rows, 3);
@@ -1656,7 +2435,7 @@ mod tests {
     // After the bad run, a new clean row that is followed by another clean row
     // stays good: X(3),Y(1),Z(1) -> bad; D(3),E(3) -> good.
     let input = "a,b,c\nx,1,2\ny\nz\nd,1,2\ne,3,4\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.good_rows, 2);
     assert_eq!(out.bad_rows, 3);
@@ -1669,7 +2448,7 @@ mod tests {
     // The user's example: `1,tom,man` is followed only by malformed rows, so
     // every data row goes to bad and only the header stays in good.
     let input = "age,name,gender\n1,tom,man\n2\n2.1\n2.3\n3,jerry\n4\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.good_rows, 0);
     assert_eq!(out.bad_rows, 6);
@@ -1685,7 +2464,7 @@ mod tests {
     // A fully clean file (every row matches, each followed by another match)
     // sends every row to good.
     let input = "a,b,c\n1,2,3\n4,5,6\n";
-    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     assert_eq!(out.good_rows, 2);
     assert_eq!(out.bad_rows, 0);
@@ -1696,7 +2475,8 @@ mod tests {
   #[test]
   fn separate_group_bad_single_bad_taints_preceding() {
     // A malformed `x,y` pulls the preceding clean `1,2,3` into bad too.
-    let out = separate_csv_inner("a,b,c\n1,2,3\nx,y\n".as_bytes(), b',', true, None, 0).unwrap();
+    let out =
+      separate_csv_inner("a,b,c\n1,2,3\nx,y\n".as_bytes(), b',', true, None, 0, false).unwrap();
     assert_eq!(out.good_rows, 0);
     assert_eq!(out.bad_rows, 2);
     assert_eq!(out.bad, "a,b,c\n1,2,3\nx,y\n".as_bytes());
@@ -1710,6 +2490,7 @@ mod tests {
     input: &[u8],
     expected: Option<usize>,
     skiprows: usize,
+    no_headers: bool,
   ) -> (Vec<u8>, Vec<u8>, usize, usize, usize) {
     let mut good: Vec<u8> = Vec::new();
     let mut bad: Vec<u8> = Vec::new();
@@ -1719,6 +2500,7 @@ mod tests {
       true,
       expected,
       skiprows,
+      no_headers,
       &mut good,
       &mut bad,
     )
@@ -1733,10 +2515,16 @@ mod tests {
   }
 
   /// The streaming path must be byte-for-byte equivalent to the in-memory path.
-  fn assert_stream_matches_inner(input: &str, expected: Option<usize>, skiprows: usize) {
-    let mem = separate_csv_inner(input.as_bytes(), b',', true, expected, skiprows).unwrap();
+  fn assert_stream_matches_inner(
+    input: &str,
+    expected: Option<usize>,
+    skiprows: usize,
+    no_headers: bool,
+  ) {
+    let mem =
+      separate_csv_inner(input.as_bytes(), b',', true, expected, skiprows, no_headers).unwrap();
     let (good, bad, good_rows, bad_rows, expected_columns) =
-      separate_via_stream(input.as_bytes(), expected, skiprows);
+      separate_via_stream(input.as_bytes(), expected, skiprows, no_headers);
     assert_eq!(good, mem.good, "good bytes differ for {input:?}");
     assert_eq!(bad, mem.bad, "bad bytes differ for {input:?}");
     assert_eq!(good_rows, mem.good_rows, "good_rows differ for {input:?}");
@@ -1772,10 +2560,10 @@ mod tests {
       "a,b,c\n",
     ];
     for input in cases {
-      assert_stream_matches_inner(input, None, 0);
+      assert_stream_matches_inner(input, None, 0, false);
     }
-    assert_stream_matches_inner("junk line\nage,name\n1,tom\n", None, 1);
-    assert_stream_matches_inner("a,b,c\n1,2\nx,y,z\n", Some(2), 0);
+    assert_stream_matches_inner("junk line\nage,name\n1,tom\n", None, 1, false);
+    assert_stream_matches_inner("a,b,c\n1,2\nx,y,z\n", Some(2), 0, false);
   }
 
   #[test]
@@ -1792,7 +2580,7 @@ mod tests {
         _ => input.push_str(&format!("{i},\"x\ny\",z\n")),
       }
     }
-    assert_stream_matches_inner(&input, None, 0);
+    assert_stream_matches_inner(&input, None, 0, false);
   }
 
   #[test]
@@ -1803,6 +2591,7 @@ mod tests {
       true,
       None,
       0,
+      false,
       Vec::<u8>::new(),
       Vec::<u8>::new(),
     )
@@ -1816,6 +2605,7 @@ mod tests {
       true,
       None,
       2,
+      false,
       Vec::<u8>::new(),
       Vec::<u8>::new(),
     )
@@ -1840,6 +2630,7 @@ mod tests {
       true,
       None,
       0,
+      false,
     )
     .unwrap();
 
@@ -1869,7 +2660,7 @@ mod tests {
       input.push_str(&format!("{i},\"x\ny\",z\n")); // good, embedded newline
       input.push_str(&format!("{i}\n")); // under-column
     }
-    let mem = separate_csv_inner(input.as_bytes(), b',', true, None, 0).unwrap();
+    let mem = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
 
     let dir = std::env::temp_dir();
     let tag = format!("easy_csv_sep_big_{}", std::process::id());
@@ -1886,6 +2677,7 @@ mod tests {
       true,
       None,
       0,
+      false,
     )
     .unwrap();
 
@@ -1898,5 +2690,666 @@ mod tests {
     for p in [&input_path, &good_path, &bad_path] {
       let _ = std::fs::remove_file(p);
     }
+  }
+
+  #[test]
+  fn separate_no_headers_treats_first_row_as_data() {
+    // No header row is emitted; the first record joins normal classification.
+    // `1,2` is followed only by the malformed `3`, so reach-back pulls it into
+    // bad as well; `4,5` survives as good.
+    let input = "1,2\n3\n4,5\n";
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, true).unwrap();
+
+    assert_eq!(out.expected_columns, 2);
+    assert_eq!(out.good_rows, 1);
+    assert_eq!(out.bad_rows, 2);
+    assert_eq!(out.good, "4,5\n".as_bytes());
+    assert_eq!(out.bad, "1,2\n3\n".as_bytes());
+  }
+
+  #[test]
+  fn separate_no_headers_clean_file_all_good() {
+    let input = "1,2,3\n4,5,6\n5,6,7\n";
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, true).unwrap();
+
+    assert_eq!(out.good_rows, 3);
+    assert_eq!(out.bad_rows, 0);
+    assert_eq!(out.good, "1,2,3\n4,5,6\n5,6,7\n".as_bytes());
+    assert_eq!(out.bad, "".as_bytes());
+  }
+
+  #[test]
+  fn separate_no_headers_with_expected_columns_override() {
+    // expected=2 while the first (data) row has 3 columns: it goes to bad
+    // directly; `1,2` stays good.
+    let input = "x,y,z\n1,2\n";
+    let out = separate_csv_inner(input.as_bytes(), b',', true, Some(2), 0, true).unwrap();
+
+    assert_eq!(out.expected_columns, 2);
+    assert_eq!(out.good_rows, 1);
+    assert_eq!(out.bad_rows, 1);
+    assert_eq!(out.good, "1,2\n".as_bytes());
+    assert_eq!(out.bad, "x,y,z\n".as_bytes());
+  }
+
+  #[test]
+  fn separate_no_headers_streaming_matches_in_memory() {
+    let input = "1,2\n3\n4,5\n";
+    let mem = separate_csv_inner(input.as_bytes(), b',', true, None, 0, true).unwrap();
+    let (good, bad, good_rows, bad_rows, expected_columns) =
+      separate_via_stream(input.as_bytes(), None, 0, true);
+    assert_eq!(good, mem.good);
+    assert_eq!(bad, mem.bad);
+    assert_eq!(good_rows, mem.good_rows);
+    assert_eq!(bad_rows, mem.bad_rows);
+    assert_eq!(expected_columns, mem.expected_columns);
+  }
+
+  // split_lines (line-count split into *_partN files)
+
+  /// In-memory `Write` that keeps its bytes in a shared buffer so a test can
+  /// read back what [`split_lines_stream`] wrote to a part.
+  #[derive(Clone, Default)]
+  struct SharedBuf(std::rc::Rc<std::cell::RefCell<Vec<u8>>>);
+
+  impl SharedBuf {
+    fn text(&self) -> String {
+      String::from_utf8(self.0.borrow().clone()).unwrap()
+    }
+  }
+
+  impl Write for SharedBuf {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+      self.0.borrow_mut().extend_from_slice(buf);
+      Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+      Ok(())
+    }
+  }
+
+  /// Run the splitter in memory, collecting every part's content.
+  fn split_lines_in_memory(
+    input: &[u8],
+    lines_per_file: usize,
+    no_headers: bool,
+  ) -> (Vec<String>, SplitLinesCounts) {
+    let mut parts: Vec<SharedBuf> = Vec::new();
+    let counts = split_lines_stream(Cursor::new(input), lines_per_file, no_headers, |index| {
+      assert_eq!(index, parts.len() + 1, "parts must be numbered from 1");
+      let buf = SharedBuf::default();
+      parts.push(buf.clone());
+      Ok(buf)
+    })
+    .unwrap();
+    (parts.iter().map(SharedBuf::text).collect(), counts)
+  }
+
+  #[test]
+  fn split_lines_writes_every_n_rows_and_copies_the_header() {
+    let input = "id,name\n1,a\n2,b\n3,c\n4,d\n5,e\n";
+    let (parts, counts) = split_lines_in_memory(input.as_bytes(), 2, false);
+
+    assert_eq!(counts.file_count, 3);
+    assert_eq!(counts.total_rows, 5);
+    assert_eq!(
+      parts,
+      vec![
+        "id,name\n1,a\n2,b\n".to_string(),
+        "id,name\n3,c\n4,d\n".to_string(),
+        "id,name\n5,e\n".to_string(),
+      ]
+    );
+  }
+
+  #[test]
+  fn split_lines_no_headers_treats_the_first_line_as_data() {
+    let input = "id,name\n1,a\n2,b\n3,c\n4,d\n5,e\n";
+    let (parts, counts) = split_lines_in_memory(input.as_bytes(), 2, true);
+
+    // Six data rows now (the first line counts), so 3 parts of 2 rows each.
+    assert_eq!(counts.file_count, 3);
+    assert_eq!(counts.total_rows, 6);
+    assert_eq!(
+      parts,
+      vec![
+        "id,name\n1,a\n".to_string(),
+        "2,b\n3,c\n".to_string(),
+        "4,d\n5,e\n".to_string(),
+      ]
+    );
+  }
+
+  #[test]
+  fn split_lines_keeps_exactly_n_rows_per_part() {
+    let (parts, counts) = split_lines_in_memory(b"h\n1\n2\n3\n4\n", 2, false);
+
+    assert_eq!(counts.file_count, 2);
+    assert_eq!(counts.total_rows, 4);
+    assert_eq!(
+      parts,
+      vec!["h\n1\n2\n".to_string(), "h\n3\n4\n".to_string()]
+    );
+  }
+
+  #[test]
+  fn split_lines_single_part_when_rows_fit() {
+    let (parts, counts) = split_lines_in_memory(b"h\n1\n2\n", 1000, false);
+
+    assert_eq!(counts.file_count, 1);
+    assert_eq!(counts.total_rows, 2);
+    assert_eq!(parts, vec!["h\n1\n2\n".to_string()]);
+  }
+
+  #[test]
+  fn split_lines_preserves_crlf_and_terminates_a_missing_final_newline() {
+    let (parts, counts) = split_lines_in_memory(b"h\r\n1\r\n2", 5, false);
+
+    assert_eq!(counts.file_count, 1);
+    assert_eq!(counts.total_rows, 2);
+    // CRLF survives; the unterminated last line gets a terminator.
+    assert_eq!(parts, vec!["h\r\n1\r\n2\n".to_string()]);
+  }
+
+  #[test]
+  fn split_lines_header_only_input_still_writes_one_part() {
+    let (parts, counts) = split_lines_in_memory(b"id,name\n", 10, false);
+
+    assert_eq!(counts.file_count, 1);
+    assert_eq!(counts.total_rows, 0);
+    assert_eq!(parts, vec!["id,name\n".to_string()]);
+  }
+
+  #[test]
+  fn split_lines_rejects_degenerate_input() {
+    let zero = split_lines_stream(Cursor::new(b"h\n1\n".as_slice()), 0, false, |_| {
+      Ok(Vec::<u8>::new())
+    })
+    .unwrap_err();
+    assert!(zero.contains("at least 1"), "{zero}");
+
+    let empty = split_lines_stream(Cursor::new(b"".as_slice()), 10, false, |_| {
+      Ok(Vec::<u8>::new())
+    })
+    .unwrap_err();
+    assert!(empty.contains("empty"), "{empty}");
+  }
+
+  #[test]
+  fn split_lines_reads_across_buffer_boundaries() {
+    // A tiny `BufReader` capacity forces many refills, so lines are reassembled
+    // from several reads.
+    let mut input = String::from("h\n");
+    for i in 0..500 {
+      input.push_str(&format!("row-{i},aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"));
+    }
+
+    let mut parts: Vec<SharedBuf> = Vec::new();
+    let counts = split_lines_stream(
+      BufReader::with_capacity(16, Cursor::new(input.as_bytes())),
+      128,
+      false,
+      |_| {
+        let buf = SharedBuf::default();
+        parts.push(buf.clone());
+        Ok(buf)
+      },
+    )
+    .unwrap();
+
+    assert_eq!(counts.total_rows, 500);
+    assert_eq!(counts.file_count, 4);
+    // Reassembling the parts (minus the header copied into each one) must give
+    // back every row exactly once, in order.
+    let joined: String = parts
+      .iter()
+      .map(|p| p.text().replace("h\n", ""))
+      .collect::<Vec<_>>()
+      .join("");
+    let expected: String = input.lines().skip(1).map(|l| format!("{l}\n")).collect();
+    assert_eq!(joined, expected);
+  }
+
+  #[test]
+  fn split_lines_part_naming_preserves_the_extension() {
+    assert_eq!(
+      split_part_path(std::path::Path::new("/tmp/out"), "log", ".txt", 2)
+        .to_string_lossy()
+        .replace('\\', "/"),
+      "/tmp/out/log_part2.txt"
+    );
+    assert_eq!(
+      split_part_path(std::path::Path::new("/tmp/out"), "data", "", 1)
+        .to_string_lossy()
+        .replace('\\', "/"),
+      "/tmp/out/data_part1"
+    );
+  }
+
+  #[test]
+  fn split_lines_target_defaults_next_to_the_input() {
+    let (dir, stem, ext) = split_lines_target("/data/a/b.csv", None);
+    assert_eq!(dir.to_string_lossy().replace('\\', "/"), "/data/a");
+    assert_eq!(stem, "b");
+    assert_eq!(ext, ".csv");
+
+    let (dir, stem, ext) = split_lines_target("/data/a/b.txt", Some("/out"));
+    assert_eq!(dir.to_string_lossy().replace('\\', "/"), "/out");
+    assert_eq!(stem, "b");
+    assert_eq!(ext, ".txt");
+  }
+
+  #[test]
+  fn split_lines_to_files_matches_the_in_memory_layout() {
+    let dir = std::env::temp_dir();
+    let tag = format!("easy_csv_split_{}", std::process::id());
+    let stem = format!("{tag}_in");
+    let input_path = dir.join(format!("{stem}.txt"));
+    std::fs::write(&input_path, "h\n1\n2\n3\n4\n5\n").unwrap();
+
+    let (out_dir, resolved_stem, ext, counts) =
+      split_lines_to_files(input_path.to_str().unwrap(), None, 2, false).unwrap();
+
+    assert_eq!(counts.file_count, 3);
+    assert_eq!(counts.total_rows, 5);
+    assert_eq!(out_dir, dir);
+    assert_eq!(resolved_stem, stem);
+    assert_eq!(ext, ".txt");
+
+    let first = split_part_path(&dir, &stem, ".txt", 1);
+    assert_eq!(std::fs::read_to_string(&first).unwrap(), "h\n1\n2\n");
+    let third = split_part_path(&dir, &stem, ".txt", 3);
+    assert_eq!(std::fs::read_to_string(&third).unwrap(), "h\n5\n");
+
+    for index in 1..=3 {
+      let _ = std::fs::remove_file(split_part_path(&dir, &stem, ".txt", index));
+    }
+    let _ = std::fs::remove_file(&input_path);
+  }
+
+  #[test]
+  fn split_lines_to_files_honours_out_dir_and_no_headers() {
+    let dir = std::env::temp_dir();
+    let tag = format!("easy_csv_split_out_{}", std::process::id());
+    let stem = format!("{tag}_in");
+    let input_path = dir.join(format!("{stem}.csv"));
+    let out_dir = dir.join(format!("{tag}_out"));
+    std::fs::write(&input_path, "1,a\n2,b\n3,c\n").unwrap();
+
+    let (written_to, resolved_stem, ext, counts) = split_lines_to_files(
+      input_path.to_str().unwrap(),
+      Some(out_dir.to_str().unwrap()),
+      2,
+      true,
+    )
+    .unwrap();
+
+    assert_eq!(written_to, out_dir);
+    assert_eq!(resolved_stem, stem);
+    assert_eq!(ext, ".csv");
+    assert_eq!(counts.file_count, 2);
+    assert_eq!(counts.total_rows, 3);
+    assert_eq!(
+      std::fs::read_to_string(split_part_path(&out_dir, &stem, ".csv", 1)).unwrap(),
+      "1,a\n2,b\n"
+    );
+    assert_eq!(
+      std::fs::read_to_string(split_part_path(&out_dir, &stem, ".csv", 2)).unwrap(),
+      "3,c\n"
+    );
+
+    let _ = std::fs::remove_dir_all(&out_dir);
+    let _ = std::fs::remove_file(&input_path);
+  }
+
+  // detect_delimiter / probe_csv_file
+
+  fn detect(sample: &str, skiprows: usize) -> (Option<String>, String) {
+    let (best, _, confidence, _) =
+      detect_delimiter_with_fallback(sample.as_bytes(), true, skiprows);
+    (
+      best.map(|d| (d as char).to_string()),
+      confidence.to_string(),
+    )
+  }
+
+  fn candidate_of(sample: &str, delimiter: &str) -> DelimiterCandidate {
+    score_delimiters(sample.as_bytes(), true, 0)
+      .into_iter()
+      .find(|c| c.delimiter == delimiter)
+      .unwrap()
+  }
+
+  fn temp_csv(tag: &str, contents: &str) -> std::path::PathBuf {
+    let path = std::env::temp_dir().join(format!("easy_csv_{tag}_{}.csv", std::process::id()));
+    std::fs::write(&path, contents).unwrap();
+    path
+  }
+
+  #[test]
+  fn detect_delimiter_picks_each_conventional_delimiter() {
+    let cases = [
+      ("a,b,c\n1,2,3\n", ","),
+      ("a;b;c\n1;2;3\n", ";"),
+      ("a\tb\tc\n1\t2\t3\n", "\t"),
+      ("a|b|c\n1|2|3\n", "|"),
+      ("a^b^c\n1^2^3\n", "^"),
+    ];
+    for (sample, expected) in cases {
+      let (best, confidence) = detect(sample, 0);
+      assert_eq!(best.as_deref(), Some(expected), "sample {sample:?}");
+      assert_eq!(confidence, "high", "sample {sample:?}");
+    }
+  }
+
+  #[test]
+  fn detect_delimiter_handles_dirty_acceptance_data() {
+    // 016 acceptance data: the body's dominant field count is 1 (4 of 7 rows are
+    // single-field), so only the 3-column header can justify the comma.
+    let sample = "age,name,gender\n1,tom,man\n2\n2.1\n2.3\n3,jerry\n4\n";
+    let (best, confidence) = detect(sample, 0);
+    assert_eq!(best.as_deref(), Some(","));
+    assert_eq!(confidence, "high");
+
+    let comma = candidate_of(sample, ",");
+    assert_eq!(comma.header_fields, 3);
+    assert_eq!(comma.fields, 3);
+    assert!(!comma.consistent, "body alone is inconsistent here");
+  }
+
+  #[test]
+  fn detect_delimiter_ignores_delimiters_inside_quotes() {
+    let (best, confidence) = detect("a,b\n1,\"x,y\"\n2,\"p,q\"\n", 0);
+    assert_eq!(best.as_deref(), Some(","));
+    assert_eq!(confidence, "high");
+  }
+
+  #[test]
+  fn detect_delimiter_returns_none_for_single_column_files() {
+    let (best, confidence) = detect("name\nAlice\nBob\n", 0);
+    assert!(best.is_none());
+    assert_eq!(confidence, "none");
+    let candidates = score_delimiters(b"name\nAlice\nBob\n", true, 0);
+    assert!(candidates.iter().all(|c| c.score < 0));
+  }
+
+  #[test]
+  fn detect_delimiter_breaks_ties_by_field_count() {
+    // Single line `a,b;c;d;e`: `,` yields 2 fields and `;` yields 4, both
+    // explaining the header, so their scores tie — the richer split wins.
+    let (best, confidence) = detect("a,b;c;d;e\n", 0);
+    assert_eq!(best.as_deref(), Some(";"));
+    assert_eq!(confidence, "low");
+  }
+
+  #[test]
+  fn detect_delimiter_marks_body_only_evidence_low() {
+    // Single-column file whose values contain commas: only the body explains
+    // the delimiter, so the result is flagged for user review.
+    let (best, confidence) = detect("name\n1,5\n2,3\n", 0);
+    assert_eq!(best.as_deref(), Some(","));
+    assert_eq!(confidence, "low");
+  }
+
+  #[test]
+  fn detect_delimiter_skips_records_before_the_header() {
+    let (best, confidence) = detect("# note\n# note2\na;b\n1;2\n", 2);
+    assert_eq!(best.as_deref(), Some(";"));
+    assert_eq!(confidence, "high");
+  }
+
+  #[test]
+  fn detect_delimiter_ignores_the_file_extension() {
+    // Plenty of CSVs are named `.csv` while using `;`/`|`/tab, so the extension
+    // must carry no weight: `a|b;c` is consistently read as `;` (2 columns)
+    // whatever the file is called.
+    for ext in ["csv", "psv", "tsv", "txt"] {
+      let path =
+        std::env::temp_dir().join(format!("easy_csv_ext_{ext}_{}.{ext}", std::process::id()));
+      std::fs::write(&path, "a|b;c\n1|2;3\n").unwrap();
+
+      let probe = probe_csv_sync(path.to_str().unwrap(), None, None, 0, true, None).unwrap();
+      assert_eq!(probe.delimiter, ";", "extension {ext}");
+      assert_eq!(probe.source, PROBE_SOURCE_DETECTED, "extension {ext}");
+      assert_eq!(probe.columns, 2, "extension {ext}");
+
+      let _ = std::fs::remove_file(&path);
+    }
+  }
+
+  #[test]
+  fn detect_delimiter_retries_without_quoting() {
+    // An unterminated quote makes the quoting-aware parser swallow the whole
+    // sample into one field, leaving no viable candidate — the second pass
+    // without quoting recovers the real delimiter.
+    let sample = "\"a;b\n1;2\n3;4\n";
+    let (best, _, confidence, quoting_used) =
+      detect_delimiter_with_fallback(sample.as_bytes(), true, 0);
+    assert_eq!(best, Some(b';'));
+    assert_eq!(confidence, "high");
+    assert!(!quoting_used);
+
+    // Already quoting-free: no second pass is attempted.
+    let (best, _, _, quoting_used) = detect_delimiter_with_fallback(sample.as_bytes(), false, 0);
+    assert_eq!(best, Some(b';'));
+    assert!(!quoting_used);
+  }
+
+  #[test]
+  fn probe_reports_first_row_columns_matching_separate_expected() {
+    let input = "age,name,gender\n1,tom,man\n2\n2.1\n2.3\n3,jerry\n4\n";
+    let path = temp_csv("probe_cols", input);
+    let probe = probe_csv_sync(path.to_str().unwrap(), None, None, 0, true, Some(2)).unwrap();
+
+    assert_eq!(probe.columns, 3);
+    assert_eq!(probe.header.join(","), "age,name,gender");
+    assert_eq!(probe.delimiter, ",");
+    assert_eq!(probe.source, PROBE_SOURCE_DETECTED);
+    assert_eq!(probe.confidence, "high");
+    assert_eq!(probe.sample_rows.len(), 2);
+    assert_eq!(probe.sample_rows[0].join("|"), "1|tom|man");
+    assert!(!probe.truncated);
+    assert!(probe.quoting_used);
+
+    // Same source of truth as the split's automatic `expected`.
+    let out = separate_csv_inner(input.as_bytes(), b',', true, None, 0, false).unwrap();
+    assert_eq!(out.expected_columns, probe.columns);
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn probe_forced_delimiter_skips_detection() {
+    let path = temp_csv("probe_forced", "a;b\n1;2\n");
+    let probe = probe_csv_sync(path.to_str().unwrap(), Some(";"), None, 0, true, None).unwrap();
+
+    assert_eq!(probe.source, PROBE_SOURCE_FORCED);
+    assert_eq!(probe.delimiter, ";");
+    assert_eq!(probe.confidence, "high");
+    assert!(probe.candidates.is_empty());
+    assert_eq!(probe.columns, 2);
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn probe_falls_back_to_the_default_delimiter() {
+    let path = temp_csv("probe_fallback", "name\nAlice\nBob\n");
+
+    let probe = probe_csv_sync(path.to_str().unwrap(), None, Some(";"), 0, true, None).unwrap();
+    assert_eq!(probe.source, PROBE_SOURCE_FALLBACK);
+    assert_eq!(probe.confidence, "none");
+    assert_eq!(probe.delimiter, ";");
+    assert_eq!(probe.columns, 1);
+
+    // No fallback given → comma.
+    let probe = probe_csv_sync(path.to_str().unwrap(), None, None, 0, true, None).unwrap();
+    assert_eq!(probe.delimiter, ",");
+    assert_eq!(probe.source, PROBE_SOURCE_FALLBACK);
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn probe_errors_match_separate_csv() {
+    let empty = temp_csv("probe_empty", "");
+    let err = probe_csv_sync(empty.to_str().unwrap(), None, None, 0, true, None).unwrap_err();
+    assert!(err.contains("empty") || err.contains("header"), "{err}");
+    let _ = std::fs::remove_file(&empty);
+
+    let junk = temp_csv("probe_skiprows", "junk\n");
+    let err = probe_csv_sync(junk.to_str().unwrap(), None, None, 3, true, None).unwrap_err();
+    assert!(err.contains("skipping"), "{err}");
+    let _ = std::fs::remove_file(&junk);
+
+    let missing = std::env::temp_dir().join("easy_csv_probe_missing_file.csv");
+    let _ = std::fs::remove_file(&missing);
+    let err = probe_csv_sync(missing.to_str().unwrap(), None, None, 0, true, None).unwrap_err();
+    assert!(err.contains("Failed to open"), "{err}");
+  }
+
+  #[test]
+  fn probe_truncated_sample_drops_incomplete_tail() {
+    // Sample larger than the 64 KiB probe window, ending without a newline.
+    let mut input = String::from("a,b\n");
+    while input.len() < PROBE_SAMPLE_BYTES + 1024 {
+      input.push_str("1,2\n");
+    }
+    input.push_str("9,9,9,9,9");
+    let path = temp_csv("probe_truncated", &input);
+
+    let probe = probe_csv_sync(path.to_str().unwrap(), None, None, 0, true, Some(1)).unwrap();
+    assert!(probe.truncated);
+    assert_eq!(probe.delimiter, ",");
+    assert_eq!(probe.columns, 2);
+    assert_eq!(probe.sampled_records, PROBE_SAMPLE_RECORDS);
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn read_csv_auto_detects_the_delimiter() {
+    let path = temp_csv("read_auto_semicolon", "a;b;c\n1;2;3\n4;5;6\n");
+    let data = read_csv_sync(path.to_str().unwrap(), None, None, None).unwrap();
+
+    assert_eq!(data.delimiter, ";");
+    assert_eq!(data.delimiter_source, PROBE_SOURCE_DETECTED);
+    assert_eq!(data.delimiter_confidence, "high");
+    assert_eq!(data.columns, 3);
+    assert_eq!(data.headers, vec!["a", "b", "c"]);
+    assert_eq!(data.rows.len(), 2);
+    assert_eq!(data.rows[0], vec!["1", "2", "3"]);
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn read_csv_forced_delimiter_skips_detection() {
+    // Comma separated content read with a forced `;`: detection must not
+    // override the caller, even though the sample clearly says `,`.
+    let path = temp_csv("read_forced", "a,b\n1,2\n");
+    let data = read_csv_sync(path.to_str().unwrap(), Some(";"), None, None).unwrap();
+
+    assert_eq!(data.delimiter_source, PROBE_SOURCE_FORCED);
+    assert_eq!(data.delimiter_confidence, "high");
+    assert_eq!(data.delimiter, ";");
+    assert_eq!(data.columns, 1);
+    assert_eq!(data.headers, vec!["a,b"]);
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn read_csv_empty_delimiter_falls_back_to_detection() {
+    // Regression: an empty delimiter used to index `as_bytes()[0]` and panic.
+    let path = temp_csv("read_empty_delim", "a;b\n1;2\n");
+    let data = read_csv_sync(path.to_str().unwrap(), Some(""), Some(","), None).unwrap();
+
+    assert_eq!(data.delimiter, ";");
+    assert_eq!(data.delimiter_source, PROBE_SOURCE_DETECTED);
+    assert_eq!(data.columns, 2);
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn read_csv_falls_back_when_detection_is_inconclusive() {
+    let path = temp_csv("read_fallback", "name\nAlice\nBob\n");
+
+    // Explicit fallback wins over the built-in `,`.
+    let data = read_csv_sync(path.to_str().unwrap(), None, Some(";"), None).unwrap();
+    assert_eq!(data.delimiter_source, PROBE_SOURCE_FALLBACK);
+    assert_eq!(data.delimiter_confidence, "none");
+    assert_eq!(data.delimiter, ";");
+    assert_eq!(data.columns, 1);
+
+    // No fallback given → comma.
+    let data = read_csv_sync(path.to_str().unwrap(), None, None, None).unwrap();
+    assert_eq!(data.delimiter, ",");
+    assert_eq!(data.delimiter_source, PROBE_SOURCE_FALLBACK);
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn read_csv_delimiter_matches_probe_csv_file() {
+    // Both entry points must resolve the same file to the same delimiter, or
+    // the split dialog and the preview table would disagree.
+    for (tag, contents, expected) in [
+      ("same_comma", "a,b\n1,2\n", ","),
+      ("same_semicolon", "a;b\n1;2\n", ";"),
+      ("same_tab", "a\tb\n1\t2\n", "\t"),
+      ("same_single", "name\nAlice\n", ","),
+    ] {
+      let path = temp_csv(tag, contents);
+      let data = read_csv_sync(path.to_str().unwrap(), None, None, None).unwrap();
+      let probe = probe_csv_sync(path.to_str().unwrap(), None, None, 0, true, None).unwrap();
+
+      assert_eq!(data.delimiter, expected, "{tag}");
+      assert_eq!(probe.delimiter, data.delimiter, "{tag}");
+      assert_eq!(probe.columns, data.columns, "{tag}");
+
+      let _ = std::fs::remove_file(&path);
+    }
+  }
+
+  #[test]
+  fn read_csv_rejects_ragged_rows() {
+    // Known limitation (design 018 §6): the preview reader is rigid, so a file
+    // whose rows do not match the header's field count fails to preview even
+    // though the delimiter was detected correctly. Locked in so a future change
+    // to `flexible(true)` is a deliberate one.
+    let path = temp_csv("read_ragged", "age,name,gender\n1,tom,man\n2\n2.1\n");
+    let err = read_csv_sync(path.to_str().unwrap(), None, None, None).unwrap_err();
+    assert!(err.contains("Failed to read row"), "{err}");
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn read_csv_honours_the_row_limit() {
+    let path = temp_csv("read_limit", "a,b\n1,2\n3,4\n5,6\n");
+
+    let head_only = read_csv_sync(path.to_str().unwrap(), None, None, Some(0)).unwrap();
+    assert_eq!(head_only.headers, vec!["a", "b"]);
+    assert!(head_only.rows.is_empty());
+
+    let limited = read_csv_sync(path.to_str().unwrap(), None, None, Some(2)).unwrap();
+    assert_eq!(limited.rows.len(), 2);
+
+    // Default limit is 51 rows.
+    let default_limited = read_csv_sync(path.to_str().unwrap(), None, None, None).unwrap();
+    assert_eq!(default_limited.rows.len(), 3);
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn read_csv_reports_a_missing_file() {
+    let missing = std::env::temp_dir().join("easy_csv_read_missing_file.csv");
+    let _ = std::fs::remove_file(&missing);
+    let err = read_csv_sync(missing.to_str().unwrap(), None, None, None).unwrap_err();
+    assert!(err.contains("Failed to open"), "{err}");
   }
 }
