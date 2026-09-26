@@ -324,6 +324,43 @@ gh secret set TAURI_PRIVATE_KEY --repo tansen87/easy-csv < ~/.tauri/easycsv-upda
 验证是否生效:推一个 tag 跑一次 Release;该步骤会打印找到的 `.sig` 路径。
 若打印 `::error::No .sig produced`,就是 Secret 名不对或值被截断了。
 
+##### ⚠️ 实测踩坑:secret 里放了「已解码的 minisign 原文」→ `Missing comment in secret key`
+
+2026-09-26 首次跑 Release 时四平台全挂在 `pnpm tauri build`:
+
+```
+failed to decode secret key: incorrect updater private key password: Missing comment in secret key
+```
+
+**成因**:`TAURI_SIGNING_PRIVATE_KEY` 要的是**私钥文件本身的全部内容**,而那个文件是
+**一行 base64**(348 字符,以 `dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWdu` 开头)。
+Tauri 会先 base64 解码它,再要求解出的文本以 `untrusted comment: ` 开头。
+若把**解码后**的 minisign 文本(以字面量 `untrusted comment: rsign` 开头)当成 secret 粘进去,
+base64 解码就得到乱码 → 正是这个 `Missing comment` 报错。
+
+对照实验(本机实测):
+
+| secret 里放的是 | 长度 | 结果 |
+|-----------------|------|------|
+| ✅ 私钥文件的**原样 base64** | 348 | 正常,解码出 `untrusted comment: rsign encrypted secret key` |
+| 同一内容带尾随换行 | 349 | **也正常**(会被忽略) |
+| **解码后的 minisign 文本** | 257 | ❌ `Missing comment in secret key`(本次踩到的) |
+| `.key.pub`(公钥) | 152 | ❌ 打印别的错(它是合法的 comment,只是密钥类型不对) |
+| 只粘一半 | 174 | 仍能解出 comment → 报别的错 |
+
+**怎么确认自己的 secret 对不对**:看 Release 日志里 `Validate updater signing key` 这一步打印的
+`secret: N chars, starts with ...`。正确值应是 **348 chars, starts with `dW50cnVzdGVkIGNvbW1lbnQ6`**;
+若显示 `starts with untrusted comment: rsign`,就是放成解码后的文本了。
+
+**正确设置方式**(用文件直传,避免手抄/解码):
+
+```bash
+gh secret set TAURI_PRIVATE_KEY --repo tansen87/easy-csv < ~/.tauri/easycsv-updater.key
+```
+
+现在 `release.yml` 已加**预检步骤**(在任何构建之前跑),上面五种情况都会在几秒内给出
+明确的可执行报错,而不是等 20 分钟构建完才抛一句 cryptical 的解码错误。
+
 ### 4.4 CI 变更(`.github/workflows/release.yml`)
 
 #### 发版操作顺序(容易搞错,按序执行)
@@ -397,7 +434,9 @@ gh secret set TAURI_PRIVATE_KEY --repo tansen87/easy-csv < ~/.tauri/easycsv-upda
 ### 4.5 更新清单 `latest.json`:不用手写,但要懂它
 
 **结论:不要手写,也不要放进仓库。** 由 `tauri-action` 生成并作为 **release 资产**上传
-(`uploadUpdaterJson` 默认 `true`;`.sig` 由 `uploadUpdaterSignatures` 默认一并上传)。
+(输入名是 **`includeUpdaterJson`**,默认 `true`;`.sig` 由 `uploadUpdaterSignatures` 默认一并上传。
+⚠️ **`uploadUpdaterJson` 是 `@v1` 文档里的名字,我们钉的 `@v0` 会静默忽略它** —— 2026-09-26 实测:
+传错名不报错,只在日志里出现 `Unexpected input(s) 'uploadUpdaterJson'` 警告,很容易看漏)。
 
 #### 放在哪
 
