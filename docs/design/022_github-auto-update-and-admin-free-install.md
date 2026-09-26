@@ -353,6 +353,20 @@ gh secret set TAURI_PRIVATE_KEY --repo tansen87/easy-csv < ~/.tauri/easycsv-upda
 | 发布 | 确认 `latest.json` 作为 release asset 上传;确认 release 已**正式发布**(非 draft) |
 | 清单(可选) | 生成 `checksums.txt` 随 release 发布,供人工核对/离线校验 |
 
+#### `build.yml` 也必须改(否则它一定红)
+
+`build.yml` 是「每次推 main / PR 都跑」的构建门禁,它**同样会执行 `pnpm tauri build`**。
+开了 `createUpdaterArtifacts` 之后有**两处**会让它失败,两处都必须处理:
+
+| 问题 | 症状 | 处理 |
+|------|------|------|
+| **pnpm 版本用 `latest`** | 三个平台**全都**挂在 `Install frontend dependencies`。`pnpm-lock.yaml` 是 `lockfileVersion: 9.0`,而 `latest` 已经是 **pnpm 12**,`--frozen-lockfile` 直接拒绝该格式(2026-09-26 实测) | 把 pnpm **钉死**在写 lockfile 的那个版本(`build.yml` 的 `corepack prepare` + `pnpm/action-setup.version`、`release.yml` 的 `version`、以及 `package.json` 的 `packageManager` 四处一致) |
+| **没有签名密钥** | `pnpm tauri build` 在打包阶段报 `A public key has been found, but no private key`(注意:是**报错**,不是挂起) | 用 `--config` 就地关掉更新器产物:`pnpm tauri build --config '{"bundle":{"createUpdaterArtifacts":false}}'`。构建门禁不需要签名,PR(尤其 fork)也拿不到 secret |
+
+> ⚠️ **两种「签名相关失败」行为不同,别混**:
+> - 缺 `TAURI_SIGNING_PRIVATE_KEY` → **立即报错**(8 秒),信息明确。
+> - 只缺 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`(密钥无密码也必须给空串)→ **永久挂起**(见文末「构建验证」)。
+
 > ⚠️ **draft 陷阱**:当前 `releaseDraft: true`。**draft release 的 assets 在正式发布前不是公开可访问的**,`/releases/latest/download/...` 也只指向**已发布**的 release。所以「发布」这一步必须真的执行,否则更新器 404。这也意味着 draft 期间无法端到端测更新链路 —— 测试要用一个**临时的预发布 tag**,测完再删。
 
 ### 4.5 更新清单 `latest.json`:不用手写,但要懂它

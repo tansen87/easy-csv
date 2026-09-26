@@ -48,10 +48,14 @@ jobs:
         with:
           node-version: lts/*
 
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
-          version: 9
+          # Keep identical to build.yml and to package.json's `packageManager`.
+          # Both workflows must read/write `pnpm-lock.yaml` in the same format
+          # (`lockfileVersion: 9.0`); letting them drift 9-vs-latest is how
+          # build.yml silently broke.
+          version: 10.15.0
           run_install: false
 
       - name: Get pnpm store directory
