@@ -1011,7 +1011,9 @@ function AppContent() {
           await invoke("save_recent_files", {
             recentFiles: JSON.stringify(updated, null, 2),
           });
-        } catch {}
+        } catch {
+          /* ignore: pruning the recent-files list is best-effort */
+        }
         showToastRef.current("File does not exist", "info");
       }
     },

@@ -21,7 +21,7 @@ import {
   DecimalsArrowLeft,
   DecimalsArrowRight,
   RulerDimensionLine,
-  Infinity,
+  Infinity as InfinityIcon,
   Replace,
   LayoutGrid,
   Eraser,
@@ -203,7 +203,7 @@ export function ContextMenu({
     { label: t.numTransformFloor, icon: ArrowDown, transformType: "floor" },
     { label: t.numTransformCeil, icon: ArrowUp, transformType: "ceil" },
     { label: t.numTransformInt, icon: DecimalsArrowLeft, transformType: "int" },
-    { label: t.numTransformFloat, icon: Infinity, transformType: "float" },
+    { label: t.numTransformFloat, icon: InfinityIcon, transformType: "float" },
     {
       label: t.numTransformRound,
       icon: DecimalsArrowRight,

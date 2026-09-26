@@ -31,6 +31,7 @@ export function useBatchFilter({
 }: BatchFilterHooksProps) {
   const sanitizeFileName = (value: string): string => {
     // Remove all characters not allowed in Windows filenames
+    // eslint-disable-next-line no-control-regex -- \x00-\x1f are control characters, which Windows also forbids in filenames
     return value.replace(/[<>:"/\\|?*\x00-\x1f]/g, "").substring(0, 50);
   };
 

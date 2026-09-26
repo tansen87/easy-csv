@@ -14,6 +14,7 @@ describe("useBatchFilter command building", () => {
 
   // Reproduce sanitizeFileName logic
   const sanitizeFileName = (value: string): string => {
+    // eslint-disable-next-line no-control-regex -- mirrors useBatchFilter: control characters are invalid in Windows filenames
     return value.replace(/[<>:"/\\|?*\x00-\x1f]/g, "").substring(0, 50);
   };
 

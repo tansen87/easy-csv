@@ -26,7 +26,9 @@ function getInitialLanguage(): Language {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved === "en" || saved === "zh" || saved === "system") return saved;
-  } catch {}
+  } catch {
+    /* ignore: fall back to the default when storage is unavailable */
+  }
   return "system";
 }
 
@@ -40,7 +42,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     setLanguageState(lang);
     try {
       localStorage.setItem(STORAGE_KEY, lang);
-    } catch {}
+    } catch {
+      /* ignore: persistence is best-effort */
+    }
   };
 
   const t = translations[effectiveLanguage];

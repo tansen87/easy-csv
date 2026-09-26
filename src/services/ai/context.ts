@@ -730,10 +730,10 @@ export async function buildSystemPrompt(
     - 参数名用短横线形式(如 select → -s);-r(regex)、-e(exact) 是flag类型参数,后面不接值,模式内容始终放在pattern(-p)中.
     - 创建新列时必须使用as指定列名(如map、groupby、agg命令).示例: 用户"根据debit-credit得到amount" → {"command":"map","parameters":{"expression":"col(\\"debit\\") - col(\\"credit\\") as amount"},"explanation":"计算debit减去credit得到amount列"}.严禁省略as.
     - groupby/agg的expression参数必须包含as子句.示例: 用户"按地区汇总销售额" → {"command":"groupby","parameters":{"columns":"region","expression":"sum(sales) as sales"},"explanation":"按地区汇总销售额"}.严禁写成'sum(sales)'而缺少'as sales'.
-    - 需求是"对多列做同一种聚合"(如"分别统计A、B、C的总和"、"同时求X、Y的平均值")时,必须用[一条]agg命令:expression 用英文逗号拼接多个聚合表达式,每个都要有 as 别名.严禁拆成多条 agg 命令——agg 的输出只有一行,串联会让后续步骤基于已聚合的单行重复计算.示例: 用户"分别统计销售额、成本、利润的总和" -> {"command":"agg","parameters":{"expression":"sum(col(\\"销售额\\")) as \"销售额_总和\", sum(col(\\"成本\\")) as \"成本_总和\", sum(col(\\"利润\\")) as \"利润_总和\""},"explanation":"一次性统计三列的总和"}.中文列名请用 col("列名") 形式引用,以保证表达式可解析.
+    - 需求是"对多列做同一种聚合"(如"分别统计A、B、C的总和"、"同时求X、Y的平均值")时,必须用[一条]agg命令:expression 用英文逗号拼接多个聚合表达式,每个都要有 as 别名.严禁拆成多条 agg 命令——agg 的输出只有一行,串联会让后续步骤基于已聚合的单行重复计算.示例: 用户"分别统计销售额、成本、利润的总和" -> {"command":"agg","parameters":{"expression":"sum(col(\\"销售额\\")) as "销售额_总和", sum(col(\\"成本\\")) as "成本_总和", sum(col(\\"利润\\")) as "利润_总和""},"explanation":"一次性统计三列的总和"}.中文列名请用 col("列名") 形式引用,以保证表达式可解析.
     - 特别注意括号匹配: as 别名必须写在函数括号[外面].正确: sum(col("销售额")) as "销售额_总和" ;错误: sum(col("销售额") as "销售额_总和") - 别名被包进括号会导致括号不闭合.
     - 别名含中文、空格或特殊字符时,必须用[双引号]包裹.正确: sum(col("销售额")) as "销售额_总和"、max(x) as "Max Replies";仅由英文字母/数字/下划线组成的别名(如 total、sales_sum)可不加引号.
-    - 需求"合并/拼接某目录下所有CSV文件为1个CSV"时,用cat命令:mode=rows(按行拼接),勾选union(合并各文件列头),glob填目录通配符(如D:\test\*.csv).不要用join、merge或output.示例: 用户"合并D:\test所有的csv文件为1个csv" → {"command":"cat","parameters":{"mode":"rows","union":true,"glob":"D:\\\\test\\\\*.csv"},"explanation":"合并D:\\test下所有csv文件为1个csv"}`);
+    - 需求"合并/拼接某目录下所有CSV文件为1个CSV"时,用cat命令:mode=rows(按行拼接),勾选union(合并各文件列头),glob填目录通配符(如D:\test*.csv).不要用join、merge或output.示例: 用户"合并D:\test所有的csv文件为1个csv" → {"command":"cat","parameters":{"mode":"rows","union":true,"glob":"D:\\\\test\\\\*.csv"},"explanation":"合并D:\\test下所有csv文件为1个csv"}`);
 
   sections.push(`
     ## 模糊需求处理
