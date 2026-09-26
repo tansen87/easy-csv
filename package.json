@@ -9,6 +9,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "tauri:build": "node scripts/tauri-build.mjs",
     "generate-help": "node scripts/generate-help-docs.js",
     "generate-ai-usage": "tsx scripts/generate-ai-usage-docs.ts",
     "test": "vitest run",

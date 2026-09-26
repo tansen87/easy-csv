@@ -614,20 +614,36 @@ pub fn get_install_form() -> InstallForm   // UserScoped | MachineScoped | AppBu
 
 ### ⚠️ 本机打包必读:两处「看起来像坏了,其实不是」
 
-**1. 缺 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` 会让签名步骤永久阻塞。**
+**1. 本机 `tauri build` 现在必须提供签名密钥,而且有两个不同的失败模式。**
 
-密钥是无密码的,但**该变量必须存在**(可以是空串)。实测:只设 `TAURI_SIGNING_PRIVATE_KEY` 时,
-`tauri bundle` 打完 `-setup.exe` 就停住 —— 既不产出 `.sig`,进程也不退出(第一次 `tauri build`
-因此挂了 20 分钟以上,日志停在 `Finished [tauri_bundler::bundle] 1 bundle at:`,缺少
-`Finished [tauri_cli::bundle] 1 updater signature at:`)。补上空密码变量后 **7 秒**跑完并产出 `.sig`。
-CI 不受影响:`${{ secrets.TAURI_KEY_PASSWORD }}` 在未设置时也求值为空串,变量是存在的。
+`createUpdaterArtifacts` 打开后,每一次构建都要给安装包签名。手写环境变量有两个坑:
+
+| 缺什么 | 行为 | 现象 |
+|--------|------|------|
+| `TAURI_SIGNING_PRIVATE_KEY` | **立即报错**(几秒) | `A public key has been found, but no private key` |
+| 只缺 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`(密钥无密码也必须给**空串**) | **永久挂起** | 安装包已产出但**永远不生成 `.sig`**,进程也不退出 |
+
+还有一个容易误用的点:⚠️ **`TAURI_SIGNING_PRIVATE_KEY_PATH` 不被打包器支持** —— 它只被
+`tauri signer` 子命令识别。`tauri build` / `tauri bundle` 只认 `TAURI_SIGNING_PRIVATE_KEY`
+(且必须是**密钥内容**,不是路径),导出路径照样报上面那个错(2026-09-26 实测)。
+
+**推荐用仓库里的封装脚本**,它一次处理上面全部三点(缺密钥时给出可执行的替代命令,而不是报错完事):
 
 ```bash
-export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/easycsv-updater.key)"
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD=""     # ← 不能省,否则挂起
-npx tauri build
+pnpm tauri:build                      # 参数与 `tauri build` 相同
+pnpm tauri:build --target aarch64-apple-darwin
+```
+
+脚本是 `scripts/tauri-build.mjs`:密钥默认取 `~/.tauri/easycsv-updater.key`
+(可用 `TAURI_SIGNING_PRIVATE_KEY_PATH` 指定别的路径**给脚本看**),读出内容注入
+`TAURI_SIGNING_PRIVATE_KEY`,并把 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` 补成空串。
+
+不想要签名包时(纯本地编译验证),直接用官方的 `--config` 逃生口:
+
+```bash
+pnpm tauri build --config '{"bundle":{"createUpdaterArtifacts":false}}'
 # 只想重跑打包(跳过漫长的 Rust 编译,几秒完成):
-npx tauri bundle -b nsis -v
+pnpm tauri bundle -b nsis --config '{"bundle":{"createUpdaterArtifacts":false}}'
 ```
 
 **2. 首次发布之前,「检查更新」必然报错,这是正常的。**
