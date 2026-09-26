@@ -97,14 +97,51 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
             libayatana-appindicator3-dev librsvg2-dev patchelf
 
+      # Validate the secret *before* the ~20 minute build. Without this the only
+      # symptom is a cryptic bundler error at the very end:
+      #   failed to decode secret key: incorrect updater private key password:
+      #   Missing comment in secret key
+      # (that message means the secret holds the decoded minisign text rather
+      # than the file's base64 line) -- see design 022 §4.3.
+      - name: Validate updater signing key
+        shell: bash
+        env:
+          KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+        run: |
+          node - <<'NODE'
+          const key = (process.env.KEY ?? "").replace(/[\r\n]+/g, "");
+          const fail = (msg) => {
+            console.error("::error::" + msg);
+            process.exit(1);
+          };
+          if (!key) {
+            fail("TAURI_PRIVATE_KEY is empty or unset. Add it as a repository secret.");
+          }
+          console.log(`secret: ${key.length} chars, starts with ${key.slice(0, 24)}`);
+          const decoded = Buffer.from(key, "base64").toString("utf8");
+          if (decoded.startsWith("untrusted comment: minisign public key")) {
+            fail("TAURI_PRIVATE_KEY holds the PUBLIC key (.key.pub). Use the private key file instead.");
+          }
+          if (!decoded.startsWith("untrusted comment: ")) {
+            fail(
+              "TAURI_PRIVATE_KEY does not decode to a minisign secret key. Store the file's " +
+                "verbatim contents: one base64 line (~348 chars) starting with " +
+                "dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWdu. Do NOT base64-decode it first -- a value " +
+                "starting with 'untrusted comment:' is the decoded form and is what causes " +
+                "'Missing comment in secret key'."
+            );
+          }
+          console.log(`ok: ${decoded.split("\n")[0]}`);
+          NODE
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Updater signing key (design 022). `bundle.createUpdaterArtifacts` is
           # enabled in tauri.conf.json, so a release build FAILS without a valid
           # key here. The generated key has no password, so the password secret
-          # may be empty. Rotating this key locks every existing install out of
-          # automatic updates — back it up before changing it.
+          # may be left unset. Rotating this key locks every existing install out
+          # of automatic updates — back it up before changing it.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
@@ -121,10 +158,12 @@ jobs:
           args: ${{ matrix.args }}
           # Generates `latest.json` and uploads it (plus the .sig files) as
           # release assets. That asset IS the updater's update source: the app
-          # reads `.../releases/latest/download/latest.json`. It is on by
-          # default; kept explicit because a silent regression here would only
-          # show up as "no updates ever" in the field. See design 022 §4.5.
-          uploadUpdaterJson: true
+          # reads `.../releases/latest/download/latest.json`. On by default;
+          # kept explicit because a silent regression here would only show up
+          # as "no updates ever" in the field. See design 022 §4.5.
+          # NOTE: the input name for the pinned v0 action is `includeUpdaterJson`
+          # -- `uploadUpdaterJson` belongs to the v1 docs and is ignored here.
+          includeUpdaterJson: true
 
       # `createUpdaterArtifacts` silently produces nothing when no key reaches
       # the bundler, which is only noticed much later as updates that fail
