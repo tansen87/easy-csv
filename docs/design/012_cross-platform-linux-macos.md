@@ -8,7 +8,7 @@
 ## 实施记录（相对设计稿的偏差）
 
 - **D1 变更（用户自理模型）**：最终未采用"编译期嵌入多平台二进制"。`resources/plugins/` 保留 `<平台>/` 目录结构作为文档化放置目录，但 `xan`/`pinyin` 一律**不打包进应用**（三平台均不嵌入），用户在 `<resources>/plugins/<平台>/` 放入 `xan(.exe)`/`pinyin(.exe)`（或加入 `PATH`）后由应用运行时定位。三平台均可自行构建 pinyin（`plugins/pinyin-cli`）、自行获取 xan。
-- D2 已实施，且收敛在 `config::get_resources_dir()` + `plugins::get_plugin_dir()`，调用方零改动。插件目录统一为 `<resources>/plugins/<PLATFORM_DIR>/`（Windows `<exe>/easy-csv_resources/plugins/windows-x86_64/`，macOS `~/Library/Application Support/EasyCsv/plugins/<平台>/`，Linux `~/.local/share/easy-csv/plugins/<平台>/`）；各类 SQLite 数据仍置于 `<resources>/data/`。
+- D2 已实施，且收敛在 `config::get_resources_dir()` + `plugins::get_plugin_dir()`，调用方零改动。插件目录统一为 `<resources>/plugins/<PLATFORM_DIR>/`；各类 SQLite 数据仍置于 `<resources>/data/`。⚠️ **`<resources>` 的取值已于 2026-09-27 再次调整**：Windows/Linux 的 `<resources>` 就是**安装目录**（`<用户选择路径>/EasyCsv`，数据与 `EasyCsv.exe` 平级；AppImage 为 `.AppImage` 所在目录下的 `EasyCsv/`），macOS 维持本节的 `~/Library/Application Support/EasyCsv`。详见 `docs/design/022_github-auto-update-and-admin-free-install.md` 文首「实施记录 · 修订」。
 - W3 已移除：不再解压二进制，故无需 `chmod +x`（用户自行放置并设置可执行位）。
 - D3 部分实施：托盘改为可降级（失败仅失去“最小化到托盘”，应用照常运行，`minimize_to_tray` 自动视为 false）。**W4 未进行**：`tauri-plugin-prevent-default` v5.0.2 只暴露 `platform-windows` feature，不存在 `platform-linux/macos` feature，设计假设不成立。
 - D4 已实施：`src/utils/platform.ts` 提供 `isWindows`/`modKeySymbol`；脚本导出默认扩展名按平台（Windows `.ps1` 置顶、其余 `.sh`）；快捷键绑定本就使用 `e.ctrlKey || e.metaKey`；CommandPalette 快捷键按平台渲染 ⌘/Ctrl。
@@ -100,9 +100,15 @@ const XAN_BYTES: &[u8] = include_bytes!("../resources/plugins/macos-aarch64/xan"
 - 备选方案（不采用）：Tauri `bundle.resources` 声明式携带 + build.rs 按目标选择。被否原因：会改变现有"单二进制 + 首启解压"的行为，且 AppImage 内资源路径各平台不一致，改动面更大。
 - Linux 目标选 `gnu`（AppImage/deb 主流）；`musl` 作为可选目标（未来静态分发），不进首期。
 
-### D2. 资源与数据目录策略（解决 W2，最核心的改动）
+### D2. 资源与数据目录策略(解决 W2,最核心的改动)
 
-现状 `get_resources_dir()` 返回可执行文件旁的 `EasyCsv_resources`，**该目录同时承担两个职责**：插件解压目标（可写）+ 各类 SQLite 数据（config.db / plugins.db / session.db / ai_memory.db，可写）。跨平台上这两个职责必须迁到平台标准位置：
+> ⚠️ **下表是本节成文时的形态,其后经历过两次调整,现行值见 `docs/design/022` 文首「实施记录 · 修订」**:
+> Windows 先改为 `%LOCALAPPDATA%\EasyCsv`(022 §3.2,0.6.0 发布),又于 2026-09-27 改为
+> **「数据目录 = 安装目录」** —— 安装器强制把程序装进 `<用户选择路径>\EasyCsv`,数据(`data/`、
+> `plugins/`、`templates/`、`versions/`)与 `EasyCsv.exe` 平级;macOS 路径自本节起未变。
+> 表中 Linux 的 `resources/plugins/` 亦为笔误 —— 实际是 `<resources>/plugins/<PLATFORM_DIR>/`。
+
+现状 `get_resources_dir()` 返回可执行文件旁的 `EasyCsv_resources`,**该目录同时承担两个职责**:插件解压目标(可写)+ 各类 SQLite 数据(config.db / plugins.db / session.db / ai_memory.db,可写)。跨平台上这两个职责必须迁到平台标准位置:
 
 | 平台 | 插件目录（解压目标） | 数据目录（db 文件） |
 |------|---------------------|---------------------|

@@ -39,16 +39,30 @@ impl Default for AppConfig {
   }
 }
 
-/// Legacy Windows layout: user data used to live next to the executable, which
-/// made the data directory unwritable whenever the app was installed under
-/// `Program Files` (see docs/design/022 §3.2).
-#[cfg(target_os = "windows")]
+/// Folder name the app owns on Linux AppImages.
+///
+/// On Windows the equivalent guarantee comes from the installer: `nsis/hooks.nsh`
+/// (`NSIS_HOOK_PREINSTALL`) always installs into a directory with this name, so
+/// an uninstall can only ever remove EasyCsv's own folder.
+#[cfg(target_os = "linux")]
+const INSTALL_DIR_NAME: &str = "EasyCsv";
+
+/// Pre-022 name of the data directory when it lived next to the executable;
+/// kept only as a migration source for users coming from v0.4/v0.5.
+#[cfg(not(target_os = "macos"))]
 const LEGACY_DIR_NAME: &str = "EasyCsv_resources";
 
-/// Marker written into the new data directory once a legacy → new migration has
-/// completed, so later starts neither migrate again nor resurrect data the user
-/// deliberately removed from the old location.
-const MIGRATION_MARKER: &str = ".migrated-from-exe-dir";
+/// Marker written into the data directory once it is the one in use, so later
+/// starts neither migrate again nor resurrect data the user deliberately
+/// removed.
+#[cfg(not(target_os = "macos"))]
+const IN_PLACE_MARKER: &str = ".in-place-layout";
+
+/// Marker written into the old centralized directory once its data has been
+/// moved next to the executable. Without it, every later install into a fresh
+/// directory would seed itself with that same stale snapshot.
+#[cfg(not(target_os = "macos"))]
+const MOVED_AWAY_MARKER: &str = ".moved-to-exe-dir";
 
 /// Resolved once per process: the path is stable, and resolving it may run a
 /// one-time migration that must not be repeated on every call.
@@ -56,18 +70,21 @@ static RESOURCES_DIR: OnceLock<PathBuf> = OnceLock::new();
 
 /// Return the base directory that plugins and SQLite databases live under.
 ///
-/// Always `<user-local-data>/EasyCsv`:
-/// - Windows: `%LOCALAPPDATA%\EasyCsv`
-/// - macOS: `~/Library/Application Support/EasyCsv`
-/// - Linux: `~/.local/share/EasyCsv`
+/// - Windows / Linux: **the directory the executable sits in**, so the app and
+///   its data are a single folder. On Windows the installer guarantees that
+///   directory is named `EasyCsv` (`nsis/hooks.nsh`) — that is what keeps an
+///   uninstall from ever deleting a directory the user picked for other
+///   reasons. An AppImage has no installer, so it uses
+///   `<directory of the .AppImage>/EasyCsv`.
+/// - macOS: `~/Library/Application Support/EasyCsv` — writing inside a `.app`
+///   bundle invalidates its code signature, so the bundle stays read-only.
 ///
-/// Deliberately decoupled from the install directory: the app must keep working
-/// when installed read-only (`Program Files`, `/Applications`, a `.app` bundle)
-/// and when the updater replaces the executable in place. `data_local_dir()` is
+/// When the directory is not writable (an install under `Program Files`, an
+/// enterprise per-machine push) the app falls back to the previous centralized
+/// location rather than silently failing to save settings. `data_local_dir()` is
 /// used instead of `data_dir()` because the only platform where they differ is
 /// Windows — `%LOCALAPPDATA%` vs the roaming `%APPDATA%` — and roaming profiles
-/// must not carry SQLite databases. On macOS/Linux both resolve to the same
-/// path, so existing users there are unaffected.
+/// must not carry SQLite databases.
 ///
 /// All data dirs derive from this single function; plugin dir is derived via
 /// `plugins::get_plugin_dir()`.
@@ -75,91 +92,213 @@ pub fn get_resources_dir() -> PathBuf {
   RESOURCES_DIR.get_or_init(resolve_resources_dir).clone()
 }
 
-fn resolve_resources_dir() -> PathBuf {
-  let new_dir = dirs::data_local_dir()
+/// The centralized location: no longer where new data goes, but still the
+/// migration source for v0.6 users and the fallback when the data directory
+/// cannot be written.
+fn centralized_dir() -> PathBuf {
+  dirs::data_local_dir()
     .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
-    .join("EasyCsv");
-
-  #[cfg(target_os = "windows")]
-  {
-    // Migration failed → keep using the old location rather than losing data.
-    if let Some(legacy) = migrate_legacy_resources_dir(&new_dir) {
-      return legacy;
-    }
-  }
-
-  new_dir
+    .join("EasyCsv")
 }
 
-#[cfg(target_os = "windows")]
-fn legacy_resources_dir() -> PathBuf {
-  let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("."));
-  let exe_dir = exe_path.parent().unwrap_or_else(|| Path::new("."));
-  exe_dir.join(LEGACY_DIR_NAME)
+#[cfg(target_os = "macos")]
+fn resolve_resources_dir() -> PathBuf {
+  centralized_dir()
 }
 
-/// One-time move of `<exe_dir>\EasyCsv_resources` into the new data directory.
-///
-/// Returns `Some(legacy_dir)` only when the copy failed and the app must stay on
-/// the old directory; `None` means "use the new directory".
-///
-/// The copy is additive and never deletes the source, so a failure — or a user
-/// who wants to roll back to an older build — always still has the data. The
-/// two markers (`MIGRATION_MARKER`, and the presence of a real `data/config.db`
-/// in the new location) keep this safe to call on every start.
-#[cfg(target_os = "windows")]
-fn migrate_legacy_resources_dir(new_dir: &Path) -> Option<PathBuf> {
-  // Already migrated (or already new-layout).
-  if new_dir.join(MIGRATION_MARKER).exists() {
-    return None;
+#[cfg(not(target_os = "macos"))]
+fn resolve_resources_dir() -> PathBuf {
+  let target = match data_dir_candidate() {
+    Some(dir) => dir,
+    // No executable path: the data directory cannot be determined.
+    None => return centralized_dir(),
+  };
+
+  if !ensure_writable(&target) {
+    let fallback = centralized_dir();
+    eprintln!(
+      "[EasyCsv] {} is not writable; falling back to {}",
+      target.display(),
+      fallback.display()
+    );
+    return fallback;
   }
 
-  let legacy = legacy_resources_dir();
-  if !legacy.is_dir() {
-    // Nothing to migrate — fresh install on the new layout.
-    return None;
+  // Data is already where it belongs. This also covers the plain v0.6 → next
+  // upgrade: v0.6 stored data in `%LOCALAPPDATA%\EasyCsv` *and* installed there
+  // by default, so the target is that very directory and nothing has to move.
+  if has_database(&target) || target.join(IN_PLACE_MARKER).exists() {
+    return target;
   }
 
-  // A real database already lives in the new location: this install has been
-  // used with the new layout before, so copying the legacy tree over it would
-  // clobber newer data. Treat as migrated and leave the legacy dir alone.
-  if new_dir.join("data").join("config.db").exists() {
-    let _ = std::fs::write(new_dir.join(MIGRATION_MARKER), "existing new-layout data\n");
-    return None;
-  }
+  let Some(source) = migration_source(&target, &centralized_dir()) else {
+    // Fresh install: adopt the layout with an empty directory.
+    let _ = std::fs::write(target.join(IN_PLACE_MARKER), "in-place layout\n");
+    return target;
+  };
 
-  match copy_dir_recursive(&legacy, new_dir) {
+  match copy_data_dirs(&source, &target) {
     Ok(copied) => {
       let _ = std::fs::write(
-        new_dir.join(MIGRATION_MARKER),
-        format!("migrated from {}\n", legacy.display()),
+        target.join(IN_PLACE_MARKER),
+        format!("moved from {}\n", source.display()),
       );
+      // The centralized directory is shared by every install on the machine, so
+      // it is seeded only once — otherwise installing into another directory
+      // later would start from this same stale snapshot.
+      if source == centralized_dir() {
+        let _ = std::fs::write(
+          source.join(MOVED_AWAY_MARKER),
+          format!("moved to {}\n", target.display()),
+        );
+      }
       eprintln!(
-        "[EasyCsv] migrated {copied} file(s) from {} to {}",
-        legacy.display(),
-        new_dir.display()
+        "[EasyCsv] moved {copied} file(s) from {} to {}",
+        source.display(),
+        target.display()
       );
-      None
+      target
     }
+    // Moving failed: stay on the old location rather than losing data. A partial
+    // copy in `target` is harmless — the marker is what decides, and a retry
+    // overwrites it from the still-intact source.
     Err(error) => {
-      // Stay on the legacy dir; the next start retries the copy. Partial
-      // leftovers in `new_dir` are harmless because the marker is what decides,
-      // and a retry overwrites them from the still-intact source.
       eprintln!(
-        "[EasyCsv] could not migrate {} to {} ({error}); continuing to use the old location",
-        legacy.display(),
-        new_dir.display()
+        "[EasyCsv] could not move {} to {} ({error}); continuing to use the old location",
+        source.display(),
+        target.display()
       );
-      Some(legacy)
+      source
     }
   }
+}
+
+/// The directory the data belongs in, or `None` when it cannot be determined.
+///
+/// Normally the executable's own directory — the app's data and the app itself
+/// share one folder, which is only safe because the installer forces that folder
+/// to be named `EasyCsv`.
+#[cfg(not(target_os = "macos"))]
+fn data_dir_candidate() -> Option<PathBuf> {
+  #[cfg(target_os = "linux")]
+  {
+    // An AppImage has no installer and `current_exe()` points into a read-only
+    // mount that is gone on exit; the data goes into an `EasyCsv` folder next to
+    // the `.AppImage` file the user keeps.
+    if let Some(appimage) = std::env::var_os("APPIMAGE") {
+      if let Some(parent) = Path::new(&appimage).parent() {
+        return Some(parent.join(INSTALL_DIR_NAME));
+      }
+    }
+  }
+
+  Some(std::env::current_exe().ok()?.parent()?.to_path_buf())
+}
+
+/// The directory to seed the data directory from, if there is one.
+///
+/// The centralized directory wins over the old in-place name: it is one
+/// generation newer, and a stale `<dir>\EasyCsv_resources` must not overwrite
+/// the data a v0.6 user has been using since.
+#[cfg(not(target_os = "macos"))]
+fn migration_source(target: &Path, centralized: &Path) -> Option<PathBuf> {
+  if centralized != target
+    && has_database(centralized)
+    && !centralized.join(MOVED_AWAY_MARKER).exists()
+  {
+    return Some(centralized.to_path_buf());
+  }
+
+  // The pre-022 directory is only a source on machines that never ran the v0.6
+  // centralized layout; where one exists it is always the older generation
+  // (e.g. leftovers in `target/<profile>/EasyCsv_resources` on a dev box).
+  if centralized.is_dir() {
+    return None;
+  }
+
+  // v0.4/v0.5 kept its data in `<install dir>\EasyCsv_resources`. Back then the
+  // default install directory already ended with `EasyCsv`, but a custom path
+  // was used as-is — so the old directory can be the target itself *or* one
+  // level up.
+  let mut candidates = vec![target.join(LEGACY_DIR_NAME)];
+  if let Some(parent) = target.parent() {
+    candidates.push(parent.join(LEGACY_DIR_NAME));
+  }
+
+  candidates.into_iter().find(|candidate| {
+    candidate.as_path() != target
+      && candidate.as_path() != centralized
+      && has_database(candidate)
+  })
+}
+
+/// Only a directory holding a real database counts as "has data", so an empty
+/// directory left behind by an earlier attempt cannot shadow a full one.
+#[cfg(not(target_os = "macos"))]
+fn has_database(dir: &Path) -> bool {
+  dir.join("data").join("config.db").is_file()
+}
+
+/// Create `dir` if needed and check that it accepts a new file, so read-only
+/// cases (an install under `Program Files`, an AppImage mount) are caught before
+/// the app starts writing settings into a directory that cannot take them.
+#[cfg(not(target_os = "macos"))]
+fn ensure_writable(dir: &Path) -> bool {
+  if std::fs::create_dir_all(dir).is_err() {
+    return false;
+  }
+  let probe = dir.join(".write-probe");
+  match std::fs::write(&probe, b"") {
+    Ok(()) => {
+      let _ = std::fs::remove_file(&probe);
+      true
+    }
+    Err(_) => false,
+  }
+}
+
+/// True when copying `candidate` would descend into the directory being written.
+///
+/// Both are the same directory in the v0.6 → next upgrade path (data sits in the
+/// install directory, so source and target coincide), and the source can contain
+/// the target when the app is installed *inside* the old centralized directory.
+/// Without this guard such a copy would read its own output and never terminate.
+#[cfg(not(target_os = "macos"))]
+fn would_nest_into_itself(candidate: &Path, target: &Path) -> bool {
+  candidate == target || target.starts_with(candidate)
+}
+
+/// Copy the data subdirectories of `from` into `to`, returning the number of
+/// files copied.
+///
+/// Only directories are taken from this level: every location the app writes is
+/// a subdirectory (`data/`, `plugins/`, `templates/`, `versions/`), while a file
+/// sitting at the source root is the program itself (`EasyCsv.exe`,
+/// `uninstall.exe`) or a marker that must not be duplicated into the data
+/// folder. A fifth data subdirectory would have to be handled here.
+#[cfg(not(target_os = "macos"))]
+fn copy_data_dirs(from: &Path, to: &Path) -> std::io::Result<usize> {
+  std::fs::create_dir_all(to)?;
+  let mut copied = 0usize;
+  for entry in std::fs::read_dir(from)? {
+    let entry = entry?;
+    let source = entry.path();
+    if would_nest_into_itself(&source, to) {
+      continue;
+    }
+    if !entry.file_type()?.is_dir() {
+      continue;
+    }
+    copied += copy_dir_recursive(&source, &to.join(entry.file_name()))?;
+  }
+  Ok(copied)
 }
 
 /// Recursively copy `from` into `to`, returning the number of files copied.
 ///
 /// `std::fs` has no recursive copy. Existing files are overwritten, which makes
 /// a retry after a partial failure self-healing.
-#[cfg(target_os = "windows")]
+#[cfg(not(target_os = "macos"))]
 fn copy_dir_recursive(from: &Path, to: &Path) -> std::io::Result<usize> {
   std::fs::create_dir_all(to)?;
   let mut copied = 0usize;
@@ -640,4 +779,201 @@ pub async fn set_ai_config(config: String) -> Result<(), String> {
     .unwrap_or_else(|| "[]".to_string());
 
   save_ai_config(provider, model, base_url, name, &models)
+}
+
+#[cfg(all(test, not(target_os = "macos")))]
+mod tests {
+  use super::*;
+
+  /// A unique scratch directory, built by hand to keep this crate on its
+  /// zero-dev-dependency test setup (see the tests in `plugins.rs`).
+  fn scratch(name: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("EasyCsv-config-test-{name}"));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    dir
+  }
+
+  fn seed_database(dir: &Path) {
+    std::fs::create_dir_all(dir.join("data")).unwrap();
+    std::fs::write(dir.join("data").join("config.db"), b"db").unwrap();
+  }
+
+  /// A stand-in for the data directory of an install (`<dir>/EasyCsv`).
+  fn target(root: &Path) -> PathBuf {
+    let dir = root.join("EasyCsv");
+    std::fs::create_dir_all(&dir).unwrap();
+    dir
+  }
+
+  #[test]
+  fn only_a_real_database_counts_as_data() {
+    let root = scratch("has-db");
+    assert!(!has_database(&root));
+
+    // A marker on its own must never shadow a directory that holds real data.
+    std::fs::write(root.join(IN_PLACE_MARKER), b"").unwrap();
+    assert!(!has_database(&root));
+
+    seed_database(&root);
+    assert!(has_database(&root));
+    let _ = std::fs::remove_dir_all(&root);
+  }
+
+  #[test]
+  fn writability_probe_creates_the_directory_and_leaves_no_trace() {
+    let root = scratch("writable");
+    let target = root.join("EasyCsv");
+
+    assert!(ensure_writable(&target));
+    assert!(target.is_dir());
+    assert!(!target.join(".write-probe").exists());
+
+    let _ = std::fs::remove_dir_all(&root);
+  }
+
+  #[test]
+  fn copy_is_recursive_and_overwrites_partial_leftovers() {
+    let root = scratch("copy");
+    let from = root.join("from");
+    let to = root.join("to");
+    std::fs::create_dir_all(from.join("data")).unwrap();
+    std::fs::create_dir_all(from.join("plugins").join("windows-x86_64")).unwrap();
+    std::fs::write(from.join("data").join("config.db"), b"new").unwrap();
+    std::fs::write(
+      from.join("plugins").join("windows-x86_64").join("xan.exe"),
+      b"x",
+    )
+    .unwrap();
+    // Leftovers from an interrupted earlier attempt must be overwritten.
+    std::fs::create_dir_all(to.join("data")).unwrap();
+    std::fs::write(to.join("data").join("config.db"), b"old").unwrap();
+
+    assert_eq!(copy_data_dirs(&from, &to).unwrap(), 2);
+    assert_eq!(
+      std::fs::read(to.join("data").join("config.db")).unwrap(),
+      b"new"
+    );
+    assert!(
+      to.join("plugins")
+        .join("windows-x86_64")
+        .join("xan.exe")
+        .is_file()
+    );
+
+    let _ = std::fs::remove_dir_all(&root);
+  }
+
+  #[test]
+  fn only_entries_that_do_not_contain_the_target_are_copied() {
+    let target = Path::new("app").join("EasyCsv");
+
+    // The target itself, and any directory that contains it.
+    assert!(would_nest_into_itself(&target, &target));
+    assert!(would_nest_into_itself(Path::new("app"), &target));
+
+    // Siblings and their contents.
+    assert!(!would_nest_into_itself(Path::new("app/data"), &target));
+    assert!(!would_nest_into_itself(Path::new("app/plugins"), &target));
+    assert!(!would_nest_into_itself(
+      &Path::new("app").join(LEGACY_DIR_NAME),
+      &target
+    ));
+  }
+
+  /// The install directory holds both the program and the data, so copying the
+  /// program files into the data folder would be wrong — and a source that
+  /// contains the target must be skipped instead of recursed into.
+  #[test]
+  fn a_target_inside_the_source_is_skipped() {
+    let root = scratch("self-nesting");
+    let source = root.join("install");
+    let nested_target = source.join("EasyCsv");
+    seed_database(&source);
+    std::fs::create_dir_all(source.join("plugins")).unwrap();
+    std::fs::write(source.join("plugins").join("xan.exe"), b"x").unwrap();
+    // Program files at the source root must not be duplicated into the data dir.
+    std::fs::write(source.join("EasyCsv.exe"), b"binary").unwrap();
+
+    assert_eq!(copy_data_dirs(&source, &nested_target).unwrap(), 2);
+    assert!(nested_target.join("data").join("config.db").is_file());
+    assert!(nested_target.join("plugins").join("xan.exe").is_file());
+    assert!(!nested_target.join("EasyCsv.exe").exists());
+    assert!(!nested_target.join("EasyCsv").exists());
+
+    let _ = std::fs::remove_dir_all(&root);
+  }
+
+  #[test]
+  fn the_v06_snapshot_wins_over_the_legacy_in_place_directory() {
+    let root = scratch("source-priority");
+    let target = target(&root);
+    let centralized = root.join("centralized");
+    seed_database(&centralized);
+    // Both pre-022 locations at once.
+    seed_database(&target.join(LEGACY_DIR_NAME));
+    seed_database(&root.join(LEGACY_DIR_NAME));
+
+    assert_eq!(
+      migration_source(&target, &centralized),
+      Some(centralized.clone())
+    );
+
+    // Once its data has moved out, the shared snapshot must not seed a second
+    // install directory with the same stale copy — and neither may the legacy
+    // directories, because a centralized directory proves this machine ran v0.6.
+    std::fs::write(centralized.join(MOVED_AWAY_MARKER), b"").unwrap();
+    assert_eq!(migration_source(&target, &centralized), None);
+
+    let _ = std::fs::remove_dir_all(&root);
+  }
+
+  #[test]
+  fn the_legacy_directory_is_a_source_only_without_a_centralized_one() {
+    let root = scratch("legacy");
+    let target = target(&root);
+    let centralized = root.join("centralized");
+
+    // Default install path in v0.4/v0.5: the data was a subdirectory of what is
+    // the data directory now.
+    let next_to_the_target = target.join(LEGACY_DIR_NAME);
+    seed_database(&next_to_the_target);
+    assert_eq!(
+      migration_source(&target, &centralized),
+      Some(next_to_the_target.clone())
+    );
+    let _ = std::fs::remove_dir_all(&next_to_the_target);
+
+    // Custom install path in v0.4/v0.5: the data was a sibling (the install
+    // directory then was what is the parent now).
+    let one_level_up = root.join(LEGACY_DIR_NAME);
+    seed_database(&one_level_up);
+    assert_eq!(migration_source(&target, &centralized), Some(one_level_up));
+
+    // An empty centralized directory is enough to prove this machine ran v0.6,
+    // which makes the legacy directory the older generation (`target/<profile>`
+    // leftovers on a dev box).
+    std::fs::create_dir_all(&centralized).unwrap();
+    assert_eq!(migration_source(&target, &centralized), None);
+
+    let _ = std::fs::remove_dir_all(&root);
+  }
+
+  #[test]
+  fn the_data_directory_is_never_its_own_migration_source() {
+    let root = scratch("self-source");
+    let target = target(&root);
+    seed_database(&target);
+
+    assert_eq!(migration_source(&target, &target), None);
+
+    let _ = std::fs::remove_dir_all(&root);
+  }
+
+  #[test]
+  fn a_fresh_install_has_nothing_to_migrate() {
+    let root = scratch("fresh");
+    assert_eq!(migration_source(&target(&root), &root.join("centralized")), None);
+    let _ = std::fs::remove_dir_all(&root);
+  }
 }

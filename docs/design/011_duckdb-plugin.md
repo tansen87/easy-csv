@@ -54,7 +54,7 @@ xan 的 moonblade 表达式体系覆盖了大部分行级变换，但在以下�
 
 两种任选：
 
-- **方式 A（推荐）**：将 `duckdb.exe` 放入 `<exe目录>/EasyCsv_resources/plugins/`。`resolve_plugin_executable` 会优先在该目录查找（含 `.exe` 补全），与 `xan.exe`、`pinyin.exe` 同目录。
+- **方式 A（推荐）**：将 `duckdb.exe` 放入数据目录的 `plugins/`。`resolve_plugin_executable` 会优先在该目录查找（含 `.exe` 补全），与 `xan.exe`、`pinyin.exe` 同目录。数据目录自 2026-09-27 起就是 exe 所在目录：Windows/Linux 为 `<安装目录>/plugins/`（安装目录恒为 `<用户选择路径>/EasyCsv`；AppImage 为 `.AppImage` 所在目录下的 `EasyCsv/`），macOS 为 `~/Library/Application Support/EasyCsv/plugins/`。
 - **方式 B**：`duckdb` 已在系统 `PATH` 中（如 `winget install DuckDB.cli` 安装）。解析顺序为：路径 → `plugins/` 目录 → `PATH`，两者不冲突（plugins 目录优先）。
 
 ### 3.2 注册进 plugins.db
@@ -62,7 +62,7 @@ xan 的 moonblade 表达式体系覆盖了大部分行级变换，但在以下�
 `command_executable` 按命令名查 `plugins` 表路由；未注册的命令名一律回退到 xan.exe（导致 "unknown command duckdb" 错误）。当前**没有** UI 或 Tauri 命令用于新增注册（只有只读的 `list_plugins` / `check_plugins`），因此零代码路径需要用任意 SQLite 工具手动写入一次：
 
 ```sql
--- 文件：<exe目录>/EasyCsv_resources/data/plugins.db
+-- 文件:<数据目录>/data/plugins.db(Windows/Linux 下 <安装目录>/data/plugins.db)
 INSERT OR REPLACE INTO plugins (name, executable) VALUES ('duckdb', 'duckdb');
 ```
 

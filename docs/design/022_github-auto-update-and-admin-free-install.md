@@ -1,6 +1,6 @@
 # 022 — GitHub 自动更新 + 免管理员权限安装设计
 
-> 状态: **P0 + P1 已实现(2026-09-26)**;端到端更新链路(§8 V5–V7)需一次真实发布才能验证
+> 状态: **P0 + P1 已实现(2026-09-26)**;数据目录策略于 **2026-09-27 修订**(见文首「修订记录」);端到端更新链路(§8 V5–V7)需一次真实发布才能验证
 > 日期: 2026-09-26
 > 关联: `docs/design/012_cross-platform-linux-macos.md`(三平台目录策略与打包,本设计在其之上加「更新」与「免提权」)、`src/app/App.tsx`(`checkForUpdates`)、`src/modules/dialogs/app/UpdateDialog.tsx`、`docs/AI/INDEX.md`(§ 设计文档表、§ Tauri 命令清单)
 > 前置: 无。全部为 GitHub 单渠道配置,P1 的端到端验证依赖一次预发布 tag。
@@ -27,13 +27,108 @@
   Windows 上唯一未被本机实测覆盖的提权点(本机已有 WebView2),见 §9。
 - **数据目录迁移已实现**,含 `plugins/`;另加一条设计稿没写的护栏:若新目录里**已存在**
   `data/config.db`(即该机器已在用新布局),则**不**用旧目录覆盖它,只补标记文件 ——
-  避免「重装后旧数据盖掉新数据」。
+  避免「重装后旧数据盖掉新数据」。→ ⚠️ **该布局已于 2026-09-27 修订,见下方「实施记录 · 修订」**。
 - **`formatBytes` 上提**:`ExecutionHistoryDialog` 里的私有 `formatBytes` 移到
   `utils/format.ts` 供更新对话框复用(同 020 把 `formatElapsed` 上提的做法)。
 - **验证状态**:`cargo check` 通过;`pnpm typecheck` / `vitest run`(26 文件 383 例)/
   `eslint` 全通过(存量 13 个 error 均与本设计无关)。真实 `tauri build` 见文末「构建验证」。
 - **未做**:§8 的 V1–V11 需要在真实环境执行(V1/V3/V4 需标准用户账户与旧目录样本);
   `docs/changelog/CHANGELOG-0.6.0.md` 待发版时写(含 Windows 数据目录迁移这一破坏性变更)。
+
+---
+
+## 实施记录 · 修订(2026-09-27):安装目录必定叫 EasyCsv,数据目录 = 安装目录
+
+**触发**:排查「自动更新会不会覆盖源文件」时实测发现,§3.2 声称的「数据目录与安装目录解耦」
+在 Windows 上**并未真正成立** —— `currentUser` 安装的默认 `$INSTDIR` 是
+`$LOCALAPPDATA\EasyCsv`(NSIS 模板 `StrCpy $INSTDIR "$LOCALAPPDATA\${PRODUCTNAME}"`),
+而 `get_resources_dir()` 是 `dirs::data_local_dir()/EasyCsv`,**两者是同一个路径**。
+真机 `%LOCALAPPDATA%\EasyCsv\` 里 `EasyCsv.exe` / `uninstall.exe` 与 `data/` `plugins/`
+`templates/` `versions/` 并列存在。
+
+**为什么此前没出事(两条都是「碰巧」,不是设计保证)**:
+
+1. 更新走 `/P /UPDATE /R /ARGS`(`tauri-plugin-updater` 的 `updater_parameters()`),
+   `/UPDATE` 让 `PageLeaveReinstall` 直接 `Goto reinst_done`,**不执行旧卸载程序**;
+   `Section Install` 只写 `File "${MAINBINARYSRCPATH}"` + `WriteUninstaller`,而本项目
+   `bundle.resources` / `externalBin` 均为空(xan / pinyin 走 `include_bytes!`、运行时
+   解压到 `plugins/`)→ 更新实际只覆盖这 2 个文件。
+2. 卸载器的 `RMDir "$INSTDIR"` 是**非递归**的,目录非空(有 `data/`)就删不掉。
+
+**新决定(两条必须同时成立)**:
+
+```text
+① 安装目录必定是 <用户选择的路径>\EasyCsv   ← NSIS_HOOK_PREINSTALL 强制追加(幂等)
+② 数据目录 = 安装目录,即 EasyCsv.exe 所在目录
+   实际形态:<用户选择路径>\EasyCsv\
+              EasyCsv.exe  uninstall.exe
+              data\  plugins\  templates\  versions\
+```
+
+- **为什么必须先有 ①**:卸载器删的是 `$INSTDIR`。如果允许把程序直接摊在用户选的目录里(例如
+  `D:\Tools`),卸载就会连带删掉 `D:\Tools` 下不属于 EasyCsv 的东西。先保证「`$INSTDIR` 一定是
+  应用自己的文件夹」,数据才敢放进去。
+- **为什么 ② 安全**:更新只覆盖 `EasyCsv.exe` + `uninstall.exe`(见上文第 1 条),数据文件根本不在
+  安装清单里,不会被动;`/UPDATE` 也不跑卸载程序。于是「一个文件夹 = 程序 + 数据」,备份、搬迁、
+  清理都只需处理这一个目录。
+- **平台差异**:
+  - Windows / Linux:即 `<exe 目录>` 本身。Linux AppImage 没有安装器,`current_exe()` 指向一次性
+    只读挂载点,故改用 `<.AppImage 文件所在目录>/EasyCsv`。
+  - macOS:`~/Library/Application Support/EasyCsv` —— 往 `.app` 内部写会破坏代码签名,故 macOS 是
+    唯一保持集中式布局的平台(路径同样以 `EasyCsv` 结尾)。
+  - **安装目录不可写**(装到 `Program Files`、企业 perMachine 推送、只读介质)时回退集中式
+    `%LOCALAPPDATA%\EasyCsv` / `~/.local/share/EasyCsv`,并打日志 —— 不静默丢设置。
+- **① 的实现要点**(`src-tauri/nsis/hooks.nsh` → `NSIS_HOOK_PREINSTALL`):用 `${GetFileName}` 取
+  `$INSTDIR` 的末级名,已经是 `EasyCsv` 就不再追加 —— **必须幂等**,因为更新/重装时 `.onInit` 会从
+  注册表读回上一次的 `$INSTDIR`(它已经以 `EasyCsv` 结尾)。追加后要补一次 `SetOutPath "$INSTDIR"`:
+  `File` 解压到的是 `$OUTDIR`,而 `Section Install` 在本钩子**之前**就设过它。钩子插在
+  `SetOutPath` 之后、`CheckIfAppIsRunning` 之前,所以后面所有 `$INSTDIR` 引用(写文件、卸载器、
+  快捷方式、注册表 `InstallLocation`/`UninstallString`、`/R` 重启)都是修正后的值。
+- **一次性迁移**(仅在数据目录里还没有 `data/config.db` 时尝试;来源优先级):
+  - ① 集中式 `%LOCALAPPDATA%\EasyCsv`(0.6.0 的那份):要求有 `data/config.db`、**不是**目标本身、
+    且没有 `.moved-to-exe-dir` 标记。该标记**不可省** —— 集中式目录是全机共用的一份快照,不标记的话
+    以后每装到新目录都会把自己种成同一份过期数据。
+  - ② `<数据目录>\EasyCsv_resources`(0.4/0.5 默认安装路径下的老位置)与
+    `<数据目录的上一级>\EasyCsv_resources`(0.4/0.5 自定义路径 —— 那时的安装目录就是现在的上一级)。
+    这两条**只在「本机从未出现过集中式目录」时**才作数,否则会读进开发机上
+    `target/<profile>/EasyCsv_resources` 这类过期残留。
+  - 成功后在数据目录写 `.in-place-layout`;仍是**复制而非移动**(源目录保留、可回滚),失败则继续用
+    旧位置、下次重试。
+  - **v0.6 → 本次,在默认安装路径上是「零拷贝」**:0.6.0 把数据放在 `%LOCALAPPDATA%\EasyCsv` 且默认
+    就装在那里,修正后的 `$INSTDIR` 正是那个目录 → 一进来就命中「已有 `data/config.db`」,不动任何文件。
+  - ⚠️ **必须防自嵌套**:源可能包含目标(程序装在旧集中式目录**内部**时,或源就是目标时)→ 复制时
+    不跳过「包含目标的那一项」会一路递归进自己的输出而永不终止(`would_nest_into_itself()`)。
+    同理**只从源根复制目录**:源根下的文件是程序本身(`EasyCsv.exe` / `uninstall.exe`)或标记,
+    不能复制进数据目录。
+- **卸载清理修好了**:模板删的是 `$LOCALAPPDATA\$BUNDLEID`
+  (`%LOCALAPPDATA%\com.administrator.easycsv`),**对真实数据目录是空操作**。`hooks.nsh` 里:
+  - `NSIS_HOOK_PREINSTALL` → 见 ①。
+  - `NSIS_HOOK_POSTUNINSTALL` → 勾选「删除应用数据」时删 `$INSTDIR`(要求末级名是 `EasyCsv`,
+    这是第二道安全阀:万一 `$INSTDIR` 被设成别的目录,宁可留下数据也不递归删)+ 回退位置
+    `$LOCALAPPDATA\EasyCsv`。不勾选则数据原位保留(模板的 `RMDir` 非递归,非空目录删不掉)。
+    静默/被动卸载时 `$DeleteAppDataCheckboxState` 为空,不会触发。
+
+- **代价(必须知道)**:数据与 exe 同目录 ⇒ **每份 exe 目录各有一份数据**,开发构建与安装版不再
+  共享设置/历史(即 022 之前的老行为)。迁移只发生一次,「谁先跑谁拿到搬过来的那份」;想共用需手动
+  复制 `data/` `plugins/` 等子目录。另外 `cargo clean` 会连同开发用的数据一起清掉。
+- ⚠️ **与「数据 = 安装目录」绑定的一个前提**:更新之所以安全,是因为安装清单里只有
+  `EasyCsv.exe` + `uninstall.exe`(`bundle.resources` / `externalBin` 均为空)。**将来若引入
+  `bundle.resources` / `externalBin`,清单会变长**,一旦有资源落在 `plugins/` 这类目录下,更新就会
+  覆盖用户自己放的 `xan.exe` / `pinyin.exe`。那时必须把资源目录与数据目录分开(例如资源进
+  `$INSTDIR\resources\`),或让插件目录改用集中式位置。
+- **0.6.0 已于 2026-09-26 发布**,所以这是**第二次**数据目录搬迁(0.5.0 的
+  `<exe>\EasyCsv_resources` → 0.6.0 的 `%LOCALAPPDATA%\EasyCsv` → 本次的「安装目录即数据目录」)。
+  `docs/changelog/CHANGELOG-0.6.0.md` **保持原样** —— 它如实记录了 0.6.0 的实际行为;本次搬迁要在
+  下一次发版时另写一份 changelog 并明确告知用户。
+- **验证**:`cargo check` 通过;`cargo test --lib` 84 例通过(`config::tests` 9 例,覆盖「只有真库
+  才算有数据」「可写性探测」「复制覆盖旧残片」「集中式优先于旧就地名」「旧就地名只在无集中式目录时
+  才作来源」「两级老位置都认」「数据目录不会把自己当迁移源」「目标嵌在源里时被跳过且不复制程序文件」);
+  `npx tauri bundle -b nsis` 重跑成功,`target/release/nsis/x64/installer.nsi` 第 28 行 include 了钩子、
+  第 614 行插在 `SetOutPath $INSTDIR` 之后与 `CheckIfAppIsRunning` 之前、第 819 行在 `Section Uninstall`
+  之后 —— makensis 编译通过即证明 `${GetFileName}` / `RmDir /r` 等语法有效。
+- **未做**:release 重编译与真机「装到自定义目录 → 更新 → 卸载」全流程(`target/release/EasyCsv.exe`
+  仍是 0.6.0 的旧二进制,只做过 `cargo check` 与单测)。
+
 
 ---
 
@@ -139,6 +234,12 @@
 - 托盘功能(`tray-icon`)与 HKCU 无冲突;`tauri-plugin-prevent-default` 的 `platform-windows` feature 不涉及提权。这两处不需要改动。
 
 ### 3.2 Windows:把用户数据搬出安装目录(必须与 3.1 同时做)
+
+> ⚠️ **本节已于 2026-09-27 修订。** 下文的集中式布局 `%LOCALAPPDATA%\EasyCsv` 已降级为
+> 「安装目录不可写」时的回退与 v0.6 用户的迁移来源,现行布局见文首
+> 「实施记录 · 修订(2026-09-27):安装目录必定叫 EasyCsv,数据目录 = 安装目录」。本节保留原文
+> 是为了记录当时的推理;**第四节「一次性迁移」描述的方向已被反向迁移取代**,且迁移源多了
+> 0.4/0.5 时代的两处 `EasyCsv_resources`。
 
 只改安装模式仍不够 —— 只要数据目录还可能落在安装目录下,「免 admin」就是脆的(绿色版、企业推送的 perMachine 包、用户手动挪目录,任一情况都会触发 §1.1 的静默失败)。
 
@@ -693,7 +794,11 @@ pub fn get_install_form() -> InstallForm   // UserScoped | MachineScoped | AppBu
 - **F2 的语义残留**:即使只有单渠道,也不要为了「冗余」往 `endpoints` 里加第二个 URL —— 它不会按预期回退,只会拉长失败等待。
 - **macOS 的签名/公证成本**:Apple Developer Program 年费 + 公证流程,是 macOS 上「能用」的硬前提(§3.4)。免 admin ≠ 免签名。
 - **WebView2 是唯一需要单独验证的提权点**:`downloadBootstrapper` 在非提权状态下按用户安装,但企业策略可能禁用其下载。若实测发现需要 admin,退化为「提示用户手动安装 WebView2」。Win11 与较新的 Win10 已内置,大多数用户不会走到这里。
-- **卸载不删用户数据**(`%LOCALAPPDATA%\EasyCsv` 保留),避免误删。用户需自行清理,文档里给出路径。
+- **卸载默认不删用户数据**,避免误删;但卸载向导里那个「删除应用数据」勾选框自
+  2026-09-27 起**真的有效**(见 `src-tauri/nsis/hooks.nsh`):勾了才会删 `$INSTDIR`
+  (此时它必定以 `EasyCsv` 结尾,见文首「修订」)以及回退位置 `%LOCALAPPDATA%\EasyCsv`。
+  不勾则数据留在原地,用户可自行清理。顺带一提,该勾选框用不上「整个安装目录都归我」这个前提
+  —— 正因为安装器强制了 `EasyCsv` 这一级目录,它才敢递归删。
 - **GitHub API 限流**:不走 API 后此问题消失(`latest.json` 走 release 下载通道,不受 60 次/小时限制),这是走 manifest 而非 API 的附带收益。
 - **版本号三处同步**仍靠 CI 断言兜底(§5.1),没有单一真值源;彻底解决需要构建期注入,超出本期范围。
 
