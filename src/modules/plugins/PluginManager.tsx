@@ -118,6 +118,7 @@ export function PluginManager({ showToast }: PluginManagerProps) {
               <Button
                 variant="ghost"
                 size="sm"
+                aria-label={t.pluginOpenFolder}
                 disabled={!view?.plugin_dir || revealing}
                 onClick={handleOpenFolder}
               >
@@ -131,6 +132,7 @@ export function PluginManager({ showToast }: PluginManagerProps) {
             <Button
               variant="secondary"
               size="sm"
+              aria-label={t.pluginRefreshHint}
               disabled={isRefreshing || isBusy}
               onClick={refresh}
             >

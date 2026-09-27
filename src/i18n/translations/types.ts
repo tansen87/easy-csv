@@ -316,6 +316,7 @@ export interface Translations {
   pluginOpenFolder: string;
   pluginHomepage: string;
   pluginRefresh: string;
+  pluginRefreshHint: string;
   pluginRetry: string;
   pluginDownloading: string;
   pluginVerifying: string;

@@ -13,6 +13,7 @@ export const enPlugins = {
   pluginOpenFolder: "Open plugin folder",
   pluginHomepage: "Homepage",
   pluginRefresh: "Fetch the latest version",
+  pluginRefreshHint: "Refresh catalog",
   pluginRetry: "Retry",
 
   // Progress / state

@@ -13,6 +13,7 @@ export const zhPlugins = {
   pluginOpenFolder: "打开插件目录",
   pluginHomepage: "项目主页",
   pluginRefresh: "获取最新版本",
+  pluginRefreshHint: "刷新插件清单",
   pluginRetry: "重试",
 
   // Progress / state
