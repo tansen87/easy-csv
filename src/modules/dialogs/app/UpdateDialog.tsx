@@ -42,10 +42,17 @@ export function UpdateDialog({
   const { t } = useLanguage();
   const dialogRef = useRef<HTMLDivElement>(null);
 
+  // While the installer has taken over there is nothing useful to close to, and
+  // closing would hide the only progress indicator. The X button is disabled,
+  // so the backdrop and Escape must not get around that.
+  const requestClose = useCallback(() => {
+    if (!isInstalling) onClose();
+  }, [isInstalling, onClose]);
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose();
+        requestClose();
         return;
       }
       if (e.key === "Tab" && dialogRef.current) {
@@ -64,7 +71,7 @@ export function UpdateDialog({
         }
       }
     },
-    [onClose],
+    [requestClose],
   );
 
   useEffect(() => {
@@ -93,7 +100,7 @@ export function UpdateDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
         className="absolute inset-0 bg-black/20 backdrop-blur-xs"
-        onClick={onClose}
+        onClick={requestClose}
         onContextMenu={(e) => e.preventDefault()}
       />
       <div
@@ -105,17 +112,25 @@ export function UpdateDialog({
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
       >
-        <div className="flex items-center justify-between px-4 py-3 bg-muted/20">
-          <h3 className="text-sm font-semibold text-foreground">
+        {/* The title and the close button are laid out as two equal `flex-1`
+            boxes, which is what puts the progress in the exact middle of the
+            header — and keeps it visible while the release notes scroll. */}
+        <div className="flex items-center gap-2 px-4 py-3 bg-muted/20">
+          <h3 className="flex-1 min-w-0 truncate text-sm font-semibold text-foreground">
             {t.checkForUpdates}
           </h3>
-          <button
-            onClick={onClose}
-            disabled={isInstalling}
-            className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground disabled:opacity-40"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          {isInstalling && progress && (
+            <UpdateProgressInline progress={progress} />
+          )}
+          <div className="flex flex-1 justify-end">
+            <button
+              onClick={requestClose}
+              disabled={isInstalling}
+              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground disabled:opacity-40"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <ScrollArea className="p-4 h-[40vh]">
@@ -175,7 +190,9 @@ export function UpdateDialog({
                           </h2>
                         ),
                         h3: ({ children }) => (
-                          <h3 className="text-xs font-medium mb-2">{children}</h3>
+                          <h3 className="text-xs font-medium mb-2">
+                            {children}
+                          </h3>
                         ),
                         p: ({ children }) => <p className="mb-2">{children}</p>,
                         ul: ({ children }) => (
@@ -254,15 +271,15 @@ export function UpdateDialog({
                   </div>
                 )
               )}
-
-              {progress && <UpdateProgressBar progress={progress} />}
             </div>
           )}
 
           {error && (
             <div className="mt-3 text-xs text-red-600 bg-red-500/10 border border-red-500/30 rounded p-2">
               <div className="font-medium mb-0.5">
-                {updateInfo?.available ? t.updateInstallFailed : t.updateCheckFailed}
+                {updateInfo?.available
+                  ? t.updateInstallFailed
+                  : t.updateCheckFailed}
               </div>
               <div className="break-all">{error}</div>
             </div>
@@ -307,7 +324,13 @@ export function UpdateDialog({
   );
 }
 
-function UpdateProgressBar({ progress }: { progress: UpdateProgressState }) {
+/**
+ * Compact progress for the dialog header.
+ *
+ * Deliberately narrow: the byte counts are dropped below `sm` (a narrow window
+ * cannot show everything) and are always available through the tooltip.
+ */
+function UpdateProgressInline({ progress }: { progress: UpdateProgressState }) {
   const { t } = useLanguage();
   const percent =
     progress.total && progress.total > 0
@@ -316,23 +339,30 @@ function UpdateProgressBar({ progress }: { progress: UpdateProgressState }) {
 
   const label =
     progress.phase === "installing" ? t.updateInstalling : t.updateDownloading;
+  const bytes = `${formatBytes(progress.downloaded)}${
+    progress.total ? ` / ${formatBytes(progress.total)}` : ""
+  }`;
 
   return (
-    <div className="mt-3">
-      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-        <span>{label}</span>
-        <span>
-          {progress.downloaded > 0 && formatBytes(progress.downloaded)}
-          {progress.total ? ` / ${formatBytes(progress.total)}` : ""}
-          {percent !== null ? ` (${percent}%)` : ""}
-        </span>
-      </div>
-      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+    <div
+      className="flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-muted-foreground"
+      title={`${label} ${bytes}${percent !== null ? ` (${percent}%)` : ""}`}
+    >
+      <span>{label}</span>
+      {/* Without a content-length there is no percentage to show; pulse so the
+          bar does not read as a stalled 30%. */}
+      <div className="h-1.5 w-24 lg:w-40 overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full bg-primary transition-[width] duration-200"
+          className={`h-full bg-primary transition-[width] duration-200 ${
+            percent === null ? "animate-pulse" : ""
+          }`}
           style={{ width: percent !== null ? `${percent}%` : "30%" }}
         />
       </div>
+      <span className="w-9 text-right tabular-nums">
+        {percent !== null ? `${percent}%` : ""}
+      </span>
+      <span className="hidden sm:inline tabular-nums">{bytes}</span>
     </div>
   );
 }

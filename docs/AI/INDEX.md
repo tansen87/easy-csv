@@ -275,8 +275,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `SeparateCSVDialog.test.tsx` | 拆分好/坏行对话框(设计 016/017): 流式/无表头选项、探测、上次结果、打开路径 |  |
 | `splitLinesHistory.test.ts` | 按行拆分结果 localStorage(设计 021): 往返、坏 JSON / 缺选项字段 / 类型不符、超长跳过、清除 | 6 |
 | `SplitLinesDialog.test.tsx` | 按行拆分对话框(设计 021): 行数/无表头/输出目录选项、校验拦截、上次记录回填与展示、打开路径、目录失效 | 9 |
+| `UpdateDialog.test.tsx` | 更新对话框: 进度条落在标题栏(不在可滚动正文里)、字节数展示、未安装时无进度、安装中 Esc 与遮罩点击均不关闭 | 6 |
 
-> 全量以 `pnpm test` 为准(当前 26 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
+> 全量以 `pnpm test` 为准(当前 27 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
 
 ---
 
@@ -448,7 +449,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `file/CsvEncodingDialog.tsx` | CSV 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1);上次记录(完成时间/耗时/编码对/字节数 + 打开路径 + 清除记录 + 输出文件失效提示),打开时回填输入输出路径与源/目标编码。设计:`docs/design/020_encoding-conversion-history.md` |
 | `file/PipelineTemplateDialog.tsx` | 管道模板库对话框(F4) |
 | `app/ExecutionHistoryDialog.tsx` | 执行历史(F6) |
-| `app/UpdateDialog.tsx` | 应用更新通知 |
+| `app/UpdateDialog.tsx` | 应用更新通知。**进度条在标题栏正中**(左右各一个 `flex-1` 槽位实现真正居中),不放在可滚动正文里 —— release notes 再长也不会把进度挤出视野;字节数在标题栏放不下,窄窗口下由 `hidden sm:inline` 收起、始终可用 tooltip 查看;**安装中 Esc 与遮罩点击都不关闭**(仅禁用 X 挡不住,关掉就没进度可看了) |
 | `common/ConfirmDialog.tsx` | 通用确认对话框 |
 | `common/VariableValuesDialog.tsx` | 管道变量取值对话框(F3) |
 
