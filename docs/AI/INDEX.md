@@ -72,9 +72,11 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | `docs/design/020_encoding-conversion-history.md` | CSV 编码转换保留上次记录(已实现): 复用 017 的「上次结果」模式——`easy-csv-encoding-last` 持久化(输出路径/字节数/完成时间/耗时)、打开时回填输入输出路径与源/目标编码、「打开路径」(`reveal_paths`)与「清除记录」、输出文件被删则置灰提示;后端 `CsvEncodingResult` 增加 `elapsed_ms`;`formatElapsed` 由 `utils/separateHistory.ts` 上提到 `utils/format.ts` |
 | `docs/design/021_split-lines-by-line-count.md` | 按行拆分(已实现): 移植上游 `split_lines`(来源文件已删除,节选见该设计文档 §2)—— 不解析 CSV 的**原始行**切分(`read_until(b'\n')` 字节保真、常量内存、可处理超大文件),`no_headers` 选项(首行按数据行),输出 `{stem}_part{N}{ext}`(N 从 1、保留扩展名);File 菜单「拆分好/坏行」下方新入口 + `easy-csv-split-lines-last` 上次记录(存输出目录而非全部分片路径) |
-| `docs/design/022_github-auto-update-and-admin-free-install.md` | GitHub 自动更新 + **免管理员权限安装**(**P0+P1 已实现**;端到端更新链路待真实发布验证): ①免提权——Windows 收敛为只出 NSIS + `installMode: "currentUser"`(去掉默认要 UAC 的 MSI)、**2026-09-27 修订:安装目录恒为 `<用户选择路径>\EasyCsv`(NSIS 钩子强制追加),且数据目录 = 安装目录**(2026-09-26 曾在 `dirs::data_local_dir()/EasyCsv`,现降级为「不可写」时的回退与迁移来源;macOS 因 `.app` 签名仍用集中式)、macOS 需装 `~/Applications`、Linux 限 AppImage;②自动更新——单渠道固定 GitHub Releases,`plugins.updater.endpoints` **配置驱动**(无需后端胶水,前端 `fetch` GitHub API 改为官方 `check()` / `downloadAndInstall()`),仅新增一个 `get_install_form` 命令用于按运行形态禁用一键更新;③签名私钥为单点(丢失不可逆)。**关键结论**:`endpoints` 数组只在非 2XX 时回退,大陆访问 GitHub 的失败是超时,**不要**加 Gitee 地址做兜底;单渠道的代价是国内自动更新成功率不可保证。**2026-09-27 修订**:①安装器强制把程序装进 `<用户选择路径>\EasyCsv`(`NSIS_HOOK_PREINSTALL`,幂等),数据目录即该目录 —— 卸载只会删应用自己的文件夹;②新增 `src-tauri/nsis/hooks.nsh`,修好卸载器里那个一直形同虚设的「删除应用数据」勾选框(模板原本删的是 BUNDLEID 路径 `%LOCALAPPDATA%\com.administrator.easycsv`,对真实数据目录是空操作) |
+| `docs/design/022_github-auto-update-and-admin-free-install.md` | GitHub 自动更新 + **免管理员权限安装**(**P0+P1 已实现**;端到端更新链路待真实发布验证): ①免提权——Windows 收敛为只出 NSIS + `installMode: "currentUser"`(去掉默认要 UAC 的 MSI)、Windows/Linux 数据目录**于 2026-09-27 修订为「安装目录即数据目录」**(安装器强制装进 `<用户选择路径>\EasyCsv`,见该文档文首「修订」)、macOS 需装 `~/Applications`、Linux 限 AppImage;②自动更新——单渠道固定 GitHub Releases,`plugins.updater.endpoints` **配置驱动**(无需后端胶水,前端 `fetch` GitHub API 改为官方 `check()` / `downloadAndInstall()`),仅新增一个 `get_install_form` 命令用于按运行形态禁用一键更新;③签名私钥为单点(丢失不可逆)。**关键结论**:`endpoints` 数组只在非 2XX 时回退,大陆访问 GitHub 的失败是超时,**不要**加 Gitee 地址做兜底;单渠道的代价是国内自动更新成功率不可保证。**2026-09-27 修订**:①安装器强制把程序装进 `<用户选择路径>\EasyCsv`(`NSIS_HOOK_PREINSTALL`,幂等),数据目录即该目录 —— 卸载只会删应用自己的文件夹;②新增 `src-tauri/nsis/hooks.nsh`,修好卸载器里那个一直形同虚设的「删除应用数据」勾选框(模板原本删的是 BUNDLEID 路径 `%LOCALAPPDATA%\com.administrator.easycsv`,对真实数据目录是空操作) |
+| `docs/design/023_plugin-repository-and-in-app-install.md` | 插件仓库与应用内下载安装(**设计稿,未实现**): 建独立仓库 `easy-csv-plugins` + **minisign 签名的 `catalog.json`**(钉住各平台资产的 `size`/`sha256`);应用内「取清单 → 下载 → 校验 → 原子替换落盘到 `<数据目录>/plugins/<平台>/`」,新增 `get_plugin_catalog` / `install_plugin` / `uninstall_plugin` 三个命令与 `plugin_catalog.rs` / `plugin_install.rs` 两个模块;设置页插件页签从只读改为可下载/更新/卸载,**并修掉「缺 xan 无任何提示」**(`App.tsx` 里 `check_xan_installed` 的结果原本被丢弃)。**关键事实**:插件二进制目前**一个都没有分发渠道**(`src-tauri/.gitignore` 的 `*.exe` 排除了它们,仓库里只有 `readme.md`);**关键结论**:与 022 的 `endpoints` 不同,本设计的下载循环自己实现,可按超时多源回退;且因哈希来自签名清单,**走镜像/代理不影响完整性** |
 
-> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–022 已登记。
+
+> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–023 已登记。
 
 ---
 
@@ -89,7 +91,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `config.rs` | `AppConfig` 类型、SQLite 持久化(app_config/ai_config 表)、AES-256-GCM 加密存储 API Key、per-provider API Key 管理、自定义 AI provider 配置(provider=custom 时存 name/base_url/models)、配置相关命令 |
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
 | `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令、`set_pipeline_cancelled` 取消执行 |
-| `plugins.rs` | 外部 CLI 插件管理: `plugins` 表(plugins.db)持久化、`list_plugins`/`check_plugins` 命令、`command_executable` 按命令名解析可执行文件(插件命令走插件二进制,其余走 xan.exe)。`xan` 与 `pinyin` 默认注册进插件表,列表按 xan 置顶排序。插件二进制按平台编译期嵌入 `src-tauri/resources/plugins/<target>/`(`include_bytes!`)、首启自动解压到平台插件目录,Unix 下 `make_executable` 置 0o755。解压目录: Windows/Linux 为 `<安装目录>/plugins/`(即 `get_resources_dir()/plugins/`;安装目录恒为 `<用户选择路径>/EasyCsv`,AppImage 为 `.AppImage` 所在目录下的 `EasyCsv/`),macOS 为 `~/Library/Application Support/EasyCsv/plugins/`。解析顺序: 路径 → `plugins/` 目录(含 `.exe` 补全)→ `PATH` |
+| `plugin_catalog.rs` | 插件清单(设计 023):取 `catalogUrls` + minisign 验签(**支持多把公钥**,轮换不锁死老版本)、`parse_catalog` 形状校验(插件名/文件名白名单、sha256 格式、平台枚举)、12h 磁盘缓存 + 离线回退标 `stale`、`generatedAt` 防回滚;`is_newer` 用 semver 判可更新;按 `PLATFORM_DIR` 选资产 |
+| `plugin_install.rs` | 插件下载安装(设计 023):逐 URL 回退下载(边下边算 sha256、超过清单声明大小即中止)、size + sha256 双校验、`.staging/<name>.part` 同盘 `rename` 原子替换、Unix 置 0o755、写安装记录、`plugin://progress` 进度事件;同插件并发安装用进程内 claim 拦截 |
+| `plugins.rs` | 外部 CLI 插件管理: `plugins` 表(plugins.db)持久化、`list_plugins`/`check_plugins` 命令、`command_executable` 按命令名解析可执行文件(插件命令走插件二进制,其余走 xan.exe)。`xan` 与 `pinyin`、`duckdb` 默认注册进插件表,列表按 xan 置顶排序。⚠️ **插件二进制不在仓库里**(`src-tauri/.gitignore` 的 `*.exe` 排除了它们,仓库内只有 `readme.md`),用户在 `<数据目录>/plugins/<平台>/` 手工放置(或装到 `PATH`)。解析顺序: 路径 → `plugins/` 目录(含 `.exe` 补全)→ `PATH`,**插件目录优先于 `PATH`**。插件目录: Windows/Linux 为 `<安装目录>/plugins/<平台>/`(安装目录恒为 `<用户选择路径>/EasyCsv`,AppImage 为 `.AppImage` 所在目录下的 `EasyCsv/`),macOS 为 `~/Library/Application Support/EasyCsv/plugins/<平台>/`。应用内下载见 `docs/design/023_plugin-repository-and-in-app-install.md` |
 | `csv.rs` | `CsvData` 类型、`read_csv_file`(自动检测分隔符)/`profile_csv`/`diff_csv_files`/`convert_csv_encoding`/`separate_csv`/`probe_csv_file` 命令 |
 | `storage.rs` | 历史记录、最近文件、数据概况缓存、版本/血缘存储、窗口标题、开发者工具命令 |
 | `ai.rs` | AI 对话代理: `call_ai` 命令,转发到 DeepSeek / Qwen / GLM |
@@ -158,7 +162,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_lineage_data` / `load_lineage_data` | 数据血缘持久化 |
 | `save_execution_history` / `load_execution_history` / `clear_execution_history` | 执行历史持久化(SQLite `execution_history` 表,只存统计摘要,LRU 保留最近100条) |
 | `file_exists` | 文件存在性检查 |
-| `reveal_paths` | 在系统文件管理器中定位一个或多个路径(过滤已不存在的路径后交给 `tauri_plugin_opener::reveal_items_in_dir`) |
+| `reveal_paths` | 在系统文件管理器中定位一个或多个路径(过滤已不存在的路径后交给 `tauri_plugin_opener::reveal_items_in_dir`;**需 capability `opener:default`**,缺失会静默失败并把路径当错误文案弹出) |
 | `set_window_title` | 设置窗口标题 |
 | `toggle_devtools` | 切换开发者工具 |
 
@@ -231,8 +235,11 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `file_exists` | storage | 检查文件是否存在 |
 | `reveal_paths` | storage | 在系统文件管理器中定位路径(拆分结果「打开路径」按钮用) |
 | `toggle_devtools` | storage | 切换开发者工具面板 |
-| `list_plugins` | plugins | 列出已注册的 CLI 插件 |
-| `check_plugins` | plugins | 检查插件可执行文件是否可用(解析 PATH + 读取 `--version`) |
+| `plugins::list_plugins` | plugins | 列出已注册的 CLI 插件 |
+| `plugins::check_plugins` | plugins | 检查插件可执行文件是否可用(PATH + 读取 `--version`);版本参数现取自缓存清单(新增插件无需改代码) |
+| `plugin_catalog::get_plugin_catalog` | plugin_catalog | 取插件清单:验签 → 12h 缓存 → 离线回退旧缓存 → 拒绝回滚;返回各插件在本平台的可用性/大小/已装版本/可更新状态。设计:`docs/design/023_plugin-repository-and-in-app-install.md` |
+| `plugin_install::install_plugin` | plugin_install | 下载插件并原子落盘到 `<数据目录>/plugins/<平台>/`:逐 URL 回退、边下边算 sha256、size+sha256 双校验通过才 rename;进度走 `plugin://progress` 事件 |
+| `plugin_install::uninstall_plugin` | plugin_install | 删除本应用安装的插件二进制(解析到 PATH 或手工放置的会拒绝删除并说明原因) |
 | `get_install_form` | update | 返回运行形态(`InstallForm`)与 `can_self_update`:按 `current_exe()` 路径与 `APPIMAGE` 环境变量判定,用于对 deb / `/Applications` 下的安装**禁用一键更新**。设计:`docs/design/022_github-auto-update-and-admin-free-install.md` |
 | `get/set_auto_check_update` | config | 启动后静默检查更新的总开关(默认开;只提示,不自动安装)。设计:`docs/design/022_github-auto-update-and-admin-free-install.md` |
 
@@ -296,6 +303,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `modules/ai/` | AI 助手面板 |
 | `modules/variables/` | 变量管理面板 |
 | `modules/logs/` | 日志面板、命令列表、全局命令面板 |
+| `modules/plugins/` | 插件管理域(设计 023): `PluginManager`(设置页页签)、`PluginRow`(单条:状态/版本/来源/下载/更新/卸载/进度/取消)、`PluginSetupDialog`(启动引导缺 xan)、`DownloadPrefixSetting`(下载加速前缀输入框) |
 
 ### 入口与全局
 
@@ -333,6 +341,23 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 更新源固定为 GitHub Releases(端点在 `tauri.conf.json` 的 `plugins.updater.endpoints`),**不做渠道切换**。
 
+**`services/plugins/index.ts`** — 插件清单与应用内安装(设计 `docs/design/023_plugin-repository-and-in-app-install.md`)。唯一直接 invoke 插件命令、唯一订阅 `plugin://progress` 的地方:
+
+| 导出 | 职责 |
+|------|------|
+| `getPluginCatalog(refresh?)` | 调后端 `get_plugin_catalog`,返回 `CatalogView`(`entries` / `plugin_dir` / `platform` / `stale`);离线时后端给缓存并置 `stale` |
+| `installPlugin(name)` · `uninstallPlugin(name)` | 下载安装 / 卸载,返回卸载后的 `PluginStatus` |
+| `cancelPluginInstall(name)` · `isInstallCancelled(error)` | 请后端停止下载(后端逐 chunk 检查);后者判断失败是否为用户取消而非真故障 |
+| `getPluginDownloadPrefix()` · `setPluginDownloadPrefix(prefix)` | 读取/保存「下载加速前缀」(传 `null` 即清除);后端校验必须是 `https://` |
+| `checkPlugins()` · `listPlugins()` | 探测可执行文件是否可用 / 只列注册表(不启动子进程) |
+| `isXanInstalled()` | `check_xan_installed`,用于启动引导 |
+| `onPluginProgress(handler)` | 订阅 `plugin://progress`,事件按插件名路由到各自行;`phase` 有 `downloading`/`verifying`/`done`/`cancelled`/`failed` |
+| `revealPaths(paths)` | `reveal_paths`,打开插件目录或定位二进制 |
+| `describePluginError(error)` | 归一化 `invoke` 的拒绝(`Err(String)` / `Error` / 其他),避免渲染 `[object Object]` |
+| `progressPercent(progress)` | 进度百分比(总长未知时返回 `null`) |
+
+⚠️ `CatalogEntry` / `CatalogView` 的字段名是 **snake_case**(`latest_version` / `installed_path` / `update_available` / `fetched_at` / `plugin_dir`)—— Rust 侧 derive `Serialize` 未加 `rename`,写成 camelCase 会编译通过但运行时读到 `undefined`。
+
 AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 
 | 文件 | 职责 |
@@ -360,6 +385,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `useDataLineage.ts` | 数据血缘: 列类型推断、变换分析、血缘图数据构建与持久化 |
 | `useExecutionHistory.ts` | 执行历史(F6) |
 | `useUpdater.ts` | 自动更新状态机: 静默/交互检查、下载进度、安装交接(`beforeInstall` 先落盘会话)、错误态;对话框可见性留在调用方(静默检查不得自己弹窗)。设计: `docs/design/022_github-auto-update-and-admin-free-install.md` |
+| `usePluginCatalog.ts` | 插件清单状态: 加载/强制刷新、按插件名路由的安装进度、失败回读权威清单;另导出 `useRequiredPluginCheck`(启动延迟 1.2s 探测 xan,只对"确定缺失"返回 true)。设计: `docs/design/023_plugin-repository-and-in-app-install.md` |
 | `useAppSettings.ts` | 应用配置: 分隔符、无表头、通知、历史上限、托盘设置 |
 | `useCsvProbe.ts` | 拆分对话框的文件探测(防抖 + 过期响应丢弃) |
 | `useToast.ts` | Toast 通知 |
@@ -420,7 +446,10 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `logs/LogPanel.tsx` | 浮动日志面板,显示执行结果,支持拖拽和复制 |
 | `logs/CommandList.tsx` | **命令面板**,可拖拽浮动面板,按分类展示命令,支持搜索和历史记录 |
 | `logs/CommandPalette.tsx` | **全局命令面板**(Ctrl/Cmd+K): 可搜索、键盘导航的动作/标签/最近文件/xan 命令列表 |
-
+| `modules/plugins/PluginManager.tsx` | 设置页「插件」页签: 清单加载/刷新、离线缓存提示、安装与卸载(带确认)、打开插件目录;失败保留列表只出横幅 |
+| `modules/plugins/PluginRow.tsx` | 单个插件的行: 已装/缺失徽标、必需徽标、可更新徽标、来源标签(registry/manual/path)、大小、二进制路径、下载/更新/卸载/主页/定位按钮、下载进度条 + 进度条旁的「取消」按钮 |
+| `modules/plugins/PluginSetupDialog.tsx` | 启动时缺 xan 的引导: 一键下载安装 + 打开插件目录的手动兜底;不走 `usePluginCatalog`(只管一个插件) |
+| `modules/plugins/DownloadPrefixSetting.tsx` | 「下载加速前缀」输入框(设计 023 §6): 读/存 `get_/set_plugin_download_prefix`,保存后回读后端规范化结果,清除时发 `null`;校验失败由后端文案透出 |
 ### 业务模块 — 对话框 (`modules/dialogs/`)
 
 按 019 §3.3 四分:**命令参数配置 / 文件级操作 / 应用级 / 通用原子**。
@@ -576,7 +605,9 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 测试命令面板 | `src/__tests__/CommandPalette.test.tsx` |
 | 测试 CSV 对比对话框 | `src/__tests__/initialParams.test.ts` |
 | 测试编码转换对话框 | `src/__tests__/CsvEncodingDialog.test.tsx` |
+| 测试插件管理页签 | `src/__tests__/PluginManager.test.tsx` |
 | 修改测试 mock/setup | `src/test/setup.ts` |
 | 修改 vitest 配置 | `vitest.config.ts` |
-| 新增/修改 CLI 插件 | `plugins/<name>/`(独立 crate)+ `src/data/commands/index.ts`(命令定义)+ `src/modules/dialogs/command/forms/pinyin.tsx`(表单)+ `src-tauri/src/plugins.rs`(后端注册)+ `src/docs/cmd/<name>.md` 与 `docs/cmd_zh/<name>.md`(帮助文档,改后跑 `pnpm generate-help`) |
-| 修改插件管理设置页 | `src/components/setting/SettingsTabContent.tsx`(Plugins 页签)+ `src-tauri/src/plugins.rs` |
+| 新增/修改 CLI 插件 | `plugins/<name>/`(独立 crate)+ `src/data/commands/index.ts`(命令定义)+ `src/modules/dialogs/command/forms/pinyin.tsx`(表单)+ `src-tauri/src/plugins.rs`(后端注册)+ `src/docs/cmd/<name>.md` 与 `docs/cmd_zh/<name>.md`(帮助文档,改后跑 `pnpm generate-help`)。若要让用户能**应用内下载**它,还要:插件仓库 `easy-csv-plugins` 的 `catalog.json` 加条目 + `plugin_catalog.rs`/`plugin_install.rs`(设计 `docs/design/023_plugin-repository-and-in-app-install.md`) |
+| 修改插件仓库 / 应用内插件下载(**P0 + P1 已实现**;设计 `docs/design/023_plugin-repository-and-in-app-install.md`) | 后端:`src-tauri/src/plugin_catalog.rs`(取清单 + 验签 + 12h 缓存 + 防回滚 + **逐源回退**)+ `src-tauri/src/plugin_install.rs`(下载 + 校验 + 原子落盘 + 进度事件 + **取消**)+ `src-tauri/src/config.rs`(下载加速前缀的读写与校验)+ `src-tauri/plugin-signing.pub`(验签公钥,**支持多把**)+ `src-tauri/src/plugins.rs`(`plugins` 表新增四列)。前端:`src/services/plugins/index.ts` + `src/hooks/usePluginCatalog.ts` + `src/modules/plugins/`。**清单源有两条**:GitHub release(权威)+ jsDelivr `@main`(镜像,靠 CI 把 `catalog.json` 提交回 main 才成立) |
+| 修改插件管理设置页 | `src/components/setting/SettingsTabContent.tsx`(plugins 页签 → `<PluginManager showToast>`)+ `src/modules/plugins/`(前端)+ `src-tauri/src/{plugin_catalog,plugin_install,plugins,config}.rs`(后端)。已支持下载/更新/卸载/打开目录/**取消下载**/**下载加速前缀**;设计: `docs/design/023_plugin-repository-and-in-app-install.md` |

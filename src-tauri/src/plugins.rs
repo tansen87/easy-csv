@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
@@ -13,15 +14,15 @@ use crate::config::get_resources_dir;
 /// named after the compile target so a single data dir can host several
 /// platforms side by side.
 #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
-const PLATFORM_DIR: &str = "windows-x86_64";
+pub(crate) const PLATFORM_DIR: &str = "windows-x86_64";
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-const PLATFORM_DIR: &str = "macos-aarch64";
+pub(crate) const PLATFORM_DIR: &str = "macos-aarch64";
 #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
-const PLATFORM_DIR: &str = "macos-x86_64";
+pub(crate) const PLATFORM_DIR: &str = "macos-x86_64";
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-const PLATFORM_DIR: &str = "linux-x86_64-gnu";
+pub(crate) const PLATFORM_DIR: &str = "linux-x86_64-gnu";
 #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
-const PLATFORM_DIR: &str = "linux-aarch64-gnu";
+pub(crate) const PLATFORM_DIR: &str = "linux-aarch64-gnu";
 #[cfg(not(any(
   all(target_os = "windows", target_arch = "x86_64"),
   all(target_os = "macos", target_arch = "aarch64"),
@@ -29,7 +30,7 @@ const PLATFORM_DIR: &str = "linux-aarch64-gnu";
   all(target_os = "linux", target_arch = "x86_64"),
   all(target_os = "linux", target_arch = "aarch64"),
 )))]
-const PLATFORM_DIR: &str = "unsupported";
+pub(crate) const PLATFORM_DIR: &str = "unsupported";
 
 /// Directory where users place plugin binaries: `<resources>/plugins/<target>/`.
 ///
@@ -135,6 +136,18 @@ fn get_db() -> Option<&'static DbState> {
       );
     }
 
+    // Columns added with the plugin catalog (design 023 §3.6). Going through
+    // `ensure_column` keeps this idempotent for databases created by an earlier
+    // version, which only had (name, executable).
+    for (column, ddl) in [
+      ("version", "version TEXT"),
+      ("sha256", "sha256 TEXT"),
+      ("source", "source TEXT"),
+      ("installed_at", "installed_at TEXT"),
+    ] {
+      crate::config::ensure_column(&conn, "plugins", column, ddl);
+    }
+
     // Make sure the plugin folder exists so users have a documented place to
     // drop xan/pinyin binaries.
     ensure_plugin_dir_exists();
@@ -142,7 +155,12 @@ fn get_db() -> Option<&'static DbState> {
     let state = DbState {
       conn: Mutex::new(conn),
     };
-    DB_STATE.set(state).ok()?;
+    // Losing the race is not an error: another thread installed an equivalent
+    // state first, and `DB_STATE.get()` below returns that one. Treating the
+    // `Err` as "initialization failed" made every caller silently see `None`,
+    // which in turn made `install_records()` return an empty map — an
+    // intermittent failure that only showed up under parallel tests.
+    let _ = DB_STATE.set(state);
     DB_STATE.get()
   })
 }
@@ -273,44 +291,152 @@ pub async fn list_plugins() -> Result<Vec<Plugin>, String> {
   Ok(plugins)
 }
 
+/// The arguments that make a plugin print its version.
+///
+/// Not uniform across upstreams: DuckDB's CLI follows the SQLite shell and wants
+/// `-version`. The catalog states it per plugin, so a newly published plugin needs
+/// no code change; the table below only covers the plugins that shipped before the
+/// catalog existed.
+fn version_arguments(name: &str) -> Vec<String> {
+  if let Some(args) = crate::plugin_catalog::cached_version_args(name) {
+    return args;
+  }
+  if name == "duckdb" {
+    vec!["-version".to_string()]
+  } else {
+    vec!["--version".to_string()]
+  }
+}
+
+/// Resolves a plugin and asks it for its version. Spawning a process is why this
+/// is not called in a loop over every plugin on every render.
+fn probe(plugin: &Plugin) -> PluginStatus {
+  let found = resolve_plugin_executable(&plugin.executable);
+  let version = match &found {
+    Some(path) => {
+      let mut cmd = Command::new(path);
+      for argument in version_arguments(&plugin.name) {
+        cmd.arg(argument);
+      }
+      #[cfg(target_os = "windows")]
+      {
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+      }
+      cmd
+        .output()
+        .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
+        .unwrap_or_default()
+    }
+    None => String::new(),
+  };
+  PluginStatus {
+    name: plugin.name.clone(),
+    executable: plugin.executable.clone(),
+    found: found.is_some(),
+    version,
+  }
+}
+
+/// Status of one plugin, for callers that just installed it and want to report
+/// the outcome without re-probing everything.
+pub fn status_for(name: &str) -> Option<PluginStatus> {
+  get_plugin(name).map(|plugin| probe(&plugin))
+}
+
 #[tauri::command]
 pub async fn check_plugins() -> Result<Vec<PluginStatus>, String> {
   let plugins = list_plugins().await?;
+  Ok(plugins.iter().map(probe).collect())
+}
 
-  let mut statuses = Vec::new();
-  for plugin in plugins {
-    let found = resolve_plugin_executable(&plugin.executable);
-    let version = match &found {
-      Some(path) => {
-        let mut cmd = Command::new(path);
-        // DuckDB's CLI reports its version with `-version` (SQLite shell style);
-        // xan/pinyin use the conventional `--version`.
-        let version_arg = if plugin.name == "duckdb" {
-          "-version"
-        } else {
-          "--version"
-        };
-        cmd.arg(version_arg);
-        #[cfg(target_os = "windows")]
-        {
-          cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-        }
-        cmd
-          .output()
-          .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
-          .unwrap_or_default()
-      }
-      None => String::new(),
-    };
-    statuses.push(PluginStatus {
-      name: plugin.name,
-      executable: plugin.executable,
-      found: found.is_some(),
-      version,
-    });
+/// What this app knows about an installed plugin, on top of the registration
+/// itself (design 023 §3.6). All fields are optional because a database written
+/// by an earlier version has none of them.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct InstallRecord {
+  pub version: Option<String>,
+  pub sha256: Option<String>,
+  /// `registry` (installed by this app) or `manual`.
+  pub source: Option<String>,
+  pub installed_at: Option<String>,
+}
+
+/// Every plugin's install record, keyed by name. Best effort: an unreadable
+/// database must not stop the settings page from rendering.
+pub fn install_records() -> BTreeMap<String, InstallRecord> {
+  let mut records = BTreeMap::new();
+  let Some(db) = get_db() else {
+    return records;
+  };
+  let Ok(conn) = db.conn.lock() else {
+    return records;
+  };
+  let Ok(mut statement) =
+    conn.prepare("SELECT name, version, sha256, source, installed_at FROM plugins")
+  else {
+    return records;
+  };
+  let Ok(rows) = statement.query_map([], |row| {
+    Ok((
+      row.get::<_, String>(0)?,
+      InstallRecord {
+        version: row.get(1)?,
+        sha256: row.get(2)?,
+        source: row.get(3)?,
+        installed_at: row.get(4)?,
+      },
+    ))
+  }) else {
+    return records;
+  };
+  for row in rows.flatten() {
+    records.insert(row.0, row.1);
   }
+  records
+}
 
-  Ok(statuses)
+/// Registers a name so `command_executable` routes to it. `INSERT OR IGNORE`, so
+/// a registration the user already has (an absolute path, say) is never replaced.
+pub fn ensure_registered(name: &str) -> Result<(), String> {
+  let db = get_db().ok_or("Database not initialized")?;
+  let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+  conn
+    .execute(
+      "INSERT OR IGNORE INTO plugins (name, executable) VALUES (?1, ?2)",
+      params![name, name],
+    )
+    .map_err(|e| format!("Failed to register {}: {}", name, e))?;
+  Ok(())
+}
+
+/// Remembers what was installed. This is what makes an update check possible:
+/// without a version we cannot tell an upgrade from an unknown hand-placed binary.
+pub fn record_install(name: &str, version: &str, sha256: &str) -> Result<(), String> {
+  let db = get_db().ok_or("Database not initialized")?;
+  let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+  conn
+    .execute(
+      "UPDATE plugins SET version = ?2, sha256 = ?3, source = 'registry', installed_at = ?4 \
+       WHERE name = ?1",
+      params![name, version, sha256, chrono::Utc::now().to_rfc3339()],
+    )
+    .map_err(|e| format!("Failed to record the install of {}: {}", name, e))?;
+  Ok(())
+}
+
+/// Forgets the install record after the binary is gone. The registration itself
+/// stays: the plugin may come back — reinstalled, or supplied by hand.
+pub fn clear_install_record(name: &str) -> Result<(), String> {
+  let db = get_db().ok_or("Database not initialized")?;
+  let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+  conn
+    .execute(
+      "UPDATE plugins SET version = NULL, sha256 = NULL, source = NULL, installed_at = NULL \
+       WHERE name = ?1",
+      params![name],
+    )
+    .map_err(|e| format!("Failed to clear the install record of {}: {}", name, e))?;
+  Ok(())
 }
 
 #[cfg(test)]
@@ -361,6 +487,41 @@ mod tests {
     let xan = Path::new("C:/fake/xan.exe");
     let exe = command_executable("select", xan).unwrap();
     assert_eq!(exe, xan);
+  }
+
+  #[test]
+  fn version_arguments_cover_the_known_quirks() {
+    // No catalog cache in a test environment, so this exercises the table.
+    assert_eq!(version_arguments("duckdb"), vec!["-version".to_string()]);
+    assert_eq!(version_arguments("xan"), vec!["--version".to_string()]);
+    assert_eq!(
+      version_arguments("something-new"),
+      vec!["--version".to_string()]
+    );
+  }
+
+  #[test]
+  fn install_records_are_written_and_cleared() {
+    let name = "record-test-plugin";
+    ensure_registered(name).unwrap();
+    record_install(name, "1.2.3", &"a".repeat(64)).unwrap();
+
+    let record = install_records().remove(name).expect("record must exist");
+    assert_eq!(record.version.as_deref(), Some("1.2.3"));
+    assert_eq!(record.source.as_deref(), Some("registry"));
+    assert!(record.installed_at.is_some());
+
+    clear_install_record(name).unwrap();
+    let record = install_records().remove(name).expect("registration stays");
+    assert_eq!(record.version, None);
+    assert_eq!(record.source, None);
+
+    // Clean up the registration we added so other tests see the seeded set only.
+    if let Some(db) = get_db() {
+      if let Ok(conn) = db.conn.lock() {
+        let _ = conn.execute("DELETE FROM plugins WHERE name = ?1", params![name]);
+      }
+    }
   }
 
   #[test]

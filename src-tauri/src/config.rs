@@ -23,6 +23,12 @@ pub struct AppConfig {
   /// Master switch for the silent update check that runs shortly after launch
   /// (design 022). Checking never installs anything by itself.
   pub auto_check_update: Option<bool>,
+  /// Optional URL prefix prepended to plugin download URLs, for users behind a
+  /// slow or blocked route to GitHub (design 023 §6). Purely a transport hint:
+  /// every download is still checked against the size and sha256 pinned in the
+  /// signed catalog, so a hostile proxy cannot change what gets installed —
+  /// only make the transfer fail.
+  pub plugin_download_prefix: Option<String>,
 }
 
 impl Default for AppConfig {
@@ -35,6 +41,7 @@ impl Default for AppConfig {
       minimize_to_tray: None,
       double_click_fit_view: Some(true),
       auto_check_update: Some(true),
+      plugin_download_prefix: None,
     }
   }
 }
@@ -108,6 +115,14 @@ fn resolve_resources_dir() -> PathBuf {
 
 #[cfg(not(target_os = "macos"))]
 fn resolve_resources_dir() -> PathBuf {
+  // Under `cargo test` the executable lives in `target/debug/deps`, so resolving
+  // the real path would run the one-time migration *from* the user's actual data
+  // directory and leave markers that stop the app itself from migrating later.
+  // Tests get a throwaway directory instead.
+  if cfg!(test) {
+    return std::env::temp_dir().join("easycsv-test-data");
+  }
+
   let target = match data_dir_candidate() {
     Some(dir) => dir,
     // No executable path: the data directory cannot be determined.
@@ -226,9 +241,7 @@ fn migration_source(target: &Path, centralized: &Path) -> Option<PathBuf> {
   }
 
   candidates.into_iter().find(|candidate| {
-    candidate.as_path() != target
-      && candidate.as_path() != centralized
-      && has_database(candidate)
+    candidate.as_path() != target && candidate.as_path() != centralized && has_database(candidate)
   })
 }
 
@@ -321,7 +334,7 @@ struct DbState {
 
 static DB_STATE: std::sync::OnceLock<DbState> = std::sync::OnceLock::new();
 
-fn ensure_column(conn: &Connection, table: &str, column: &str, ddl: &str) {
+pub(crate) fn ensure_column(conn: &Connection, table: &str, column: &str, ddl: &str) {
   let exists = conn
     .prepare(&format!("PRAGMA table_info({})", table))
     .ok()
@@ -475,6 +488,20 @@ fn set_config_string(key: &str, value: &str) -> Result<(), String> {
   Ok(())
 }
 
+/// Removes a setting so it falls back to its default.
+///
+/// Distinct from storing an empty string: an optional text setting such as the
+/// download prefix must be able to go back to "unset", which reads as `None` and
+/// means "use the catalog's own URLs".
+fn delete_config_string(key: &str) -> Result<(), String> {
+  let db = get_db().ok_or("Database not initialized")?;
+  let conn = db.conn.lock().map_err(|e| format!("Lock error: {}", e))?;
+  conn
+    .execute("DELETE FROM app_config WHERE key = ?1", params![key])
+    .map_err(|e| format!("Failed to delete config value: {}", e))?;
+  Ok(())
+}
+
 pub fn load_config() -> Result<AppConfig, String> {
   let default = AppConfig::default();
 
@@ -488,6 +515,7 @@ pub fn load_config() -> Result<AppConfig, String> {
   let double_click_fit_view =
     get_config_string("double_click_fit_view").and_then(|v| v.parse().ok());
   let auto_check_update = get_config_string("auto_check_update").and_then(|v| v.parse().ok());
+  let plugin_download_prefix = get_config_string("plugin_download_prefix");
 
   Ok(AppConfig {
     default_delimiter: default_delimiter.or(default.default_delimiter),
@@ -498,6 +526,7 @@ pub fn load_config() -> Result<AppConfig, String> {
     minimize_to_tray: minimize_to_tray.or(default.minimize_to_tray),
     double_click_fit_view: double_click_fit_view.or(default.double_click_fit_view),
     auto_check_update: auto_check_update.or(default.auto_check_update),
+    plugin_download_prefix: plugin_download_prefix.or(default.plugin_download_prefix),
   })
 }
 
@@ -522,6 +551,14 @@ pub fn save_config(config: &AppConfig) -> Result<(), String> {
   }
   if let Some(v) = config.auto_check_update {
     set_config_string("auto_check_update", &v.to_string())?;
+  }
+  if let Some(ref v) = config.plugin_download_prefix {
+    // An empty value clears the setting rather than storing an empty prefix.
+    if v.trim().is_empty() {
+      delete_config_string("plugin_download_prefix")?;
+    } else {
+      set_config_string("plugin_download_prefix", v)?;
+    }
   }
   Ok(())
 }
@@ -728,6 +765,81 @@ pub async fn set_auto_check_update(enabled: bool) -> Result<(), String> {
   let mut config = load_config()?;
   config.auto_check_update = Some(enabled);
   save_config(&config)
+}
+
+/// The proxy prefix applied to plugin downloads, or `None` when unset.
+#[tauri::command]
+pub async fn get_plugin_download_prefix() -> Option<String> {
+  load_config().unwrap_or_default().plugin_download_prefix
+}
+
+/// The stored prefix, for the download path — which runs outside a command
+/// context and so cannot use the `#[tauri::command]` wrapper.
+pub fn plugin_download_prefix() -> Option<String> {
+  load_config().unwrap_or_default().plugin_download_prefix
+}
+
+/// Stores the download prefix after checking it is a usable https prefix.
+///
+/// Validated here rather than at download time so the settings page can reject a
+/// typo immediately. An https-only rule is deliberate: the prefix is prepended to
+/// URLs the catalog pins, and allowing `http://` or a loopback host would let a
+/// local misconfiguration turn every plugin download into plain text — the
+/// sha256 check would still catch tampering, but there is no reason to ship a
+/// transport that invites it.
+#[tauri::command]
+pub async fn set_plugin_download_prefix(prefix: Option<String>) -> Result<(), String> {
+  let normalized = match prefix {
+    Some(value) if !value.trim().is_empty() => Some(normalize_download_prefix(&value)?),
+    // `None` and the empty string both mean "stop using a prefix".
+    _ => None,
+  };
+  let mut config = load_config()?;
+  config.plugin_download_prefix = normalized;
+  save_config(&config)
+}
+
+/// Turns user input into a canonical `https://host/path/` prefix, or explains why
+/// it cannot be used.
+///
+/// Accepts what people actually paste — a bare host, a `http://` prefix from a
+/// tutorial, a missing trailing slash — and only rejects what cannot work.
+pub fn normalize_download_prefix(raw: &str) -> Result<String, String> {
+  let trimmed = raw.trim();
+  if trimmed.is_empty() {
+    return Err("the prefix is empty".to_string());
+  }
+
+  // Tolerate a schemeless paste ("ghproxy.example/") by assuming https; reject
+  // an explicit http:// instead of silently upgrading it, because the user may
+  // be pasting a proxy that only speaks http and should be told so.
+  let with_scheme = if let Some(rest) = trimmed.strip_prefix("https://") {
+    rest
+  } else if trimmed.starts_with("http://") {
+    return Err(
+      "only https:// prefixes are allowed — a plain http:// proxy would not be encrypted"
+        .to_string(),
+    );
+  } else if trimmed.contains("://") {
+    return Err("the prefix must be an https:// URL".to_string());
+  } else {
+    trimmed
+  };
+
+  let host = crate::plugin_catalog::host_of(with_scheme);
+  if host.is_empty() {
+    return Err("the prefix has no host".to_string());
+  }
+  if !host.contains('.') {
+    // Catches "localhost" and typos alike; a real proxy is a domain or an IP.
+    return Err(format!("{host} is not a valid proxy host"));
+  }
+
+  let mut normalized = format!("https://{with_scheme}");
+  if !normalized.ends_with('/') {
+    normalized.push('/');
+  }
+  Ok(normalized)
 }
 
 #[tauri::command]
@@ -973,7 +1085,64 @@ mod tests {
   #[test]
   fn a_fresh_install_has_nothing_to_migrate() {
     let root = scratch("fresh");
-    assert_eq!(migration_source(&target(&root), &root.join("centralized")), None);
+    assert_eq!(
+      migration_source(&target(&root), &root.join("centralized")),
+      None
+    );
     let _ = std::fs::remove_dir_all(&root);
+  }
+}
+
+/// Separate from the module above: that one is skipped on macOS because it is
+/// about the Windows/Linux data directory, while this is platform-independent.
+#[cfg(test)]
+mod download_prefix_tests {
+  use super::*;
+
+  #[test]
+  fn accepts_the_forms_people_actually_paste() {
+    // Trailing slash optional, and a schemeless paste is assumed to be https.
+    for input in [
+      "https://ghproxy.example/",
+      "https://ghproxy.example",
+      "https://ghproxy.example/  ",
+      "ghproxy.example",
+    ] {
+      assert_eq!(
+        normalize_download_prefix(input).unwrap(),
+        "https://ghproxy.example/",
+        "{input:?} should normalize to a canonical prefix"
+      );
+    }
+    // A path is preserved: some proxies are namespaced.
+    assert_eq!(
+      normalize_download_prefix("https://proxy.example/gh/").unwrap(),
+      "https://proxy.example/gh/"
+    );
+  }
+
+  #[test]
+  fn refuses_plain_http_rather_than_silently_upgrading_it() {
+    // Silently adding an `s` would leave the user believing an http-only proxy
+    // works; telling them is the point.
+    let error = normalize_download_prefix("http://ghproxy.example/").unwrap_err();
+    assert!(error.contains("https"), "unexpected message: {error}");
+  }
+
+  #[test]
+  fn refuses_what_cannot_be_a_proxy() {
+    for bad in [
+      "",
+      "   ",
+      "https://",
+      "https:///path",
+      "file:///tmp/",
+      "localhost",
+    ] {
+      assert!(
+        normalize_download_prefix(bad).is_err(),
+        "{bad:?} must be rejected"
+      );
+    }
   }
 }

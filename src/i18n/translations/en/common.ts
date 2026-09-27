@@ -1,6 +1,6 @@
 import type { Translations } from "../types";
 
-/** (none) · ConfirmDialog · HomeView · UpdateDialog · Floating panel docking · Result preview (F1) · Plugins · CommandPalette */
+/** (none) · ConfirmDialog · HomeView · UpdateDialog · Floating panel docking · Result preview (F1) · CommandPalette */
 export const enCommon = {
   rows: "Rows",
   confirm: "Confirm",
@@ -41,11 +41,6 @@ export const enCommon = {
   copyMarkdown: "Copy as Markdown table",
   resultTruncated:
     "Result truncated to first rows; use an output/to step to export the full data.",
-  plugins: "Plugins",
-  pluginDesc: "Register external CLI plugins",
-  pluginNone: "No plugins registered",
-  pluginInstalled: "Found",
-  pluginMissing: "Not found",
   commandPalette: "Command Palette",
   palettePlaceholder: "Type a command or search",
   paletteActions: "Actions",

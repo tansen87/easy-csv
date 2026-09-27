@@ -298,19 +298,33 @@ pub async fn file_exists(file_path: String) -> Result<bool, String> {
 ///
 /// Paths that no longer exist are skipped (the opener canonicalizes and checks
 /// existence), so revealing a pair where only one output survived still works;
-/// when none of them exist this returns an error.
+/// when none of them exist this returns an error naming the paths, so callers
+/// can show something more useful than a bare "does not exist". This command
+/// requires the `opener:default` (or `opener:allow-reveal-item-in-dir`)
+/// capability — without it the ACL rejects the call and the frontend would
+/// surface the raw path as an error toast.
 #[tauri::command]
 pub async fn reveal_paths(paths: Vec<String>) -> Result<(), String> {
   tokio::task::spawn_blocking(move || {
-    let existing = paths
+    let requested: Vec<(String, std::path::PathBuf)> = paths
       .into_iter()
       .filter(|p| !p.trim().is_empty())
-      .map(std::path::PathBuf::from)
-      .filter(|p| p.exists())
-      .collect::<Vec<_>>();
+      .map(|raw| (raw.clone(), std::path::PathBuf::from(raw)))
+      .collect();
+
+    let existing: Vec<_> = requested
+      .iter()
+      .filter(|(_, path)| path.exists())
+      .map(|(_, path)| path.clone())
+      .collect();
 
     if existing.is_empty() {
-      return Err("Path does not exist".to_string());
+      let names = requested
+        .iter()
+        .map(|(raw, _)| raw.as_str())
+        .collect::<Vec<_>>()
+        .join(", ");
+      return Err(format!("Path does not exist: {names}"));
     }
 
     tauri_plugin_opener::reveal_items_in_dir(existing).map_err(|e| e.to_string())
@@ -496,4 +510,47 @@ pub async fn clear_execution_history() -> Result<(), String> {
     .map_err(|e| format!("Failed to clear execution history: {}", e))?;
 
   Ok(())
+}
+
+#[cfg(test)]
+mod reveal_paths_tests {
+  use super::reveal_paths;
+
+  /// All-missing input must fail with the offending paths named, so the UI can
+  /// explain *which* path is gone instead of a bare "does not exist".
+  #[tokio::test]
+  async fn names_every_missing_path() {
+    let dir = std::env::temp_dir().join("easycsv-reveal-missing-fixture");
+    let a = dir.join("alpha.csv");
+    let b = dir.join("beta.csv");
+
+    let err = reveal_paths(vec![
+      a.to_string_lossy().to_string(),
+      b.to_string_lossy().to_string(),
+    ])
+    .await
+    .expect_err("missing files must not be revealed");
+
+    assert!(
+      err.contains("alpha.csv"),
+      "error must name the first path: {err}"
+    );
+    assert!(
+      err.contains("beta.csv"),
+      "error must name the second path: {err}"
+    );
+  }
+
+  /// Blank entries are ignored; an all-blank request is still an error rather
+  /// than a silent success.
+  #[tokio::test]
+  async fn ignores_blank_entries() {
+    let err = reveal_paths(vec!["".to_string(), "   ".to_string()])
+      .await
+      .expect_err("blank-only input must fail");
+    assert!(
+      err.contains("Path does not exist"),
+      "unexpected error: {err}"
+    );
+  }
 }

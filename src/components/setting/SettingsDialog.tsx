@@ -25,6 +25,11 @@ interface SettingsDialogProps {
   onSave: () => void;
   aiConfig: AIConfig;
   onAIConfigChange: (config: AIConfig) => void;
+  /** Forwarded to the plugins tab, which reports install/remove outcomes. */
+  showToast: (
+    message: string,
+    type?: "info" | "success" | "warning" | "error",
+  ) => void;
 }
 
 export function SettingsDialog({
@@ -45,6 +50,7 @@ export function SettingsDialog({
   onSave,
   aiConfig,
   onAIConfigChange,
+  showToast,
 }: SettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<"general" | "ai" | "plugins">(
     "general",
@@ -180,6 +186,7 @@ export function SettingsDialog({
             onSave={onSave}
             aiConfig={aiConfig}
             onAIConfigChange={onAIConfigChange}
+            showToast={showToast}
           />
         </div>
       </div>

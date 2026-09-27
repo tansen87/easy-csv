@@ -1,6 +1,6 @@
 import type { Translations } from "../types";
 
-/** (none) · ConfirmDialog · HomeView · UpdateDialog · Floating panel docking · Result preview (F1) · Plugins · CommandPalette */
+/** (none) · ConfirmDialog · HomeView · UpdateDialog · Floating panel docking · Result preview · CommandPalette */
 export const zhCommon = {
   rows: "行数",
   confirm: "确认",
@@ -38,11 +38,6 @@ export const zhCommon = {
   copyCsv: "复制为 CSV",
   copyMarkdown: "复制为 Markdown 表格",
   resultTruncated: "结果已截断为前几行,请用 output/to 步骤导出完整数据.",
-  plugins: "插件",
-  pluginDesc: "注册外部 CLI 插件",
-  pluginNone: "暂无已注册插件",
-  pluginInstalled: "已找到",
-  pluginMissing: "未找到",
   commandPalette: "命令面板",
   palettePlaceholder: "输入命令或搜索",
   paletteActions: "操作",

@@ -40,6 +40,7 @@ function renderSettings(
         onSave={vi.fn()}
         aiConfig={aiConfig}
         onAIConfigChange={vi.fn()}
+        showToast={vi.fn()}
       />
     </LanguageProvider>,
   );

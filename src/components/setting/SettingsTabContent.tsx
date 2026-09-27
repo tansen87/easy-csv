@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   Save,
   RotateCcw,
@@ -16,9 +16,6 @@ import {
   Server,
   Plus,
   X,
-  Plug,
-  CircleCheck,
-  CircleX,
   MousePointer2,
   SeparatorVertical,
   RectangleEllipsis,
@@ -30,6 +27,7 @@ import { Button } from "@/components/ui/Button";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Select } from "@/components/ui/Select";
 import { DelimiterModeSelect } from "@/components/ui/DelimiterModeSelect";
+import { PluginManager } from "@/modules/plugins";
 import type { DelimiterMode } from "@/types/xan";
 import { useLanguage } from "@/i18n";
 import {
@@ -39,7 +37,6 @@ import {
   isBuiltinProvider,
 } from "@/services/ai/types";
 import { loadProviderApiKey } from "@/services/ai";
-import { PluginInfo } from "@/types/xan";
 
 interface SettingsTabContentProps {
   activeTab: "general" | "ai" | "plugins";
@@ -61,6 +58,11 @@ interface SettingsTabContentProps {
   onSave: () => void;
   aiConfig: AIConfig;
   onAIConfigChange: (config: AIConfig) => void;
+  /** Used by the plugins tab to report install/remove outcomes. */
+  showToast: (
+    message: string,
+    type?: "info" | "success" | "warning" | "error",
+  ) => void;
 }
 
 export function SettingsTabContent({
@@ -82,6 +84,7 @@ export function SettingsTabContent({
   onSave,
   aiConfig,
   onAIConfigChange,
+  showToast,
 }: SettingsTabContentProps) {
   const [isThemeTransitioning, setIsThemeTransitioning] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -94,32 +97,6 @@ export function SettingsTabContent({
     "conversations" | "feedback" | "corrections" | "history" | null
   >(null);
   const [clearing, setClearing] = useState(false);
-  const [plugins, setPlugins] = useState<PluginInfo[]>([]);
-  const [pluginsLoading, setPluginsLoading] = useState(false);
-
-  const loadPlugins = useCallback(async () => {
-    setPluginsLoading(true);
-    try {
-      const statuses = await invoke<PluginInfo[]>("check_plugins");
-      setPlugins(statuses || []);
-    } catch (error) {
-      console.error("Failed to check plugins:", error);
-      try {
-        const list = await invoke<PluginInfo[]>("list_plugins");
-        setPlugins(list || []);
-      } catch (err) {
-        console.error("Failed to load plugins:", err);
-      }
-    } finally {
-      setPluginsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === "plugins") {
-      loadPlugins();
-    }
-  }, [activeTab, loadPlugins]);
 
   const updateCustomModels = useCallback(
     (models: string[]) => {
@@ -697,61 +674,7 @@ export function SettingsTabContent({
             </div>
           )}
 
-          {activeTab === "plugins" && (
-            <div className="space-y-6">
-              {/* Description */}
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Plug className="h-4 w-4" />
-                  {t.plugins} ({plugins.length})
-                </h3>
-                <p className="text-sm text-muted-foreground">{t.pluginDesc}</p>
-              </div>
-
-              {/* Plugin list */}
-              <div>
-                {plugins.length === 0 && !pluginsLoading ? (
-                  <p className="text-sm text-muted-foreground">
-                    {t.pluginNone}
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {plugins.map((plugin) => (
-                      <div
-                        key={plugin.name}
-                        className="flex items-center justify-between gap-3 border rounded-md p-3 bg-muted/20"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          {plugin.found ? (
-                            <CircleCheck className="h-4 w-4 text-green-600 flex-shrink-0" />
-                          ) : (
-                            <CircleX className="h-4 w-4 text-destructive flex-shrink-0" />
-                          )}
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium">{plugin.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {plugin.version ? `${plugin.version}` : ""}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span
-                            className={`text-[11px] px-2 py-0.5 rounded-full ${
-                              plugin.found
-                                ? "bg-green-600/10 text-green-700"
-                                : "bg-destructive/10 text-destructive"
-                            }`}
-                          >
-                            {plugin.found ? t.pluginInstalled : t.pluginMissing}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {activeTab === "plugins" && <PluginManager showToast={showToast} />}
         </div>
       </ScrollArea>
 

@@ -1,5 +1,11 @@
 # Plugin binaries (user-managed)
 
+> Since 2026-09-27 the app can install these itself: **Settings → Plugins** downloads
+> the binary for your platform from the signed catalog published by
+> [`easy-csv-plugins`](https://github.com/tansen87/easy-csv-plugins)
+> (design `docs/design/023_plugin-repository-and-in-app-install.md`). Dropping files
+> in by hand still works and still takes precedence — this page documents that path.
+
 `xan` and `pinyin` are **not** shipped inside the app. The user provides them.
 
 At runtime the app looks for the binaries in the current platform's plugin

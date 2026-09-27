@@ -7,6 +7,7 @@ import { enAi } from "./ai";
 import { enSettings } from "./settings";
 import { enHelp } from "./help";
 import { enUpdate } from "./update";
+import { enPlugins } from "./plugins";
 
 /**
  * Every en string, merged back into one flat object.
@@ -24,4 +25,5 @@ export const en: Translations = {
   ...enSettings,
   ...enHelp,
   ...enUpdate,
+  ...enPlugins,
 };

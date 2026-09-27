@@ -21,6 +21,7 @@ import { HomeView } from "@/modules/data-preview/HomeView";
 import { HelpDialog } from "@/components/help/HelpDialog";
 import { getHelpContent } from "@/components/help/HelpContent";
 import { UpdateDialog } from "@/modules/dialogs/app/UpdateDialog";
+import { PluginSetupDialog } from "@/modules/plugins";
 import { ConfirmDialog } from "@/modules/dialogs/common/ConfirmDialog";
 import { PipelineTemplateDialog } from "@/modules/dialogs/file/PipelineTemplateDialog";
 import { VariableValuesDialog } from "@/modules/dialogs/common/VariableValuesDialog";
@@ -64,6 +65,7 @@ import { useSession } from "@/hooks/useSession";
 import { useExecutionHistory } from "@/hooks/useExecutionHistory";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useUpdater } from "@/hooks/useUpdater";
+import { useRequiredPluginCheck } from "@/hooks/usePluginCatalog";
 
 /** Delay before the silent startup update check, in ms (design 022 §5.4). */
 const AUTO_UPDATE_CHECK_DELAY_MS = 5000;
@@ -106,6 +108,11 @@ function AppContent() {
 
   // App settings
   const settings = useAppSettings(showToastRef);
+
+  // Startup guidance for a missing xan (design 023 §3.9). The probe is owned
+  // here rather than by a dialog so it runs exactly once, and the dialog is
+  // rendered from `missingXan` below.
+  const xanCheck = useRequiredPluginCheck();
 
   // Tabs + CSV loading
   const tabsHook = useTabs(
@@ -587,7 +594,11 @@ function AppContent() {
 
   // App bootstrap & global listeners — owned by useAppBootstrap
   const initializeApp = useCallback(async () => {
-    await invoke("check_xan_installed");
+    // The result is deliberately not awaited for its value: the guide is shown
+    // by `useRequiredPluginCheck` so that a slow probe never delays bootstrap.
+    void invoke("check_xan_installed").catch(() => {
+      // The dedicated check below reports it properly.
+    });
     await settings.loadAll();
     await tabsHook.loadRecentFiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1639,6 +1650,7 @@ function AppContent() {
             onSave={handleSaveSettings}
             aiConfig={aiConfig}
             onAIConfigChange={handleAIConfigChange}
+            showToast={showToast}
           />
 
           <UpdateDialog
@@ -1651,6 +1663,15 @@ function AppContent() {
             error={updater.error}
             onInstall={() => void updater.install()}
           />
+
+          {/* One-time guidance: without xan almost every command fails, so this
+              is worth interrupting for exactly once per launch. */}
+          {xanCheck.missingXan && (
+            <PluginSetupDialog
+              onClose={xanCheck.dismiss}
+              onInstalled={xanCheck.recheck}
+            />
+          )}
 
           <ConfirmDialog
             isOpen={ui.showRefreshDialog}

@@ -3,6 +3,8 @@ pub mod ai_memory;
 pub mod config;
 pub mod csv;
 pub mod pipeline;
+pub mod plugin_catalog;
+pub mod plugin_install;
 pub mod plugins;
 pub mod session;
 pub mod storage;
@@ -34,6 +36,8 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     config::set_double_click_fit_view,
     config::get_auto_check_update,
     config::set_auto_check_update,
+    config::get_plugin_download_prefix,
+    config::set_plugin_download_prefix,
     config::get_ai_config,
     config::set_ai_config,
     config::save_api_key,
@@ -51,6 +55,10 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     pipeline::set_pipeline_cancelled,
     plugins::list_plugins,
     plugins::check_plugins,
+    plugin_catalog::get_plugin_catalog,
+    plugin_install::install_plugin,
+    plugin_install::uninstall_plugin,
+    plugin_install::cancel_plugin_install,
     xan::check_xan_installed,
     session::save_session,
     session::load_session,

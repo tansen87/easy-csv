@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-27T05:38:28Z",
+  "plugins": [
+    {
+      "name": "xan",
+      "title": "xan",
+      "description": "CSV processing engine used by every non-plugin command",
+      "homepage": "https://github.com/medialab/xan",
+      "license": "MIT",
+      "required": true,
+      "version": "0.61.0",
+      "versionArgs": [
+        "--version"
+      ],
+      "assets": {
+        "windows-x86_64": {
+          "file": "xan.exe",
+          "size": 18447872,
+          "sha256": "0f0350a0856ab0e5a391ed37d36451f569a2a7f68123ff66fd23c24f5c3a6363",
+          "urls": [
+            "https://github.com/tansen87/easy-csv-plugins/releases/download/xan-v0.61.0/xan-0.61.0-windows-x86_64.exe"
+          ]
+        },
+        "macos-aarch64": {
+          "file": "xan",
+          "size": 14610272,
+          "sha256": "55dd4ebdac84abc0699a0855561dee83387177435d3b0389f821c96dae6093ce",
+          "urls": [
+            "https://github.com/tansen87/easy-csv-plugins/releases/download/xan-v0.61.0/xan-0.61.0-macos-aarch64"
+          ]
+        },
+        "macos-x86_64": {
+          "file": "xan",
+          "size": 15918868,
+          "sha256": "02b3d9579f6fd410d5080ed3b845ddcfd2d7955526eea7ad578eeea7d93c8627",
+          "urls": [
+            "https://github.com/tansen87/easy-csv-plugins/releases/download/xan-v0.61.0/xan-0.61.0-macos-x86_64"
+          ]
+        },
+        "linux-x86_64-gnu": {
+          "file": "xan",
+          "size": 19307256,
+          "sha256": "f444f1eea35c7e4f64b7f687c37d3ced268926277deced1b71254a168558856e",
+          "urls": [
+            "https://github.com/tansen87/easy-csv-plugins/releases/download/xan-v0.61.0/xan-0.61.0-linux-x86_64-gnu"
+          ]
+        },
+        "linux-aarch64-gnu": {
+          "file": "xan",
+          "size": 17369640,
+          "sha256": "aa0e58b98367eccf13c8a3592baf217259181d5faf6e9a4d2654c828b19f42a0",
+          "urls": [
+            "https://github.com/tansen87/easy-csv-plugins/releases/download/xan-v0.61.0/xan-0.61.0-linux-aarch64-gnu"
+          ]
+        }
+      }
+    },
+    {
+      "name": "duckdb",
+      "title": "DuckDB",
+      "description": "Run a SQL query over the data with the DuckDB CLI",
+      "homepage": "https://duckdb.org",
+      "license": "MIT",
+      "required": false,
+      "version": "1.5.5",
+      "versionArgs": [
+        "-version"
+      ],
+      "assets": {
+        "windows-x86_64": {
+          "file": "duckdb.exe",
+          "size": 37077288,
+          "sha256": "fde737c7749075f6b54e14772a4e6b33a5fa0201075d03640aca358074ea4554",
+          "urls": [
+            "https://github.com/tansen87/easy-csv-plugins/releases/download/duckdb-v1.5.5/duckdb-1.5.5-windows-x86_64.exe"
+          ]
+        },
+        "macos-aarch64": {
+          "file": "duckdb",
+          "size": 117559952,
+          "sha256": "8463eb26527b278109cfddffc4606e1019ebefcfe2eac75efc53c76ed8f282d5",
+          "urls": [
+            "https://github.com/tansen87/easy-csv-plugins/releases/download/duckdb-v1.5.5/duckdb-1.5.5-macos-aarch64"
+          ]
+        },
+        "macos-x86_64": {
+          "file": "duckdb",
+          "size": 117559952,
+          "sha256": "8463eb26527b278109cfddffc4606e1019ebefcfe2eac75efc53c76ed8f282d5",
+          "urls": [
+            "https://github.com/tansen87/easy-csv-plugins/releases/download/duckdb-v1.5.5/duckdb-1.5.5-macos-x86_64"
+          ]
+        },
+        "linux-x86_64-gnu": {
+          "file": "duckdb",
+          "size": 61936648,
+          "sha256": "3d33b1df037cb049155c393778df7853fafb23e9d49d7c9cacdde4dd67155788",
+          "urls": [
+            "https://github.com/tansen87/easy-csv-plugins/releases/download/duckdb-v1.5.5/duckdb-1.5.5-linux-x86_64-gnu"
+          ]
+        },
+        "linux-aarch64-gnu": {
+          "file": "duckdb",
+          "size": 54323032,
+          "sha256": "9882c99a9804407de82c0edb1816d7667733d37d771a98eb23ad5f6a8d37acb1",
+          "urls": [
+            "https://github.com/tansen87/easy-csv-plugins/releases/download/duckdb-v1.5.5/duckdb-1.5.5-linux-aarch64-gnu"
+          ]
+        }
+      }
+    },
+    {
+      "name": "pinyin",
+      "title": "pinyin",
+      "description": "Convert Chinese characters in a column to pinyin",
+      "homepage": "https://github.com/tansen87/easy-csv/tree/main/plugins/pinyin-cli",
+      "license": "MIT",
+      "required": false,
+      "version": "0.1.0",
+      "versionArgs": [
+        "--version"
+      ],
+      "assets": {
+        "windows-x86_64": {
+          "file": "pinyin.exe",
+          "size": 1267200,
+          "sha256": "f67c6af6a9e95979041463aa1596d1c40fa52fa64155de4b37e7d635d472c66d",
+          "urls": [
+            "https://github.com/tansen87/easy-csv-plugins/releases/download/pinyin-v0.1.0/pinyin-0.1.0-windows-x86_64.exe"
+          ]
+        },
+        "macos-aarch64": {
+          "file": "pinyin",
+          "size": 1253232,
+          "sha256": "8f4bd16e2a07a625f200d5161711123e148e93ffb856b63579d113dbbf700d6b",
+          "urls": [
+            "https://github.com/tansen87/easy-csv-plugins/releases/download/pinyin-v0.1.0/pinyin-0.1.0-macos-aarch64"
+          ]
+        },
+        "macos-x86_64": {
+          "file": "pinyin",
+          "size": 1288464,
+          "sha256": "dd80aa3146af80f3af9320bf4bcd9a3c30aaf31f028de69bb70e9f7fb9de88c3",
+          "urls": [
+            "https://github.com/tansen87/easy-csv-plugins/releases/download/pinyin-v0.1.0/pinyin-0.1.0-macos-x86_64"
+          ]
+        },
+        "linux-x86_64-gnu": {
+          "file": "pinyin",
+          "size": 1481936,
+          "sha256": "0eba9ecccf62876d304ccc89e804524eba5c0cdf45c766cf7ff0669319cba8a0",
+          "urls": [
+            "https://github.com/tansen87/easy-csv-plugins/releases/download/pinyin-v0.1.0/pinyin-0.1.0-linux-x86_64-gnu"
+          ]
+        },
+        "linux-aarch64-gnu": {
+          "file": "pinyin",
+          "size": 1446568,
+          "sha256": "d9304f66ad2a09c08d2a51b020dc9a77bcf4d9215df25c4304a13d5ec8a95978",
+          "urls": [
+            "https://github.com/tansen87/easy-csv-plugins/releases/download/pinyin-v0.1.0/pinyin-0.1.0-linux-aarch64-gnu"
+          ]
+        }
+      }
+    }
+  ]
+}
