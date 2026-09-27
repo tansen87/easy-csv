@@ -2,7 +2,6 @@ import { memo } from "react";
 import {
   CircleCheck,
   CircleX,
-  Download,
   ExternalLink,
   FolderOpen,
   RefreshCw,
