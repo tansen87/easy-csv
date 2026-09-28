@@ -15,6 +15,12 @@ interface DuckdbEditorProps {
   columns?: string[];
   placeholder?: string;
   autoFocus?: boolean;
+  /**
+   * The selected table of a `.duckdb` input: substituted into
+   * templates at the `table_name` placeholder, e.g. the SRC TABLE template
+   * becomes `SELECT * FROM src.<table> LIMIT 100;`.
+   */
+  sourceTable?: string;
 }
 
 interface Suggestion {
@@ -39,6 +45,7 @@ export function DuckdbEditor({
   columns = [],
   placeholder = "SELECT ... FROM input ...",
   autoFocus = false,
+  sourceTable,
 }: DuckdbEditorProps) {
   const { effectiveLanguage } = useLanguage();
   const isZh = effectiveLanguage === "zh";
@@ -241,7 +248,9 @@ export function DuckdbEditor({
                 value,
                 value.length,
                 value.length,
-                t.sql.replace(/\n+$/, ""),
+                t.sql
+                  .replace(/\n+$/, "")
+                  .replace("table_name", sourceTable || "table_name"),
               )
             }
             className="px-2 py-0.5 text-[11px] font-medium rounded border border-border/60 bg-muted/40 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"

@@ -71,7 +71,7 @@ export const enDialog = {
   separateStart: "Separate",
   separating: "Separating...",
   separateNoResult:
-    "Pick a CSV file and click Separate to split good rows (matching column count) from bad rows. Output files are written next to the input as *_good.csv and *_bad.csv.",
+    "Pick a CSV file and click Separate to split good rows (matching column count) from bad rows",
   goodRows: "good rows",
   badRows: "bad rows",
   separateSelectFile: "Please select an input file",
@@ -89,6 +89,14 @@ export const enDialog = {
     "Pick a text file and a row count per file, then click Split. Lines are copied as-is (no CSV parsing), so this also works for huge files. Output files are written next to the input as *_partN.<ext>.",
   splitLinesInvalidLinesPerFile:
     "Lines per file must be an integer of at least 1",
+  // DuckDB table picker (design 024)
+  duckdbSelectTable: "Select Table",
+  duckdbNoTables: "No tables found in this database",
+  duckdbTableHint: "Choose the table to read from the DuckDB database",
+  duckdbPluginRequired:
+    "Reading .parquet / .duckdb files requires the DuckDB plugin (Settings → Plugins)",
+  inputFormatParquet: "PARQUET",
+  inputFormatDuckdb: "DUCKDB",
   batchFilter: "Batch Filter",
   filterColumn: "Column",
   selectColumn: "Select column",

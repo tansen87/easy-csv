@@ -18,6 +18,10 @@ interface UsePipelineLayoutArgs {
   delimiterMode?: string;
   delimiterSource?: string;
   delimiterConfidence?: "high" | "low" | "none";
+  /** Input file format; non-CSV inputs show a read-only badge. */
+  inputFormat?: string;
+  /** Chosen table when the input is a `.duckdb` file. */
+  sourceTable?: string;
   selectedStepId?: string;
   highlightedNodeId: string | null;
   // Callback refs captured to avoid unnecessary re-layout
@@ -55,6 +59,8 @@ export function usePipelineLayout({
   delimiterMode,
   delimiterSource,
   delimiterConfidence,
+  inputFormat,
+  sourceTable,
   selectedStepId,
   highlightedNodeId,
   onStepClickRef,
@@ -127,6 +133,8 @@ export function usePipelineLayout({
             delimiterMode,
             delimiterSource,
             delimiterConfidence,
+            inputFormat: inputFormat as any,
+            sourceTable,
             onDelimiterChange: onDelimiterChangeRef.current,
           },
         };
@@ -194,6 +202,8 @@ export function usePipelineLayout({
     delimiterMode,
     delimiterSource,
     delimiterConfidence,
+    inputFormat,
+    sourceTable,
   ]);
 
   // Apply selection/highlight as visual-only properties (no layout recompute)

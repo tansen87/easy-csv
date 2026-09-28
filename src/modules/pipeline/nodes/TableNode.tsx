@@ -6,7 +6,7 @@ import { Select } from "@/components/ui/Select";
 import { DelimiterModeSelect } from "@/components/ui/DelimiterModeSelect";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { useLanguage } from "@/i18n";
-import { DelimiterMode, DelimiterSource } from "@/types/xan";
+import { DelimiterMode, DelimiterSource, TabularFormat } from "@/types/xan";
 import { delimiterLabel } from "@/utils/separateHistory";
 
 export interface TableNodeData {
@@ -23,6 +23,10 @@ export interface TableNodeData {
   delimiterSource?: DelimiterSource;
   delimiterConfidence?: "high" | "low" | "none";
   onDelimiterChange?: (mode: DelimiterMode) => void;
+  /** Input file format; non-CSV inputs show a read-only badge instead. */
+  inputFormat?: TabularFormat;
+  /** Chosen table when the input is a `.duckdb` file. */
+  sourceTable?: string;
 }
 
 export function TableNode({
@@ -46,6 +50,8 @@ export function TableNode({
     delimiterSource,
     delimiterConfidence,
     onDelimiterChange,
+    inputFormat,
+    sourceTable,
   } = data;
   const [editingCol, setEditingCol] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -232,6 +238,19 @@ export function TableNode({
             placeholder={t.headerRename}
           />
         </div>
+        {/* Non-CSV inputs (parquet / duckdb) have no delimiter: show a
+            read-only format badge instead of the delimiter one (024). */}
+        {inputFormat && inputFormat !== "csv" && (
+          <span
+            className="nodrag shrink-0 flex items-center h-6 px-1.5 rounded-md border bg-muted/40 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+            title={inputFormat === "duckdb" ? sourceTable : undefined}
+          >
+            {inputFormat === "parquet"
+              ? t.inputFormatParquet
+              : t.inputFormatDuckdb}
+            {inputFormat === "duckdb" && sourceTable ? ` · ${sourceTable}` : ""}
+          </span>
+        )}
         {delimiter !== undefined && delimiter !== "" && (
           <div className="nodrag nowheel shrink-0">
             {delimiterOpen ? (

@@ -8,6 +8,7 @@ pub mod plugin_install;
 pub mod plugins;
 pub mod session;
 pub mod storage;
+pub mod tabular;
 pub mod update;
 pub mod xan;
 
@@ -51,6 +52,8 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     csv::separate_csv,
     csv::split_lines,
     csv::probe_csv_file,
+    tabular::list_duckdb_tables,
+    tabular::read_tabular_file,
     pipeline::execute_xan_pipeline,
     pipeline::set_pipeline_cancelled,
     plugins::list_plugins,

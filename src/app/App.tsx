@@ -30,6 +30,7 @@ import { VariablePanel } from "@/modules/variables/VariablePanel";
 import { CsvDiffDialog } from "@/modules/dialogs/file/CsvDiffDialog";
 import { CsvEncodingDialog } from "@/modules/dialogs/file/CsvEncodingDialog";
 import { SeparateCSVDialog } from "@/modules/dialogs/file/SeparateCSVDialog";
+import { DuckdbTableDialog } from "@/modules/dialogs/file/DuckdbTableDialog";
 import { SplitLinesDialog } from "@/modules/dialogs/file/SplitLinesDialog";
 import { DataProfilePanel } from "@/modules/data-preview/DataProfilePanel";
 import { AIPanel } from "@/modules/ai/AIPanel";
@@ -86,6 +87,7 @@ import {
   PipelineVariable,
   PipelineTemplate,
   DelimiterMode,
+  DuckdbTableInfo,
 } from "@/types/xan";
 import { AIConfig, DEFAULT_AI_CONFIG } from "@/services/ai/types";
 import { loadAIConfig, saveAIConfig, setAIConfig } from "@/services/ai/index";
@@ -109,16 +111,55 @@ function AppContent() {
   // App settings
   const settings = useAppSettings(showToastRef);
 
-  // Startup guidance for a missing xan (design 023 §3.9). The probe is owned
+  // Startup guidance for a missing xan. The probe is owned
   // here rather than by a dialog so it runs exactly once, and the dialog is
   // rendered from `missingXan` below.
   const xanCheck = useRequiredPluginCheck();
+
+  // `.duckdb` table picker: useTabs asks through this promise-
+  // returning callback; the dialog resolves it (null = abort the open).
+  const [duckdbTableDialog, setDuckdbTableDialog] = useState<{
+    filePath: string;
+    tables: DuckdbTableInfo[];
+  } | null>(null);
+  const duckdbTableResolveRef = useRef<((table: string | null) => void) | null>(
+    null,
+  );
+  const requestDuckdbTableSelection = useCallback(
+    (filePath: string, tables: DuckdbTableInfo[]) => {
+      return new Promise<string | null>((resolve) => {
+        duckdbTableResolveRef.current = resolve;
+        setDuckdbTableDialog({ filePath, tables });
+      });
+    },
+    [],
+  );
+  const resolveDuckdbTable = useCallback((table: string | null) => {
+    duckdbTableResolveRef.current?.(table);
+    duckdbTableResolveRef.current = null;
+    setDuckdbTableDialog(null);
+  }, []);
+
+  // Tabular (non-CSV) open failures must be visible (024): otherwise the
+  // welcome page stays up with only a log entry. The backend's
+  // "DuckDB plugin is required" message is mapped to its localized counterpart.
+  const handleTabularOpenError = useCallback(
+    (message: string) => {
+      const localized = message.includes("DuckDB plugin is required")
+        ? t.duckdbPluginRequired
+        : message;
+      showToast(localized, "error");
+    },
+    [showToast, t],
+  );
 
   // Tabs + CSV loading
   const tabsHook = useTabs(
     settings.defaultDelimiter,
     addLog,
     settings.autoDetectDelimiter,
+    requestDuckdbTableSelection,
+    handleTabularOpenError,
   );
 
   /**
@@ -1560,6 +1601,8 @@ function AppContent() {
                 delimiterConfidence={
                   tabsHook.getCurrentTab()?.delimiterConfidence
                 }
+                inputFormat={tabsHook.getCurrentTab()?.inputFormat}
+                sourceTable={tabsHook.getCurrentTab()?.sourceTable}
                 onDelimiterChange={onDelimiterModeChange}
               />
             </div>
@@ -1762,6 +1805,16 @@ function AppContent() {
             initialInputFile={ui.splitLinesInitialInput}
             onShowToast={showToast}
           />
+
+          {/* .duckdb table picker (design 024) */}
+          {duckdbTableDialog && (
+            <DuckdbTableDialog
+              filePath={duckdbTableDialog.filePath}
+              tables={duckdbTableDialog.tables}
+              onPick={(table) => resolveDuckdbTable(table)}
+              onClose={() => resolveDuckdbTable(null)}
+            />
+          )}
 
           {/* Data Profile Panel */}
           <div

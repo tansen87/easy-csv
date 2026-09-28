@@ -206,6 +206,8 @@ export async function executeSingleBranch({
     result = await invoke<any>("execute_xan_pipeline", {
       commands,
       inputFile,
+      // The chosen table of a `.duckdb` input; null otherwise.
+      inputTable: currentTab?.sourceTable ?? null,
       defaultDelimiter: resolveRunDelimiter(),
       maxOutputBytes: MAX_OUTPUT_BYTES,
     });

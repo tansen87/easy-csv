@@ -97,6 +97,8 @@ export interface CommandFormProps {
   onStepUpdate?: (stepId: string, parameters: Record<string, any>) => void;
   setCommandDialog: (dialog: CommandDialogState | null) => void;
   headers?: string[];
+  /** Chosen table when the input is a `.duckdb` file (design 024). */
+  sourceTable?: string;
 }
 
 /** Human-readable title for each command dialog. */

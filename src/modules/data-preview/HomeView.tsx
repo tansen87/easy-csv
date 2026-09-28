@@ -11,6 +11,7 @@ import {
   StoredPipelineStep,
   DelimiterMode,
   DelimiterSource,
+  TabularFormat,
 } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 import { useLanguage } from "@/i18n";
@@ -104,6 +105,10 @@ interface HomeViewProps {
   delimiterMode?: DelimiterMode;
   delimiterSource?: DelimiterSource;
   delimiterConfidence?: "high" | "low" | "none";
+  /** Input file format; non-CSV inputs show a read-only badge. */
+  inputFormat?: TabularFormat;
+  /** Chosen table when the input is a `.duckdb` file. */
+  sourceTable?: string;
   onDelimiterChange?: (mode: DelimiterMode) => void;
 }
 
@@ -161,6 +166,8 @@ export const HomeView = React.memo(function HomeView({
   delimiterMode,
   delimiterSource,
   delimiterConfidence,
+  inputFormat,
+  sourceTable,
   onDelimiterChange,
 }: HomeViewProps) {
   const { t } = useLanguage();
@@ -508,6 +515,8 @@ export const HomeView = React.memo(function HomeView({
           delimiterMode={delimiterMode}
           delimiterSource={delimiterSource}
           delimiterConfidence={delimiterConfidence}
+          inputFormat={inputFormat}
+          sourceTable={sourceTable}
           onDelimiterChange={onDelimiterChange}
         />
       </div>
@@ -738,6 +747,7 @@ export const HomeView = React.memo(function HomeView({
           onStepUpdate={onStepUpdate}
           setCommandDialog={setCommandDialog}
           headers={headers}
+          sourceTable={sourceTable}
         />
       )}
     </div>

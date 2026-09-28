@@ -6,6 +6,7 @@ const FILE_DIALOG_FILTERS = [
   { name: "JSON", extensions: ["json", "jsonl"] },
   { name: "Excel", extensions: ["xlsx", "xls", "xlsm"] },
   { name: "Parquet", extensions: ["parquet"] },
+  { name: "DuckDB", extensions: ["duckdb", "ddb", "db"] },
   { name: "All", extensions: ["*"] },
 ];
 

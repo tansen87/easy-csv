@@ -169,6 +169,30 @@ export interface CsvReadResult {
   columns: number;
 }
 
+/** Tabular input formats recognized by extension (design 024). */
+export type TabularFormat = "csv" | "parquet" | "duckdb";
+
+/** Payload of the `read_tabular_file` command (superset of `CsvReadResult`). */
+export interface TabularReadResult {
+  headers: string[];
+  rows: string[][];
+  columns: number;
+  format: TabularFormat;
+  /** Only meaningful for `format === "csv"`. */
+  delimiter?: string;
+  delimiter_source?: DelimiterSource;
+  delimiter_confidence?: "high" | "low" | "none";
+  /** Only set for duckdb inputs (echoes the chosen table). */
+  source_table?: string;
+}
+
+/** One user table of a `.duckdb` file, reported by `list_duckdb_tables`. */
+export interface DuckdbTableInfo {
+  schema: string;
+  name: string;
+  kind: string;
+}
+
 export interface PipelineTab {
   id: string;
   name: string;
@@ -198,6 +222,10 @@ export interface PipelineTab {
   variables?: PipelineVariable[];
   /** Last-run values for variables, session-only. */
   runVariableValues?: Record<string, string>;
+  /** Input format of the opened file (design 024); absent for unknown types. */
+  inputFormat?: TabularFormat;
+  /** Chosen table when the input is a `.duckdb` file. */
+  sourceTable?: string;
 }
 
 export interface PipelineVersion {

@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::load_config;
 use crate::plugins::command_executable;
 use crate::plugins::is_plugin_command;
+use crate::tabular::{self, InputFormat, SourceRef};
 use crate::xan::find_xan_executable;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,7 +56,7 @@ pub fn set_pipeline_cancelled(cancel: bool) {
   cancellation_flag().store(cancel, Ordering::SeqCst);
 }
 
-fn wait_with_cancel(
+pub(crate) fn wait_with_cancel(
   mut child: std::process::Child,
   cancel: &AtomicBool,
 ) -> Result<std::process::Output, String> {
@@ -99,7 +100,7 @@ fn wait_with_cancel(
 /// Like `wait_with_cancel` but streams the child stdout directly into
 /// `out_path` instead of buffering it in memory. Used to hand a large upstream
 /// step's output to a `duckdb` step without ballooning RAM.
-fn wait_with_cancel_to_file(
+pub(crate) fn wait_with_cancel_to_file(
   mut child: std::process::Child,
   cancel: &AtomicBool,
   out_path: &Path,
@@ -179,6 +180,7 @@ fn single_output_with_errors(
 pub async fn execute_xan_pipeline(
   commands: Vec<PipelineCommand>,
   input_file: String,
+  input_table: Option<String>,
   default_delimiter: String,
   max_output_bytes: Option<usize>,
 ) -> Result<ExecutionResult, String> {
@@ -194,29 +196,100 @@ pub async fn execute_xan_pipeline(
     });
   }
 
-  let xan_path = find_xan_executable().ok_or("xan executable not found")?;
-
   let config = load_config()?;
   let no_headers_enabled = config.no_headers.unwrap_or(false);
 
-  // Any DuckDB step switches the pipeline to the sequential materialization
-  // engine, which hands each duckdb step its input as a fully-written temp file.
-  let has_duckdb = commands.iter().any(|c| is_duckdb(&c.name));
-  if has_duckdb {
-    return run_duckdb_pipeline(
+  let format = tabular::detect_input_format(&input_file);
+  let all_duckdb = !commands.is_empty() && commands.iter().all(|c| is_duckdb(&c.name));
+  let first_is_duckdb = commands
+    .first()
+    .map(|c| is_duckdb(&c.name))
+    .unwrap_or(false);
+
+  // All-duckdb pipeline: one process, one chained SQL script (024 §4.4.1).
+  if all_duckdb {
+    return run_duckdb_chain(
       commands,
       input_file,
+      input_table,
       default_delimiter,
-      no_headers_enabled,
       cancel_flag,
       max_output_bytes,
     )
     .await;
   }
 
+  // Non-CSV input needs adaptation before it can reach any xan command.
+  // A leading duckdb step can read the original file natively instead.
+  let mut temps = TempFiles::default();
+  let mut effective_input = input_file.clone();
+  let mut initial_source: Option<SourceRef> = None;
+
+  if format != InputFormat::Csv {
+    if !Path::new(&input_file).exists() {
+      return Err("Input file does not exist".to_string());
+    }
+    if first_is_duckdb {
+      initial_source = Some(native_source(&input_file, input_table)?);
+    } else {
+      let source_path = input_file.clone();
+      let table = input_table;
+      let sep = default_delimiter.clone();
+      let (tmp, materialized) =
+        tokio::task::spawn_blocking(move || -> (PathBuf, Result<(), String>) {
+          let tmp = make_temp_csv();
+          let result = match native_source(&source_path, table) {
+            Ok(source) => tabular::materialize_input_to_csv(
+              &source,
+              no_headers_enabled,
+              &sep,
+              cancellation_flag(),
+              &tmp,
+            ),
+            Err(e) => Err(e),
+          };
+          (tmp, result)
+        })
+        .await
+        .map_err(|e| format!("Task execution failed: {}", e))?;
+      temps.push(tmp.clone());
+      materialized?;
+      if cancel_flag.load(Ordering::SeqCst) {
+        return Ok(ExecutionResult {
+          success: false,
+          output: String::new(),
+          error: "Execution cancelled".to_string(),
+          cancelled: true,
+          step_errors: HashMap::new(),
+        });
+      }
+      effective_input = tmp.to_string_lossy().into_owned();
+    }
+  }
+
+  let xan_path = find_xan_executable().ok_or("xan executable not found")?;
+
+  // Any DuckDB step switches the pipeline to the sequential materialization
+  // engine, which hands each duckdb step its input as a fully-written temp file.
+  let has_duckdb = commands.iter().any(|c| is_duckdb(&c.name));
+  if has_duckdb {
+    let result = run_duckdb_pipeline(
+      commands,
+      effective_input,
+      initial_source,
+      default_delimiter,
+      no_headers_enabled,
+      cancel_flag,
+      max_output_bytes,
+    )
+    .await;
+    drop(temps);
+    return result;
+  }
+
   let first_cmd = commands.first().ok_or("No commands provided")?;
   let first_is_cat = matches!(first_cmd.name.as_str(), "cat");
-  if !first_is_cat && !Path::new(&input_file).exists() {
+  if !first_is_cat && !Path::new(&effective_input).exists() {
     return Err(format!("Input file does not exist"));
   }
 
@@ -277,7 +350,7 @@ pub async fn execute_xan_pipeline(
       let mut input_file_handle: Option<File> = if is_cat_command {
         None
       } else {
-        Some(File::open(&input_file).map_err(|e| format!("Failed to open input file: {}", e))?)
+        Some(File::open(&effective_input).map_err(|e| format!("Failed to open input file: {}", e))?)
       };
 
       // Always use piped I/O so we can capture output
@@ -326,7 +399,7 @@ pub async fn execute_xan_pipeline(
           }
 
           // Add input file as the last argument
-          args.push(input_file.clone());
+          args.push(effective_input.clone());
 
           let exe = command_executable(&cmd_args_list[0][0], Path::new(&xan_path))?;
           let mut command = Command::new(&exe);
@@ -766,23 +839,98 @@ fn make_temp_csv() -> PathBuf {
   std::env::temp_dir().join(format!("EasyCsv_duckdb_{}_{}.csv", std::process::id(), id))
 }
 
-/// Build the CLI argv for a `duckdb` step.
+/// Like [`make_temp_csv`], but for parquet hand-off files between adjacent
+/// duckdb steps of a mixed pipeline (design 024 §4.4.2).
+fn make_temp_parquet() -> PathBuf {
+  let id = TEMP_FILE_COUNTER.fetch_add(1, Ordering::SeqCst);
+  std::env::temp_dir().join(format!(
+    "EasyCsv_duckdb_{}_{}.parquet",
+    std::process::id(),
+    id
+  ))
+}
+
+/// RAII guard for temp files created outside `pipeline_seq` (e.g. the
+/// pre-materialized input CSV): removed on every exit path, including `?`
+/// propagation and cancellation.
+#[derive(Default)]
+struct TempFiles(Vec<PathBuf>);
+
+impl TempFiles {
+  fn push(&mut self, p: PathBuf) {
+    self.0.push(p);
+  }
+}
+
+impl Drop for TempFiles {
+  fn drop(&mut self) {
+    for t in &self.0 {
+      let _ = std::fs::remove_file(t);
+    }
+  }
+}
+
+/// Build the [`SourceRef`] for a native (non-materialized) input file.
+fn native_source(path: &str, table: Option<String>) -> Result<SourceRef, String> {
+  match tabular::detect_input_format(path) {
+    InputFormat::Parquet => Ok(SourceRef::Parquet(PathBuf::from(path))),
+    InputFormat::Duckdb => {
+      let table = table
+        .map(|t| t.trim().to_string())
+        .filter(|t| !t.is_empty())
+        .ok_or_else(|| "A table must be selected for .duckdb input files".to_string())?;
+      Ok(SourceRef::Duckdb {
+        path: PathBuf::from(path),
+        table,
+      })
+    }
+    InputFormat::Csv => Ok(SourceRef::Csv(PathBuf::from(path))),
+  }
+}
+
+/// Build the CLI argv for a `duckdb` step of a mixed pipeline.
 ///
-/// The piped-upstream CSV (already written to `input_csv`) is exposed to the
+/// The upstream data (already materialized to `source`) is exposed to the
 /// user's SQL as the virtual relation `input`. Guarded by `<sql>` referencing
-/// `input`, we prepend a `CREATE VIEW` that materializes it via `read_csv_auto`.
-/// Non-`input` queries (e.g. reading external files, `SELECT 1`) are untouched.
+/// `input`, we prepend a `CREATE VIEW` over the source. Non-`input` queries
+/// (e.g. reading external files, `SELECT 1`) are untouched.
+///
+/// When the *next* step is also a duckdb step, the result is handed over as a
+/// parquet temp file via `COPY ( … ) TO … (FORMAT PARQUET)` (types survive the
+/// hop); otherwise the legacy `-csv` stdout is kept (the next step is xan, or
+/// this is the final step whose CSV output feeds the result panel / `output`
+/// param).
 fn build_duckdb_args(
   cmd: &PipelineCommand,
-  input_csv: &Path,
+  source: &SourceRef,
   default_delimiter: &str,
-) -> Vec<String> {
+  next_is_duckdb: bool,
+  next_temp: Option<&Path>,
+) -> Result<Vec<String>, String> {
   let mut map = HashMap::new();
   for p in &cmd.parameters {
     map.insert(p.name.clone(), p.value.clone());
   }
 
   let sql = map.get("sql").cloned().unwrap_or_default();
+
+  if next_is_duckdb {
+    let target = next_temp.ok_or_else(|| {
+      "Internal error: parquet hand-off path missing for a chained duckdb step".to_string()
+    })?;
+    let body = tabular::chain_query_sql(&sql)?;
+    let mut args = Vec::new();
+    args.push("-bail".to_string());
+    args.push("-c".to_string());
+    args.push(format!(
+      "{}COPY ({}) TO {} (FORMAT PARQUET);",
+      tabular::source_view_sql(source),
+      body,
+      tabular::path_literal(target)
+    ));
+    return Ok(args);
+  }
+
   // DuckDB query results are always emitted as CSV (the only supported format),
   // which by default includes a header row. `-bail` enables the stop-on-error
   // behavior; `-separator` mirrors the app's default delimiter. Ignore any
@@ -790,14 +938,8 @@ fn build_duckdb_args(
   let mut args = Vec::new();
   args.push("-csv".to_string());
   if sql.references_input() {
-    // Use forward slashes so the path survives as a literal inside single quotes.
-    let path = input_csv.to_string_lossy().replace('\\', "/");
-    let preamble = format!(
-      "CREATE VIEW input AS SELECT * FROM read_csv_auto('{}', header = true);\n",
-      path
-    );
     args.push("-c".to_string());
-    args.push(format!("{}{}", preamble, sql));
+    args.push(format!("{}{}", tabular::source_view_sql(source), sql));
   } else {
     args.push("-c".to_string());
     args.push(sql);
@@ -811,7 +953,7 @@ fn build_duckdb_args(
   };
   args.push("-separator".to_string());
   args.push(separator.to_string());
-  args
+  Ok(args)
 }
 
 /// A small wrapper so the intent is readable at the call site.
@@ -860,6 +1002,7 @@ impl SqlReferencesInput for str {
 fn pipeline_seq(
   commands: &[PipelineCommand],
   input_file: &str,
+  initial_source: Option<SourceRef>,
   default_delimiter: &str,
   no_headers: bool,
   cancel: &AtomicBool,
@@ -870,15 +1013,21 @@ fn pipeline_seq(
   let mut step_errors: HashMap<String, String> = HashMap::new();
   let mut raw_stderr: Vec<(String, Vec<u8>)> = Vec::new();
 
-  // The CSV that the next step consumes. The first step reads the project input
-  // file (when present); otherwise an empty scratch file is used.
-  let mut current_input: PathBuf = if Path::new(input_file).exists() {
-    Path::new(input_file).to_path_buf()
-  } else {
-    let t = make_temp_csv();
-    let _ = std::fs::write(&t, b"");
-    temp_files.push(t.clone());
-    t
+  // What the first step consumes: a native (parquet / .duckdb) source when the
+  // first step can read it directly, the project CSV input file, or an empty
+  // scratch file when there is no input at all.
+  let mut current_input: SourceRef = match initial_source {
+    Some(s) => s,
+    None => {
+      if Path::new(input_file).exists() {
+        SourceRef::Csv(PathBuf::from(input_file))
+      } else {
+        let t = make_temp_csv();
+        let _ = std::fs::write(&t, b"");
+        temp_files.push(t.clone());
+        SourceRef::Csv(t)
+      }
+    }
   };
 
   let num = commands.len();
@@ -896,9 +1045,34 @@ fn pipeline_seq(
     let duckdb = is_duckdb(name);
     // Commands that read their input as a file argument, not from stdin.
     let needs_file_path = matches!(name, "sort" | "dedup" | "shuffle" | "from");
+    // Adjacent duckdb steps hand data over as parquet (024 §4.4.2); a xan
+    // successor or the end of the pipeline needs the legacy CSV output.
+    let next_is_duckdb = commands
+      .get(i + 1)
+      .map(|c| is_duckdb(&c.name))
+      .unwrap_or(false);
+
+    // For every step but the last, decide where this step's output goes.
+    let next_temp: Option<PathBuf> = if is_last {
+      None
+    } else {
+      let t = if duckdb && next_is_duckdb {
+        make_temp_parquet()
+      } else {
+        make_temp_csv()
+      };
+      temp_files.push(t.clone());
+      Some(t)
+    };
 
     let argv: Vec<String> = if duckdb {
-      build_duckdb_args(cmd, &current_input, default_delimiter)
+      build_duckdb_args(
+        cmd,
+        &current_input,
+        default_delimiter,
+        next_is_duckdb,
+        next_temp.as_deref(),
+      )?
     } else {
       let mut args = vec![name.to_string()];
       if i == 0 && no_headers {
@@ -929,7 +1103,7 @@ fn pipeline_seq(
         optional.push(default_delimiter.to_string());
       }
       if needs_file_path {
-        positional.push(current_input.to_string_lossy().to_string());
+        positional.push(current_input.path().to_string_lossy().to_string());
       }
       args.extend(positional);
       args.extend(optional);
@@ -943,7 +1117,7 @@ fn pipeline_seq(
     // duckdb / cat / sort-type read from disk; other xan commands stream the
     // current input CSV through stdin.
     let feed_stdin = !(duckdb || is_cat || needs_file_path);
-    let stdin_available = feed_stdin && Path::new(&current_input).exists();
+    let stdin_available = feed_stdin && current_input.path().exists();
     if stdin_available {
       command.stdin(Stdio::piped());
     } else {
@@ -963,7 +1137,7 @@ fn pipeline_seq(
 
     if stdin_available {
       let mut stdin = child.stdin.take().ok_or("Failed to get stdin handle")?;
-      let src = current_input.clone();
+      let src = current_input.path().to_path_buf();
       thread::spawn(move || {
         let mut file = match File::open(&src) {
           Ok(f) => f,
@@ -984,18 +1158,13 @@ fn pipeline_seq(
       });
     }
 
-    // For every step but the last, capture stdout into the next step's input.
-    let next_temp = if is_last {
-      None
-    } else {
-      let t = make_temp_csv();
-      temp_files.push(t.clone());
-      Some(t)
-    };
-
-    // Non-last steps stream stdout straight into the next input temp file so a
-    // large upstream result does not have to be buffered in RAM.
-    let output = if let Some(t) = &next_temp {
+    // Non-last xan steps stream stdout straight into the next input temp file
+    // so a large upstream result does not have to be buffered in RAM. A duckdb
+    // step whose successor is also duckdb wrote its output itself (COPY →
+    // parquet), so its (empty) stdout is just captured in memory.
+    let output = if duckdb && next_is_duckdb {
+      wait_with_cancel(child, cancel)?
+    } else if let Some(t) = &next_temp {
       wait_with_cancel_to_file(child, cancel, t)?
     } else {
       wait_with_cancel(child, cancel)?
@@ -1015,7 +1184,11 @@ fn pipeline_seq(
 
     final_status = Some(output.status);
     if let Some(t) = &next_temp {
-      current_input = t.clone();
+      current_input = if duckdb && next_is_duckdb {
+        SourceRef::Parquet(t.clone())
+      } else {
+        SourceRef::Csv(t.clone())
+      };
     } else {
       final_stdout = output.stdout;
     }
@@ -1074,6 +1247,7 @@ fn pipeline_seq(
 async fn run_duckdb_pipeline(
   commands: Vec<PipelineCommand>,
   input_file: String,
+  initial_source: Option<SourceRef>,
   default_delimiter: String,
   no_headers: bool,
   cancel_flag: &'static AtomicBool,
@@ -1083,6 +1257,7 @@ async fn run_duckdb_pipeline(
     pipeline_seq(
       &commands,
       &input_file,
+      initial_source,
       &default_delimiter,
       no_headers,
       cancel_flag,
@@ -1093,6 +1268,132 @@ async fn run_duckdb_pipeline(
 
   let cancelled = cancel_flag.load(Ordering::Relaxed);
   let (process_output, step_errors) = result;
+
+  Ok(ExecutionResult {
+    success: process_output.status.success() && !cancelled,
+    output: truncate_output(
+      String::from_utf8_lossy(&process_output.stdout).to_string(),
+      max_output_bytes,
+    ),
+    error: String::from_utf8_lossy(&process_output.stderr).to_string(),
+    cancelled,
+    step_errors,
+  })
+}
+
+/// All-duckdb pipeline: the whole chain runs as ONE SQL script in ONE duckdb
+/// process (design 024 §4.4.1) — no hand-off files, no CSV round-trips, types
+/// preserved end-to-end.
+///
+/// Each non-final step is materialized into a temp table and the `input` view
+/// is re-pointed at it (see `tabular::build_duckdb_chain_sql`); the final step's
+/// result set is printed as CSV on stdout, feeding the same result-panel /
+/// `output`-param handling as `pipeline_seq`.
+async fn run_duckdb_chain(
+  commands: Vec<PipelineCommand>,
+  input_file: String,
+  input_table: Option<String>,
+  default_delimiter: String,
+  cancel_flag: &'static AtomicBool,
+  max_output_bytes: Option<usize>,
+) -> Result<ExecutionResult, String> {
+  if !Path::new(&input_file).exists() {
+    return Err("Input file does not exist".to_string());
+  }
+
+  // The final step's export target and id, extracted before `commands` is moved.
+  let last_step_id = commands
+    .last()
+    .and_then(|last| last.id.clone())
+    .unwrap_or_default();
+  let last_output_path = commands.last().and_then(|last| {
+    last
+      .parameters
+      .iter()
+      .find(|p| p.name == "output" && !p.value.is_empty())
+      .map(|p| p.value.clone())
+  });
+
+  let result = tokio::task::spawn_blocking(
+    move || -> Result<(std::process::Output, HashMap<String, String>), String> {
+      let source = native_source(&input_file, input_table)?;
+      let steps: Vec<tabular::ChainStep> = commands
+        .iter()
+        .map(|c| {
+          let mut map = HashMap::new();
+          for p in &c.parameters {
+            map.insert(p.name.clone(), p.value.clone());
+          }
+          (c.id.clone(), map.get("sql").cloned().unwrap_or_default())
+        })
+        .collect();
+      let (script, line_map) = tabular::build_duckdb_chain_sql(
+        &steps,
+        &source,
+        &default_delimiter,
+        &std::env::temp_dir(),
+      )?;
+
+      let exe = tabular::duckdb_executable()?;
+      let separator = if default_delimiter.is_empty() {
+        ","
+      } else {
+        default_delimiter.as_str()
+      };
+      let args: Vec<String> = vec![
+        "-csv".to_string(),
+        "-separator".to_string(),
+        separator.to_string(),
+        "-bail".to_string(),
+        "-c".to_string(),
+        script,
+      ];
+      let mut command = Command::new(&exe);
+      command.args(&args);
+      // `wait_with_cancel` captures both pipes; forgetting them makes
+      // `child.stdout.take()` fail with "Failed to get stdout handle".
+      command.stdout(Stdio::piped());
+      command.stderr(Stdio::piped());
+      #[cfg(target_os = "windows")]
+      {
+        command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+      }
+      let child = command
+        .spawn()
+        .map_err(|e| format!("Failed to start duckdb: {}", e))?;
+      let output = wait_with_cancel(child, cancel_flag)?;
+
+      // Attribute the first `LINE n:` in stderr back to its step; errors in
+      // the source-view region stay global.
+      let mut step_errors: HashMap<String, String> = HashMap::new();
+      let stderr_text = String::from_utf8_lossy(&output.stderr).trim().to_string();
+      if !stderr_text.is_empty() {
+        if let Some(line) = tabular::first_error_line(&stderr_text) {
+          if let Some(id) = tabular::step_for_line(&line_map, line) {
+            step_errors.insert(id.to_string(), stderr_text.clone());
+          }
+        }
+      }
+
+      Ok((output, step_errors))
+    },
+  )
+  .await
+  .map_err(|e| format!("Task execution failed: {}", e))??;
+
+  let cancelled = cancel_flag.load(Ordering::Relaxed);
+  let (mut process_output, mut step_errors) = result;
+
+  // Same contract as `pipeline_seq`: the last step's `output` param means
+  // "export the captured CSV stdout to this file".
+  if let Some(path) = last_output_path {
+    match std::fs::write(&path, &process_output.stdout) {
+      Ok(()) => process_output.stdout.clear(),
+      Err(e) => {
+        step_errors.insert(last_step_id, format!("Failed to write output file: {}", e));
+      }
+    }
+  }
 
   Ok(ExecutionResult {
     success: process_output.status.success() && !cancelled,

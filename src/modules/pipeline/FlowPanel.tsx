@@ -33,6 +33,7 @@ import {
   PipelineEdge,
   DelimiterMode,
   DelimiterSource,
+  TabularFormat,
 } from "@/types/xan";
 import { ContextMenu } from "@/components/menu/ContextMenu";
 import {
@@ -123,6 +124,10 @@ interface FlowPanelProps {
   delimiterMode?: DelimiterMode;
   delimiterSource?: DelimiterSource;
   delimiterConfidence?: "high" | "low" | "none";
+  /** Input file format; non-CSV inputs show a read-only badge. */
+  inputFormat?: TabularFormat;
+  /** Chosen table when the input is a `.duckdb` file. */
+  sourceTable?: string;
   /** `"auto"` re-detects the delimiter, any other value locks it. */
   onDelimiterChange?: (mode: DelimiterMode) => void;
 }
@@ -165,6 +170,8 @@ export function FlowPanel({
   delimiterMode,
   delimiterSource,
   delimiterConfidence,
+  inputFormat,
+  sourceTable,
   onDelimiterChange,
 }: FlowPanelProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -374,6 +381,8 @@ export function FlowPanel({
     delimiterMode,
     delimiterSource,
     delimiterConfidence,
+    inputFormat,
+    sourceTable,
     selectedStepId,
     highlightedNodeId,
     onStepClickRef,

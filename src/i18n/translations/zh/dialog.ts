@@ -69,8 +69,7 @@ export const zhDialog = {
   lastResultNoOutput: "输出文件已不存在",
   separateStart: "开始拆分",
   separating: "拆分中...",
-  separateNoResult:
-    "选择 CSV 文件后点击开始拆分,按列数据将好行(列数匹配)与坏行分开。输出为输入旁的 *_good.csv 与 *_bad.csv",
+  separateNoResult: "选择CSV文件后点击开始拆分,按期望列数将好行与坏行分开",
   goodRows: "好行数",
   badRows: "坏行数",
   separateSelectFile: "请选择输入文件",
@@ -87,6 +86,14 @@ export const zhDialog = {
   splitLinesNoResult:
     "选择文本文件并设置每个文件的行数,点击开始拆分.按原始行复制、不解析 CSV,因此也适用于超大文件.输出为输入旁的 *_partN.<ext>",
   splitLinesInvalidLinesPerFile: "每个文件行数需为不小于 1 的整数",
+  // DuckDB 表选择(设计 024)
+  duckdbSelectTable: "选择表",
+  duckdbNoTables: "该数据库中没有找到表",
+  duckdbTableHint: "选择要从 DuckDB 数据库读取的表",
+  duckdbPluginRequired:
+    "读取 .parquet / .duckdb 文件需要先安装 DuckDB 插件(设置 → 插件)",
+  inputFormatParquet: "PARQUET",
+  inputFormatDuckdb: "DUCKDB",
   batchFilter: "批量筛选",
   filterColumn: "列",
   selectColumn: "选择列",

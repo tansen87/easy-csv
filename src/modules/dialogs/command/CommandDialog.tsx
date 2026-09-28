@@ -22,6 +22,8 @@ interface CommandDialogProps {
   onStepUpdate?: (stepId: string, parameters: Record<string, any>) => void;
   setCommandDialog: (dialog: CommandDialogState | null) => void;
   headers?: string[];
+  /** Chosen table when the input is a `.duckdb` file. */
+  sourceTable?: string;
 }
 
 /**
@@ -43,6 +45,7 @@ function CommandDialogShell({
   onStepUpdate,
   setCommandDialog,
   headers = [],
+  sourceTable,
 }: CommandDialogProps & { commandDialog: CommandDialogState }) {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const isDragging = useRef(false);
@@ -152,6 +155,7 @@ function CommandDialogShell({
             onStepUpdate={onStepUpdate}
             setCommandDialog={setCommandDialog}
             headers={headers}
+            sourceTable={sourceTable}
           />
         )}
       </div>

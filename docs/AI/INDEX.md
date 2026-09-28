@@ -37,7 +37,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 │  storage.rs · ai.rs · ai_memory.rs · session.rs     │
 │  AI 对话持久化 (ai_memory.db) · AI 配置 (config.db)     │
 │  会话快照持久化 (session.db) · API Key 加密存储          │
-│  (AES-256-GCM) · 61 个 Tauri 命令                    │
+│  (AES-256-GCM) · 63 个 Tauri 命令                    │
 │  CSV 读取 (csv crate) · CSV 对比 · 编码转换            │
 │  管道执行 (进程管理 + 取消) · AI 代理 (DeepSeek/       │
 │  Qwen/GLM) · AI 记忆持久化 · 数据概况缓存              │
@@ -75,8 +75,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `docs/design/022_github-auto-update-and-admin-free-install.md` | GitHub 自动更新 + **免管理员权限安装**(**P0+P1 已实现**;端到端更新链路待真实发布验证): ①免提权——Windows 收敛为只出 NSIS + `installMode: "currentUser"`(去掉默认要 UAC 的 MSI)、Windows/Linux 数据目录**于 2026-09-27 修订为「安装目录即数据目录」**(安装器强制装进 `<用户选择路径>\EasyCsv`,见该文档文首「修订」)、macOS 需装 `~/Applications`、Linux 限 AppImage;②自动更新——单渠道固定 GitHub Releases,`plugins.updater.endpoints` **配置驱动**(无需后端胶水,前端 `fetch` GitHub API 改为官方 `check()` / `downloadAndInstall()`),仅新增一个 `get_install_form` 命令用于按运行形态禁用一键更新;③签名私钥为单点(丢失不可逆)。**关键结论**:`endpoints` 数组只在非 2XX 时回退,大陆访问 GitHub 的失败是超时,**不要**加 Gitee 地址做兜底;单渠道的代价是国内自动更新成功率不可保证。**2026-09-27 修订**:①安装器强制把程序装进 `<用户选择路径>\EasyCsv`(`NSIS_HOOK_PREINSTALL`,幂等),数据目录即该目录 —— 卸载只会删应用自己的文件夹;②新增 `src-tauri/nsis/hooks.nsh`,修好卸载器里那个一直形同虚设的「删除应用数据」勾选框(模板原本删的是 BUNDLEID 路径 `%LOCALAPPDATA%\com.administrator.easycsv`,对真实数据目录是空操作) |
 | `docs/design/023_plugin-repository-and-in-app-install.md` | 插件仓库与应用内下载安装(**设计稿,未实现**): 建独立仓库 `easy-csv-plugins` + **minisign 签名的 `catalog.json`**(钉住各平台资产的 `size`/`sha256`);应用内「取清单 → 下载 → 校验 → 原子替换落盘到 `<数据目录>/plugins/<平台>/`」,新增 `get_plugin_catalog` / `install_plugin` / `uninstall_plugin` 三个命令与 `plugin_catalog.rs` / `plugin_install.rs` 两个模块;设置页插件页签从只读改为可下载/更新/卸载,**并修掉「缺 xan 无任何提示」**(`App.tsx` 里 `check_xan_installed` 的结果原本被丢弃)。**关键事实**:插件二进制目前**一个都没有分发渠道**(`src-tauri/.gitignore` 的 `*.exe` 排除了它们,仓库里只有 `readme.md`);**关键结论**:与 022 的 `endpoints` 不同,本设计的下载循环自己实现,可按超时多源回退;且因哈希来自签名清单,**走镜像/代理不影响完整性** |
 
+| `docs/design/024_parquet-duckdb-file-reading.md` | Parquet / DuckDB 文件读取(**已实现,2026-09-28**): 输入侧从「只能是 CSV」扩展到 `.parquet` 与 `.duckdb`(数据库文件需选表)。**决策: 不引入 arrow/parquet/duckdb crate**(`.duckdb` 存储格式无纯 Rust 读取器,与 011「不打包 DuckDB」冲突),统一用已有的 DuckDB CLI 插件做格式适配;采用**按需物化**——管道首步是 duckdb 步骤则**原生直读**(`read_parquet` / `ATTACH ... (READ_ONLY)` 暴露成虚拟关系 `input`,零转换、类型保真),否则先用 duckdb 把输入导出成临时 CSV 再走今天的两条路径(xan 只吃 CSV)。**多步 duckdb SQL 串联**:**全链都是 duckdb 步骤时单进程执行**(`CREATE TEMP TABLE _step_N AS (sql)` + 重定义 `input` 视图 + `DROP` 旧表,避免视图自引用歧义;错误按脚本行号映射回步骤,零交接文件、1 次进程启动);只有混合链跨进程才用 `COPY (sql) TO tmp.parquet (FORMAT PARQUET)` 交接(不落 CSV、类型不退化),由邻接关系驱动、无需模式开关;链中非最后 duckdb 步必须是单条查询语句,xan 步骤仍可随时插入(边界落一次 CSV)。新增模块 `src-tauri/src/tabular.rs`(`InputFormat`/`SourceRef`/`detect_input_format`/`quote_literal`/`quote_ident`/`source_view_sql`/`materialize_input_to_csv`)与两个命令 `list_duckdb_tables`、`read_tabular_file`(`TabularData` = `CsvData` 超集 + `format`/`source_table`);`execute_xan_pipeline` 增 `input_table` 参数,`pipeline_seq` 的 `current_input` 由 `PathBuf` 改 `SourceRef`。临时文件用 RAII 守卫清理(覆盖取消/报错提前返回),物化的 `-separator` 必须等于 `default_delimiter`(与下游 `-d` 注入对齐)。前端:`src/utils/fileFormat.ts`(新,`isCsvFile` 唯一真相)、`DuckdbTableDialog`(新)、`useTabs.loadCsvData` 单入口 + 分隔符重读 effect 限定 CSV、`TableNode` 非 CSV 隐藏分隔符徽标。**CSV 路径零变化**是回归红线 |
 
-> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–023 已登记。
+> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–024 已登记。
 
 ---
 
@@ -87,14 +88,15 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | 文件 | 职责 |
 |------|------|
 | `main.rs` | 二进制入口,注册插件(opener/dialog/fs/shell/window_state/notification/http/prevent_default),系统托盘,窗口事件处理 |
-| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 61 个命令) |
+| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 63 个命令) |
 | `config.rs` | `AppConfig` 类型、SQLite 持久化(app_config/ai_config 表)、AES-256-GCM 加密存储 API Key、per-provider API Key 管理、自定义 AI provider 配置(provider=custom 时存 name/base_url/models)、配置相关命令 |
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
-| `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令、`set_pipeline_cancelled` 取消执行 |
+| `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令(`input_table` 参数 + 入口分派:全链 duckdb → `run_duckdb_chain` 单进程串联;首步 duckdb + 非 CSV → 原生 `SourceRef` 直读 `pipeline_seq`;否则非 CSV 先 `materialize_input_to_csv` + `TempFiles` RAII 清理)、`pipeline_seq`(`current_input` 为 `SourceRef`;**相邻 duckdb 步骤用 `COPY → tmp.parquet` 交接**,duckdb→xan 边界照旧 CSV)、`build_duckdb_args`(按 `next_is_duckdb` 分派)、`set_pipeline_cancelled` 取消执行 |
 | `plugin_catalog.rs` | 插件清单(设计 023):取 `catalogUrls` + minisign 验签(**支持多把公钥**,轮换不锁死老版本)、`parse_catalog` 形状校验(插件名/文件名白名单、sha256 格式、平台枚举)、12h 磁盘缓存 + 离线回退标 `stale`、`generatedAt` 防回滚;`is_newer` 用 semver 判可更新;按 `PLATFORM_DIR` 选资产 |
 | `plugin_install.rs` | 插件下载安装(设计 023):逐 URL 回退下载(边下边算 sha256、超过清单声明大小即中止)、size + sha256 双校验、`.staging/<name>.part` 同盘 `rename` 原子替换、Unix 置 0o755、写安装记录、`plugin://progress` 进度事件;同插件并发安装用进程内 claim 拦截 |
 | `plugins.rs` | 外部 CLI 插件管理: `plugins` 表(plugins.db)持久化、`list_plugins`/`check_plugins` 命令、`command_executable` 按命令名解析可执行文件(插件命令走插件二进制,其余走 xan.exe)。`xan` 与 `pinyin`、`duckdb` 默认注册进插件表,列表按 xan 置顶排序。⚠️ **插件二进制不在仓库里**(`src-tauri/.gitignore` 的 `*.exe` 排除了它们,仓库内只有 `readme.md`),用户在 `<数据目录>/plugins/<平台>/` 手工放置(或装到 `PATH`)。解析顺序: 路径 → `plugins/` 目录(含 `.exe` 补全)→ `PATH`,**插件目录优先于 `PATH`**。插件目录: Windows/Linux 为 `<安装目录>/plugins/<平台>/`(安装目录恒为 `<用户选择路径>/EasyCsv`,AppImage 为 `.AppImage` 所在目录下的 `EasyCsv/`),macOS 为 `~/Library/Application Support/EasyCsv/plugins/<平台>/`。应用内下载见 `docs/design/023_plugin-repository-and-in-app-install.md` |
-| `csv.rs` | `CsvData` 类型、`read_csv_file`(自动检测分隔符)/`profile_csv`/`diff_csv_files`/`convert_csv_encoding`/`separate_csv`/`probe_csv_file` 命令 |
+| `csv.rs` | `CsvData` 类型、`read_csv_file`(自动检测分隔符)/`profile_csv`/`diff_csv_files`/`convert_csv_encoding`/`separate_csv`/`probe_csv_file` 命令。`read_csv_sync` 为 `pub(crate)`,被 `tabular.rs` 的 `read_tabular_file` 复用(024) |
+| `tabular.rs` | 非 CSV 表格输入(024):`InputFormat`(`detect_input_format` 按扩展名判 parquet/duckdb/csv,未知一律 Csv)+ `SourceRef`(Csv/Parquet/Duckdb{path,table})+ SQL 转义(`quote_literal`/`quote_ident`/`path_literal`/`qualified_ident`)+ `list_duckdb_tables`(只读 ATTACH 列表)+ `read_tabular_file`(`TabularData` = CsvData 超集 + `format`/`source_table`;CSV 委托 `read_csv_sync`)+ `materialize_input_to_csv`(xan 只吃 CSV,`-separator` 对齐 default_delimiter)+ **`build_duckdb_chain_sql`**(全链 duckdb 单进程脚本:临时表 + 重定义 `input` 视图 + DROP,返回行号→步骤映射)+ `step_for_line`/`first_error_line`(错误归因)。所有 DuckDB 调用走 `plugins::resolve_plugin_executable("duckdb")` |
 | `storage.rs` | 历史记录、最近文件、数据概况缓存、版本/血缘存储、窗口标题、开发者工具命令 |
 | `ai.rs` | AI 对话代理: `call_ai` 命令,转发到 DeepSeek / Qwen / GLM |
 | `ai_memory.rs` | AI 记忆持久化(SQLite): 对话历史、反馈记录、纠正规则的 CRUD + 清除 |
@@ -195,12 +197,14 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_correction` | 保存纠正规则 |
 | `clear_conversations` / `clear_feedback` / `clear_corrections` | 清除对应表全部数据 |
 
-### Tauri 命令清单(前端可调用,共 61 个)
+### Tauri 命令清单(前端可调用,共 63 个)
 
 | 命令 | 模块 | 功能 |
 |------|------|------|
 | `read_csv_file` | csv | 读取 CSV 文件,返回表头 + 前51行预览;`delimiter` 为空时自动检测分隔符并回传来源/置信度/列数。设计:`docs/design/018_open-file-delimiter-detection.md` |
-| `execute_xan_pipeline` | pipeline | 执行多步骤 xan 管道(核心命令) |
+| `read_tabular_file` | tabular | 按 `TabularData`(`CsvData` 超集 + `format`/`source_table`)读取任意表格输入(024):CSV 委托 `read_csv_file` 同源逻辑;`.parquet`/`.duckdb` 经 DuckDB CLI `SELECT * … LIMIT` 有界预览,`.duckdb` 需传选中表。设计:`docs/design/024_parquet-duckdb-file-reading.md` |
+| `list_duckdb_tables` | tabular | 列出 `.duckdb` 文件的用户表/视图(只读 `ATTACH` + information_schema),供打开时的选表对话框;0 张表报错、1 张自动选中、多张弹 `DuckdbTableDialog`。设计:`docs/design/024_parquet-duckdb-file-reading.md` |
+| `execute_xan_pipeline` | pipeline | 执行多步骤 xan 管道(核心命令);`inputTable` 携带 `.duckdb` 输入选中的表。024 分派见 `pipeline.rs` 模块行 |
 | `set_pipeline_cancelled` | pipeline | 取消正在执行的管道(全局标志 + kill 子进程) |
 | `profile_csv` | csv | 调用 `xan stats` 生成数据概况统计 |
 | `diff_csv_files` | csv | 对比两个 CSV 文件(Myers diff,分页返回) |
@@ -261,7 +265,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | 文件 | 职责 | 测试数 |
 |------|------|--------|
 | `commands.test.ts` | **核心测试**: 覆盖全部 59 个 xan 命令的参数构建正确性(命令名、参数名、值、isPositional、默认值) | ~76 |
-| `invoke.test.ts` | App.tsx 中所有 invoke 调用模式验证(read_csv_file、配置读写、历史记录、错误处理、历史重建) | ~20 |
+| `invoke.test.ts` | App.tsx 中所有 invoke 调用模式验证(read_csv_file、read_tabular_file、配置读写、历史记录、错误处理、历史重建) | ~21 |
 | `BatchFilterHooks.test.ts` | Batch Filter 执行逻辑: 文件名清理、正则构建、文本/数值筛选 invoke 形状、频率提取、多值批处理 | ~31 |
 | `BatchConvertHooks.test.ts` | 批量格式转换: globToRegex、getBaseName、getOutputDir、CSV↔XLSX↔JSON 转换 invoke 模式 | ~37 |
 | `CommandPalette.test.tsx` | 命令面板: 搜索过滤、键盘导航、选中执行、Esc 关闭 | ~11 |
@@ -269,7 +273,8 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `HelpDialog.test.tsx` | 帮助对话框搜索与打开 | ~2 |
 | `HelpMarkdown.test.tsx` | 自定义 Markdown 渲染器 | ~3 |
 | `layout.test.ts` | 连线布局工具: `resolveHandles` 四方向选择、`handleAnchor`/`getEdgeEndpoints`、`pickStartHandle`、`buildConnectPreviewPath`(贝塞尔预览)、`transformBezierPath` | ~27 |
-| `useTabsDelimiter.test.ts` | 打开文件的分隔符解析(设计 018): 自动检测开关的开/关、模式变化后重读当前标签、导入分隔符一次性覆盖、非 CSV 不读 | 6 |
+| `useTabsDelimiter.test.ts` | 打开文件的分隔符解析(设计 018)+ 表格格式分派(设计 024): 018 的自动检测开关/模式重读/一次性覆盖/非 CSV 不读;024 的 parquet 无分隔符簿记、非 CSV 不随分隔符重读、duckdb 单表自动选/非 main schema 限定名/多表回调/取消打开/空库报错/**打开失败经 `onOpenError` 可见**(缺插件、parquet 读取失败;用户取消不算错误) | 15 |
+| `fileFormat.test.ts` | `detectTabularFormat` 扩展名识别(大小写、`.db` 别名、未知 → null)、`isCsvFile`、`duckdbTableName`(设计 024) | 6 |
 | `delimiterMode.test.ts` | 分隔符单一状态的换算(设计 018 §3.9): 设置 ⇄ 界面值、六种模式往返一致(锁住设置页与输入节点不漂移) | 6 |
 | `SettingsDelimiterControl.test.tsx` | 设置页分隔符控件(设计 018 §3.9): auto/锁定两种显示、6 个选项与顺序、选择回调、「恢复默认」复位为 auto | 6 |
 | `initialParams.test.ts` | 命令入口预填参数纯函数 `buildCommandInitialParams`(设计 019 §3.1): 各画布入口(筛选/排序/文本/数值/切割/补位/替换/日期)与旧对话框默认输出一致、无列时不猜 | 28 |
@@ -284,7 +289,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `SplitLinesDialog.test.tsx` | 按行拆分对话框(设计 021): 行数/无表头/输出目录选项、校验拦截、上次记录回填与展示、打开路径、目录失效 | 9 |
 | `UpdateDialog.test.tsx` | 更新对话框: 进度条落在标题栏(不在可滚动正文里)、字节数展示、未安装时无进度、安装中 Esc 与遮罩点击均不关闭 | 6 |
 
-> 全量以 `pnpm test` 为准(当前 27 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
+> 全量以 `pnpm test` 为准(当前 29 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
 
 ---
 
@@ -323,6 +328,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `types/dialog.ts` | **对话框共享类型**(019 §3.2 下沉,解除 `CommandDialog` ⇄ `commands/` 循环依赖): `CommandDialogType`(61 个命令联合类型)、`CommandDialogState`、`CommandFormProps`、`COMMAND_LABELS`;以及画布入口上下文 `CommandEntryContext` 与 `TextTransformKind`/`NumberTransformKind`/`SliceKind`/`PadKind`/`MapScaffold` |
 | `generated/help-docs.ts` | 自动生成的命令帮助文档(中英文),由 `scripts/generate-help-docs.js` 生成,**禁止手改** |
 | `utils/delimiterMode.ts` | 分隔符单一状态的两个换算: `delimiterModeFromSettings(autoDetect, delimiter)`(设置 → 界面值)与 `settingsPatchForMode(mode)`(界面值 → 要落库的设置) |
+| `utils/fileFormat.ts` | 表格输入格式的唯一真相(024): `detectTabularFormat`(csv/parquet/duckdb,未知 → null)、`isCsvFile`、`duckdbTableName`(非 main schema 补限定名)、`listDuckdbTables`(invoke `list_duckdb_tables`) |
 | `utils/session.ts` | 会话快照序列化: `stripStepCommand`/`reconstructStep`/`serializeTabSnapshot`/`deserializeTabSnapshot` |
 | `utils/format.ts` | `formatDateTime` / `formatElapsed` / `formatBytes`(后两者由 020、022 从业务文件上提复用) |
 | `utils/params.ts` · `utils/platform.ts` · `utils/separateHistory.ts` · `utils/executionHistory.ts` · `utils/versionDiff.ts` · `utils/panelDock.ts` · `utils/csv.ts` | 其余纯函数工具(参数构造、平台判断、拆分结果/执行历史持久化、版本差异、面板停靠、CSV 工具) |
@@ -378,7 +384,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `hooks/fileIO/` | `useFileOpen`/`useFileSave`/`useImportExport` + `pipelineScript.ts`(.sh/.ps1 内容纯函数生成) |
 | `hooks/charts/processChartData.ts` | 图表数据后处理纯函数 |
 | `useSession.ts` | 会话持久化: 启动恢复标签页、防抖自动保存(800ms)、beforeunload 兜底保存;导出 `flushSession()`(跳过防抖,更新安装前调用) |
-| `useTabs.ts` | 标签页管理: 标签增删改、当前标签、管道状态读写、**文件读取的分隔符解析**: `loadCsvData(tabId, path, forcedDelimiter?)`。设计: `docs/design/018_open-file-delimiter-detection.md` |
+| `useTabs.ts` | 标签页管理: 标签增删改、当前标签、管道状态读写、**文件读取的格式分派**: `loadCsvData(tabId, path, forcedDelimiter?)` 经 `read_tabular_file` 统一读 CSV/parquet/duckdb(024),分隔符簿记与重读 effect 仅限 CSV;`.duckdb` 走 `list_duckdb_tables` → 单表自动选 / 多表经注入式 `requestTableSelection` 回调弹 `DuckdbTableDialog`。设计: `docs/design/018_open-file-delimiter-detection.md` + `docs/design/024_parquet-duckdb-file-reading.md` |
 | `usePipelineState.ts` | 管道状态: `updateTabPipeline` 单点更新管道+edges,撤销/重做状态管理 |
 | `usePipelineVersions.ts` | 管道版本控制: 保存/恢复/删除版本、标签管理、步骤序列化与重建 |
 | `usePipelineTemplates.ts` | 管道模板库(F4) |
@@ -417,7 +423,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 文件 | 职责 |
 |------|------|
 | `pipeline/FlowPanel.tsx` | **可视化管道编辑器主组件**,组合子组件,管理状态和事件处理;右键拖拽连线(贝塞尔实时预览)、切刀、节点拖拽 |
-| `pipeline/nodes/TableNode.tsx` | 输入数据表格节点,支持表头重命名和右键菜单;四方向连接点;表头行的**分隔符徽标**(设计 018) |
+| `pipeline/nodes/TableNode.tsx` | 输入数据表格节点,支持表头重命名和右键菜单;四方向连接点;表头行的**分隔符徽标**(设计 018);非 CSV 输入(parquet/duckdb)改为只读格式徽标、不显示分隔符控件(设计 024) |
 | `pipeline/nodes/PipelineStepNode.tsx` | 管道步骤节点,支持别名编辑、参数展示、切割动画 |
 | `pipeline/nodes/ResultTableNode.tsx` | 结果表节点(F1) |
 | `pipeline/nodes/index.ts` | 节点类型注册表(nodeTypes) |
@@ -474,6 +480,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 |------|------|
 | `file/SeparateCSVDialog.tsx` | 拆分好/坏行: 输入探测、分隔符自动检测/手选/设为默认、期望列数/跳过行/引号/无表头/流式、上次结果(localStorage)+ 打开路径 |
 | `file/SplitLinesDialog.tsx` | 按行拆分(设计 021): 输入文件、输出目录、每个文件行数、无表头、上次记录(回填选项 + 打开输出目录 + 清除记录 + 目录失效提示);不解析 CSV,故无分隔符/探测选项 |
+| `file/DuckdbTableDialog.tsx` | `.duckdb` 选表对话框(设计 024): 打开多表数据库时由 `useTabs` 的注入式回调唤起,列出 `schema.table` + 类型;单表库自动选中不经此对话框,Esc/遮罩取消 = 放弃打开 |
 | `file/CsvDiffDialog.tsx` | CSV 双文件对比(Ctrl+D),分页避免卡顿 |
 | `file/CsvEncodingDialog.tsx` | CSV 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1);上次记录(完成时间/耗时/编码对/字节数 + 打开路径 + 清除记录 + 输出文件失效提示),打开时回填输入输出路径与源/目标编码。设计:`docs/design/020_encoding-conversion-history.md` |
 | `file/PipelineTemplateDialog.tsx` | 管道模板库对话框(F4) |
@@ -539,6 +546,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 修改 CSV 预览读取 | `src-tauri/src/csv.rs` 中的 `read_csv_file` 函数 |
 | 修改打开文件的分隔符检测(工作流输入节点) | `src-tauri/src/csv.rs`(`read_csv_file` 的 `resolve_read_delimiter`/`read_csv_sync`)+ `src/hooks/useTabs.ts`(`loadCsvData` + 全局模式重载规则)+ `src/components/ui/DelimiterModeSelect.tsx`(共用控件)+ `src/modules/pipeline/nodes/TableNode.tsx`(徽标)+ `src/modules/pipeline/FlowPanel.tsx`/`src/modules/data-preview/HomeView.tsx`/`src/app/App.tsx`(透传)+ `src/utils/delimiterMode.ts`(设置 ⇄ 界面值换算)+ `src/hooks/execution/resolveDelimiter.ts` + `src/hooks/usePipelineTabs.ts`(`resolveRunDelimiter`,保证执行与预览同源)。设计:`docs/design/018_open-file-delimiter-detection.md` |
 | 修改分隔符自动检测总开关 / 默认分隔符(设置页 ⇄ 输入节点同步) | `src-tauri/src/config.rs`(`auto_detect_delimiter` + `get/set_auto_detect_delimiter`、`get/set_default_delimiter`)+ `src/hooks/useAppSettings.ts` + `src/components/setting/SettingsTabContent.tsx`(分隔符区块)+ `src/components/ui/DelimiterModeSelect.tsx` + `src/app/App.tsx`(`delimiterMode`/`onDelimiterModeChange`,含即时落库)。设计:`docs/design/018_open-file-delimiter-detection.md` §3.9 |
+| 修改 Parquet / DuckDB 文件读取(打开/预览/选表) | `src-tauri/src/tabular.rs`(`detect_input_format`/`read_tabular_file`/`list_duckdb_tables`)+ `src/utils/fileFormat.ts` + `src/hooks/useTabs.ts`(`loadCsvData` + 注入式选表回调)+ `src/modules/dialogs/file/DuckdbTableDialog.tsx` + `src/modules/pipeline/nodes/TableNode.tsx`(格式徽标)+ `src/hooks/fileIO/useFileOpen.ts`(DuckDB filter)+ `src/app/App.tsx`(回调装配与对话框渲染)+ `src/utils/session.ts`(`inputFormat`/`sourceTable` 快照)。设计:`docs/design/024_parquet-duckdb-file-reading.md` |
+| 修改 duckdb SQL 串联 / 管道输入物化 | `src-tauri/src/pipeline.rs`(`execute_xan_pipeline` 入口分派 + `run_duckdb_chain`/`build_duckdb_args`/`pipeline_seq` 的 `SourceRef` 与 parquet 交接)+ `src-tauri/src/tabular.rs`(`build_duckdb_chain_sql`/`materialize_input_to_csv`/`source_view_sql`/`chain_query_sql`)+ `src/hooks/execution/executeBranch.ts`(`inputTable`)。设计:`docs/design/024_parquet-duckdb-file-reading.md` |
 | 修改 CSV 对比功能 | `src/modules/dialogs/file/CsvDiffDialog.tsx` + `src-tauri/src/csv.rs`(`diff_csv_files`) |
 | 修改 CSV 编码转换 | `src/modules/dialogs/file/CsvEncodingDialog.tsx` + `src-tauri/src/csv.rs`(`convert_csv_encoding`)+ `src/utils/encodingHistory.ts`(上次记录持久化)。设计:`docs/design/020_encoding-conversion-history.md` |
 | 修改拆分好/坏行 | `src/modules/dialogs/file/SeparateCSVDialog.tsx` + `src-tauri/src/csv.rs`(`separate_csv`/`separate_stream`/`probe_csv_file`)+ `src/hooks/useCsvProbe.ts` + `src/utils/separateHistory.ts` + `src-tauri/src/storage.rs`(`reveal_paths`) |

@@ -45,6 +45,10 @@ export interface TabSnapshot {
   delimiterSource?: DelimiterSource;
   delimiterConfidence?: "high" | "low" | "none";
   delimiterMode?: DelimiterMode;
+  /** Input format of the opened file (design 024); absent for unknown types. */
+  inputFormat?: string;
+  /** Chosen table when the input is a `.duckdb` file. */
+  sourceTable?: string;
   headers?: string[];
   data?: string[][];
   inputPosition?: { x: number; y: number };
@@ -67,6 +71,8 @@ export function serializeTabSnapshot(tab: PipelineTab): TabSnapshot {
     delimiterSource: tab.delimiterSource,
     delimiterConfidence: tab.delimiterConfidence,
     delimiterMode: tab.delimiterMode,
+    inputFormat: tab.inputFormat,
+    sourceTable: tab.sourceTable,
     headers: tab.headers,
     data: tab.data,
     inputPosition: tab.inputPosition,
@@ -101,6 +107,8 @@ export function deserializeTabSnapshot(snap: any): PipelineTab | null {
     delimiterMode:
       snap.delimiterMode ??
       (snap.defaultDelimiter ? (snap.defaultDelimiter as string) : undefined),
+    inputFormat: snap.inputFormat,
+    sourceTable: snap.sourceTable,
     edges: snap.edges || [],
     inputPosition: snap.inputPosition,
     isSettings: snap.isSettings,

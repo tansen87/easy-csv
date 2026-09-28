@@ -90,8 +90,9 @@ fn resolve_read_delimiter(
 }
 
 /// Synchronous body of [`read_csv_file`], kept separate so the delimiter
-/// resolution logic can be unit tested without an async runtime.
-fn read_csv_sync(
+/// resolution logic can be unit tested without an async runtime. Also reused
+/// by `tabular::read_tabular_file` for CSV inputs (design 024).
+pub(crate) fn read_csv_sync(
   file_path: &str,
   delimiter: Option<&str>,
   fallback_delimiter: Option<&str>,

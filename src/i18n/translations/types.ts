@@ -449,6 +449,14 @@ export interface Translations {
   splitLinesNoResult: string;
   splitLinesInvalidLinesPerFile: string;
 
+  // DuckDB table picker
+  duckdbSelectTable: string;
+  duckdbNoTables: string;
+  duckdbTableHint: string;
+  duckdbPluginRequired: string;
+  inputFormatParquet: string;
+  inputFormatDuckdb: string;
+
   // BatchFilterDialog
   batchFilter: string;
   filterColumn: string;

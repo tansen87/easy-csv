@@ -5,7 +5,7 @@ import { DuckdbEditor } from "@/components/expression/DuckdbEditor";
 import { useLanguage } from "@/i18n";
 
 export function DuckDBForm(props: CommandFormProps) {
-  const { commandDialog, setCommandDialog, headers } = props;
+  const { commandDialog, setCommandDialog, headers, sourceTable } = props;
   const { effectiveLanguage } = useLanguage();
   const isZh = effectiveLanguage === "zh";
   const sql = (commandDialog.params.sql as string) || "";
@@ -23,6 +23,7 @@ export function DuckDBForm(props: CommandFormProps) {
               updateParam(commandDialog, setCommandDialog, "sql", v)
             }
             columns={headers ?? []}
+            sourceTable={sourceTable}
             autoFocus
           />
         </div>

@@ -69,6 +69,39 @@ describe("App.tsx invoke call patterns", () => {
     });
   });
 
+  describe("read_tabular_file", () => {
+    it("passes the selected table for .duckdb inputs (design 024)", async () => {
+      mockInvoke.mockResolvedValue({
+        headers: ["id"],
+        rows: [["1"]],
+        columns: 1,
+        format: "duckdb",
+        source_table: "sales",
+      });
+
+      const result = await invoke<{ format: string; source_table?: string }>(
+        "read_tabular_file",
+        {
+          filePath: "/data/db.duckdb",
+          table: "sales",
+          delimiter: null,
+          fallbackDelimiter: ",",
+          limit: 31,
+        },
+      );
+
+      expect(result.format).toBe("duckdb");
+      expect(result.source_table).toBe("sales");
+      expect(mockInvoke).toHaveBeenCalledWith("read_tabular_file", {
+        filePath: "/data/db.duckdb",
+        table: "sales",
+        delimiter: null,
+        fallbackDelimiter: ",",
+        limit: 31,
+      });
+    });
+  });
+
   describe("load_recent_files / save_recent_files", () => {
     it("should load recent files", async () => {
       const filesData = JSON.stringify([

@@ -26,6 +26,9 @@ export function buildPipelineCliLines(
     // DuckDB steps are emitted as `duckdb -c "<sql>"` rather than a xan
     // subcommand. The in-app `input` virtual relation has no standalone
     // equivalent; exported scripts rely on the user adapting the data source.
+    // Non-CSV tabular inputs (parquet / .duckdb, design 024) have no script
+    // equivalent either — prepend e.g. `duckdb -c "SELECT * FROM
+    // read_parquet('…')"` or a `xan from` step yourself.
     if (step.command.id === "duckdb") {
       const sql = String(step.parameters.sql || "").trim();
       // DuckDB query results are always emitted as CSV (`-csv`) with a header
