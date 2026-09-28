@@ -203,6 +203,30 @@ P1 清单里有一半其实在 P0 就落地了(更新检测 + 「更新」按钮
 - ⚠️ 期间发现 `PluginSetupDialog.tsx` 在本次会话中被**外部编辑器/格式化器改写**(图标 import 与
   按钮图标被剥离,`openingFolder` 逻辑保留)。已恢复 `Loader2`/`Download`/`FolderOpen` 图标。
 
+**CI 修复(2026-09-28):Windows job 验签 fixture 失败 —— 根因是 CRLF**
+
+GitHub Actions 只有 `windows-latest` 红,两例:
+`the_published_catalog_verifies_against_the_embedded_key` 与 `a_rotation_can_trust_several_keys`,
+文案 `"the catalog signature does not match any trusted key"`(Linux / macOS 全绿)。
+
+- **根因:Windows runner 的 `core.autocrlf=true`**。`git checkout` 把
+  `src-tauri/tests/fixtures/plugin-catalog/catalog.json` 写成 CRLF(实测多出 **168 个 `\r`**),
+  而 `include_str!` 拿到的是**原始字节**、minisign 签名覆盖的也是精确字节 → 必然验签失败。
+  `plugin-signing.pub` 同样被转成 CRLF,但它走 base64 解码时 `\r` 被忽略 —— **只有清单的字节敏感**。
+- **一次到位的本地复现**:把 fixture 换成 CRLF 版本再跑 `cargo test --lib plugin_catalog`,
+  两例立刻以**同样的行号、同样的文案**失败,与 CI 输出逐字一致。
+- **修法**:仓库根新增 `.gitattributes`,把这 3 个文件钉成 `text eol=lf`
+  (`plugin-signing.pub` / `catalog.json` / `catalog.json.sig`)。选 `eol=lf` 而非 `-text`:
+  前者在**检出与提交两侧**都把行尾拉回 LF(Windows 上被编辑器写成 CRLF 也会在 `git add` 时归一化),
+  且文件仍是文本、照常 diff。已验证:`core.autocrlf=true` 下重新检出 → CR 字节归零、6134 字节不变。
+- **不改代码去容忍 CRLF**:验签的职责就是拒绝"字节被改过",运行时验的是网络字节;
+  在测试里做行尾归一化等于把"产物被悄悄改写"这个真问题盖掉。**修仓库卫生,不修判据。**
+- 附带:测试里加 `signed_fixture_catalog()`,只在**期望验签成功**的两例上断言 fixture 无 `\r`
+  (其余用例的行尾与该断言无关,不扩大失败面)。它把"签不出来"翻译成真正的原因 ——
+  本次排查里,那条误导性的 `does not match any trusted key` 差点把人引去查密钥轮换。
+- ⚠️ **插件仓库不需要同样处理**:`catalog.json` 的生成 / 签名 / `git add -f` 全在 `ubuntu-latest`
+  上(见附录 A),没有 Windows 侧的行尾入口。
+
 ---
 
 ## 0. 结论速览

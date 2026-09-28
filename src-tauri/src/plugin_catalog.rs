@@ -648,6 +648,20 @@ mod tests {
   const FIXTURE_CATALOG: &str = include_str!("../tests/fixtures/plugin-catalog/catalog.json");
   const FIXTURE_SIGNATURE: &str = include_str!("../tests/fixtures/plugin-catalog/catalog.json.sig");
 
+  /// The signature covers the fixture's exact bytes, so a line-ending rewrite
+  /// silently invalidates it. `.gitattributes` pins these files to LF, and this
+  /// assertion turns the resulting "the catalog signature does not match any
+  /// trusted key" — which sends you hunting for a key rotation that never
+  /// happened — into the actual cause. Only used where verification is expected
+  /// to *succeed*; elsewhere the fixture's line endings are irrelevant.
+  fn signed_fixture_catalog() -> &'static [u8] {
+    assert!(
+      !FIXTURE_CATALOG.as_bytes().contains(&b'\r'),
+      "the catalog fixture must keep its LF line endings: its bytes are signed"
+    );
+    FIXTURE_CATALOG.as_bytes()
+  }
+
   #[test]
   fn base64_round_trips_known_vectors() {
     assert_eq!(base64_decode("aGVsbG8="), b"hello");
@@ -664,7 +678,7 @@ mod tests {
   fn the_published_catalog_verifies_against_the_embedded_key() {
     let keys = trusted_public_keys();
     assert!(!keys.is_empty(), "plugin-signing.pub must contain a key");
-    verify_catalog(FIXTURE_CATALOG.as_bytes(), FIXTURE_SIGNATURE, &keys)
+    verify_catalog(signed_fixture_catalog(), FIXTURE_SIGNATURE, &keys)
       .expect("the published catalog must verify");
   }
 
@@ -700,7 +714,7 @@ mod tests {
     let updater_key = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENERTZDMjNTRjQxMDIwMzcKUldRM0lCRDBQc0xtemRMY3RaV2FBeENMOTNVR0tkd1NqcmFMenowa3BPRGwzUnVJZlBOVmIwZ1YK";
     let mut keys = vec![updater_key.to_string()];
     keys.extend(trusted_public_keys());
-    assert!(verify_catalog(FIXTURE_CATALOG.as_bytes(), FIXTURE_SIGNATURE, &keys).is_ok());
+    assert!(verify_catalog(signed_fixture_catalog(), FIXTURE_SIGNATURE, &keys).is_ok());
   }
 
   #[test]
