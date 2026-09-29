@@ -3110,7 +3110,10 @@ b/sub/report_2024_03.xlsx#Notes,,,,hello\n";
   }
 
   #[test]
-  fn xan_merge_reports_xan_absence_and_skips_unreadable_workbooks() {
+  fn xan_merge_warns_and_skips_unreadable_workbooks() {
+    if xan_for_test().is_none() {
+      return;
+    }
     let dir = unique_dir("xan-merge-warnings");
     fixture::write_workbook(
       &dir.join("in/good.xlsx"),
