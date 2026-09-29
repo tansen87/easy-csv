@@ -134,9 +134,21 @@ export const enDialog = {
   mergeExcelOutputSheetNote:
     'The output workbook has a single sheet named "Sheet1" (a limitation of the Excel writer).',
   mergeExcelShape: "Merge mode",
-  mergeExcelShapeSingle: "Merge into one table",
-  mergeExcelShapeBySheet: "One file per sheet name",
-  mergeExcelShapeMultiSheet: "Merge into a multi-sheet workbook",
+  mergeExcelShapeSingle: "One merged table",
+  mergeExcelShapeBySheet: "Files by sheet name",
+  mergeExcelShapeMultiSheet: "One multi-sheet file",
+  mergeExcelShapeExampleTitle:
+    "Given t1.xlsx (sheets a1, a2) + t2.xlsx (sheets a1, a2):",
+  mergeExcelShapeExampleSingle:
+    "1 output file merged.xlsx: a single worksheet with all data stacked",
+  mergeExcelShapeExampleBySheetTitle: "2 output files:",
+  mergeExcelShapeExampleBySheet1:
+    "a1.xlsx: 1 worksheet — t1's a1 and t2's a1 stacked together",
+  mergeExcelShapeExampleBySheet2:
+    "a2.xlsx: 1 worksheet — t1's a2 and t2's a2 stacked together",
+  mergeExcelShapeExampleMultiTitle: "1 output file merged.xlsx: 2 worksheets -",
+  mergeExcelShapeExampleMulti1: "“t1” from t1.xlsx's sheet a1",
+  mergeExcelShapeExampleMulti2: "“t2” from t2.xlsx's sheet a1",
   mergeExcelSheetFilterTitle:
     "Pick the sheets to merge (one file per selected name)",
   mergeExcelSheetFilterEmpty: "Select at least one sheet",

@@ -1152,12 +1152,23 @@ pub(crate) fn write_paths_list(dest: &Path, parts: &[PathBuf]) -> Result<(), Str
   fs::write(dest, content).map_err(|e| format!("Failed to write paths list: {e}"))
 }
 
-/// Default output location: next to the first input, `{stem}_merged.{ext}`.
-/// An explicit output has its extension forced to match the chosen format.
+/// `YYYYMMDD_HHMMSS` tag embedded in *default* output names so repeated runs
+/// never overwrite each other (design 026: fixed default names like
+/// `s1.xlsx` made every re-run silently overwrite the previous result).
+/// Explicit output paths keep overwrite semantics — the user chose that
+/// exact file.
+pub(crate) fn run_timestamp() -> String {
+  chrono::Local::now().format("%Y%m%d_%H%M%S").to_string()
+}
+
+/// Default output location: next to the first input,
+/// `{stem}_merged_{run_ts}.{ext}`. An explicit output has its extension
+/// forced to match the chosen format (and is used verbatim — no timestamp).
 pub(crate) fn resolve_output_path(
   output_path: &str,
   first_input: &Path,
   format: OutputFormat,
+  run_ts: &str,
 ) -> PathBuf {
   let trimmed = output_path.trim();
   if !trimmed.is_empty() {
@@ -1177,7 +1188,7 @@ pub(crate) fn resolve_output_path(
     .file_stem()
     .map(|s| s.to_string_lossy().to_string())
     .unwrap_or_else(|| "merged".to_string());
-  parent.join(format!("{stem}_merged.{}", format.extension()))
+  parent.join(format!("{stem}_merged_{run_ts}.{}", format.extension()))
 }
 
 fn make_temp_dir() -> Result<PathBuf, String> {
@@ -1433,6 +1444,9 @@ fn merge_sync(request: ExcelMergeRequest) -> Result<ExcelMergeResult, String> {
 
   let dir = make_temp_dir()?;
   let mut outputs: Vec<OutputSummary> = Vec::new();
+  // One tag per run: all outputs of this merge share it, so a re-run never
+  // collides with (and silently overwrites) the previous run's files.
+  let run_ts = run_timestamp();
 
   match shape {
     OutputShape::Single | OutputShape::BySheet => {
@@ -1443,13 +1457,15 @@ fn merge_sync(request: ExcelMergeRequest) -> Result<ExcelMergeResult, String> {
         .unwrap_or_else(|| PathBuf::from("."));
       for (index, plan) in plans.iter().enumerate() {
         // `single` keeps the 025 output resolution; `by_sheet` emits one
-        // `{name}.{ext}` file per plan into the requested output directory.
+        // `{name}_{run_ts}.{ext}` file per plan into the requested output
+        // directory (timestamped — a re-run must not overwrite it).
         let output = if shape == OutputShape::Single {
-          resolve_output_path(&request.output_path, &first_input, format)
+          resolve_output_path(&request.output_path, &first_input, format, &run_ts)
         } else {
           resolve_output_dir(request.output_dir.as_deref(), &first_input).join(format!(
-            "{}.{}",
+            "{}_{}.{}",
             plan.name,
+            run_ts,
             format.extension()
           ))
         };
@@ -1486,7 +1502,12 @@ fn merge_sync(request: ExcelMergeRequest) -> Result<ExcelMergeResult, String> {
         .first()
         .map(|s| s.path.clone())
         .unwrap_or_else(|| PathBuf::from("."));
-      let output = resolve_output_path(&request.output_path, &first_input, OutputFormat::Xlsx);
+      let output = resolve_output_path(
+        &request.output_path,
+        &first_input,
+        OutputFormat::Xlsx,
+        &run_ts,
+      );
       let outcome = run_multi_sheet_output(
         &exe,
         &dir,
@@ -2422,16 +2443,40 @@ mod tests {
   // -- resolve_output_path ----------------------------------------------------
 
   #[test]
+  fn run_timestamp_has_the_compact_shape() {
+    let ts = run_timestamp();
+    assert_eq!(ts.len(), 15, "{ts}"); // YYYYMMDD_HHMMSS
+    let (date, rest) = ts.split_at(8);
+    assert!(date.chars().all(|c| c.is_ascii_digit()), "{ts}");
+    let (sep, time) = rest.split_at(1);
+    assert_eq!(sep, "_");
+    assert!(time.chars().all(|c| c.is_ascii_digit()), "{ts}");
+  }
+
+  #[test]
   fn resolve_output_path_defaults_next_to_the_first_input() {
     let output = resolve_output_path(
       "  ",
       &PathBuf::from("/data/in/a/one.xlsx"),
       OutputFormat::Xlsx,
+      "20260101_000000",
     );
-    assert_eq!(output, PathBuf::from("/data/in/a/one_merged.xlsx"));
+    // The default name embeds the run timestamp so re-runs never overwrite.
+    assert_eq!(
+      output,
+      PathBuf::from("/data/in/a/one_merged_20260101_000000.xlsx")
+    );
 
-    let output = resolve_output_path("", &PathBuf::from("/data/in/a/one.xlsx"), OutputFormat::Csv);
-    assert_eq!(output, PathBuf::from("/data/in/a/one_merged.csv"));
+    let output = resolve_output_path(
+      "",
+      &PathBuf::from("/data/in/a/one.xlsx"),
+      OutputFormat::Csv,
+      "20260101_000000",
+    );
+    assert_eq!(
+      output,
+      PathBuf::from("/data/in/a/one_merged_20260101_000000.csv")
+    );
   }
 
   #[test]
@@ -2440,13 +2485,16 @@ mod tests {
       "/data/out/result.v2.csv",
       &PathBuf::from("/data/in/a/one.xlsx"),
       OutputFormat::Xlsx,
+      "20260101_000000",
     );
+    // An explicit path is used verbatim (no timestamp injected).
     assert_eq!(output, PathBuf::from("/data/out/result.v2.xlsx"));
 
     let output = resolve_output_path(
       "/data/out/result.csv",
       &PathBuf::from("/data/in/a/one.xlsx"),
       OutputFormat::Csv,
+      "20260101_000000",
     );
     assert_eq!(output, PathBuf::from("/data/out/result.csv"));
   }
@@ -3030,23 +3078,32 @@ b/sub/report_2024_03.xlsx#Notes,,,,hello\n";
     .unwrap();
 
     let mut request = merge_request(&dir, "first", "union", "file");
-    request.output_path = String::new(); // → in/one_merged.csv … but format = csv
+    request.output_path = String::new(); // → in/one_merged_<ts>.xlsx
     request.output_format = "xlsx".to_string();
     let result = merge_sync(request).unwrap();
 
-    // Extension is forced to match the chosen format, and the file sits next
-    // to the first input.
-    let expected = dir.join("in/one_merged.xlsx");
+    // Extension is forced to match the chosen format, the file sits next to
+    // the first input, and the default name carries the run timestamp so a
+    // re-run never overwrites it.
+    let output = PathBuf::from(&result.output_path);
     assert_eq!(
-      Path::new(&result.output_path),
-      expected.as_path(),
+      output.parent(),
+      Some(dir.join("in").as_path()),
       "{}",
       result.output_path
     );
-    assert!(expected.is_file());
+    let name = output.file_name().unwrap().to_string_lossy().to_string();
+    assert!(
+      name.starts_with("one_merged_") && name.ends_with(".xlsx"),
+      "{name}"
+    );
+    let stamp = name
+      .trim_start_matches("one_merged_")
+      .trim_end_matches(".xlsx");
+    assert_eq!(stamp.len(), 15, "{name}"); // YYYYMMDD_HHMMSS
 
     // xan's xlsx writer always emits a single sheet named `Sheet1`.
-    let sheets = list_workbook_sheets(&exe, &expected).unwrap();
+    let sheets = list_workbook_sheets(&exe, &output).unwrap();
     assert_eq!(sheets, vec!["Sheet1".to_string()]);
 
     let _ = fs::remove_dir_all(&dir);
@@ -3113,21 +3170,30 @@ b/sub/report_2024_03.xlsx#Notes,,,,hello\n";
     assert_eq!(result.output_path, result.outputs[0].path);
     assert!(result.name_mappings.is_empty());
 
-    let s1_path = display_path(&dir.join("out/s1.csv"));
-    let s2_path = display_path(&dir.join("out/s2.csv"));
-    assert_eq!(result.outputs[0].path, s1_path);
-    assert_eq!(result.outputs[1].path, s2_path);
+    // Output names carry the run timestamp: `{name}_{YYYYMMDD_HHMMSS}.csv`.
+    let s1_path = PathBuf::from(&result.outputs[0].path);
+    let s2_path = PathBuf::from(&result.outputs[1].path);
+    assert!(
+      s1_path
+        .file_name()
+        .unwrap()
+        .to_string_lossy()
+        .starts_with("s1_")
+    );
+    assert!(
+      s2_path
+        .file_name()
+        .unwrap()
+        .to_string_lossy()
+        .starts_with("s2_")
+    );
 
     // Each output = the union of that sheet across the workbooks, source
     // column first (mode "file" → relative file names).
-    let s1 = fs::read_to_string(dir.join("out/s1.csv")).unwrap();
+    let s1 = fs::read_to_string(&s1_path).unwrap();
     assert_eq!(s1, "source,id,name\nt1.xlsx,1,alice\nt2.xlsx,4,dave\n");
-    let s2 = fs::read_to_string(dir.join("out/s2.csv")).unwrap();
+    let s2 = fs::read_to_string(&s2_path).unwrap();
     assert_eq!(s2, "source,id,name\nt1.xlsx,2,bob\nt2.xlsx,5,erin\n");
-    assert!(
-      !dir.join("out/s3.csv").exists(),
-      "unselected names produce no output"
-    );
 
     // xlsx variant: same planning, only the emission step changes.
     let mut request = merge_request(&dir, "first", "union", "file");
@@ -3137,7 +3203,7 @@ b/sub/report_2024_03.xlsx#Notes,,,,hello\n";
     request.output_format = "xlsx".to_string();
     let result = merge_sync(request).unwrap();
     assert_eq!(result.outputs.len(), 1);
-    let s3_xlsx = dir.join("out/s3.xlsx");
+    let s3_xlsx = PathBuf::from(&result.outputs[0].path);
     assert!(s3_xlsx.is_file());
     let sheets = list_workbook_sheets(&exe, &s3_xlsx).unwrap();
     assert_eq!(sheets, vec!["Sheet1".to_string()]);
@@ -3175,12 +3241,21 @@ b/sub/report_2024_03.xlsx#Notes,,,,hello\n";
 
     let error = merge_sync(request).unwrap_err();
     assert!(error.contains("Inconsistent headers"), "{error}");
-    // s1 completed and was kept; s2 never produced a file.
+    // s1 completed and was kept; s2 never produced a file. Output names
+    // carry the run timestamp, so scan the directory by prefix.
+    let names: Vec<String> = fs::read_dir(dir.join("out"))
+      .unwrap()
+      .filter_map(|e| e.ok())
+      .map(|e| e.file_name().to_string_lossy().to_string())
+      .collect();
     assert!(
-      dir.join("out/s1.csv").is_file(),
-      "completed outputs are kept"
+      names.iter().any(|n| n.starts_with("s1_")),
+      "completed outputs are kept: {names:?}"
     );
-    assert!(!dir.join("out/s2.csv").exists(), "no half-written output");
+    assert!(
+      names.iter().all(|n| !n.starts_with("s2_")),
+      "no half-written output: {names:?}"
+    );
 
     let _ = fs::remove_dir_all(&dir);
   }

@@ -493,6 +493,14 @@ export interface Translations {
   mergeExcelShapeSingle: string;
   mergeExcelShapeBySheet: string;
   mergeExcelShapeMultiSheet: string;
+  mergeExcelShapeExampleTitle: string;
+  mergeExcelShapeExampleSingle: string;
+  mergeExcelShapeExampleBySheetTitle: string;
+  mergeExcelShapeExampleBySheet1: string;
+  mergeExcelShapeExampleBySheet2: string;
+  mergeExcelShapeExampleMultiTitle: string;
+  mergeExcelShapeExampleMulti1: string;
+  mergeExcelShapeExampleMulti2: string;
   mergeExcelSheetFilterTitle: string;
   mergeExcelSheetFilterEmpty: string;
   mergeExcelOutputDirPlaceholder: string;

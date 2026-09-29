@@ -165,7 +165,8 @@ const OUTPUT_FORMAT_OPTIONS: {
 ];
 
 /** Output shape options (design 026 §7). `split` is the single-workbook
- * degenerate case of `by_sheet` — the same option covers it. */
+ * degenerate case of `by_sheet` — the same option covers it. The example
+ * panel below the select explains the selected mode in plain language. */
 const SHAPE_OPTIONS: {
   value: ExcelOutputShape;
   labelKey:
@@ -609,27 +610,51 @@ export function MergeExcelDialog({
 
         <ScrollArea type="always" className="flex-1 min-h-0">
           <div className="p-4 space-y-3">
-            {/* ── 输出方式(design 026 §7,对话框最顶部)───────── */}
-            <div className="flex items-center gap-2 px-3">
-              <label className="text-xs text-muted-foreground shrink-0 w-24">
-                {t.mergeExcelShape}
-              </label>
-              <div className="flex-1 min-w-0">
-                <Select
-                  value={shape}
-                  onChange={(v) => {
-                    clearFeedback();
-                    const next = v as ExcelOutputShape;
-                    setOutputShape(next);
-                    // The meaningful source column differs per shape (§7).
-                    setSourceColumn(SHAPE_SOURCE_COLUMN_DEFAULT[next]);
-                  }}
-                  options={SHAPE_OPTIONS.map((o) => ({
-                    value: o.value,
-                    label: t[o.labelKey],
-                  }))}
-                  ariaLabel={t.mergeExcelShape}
-                />
+            {/* ── 合并方式(design 026 §7,对话框最顶部)───────── */}
+            <div className="px-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-muted-foreground shrink-0 w-24">
+                  {t.mergeExcelShape}
+                </label>
+                <div className="flex-1 min-w-0">
+                  <Select
+                    value={shape}
+                    onChange={(v) => {
+                      clearFeedback();
+                      const next = v as ExcelOutputShape;
+                      setOutputShape(next);
+                      // The meaningful source column differs per shape (§7).
+                      setSourceColumn(SHAPE_SOURCE_COLUMN_DEFAULT[next]);
+                    }}
+                    options={SHAPE_OPTIONS.map((o) => ({
+                      value: o.value,
+                      label: t[o.labelKey],
+                    }))}
+                    ariaLabel={t.mergeExcelShape}
+                  />
+                </div>
+              </div>
+              {/* Concrete before → after example for the selected mode —
+                  mode names alone don't tell users what will happen. */}
+              <div className="rounded-md bg-muted/40 p-2.5 text-[11px] text-muted-foreground space-y-0.5">
+                <p>{t.mergeExcelShapeExampleTitle}</p>
+                {shape === "single" && (
+                  <p>· {t.mergeExcelShapeExampleSingle}</p>
+                )}
+                {shape === "by_sheet" && (
+                  <>
+                    <p>{t.mergeExcelShapeExampleBySheetTitle}</p>
+                    <p>· {t.mergeExcelShapeExampleBySheet1}</p>
+                    <p>· {t.mergeExcelShapeExampleBySheet2}</p>
+                  </>
+                )}
+                {shape === "multi_sheet" && (
+                  <>
+                    <p>{t.mergeExcelShapeExampleMultiTitle}</p>
+                    <p>· {t.mergeExcelShapeExampleMulti1}</p>
+                    <p>· {t.mergeExcelShapeExampleMulti2}</p>
+                  </>
+                )}
               </div>
             </div>
 

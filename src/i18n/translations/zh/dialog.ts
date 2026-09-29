@@ -129,8 +129,20 @@ export const zhDialog = {
     '输出工作簿只有名为 "Sheet1" 的单个 sheet(Excel 写出能力所限)',
   mergeExcelShape: "合并方式",
   mergeExcelShapeSingle: "合并为一张表",
-  mergeExcelShapeBySheet: "按 sheet 名分文件",
-  mergeExcelShapeMultiSheet: "合成多 sheet 工作簿",
+  mergeExcelShapeBySheet: "按同名 sheet 分文件",
+  mergeExcelShapeMultiSheet: "合成一个多 sheet 文件",
+  mergeExcelShapeExampleTitle:
+    "以输入 t1.xlsx(工作表 a1、a2)+ t2.xlsx(工作表 a1、a2)为例:",
+  mergeExcelShapeExampleSingle:
+    "输出 1 个文件 merged.xlsx:仅 1 张工作表,所有数据上下拼接在一起",
+  mergeExcelShapeExampleBySheetTitle: "输出 2 个文件:",
+  mergeExcelShapeExampleBySheet1:
+    "a1.xlsx:1 张工作表 —— t1 的 a1 与 t2 的 a1 上下拼接在一起",
+  mergeExcelShapeExampleBySheet2:
+    "a2.xlsx:1 张工作表 —— t1 的 a2 与 t2 的 a2 上下拼接在一起",
+  mergeExcelShapeExampleMultiTitle: "输出 1 个文件 merged.xlsx:2 张工作表 -",
+  mergeExcelShapeExampleMulti1: "「t1」来自 t1.xlsx 的工作表 a1",
+  mergeExcelShapeExampleMulti2: "「t2」来自 t2.xlsx 的工作表 a1",
   mergeExcelSheetFilterTitle: "勾选要合并的 sheet(勾几个出几个文件)",
   mergeExcelSheetFilterEmpty: "请至少勾选一个 sheet",
   mergeExcelOutputDirPlaceholder: "输出目录,留空则与第一个输入同目录",

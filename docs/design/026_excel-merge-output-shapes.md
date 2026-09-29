@@ -7,7 +7,12 @@
 >
 > ### 实施记录(2026-09-29,与设计的偏差与补充)
 >
-> - **开放问题①定案:`rust_xlsxwriter 0.99.1`**(`cargo add` 实测 crates.io 可达,经 rsproxy 镜像);
+> - **默认输出名嵌入运行时间戳(2026-09-29 用户反馈,防覆盖)**:三种形态的默认命名均由
+>   固定名改为 `{名}_{YYYYMMDD_HHMMSS}.{ext}`(单表:`{stem}_merged_{ts}`;按名分文件:
+>   `{sheet 名}_{ts}`;多 sheet 合并:`{stem}_merged_{ts}`),同一次运行的多个输出共用同一时间戳,
+>   重复执行不再覆盖上次结果。**用户显式填写的输出路径保持原样**(无时间戳、覆盖语义——那是明确选择);
+>   `resolve_output_path` 增 `run_ts` 参数。
+>> - **开放问题①定案:`rust_xlsxwriter 0.99.1`**(`cargo add` 实测 crates.io 可达,经 rsproxy 镜像);
 >   单元格全按字符串写(`write_string`),sheet 名经 `sanitize_sheet_name` 后 `set_name`;
 >   超 xlsx 行/列上限时库错误被映射为含 sheet 名/行列号的文案。**未启用 constant_memory 模式**
 >   (默认整表驻内存;与 025 读取阶段「按 sheet 计费」同量级,后续大 sheet 再评估);
