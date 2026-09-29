@@ -22,6 +22,7 @@ import {
   type ExcelAlign,
   type ExcelMissingSheet,
   type ExcelOutputFormat,
+  type ExcelOutputShape,
   type ExcelSheetMode,
   type ExcelSourceColumn,
   type StoredExcelMergeResult,
@@ -60,6 +61,16 @@ export interface ExcelMergeResult {
   } | null;
   /** Backend-reported duration; optional for older payloads/mocks. */
   elapsed_ms?: number;
+  /** 026: per-output summaries (one per selected sheet name for by_sheet). */
+  outputs?: {
+    path: string;
+    source_file_count: number;
+    sheet_count: number;
+    total_rows: number;
+    header: string[];
+  }[];
+  /** 026: renames applied to output/sheet names (original → final). */
+  name_mappings?: [string, string][];
 }
 
 // -- constants ----------------------------------------------------------------
@@ -153,6 +164,30 @@ const OUTPUT_FORMAT_OPTIONS: {
   { value: "xlsx", label: "XLSX" },
 ];
 
+/** Output shape options (design 026 §7). `split` is the single-workbook
+ * degenerate case of `by_sheet` — the same option covers it. */
+const SHAPE_OPTIONS: {
+  value: ExcelOutputShape;
+  labelKey:
+    | "mergeExcelShapeSingle"
+    | "mergeExcelShapeBySheet"
+    | "mergeExcelShapeMultiSheet";
+}[] = [
+  { value: "single", labelKey: "mergeExcelShapeSingle" },
+  { value: "by_sheet", labelKey: "mergeExcelShapeBySheet" },
+  { value: "multi_sheet", labelKey: "mergeExcelShapeMultiSheet" },
+];
+
+/** Default source column per shape (design 026 §7): within a by-sheet output
+ * every part shares the sheet name, so `file` is the meaningful default. */
+const SHAPE_SOURCE_COLUMN_DEFAULT: Record<ExcelOutputShape, ExcelSourceColumn> =
+  {
+    single: "file_sheet",
+    by_sheet: "file",
+    multi_sheet: "file_sheet",
+    split: "file",
+  };
+
 type ScanStatus = "idle" | "scanning" | "done" | "error";
 
 interface MergeExcelDialogProps {
@@ -178,12 +213,17 @@ export function MergeExcelDialog({
   const [sheetName, setSheetName] = useState("");
   const [missingSheet, setMissingSheet] = useState<ExcelMissingSheet>("error");
   const [align, setAlign] = useState<ExcelAlign>("union");
-  const [sourceColumn, setSourceColumn] = useState<ExcelSourceColumn>(
-    "file_sheet",
-  );
+  const [sourceColumn, setSourceColumn] =
+    useState<ExcelSourceColumn>("file_sheet");
   const [sourceColumnName, setSourceColumnName] = useState("source");
   const [outputPathInput, setOutputPathInput] = useState("");
   const [outputFormat, setOutputFormat] = useState<ExcelOutputFormat>("xlsx");
+  // Output shape (design 026). `split` is accepted from old records and shown
+  // as `by_sheet` — the same pipeline covers both.
+  const [outputShape, setOutputShape] = useState<ExcelOutputShape>("single");
+  /** Sheet names the user checked for `by_sheet` (initially empty — an
+   * explicit selection is required, §4.1). */
+  const [sheetFilter, setSheetFilter] = useState<string[]>([]);
 
   const [scanStatus, setScanStatus] = useState<ScanStatus>("idle");
   const [scanResult, setScanResult] = useState<ExcelScanResult | null>(null);
@@ -199,6 +239,10 @@ export function MergeExcelDialog({
   const [outputExists, setOutputExists] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+
+  /** The shape actually driving the UI/payload (`split` → `by_sheet`). */
+  const shape: ExcelOutputShape =
+    outputShape === "split" ? "by_sheet" : outputShape;
 
   /** Only feedback is cleared on edit — the last result stays visible. */
   const clearFeedback = useCallback(() => {
@@ -229,6 +273,8 @@ export function MergeExcelDialog({
       setSourceColumnName("source");
       setOutputPathInput(stored?.outputPathInput ?? "");
       setOutputFormat(stored?.outputFormat ?? "xlsx");
+      setOutputShape(stored?.outputShape ?? "single");
+      setSheetFilter(stored?.sheetFilter ?? []);
       setLastResult(stored);
       setIsStaleResult(stored !== null);
       setError(null);
@@ -336,19 +382,20 @@ export function MergeExcelDialog({
     [clearFeedback],
   );
 
-  // Auto-scan once when the user switches to "指定名称" without results, so
-  // the sheet-name dropdown is not empty (§3.7).
+  // Auto-scan once when the user switches to "指定名称" or the by-sheet shape
+  // without results, so the sheet name candidates are not empty (025 §3.7 /
+  // 026 §7).
   useEffect(() => {
     if (
       isOpen &&
-      sheetMode === "name" &&
+      (sheetMode === "name" || shape === "by_sheet") &&
       scanStatus === "idle" &&
       sources.length > 0
     ) {
       void runScan(scanKey);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, sheetMode]);
+  }, [isOpen, sheetMode, shape]);
 
   /** Remove a workbook from the merge (reversible, §3.7). */
   const toggleExclude = useCallback(
@@ -408,11 +455,21 @@ export function MergeExcelDialog({
       setError(t.mergeExcelSheetNameEmpty);
       return;
     }
+    // By-sheet output requires an explicit selection — never a silent
+    // fallback to "all sheet names" (design 026 §4.1).
+    if (shape === "by_sheet" && sheetFilter.length === 0) {
+      setError(t.mergeExcelSheetFilterEmpty);
+      return;
+    }
+    // A multi-sheet workbook needs the xlsx writer (CSV has no sheets).
+    const effectiveFormat: ExcelOutputFormat =
+      shape === "multi_sheet" ? "xlsx" : outputFormat;
     clearFeedback();
     setIsMerging(true);
     try {
       const data = await invoke<ExcelMergeResult>("merge_excel_sources", {
         request: {
+          outputShape: shape,
           roots: sources,
           recursive,
           extensions,
@@ -422,8 +479,11 @@ export function MergeExcelDialog({
           align,
           sourceColumn,
           sourceColumnName: null,
-          outputPath: outputPathInput.trim(),
-          outputFormat,
+          // by_sheet: the text input is the output *directory*.
+          outputPath: shape === "by_sheet" ? "" : outputPathInput.trim(),
+          outputDir: shape === "by_sheet" ? outputPathInput.trim() : null,
+          sheetNamesFilter: shape === "by_sheet" ? [...sheetFilter] : [],
+          outputFormat: effectiveFormat,
           outDelimiter: null,
           exclude: excluded,
         },
@@ -452,6 +512,14 @@ export function MergeExcelDialog({
           : null,
         finishedAt: new Date().toISOString(),
         elapsedMs: data.elapsed_ms,
+        outputShape: shape,
+        outputs: (data.outputs ?? []).map((output) => ({
+          path: output.path,
+          sheetCount: output.sheet_count,
+          totalRows: output.total_rows,
+        })),
+        nameMappings: data.name_mappings ?? [],
+        sheetFilter: shape === "by_sheet" ? [...sheetFilter] : [],
         sources: [...sources],
         recursive,
         extensions: [...extensions],
@@ -486,6 +554,8 @@ export function MergeExcelDialog({
     sourceColumn,
     outputPathInput,
     outputFormat,
+    shape,
+    sheetFilter,
     excluded,
     t,
     clearFeedback,
@@ -539,6 +609,30 @@ export function MergeExcelDialog({
 
         <ScrollArea type="always" className="flex-1 min-h-0">
           <div className="p-4 space-y-3">
+            {/* ── 输出方式(design 026 §7,对话框最顶部)───────── */}
+            <div className="flex items-center gap-2 px-3">
+              <label className="text-xs text-muted-foreground shrink-0 w-24">
+                {t.mergeExcelShape}
+              </label>
+              <div className="flex-1 min-w-0">
+                <Select
+                  value={shape}
+                  onChange={(v) => {
+                    clearFeedback();
+                    const next = v as ExcelOutputShape;
+                    setOutputShape(next);
+                    // The meaningful source column differs per shape (§7).
+                    setSourceColumn(SHAPE_SOURCE_COLUMN_DEFAULT[next]);
+                  }}
+                  options={SHAPE_OPTIONS.map((o) => ({
+                    value: o.value,
+                    label: t[o.labelKey],
+                  }))}
+                  ariaLabel={t.mergeExcelShape}
+                />
+              </div>
+            </div>
+
             {/* ── ① 选择要合并的文件 ────────────────────────── */}
             <section className="rounded-lg border border-border/50 p-3">
               <div className="flex items-center gap-2 mb-2.5">
@@ -562,52 +656,65 @@ export function MergeExcelDialog({
                       return (
                         <div
                           key={file.path}
-                          className={`flex items-center gap-2 px-2 py-1.5 text-xs border-b border-border/40 last:border-b-0 ${
+                          className={`px-2 py-1.5 text-xs border-b border-border/40 last:border-b-0 ${
                             isExcluded ? "opacity-50" : ""
                           }`}
                         >
-                          <span
-                            className={`flex-1 min-w-0 truncate ${
-                              isExcluded
-                                ? "text-muted-foreground/50 line-through"
-                                : "text-foreground/80"
-                            }`}
-                          >
-                            {file.path}
-                          </span>
-                          {file.sheets.map((name) => (
+                          {/* Path and toggle on the first line; the sheet
+                              tags wrap onto their own lines instead of
+                              stretching the row horizontally. */}
+                          <div className="flex items-center gap-2">
                             <span
-                              key={name}
-                              className="px-1.5 py-0.5 rounded-full bg-muted text-[10px] text-muted-foreground shrink-0"
+                              className={`flex-1 min-w-0 truncate ${
+                                isExcluded
+                                  ? "text-muted-foreground/50 line-through"
+                                  : "text-foreground/80"
+                              }`}
                             >
-                              {name}
+                              {file.path}
                             </span>
-                          ))}
-                          {isExcluded && (
-                            <span className="text-[11px] text-amber-600 shrink-0">
-                              {t.mergeExcelExcluded}
-                            </span>
-                          )}
-                          <button
-                            onClick={() => toggleExclude(file.path)}
-                            aria-label={`${
-                              isExcluded
-                                ? t.mergeExcelRestore
-                                : t.mergeExcelExclude
-                            }: ${file.path}`}
-                            title={
-                              isExcluded
-                                ? t.mergeExcelRestore
-                                : t.mergeExcelExclude
-                            }
-                            className="p-0.5 hover:bg-accent rounded text-muted-foreground hover:text-foreground shrink-0"
-                          >
-                            {isExcluded ? (
-                              <RotateCcw className="h-3 w-3" />
-                            ) : (
-                              <X className="h-3 w-3" />
+                            {isExcluded && (
+                              <span className="text-[11px] text-amber-600 shrink-0">
+                                {t.mergeExcelExcluded}
+                              </span>
                             )}
-                          </button>
+                            <button
+                              onClick={() => toggleExclude(file.path)}
+                              aria-label={`${
+                                isExcluded
+                                  ? t.mergeExcelRestore
+                                  : t.mergeExcelExclude
+                              }: ${file.path}`}
+                              title={
+                                isExcluded
+                                  ? t.mergeExcelRestore
+                                  : t.mergeExcelExclude
+                              }
+                              className="p-0.5 hover:bg-accent rounded text-muted-foreground hover:text-foreground shrink-0"
+                            >
+                              {isExcluded ? (
+                                <RotateCcw className="h-3 w-3" />
+                              ) : (
+                                <X className="h-3 w-3" />
+                              )}
+                            </button>
+                          </div>
+                          {file.sheets.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {file.sheets.map((name) => (
+                                <span
+                                  key={name}
+                                  className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                                    isExcluded
+                                      ? "bg-muted/50 text-muted-foreground/50"
+                                      : "bg-muted text-muted-foreground"
+                                  }`}
+                                >
+                                  {name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -696,58 +803,106 @@ export function MergeExcelDialog({
                   {t.mergeExcelSheetMode}
                 </span>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                {SHEET_MODE_CARDS.map((card) => {
-                  const selected = sheetMode === card.value;
-                  return (
-                    <button
-                      key={card.value}
-                      onClick={() => {
-                        clearFeedback();
-                        setSheetMode(card.value);
-                      }}
-                      aria-pressed={selected}
-                      className={`text-left rounded-md p-2.5 border transition-colors ${
-                        selected
-                          ? "border-primary bg-primary/10"
-                          : "border-border/60 hover:bg-accent"
-                      }`}
-                    >
-                      <span
-                        className={`block text-xs font-medium ${
-                          selected ? "text-primary" : "text-foreground"
-                        }`}
-                      >
-                        {t[card.labelKey]}
-                      </span>
-                      <span className="block text-[11px] text-muted-foreground mt-0.5">
-                        {t[card.subKey]}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              {sheetMode === "name" && (
-                <div className="flex items-center gap-2 mt-3">
-                  <label className="text-xs text-muted-foreground shrink-0 w-26">
-                    {t.mergeExcelSheetByName}
-                  </label>
-                  <div className="flex-1 min-w-0">
-                    <Select
-                      value={sheetName}
-                      onChange={(v) => {
-                        clearFeedback();
-                        setSheetName(v);
-                      }}
-                      options={(scanResult?.sheet_names ?? []).map((name) => ({
-                        value: name,
-                        label: name,
-                      }))}
-                      placeholder={t.mergeExcelSheetNameEmpty}
-                      ariaLabel={t.mergeExcelSheetByName}
-                    />
+              {shape === "by_sheet" ? (
+                scanResult ? (
+                  <div>
+                    <p className="text-[11px] text-muted-foreground mb-1.5">
+                      {t.mergeExcelSheetFilterTitle}
+                    </p>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {scanResult.sheet_names.map((name) => {
+                        const checked = sheetFilter.includes(name);
+                        return (
+                          <label
+                            key={name}
+                            className={`flex items-center gap-1.5 text-xs rounded-md border px-2 py-1.5 cursor-pointer transition-colors min-w-0 ${
+                              checked
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-border/60 text-foreground hover:bg-accent"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                clearFeedback();
+                                setSheetFilter((prev) =>
+                                  checked
+                                    ? prev.filter((n) => n !== name)
+                                    : [...prev, name],
+                                );
+                              }}
+                              className="accent-primary shrink-0"
+                            />
+                            <span className="truncate">{name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    {t.mergeExcelScanning}
+                  </p>
+                )
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-2">
+                    {SHEET_MODE_CARDS.map((card) => {
+                      const selected = sheetMode === card.value;
+                      return (
+                        <button
+                          key={card.value}
+                          onClick={() => {
+                            clearFeedback();
+                            setSheetMode(card.value);
+                          }}
+                          aria-pressed={selected}
+                          className={`text-left rounded-md p-2.5 border transition-colors ${
+                            selected
+                              ? "border-primary bg-primary/10"
+                              : "border-border/60 hover:bg-accent"
+                          }`}
+                        >
+                          <span
+                            className={`block text-xs font-medium ${
+                              selected ? "text-primary" : "text-foreground"
+                            }`}
+                          >
+                            {t[card.labelKey]}
+                          </span>
+                          <span className="block text-[11px] text-muted-foreground mt-0.5">
+                            {t[card.subKey]}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {sheetMode === "name" && (
+                    <div className="flex items-center gap-2 mt-3">
+                      <label className="text-xs text-muted-foreground shrink-0 w-26">
+                        {t.mergeExcelSheetByName}
+                      </label>
+                      <div className="flex-1 min-w-0">
+                        <Select
+                          value={sheetName}
+                          onChange={(v) => {
+                            clearFeedback();
+                            setSheetName(v);
+                          }}
+                          options={(scanResult?.sheet_names ?? []).map(
+                            (name) => ({
+                              value: name,
+                              label: name,
+                            }),
+                          )}
+                          placeholder={t.mergeExcelSheetNameEmpty}
+                          ariaLabel={t.mergeExcelSheetByName}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </section>
 
@@ -765,20 +920,28 @@ export function MergeExcelDialog({
                 <label className="text-xs text-muted-foreground shrink-0 w-24">
                   {t.mergeExcelOutputFormat}
                 </label>
-                <div className="w-32">
-                  <Select
-                    value={outputFormat}
-                    onChange={(v) => {
-                      clearFeedback();
-                      setOutputFormat(v as ExcelOutputFormat);
-                    }}
-                    options={OUTPUT_FORMAT_OPTIONS.map((o) => ({
-                      value: o.value,
-                      label: o.label,
-                    }))}
-                    ariaLabel={t.mergeExcelOutputFormat}
-                  />
-                </div>
+                {shape === "multi_sheet" ? (
+                  // A multi-sheet workbook can only be xlsx (CSV has no
+                  // sheets) — locked, not hidden (§7).
+                  <span className="text-xs text-foreground px-2 py-1.5 rounded-md bg-muted/60">
+                    XLSX
+                  </span>
+                ) : (
+                  <div className="w-32">
+                    <Select
+                      value={outputFormat}
+                      onChange={(v) => {
+                        clearFeedback();
+                        setOutputFormat(v as ExcelOutputFormat);
+                      }}
+                      options={OUTPUT_FORMAT_OPTIONS.map((o) => ({
+                        value: o.value,
+                        label: o.label,
+                      }))}
+                      ariaLabel={t.mergeExcelOutputFormat}
+                    />
+                  </div>
+                )}
                 <input
                   type="text"
                   value={outputPathInput}
@@ -786,10 +949,19 @@ export function MergeExcelDialog({
                     clearFeedback();
                     setOutputPathInput(e.target.value);
                   }}
-                  placeholder={t.outputPathLeaveEmpty}
+                  placeholder={
+                    shape === "by_sheet"
+                      ? t.mergeExcelOutputDirPlaceholder
+                      : t.outputPathLeaveEmpty
+                  }
                   className="flex-1 min-w-0 h-8 px-2 text-xs border rounded-md bg-background"
                 />
               </div>
+              {shape === "multi_sheet" && (
+                <p className="text-[11px] text-muted-foreground/80 mt-1.5">
+                  {t.mergeExcelMultiSheetNote}
+                </p>
+              )}
             </section>
 
             {/* ── 高级选项(默认折叠) ────────────────────────── */}
@@ -809,28 +981,32 @@ export function MergeExcelDialog({
             </button>
             {advancedOpen && (
               <div className="rounded-lg border border-border/50 p-3 space-y-2.5">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-muted-foreground shrink-0 w-24">
-                    {t.mergeExcelAlign}
-                  </label>
-                  <div className="flex-1 min-w-0">
-                    <Select
-                      value={align}
-                      onChange={(v) => {
-                        clearFeedback();
-                        setAlign(v as ExcelAlign);
-                      }}
-                      options={ALIGN_OPTIONS.map((o) => ({
-                        value: o.value,
-                        label: t[o.labelKey],
-                      }))}
-                      ariaLabel={t.mergeExcelAlign}
-                    />
-                  </div>
-                </div>
-                <p className="text-[11px] text-muted-foreground/80 pl-[6.5rem] -mt-1.5">
-                  {alignHint && t[alignHint]}
-                </p>
+                {shape !== "multi_sheet" && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-muted-foreground shrink-0 w-24">
+                        {t.mergeExcelAlign}
+                      </label>
+                      <div className="flex-1 min-w-0">
+                        <Select
+                          value={align}
+                          onChange={(v) => {
+                            clearFeedback();
+                            setAlign(v as ExcelAlign);
+                          }}
+                          options={ALIGN_OPTIONS.map((o) => ({
+                            value: o.value,
+                            label: t[o.labelKey],
+                          }))}
+                          ariaLabel={t.mergeExcelAlign}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground/80 pl-[6.5rem] -mt-1.5">
+                      {alignHint && t[alignHint]}
+                    </p>
+                  </>
+                )}
                 <div className="flex items-center gap-2">
                   <label className="text-xs text-muted-foreground shrink-0 w-24">
                     {t.mergeExcelSourceColumn}
@@ -862,7 +1038,7 @@ export function MergeExcelDialog({
                     />
                   )}
                 </div>
-                {sheetMode === "name" && (
+                {sheetMode === "name" && shape !== "by_sheet" && (
                   <div className="flex items-center gap-2">
                     <label className="text-xs text-muted-foreground shrink-0 w-24">
                       {t.mergeExcelMissingSheet}
@@ -951,16 +1127,35 @@ export function MergeExcelDialog({
                     </span>
                     {lastResult.header.join(", ")}
                   </p>
-                  {lastResult.outputFormat === "xlsx" && (
-                    <p className="flex items-center gap-2 text-[11px] text-muted-foreground/80">
-                      {t.mergeExcelOutputSheetNote}
+                  {lastResult.outputFormat === "xlsx" &&
+                    shape !== "multi_sheet" && (
+                      <p className="flex items-center gap-2 text-[11px] text-muted-foreground/80">
+                        {t.mergeExcelOutputSheetNote}
+                      </p>
+                    )}
+                  {/* The multi-sheet naming note is already shown next to the
+                      output controls for this shape — not repeated here. */}
+                  {/* Multi-output shapes (`by_sheet`): the directory plus the
+                      produced file names (021's "first five" pattern). */}
+                  {(lastResult.outputs?.length ?? 0) > 1 && (
+                    <p className="text-xs text-muted-foreground break-all">
+                      <span className="text-muted-foreground/60">
+                        {t.mergeExcelOutputListHeader}:{" "}
+                      </span>
+                      {lastResult
+                        .outputs!.slice(0, 5)
+                        .map((output) => output.path.split(/[\\/]/).pop())
+                        .join(", ")}
+                      {lastResult.outputs!.length > 5 &&
+                        ` … (+${lastResult.outputs!.length - 5})`}
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground/80 break-all">
                     {lastResult.outputPath}
                   </p>
                   {(lastResult.skipped.length > 0 ||
-                    lastResult.unionSummary) && (
+                    lastResult.unionSummary ||
+                    (lastResult.nameMappings?.length ?? 0) > 0) && (
                     <div className="space-y-1 rounded-md bg-amber-500/10 p-2.5">
                       {lastResult.skipped.map((entry) => (
                         <p
@@ -971,6 +1166,19 @@ export function MergeExcelDialog({
                           {entry}
                         </p>
                       ))}
+                      {(lastResult.nameMappings ?? []).map(
+                        ([original, final]) => (
+                          <p
+                            key={`${original}|${final}`}
+                            className="flex items-center gap-2 text-xs text-amber-600"
+                          >
+                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                            {t.mergeExcelNameMapping
+                              .replace("{a}", original)
+                              .replace("{b}", final)}
+                          </p>
+                        ),
+                      )}
                       {lastResult.unionSummary?.notInAllParts.map(
                         (coverage: {
                           column: string;

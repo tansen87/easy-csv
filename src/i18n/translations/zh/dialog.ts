@@ -127,6 +127,17 @@ export const zhDialog = {
   mergeExcelXanMissing: "合并 Excel 需要 xan 插件(设置 → 插件)",
   mergeExcelOutputSheetNote:
     '输出工作簿只有名为 "Sheet1" 的单个 sheet(Excel 写出能力所限)',
+  mergeExcelShape: "合并方式",
+  mergeExcelShapeSingle: "合并为一张表",
+  mergeExcelShapeBySheet: "按 sheet 名分文件",
+  mergeExcelShapeMultiSheet: "合成多 sheet 工作簿",
+  mergeExcelSheetFilterTitle: "勾选要合并的 sheet(勾几个出几个文件)",
+  mergeExcelSheetFilterEmpty: "请至少勾选一个 sheet",
+  mergeExcelOutputDirPlaceholder: "输出目录,留空则与第一个输入同目录",
+  mergeExcelMultiSheetNote:
+    "输出为多 sheet 工作簿:sheet 名 = 来源文件名(重名自动加序号)",
+  mergeExcelNameMapping: "名称冲突:{a} → {b}",
+  mergeExcelOutputListHeader: "输出文件",
   mergeExcelOutputFormat: "输出格式",
   mergeExcelInconsistentHeaders:
     "各文件的表头不一致.可改用「并集(按列名)」来合并",

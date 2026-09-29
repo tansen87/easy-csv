@@ -19,9 +19,18 @@ export type ExcelAlign = "union" | "strict" | "intersection";
 export type ExcelSourceColumn = "none" | "file" | "file_sheet";
 export type ExcelMissingSheet = "error" | "skip";
 export type ExcelOutputFormat = "csv" | "xlsx";
+/** Output shape (design 026). `split` is the frontend alias of `by_sheet`. */
+export type ExcelOutputShape = "single" | "by_sheet" | "multi_sheet" | "split";
+
+/** One produced file, for multi-output shapes (`by_sheet`). */
+export interface StoredOutputSummary {
+  path: string;
+  sheetCount: number;
+  totalRows: number;
+}
 
 export interface StoredExcelMergeResult {
-  /** Result: the single merged output file. */
+  /** Result: the single merged output file (first output for `by_sheet`). */
   outputPath: string;
   outputFormat: ExcelOutputFormat;
   sourceFileCount: number;
@@ -37,6 +46,10 @@ export interface StoredExcelMergeResult {
     notInAllParts: { column: string; presentIn: number; total: number }[];
     nearDuplicateColumns: [string, string][];
   } | null;
+  /** Result (026): per-output summaries; absent for 025-era records. */
+  outputs?: StoredOutputSummary[];
+  /** Result (026): renames applied to output/sheet names (original → final). */
+  nameMappings?: [string, string][];
   /** ISO 8601 timestamp of when the merge finished. */
   finishedAt: string;
   /** Backend-reported duration in milliseconds. */
@@ -45,12 +58,16 @@ export interface StoredExcelMergeResult {
   sources: string[];
   recursive: boolean;
   extensions: string[];
+  /** Optional for backward compatibility with 025-era records. */
+  outputShape?: ExcelOutputShape;
   sheetMode: ExcelSheetMode;
   sheetName: string;
   missingSheet: ExcelMissingSheet;
   align: ExcelAlign;
   sourceColumn: ExcelSourceColumn;
   outputPathInput: string;
+  /** Optional (026): sheet names the user checked for `by_sheet`. */
+  sheetFilter?: string[];
 }
 
 const SHEET_MODES: ExcelSheetMode[] = ["first", "name", "all"];
@@ -58,6 +75,12 @@ const ALIGNS: ExcelAlign[] = ["union", "strict", "intersection"];
 const SOURCE_COLUMNS: ExcelSourceColumn[] = ["none", "file", "file_sheet"];
 const MISSING_SHEETS: ExcelMissingSheet[] = ["error", "skip"];
 const OUTPUT_FORMATS: ExcelOutputFormat[] = ["csv", "xlsx"];
+const OUTPUT_SHAPES: ExcelOutputShape[] = [
+  "single",
+  "by_sheet",
+  "multi_sheet",
+  "split",
+];
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((v) => typeof v === "string");
@@ -65,6 +88,35 @@ function isStringArray(value: unknown): value is string[] {
 
 function oneOf<T extends string>(value: unknown, allowed: T[]): value is T {
   return typeof value === "string" && (allowed as string[]).includes(value);
+}
+
+/** 026 fields are optional: absent = a valid 025-era record. */
+function isOutputSummaries(value: unknown): boolean {
+  return (
+    value === undefined ||
+    (Array.isArray(value) &&
+      value.every(
+        (o) =>
+          o !== null &&
+          typeof o === "object" &&
+          typeof (o as Record<string, unknown>).path === "string" &&
+          typeof (o as Record<string, unknown>).sheetCount === "number" &&
+          typeof (o as Record<string, unknown>).totalRows === "number",
+      ))
+  );
+}
+
+function isNameMappings(value: unknown): boolean {
+  return (
+    value === undefined ||
+    (Array.isArray(value) &&
+      value.every(
+        (p) =>
+          Array.isArray(p) &&
+          p.length === 2 &&
+          p.every((x) => typeof x === "string"),
+      ))
+  );
 }
 
 function isUnionSummary(
@@ -110,6 +162,10 @@ function isStoredExcelMergeResult(
     isStringArray(v.header) &&
     isStringArray(v.skipped) &&
     isUnionSummary(v.unionSummary) &&
+    isOutputSummaries(v.outputs) &&
+    isNameMappings(v.nameMappings) &&
+    (v.outputShape === undefined || oneOf(v.outputShape, OUTPUT_SHAPES)) &&
+    (v.sheetFilter === undefined || isStringArray(v.sheetFilter)) &&
     typeof v.finishedAt === "string" &&
     isStringArray(v.sources) &&
     typeof v.recursive === "boolean" &&

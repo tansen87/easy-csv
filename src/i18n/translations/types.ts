@@ -489,6 +489,16 @@ export interface Translations {
   mergeExcelNoOutput: string;
   mergeExcelXanMissing: string;
   mergeExcelOutputSheetNote: string;
+  mergeExcelShape: string;
+  mergeExcelShapeSingle: string;
+  mergeExcelShapeBySheet: string;
+  mergeExcelShapeMultiSheet: string;
+  mergeExcelSheetFilterTitle: string;
+  mergeExcelSheetFilterEmpty: string;
+  mergeExcelOutputDirPlaceholder: string;
+  mergeExcelMultiSheetNote: string;
+  mergeExcelNameMapping: string;
+  mergeExcelOutputListHeader: string;
   mergeExcelOutputFormat: string;
   mergeExcelInconsistentHeaders: string;
   mergeExcelStep1: string;

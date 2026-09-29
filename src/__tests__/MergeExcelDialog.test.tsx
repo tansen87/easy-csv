@@ -76,12 +76,14 @@ const STORED: StoredExcelMergeResult = {
   outputPathInput: "",
 };
 
-function mockBackend(overrides: {
-  merge?: unknown;
-  mergeError?: string;
-  scan?: unknown;
-  fileExists?: boolean;
-} = {}) {
+function mockBackend(
+  overrides: {
+    merge?: unknown;
+    mergeError?: string;
+    scan?: unknown;
+    fileExists?: boolean;
+  } = {},
+) {
   mockInvoke.mockImplementation((async (cmd: string) => {
     if (cmd === "merge_excel_sources") {
       if (overrides.mergeError) throw overrides.mergeError;
@@ -139,6 +141,7 @@ describe("MergeExcelDialog", () => {
             sheetMode: "first",
             align: "union",
             outputFormat: "xlsx",
+            outputShape: "single",
           }),
         }),
       );
@@ -259,7 +262,7 @@ describe("MergeExcelDialog", () => {
   it("passes a backend error (strict headers) through to the banner", async () => {
     mockOpen.mockResolvedValue(["/data/a.xlsx"]);
     mockBackend({
-      mergeError: "Inconsistent headers (strict mode): expected [\"id\"]",
+      mergeError: 'Inconsistent headers (strict mode): expected ["id"]',
     });
     renderDialog();
     fireEvent.click(await screen.findByText(t("mergeExcelAddFiles")));
@@ -287,9 +290,7 @@ describe("MergeExcelDialog", () => {
   it("notes the single-sheet limitation for xlsx output", async () => {
     seedStored({ outputFormat: "xlsx" });
     renderDialog();
-    expect(
-      await screen.findByText(/Sheet1/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Sheet1/)).toBeInTheDocument();
   });
 
   it("shows the last result on open and reveals the output path", async () => {
@@ -312,7 +313,9 @@ describe("MergeExcelDialog", () => {
 
     const reveal = await screen.findByText(t("openPath"));
     expect(reveal).toBeDisabled();
-    expect(await screen.findByText(t("lastResultNoOutput"))).toBeInTheDocument();
+    expect(
+      await screen.findByText(t("lastResultNoOutput")),
+    ).toBeInTheDocument();
   });
 
   it("clears the stored record", async () => {
@@ -320,6 +323,121 @@ describe("MergeExcelDialog", () => {
     renderDialog();
     fireEvent.click(await screen.findByText(t("clearRecord")));
     expect(loadLastExcelMergeResult()).toBeNull();
+  });
+
+  it("requires an explicit sheet selection for by-sheet output", async () => {
+    mockOpen.mockResolvedValue(["/data/a.xlsx"]);
+    renderDialog();
+    fireEvent.click(await screen.findByText(t("mergeExcelAddFiles")));
+    await screen.findAllByText(/Auto-scanned/);
+
+    await pickCombobox(t("mergeExcelShape"), t("mergeExcelShapeBySheet"));
+
+    // Nothing checked → intercepted, never a silent fallback to "all names".
+    fireEvent.click(screen.getByText(t("mergeExcelStart")));
+    expect(
+      await screen.findByText(t("mergeExcelSheetFilterEmpty")),
+    ).toBeInTheDocument();
+    expect(mockInvoke).not.toHaveBeenCalledWith(
+      "merge_excel_sources",
+      expect.anything(),
+    );
+
+    // Checking exactly one name sends exactly that filter (design 026 §4.1).
+    fireEvent.click(screen.getByRole("checkbox", { name: "Q1" }));
+    fireEvent.click(screen.getByText(t("mergeExcelStart")));
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith(
+        "merge_excel_sources",
+        expect.objectContaining({
+          request: expect.objectContaining({
+            outputShape: "by_sheet",
+            sheetNamesFilter: ["Q1"],
+            outputDir: "",
+          }),
+        }),
+      );
+    });
+  });
+
+  it("locks xlsx output and hides alignment for the multi-sheet shape", async () => {
+    mockOpen.mockResolvedValue(["/data/a.xlsx"]);
+    renderDialog();
+    fireEvent.click(await screen.findByText(t("mergeExcelAddFiles")));
+    await screen.findAllByText(/Auto-scanned/);
+
+    await pickCombobox(t("mergeExcelShape"), t("mergeExcelShapeMultiSheet"));
+
+    // The format select is replaced by a locked XLSX badge, alignment is
+    // hidden (each output sheet is a single part), and the per-workbook
+    // sheet-mode cards stay.
+    expect(
+      screen.queryByRole("combobox", { name: t("mergeExcelOutputFormat") }),
+    ).toBeNull();
+    expect(screen.getByText("XLSX")).toBeInTheDocument();
+    fireEvent.click(screen.getByText(t("mergeExcelAdvanced")));
+    expect(
+      screen.queryByRole("combobox", { name: t("mergeExcelAlign") }),
+    ).toBeNull();
+    expect(screen.getByText(t("mergeExcelSheetAll"))).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(t("mergeExcelStart")));
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith(
+        "merge_excel_sources",
+        expect.objectContaining({
+          request: expect.objectContaining({
+            outputShape: "multi_sheet",
+            outputFormat: "xlsx",
+          }),
+        }),
+      );
+    });
+  });
+
+  it("lists by-sheet outputs and name conflicts in the result card", async () => {
+    mockOpen.mockResolvedValue(["/data/a.xlsx"]);
+    mockBackend({
+      merge: {
+        ...MERGE_RESULT,
+        output_path: "/data/out/s1.xlsx",
+        outputs: [
+          {
+            path: "/data/out/s1.xlsx",
+            source_file_count: 2,
+            sheet_count: 2,
+            total_rows: 10,
+            header: ["source", "id"],
+          },
+          {
+            path: "/data/out/s2.xlsx",
+            source_file_count: 2,
+            sheet_count: 2,
+            total_rows: 12,
+            header: ["source", "id"],
+          },
+        ],
+        name_mappings: [["S1", "S1_2"]],
+      },
+    });
+    renderDialog();
+    fireEvent.click(await screen.findByText(t("mergeExcelAddFiles")));
+    await screen.findAllByText(/Auto-scanned/);
+    await pickCombobox(t("mergeExcelShape"), t("mergeExcelShapeBySheet"));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Q1" }));
+    fireEvent.click(screen.getByText(t("mergeExcelStart")));
+
+    expect(await screen.findByText(/s1\.xlsx, s2\.xlsx/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Name conflict: S1 → S1_2/),
+    ).toBeInTheDocument();
+  });
+
+  it("notes the sheet naming rule for a multi-sheet result", async () => {
+    seedStored({ outputShape: "multi_sheet", outputFormat: "xlsx" });
+    renderDialog();
+    expect(await screen.findByText(/multi-sheet workbook/)).toBeInTheDocument();
+    expect(screen.queryByText(/Sheet1/)).toBeNull();
   });
 
   function seedStored(overrides: Partial<StoredExcelMergeResult> = {}): void {

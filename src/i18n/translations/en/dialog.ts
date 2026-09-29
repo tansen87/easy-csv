@@ -133,6 +133,19 @@ export const enDialog = {
     "Merging Excel files requires the xan plugin (Settings → Plugins)",
   mergeExcelOutputSheetNote:
     'The output workbook has a single sheet named "Sheet1" (a limitation of the Excel writer).',
+  mergeExcelShape: "Merge mode",
+  mergeExcelShapeSingle: "Merge into one table",
+  mergeExcelShapeBySheet: "One file per sheet name",
+  mergeExcelShapeMultiSheet: "Merge into a multi-sheet workbook",
+  mergeExcelSheetFilterTitle:
+    "Pick the sheets to merge (one file per selected name)",
+  mergeExcelSheetFilterEmpty: "Select at least one sheet",
+  mergeExcelOutputDirPlaceholder:
+    "Output directory; leave empty to use the first input's folder",
+  mergeExcelMultiSheetNote:
+    "The output is a multi-sheet workbook: each sheet is named after its source file (duplicates get a numeric suffix).",
+  mergeExcelNameMapping: "Name conflict: {a} → {b}",
+  mergeExcelOutputListHeader: "Output files",
   mergeExcelOutputFormat: "Output format",
   mergeExcelInconsistentHeaders:
     "Headers differ across files. Use the union alignment to merge them by column name.",
