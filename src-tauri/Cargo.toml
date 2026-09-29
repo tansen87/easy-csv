@@ -64,6 +64,12 @@ chrono = "^0.4.45"
 minisign-verify = "0.2"
 semver = "1"
 
+# Test-only: generate minimal xlsx fixtures on the fly (design 025). Same
+# version already in Cargo.lock via tauri; Stored entries need no extra
+# features, so this adds no new crate to the build.
+[dev-dependencies]
+zip = { version = "4", default-features = false }
+
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]

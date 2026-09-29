@@ -32,6 +32,7 @@ import { CsvEncodingDialog } from "@/modules/dialogs/file/CsvEncodingDialog";
 import { SeparateCSVDialog } from "@/modules/dialogs/file/SeparateCSVDialog";
 import { DuckdbTableDialog } from "@/modules/dialogs/file/DuckdbTableDialog";
 import { SplitLinesDialog } from "@/modules/dialogs/file/SplitLinesDialog";
+import { MergeExcelDialog } from "@/modules/dialogs/file/MergeExcelDialog";
 import { DataProfilePanel } from "@/modules/data-preview/DataProfilePanel";
 import { AIPanel } from "@/modules/ai/AIPanel";
 import { ToastContainer } from "@/components/setting/Toast";
@@ -1335,6 +1336,19 @@ function AppContent() {
         },
       },
       {
+        id: "merge-excel",
+        label: t.mergeExcel,
+        description: t.mergeExcelHint,
+        group: t.paletteActions,
+        groupIcon: Zap,
+        onSelect: () => {
+          ui.setMergeExcelInitialInput(
+            tabsHook.getCurrentTab()?.inputFile || undefined,
+          );
+          ui.setShowMergeExcel(true);
+        },
+      },
+      {
         id: "use-or-save-template",
         label: t.paletteTemplates,
         group: t.paletteActions,
@@ -1514,6 +1528,12 @@ function AppContent() {
                   tabsHook.getCurrentTab()?.inputFile || undefined,
                 );
                 ui.setShowSplitLines(true);
+              }}
+              onOpenMergeExcel={() => {
+                ui.setMergeExcelInitialInput(
+                  tabsHook.getCurrentTab()?.inputFile || undefined,
+                );
+                ui.setShowMergeExcel(true);
               }}
               isExecuting={isExecuting}
               isCheckingUpdate={updater.isChecking}
@@ -1803,6 +1823,14 @@ function AppContent() {
             isOpen={ui.showSplitLines}
             onClose={() => ui.setShowSplitLines(false)}
             initialInputFile={ui.splitLinesInitialInput}
+            onShowToast={showToast}
+          />
+
+          {/* Excel multi-file merge (design 025) */}
+          <MergeExcelDialog
+            isOpen={ui.showMergeExcel}
+            onClose={() => ui.setShowMergeExcel(false)}
+            initialInputFile={ui.mergeExcelInitialInput}
             onShowToast={showToast}
           />
 

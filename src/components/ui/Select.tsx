@@ -11,6 +11,12 @@ interface SelectProps {
   size?: "sm" | "md";
   /** Container width. Defaults to full width of the parent. */
   width?: string | number;
+  /**
+   * Accessible name forwarded to the internal `input[role=combobox]`. The
+   * rendered markup has no label element, so without this the combobox has no
+   * programmatically-associated name (a11y + `getByRole(name)` in tests).
+   */
+  ariaLabel?: string;
 }
 
 export function Select({
@@ -20,6 +26,7 @@ export function Select({
   placeholder = "Search or select...",
   size = "sm",
   width,
+  ariaLabel,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -138,6 +145,7 @@ export function Select({
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-autocomplete="list"
+        aria-label={ariaLabel}
         aria-activedescendant={
           activeIndex >= 0 ? `ss-option-${activeIndex}` : undefined
         }

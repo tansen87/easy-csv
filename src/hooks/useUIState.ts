@@ -47,6 +47,10 @@ export function useUIState() {
   const [splitLinesInitialInput, setSplitLinesInitialInput] = useState<
     string | undefined
   >(undefined);
+  const [showMergeExcel, setShowMergeExcel] = useState(false);
+  const [mergeExcelInitialInput, setMergeExcelInitialInput] = useState<
+    string | undefined
+  >(undefined);
 
   return {
     showHelp,
@@ -109,5 +113,9 @@ export function useUIState() {
     setShowSplitLines,
     splitLinesInitialInput,
     setSplitLinesInitialInput,
+    showMergeExcel,
+    setShowMergeExcel,
+    mergeExcelInitialInput,
+    setMergeExcelInitialInput,
   };
 }

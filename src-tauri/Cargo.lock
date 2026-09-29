@@ -1170,6 +1170,7 @@ dependencies = [
  "tauri-plugin-window-state",
  "tokio",
  "whoami",
+ "zip",
 ]
 
 [[package]]

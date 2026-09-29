@@ -854,10 +854,10 @@ fn make_temp_parquet() -> PathBuf {
 /// pre-materialized input CSV): removed on every exit path, including `?`
 /// propagation and cancellation.
 #[derive(Default)]
-struct TempFiles(Vec<PathBuf>);
+pub(crate) struct TempFiles(Vec<PathBuf>);
 
 impl TempFiles {
-  fn push(&mut self, p: PathBuf) {
+  pub(crate) fn push(&mut self, p: PathBuf) {
     self.0.push(p);
   }
 }

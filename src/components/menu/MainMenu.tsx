@@ -39,6 +39,7 @@ interface MainMenuProps {
   onOpenCsvEncoding: () => void;
   onOpenSeparateCsv: () => void;
   onOpenSplitLines: () => void;
+  onOpenMergeExcel: () => void;
   isExecuting: boolean;
   isCheckingUpdate: boolean;
   hasUpdate: boolean;
@@ -85,6 +86,7 @@ export const MainMenu = React.memo(function MainMenu({
   onOpenCsvEncoding,
   onOpenSeparateCsv,
   onOpenSplitLines,
+  onOpenMergeExcel,
   isExecuting,
   isCheckingUpdate,
   hasUpdate,
@@ -289,6 +291,15 @@ export const MainMenu = React.memo(function MainMenu({
                 className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
                 {t.splitLines}
+              </button>
+              <button
+                onClick={() => {
+                  onOpenMergeExcel();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                {t.mergeExcel}
               </button>
             </div>
           )}

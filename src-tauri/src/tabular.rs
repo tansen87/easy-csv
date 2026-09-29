@@ -137,7 +137,11 @@ pub fn duckdb_executable() -> Result<PathBuf, String> {
 
 // --- DuckDB CLI invocation ---------------------------------------------------
 
-fn run_capture(exe: &Path, args: &[String]) -> Result<std::process::Output, String> {
+pub(crate) fn run_capture(
+  exe: &Path,
+  args: &[String],
+  label: &str,
+) -> Result<std::process::Output, String> {
   let mut command = Command::new(exe);
   command.args(args);
   #[cfg(target_os = "windows")]
@@ -146,7 +150,7 @@ fn run_capture(exe: &Path, args: &[String]) -> Result<std::process::Output, Stri
   }
   command
     .output()
-    .map_err(|e| format!("Failed to run duckdb: {}", e))
+    .map_err(|e| format!("Failed to run {label}: {}", e))
 }
 
 fn duckdb_error(stderr: &[u8]) -> String {
@@ -195,6 +199,7 @@ fn list_duckdb_tables_sync(path: &str) -> Result<Vec<DuckdbTableInfo>, String> {
       "-c".to_string(),
       sql,
     ],
+    "duckdb",
   )?;
   if !output.status.success() {
     return Err(duckdb_error(&output.stderr));
@@ -336,6 +341,7 @@ fn preview_query(
       "-c".to_string(),
       sql,
     ],
+    "duckdb",
   )?;
   if !output.status.success() {
     return Err(duckdb_error(&output.stderr));

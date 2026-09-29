@@ -77,7 +77,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | `docs/design/024_parquet-duckdb-file-reading.md` | Parquet / DuckDB 文件读取(**已实现,2026-09-28**): 输入侧从「只能是 CSV」扩展到 `.parquet` 与 `.duckdb`(数据库文件需选表)。**决策: 不引入 arrow/parquet/duckdb crate**(`.duckdb` 存储格式无纯 Rust 读取器,与 011「不打包 DuckDB」冲突),统一用已有的 DuckDB CLI 插件做格式适配;采用**按需物化**——管道首步是 duckdb 步骤则**原生直读**(`read_parquet` / `ATTACH ... (READ_ONLY)` 暴露成虚拟关系 `input`,零转换、类型保真),否则先用 duckdb 把输入导出成临时 CSV 再走今天的两条路径(xan 只吃 CSV)。**多步 duckdb SQL 串联**:**全链都是 duckdb 步骤时单进程执行**(`CREATE TEMP TABLE _step_N AS (sql)` + 重定义 `input` 视图 + `DROP` 旧表,避免视图自引用歧义;错误按脚本行号映射回步骤,零交接文件、1 次进程启动);只有混合链跨进程才用 `COPY (sql) TO tmp.parquet (FORMAT PARQUET)` 交接(不落 CSV、类型不退化),由邻接关系驱动、无需模式开关;链中非最后 duckdb 步必须是单条查询语句,xan 步骤仍可随时插入(边界落一次 CSV)。新增模块 `src-tauri/src/tabular.rs`(`InputFormat`/`SourceRef`/`detect_input_format`/`quote_literal`/`quote_ident`/`source_view_sql`/`materialize_input_to_csv`)与两个命令 `list_duckdb_tables`、`read_tabular_file`(`TabularData` = `CsvData` 超集 + `format`/`source_table`);`execute_xan_pipeline` 增 `input_table` 参数,`pipeline_seq` 的 `current_input` 由 `PathBuf` 改 `SourceRef`。临时文件用 RAII 守卫清理(覆盖取消/报错提前返回),物化的 `-separator` 必须等于 `default_delimiter`(与下游 `-d` 注入对齐)。前端:`src/utils/fileFormat.ts`(新,`isCsvFile` 唯一真相)、`DuckdbTableDialog`(新)、`useTabs.loadCsvData` 单入口 + 分隔符重读 effect 限定 CSV、`TableNode` 非 CSV 隐藏分隔符徽标。**CSV 路径零变化**是回归红线 |
 
-> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–024 已登记。
+| `docs/design/025_excel-multi-file-merge.md` | Excel 多文件合并(**已实现,2026-09-29**;上游能力/内存/并行度实测与决策依据见文内): 补上「N 个工作簿 → 1 张表」这一空缺 —— 现有对 xlsx 的能力只有「单输入单输出」(管道 `from`/`to` 节点、Batch Convert 的 N→N),而管道 `cat` 节点**只吃 CSV**(实测:`xan cat rows a.xlsx b.xlsx` 会把 zip 字节当 CSV,报 `CSV error: record 4 ... found record with 2 fields`),所以「按 sheet 名/全部 sheet 合并多个 Excel」今天无法表达。实测确认 `xan 0.60.0` 的 `from --list-sheets` / `--sheet-name` / `--sheet-index`(默认 0)与 `cat rows -U/-I`(按列名对齐)可用,但有三个陷阱:①严格 `cat` 表头不一致时**先吐数据再报错**(直接 `-o` 会留半截文件)→ 改为**写前预检 + 临时输出 rename 原子落盘**;②`-U`/`-I` 会让 `--source-column` **静默消失** → 来源列改为**我们自己前置首列**,已验证在 `-U` 下可保留;③`--paths` 清单必须写**绝对路径**(按子进程 cwd 解析);④`to xlsx` 恒为**单 sheet 且名固定 `Sheet1`**,多 sheet 输出列为非目标。**已实现**:后端 `src-tauri/src/excel_merge.rs`(纯函数 `collect_workbooks`/`resolve_parts`/`plan_alignment`/`union_summary`/`is_near_duplicate_column`/`source_label`/`common_ancestor`/`write_paths_list`/`resolve_output_path` + xan 薄壳)与命令 `scan_excel_sources`/`merge_excel_sources`/`read_excel_header`;前端 `src/modules/dialogs/file/MergeExcelDialog.tsx` + `src/utils/excelMergeHistory.ts`;File 菜单「按行拆分」下方入口 + 命令面板 `merge-excel`。**已定策略**:①**列对齐默认 `--union`**(配套 `union_summary` 让「加宽」可见);②**合并全程单线程**(实测 cpu/wall 0.95~0.98×;明确不做并发——峰值内存可预测优先);③取 sheet **三选一下拉**(第 1 个/所有/指定名称,无「按序号」;指定名称必须选、留空报错);④**不引入流式读取库**(`xl` 已实测否决:会把格式码含 `m`/`d` 的数值静默改成日期、值为 60 时 panic、缺 `<dimension>` 时变长行)。**内存实测**:合并阶段 `cat rows` 131 MB 输入峰值仅 **8.5 MB**(流式),读取阶段一张 80 万行 sheet(解压 179 MB)峰值 **308 MB** 但**按 sheet 计费**(峰值 = max(单个 sheet) 而非总和)。⚠️ **CI 关键约束**:`xan` 不随包分发(`.gitignore` 排除 `*.exe`,`resources/plugins/` 只有 `readme.md`),故 `cargo test` 里凡 shell out 到 xan 的用例**必须能优雅跳过**(测试把 xan 复制进测试资源插件目录,走生产解析器同一条路)。 |
+
+> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–025 已登记。
 
 ---
 
@@ -211,6 +213,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `convert_csv_encoding` | csv | 转换 CSV 文件编码(64KB 流式转码),返回输出路径/读写字节数/后端耗时 |
 | `separate_csv` | 将 CSV 拆分为 good/bad 两文件(共享 `flexible(true)` reader/writer 重新序列化,坏行不丢失;后续连续坏行会连同前一合法行一并进 bad;支持 expected_columns 覆盖 / skiprows / quoting / out_dir / streaming / no_headers;核心为泛型 `separate_stream`,默认内存路径与 `streaming` 流式路径共用同一逻辑)。设计:`docs/design/016_separate-good-bad-rows.md` |
 | `split_lines` | 按**原始行**把文本文件切成 `{stem}_part{N}{ext}`(N 从 1、保留输入扩展名;不解析 CSV、不涉及分隔符,`read_until(b'\n')` 字节保真 + 常量内存,可处理超大文件);返回 `SplitLinesResult`(output_dir/output_paths/file_count/lines_per_file/total_rows/header_written/elapsed_ms);`no_headers=true` 时首行按数据行、输出不写表头,默认首行作为表头复制进每一份。核心 `split_lines_stream`(泛型 writer 工厂)、`split_lines_to_files`、`split_part_path`/`split_lines_target`。设计:`docs/design/021_split-lines-by-line-count.md` |
+| `scan_excel_sources` | excel_merge | 扫描来源(文件/目录混选、递归可选、扩展名过滤): 列出工作簿 + 各自 sheet 名(`from --list-sheets`)+ sheet 名并集 + warnings;只扫描不转换 |
+| `merge_excel_sources` | excel_merge | Excel 多文件合并(设计 025): 逐 sheet `xan from` 转临时 CSV(需要来源列时用 csv crate 自建首列,绕开 `--source-column` 在 `-U` 下静默消失)→ 写前预检(`plan_alignment` + `union_summary`)→ `cat rows [-U\|-I] --paths` 流式拼接 → `to xlsx`/`fmt` 原子落盘;单线程,峰值内存 = max(单个 sheet) |
+| `read_excel_header` | excel_merge | 取某工作簿某 sheet 的表头行(对话框列名按需展开用);`sheet_to_csv` + 首行解析,空 sheet 返回空数组 |
 | `probe_csv_file` | csv | 探测文件头部(64 KiB):自动检测分隔符 + 返回第一行列数与表头预览,供拆分对话框显示文件信息。设计:`docs/design/017_separate-dialog-ux.md` |
 | `load_profile_cache` / `save_profile_cache` | storage | 数据概况缓存(基于文件 mtime,LRU 淘汰,上限50条) |
 | `check_xan_installed` | xan | 检查 xan.exe 是否已解压 |
@@ -287,6 +292,8 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `SeparateCSVDialog.test.tsx` | 拆分好/坏行对话框(设计 016/017): 流式/无表头选项、探测、上次结果、打开路径 |  |
 | `splitLinesHistory.test.ts` | 按行拆分结果 localStorage(设计 021): 往返、坏 JSON / 缺选项字段 / 类型不符、超长跳过、清除 | 6 |
 | `SplitLinesDialog.test.tsx` | 按行拆分对话框(设计 021): 行数/无表头/输出目录选项、校验拦截、上次记录回填与展示、打开路径、目录失效 | 9 |
+| `excelMergeHistory.test.ts` | Excel 合并结果 localStorage(设计 025): 往返、坏 JSON / 缺选项字段 / 类型不符 / 未知枚举值 / 摘要结构错误、超长跳过、清除 | 9 |
+| `MergeExcelDialog.test.tsx` | Excel 合并对话框(设计 025): 默认 payload(union/first/无 sheetIndex)、三模式互斥与按需渲染、名称留空拦截、扫描预览且不预取列名、按需展开、严格报错透传、并集加宽提示、xlsx 单 sheet 提示、打开路径、输出失效 | 12 |
 | `UpdateDialog.test.tsx` | 更新对话框: 进度条落在标题栏(不在可滚动正文里)、字节数展示、未安装时无进度、安装中 Esc 与遮罩点击均不关闭 | 6 |
 
 > 全量以 `pnpm test` 为准(当前 29 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
@@ -480,6 +487,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 |------|------|
 | `file/SeparateCSVDialog.tsx` | 拆分好/坏行: 输入探测、分隔符自动检测/手选/设为默认、期望列数/跳过行/引号/无表头/流式、上次结果(localStorage)+ 打开路径 |
 | `file/SplitLinesDialog.tsx` | 按行拆分(设计 021): 输入文件、输出目录、每个文件行数、无表头、上次记录(回填选项 + 打开输出目录 + 清除记录 + 目录失效提示);不解析 CSV,故无分隔符/探测选项 |
+| `file/MergeExcelDialog.tsx` | Excel 多文件合并(设计 025): 来源(文件/目录混选可多条)+ 递归 + 扩展名多选 + 取 sheet 三选一(第 1 个/所有/指定名称)+ 列对齐(默认并集)+ 来源列 + 输出格式(csv/xlsx);扫描预览(sheet 名常显、列名按需展开)、并集加宽/疑似同列琥珀提示、xlsx 单 sheet 说明、上次记录(选项回填 + 打开路径 + 清除记录 + 输出失效提示) |
 | `file/DuckdbTableDialog.tsx` | `.duckdb` 选表对话框(设计 024): 打开多表数据库时由 `useTabs` 的注入式回调唤起,列出 `schema.table` + 类型;单表库自动选中不经此对话框,Esc/遮罩取消 = 放弃打开 |
 | `file/CsvDiffDialog.tsx` | CSV 双文件对比(Ctrl+D),分页避免卡顿 |
 | `file/CsvEncodingDialog.tsx` | CSV 编码转换(auto/BOM 检测、UTF-8、GBK、GB18030、UTF-16 LE/BE、Latin-1);上次记录(完成时间/耗时/编码对/字节数 + 打开路径 + 清除记录 + 输出文件失效提示),打开时回填输入输出路径与源/目标编码。设计:`docs/design/020_encoding-conversion-history.md` |
@@ -552,6 +560,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 修改 CSV 编码转换 | `src/modules/dialogs/file/CsvEncodingDialog.tsx` + `src-tauri/src/csv.rs`(`convert_csv_encoding`)+ `src/utils/encodingHistory.ts`(上次记录持久化)。设计:`docs/design/020_encoding-conversion-history.md` |
 | 修改拆分好/坏行 | `src/modules/dialogs/file/SeparateCSVDialog.tsx` + `src-tauri/src/csv.rs`(`separate_csv`/`separate_stream`/`probe_csv_file`)+ `src/hooks/useCsvProbe.ts` + `src/utils/separateHistory.ts` + `src-tauri/src/storage.rs`(`reveal_paths`) |
 | 修改按行拆分(按行数切成多份) | `src/modules/dialogs/file/SplitLinesDialog.tsx` + `src-tauri/src/csv.rs`(`split_lines`/`split_lines_stream`/`split_lines_to_files`)+ `src/utils/splitLinesHistory.ts` + `src/components/menu/MainMenu.tsx`(File 菜单入口)+ `src-tauri/src/storage.rs`(`reveal_paths`)。设计:`docs/design/021_split-lines-by-line-count.md` |
+| 修改 Excel 多文件合并(多工作簿/sheet 合成一张表) | `src/modules/dialogs/file/MergeExcelDialog.tsx` + `src-tauri/src/excel_merge.rs`(`scan_excel_sources`/`merge_excel_sources`/`read_excel_header`)+ `src/utils/excelMergeHistory.ts` + `src/components/menu/MainMenu.tsx`(File 菜单入口)+ `src/components/ui/Select.tsx`(可选 `ariaLabel`)。设计:`docs/design/025_excel-multi-file-merge.md` |
 | 修改会话保存/恢复 | `src/hooks/useSession.ts` + `src/utils/session.ts` + `src-tauri/src/session.rs` |
 | 修改自动更新 / 免提权安装 | `src-tauri/tauri.conf.json`(`bundle.targets`/`installMode`/`createUpdaterArtifacts`/`plugins.updater`)+ `src-tauri/src/update.rs`(`get_install_form`)+ `src-tauri/src/config.rs`(`get_resources_dir` 的就地布局、不可写回退与反向迁移)+ `src-tauri/nsis/hooks.nsh`(装入 `<用户选择路径>\EasyCsv` + 卸载时按「删除应用数据」勾选框删除该目录,配合 `bundle.windows.nsis.installerHooks`)+ `src/services/update/index.ts` + `src/hooks/useUpdater.ts` + `src/modules/dialogs/app/UpdateDialog.tsx` + `src/hooks/useSession.ts`(`flushSession`)+ `.github/workflows/release.yml`。设计:`docs/design/022_github-auto-update-and-admin-free-install.md` |
 | 修改命令面板 | `src/modules/logs/CommandPalette.tsx` + `src/hooks/useUIState.ts` + `src/hooks/useKeyboardShortcuts.ts`(Ctrl+K) |
