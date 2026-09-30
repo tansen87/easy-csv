@@ -385,6 +385,26 @@
   animation: pulse-once 0.8s ease-in-out 2;
 }
 
+/**
+ * Entrance for a step node that has just joined the pipeline (design 027 §4.1:
+ * the sample pipeline is revealed step by step so a new user sees *how* a step
+ * gets added instead of being handed a finished pipeline).
+ */
+@keyframes node-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-node-enter {
+  animation: node-enter 0.28s ease-out;
+}
+
 /* Splash screen animations */
 @keyframes fade-in {
   0% {

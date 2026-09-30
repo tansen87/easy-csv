@@ -22,6 +22,8 @@ interface SettingsDialogProps {
   onDoubleClickFitViewChange: (value: boolean) => void;
   autoCheckUpdate: boolean;
   onAutoCheckUpdateChange: (value: boolean) => void;
+  /** Clear the "intro seen" flag so the canvas guide shows again (design 027 §5). */
+  onResetOnboarding?: () => void;
   onSave: () => void;
   aiConfig: AIConfig;
   onAIConfigChange: (config: AIConfig) => void;
@@ -47,6 +49,7 @@ export function SettingsDialog({
   onDoubleClickFitViewChange,
   autoCheckUpdate,
   onAutoCheckUpdateChange,
+  onResetOnboarding,
   onSave,
   aiConfig,
   onAIConfigChange,
@@ -183,6 +186,7 @@ export function SettingsDialog({
             onDoubleClickFitViewChange={onDoubleClickFitViewChange}
             autoCheckUpdate={autoCheckUpdate}
             onAutoCheckUpdateChange={onAutoCheckUpdateChange}
+            onResetOnboarding={onResetOnboarding}
             onSave={onSave}
             aiConfig={aiConfig}
             onAIConfigChange={onAIConfigChange}

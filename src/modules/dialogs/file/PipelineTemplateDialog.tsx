@@ -1,10 +1,20 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from "react";
-import { X, Check, Play, Pencil, Trash2, Download, Search } from "lucide-react";
+import {
+  X,
+  Check,
+  Play,
+  Pencil,
+  Trash2,
+  Download,
+  CopyPlus,
+  Search,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { useLanguage } from "@/i18n";
 import { PipelineTemplate } from "@/types/xan";
+import { isBuiltinTemplate } from "@/data/templates/builtin";
 
 interface PipelineTemplateDialogProps {
   isOpen: boolean;
@@ -18,6 +28,8 @@ interface PipelineTemplateDialogProps {
   onDelete: (id: string) => void;
   onExport: (id: string) => void;
   onImport: () => void;
+  /** Adopt a built-in template into the user's own library (design 027 §4.4). */
+  onCopyToMine: (id: string) => void;
 }
 
 export function PipelineTemplateDialog({
@@ -32,6 +44,7 @@ export function PipelineTemplateDialog({
   onDelete,
   onExport,
   onImport,
+  onCopyToMine,
 }: PipelineTemplateDialogProps) {
   const { t } = useLanguage();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -109,6 +122,134 @@ export function PipelineTemplateDialog({
     }
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, handleKeyDown]);
+
+  const builtinList = filteredTemplates.filter((tpl) =>
+    isBuiltinTemplate(tpl.id),
+  );
+  const myList = filteredTemplates.filter((tpl) => !isBuiltinTemplate(tpl.id));
+
+  /**
+   * One template row. Built-ins (design 027 §4.4) are read-only: no rename and
+   * no delete, but "copy to my templates" so the user can adopt and then edit
+   * one.
+   */
+  const renderTemplateRow = (tpl: PipelineTemplate) => {
+    const isRenaming = renamingId === tpl.id;
+    const builtin = isBuiltinTemplate(tpl.id);
+    return (
+      <li
+        key={tpl.id}
+        className="flex items-start justify-between gap-3 p-2 rounded-md border border-border bg-muted/20"
+      >
+        <div className="min-w-0 flex-1">
+          {isRenaming ? (
+            <div className="space-y-1">
+              <input
+                data-saveonenter="true"
+                data-kind="rename"
+                type="text"
+                value={renameName}
+                onChange={(e) => setRenameName(e.target.value)}
+                placeholder={t.templateName}
+                className="w-full h-7 px-2 rounded-md bg-muted text-sm text-foreground outline-none border border-transparent focus:border-primary"
+              />
+              <input
+                type="text"
+                value={renameDesc}
+                onChange={(e) => setRenameDesc(e.target.value)}
+                placeholder={t.templateDescriptionPlaceholder}
+                className="w-full h-7 px-2 rounded-md bg-muted text-xs text-foreground outline-none border border-transparent focus:border-primary"
+              />
+            </div>
+          ) : (
+            <>
+              <div className="text-sm font-medium text-foreground truncate">
+                {tpl.name}
+              </div>
+              {tpl.description && (
+                <div className="text-xs text-muted-foreground truncate">
+                  {tpl.description}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {isRenaming ? (
+            <>
+              <Button variant="ghost" size="icon" onClick={commitRename}>
+                <Check className="h-4 w-4 text-primary" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setRenamingId(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onApply(tpl.id)}
+              >
+                <Play className="h-3.5 w-3.5 mr-1" />
+                {t.templateApply}
+              </Button>
+              {builtin && (
+                <Tooltip content={t.copyToMyTemplates}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onCopyToMine(tpl.id)}
+                  >
+                    <CopyPlus className="h-3.5 w-3.5" />
+                  </Button>
+                </Tooltip>
+              )}
+              {!builtin && (
+                <>
+                  <Tooltip content={t.templateRename}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setRenamingId(tpl.id);
+                        setRenameName(tpl.name);
+                        setRenameDesc(tpl.description || "");
+                      }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </Tooltip>
+                  <Tooltip content={t.templateExport}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onExport(tpl.id)}
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                    </Button>
+                  </Tooltip>
+                  <Tooltip content={t.templateDelete}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(tpl.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </Tooltip>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </li>
+    );
+  };
 
   if (!isOpen) return null;
 
@@ -200,113 +341,27 @@ export function PipelineTemplateDialog({
                 {t.templateNoMatches}
               </div>
             ) : (
-              <ul className="space-y-2">
-                {filteredTemplates.map((tpl) => {
-                  const isRenaming = renamingId === tpl.id;
-                  return (
-                    <li
-                      key={tpl.id}
-                      className="flex items-start justify-between gap-3 p-2 rounded-md border border-border bg-muted/20"
-                    >
-                      <div className="min-w-0 flex-1">
-                        {isRenaming ? (
-                          <div className="space-y-1">
-                            <input
-                              data-saveonenter="true"
-                              data-kind="rename"
-                              type="text"
-                              value={renameName}
-                              onChange={(e) => setRenameName(e.target.value)}
-                              placeholder={t.templateName}
-                              className="w-full h-7 px-2 rounded-md bg-muted text-sm text-foreground outline-none border border-transparent focus:border-primary"
-                            />
-                            <input
-                              type="text"
-                              value={renameDesc}
-                              onChange={(e) => setRenameDesc(e.target.value)}
-                              placeholder={t.templateDescriptionPlaceholder}
-                              className="w-full h-7 px-2 rounded-md bg-muted text-xs text-foreground outline-none border border-transparent focus:border-primary"
-                            />
-                          </div>
-                        ) : (
-                          <>
-                            <div className="text-sm font-medium text-foreground truncate">
-                              {tpl.name}
-                            </div>
-                            {tpl.description && (
-                              <div className="text-xs text-muted-foreground truncate">
-                                {tpl.description}
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        {isRenaming ? (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={commitRename}
-                            >
-                              <Check className="h-4 w-4 text-primary" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setRenamingId(null)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onApply(tpl.id)}
-                            >
-                              <Play className="h-3.5 w-3.5 mr-1" />
-                              {t.templateApply}
-                            </Button>
-                            <Tooltip content={t.templateRename}>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setRenamingId(tpl.id);
-                                  setRenameName(tpl.name);
-                                  setRenameDesc(tpl.description || "");
-                                }}
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                            </Tooltip>
-                            <Tooltip content={t.templateExport}>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => onExport(tpl.id)}
-                              >
-                                <Download className="h-3.5 w-3.5" />
-                              </Button>
-                            </Tooltip>
-                            <Tooltip content={t.templateDelete}>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => onDelete(tpl.id)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </Tooltip>
-                          </>
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="space-y-4">
+                {[
+                  {
+                    key: "builtin",
+                    label: t.builtinTemplatesGroup,
+                    list: builtinList,
+                  },
+                  { key: "mine", label: t.myTemplatesGroup, list: myList },
+                ]
+                  .filter((group) => group.list.length > 0)
+                  .map((group) => (
+                    <div key={group.key}>
+                      <h4 className="mb-1.5 px-0.5 text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                        {group.label}
+                      </h4>
+                      <ul className="space-y-2">
+                        {group.list.map(renderTemplateRow)}
+                      </ul>
+                    </div>
+                  ))}
+              </div>
             )}
           </div>
         </ScrollArea>

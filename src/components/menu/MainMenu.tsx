@@ -60,6 +60,12 @@ interface MainMenuProps {
   onToggleAIPanel: () => void;
   showVariablePanel: boolean;
   onToggleVariablePanel: () => void;
+  /**
+   * Briefly highlight the command-panel entry while the first-run guide is up
+   * (design 027 §4.2 item 3), so the card's button and the real entry point
+   * become associated. Visual only — no click behaviour changes.
+   */
+  highlightCommandEntry?: boolean;
 }
 
 export const MainMenu = React.memo(function MainMenu({
@@ -107,6 +113,7 @@ export const MainMenu = React.memo(function MainMenu({
   onToggleAIPanel,
   showVariablePanel,
   onToggleVariablePanel,
+  highlightCommandEntry = false,
 }: MainMenuProps) {
   const { t } = useLanguage();
 
@@ -331,26 +338,38 @@ export const MainMenu = React.memo(function MainMenu({
           </button>
         </div>
 
-        <button
-          onClick={onExecute}
-          disabled={currentPipelineLength === 0 || isExecuting}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-            isExecuting
-              ? "text-primary opacity-70"
-              : currentPipelineLength === 0
-                ? "text-muted-foreground/40 cursor-not-allowed"
-                : "text-primary hover:text-primary hover:bg-primary/10"
-          }`}
+        {/* Design 027 §4.2 item 3: this button used to be a silent dead end —
+            greyed out with no explanation. `pointer-events-none` lets the
+            tooltip wrapper receive hover, which a disabled button would
+            otherwise swallow. */}
+        <Tooltip
+          content={
+            currentPipelineLength === 0
+              ? `${t.onboardingExecuteNeedsStep} · ${t.onboardingExecuteHint}`
+              : `${t.execute} (Ctrl+R)`
+          }
         >
-          {isExecuting ? (
-            <>
-              <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              {t.executing}
-            </>
-          ) : (
-            <>{t.execute}</>
-          )}
-        </button>
+          <button
+            onClick={onExecute}
+            disabled={currentPipelineLength === 0 || isExecuting}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              isExecuting
+                ? "text-primary opacity-70"
+                : currentPipelineLength === 0
+                  ? "text-muted-foreground/40 cursor-not-allowed pointer-events-none"
+                  : "text-primary hover:text-primary hover:bg-primary/10"
+            }`}
+          >
+            {isExecuting ? (
+              <>
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                {t.executing}
+              </>
+            ) : (
+              <>{t.execute}</>
+            )}
+          </button>
+        </Tooltip>
 
         {/* Spacer */}
         <div className="flex-1" />
@@ -373,7 +392,12 @@ export const MainMenu = React.memo(function MainMenu({
           <Tooltip content={t.commandPanel}>
             <button
               onClick={onToggleCommandPanel}
-              className={commandButtonClass(showCommandPanel)}
+              className={cn(
+                commandButtonClass(showCommandPanel),
+                highlightCommandEntry &&
+                  !showCommandPanel &&
+                  "bg-blue-100 text-blue-700 ring-2 ring-blue-400/70 dark:bg-blue-900/60 dark:text-blue-300",
+              )}
             >
               <ListTree className="h-4 w-4" />
               {showCommandPanel && (

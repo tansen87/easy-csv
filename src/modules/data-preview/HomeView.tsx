@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/ScrollArea";
-import { X, FolderOpen, FileUp, Star, Clock, File, Square } from "lucide-react";
+import { X, FolderOpen, FileUp, Star, Clock, File, Square, Play } from "lucide-react";
 import {
   PipelineStep,
   PipelineEdge,
@@ -23,6 +23,7 @@ import {
 import { buildCommandInitialParams } from "@/modules/dialogs/command/lib/initialParams";
 import type { CommandDialogType, CommandEntryContext } from "@/types/dialog";
 import { FlowPanel } from "@/modules/pipeline/FlowPanel";
+import { FirstStepGuide } from "@/components/onboarding/FirstStepGuide";
 import { VersionControlPanel } from "@/modules/pipeline/panels/VersionControlPanel";
 import { DataLineagePanel } from "@/modules/pipeline/panels/DataLineagePanel";
 
@@ -110,6 +111,24 @@ interface HomeViewProps {
   /** Chosen table when the input is a `.duckdb` file. */
   sourceTable?: string;
   onDelimiterChange?: (mode: DelimiterMode) => void;
+  /** First-run guide card over the canvas (design 027 §4.2). */
+  showOnboardingGuide?: boolean;
+  /** xan command count, shown in the guide card's add-step line. */
+  commandCount?: number;
+  /** Open the floating command panel — the single "add an operation" entry. */
+  onOpenCommandPanel?: () => void;
+  onOpenAIPanel?: () => void;
+  /** Load the built-in sample data + demo pipeline. */
+  onLoadDemo?: () => void;
+  onDismissOnboardingGuide?: () => void;
+  /** Caption shown while the sample pipeline reveals itself step by step. */
+  demoReveal?: {
+    caption: string;
+    step?: { index: number; total: number };
+  } | null;
+  /** Advance the reveal one step, then run it (click-driven, design 027 §11.2). */
+  onAdvanceDemoReveal?: () => void;
+  onSkipDemoReveal?: () => void;
 }
 
 export const HomeView = React.memo(function HomeView({
@@ -169,6 +188,15 @@ export const HomeView = React.memo(function HomeView({
   inputFormat,
   sourceTable,
   onDelimiterChange,
+  showOnboardingGuide = false,
+  commandCount = 0,
+  onOpenCommandPanel,
+  onOpenAIPanel,
+  onLoadDemo,
+  onDismissOnboardingGuide,
+  demoReveal,
+  onAdvanceDemoReveal,
+  onSkipDemoReveal,
 }: HomeViewProps) {
   const { t } = useLanguage();
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
@@ -340,7 +368,29 @@ export const HomeView = React.memo(function HomeView({
           </div>
 
           {/* Action cards */}
-          <div className="flex items-stretch gap-4 mb-12">
+          <div className="flex items-stretch gap-4 mb-8">
+            {/* Recommended first step for a brand-new user (design 027 §4.1):
+                one click gets sample data + a pipeline that already ran. */}
+            <button
+              onClick={onLoadDemo}
+              className="group relative flex flex-col items-center gap-4 px-8 py-6 rounded-2xl border border-blue-200 bg-blue-50/60 hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transition-all duration-200 w-44 dark:border-blue-900 dark:bg-blue-950/30 dark:hover:bg-blue-950/50"
+            >
+              <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-blue-600 px-2.5 py-0.5 text-[10px] font-bold text-white">
+                {t.onboardingRecommendedBadge}
+              </span>
+              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center group-hover:scale-105 transition-all duration-200 dark:bg-blue-900/60">
+                <Play className="h-5 w-5 text-blue-700 dark:text-blue-300" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+                  {t.onboardingSeeExample}
+                </p>
+                <p className="text-xs text-blue-700/70 dark:text-blue-300/70 mt-1">
+                  {t.onboardingSeeExampleDesc}
+                </p>
+              </div>
+            </button>
+
             <button
               onClick={onOpenFile}
               className="group flex flex-col items-center gap-4 px-8 py-6 rounded-2xl border border-border/60 bg-card/50 hover:bg-accent/80 hover:border-primary/40 hover:shadow-md transition-all duration-200 w-44"
@@ -390,6 +440,31 @@ export const HomeView = React.memo(function HomeView({
                 </p>
               </div>
             </button>
+          </div>
+
+          {/* Three-step mental model (design 027 §4.1) — establishes what this
+              canvas is for before the user clicks anything. */}
+          <div className="flex items-center gap-2.5 mb-8 px-5 py-3 rounded-2xl border border-dashed border-border/80 bg-card/40">
+            {[
+              t.onboardingFlowOpenData,
+              t.onboardingFlowAddStep,
+              t.onboardingFlowExecute,
+            ].map((label, index) => (
+              <React.Fragment key={label}>
+                {index > 0 && (
+                  <span className="text-xs text-muted-foreground/50">›</span>
+                )}
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-muted text-[10.5px] font-bold text-muted-foreground flex items-center justify-center">
+                    {index + 1}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{label}</span>
+                </div>
+              </React.Fragment>
+            ))}
+            <span className="ml-1 text-[11px] text-muted-foreground/70">
+              {t.onboardingFlowNote}
+            </span>
           </div>
 
           {/* Recent files */}
@@ -520,6 +595,21 @@ export const HomeView = React.memo(function HomeView({
           onDelimiterChange={onDelimiterChange}
         />
       </div>
+
+      {/* First-run guide + gesture card (design 027 §4.2/§4.6). Rendered here
+          rather than inside FlowPanel so no canvas gesture code is touched. */}
+      <FirstStepGuide
+        showGuide={showOnboardingGuide}
+        commandCount={commandCount}
+        gestureCardExpanded={showOnboardingGuide}
+        reveal={demoReveal}
+        onAdvanceReveal={onAdvanceDemoReveal}
+        onSkipReveal={onSkipDemoReveal}
+        onAddStep={() => onOpenCommandPanel?.()}
+        onAskAi={() => onOpenAIPanel?.()}
+        onSeeExample={() => onLoadDemo?.()}
+        onDismissGuide={() => onDismissOnboardingGuide?.()}
+      />
 
       {/* Version Control Panel */}
       <div

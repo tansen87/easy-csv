@@ -20,6 +20,7 @@ import {
   SeparatorVertical,
   RectangleEllipsis,
   CloudDownload,
+  Lightbulb,
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-shell";
 import { invoke } from "@tauri-apps/api/core";
@@ -55,6 +56,8 @@ interface SettingsTabContentProps {
   onDoubleClickFitViewChange: (value: boolean) => void;
   autoCheckUpdate: boolean;
   onAutoCheckUpdateChange: (value: boolean) => void;
+  /** Clear the "intro seen" flag so the canvas guide shows again (design 027 §5). */
+  onResetOnboarding?: () => void;
   onSave: () => void;
   aiConfig: AIConfig;
   onAIConfigChange: (config: AIConfig) => void;
@@ -81,6 +84,7 @@ export function SettingsTabContent({
   onDoubleClickFitViewChange,
   autoCheckUpdate,
   onAutoCheckUpdateChange,
+  onResetOnboarding,
   onSave,
   aiConfig,
   onAIConfigChange,
@@ -386,6 +390,27 @@ export function SettingsTabContent({
                   </div>
                 </label>
               </div>
+
+              {/* Replay the first-run guide (design 027 §5). */}
+              {onResetOnboarding && (
+                <div>
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4" />
+                    {t.onboardingReset}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {t.onboardingResetDesc}
+                  </p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={onResetOnboarding}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    {t.onboardingReset}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 

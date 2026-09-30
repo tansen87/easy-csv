@@ -7,6 +7,7 @@ pub mod pipeline;
 pub mod plugin_catalog;
 pub mod plugin_install;
 pub mod plugins;
+pub mod samples;
 pub mod session;
 pub mod storage;
 pub mod tabular;
@@ -84,6 +85,7 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     storage::save_lineage_data,
     storage::load_lineage_data,
     storage::save_execution_history,
+    samples::ensure_sample_data,
     storage::load_execution_history,
     storage::clear_execution_history,
     update::get_install_form

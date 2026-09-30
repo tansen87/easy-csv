@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>原型 03 · 执行完成的反馈（顶部 Toast）</title>
+<style>
+  :root{
+    --background:#ffffff; --foreground:#2a2a2a;
+    --muted:#f5f5f5; --muted-foreground:#8a8a8a; --muted-foreground-2:#a9a9a9;
+    --border:#e9e9e9; --border-2:#dfdfdf; --primary:#333333;
+    --hint:#2563eb; --hint-bg:#eff6ff; --hint-border:#bfdbfe;
+    --green:#16a34a; --green-bg:#f0fdf4; --green-border:#bbf7d0;
+    --font:"Inter","Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#f0f0f0;font-family:var(--font);color:var(--foreground)}
+  .stage{padding:28px 24px 48px;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .plabel{width:min(1180px,100%);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .plabel .tag{background:#111;color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:6px}
+  .plabel h1{font-size:14px;margin:0;font-weight:600}
+  .plabel p{margin:0;font-size:12px;color:#6b6b6b}
+
+  .app{width:min(1180px,100%);height:720px;background:var(--background);border:1px solid #d8d8d8;
+       border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.12);overflow:hidden;display:flex;flex-direction:column;position:relative}
+  .topbar{height:44px;flex:none;display:flex;align-items:center;gap:4px;padding:0 12px;border-bottom:1px solid var(--border)}
+  .tbtn{font-size:12px;font-weight:500;padding:5px 10px;border-radius:6px;color:var(--primary)}
+  .tbtn.dim{color:#c6c6c6}
+  .spacer{flex:1}
+  .iconbtn{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--primary);font-size:13px;position:relative}
+  .iconbtn.hl{background:#f2f2f2;color:var(--foreground)}
+  .iconbtn.hl:after{content:"";position:absolute;left:50%;bottom:-2px;transform:translateX(-50%);width:12px;height:2px;border-radius:2px;background:var(--foreground)}
+  .sep{width:1px;height:16px;background:var(--border);margin:0 6px}
+
+  .canvas{flex:1;position:relative;overflow:hidden;
+    background-image:radial-gradient(circle,#dcdcdc 1px,transparent 1px);background-size:22px 22px}
+  .edge{position:absolute;inset:0;pointer-events:none}
+
+  .node{position:absolute;background:#fff;border:1px solid var(--border-2);border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+  .node h5{margin:0;font-size:11.5px;font-weight:600;display:flex;align-items:center;gap:6px}
+  .nstep{padding:10px 12px;display:flex;flex-direction:column;gap:5px}
+  .nstep .meta{font-size:10px;color:#9a9a9a;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .tbl{left:36px;top:200px;width:240px;overflow:hidden}
+  .tbl-hd{display:flex;align-items:center;gap:7px;padding:8px 11px;border-bottom:1px solid var(--border);font-size:11.5px;font-weight:600}
+  .tbl-hd .fmt{font-size:9.5px;font-weight:600;color:#666;background:#f3f3f3;border-radius:5px;padding:1px 5px}
+  table{border-collapse:collapse;width:100%;font-size:10.5px}
+  th,td{text-align:left;padding:5px 10px;border-bottom:1px solid #f1f1f1;white-space:nowrap;color:#4a4a4a}
+  th{background:#fafafa;color:#6d6d6d;font-weight:600}
+  tr:last-child td{border-bottom:none}
+
+  .s1{left:316px;top:256px;width:124px}
+  .s2{left:480px;top:256px;width:124px}
+
+  /* 结果节点：普通节点样式 —— 不做「视觉终点」装饰 */
+  .result{left:644px;top:210px;width:224px;overflow:hidden}
+  .result .rh{display:flex;align-items:center;gap:6px;padding:8px 11px;border-bottom:1px solid var(--border);font-size:11.5px;font-weight:600}
+
+  /* ── 顶部完成 Toast：沿用应用现有 Toast 的顶部居中样式 ── */
+  .toast{position:absolute;left:50%;transform:translateX(-50%);top:8px;z-index:20;
+    display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;
+    background:rgba(240,253,244,.94);border:1px solid var(--green-border);color:#15803d;
+    box-shadow:0 8px 22px rgba(0,0,0,.10);backdrop-filter:blur(6px);white-space:nowrap}
+  .toast .ti{width:20px;height:20px;border-radius:999px;background:#16a34a;color:#fff;display:grid;place-items:center;font-size:11px;flex:none}
+  .toast .tm{font-size:13px;font-weight:600}
+  .toast .tsep{width:1px;height:16px;background:#bbf7d0;margin:0 2px}
+  .toast .tact{font-size:11.5px;font-weight:700;color:#15803d;background:#fff;border:1px solid var(--green-border);
+    border-radius:7px;padding:4px 11px;cursor:pointer}
+  .toast .tx{color:#8dc0a0;font-size:12px;cursor:pointer}
+
+  /* ── 日志面板（执行开始时自动打开 —— 现状） ───────── */
+  .log{position:absolute;left:872px;top:296px;width:268px;height:322px;background:#fff;border:1px solid var(--border-2);
+    border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.13);display:flex;flex-direction:column;overflow:hidden}
+  .log-hd{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);background:#fbfbfb}
+  .log-hd b{font-size:11.5px}
+  .log-hd .n{margin-left:auto;font-size:10px;color:#a9a9a9}
+  .log-hd .close{color:#c2c2c2;font-size:13px}
+  .log-row{padding:10px 12px;border-bottom:1px solid #f3f3f3}
+  .log-row .lt{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600}
+  .log-row .lt .cb{font-size:9.5px;font-weight:700;color:#15803d;background:var(--green-bg);border:1px solid var(--green-border);border-radius:5px;padding:1px 5px}
+  .log-row .lt .tm{margin-left:auto;font-size:10px;color:#b0b0b0;font-weight:500}
+  .log-row pre{margin:7px 0 0;font-family:var(--mono);font-size:10.5px;line-height:1.6;color:#5c5c5c;
+    background:#fafafa;border:1px solid var(--border);border-radius:8px;padding:8px 10px;overflow:hidden}
+  .log-foot{margin-top:auto;border-top:1px solid var(--border);padding:7px 12px;font-size:10px;color:#b0b0b0;background:#fcfcfc}
+
+  .pin{position:absolute;width:20px;height:20px;border-radius:999px;background:var(--hint);color:#fff;
+    font-size:11px;font-weight:700;display:grid;place-items:center;z-index:30;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+  .legend{width:min(1180px,100%);display:grid;gap:8px;font-size:12px;color:#5a5a5a;line-height:1.6}
+  .legend b{color:#111}
+  .dot{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:999px;background:var(--hint);color:#fff;font-size:10.5px;font-weight:700;margin-right:7px;vertical-align:1px}
+  .dotA{background:#c2410c}
+  .dotG{background:#15803d}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="plabel">
+    <span class="tag">原型 03</span>
+    <h1>执行完成的反馈 —— 顶部 Toast（唯一新增项）</h1>
+    <p>对应设计稿 §4.3 —— <b>日志面板自动打开、步骤失败红色标记都已是现状</b>；<b>不做成功标记</b>、不做「结果节点 = 视觉终点」</p>
+  </div>
+
+  <div class="app">
+    <div class="topbar">
+      <div class="tbtn">文件</div>
+      <div class="tbtn">撤销</div>
+      <div class="tbtn dim">重做</div>
+      <div class="tbtn">执行</div>
+      <div class="spacer"></div>
+      <div class="iconbtn">▤</div>
+      <div class="iconbtn hl">▦</div>
+      <div class="iconbtn">✦</div>
+      <div class="iconbtn">◧</div>
+      <div class="sep"></div>
+      <div class="iconbtn">⤓</div>
+      <div class="iconbtn">⚙</div>
+    </div>
+
+    <div class="canvas">
+
+      <!-- ① 顶部完成 Toast（应用现有 Toast 就在顶部居中，位置天然一致） -->
+      <div class="toast">
+        <span class="ti">✓</span>
+        <span class="tm">管道执行完成 · 3 个步骤 · 0.8s</span>
+        <span class="tsep"></span>
+        <span class="tact">查看结果</span>
+        <span class="tx">✕</span>
+      </div>
+
+      <svg class="edge" viewBox="0 0 1180 676" preserveAspectRatio="none">
+        <path d="M 276 296 L 316 296" stroke="#b4b4b4" stroke-width="1.6"/>
+        <path d="M 440 296 L 480 296" stroke="#b4b4b4" stroke-width="1.6"/>
+        <path d="M 604 296 L 644 296" stroke="#b4b4b4" stroke-width="1.6"/>
+      </svg>
+
+      <div class="node tbl">
+        <div class="tbl-hd">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#777" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          输入数据 <span class="fmt">CSV</span>
+        </div>
+        <table>
+          <thead><tr><th>地区</th><th>品类</th><th>金额</th></tr></thead>
+          <tbody>
+            <tr><td>华东</td><td>数码</td><td>1280.00</td></tr>
+            <tr><td>华南</td><td>家电</td><td>3499.00</td></tr>
+            <tr><td>华北</td><td>数码</td><td>860.50</td></tr>
+            <tr><td>华东</td><td>服饰</td><td>329.00</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="node nstep s1">
+        <h5>筛选 <span style="font-size:9.5px;color:#a0a0a0;font-weight:500">filter</span></h5>
+        <div class="meta">金额 &gt; 500</div>
+      </div>
+
+      <div class="node nstep s2">
+        <h5>分组汇总 <span style="font-size:9.5px;color:#a0a0a0;font-weight:500">groupby</span></h5>
+        <div class="meta">按 地区 汇总 金额</div>
+      </div>
+
+      <!-- 结果节点：与普通步骤节点同样的样式，只有内容不同 -->
+      <div class="node result">
+        <div class="rh">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#777" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          结果
+        </div>
+        <table>
+          <thead><tr><th>地区</th><th>金额_求和</th></tr></thead>
+          <tbody>
+            <tr><td>华东</td><td>1609.00</td></tr>
+            <tr><td>华南</td><td>3499.00</td></tr>
+            <tr><td>华北</td><td>860.50</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ② 日志面板：执行一开始就自动打开（现状，非本方案改动） -->
+      <div class="log">
+        <div class="log-hd">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#777" stroke-width="2" stroke-linecap="round"><path d="M4 7V5h16v2M12 5v14M9 19h6"/></svg>
+          <b>执行日志</b>
+          <span class="n">3 个步骤 · 全部成功</span>
+          <span class="close">✕</span>
+        </div>
+        <div class="log-row">
+          <div class="lt">分组汇总 <span class="cb">成功</span><span class="tm">0.4s · 3 行</span></div>
+          <pre>地区,金额_求和
+华东,1609.00
+华南,3499.00
+华北,860.50
+… 还有 0 行</pre>
+        </div>
+        <div class="log-row">
+          <div class="lt">筛选 <span class="cb">成功</span><span class="tm">0.2s · 1180 行</span></div>
+        </div>
+        <div class="log-foot">面板在执行开始时自动打开 · 现有行为，无需改动</div>
+      </div>
+
+      <!-- 标注点 -->
+      <div class="pin" style="left:806px;top:20px">1</div>
+      <div class="pin" style="left:854px;top:278px">2</div>
+
+    </div>
+  </div>
+
+  <div class="legend">
+    <div><span class="dot">1</span><b>执行完成 → 顶部 Toast</b>（§4.3）：应用现有的 Toast 系统本来就在<b>顶部居中</b>（`components/setting/Toast.tsx`：容器 `fixed top-0 … items-center`，单条 `fixed top-12 left-1/2 -translate-x-1/2`），所以完成提示直接用 `showToast` 即可，位置天然一致，不需要新组件、也不需要另选位置。<br>文案：<code>管道执行完成 · 3 个步骤 · 0.8s</code>（多分支时写「3 条分支全部完成 · 0.8s」）。<b>不显示行数变化</b> —— 每个步骤的行数日志面板里已经有了（见右侧面板），Toast 里再重复一遍只是噪音。<br>唯一需要动的地方：现有 `ToastProps` 只有 <code>message</code> + <code>type</code>，<b>要加一个可选动作</b> <code>action?: { label, onClick }</code> —— 完成提示带一个「查看结果」（打开日志面板并滚到最后一个步骤）。<b>不带「打开数据概况」</b>：那是可选深入动作，不是「执行完成」的默认下一步，需要的人自己从「更多面板」开。</div>
+
+    <div><span class="dot">2</span><b>日志面板自动打开 —— 已经实现，本方案不动</b>：`hooks/execution/runPipeline.ts:102` 在执行开始时就调用 `setShowLogPanel(true)`（配套 `setShowProgressBar(true)`，结束后 5 秒隐藏进度条）。所以结果本身一直在视野里，这一条<b>从待办里删掉</b>。面板底部那行字只是标注这个事实。</div>
+
+    <div><span class="dot dotG">现状</span><b>步骤失败标记已经存在，本方案不新增任何节点标记</b>：`PipelineStepNode.tsx:265-280` 里 `step.error` 会让节点变成 `border-red-500/70 ring-2 ring-red-500/30`，并在节点内显示红色错误文本（`addLog("error", …)` 在 `runPipeline.ts:254` 也已经写了日志）。<b>不做「每步成功标记」</b>（本次修订）—— 一条管道本来就可能有很多节点，满屏绿点会让工作流看起来更复杂；成功是默认预期，不需要额外装饰。上图的两个步骤节点因此<b>没有任何角标</b>。</div>
+
+    <div><span class="dot dotA">已删</span><b>「结果节点 = 视觉终点」整条删除</b>（本次修订）：不做结果节点的绿色描边 / 外发光，不做节点内嵌的摘要条与「查看结果 / 数据概况」按钮，也<b>不做 fitView 定位到结果节点</b>。结果统一通过「自动打开的日志面板 + 顶部 Toast」呈现，画布上不额外装饰任何节点。上图里的结果节点<b>就是普通节点样式</b>，只有标题与内容不同。</div>
+  </div>
+
+</div>
+</body>
+</html>

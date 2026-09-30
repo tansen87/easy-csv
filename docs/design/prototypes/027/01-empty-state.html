@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>原型 01 · 首屏空状态（含「看看示例」）</title>
+<style>
+  :root{
+    --background:#ffffff; --foreground:#2a2a2a;
+    --card:#ffffff; --muted:#f5f5f5; --muted-foreground:#8a8a8a;
+    --muted-foreground-2:#a9a9a9; --border:#e9e9e9; --border-2:#dfdfdf;
+    --primary:#333333; --primary-foreground:#fafafa;
+    --hint:#2563eb; --hint-bg:#eff6ff; --hint-border:#bfdbfe;
+    --line:#b4b4b4;
+    --font:"Inter","Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#f0f0f0;font-family:var(--font);color:var(--foreground)}
+  .stage{padding:28px 24px 48px;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .plabel{width:min(1180px,100%);display:flex;align-items:center;gap:10px}
+  .plabel .tag{background:#111;color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:6px}
+  .plabel h1{font-size:14px;margin:0;font-weight:600}
+  .plabel p{margin:0;font-size:12px;color:#6b6b6b}
+
+  /* ── app frame ─────────────────────────────── */
+  .app{width:min(1180px,100%);height:720px;background:var(--background);border:1px solid #d8d8d8;
+       border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.12);overflow:hidden;display:flex;flex-direction:column;position:relative}
+  .topbar{height:44px;flex:none;display:flex;align-items:center;gap:4px;padding:0 12px;border-bottom:1px solid var(--border)}
+  .tbtn{font-size:12px;font-weight:500;padding:5px 10px;border-radius:6px;color:var(--primary);cursor:default}
+  .tbtn.dim{color:#c6c6c6;cursor:not-allowed}
+  .tbtn.on{background:#f2f2f2;color:var(--foreground)}
+  .spacer{flex:1}
+  .iconbtn{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--primary)}
+  .iconbtn.hl{background:#f2f2f2;color:var(--foreground);position:relative}
+  .sep{width:1px;height:16px;background:var(--border);margin:0 6px}
+
+  .canvas{flex:1;position:relative;overflow:hidden;
+    background-image:radial-gradient(circle,#dcdcdc 1px,transparent 1px);
+    background-size:22px 22px;background-position:0 0}
+  .canvas-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 40px}
+
+  /* ── hero ─────────────────────────────── */
+  .hero{display:flex;flex-direction:column;align-items:center;margin-bottom:26px}
+  .logo{width:76px;height:76px;border-radius:18px;background:linear-gradient(135deg,rgba(51,51,51,.13),rgba(51,51,51,.04));
+        display:grid;place-items:center;margin-bottom:18px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .hero h2{font-size:23px;margin:0;letter-spacing:-.01em}
+  .hero p{font-size:13px;color:var(--muted-foreground);margin:8px 0 0}
+
+  /* ── cards ─────────────────────────────── */
+  .cards{display:flex;align-items:stretch;gap:14px;margin-bottom:26px}
+  .card{width:170px;padding:20px 14px;border-radius:16px;border:1px solid var(--border);
+        background:rgba(255,255,255,.6);display:flex;flex-direction:column;align-items:center;gap:14px;position:relative;cursor:default}
+  .card .ic{width:44px;height:44px;border-radius:12px;background:rgba(51,51,51,.07);display:grid;place-items:center}
+  .card .t{font-size:13px;font-weight:600;text-align:center;margin:0}
+  .card .s{font-size:11px;color:var(--muted-foreground);text-align:center;margin:5px 0 0;line-height:1.45}
+  .card.primary{border-color:#b9cdf5;background:var(--hint-bg);box-shadow:0 6px 18px rgba(37,99,235,.10)}
+  .card.primary .ic{background:rgba(37,99,235,.12)}
+  .card.primary .s{color:#5470a8}
+  .badge{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--hint);color:#fff;
+         font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;letter-spacing:.02em}
+  .card.gh{width:auto;padding:20px 18px;background:transparent;border-style:dashed}
+  .ghrow{display:flex;gap:14px;align-items:stretch}
+
+  /* ── 3-step mini flow ─────────────────────── */
+  .steps{display:flex;align-items:center;gap:10px;margin-bottom:24px;padding:14px 20px;border:1px dashed var(--border-2);border-radius:14px;background:#fcfcfc}
+  .steps .st{display:flex;align-items:center;gap:9px}
+  .steps .n{width:22px;height:22px;border-radius:999px;background:#f0f0f0;color:#555;font-size:11px;font-weight:700;display:grid;place-items:center}
+  .steps .st span{font-size:12px;color:#5a5a5a}
+  .steps .arw{color:#cfcfcf;font-size:12px}
+
+  /* ── recent files ─────────────────────────── */
+  .recent{width:100%;max-width:560px}
+  .recent .hd{display:flex;align-items:center;gap:8px;margin:0 0 10px 4px}
+  .recent .hd p{margin:0;font-size:10.5px;font-weight:600;color:var(--muted-foreground-2);letter-spacing:.1em;text-transform:uppercase}
+  .frow{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:12px;cursor:default}
+  .frow .fi{width:30px;height:30px;border-radius:9px;background:#f4f4f4;display:grid;place-items:center;flex:none}
+  .frow .fname{font-size:12.5px;font-weight:500;margin:0}
+  .frow .fpath{font-size:11px;color:var(--muted-foreground);margin:2px 0 0}
+
+  .legend{width:min(1180px,100%);display:grid;gap:8px;font-size:12px;color:#5a5a5a;line-height:1.6}
+  .legend b{color:#111}
+  .dot{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:999px;background:var(--hint);color:#fff;font-size:10.5px;font-weight:700;margin-right:7px;vertical-align:1px}
+  .dotA{background:#c2410c}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="plabel">
+    <span class="tag">原型 01</span>
+    <h1>首屏空状态（无文件、无管道时）</h1>
+    <p>对应设计稿 §4.1 / §4.5 —— 新增「看看示例」主卡 + 「三步就能跑通」迷你流程条</p>
+  </div>
+
+  <div class="app">
+    <div class="topbar">
+      <div class="tbtn">文件</div>
+      <div class="tbtn dim">撤销</div>
+      <div class="tbtn dim">重做</div>
+      <div class="tbtn dim">执行</div>
+      <div class="spacer"></div>
+      <div class="iconbtn" title="命令面板">▤</div>
+      <div class="iconbtn" title="日志面板">▦</div>
+      <div class="iconbtn" title="AI 助手">✦</div>
+      <div class="iconbtn" title="更多面板">◧</div>
+      <div class="sep"></div>
+      <div class="iconbtn" title="检查更新">⤓</div>
+      <div class="iconbtn" title="设置">⚙</div>
+    </div>
+
+    <div class="canvas">
+      <div class="canvas-inner">
+
+        <div class="hero">
+          <div class="logo">
+            <svg width="34" height="34" viewBox="0 0 16 16" fill="none">
+              <path d="M4 10H2.365A.98675.98675 0 0 0 1.5 9.5a1 1 0 0 0 0 2 .98675.98675 0 0 0 .865-.5H4Z" fill="#8d8d8d"/>
+              <path d="M14.5 4.5a.98675.98675 0 0 0-.865.5H12v1h1.635A.99955.99955 0 1 0 14.5 4.5Z" fill="#8d8d8d"/>
+              <path d="M12.70705 2.5 10.5.29295 8.29295 2.5 10 4.20705V9h1V4.20705ZM10.5 1.70705 11.29295 2.5 10.5 3.29295 9.70705 2.5Z" fill="#8d8d8d"/>
+              <path d="M6 11.79295V7h-1v4.79295L3.29295 13.5 5.5 15.70705 7.70705 13.5ZM4.70705 13.5 5.5 12.70705 6.29295 13.5 5.5 14.29295Z" fill="#8d8d8d"/>
+              <path d="M9 5H4.20705L2.5 3.29295.29295 5.5 2.5 7.70705 4.20705 6H9ZM2.5 6.29295 1.70705 5.5 2.5 4.70705 3.29295 5.5Z" fill="#8d8d8d"/>
+              <path d="M6.5 1.5a1 1 0 0 0-2 0 .98665.98665 0 0 0 .5.865V4h1V2.365A.98665.98665 0 0 0 6.5 1.5Z" fill="#8d8d8d"/>
+              <path d="M11 13.63525V12h-1v1.635a1 1 0 1 0 1 0Z" fill="#8d8d8d"/>
+              <path d="M15.70705 10.5 13.5 8.29295 11.79295 10H7v1h4.79295L13.5 12.70705ZM13.5 9.70705 14.29295 10.5 13.5 11.29295 12.70705 10.5Z" fill="#8d8d8d"/>
+            </svg>
+          </div>
+          <h2>欢迎使用 Easy CSV</h2>
+          <p>把 CSV 操作串成一条可视化管道 —— 或者先看个现成的例子</p>
+        </div>
+
+        <div class="cards">
+          <div class="card primary">
+            <div class="badge">推荐 · 30 秒</div>
+            <div class="ic">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="6 3 20 12 6 21 6 3"/>
+              </svg>
+            </div>
+            <div>
+              <p class="t" style="color:#1e40af">看看示例</p>
+              <p class="s">打开一份示例数据 +<br/>一条已经跑通的管道</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="ic">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              </svg>
+            </div>
+            <div>
+              <p class="t">打开文件</p>
+              <p class="s">CSV, Excel, JSON<br/>parquet, duckdb</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="ic">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 20h16"/>
+              </svg>
+            </div>
+            <div>
+              <p class="t">导入工作流</p>
+              <p class="s">.xanflow 文件</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="ic">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c99a00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </div>
+            <div>
+              <p class="t">GitHub 点赞</p>
+              <p class="s">给作者一点鼓励</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="steps">
+          <div class="st"><div class="n">1</div><span>打开数据</span></div>
+          <div class="arw">›</div>
+          <div class="st"><div class="n">2</div><span>添加操作</span></div>
+          <div class="arw">›</div>
+          <div class="st"><div class="n">3</div><span>执行并导出</span></div>
+          <div class="arw" style="margin-left:6px">·</div>
+          <span style="font-size:11.5px;color:#8a8a8a">整条流程都在这块画布上，不写代码</span>
+        </div>
+
+        <div class="recent">
+          <div class="hd">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a9a9a9" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+            </svg>
+            <p>最近文件</p>
+          </div>
+          <div class="frow">
+            <div class="fi">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" stroke-width="1.8" stroke-linecap="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
+              </svg>
+            </div>
+            <div>
+              <p class="fname">orders_2026Q3.csv</p>
+              <p class="fpath">D:\data\orders\orders_2026Q3.csv</p>
+            </div>
+          </div>
+          <div class="frow">
+            <div class="fi">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" stroke-width="1.8" stroke-linecap="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
+              </svg>
+            </div>
+            <div>
+              <p class="fname">客户名单.xlsx</p>
+              <p class="fpath">D:\data\客户名单.xlsx</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div><span class="dot">1</span><b>新增主卡「看看示例」</b>：置于四张卡首位并高亮（蓝环 + 渐显阴影 + 「推荐 · 30 秒」角标），成为无脑首选路径。</div>
+    <div><span class="dot">2</span><b>「三步就能跑通」迷你流程条</b>（虚线框）：在用户点击任何东西之前，先用一行字建立「这块画布是干什么的」的心智模型。</div>
+    <div><span class="dot">3</span><b>「导入工作流」降权</b>：留在原位但视觉权重低于示例与打开文件 —— 对新人它是死路（手上没有 .xanflow 文件）。</div>
+    <div><span class="dot">4</span><b>最近文件保留原样</b>：回访用户的第一落点，不做改动。</div>
+    <div><span class="dot dotA">注</span>示例卡点击后的行为见 §4.1 第 4 条：一次性完成「加载示例数据 + 应用 3 节点已连线管道 + fitView + 打开日志面板 + 引导 Toast」，用户不需要再点任何东西。</div>
+  </div>
+
+</div>
+</body>
+</html>

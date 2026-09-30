@@ -14,3 +14,7 @@
 src-tauri/plugin-signing.pub text eol=lf
 src-tauri/tests/fixtures/plugin-catalog/catalog.json text eol=lf
 src-tauri/tests/fixtures/plugin-catalog/catalog.json.sig text eol=lf
+# The sample dataset is embedded with `include_str!`, so its working-tree bytes
+# are what users receive. A CRLF checkout on Windows would change the file the
+# app writes out and trip `embedded_sample_has_expected_shape` (2026-09-30).
+src-tauri/samples/easy-csv-sample-sales.csv text eol=lf

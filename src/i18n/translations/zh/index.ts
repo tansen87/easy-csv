@@ -8,6 +8,7 @@ import { zhSettings } from "./settings";
 import { zhHelp } from "./help";
 import { zhUpdate } from "./update";
 import { zhPlugins } from "./plugins";
+import { zhOnboarding } from "./onboarding";
 
 /**
  * Every zh string, merged back into one flat object.
@@ -26,4 +27,5 @@ export const zh: Translations = {
   ...zhHelp,
   ...zhUpdate,
   ...zhPlugins,
+  ...zhOnboarding,
 };

@@ -81,7 +81,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | `docs/design/026_excel-merge-output-shapes.md` | Excel 合并输出形态扩展(**已实现 2026-09-29**,文首「实施记录」): 把输出形态从「N→1 单 sheet」扩成三种界面选项 —— A 合并为一表(025 现状)/ **B 按 sheet 名分文件**(`by_sheet`:用户显式勾选 sheet 名,勾几个出几个文件,各簿同名 sheet 合并,如 t1{s1,s2,s3}+t2{s1,s2,s3} → s1/s2/s3.xlsx)/ **C 每簿一 sheet 合成一簿**(`multi_sheet`:输出 sheet 名=来源簿 stem,锁定 xlsx);`split`(单簿拆分)是 B 的别名,共用管道。核心机制:`plan_outputs` 归一输出计划;C 的多 sheet 写出用 **`rust_xlsxwriter`**(开放问题①已定案);`sanitize_filename`(Windows 保留名/末尾点空格)与 `sanitize_sheet_name`(31 字符/非法字符/History)+ `dedup_names` 大小写折叠去重(改名映射进结果区琥珀提示);多输出失败 = 逐输出原子 + fail-fast 不回滚。回归红线:025 既有测试断言零变化(后端 169/前端 464 全绿) |
 
-> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–026 已登记。
+| `docs/design/027_first-run-onboarding.md` | 首次使用引导(**§4.1/§4.2/§4.3 已实现**;§4.5「常用」分组待定): 诊断「打开文件后画布无任何提示、命令面板/日志/AI/数据概况默认全关、前进路径全是纯图标+Tooltip、置灰的『执行』无解释」等断点;方案分层 —— P0 示例数据+示例管道(`ensure_sample_data` + 内置模板;示例管道**不含导出步骤**且自动执行一次,避免往磁盘写文件的副作用;引导语并进完成 Toast 而不是弹两条)、P0 画布内「第一个步骤」引导(**收敛到命令面板这唯一入口**: 画布空态引导卡(纯文字卡片、非节点样式) + 命令面板内提示条 + 首次高亮工具栏入口图标;已实测添加入口只有命令面板 `Alt+C`/全局 `Ctrl+K`,画布右键菜单无「在此添加操作」`FlowPanel.tsx:744-762`,故不做假节点、不加右键菜单项)、P1 执行完成的**顶部 Toast**(给 `Toast.tsx` 的 `ToastProps` 加可选 `action`,带「查看结果」;不带「打开数据概况」;**日志面板自动打开是现状** `runPipeline.ts:102`,不重复做;**步骤失败红色标记也是现状** `PipelineStepNode.tsx:265-280`(`step.error` → 红框+红字块),**不做「每步成功标记」**(满屏绿点会让工作流看起来更复杂);执行结束无完成提示 `runPipeline.ts:287-290` 才是缺口;不做「结果节点=视觉终点」/fitView 定位/结果节点内嵌按钮)、内置模板库 + 帮助中心「5 分钟上手」、命令面板「常用」分组、连线手势教学卡(只教不改)。**已定三条红线: ① 连线手势一律不改**(不恢复左键连线、不改 Handle 显隐、不加连接点呼吸动画、不调 connectionMode/panOnDrag/selectionOnDrag;已实测右键连线的起手必须是操作节点 `FlowPanel.tsx:441-459` 的 `clickedNode !== "table-node"`,输入节点不能起手);**② 不做自动连线、不做任何「未连接」提示** —— 多分支是刻意设计,新节点默认自成一条分支(`buildExecutionBranches` 对无入边节点各自成支,执行时直接吃原始输入,与「连线后再跑」等价),故 `App.tsx` 的 `autoConnect=false` 是**特性不是 bug**,不得自动首尾相连、不得给孤立节点加警示徽标、不得加「自动连接新步骤」配置项;**③ 不做首启引导屏/「三扇门」式选择页**(原 §4.7 与原型 04 已删除,入门路径统一由空状态的「看看示例」主卡承担)。UI 原型(独立 HTML,不随文档分发): `docs/design/prototypes/027/01-empty-state.html`、`02-first-step-canvas.html`、`03-execute-feedback.html` |
+
+> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–027 已登记。
 
 ---
 
@@ -403,7 +405,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `usePluginCatalog.ts` | 插件清单状态: 加载/强制刷新、按插件名路由的安装进度、失败回读权威清单;另导出 `useRequiredPluginCheck`(启动延迟 1.2s 探测 xan,只对"确定缺失"返回 true)。设计: `docs/design/023_plugin-repository-and-in-app-install.md` |
 | `useAppSettings.ts` | 应用配置: 分隔符、无表头、通知、历史上限、托盘设置 |
 | `useCsvProbe.ts` | 拆分对话框的文件探测(防抖 + 过期响应丢弃) |
-| `useToast.ts` | Toast 通知 |
+| `useOnboarding.ts` | 首次使用引导状态(027): localStorage `easy-csv-onboarding-v1` 单个标记 + 复位;读写均 try/catch 降级(存储不可用时视为「已看过」,避免每次打开都弹)。另导出 `useAutoDismissOnboarding`(用户自己加了第一个步骤即标记已看过) |
+| `useToast.ts` | Toast 通知;`showToast(msg, type, { action, duration })` 支持可选的**动作按钮**(027 §4.3 完成提示的「查看结果」) |
 | `useLogs.ts` | 执行日志 |
 | `useUIState.ts` | UI 状态: 对话框/面板开关(含命令面板、CSV 对比、编码转换) |
 | `useBatchFilter.ts` | Batch Filter 执行逻辑(原 `BatchFilterHooks.ts`,019 §5.1 改名): 文件名清理、正则构建、批量筛选执行 |
@@ -416,8 +419,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 文件 | 职责 |
 |------|------|
 | `i18n/index.tsx` | 语言上下文 Provider,持久化到 localStorage |
-| `i18n/translations/types.ts` | `Language`/`EffectiveLanguage`/`Translations` 接口(504 key 的类型契约) |
-| `i18n/translations/{en,zh}/<domain>.ts` | 按域拆分的字符串(019 §4.6): `common`/`pipeline`/`canvas`/`dialog`/`ai`/`settings`/`help`,各域 `satisfies Partial<Translations>` |
+| `i18n/translations/types.ts` | `Language`/`EffectiveLanguage`/`Translations` 接口(**745 key** 的类型契约,2026-09-30 实测;新增的是 027 引导/内置模板文案) |
+| `i18n/translations/{en,zh}/<domain>.ts` | 按域拆分的字符串(019 §4.6): `common`/`pipeline`/`canvas`/`dialog`/`ai`/`settings`/`help`/`update`/`plugins`/`onboarding`,各域 `satisfies Partial<Translations>` |
 | `i18n/translations/{en,zh}/index.ts` | 合并回一个扁平对象,类型为 `Translations`(缺 key 直接编译报错) |
 | `i18n/translations/index.ts` | `translations` 聚合出口,`@/i18n/translations` 路径不变 |
 
@@ -565,6 +568,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 修改 Excel 多文件合并(多工作簿/sheet 合成一张表) | `src/modules/dialogs/file/MergeExcelDialog.tsx` + `src-tauri/src/excel_merge.rs`(`scan_excel_sources`/`merge_excel_sources`/`read_excel_header`)+ `src/utils/excelMergeHistory.ts` + `src/components/menu/MainMenu.tsx`(File 菜单入口)+ `src/components/ui/Select.tsx`(可选 `ariaLabel`)。设计:`docs/design/025_excel-multi-file-merge.md` |
 | 修改会话保存/恢复 | `src/hooks/useSession.ts` + `src/utils/session.ts` + `src-tauri/src/session.rs` |
 | 修改自动更新 / 免提权安装 | `src-tauri/tauri.conf.json`(`bundle.targets`/`installMode`/`createUpdaterArtifacts`/`plugins.updater`)+ `src-tauri/src/update.rs`(`get_install_form`)+ `src-tauri/src/config.rs`(`get_resources_dir` 的就地布局、不可写回退与反向迁移)+ `src-tauri/nsis/hooks.nsh`(装入 `<用户选择路径>\EasyCsv` + 卸载时按「删除应用数据」勾选框删除该目录,配合 `bundle.windows.nsis.installerHooks`)+ `src/services/update/index.ts` + `src/hooks/useUpdater.ts` + `src/modules/dialogs/app/UpdateDialog.tsx` + `src/hooks/useSession.ts`(`flushSession`)+ `.github/workflows/release.yml`。设计:`docs/design/022_github-auto-update-and-admin-free-install.md` |
+| 修改首次使用引导 / 示例数据(027 §4.1/§4.2, **P0 已实现**) | 后端: `src-tauri/src/samples.rs`(`ensure_sample_data`,幂等写入 `<数据目录>/samples/`)+ `src-tauri/samples/easy-csv-sample-sales.csv`(嵌入的示例数据,**LF 字节由 `.gitattributes` 钉住**)+ `src-tauri/src/lib.rs`(注册命令)。前端: `src/hooks/useOnboarding.ts` + `src/components/onboarding/FirstStepGuide.tsx`(画布空态引导卡 + 手势卡,覆盖层,`pointer-events-none`)+ `src/data/templates/builtin.ts`(5 个内置模板,文案走 i18n)+ `src/hooks/usePipelineTemplates.ts`(内置与用户模板合并)+ `src/modules/data-preview/HomeView.tsx`(「看看示例」卡 + 三步流程条 + 渲染引导层)+ `src/app/App.tsx`(`handleLoadDemo` + 示例自动执行一次 + `showOnboardingGuide`)+ `src/modules/logs/CommandList.tsx`(首个操作提示条)+ `src/components/menu/MainMenu.tsx`(置灰「执行」的 Tooltip、入口图标高亮)+ `src/components/setting/SettingsTabContent.tsx`(重新显示引导)。设计: `docs/design/027_first-run-onboarding.md` |
+| 修改执行完成提示(027 §4.3, **P1 已实现**) | `src/components/setting/Toast.tsx`(`ToastProps.action` + 关闭按钮 + `pointer-events-auto`)+ `src/hooks/useToast.ts`(透传 action/duration)+ `src/hooks/execution/runPipeline.ts`(`finally` 里按 `pipelineFailed`/`wasCancelled` 发成功/失败 Toast;**不改**既有的 `setShowLogPanel(true)` 与进度条行为)+ `src/hooks/execution/runPipelineDeps.ts`(labels)。**不做**结果节点高亮/fitView 定位/每步成功标记(失败红框是现状 `PipelineStepNode.tsx:265-280`) |
 | 修改命令面板 | `src/modules/logs/CommandPalette.tsx` + `src/hooks/useUIState.ts` + `src/hooks/useKeyboardShortcuts.ts`(Ctrl+K) |
 | 修改管道可视化布局 | `src/modules/pipeline/FlowPanel.tsx`(主逻辑) + `pipeline/lib/layout.ts`(布局) + `pipeline/nodes/`(节点样式) |
 | 修改连线方向/锚点(上下/左右连接点) | `src/modules/pipeline/lib/layout.ts`(`resolveHandles`/`handleAnchor`) + `pipeline/nodes/`(Handle 定义) |

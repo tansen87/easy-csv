@@ -8,6 +8,7 @@ import {
   ListTree,
   HelpCircle,
   Search,
+  Sparkles,
   X,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
@@ -29,6 +30,13 @@ interface CommandListProps {
   dockState?: PanelDockState;
   /** Report position changes for persistence. */
   onDockChange?: (patch: Partial<PanelDockState>) => void;
+  /**
+   * Show the "your first operation applies straight to the input" strip. True
+   * while the current pipeline is still empty (design 027 §4.2 item 2): the
+   * teaching lands exactly where the user clicks, inside the single entry point
+   * for adding operations.
+   */
+  showFirstStepHint?: boolean;
 }
 
 export const CommandList = React.memo(function CommandList({
@@ -41,6 +49,7 @@ export const CommandList = React.memo(function CommandList({
   onClose,
   dockState,
   onDockChange,
+  showFirstStepHint = false,
 }: CommandListProps) {
   const [expandedCategories, setExpandedCategories] = useState<
     Record<string, boolean>
@@ -303,6 +312,19 @@ export const CommandList = React.memo(function CommandList({
           <X className="h-3 w-3" />
         </Button>
       </div>
+
+      {/* In-place first-step teaching (design 027 §4.2 item 2). */}
+      {showFirstStepHint && (
+        <div
+          className="flex items-start gap-2 border-b border-blue-200/70 bg-blue-50/70 px-3 py-2 dark:border-blue-900/60 dark:bg-blue-950/30"
+          data-testid="command-list-first-step-hint"
+        >
+          <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
+          <p className="text-[10.5px] leading-relaxed text-blue-800/90 dark:text-blue-200/90">
+            {t.onboardingPanelHint}
+          </p>
+        </div>
+      )}
       <ScrollArea className="flex-1">
         <div className="p-2">
           {commandCategories.map((category) => {

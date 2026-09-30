@@ -106,7 +106,7 @@ export const zhPipeline = {
   executePipelineHint: "执行工作流后查看输出",
   restore: "恢复",
   maximize: "最大化",
-  allLogs: "全部",
+  allLogs: "All",
   copy: "复制",
   copied: "已复制",
   paste: "粘贴",

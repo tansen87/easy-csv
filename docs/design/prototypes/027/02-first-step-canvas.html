@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>原型 02 · 「第一个步骤」引导（收敛到命令面板入口）</title>
+<style>
+  :root{
+    --background:#ffffff; --foreground:#2a2a2a;
+    --muted:#f5f5f5; --muted-foreground:#8a8a8a; --muted-foreground-2:#a9a9a9;
+    --border:#e9e9e9; --border-2:#dfdfdf; --primary:#333333;
+    --hint:#2563eb; --hint-bg:#eff6ff; --hint-border:#bfdbfe;
+    --line:#b4b4b4;
+    --font:"Inter","Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#f0f0f0;font-family:var(--font);color:var(--foreground)}
+  .stage{padding:28px 24px 48px;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .plabel{width:min(1180px,100%);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .plabel .tag{background:#111;color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:6px}
+  .plabel h1{font-size:14px;margin:0;font-weight:600}
+  .plabel p{margin:0;font-size:12px;color:#6b6b6b}
+
+  .app{width:min(1180px,100%);height:720px;background:var(--background);border:1px solid #d8d8d8;
+       border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.12);overflow:hidden;display:flex;flex-direction:column;position:relative}
+  .topbar{height:44px;flex:none;display:flex;align-items:center;gap:4px;padding:0 12px;border-bottom:1px solid var(--border);position:relative;z-index:5}
+  .tbtn{font-size:12px;font-weight:500;padding:5px 10px;border-radius:6px;color:var(--primary)}
+  .tbtn.dim{color:#c6c6c6}
+  .spacer{flex:1}
+  .iconbtn{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--primary);font-size:13px;position:relative}
+  /* ③ 首次引导时入口图标轻微高亮 2 秒 */
+  .iconbtn.beacon{background:var(--hint-bg);color:#1d4ed8;box-shadow:0 0 0 0 rgba(37,99,235,.5);animation:pulse 2s ease-out 3}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(37,99,235,.45)}
+    70%{box-shadow:0 0 0 8px rgba(37,99,235,0)}
+    100%{box-shadow:0 0 0 0 rgba(37,99,235,0)}
+  }
+  .sep{width:1px;height:16px;background:var(--border);margin:0 6px}
+
+  .exec-tip{position:absolute;left:196px;top:40px;z-index:20;background:#1f1f1f;color:#fff;font-size:11px;
+    padding:6px 10px;border-radius:7px;white-space:nowrap;box-shadow:0 6px 16px rgba(0,0,0,.2)}
+  .exec-tip:before{content:"";position:absolute;top:-4px;left:18px;width:8px;height:8px;background:#1f1f1f;transform:rotate(45deg)}
+  .exec-tip kbd{background:rgba(255,255,255,.16);border-radius:4px;padding:1px 5px;font-family:var(--mono);font-size:10px}
+
+  .canvas{flex:1;position:relative;overflow:hidden;
+    background-image:radial-gradient(circle,#dcdcdc 1px,transparent 1px);
+    background-size:22px 22px}
+
+  /* 输入表格节点 */
+  .node{position:absolute;background:#fff;border:1px solid var(--border-2);border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+  .tbl{left:48px;top:200px;width:392px;overflow:hidden}
+  .tbl-hd{display:flex;align-items:center;gap:7px;padding:9px 12px;border-bottom:1px solid var(--border);font-size:11.5px;font-weight:600}
+  .tbl-hd .fmt{font-size:10px;font-weight:600;color:#666;background:#f3f3f3;border-radius:5px;padding:1px 6px}
+  .tbl-hd .file{margin-left:auto;font-size:10.5px;font-weight:500;color:#9a9a9a;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  table{border-collapse:collapse;width:100%;font-size:11px}
+  th,td{text-align:left;padding:6px 11px;border-bottom:1px solid #f1f1f1;white-space:nowrap;color:#4a4a4a}
+  th{background:#fafafa;color:#6d6d6d;font-weight:600}
+  tr:last-child td{border-bottom:none}
+
+  /* ── 画布空态引导卡（纯文字卡片，不是节点） ───────────── */
+  .guide{position:absolute;left:494px;top:146px;width:344px;background:#fff;border:1px solid var(--border-2);
+    border-radius:16px;box-shadow:0 12px 34px rgba(0,0,0,.10);padding:18px 18px 15px;z-index:10}
+  .guide .gh{display:flex;align-items:center;gap:8px}
+  .guide .gh h3{margin:0;font-size:14px;font-weight:700;letter-spacing:-.01em}
+  .guide .gh .x{margin-left:auto;color:#b9b9b9;font-size:15px;line-height:1;cursor:pointer}
+  .guide p.gd{margin:7px 0 14px;font-size:11.5px;color:#6f6f6f;line-height:1.6}
+  .act{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:10px;border:1px solid var(--border);margin-bottom:8px}
+  .act .ai{width:26px;height:26px;border-radius:8px;background:#f4f4f4;display:grid;place-items:center;font-size:11px;color:#555;flex:none}
+  .act .at{font-size:12px;font-weight:600;margin:0}
+  .act .as{font-size:10.5px;color:#909090;margin:2px 0 0}
+  .act kbd{margin-left:auto;font-family:var(--mono);font-size:10px;color:#8a8a8a;border:1px solid var(--border-2);border-radius:5px;padding:1px 5px;background:#fafafa}
+  .act.pri{border-color:#9dc0f8;background:var(--hint-bg);box-shadow:0 2px 8px rgba(37,99,235,.10)}
+  .act.pri .ai{background:#dbeafe;color:#1d4ed8}
+  .act.pri .at{color:#1e40af}
+  .act.pri .as{color:#5b7cb5}
+  .act .arw{margin-left:auto;color:#1d4ed8;font-size:13px;font-weight:700}
+  .gnote{margin:4px 0 12px;padding:8px 10px;border-radius:9px;background:#fafafa;border:1px dashed var(--border-2);
+    font-size:10.5px;color:#787878;line-height:1.6}
+  .gnote b{color:#454545}
+  .gfoot{display:flex;align-items:center;justify-content:space-between}
+  .gfoot span{font-size:10.5px;color:#a8a8a8}
+  .gfoot b{font-size:11.5px;font-weight:600;color:#6b6b6b;cursor:pointer}
+
+  /* ── 命令面板（浮动，真实摆位：右侧贴边、垂直居中） ──── */
+  .panel{position:absolute;left:872px;top:88px;width:288px;height:500px;background:#fff;border:1px solid var(--border-2);
+    border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.16);display:flex;flex-direction:column;overflow:hidden;z-index:12}
+  .p-hd{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);background:#fcfcfc}
+  .p-hd .badge{font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;background:var(--primary);border-radius:6px;padding:3px 7px}
+  .p-hd .sbox{flex:1;display:flex;align-items:center;gap:6px;border:1px solid var(--border-2);border-radius:8px;padding:4px 8px;background:#fff}
+  .p-hd .sbox span{font-size:10.5px;color:#b3b3b3}
+  .p-hd .x{color:#c2c2c2;font-size:12px}
+  /* ④ 面板内「第一个步骤」就地提示条 */
+  .p-hint{display:flex;gap:8px;align-items:flex-start;padding:9px 11px;background:var(--hint-bg);border-bottom:1px solid var(--hint-border)}
+  .p-hint .hi{color:#2563eb;font-size:12px;line-height:1.4;flex:none}
+  .p-hint p{margin:0;font-size:10.5px;color:#3d5f9e;line-height:1.55}
+  .p-hint p b{color:#1e40af}
+  .p-body{flex:1;overflow:hidden;padding:8px 8px 0}
+  .cat{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;background:#f7f7f7;margin-bottom:6px}
+  .cat .ct{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#6f6f6f}
+  .cat .cv{margin-left:auto;color:#b5b5b5;font-size:10px}
+  .cmd{padding:7px 9px;border-radius:8px;border:1px solid #f0f0f0;margin-bottom:5px;background:#fff}
+  .cmd .cn2{font-family:var(--mono);font-size:11px;font-weight:700;color:#2f2f2f}
+  .cmd .cd{font-size:10px;color:#9a9a9a;margin-top:2px;line-height:1.45}
+
+  /* 手势提示：折叠态 */
+  .gbtn{position:absolute;left:1122px;top:622px;width:30px;height:30px;border-radius:999px;background:#fff;
+    border:1px solid var(--border-2);box-shadow:0 3px 10px rgba(0,0,0,.10);display:grid;place-items:center;
+    font-size:13px;font-weight:700;color:#8a8a8a;z-index:9}
+
+  /* 标注 */
+  .pin{position:absolute;width:20px;height:20px;border-radius:999px;background:var(--hint);color:#fff;
+    font-size:11px;font-weight:700;display:grid;place-items:center;z-index:30;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+  .legend{width:min(1180px,100%);display:grid;gap:8px;font-size:12px;color:#5a5a5a;line-height:1.6}
+  .legend b{color:#111}
+  .dot{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:999px;background:var(--hint);color:#fff;font-size:10.5px;font-weight:700;margin-right:7px;vertical-align:1px}
+  .dotA{background:#c2410c}
+  .dotG{background:#15803d}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="plabel">
+    <span class="tag">原型 02</span>
+    <h1>「第一个步骤」引导 —— 收敛到命令面板这唯一入口</h1>
+    <p>对应设计稿 §4.2（手势提示见 §4.6）—— 右侧那张浮层就是真实的命令面板摆位（右侧贴边、垂直居中、288×500）</p>
+  </div>
+
+  <div class="app">
+    <div class="topbar">
+      <div class="tbtn">文件</div>
+      <div class="tbtn dim">撤销</div>
+      <div class="tbtn dim">重做</div>
+      <div class="tbtn dim">执行</div>
+      <div class="spacer"></div>
+      <div class="iconbtn beacon">▤</div>
+      <div class="iconbtn">▦</div>
+      <div class="iconbtn">✦</div>
+      <div class="iconbtn">◧</div>
+      <div class="sep"></div>
+      <div class="iconbtn">⤓</div>
+      <div class="iconbtn">⚙</div>
+    </div>
+
+    <div class="exec-tip">先添加至少一个步骤 · <kbd>Alt</kbd>+<kbd>C</kbd> 打开命令面板</div>
+    <div class="pin" style="left:978px;top:32px;z-index:31">3</div>
+
+    <div class="canvas">
+
+      <!-- 画布上唯一的既有内容 -->
+      <div class="node tbl">
+        <div class="tbl-hd">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#777" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          输入数据
+          <span class="fmt">CSV</span>
+          <span class="file">easy-csv-sample-sales.csv</span>
+        </div>
+        <table>
+          <thead><tr><th>日期</th><th>地区</th><th>品类</th><th>金额</th></tr></thead>
+          <tbody>
+            <tr><td>2026-07-01</td><td>华东</td><td>数码</td><td>1280.00</td></tr>
+            <tr><td>2026-07-01</td><td>华南</td><td>家电</td><td>3499.00</td></tr>
+            <tr><td>2026-07-02</td><td>华北</td><td>数码</td><td>860.50</td></tr>
+            <tr><td>2026-07-02</td><td>华东</td><td>服饰</td><td>329.00</td></tr>
+            <tr><td>2026-07-03</td><td>华南</td><td>数码</td><td>2140.00</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ② 画布空态引导卡：纯文字卡片，不是节点样式 -->
+      <div class="guide">
+        <div class="gh">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V18h8v-3.3A7 7 0 0 0 12 2Z"/></svg>
+          <h3>从这里开始</h3>
+          <span class="x">✕</span>
+        </div>
+        <p class="gd">数据已经就位。选一个操作就能开始，走完再决定要不要串成一条链。</p>
+
+        <div class="act pri">
+          <div class="ai">▤</div>
+          <div><p class="at">添加一个操作</p><p class="as">打开命令面板，浏览全部 61 个操作</p></div>
+          <kbd>Alt+C</kbd>
+        </div>
+        <div class="act">
+          <div class="ai">✦</div>
+          <div><p class="at">直接描述需求</p><p class="as">「按地区汇总金额」</p></div>
+          <kbd>Alt+A</kbd>
+        </div>
+        <div class="act">
+          <div class="ai">▶</div>
+          <div><p class="at">先看看示例</p><p class="as">加载一条现成管道</p></div>
+        </div>
+
+        <div class="gnote">新加的节点<b>会自成一条分支</b>，直接就能执行；想串起来再连线。</div>
+
+        <div class="gfoot">
+          <span>关闭后不再自动出现，可在设置里找回</span>
+          <b>我知道了</b>
+        </div>
+      </div>
+
+      <!-- ④⑤ 命令面板（右侧贴边、垂直居中，与真实摆位一致） -->
+      <div class="panel">
+        <div class="p-hd">
+          <span class="badge">cmds</span>
+          <div class="sbox">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#b3b3b3" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <span>搜索命令…</span>
+          </div>
+          <span class="x">✕</span>
+        </div>
+
+        <!-- ④ 就地提示条：只在 pipeline 为空时出现 -->
+        <div class="p-hint">
+          <span class="hi">◈</span>
+          <p>选中第一个操作后，它会<b>直接对输入数据生效</b>（自成一条分支）—— 不需要先连线。</p>
+        </div>
+
+        <div class="p-body">
+          <!-- 面板内容与现状一致：14 个分类默认全部展开，从 OUTPUT 开始往下排 -->
+          <div class="cat"><span class="ct">Output</span><span class="cv">⌄</span></div>
+          <div class="cmd">
+            <div class="cn2">output</div>
+            <div class="cd">将输出写入文件而非stdout</div>
+          </div>
+
+          <div class="cat"><span class="ct">Explore &amp; visualize</span><span class="cv">⌄</span></div>
+          <div class="cmd">
+            <div class="cn2">view</div>
+            <div class="cd">预览 CSV 文件</div>
+          </div>
+          <div class="cmd">
+            <div class="cn2">headers</div>
+            <div class="cd">显示列名</div>
+          </div>
+          <div class="cmd">
+            <div class="cn2">count</div>
+            <div class="cd">统计文件行数</div>
+          </div>
+          <div class="cmd">
+            <div class="cn2">flatten</div>
+            <div class="cd">以 flatten 显示每一行</div>
+          </div>
+
+          <div class="cat"><span class="ct">Search &amp; filter</span><span class="cv">⌄</span></div>
+          <div class="cmd">
+            <div class="cn2">search</div>
+            <div class="cd">在 CSV 数据中搜索(或替换)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 手势提示：折叠态 -->
+      <div class="gbtn">?</div>
+
+      <!-- 标注点 -->
+      <div class="pin" style="left:476px;top:152px">2</div>
+      <div class="pin" style="left:476px;top:258px">1</div>
+      <div class="pin" style="left:856px;top:138px">4</div>
+
+    </div>
+  </div>
+
+  <div class="legend">
+    <div><span class="dot">1</span><b>同一个动作，两次点击都不离正路</b>：引导卡的主按钮「添加一个操作」直接打开命令面板 —— 也就是应用里<b>唯一</b>的添加入口（`Alt+C` / 工具栏 ▤）。这里刻意<b>不做半透明假节点</b>：点假节点却打开另一个面板，是两套动作；而且节点真实落点由 dagre 自动布局决定，假节点标的位置并不准。</div>
+    <div><span class="dot">2</span><b>引导卡是「卡片」，不是「节点」</b>：没有节点标题栏、没有左右连接点、不可拖动、不参与布局、不进 ReactFlow 的 `nodes` 数组。它只是一块画布空态说明 —— 用户不会误以为它是管道的一部分，也不会期待它就代表即将出现的那个节点。</div>
+    <div><span class="dot">3</span><b>首次引导时让入口自己亮一下</b>：引导卡出现的同时，工具栏那个 ▤ 图标做约 2 秒的轻微高亮（见页面顶部工具栏）。下次用户不看卡也知道去哪点 —— 这是把「卡上的按钮」与「入口在哪」对应起来的最低成本手段。只做视觉高亮，不改任何点击行为。</div>
+    <div><span class="dot">4</span><b>关键一步：命令面板内的就地提示条</b>（§4.2 第 2 条）。教学被放在<b>用户真正点击的那一刻</b>、且在唯一入口内部：面板打开且当前管道为空时，搜索框下方出现「选中第一个操作后，它会直接对输入数据生效（自成一条分支）—— 不需要先连线」。这样整条路径是 <b>卡 → 面板 → 选中命令</b>，没有断档。</div>
+    <div><span class="dot dotG">面板内容保持现状</span>命令列表<b>不加任何东西</b>：14 个分类默认全部展开（`CommandList.tsx` 把 `expandedCategories` 初始化为全 `true`），从 OUTPUT 开始往下排。这里唯一的改动就是上面那条提示条。</div>
+
+    <div><span class="dot dotA">注</span>顶部「执行」按钮置灰时的解释 tooltip：这个按钮现在灰着且没有任何说明，是典型的「沉默死路」。补一个 hover 解释，顺手把「命令面板在哪」告诉用户。</div>
+    <div><span class="dot dotG">守</span>两条红线在本图里的体现：① 画布上<b>没有任何「未连接」类警示</b>，也没有从输入节点指向别处的虚线 —— 不做自动连线，也不提示用户去连线；② 手势提示卡在这里是<b>折叠态</b>的那个 `?` 圆钮（首次会自动展开一次），四条手势只做展示，<b>连线的交互一行代码都不改</b>。</div>
+    <div><span class="dot dotA">不做</span>不做幽灵节点 / 假节点；不往画布右键菜单里加「在此添加操作」（那又是第二套入口，且与右键的「切刀 / 菜单」双模态语义纠缠）；不在打开文件时自动弹出命令面板（用户应该先看到自己的数据，见 §8-Q2）。</div>
+  </div>
+
+</div>
+</body>
+</html>

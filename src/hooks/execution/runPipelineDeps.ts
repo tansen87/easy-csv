@@ -36,9 +36,23 @@ export interface RunPipelineDeps {
   showToast: (
     message: string,
     type?: "info" | "success" | "warning" | "error",
+    options?: { action?: { label: string; onClick: () => void }; duration?: number },
   ) => void;
   /** i18n labels needed inside the runner. */
-  labels: { cycleDetected: string };
+  labels: {
+    cycleDetected: string;
+    /** "Pipeline finished · {steps} steps · {duration}s" (design 027 §4.3). */
+    pipelineCompleted: string;
+    /** "All {branches} branches finished · {duration}s". */
+    pipelineCompletedBranches: string;
+    /** Label of the completion toast's action button. */
+    viewResult: string;
+  };
+  /**
+   * Pan the canvas so the node that produced the result is centred — what
+   * "查看结果" has to mean beyond dismissing the toast (design 027 §4.3).
+   */
+  focusResultNode: () => void;
   resolveRunDelimiter: () => string;
   setIsExecuting: (value: boolean) => void;
   setShowLogPanel: (value: boolean) => void;

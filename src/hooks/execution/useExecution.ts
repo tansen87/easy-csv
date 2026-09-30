@@ -30,6 +30,11 @@ import type { BranchProgressState } from "@/hooks/execution/runPipelineDeps";
 interface UseExecutionProps {
   selectedTabId: string;
   defaultDelimiter: string;
+  /**
+   * Pan the canvas so the node that produced the last result is centred — the
+   * completion toast's "查看结果" action (design 027 §4.3 / §11.3).
+   */
+  focusResultNode: () => void;
   getCurrentTab: () => PipelineTab;
   getCurrentPipeline: () => PipelineStep[];
   showToast: (
@@ -86,6 +91,7 @@ export function useExecution({
   setChartHeaders,
   saveVersion,
   saveExecutionHistory,
+  focusResultNode,
 }: UseExecutionProps) {
   const { t } = useLanguage();
 
@@ -139,7 +145,13 @@ export function useExecution({
         setTabs,
         addLog,
         showToast,
-        labels: { cycleDetected: t.cycleDetected },
+        labels: {
+          cycleDetected: t.cycleDetected,
+          pipelineCompleted: t.pipelineCompleted,
+          pipelineCompletedBranches: t.pipelineCompletedBranches,
+          viewResult: t.viewResult,
+        },
+        focusResultNode,
         resolveRunDelimiter,
         setIsExecuting: (v) => setIsExecuting(v),
         setShowLogPanel,
@@ -172,7 +184,11 @@ export function useExecution({
       setTabs,
       addLog,
       showToast,
+      focusResultNode,
       t.cycleDetected,
+      t.pipelineCompleted,
+      t.pipelineCompletedBranches,
+      t.viewResult,
       resolveRunDelimiter,
       setIsExecuting,
       setShowLogPanel,

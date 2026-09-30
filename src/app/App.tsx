@@ -38,6 +38,16 @@ import { AIPanel } from "@/modules/ai/AIPanel";
 import { ToastContainer } from "@/components/setting/Toast";
 import { CommandList } from "@/modules/logs/CommandList";
 import {
+  useOnboarding,
+  useAutoDismissOnboarding,
+} from "@/hooks/useOnboarding";
+import {
+  demoRevealCaptions,
+  getBuiltinDemoTemplate,
+  needsSampleData,
+  resolveBuiltinSnapshot,
+} from "@/data/templates/builtin";
+import {
   CommandPalette,
   type PaletteItem,
 } from "@/modules/logs/CommandPalette";
@@ -713,6 +723,35 @@ function AppContent() {
     selectedTabId: tabsHook.selectedTabId,
   });
 
+  /**
+   * Pan the canvas so the node that produced the last result sits in the
+   * middle (design 027 §11.3). Backs the completion toast's "查看结果": for a
+   * pipeline longer than the viewport the result node is off-screen, and an
+   * action that only dismisses a toast does not help anyone find it.
+   *
+   * Keeps the user's zoom — this is a *pan*, not a zoom change — and no-ops
+   * when there is no node or no canvas instance (e.g. before the first paint).
+   */
+  const focusResultNode = useCallback(() => {
+    const tab = tabsCtl.getCurrentTab();
+    const lastStep = tab?.pipeline?.[tab.pipeline.length - 1];
+    const instance = reactFlowInstanceRef.current;
+    if (!lastStep || !instance?.getNode || !instance?.setCenter) return;
+    const node = instance.getNode(lastStep.id);
+    if (!node) return;
+
+    const width = node.width ?? node.measured?.width ?? 240;
+    const height = node.height ?? node.measured?.height ?? 120;
+    const position = node.positionAbsolute ?? node.position;
+    if (!position) return;
+
+    instance.setCenter(
+      position.x + width / 2,
+      position.y + height / 2,
+      { zoom: instance.getZoom(), duration: 400 },
+    );
+  }, [tabsCtl]);
+
   const {
     handleExecute,
     handleCancelExecution,
@@ -728,6 +767,7 @@ function AppContent() {
     defaultDelimiter: settings.defaultDelimiter,
     getCurrentTab: tabsCtl.getCurrentTab,
     getCurrentPipeline: tabsCtl.getCurrentPipeline,
+    focusResultNode,
     showToast,
     addLog,
     setTabs: tabsHook.setTabs,
@@ -809,11 +849,224 @@ function AppContent() {
     [showToast, tabsHook, templateStore, formatDateTime, t],
   );
 
+  const onboarding = useOnboarding();
+
+  /**
+   * Tab whose demo data has finished loading and is waiting for its one
+   * automatic run.
+   *
+   * Deliberately *state set after `loadCsvData` resolves*, not a flag flipped
+   * when the tab is created. A demo tab's snapshot already carries an
+   * `inputFile` and a pipeline, so gating on those ran the pipeline before the
+   * file had been read — at which point `resolveRunDelimiter()` falls back to
+   * the global default delimiter instead of the tab's own detected one, and
+   * every step dies with "… does not exist as a named header in the given CSV
+   * data" (2026-09-30).
+   */
+  const [demoReadyTabId, setDemoReadyTabId] = useState<string | null>(null);
+
+  /**
+   * Sample-pipeline reveal (design 027 §11.2).
+   *
+   * A finished three-node pipeline appearing the instant you click teaches
+   * nothing about *how* a step gets added, so the demo now installs itself one
+   * step at a time with a caption naming the action that produced each step.
+   *
+   * **Entirely click-driven** (design 027 §11.2, second iteration): the first
+   * timer-based pacing was still too fast, and no fixed pace fits every reader,
+   * so the user advances with "下一步" and runs the pipeline with "跑一遍".
+   */
+  const [demoReveal, setDemoReveal] = useState<
+    | {
+        stage: "steps";
+        tabId: string;
+        steps: PipelineStep[];
+        edges: PipelineEdge[];
+        captions: string[];
+        revealed: number;
+      }
+    | { stage: "running"; tabId: string }
+    | null
+  >(null);
+
+  /**
+   * Stable alias for the tab setter. `tabsHook` itself is rebuilt on every
+   * render, so depending on it directly would restart the reveal's timer over
+   * and over and the steps would never appear.
+   */
+  const setTabsDirect = tabsHook.setTabs;
+
+  /**
+   * Open `template` in a new tab, writing the embedded sample first when the
+   * template ships its own data. Shared by the empty-state card, the help
+   * centre and the template dialog's "apply", so all three behave identically.
+   */
+  const openSampleTemplate = useCallback(
+    async (template: PipelineTemplate) => {
+      try {
+        const samplePath = await invoke<string>("ensure_sample_data");
+        const snapshot = resolveBuiltinSnapshot(template, samplePath);
+        const tab = deserializeTabSnapshot(snapshot);
+        if (!tab) {
+          showToast(t.templateImportFailed, "error");
+          return;
+        }
+
+        // **Every** opening of the sample is click-driven. Gating the reveal on
+        // "first time" was wrong: the flag is consumed by the very first test
+        // run, after which the user only ever got the finished pipeline with no
+        // way to see how it is built (2026-09-30). Opening the example is an
+        // explicit request for the walkthrough, so it always plays.
+        const fullSteps = tab.pipeline;
+        const fullEdges = tab.edges || [];
+
+        const newTabId = `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const newTab = {
+          ...tab,
+          id: newTabId,
+          name: template.name,
+          created: formatDateTime(new Date()),
+          updated: formatDateTime(new Date()),
+          // Start empty: the canvas shows just the input, and the user adds the
+          // three steps themselves with the pill's button.
+          pipeline: [],
+          edges: [],
+        };
+        tabsHook.setTabs((prev) => [...prev, newTab]);
+        tabsHook.setSelectedTabId(newTabId);
+        setSelectedStep(null);
+        onboarding.markSeen();
+
+        if (snapshot.inputFile) {
+          await tabsHook.loadCsvData(
+            newTabId,
+            snapshot.inputFile,
+            snapshot.defaultDelimiter,
+          );
+        }
+
+        if (fullSteps.length > 0) {
+          setDemoReveal({
+            stage: "steps",
+            tabId: newTabId,
+            steps: fullSteps,
+            edges: fullEdges,
+            captions: demoRevealCaptions(t),
+            revealed: 0,
+          });
+        }
+      } catch (error) {
+        showToast(
+          t.onboardingSampleFailed.replace("{error}", String(error)),
+          "error",
+        );
+      }
+    },
+    [showToast, tabsHook, setSelectedStep, t, onboarding],
+  );
+
+  /**
+   * The "see an example" action. Takes no arguments on purpose: it is wired
+   * straight to `onClick`, and an optional parameter would silently receive the
+   * click event.
+   */
+  const handleLoadDemo = useCallback(() => {
+    void openSampleTemplate(getBuiltinDemoTemplate(t));
+  }, [openSampleTemplate, t]);
+
+  /**
+   * Install one more demo step — or, once every step is on the canvas, run the
+   * pipeline. Driven entirely by the reveal pill's button ("下一步" for the
+   * steps, "跑一遍" for the last one): a fixed pace cannot fit every reader, so
+   * the user sets it.
+   *
+   * `setTabs` directly rather than `updateTabPipeline`: installing the demo is
+   * not a user edit, and three undo entries for it would be noise.
+   */
+  const handleAdvanceDemoReveal = useCallback(() => {
+    if (demoReveal?.stage !== "steps") return;
+    if (demoReveal.revealed >= demoReveal.steps.length) {
+      // Last step is already on the canvas: run the finished pipeline.
+      setDemoReveal({ stage: "running", tabId: demoReveal.tabId });
+      setDemoReadyTabId(demoReveal.tabId);
+      return;
+    }
+    const next = demoReveal.revealed + 1;
+    setTabsDirect((prev) =>
+      prev.map((tab) =>
+        tab.id === demoReveal.tabId
+          ? {
+              ...tab,
+              pipeline: demoReveal.steps.slice(0, next),
+              edges: demoReveal.edges.slice(0, next),
+              updated: formatDateTime(new Date()),
+            }
+          : tab,
+      ),
+    );
+    setDemoReveal({ ...demoReveal, revealed: next });
+  }, [demoReveal, setTabsDirect, setDemoReadyTabId]);
+
+  // Clear the reveal pill once the demo's automatic run has finished.
+  const demoRunStartedRef = useRef(false);
+  useEffect(() => {
+    if (isExecuting) {
+      demoRunStartedRef.current = true;
+      return;
+    }
+    if (demoRunStartedRef.current) {
+      demoRunStartedRef.current = false;
+      setDemoReveal(null);
+    }
+  }, [isExecuting]);
+
+  /** Drop the animation and show (then run) the finished pipeline at once. */
+  const handleSkipDemoReveal = useCallback(() => {
+    if (demoReveal?.stage !== "steps") return;
+    const reveal = demoReveal;
+    setDemoReveal({ stage: "running", tabId: reveal.tabId });
+    setTabsDirect((prev) =>
+      prev.map((tab) =>
+        tab.id === reveal.tabId
+          ? {
+              ...tab,
+              pipeline: reveal.steps,
+              edges: reveal.edges,
+              updated: formatDateTime(new Date()),
+            }
+          : tab,
+      ),
+    );
+    setDemoReadyTabId(reveal.tabId);
+  }, [demoReveal, setTabsDirect]);
+
+  // Run the freshly-opened demo exactly once, after its file has been read.
+  useEffect(() => {
+    if (!demoReadyTabId || demoReadyTabId !== tabsHook.selectedTabId) return;
+    const tab = tabsHook.tabs.find(
+      (candidate) => candidate.id === demoReadyTabId,
+    );
+    if (!tab || !tab.inputFile || tab.pipeline.length === 0) return;
+    setDemoReadyTabId(null);
+    void handleExecute();
+    // `demoReadyTabId` is the trigger and `handleExecute` must be fresh (it
+    // reads the current tab through its own closure), so both are listed.
+  }, [demoReadyTabId, tabsHook.tabs, tabsHook.selectedTabId, handleExecute]);
+
   const handleApplyTemplate = useCallback(
     async (id: string) => {
       const template = templateStore.templates.find((tpl) => tpl.id === id);
       if (!template) {
         showToast("Template not found", "error");
+        return;
+      }
+      // The sample-shipping demo carries a placeholder path until the sample
+      // has been written, so it must go through the sample loader — otherwise
+      // `loadCsvData` is handed "{{easy-csv-sample}}" and the tab comes up
+      // empty (2026-09-30). A user's copy of the demo keeps that placeholder,
+      // so this is detected on the placeholder rather than on the template id.
+      if (needsSampleData(template)) {
+        await openSampleTemplate(template);
         return;
       }
       const tab = deserializeTabSnapshot(template.snapshot);
@@ -848,6 +1101,7 @@ function AppContent() {
       setSelectedStep,
       formatDateTime,
       t,
+      openSampleTemplate,
     ],
   );
 
@@ -858,12 +1112,36 @@ function AppContent() {
     [templateStore],
   );
 
+  /**
+   * "See an example" (design 027 §4.1): write the embedded sample next to the
+   * user's data, open it in a new tab with the demo pipeline already wired up,
+   * and remember the tab so it runs itself once the state has settled.
+   *
+   * Nothing here is destructive: `ensure_sample_data` is idempotent, and the
+   * demo pipeline deliberately has no export step, so the automatic run cannot
+   * write files to disk.
+   */
+
   const confirmDeleteTemplate = useCallback(() => {
     if (templateToDelete) {
       void templateStore.deletePipelineTemplate(templateToDelete.id);
       setTemplateToDelete(null);
     }
   }, [templateStore, templateToDelete]);
+
+  /** Adopt a built-in template into the user's own library (design 027 §4.4). */
+  const handleCopyTemplateToMine = useCallback(
+    async (id: string) => {
+      const copy = await templateStore.copyToMyTemplates(id);
+      if (copy) {
+        showToast(
+          t.builtinTemplateCopied.replace("{name}", copy.name),
+          "success",
+        );
+      }
+    },
+    [templateStore, showToast, t],
+  );
 
   const handleExportTemplate = useCallback(
     async (id: string) => {
@@ -1125,6 +1403,42 @@ function AppContent() {
   const currentPipelineLength = tabsHook.getCurrentPipeline().length;
   const undoStackLength = pipeline.undoStack.length;
   const redoStackLength = pipeline.redoStack.length;
+
+  // ── First-run onboarding (design 027 §4.2) ──────────────────────────────
+  // The guide card shows only for the first file the user opens, and only
+  // while they have not added a step yet; adding one marks it seen for good.
+  // (`onboarding` itself is created above, next to `handleLoadDemo`.)
+  const showOnboardingGuide =
+    !onboarding.seen && hasInputFile && currentPipelineLength === 0;
+  useAutoDismissOnboarding(
+    onboarding.seen,
+    hasInputFile && currentPipelineLength > 0,
+    onboarding.markSeen,
+  );
+
+  /**
+   * Caption pill for the sample pipeline's step-by-step reveal. **Always
+   * visible while the reveal is on** — including before the first step, which
+   * is where the user learns that the pill's button is how the pipeline gets
+   * built. The counter is the step the *next* click will add.
+   */
+  const demoRevealPill = useMemo(() => {
+    if (!demoReveal) return null;
+    if (demoReveal.stage === "running") {
+      return { caption: t.onboardingDemoRevealRunning };
+    }
+    const total = demoReveal.steps.length;
+    if (demoReveal.revealed >= total) {
+      return {
+        caption: t.onboardingDemoRevealReady,
+        step: { index: total, total },
+      };
+    }
+    return {
+      caption: demoReveal.captions[demoReveal.revealed],
+      step: { index: demoReveal.revealed + 1, total },
+    };
+  }, [demoReveal, t]);
 
   // Command palette items
   const paletteItems = useMemo<PaletteItem[]>(() => {
@@ -1561,6 +1875,7 @@ function AppContent() {
               onToggleAIPanel={() => ui.setShowAIPanel(!ui.showAIPanel)}
               showVariablePanel={showVariablePanel}
               onToggleVariablePanel={onToggleVariablePanel}
+              highlightCommandEntry={showOnboardingGuide}
             />
           </header>
 
@@ -1624,6 +1939,15 @@ function AppContent() {
                 inputFormat={tabsHook.getCurrentTab()?.inputFormat}
                 sourceTable={tabsHook.getCurrentTab()?.sourceTable}
                 onDelimiterChange={onDelimiterModeChange}
+                showOnboardingGuide={showOnboardingGuide}
+                commandCount={xanCommands.length}
+                onOpenCommandPanel={() => ui.setShowCommandPanel(true)}
+                onOpenAIPanel={() => ui.setShowAIPanel(true)}
+                onLoadDemo={handleLoadDemo}
+                onDismissOnboardingGuide={onboarding.markSeen}
+                demoReveal={demoRevealPill}
+                onAdvanceDemoReveal={handleAdvanceDemoReveal}
+                onSkipDemoReveal={handleSkipDemoReveal}
               />
             </div>
           </main>
@@ -1641,6 +1965,7 @@ function AppContent() {
             onDockChange={(patch) =>
               session.updatePanelState("commandList", patch)
             }
+            showFirstStepHint={currentPipelineLength === 0}
           />
 
           <CommandPalette
@@ -1710,6 +2035,7 @@ function AppContent() {
             onDoubleClickFitViewChange={settings.setDoubleClickFitView}
             autoCheckUpdate={settings.autoCheckUpdate}
             onAutoCheckUpdateChange={settings.setAutoCheckUpdate}
+            onResetOnboarding={onboarding.reset}
             onSave={handleSaveSettings}
             aiConfig={aiConfig}
             onAIConfigChange={handleAIConfigChange}
@@ -1782,6 +2108,7 @@ function AppContent() {
             }}
             onExport={(id) => void handleExportTemplate(id)}
             onImport={() => void handleImportTemplate()}
+            onCopyToMine={(id) => void handleCopyTemplateToMine(id)}
           />
 
           <ConfirmDialog
