@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { X, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  X,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle,
+  ArrowRight,
+} from "lucide-react";
 
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { useLanguage } from "@/i18n";
-import { formatDateTime, formatElapsed } from "@/utils/format";
+import { formatBytes, formatDateTime, formatElapsed } from "@/utils/format";
 import {
   clearLastEncodingResult,
   loadLastEncodingResult,
@@ -259,6 +265,8 @@ export function CsvEncodingDialog({
 
   if (!isOpen) return null;
 
+  const elapsedText = formatElapsed(lastResult?.elapsedMs) || "—";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
@@ -271,16 +279,14 @@ export function CsvEncodingDialog({
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
-        className="relative bg-card border border-border/50 rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] min-h-[340px] flex flex-col overflow-hidden outline-none"
+        className="relative bg-card border border-border/50 rounded-lg shadow-xl w-full max-w-2xl h-[85vh] flex flex-col overflow-hidden outline-none"
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
       >
         <div className="flex items-center justify-between px-4 py-3 bg-muted/20 shrink-0">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-foreground">
-              {t.csvEncoding}
-            </h3>
-          </div>
+          <h3 className="text-sm font-semibold text-foreground">
+            {t.csvEncoding}
+          </h3>
           <button
             onClick={onClose}
             className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
@@ -289,117 +295,143 @@ export function CsvEncodingDialog({
           </button>
         </div>
 
-        {/* File + encoding selection area */}
-        <div className="px-4 py-3 shrink-0 space-y-2">
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-muted-foreground shrink-0">
-              {t.inputFile}
-            </label>
-            <input
-              type="text"
-              value={inputFile}
-              onChange={(e) => {
-                clearFeedback();
-                autoBaseRef.current = null;
-                setInputFile(e.target.value);
-              }}
-              placeholder={t.inputFile}
-              className="flex-1 min-w-0 h-8 px-2 text-xs border rounded-md bg-background"
-            />
-            <Button
-              variant="secondary"
-              size="sm"
-              className="shrink-0"
-              onClick={browseInput}
-            >
-              {t.open}
-            </Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-muted-foreground shrink-0">
-              {t.outputFile}
-            </label>
-            <input
-              type="text"
-              value={outputFile}
-              onChange={(e) => {
-                clearFeedback();
-                autoBaseRef.current = null;
-                setOutputFile(e.target.value);
-              }}
-              placeholder={t.outputFile}
-              className="flex-1 min-w-0 h-8 px-2 text-xs border rounded-md bg-background"
-            />
-            <Button
-              variant="secondary"
-              size="sm"
-              className="shrink-0"
-              onClick={browseOutput}
-            >
-              {t.open}
-            </Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-muted-foreground shrink-0">
-              {t.sourceEncoding}
-            </label>
-            <div className="flex-1 min-w-0">
-              <Select
-                value={sourceEncoding}
-                onChange={(v) => {
-                  clearFeedback();
-                  setSourceEncoding(v);
-                }}
-                options={ENCODINGS}
-                size="sm"
-              />
-            </div>
-            <label className="text-xs font-medium text-muted-foreground shrink-0">
-              {t.targetEncoding}
-            </label>
-            <div className="flex-1 min-w-0">
-              <Select
-                value={targetEncoding}
-                onChange={(v) => {
-                  clearFeedback();
-                  setTargetEncoding(v);
-                }}
-                options={ENCODINGS}
-                size="sm"
-              />
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleConvert}
-              disabled={isConverting || isSameEncoding}
-              className="ml-auto shrink-0"
-            >
-              {isConverting && (
-                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-              )}
-              {isConverting ? t.converting : t.convert}
-            </Button>
-          </div>
-          {isSameEncoding && (
-            <div className="flex items-center gap-1.5 text-xs text-amber-600">
-              <AlertCircle className="h-3.5 w-3.5" />
-              {t.sameEncoding}
-            </div>
-          )}
-        </div>
+        <ScrollArea type="always" className="flex-1 min-h-0">
+          <div className="p-4 space-y-3">
+            {/* 选择文件 */}
+            <section className="rounded-lg border border-border/50 p-3">
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-medium flex items-center justify-center">
+                  1
+                </span>
+                <span className="text-[13px] font-medium text-foreground">
+                  {t.csvEncodingStep1}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-muted-foreground shrink-0 w-16">
+                  {t.inputFile}
+                </label>
+                <input
+                  type="text"
+                  value={inputFile}
+                  onChange={(e) => {
+                    clearFeedback();
+                    autoBaseRef.current = null;
+                    setInputFile(e.target.value);
+                  }}
+                  placeholder={t.inputFile}
+                  className="flex-1 min-w-0 h-8 px-2 text-xs border rounded-md bg-background"
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={browseInput}
+                >
+                  {t.open}
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground/80 mt-2">
+                {t.csvEncodingStep1Hint}
+              </p>
+            </section>
 
-        {error && (
-          <div className="px-4 py-2 bg-red-500/10 text-red-600 text-xs flex items-center gap-2 shrink-0">
-            <AlertCircle className="h-3.5 w-3.5" />
-            {error}
-          </div>
-        )}
+            {/* 编码设置 */}
+            <section className="rounded-lg border border-border/50 p-3">
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-medium flex items-center justify-center">
+                  2
+                </span>
+                <span className="text-[13px] font-medium text-foreground">
+                  {t.csvEncodingStep2}
+                </span>
+              </div>
+              <div className="flex items-end gap-2">
+                <div className="flex-1 min-w-0 flex flex-col gap-1">
+                  <label className="text-xs text-muted-foreground">
+                    {t.sourceEncoding}
+                  </label>
+                  <Select
+                    value={sourceEncoding}
+                    onChange={(v) => {
+                      clearFeedback();
+                      setSourceEncoding(v);
+                    }}
+                    options={ENCODINGS}
+                    size="sm"
+                    ariaLabel={t.sourceEncoding}
+                  />
+                </div>
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 mb-2 text-muted-foreground" />
+                <div className="flex-1 min-w-0 flex flex-col gap-1">
+                  <label className="text-xs text-muted-foreground">
+                    {t.targetEncoding}
+                  </label>
+                  <Select
+                    value={targetEncoding}
+                    onChange={(v) => {
+                      clearFeedback();
+                      setTargetEncoding(v);
+                    }}
+                    options={ENCODINGS}
+                    size="sm"
+                    ariaLabel={t.targetEncoding}
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground/80 mt-2">
+                {t.csvEncodingStep2Hint}
+              </p>
+            </section>
 
-        {/* Result / helper hint */}
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="p-4">
-            <div className="rounded border border-border/50 p-4">
+            {/* 输出文件 */}
+            <section className="rounded-lg border border-border/50 p-3">
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-medium flex items-center justify-center">
+                  3
+                </span>
+                <span className="text-[13px] font-medium text-foreground">
+                  {t.csvEncodingStep3}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-muted-foreground shrink-0 w-16">
+                  {t.outputFile}
+                </label>
+                <input
+                  type="text"
+                  value={outputFile}
+                  onChange={(e) => {
+                    clearFeedback();
+                    autoBaseRef.current = null;
+                    setOutputFile(e.target.value);
+                  }}
+                  placeholder={t.outputFile}
+                  className="flex-1 min-w-0 h-8 px-2 text-xs border rounded-md bg-background"
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={browseOutput}
+                >
+                  {t.csvEncodingSaveAs}
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground/80 mt-2">
+                {t.csvEncodingStep3Hint}
+              </p>
+            </section>
+
+            {error && (
+              <div className="px-4 py-2 bg-red-500/10 text-red-600 text-xs flex items-center gap-2 rounded-md">
+                <AlertCircle className="h-3.5 w-3.5" />
+                {error}
+              </div>
+            )}
+
+            {/* 结果卡 */}
+            <div className="rounded-lg border border-border/50 p-3">
               {lastResult ? (
                 <div className="space-y-3">
                   <p className="flex flex-wrap items-center gap-2 text-xs font-medium text-green-600">
@@ -410,17 +442,44 @@ export function CsvEncodingDialog({
                     <span className="font-normal text-muted-foreground">
                       · {t.finishedAt}{" "}
                       {formatDateTime(new Date(lastResult.finishedAt))}
-                      {formatElapsed(lastResult.elapsedMs) !== "" &&
-                        ` · ${t.elapsed} ${formatElapsed(lastResult.elapsedMs)}`}
                     </span>
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {encodingLabel(lastResult.sourceEncoding)} →{" "}
-                    {encodingLabel(lastResult.targetEncoding)} ·{" "}
-                    {lastResult.bytesRead} {t.bytes} → {lastResult.bytesWritten}{" "}
-                    {t.bytes}
-                  </p>
-                  <p className="flex items-center gap-2 text-xs text-muted-foreground/80 break-all">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md border border-border/60 text-xs font-mono text-foreground">
+                      {encodingLabel(lastResult.sourceEncoding)}
+                    </span>
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="px-2 py-0.5 rounded-md border border-border/60 text-xs font-mono text-foreground">
+                      {encodingLabel(lastResult.targetEncoding)}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-md bg-muted/60 p-2">
+                      <p className="text-[11px] text-muted-foreground">
+                        {t.csvEncodingRead}
+                      </p>
+                      <p className="text-sm font-medium text-foreground">
+                        {formatBytes(lastResult.bytesRead)}
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-muted/60 p-2">
+                      <p className="text-[11px] text-muted-foreground">
+                        {t.csvEncodingWritten}
+                      </p>
+                      <p className="text-sm font-medium text-foreground">
+                        {formatBytes(lastResult.bytesWritten)}
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-muted/60 p-2">
+                      <p className="text-[11px] text-muted-foreground">
+                        {t.csvEncodingElapsed}
+                      </p>
+                      <p className="text-sm font-medium text-foreground">
+                        {elapsedText}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground/80 break-all">
                     {lastResult.outputPath}
                   </p>
                   {outputMissing && (
@@ -429,7 +488,7 @@ export function CsvEncodingDialog({
                       {t.lastResultNoOutput}
                     </p>
                   )}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-end gap-2">
                     <Button
                       variant="secondary"
                       size="sm"
@@ -456,6 +515,26 @@ export function CsvEncodingDialog({
             </div>
           </div>
         </ScrollArea>
+
+        {/* footer: status + primary action */}
+        <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-t border-border/50 bg-muted/20 shrink-0">
+          <span
+            className={`flex items-center gap-1.5 text-[11px] ${
+              isSameEncoding ? "text-amber-600" : "text-muted-foreground"
+            }`}
+          >
+            {isSameEncoding && <AlertCircle className="h-3 w-3" />}
+            {isSameEncoding ? t.sameEncoding : t.csvEncodingFooterHint}
+          </span>
+          <Button
+            size="sm"
+            onClick={handleConvert}
+            disabled={isConverting || isSameEncoding}
+          >
+            {isConverting && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+            {isConverting ? t.converting : t.convert}
+          </Button>
+        </div>
       </div>
     </div>
   );

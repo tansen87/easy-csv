@@ -59,6 +59,26 @@ function pickEncoding(
   fireEvent.click(option!);
 }
 
+/**
+ * The two file path fields are plain text inputs, but `Select` renders its own
+ * searchable `input[role=combobox]` too — so target the file fields by
+ * placeholder rather than by input index.
+ */
+function setPaths(input: string, output?: string) {
+  fireEvent.change(screen.getByPlaceholderText("Input"), {
+    target: { value: input },
+  });
+  if (output !== undefined) {
+    fireEvent.change(screen.getByPlaceholderText("Output"), {
+      target: { value: output },
+    });
+  }
+}
+
+function pathInput(which: "Input" | "Output") {
+  return screen.getByPlaceholderText(which);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
@@ -113,9 +133,7 @@ describe("CsvEncodingDialog", () => {
       </LanguageProvider>,
     );
 
-    const inputs = container.querySelectorAll("input");
-    fireEvent.change(inputs[0], { target: { value: "/tmp/input.csv" } });
-    fireEvent.change(inputs[1], { target: { value: "/tmp/output_utf8.csv" } });
+    setPaths("/tmp/input.csv", "/tmp/output_utf8.csv");
     pickEncoding(container, 0, "GBK / GB2312");
 
     fireEvent.click(screen.getByText("Convert"));
@@ -128,7 +146,10 @@ describe("CsvEncodingDialog", () => {
     });
 
     await screen.findByText("Conversion successful");
-    expect(screen.getByText(/1024 bytes → 512 bytes/)).toBeInTheDocument();
+    expect(screen.getByText("Read")).toBeInTheDocument();
+    expect(screen.getByText("1.0 KB")).toBeInTheDocument();
+    expect(screen.getByText("Written")).toBeInTheDocument();
+    expect(screen.getByText("512 B")).toBeInTheDocument();
     expect(screen.getByText("/tmp/output_utf8.csv")).toBeInTheDocument();
   });
 
@@ -154,9 +175,7 @@ describe("CsvEncodingDialog", () => {
       </LanguageProvider>,
     );
 
-    const inputs = container.querySelectorAll("input");
-    fireEvent.change(inputs[0], { target: { value: "/tmp/input.csv" } });
-    fireEvent.change(inputs[1], { target: { value: "/tmp/output.csv" } });
+    setPaths("/tmp/input.csv", "/tmp/output.csv");
 
     // Open the source-encoding select and pick UTF-8 (matches the target default).
     pickEncoding(container, 0, "UTF-8");
@@ -178,9 +197,7 @@ describe("CsvEncodingDialog", () => {
       </LanguageProvider>,
     );
 
-    const inputs = container.querySelectorAll("input");
-    fireEvent.change(inputs[0], { target: { value: "/tmp/input.csv" } });
-    fireEvent.change(inputs[1], { target: { value: "/tmp/output.csv" } });
+    setPaths("/tmp/input.csv", "/tmp/output.csv");
     pickEncoding(container, 0, "GBK / GB2312");
 
     fireEvent.click(screen.getByText("Convert"));
@@ -205,9 +222,7 @@ describe("CsvEncodingDialog", () => {
       </LanguageProvider>,
     );
 
-    const inputs = container.querySelectorAll("input");
-    fireEvent.change(inputs[0], { target: { value: "/tmp/input.csv" } });
-    fireEvent.change(inputs[1], { target: { value: "/tmp/output_utf8.csv" } });
+    setPaths("/tmp/input.csv", "/tmp/output_utf8.csv");
     pickEncoding(container, 0, "GBK / GB2312");
     fireEvent.click(screen.getByText("Convert"));
 
@@ -251,9 +266,7 @@ describe("CsvEncodingDialog", () => {
       </LanguageProvider>,
     );
 
-    const inputs = container.querySelectorAll("input");
-    fireEvent.change(inputs[0], { target: { value: "/tmp/input.csv" } });
-    fireEvent.change(inputs[1], { target: { value: "/tmp/output.csv" } });
+    setPaths("/tmp/input.csv", "/tmp/output.csv");
     pickEncoding(container, 0, "GBK / GB2312");
     fireEvent.click(screen.getByText("Convert"));
 
@@ -292,14 +305,14 @@ describe("CsvEncodingDialog last result", () => {
     });
     expect(container.textContent).toContain("Finished at");
     expect(container.textContent).toContain("2026-09-21");
-    expect(container.textContent).toContain("Took 1.5 s");
-    expect(container.textContent).toContain("GBK / GB2312 → UTF-8");
+    expect(container.textContent).toContain("1.5 s");
+    expect(container.textContent).toContain("GBK / GB2312");
+    expect(container.textContent).toContain("UTF-8");
     expect(container.textContent).toContain("/tmp/prev_utf8.csv");
 
     // The options that produced the record are restored too.
-    const inputs = container.querySelectorAll("input");
-    expect(inputs[0]).toHaveValue("/tmp/prev.csv");
-    expect(inputs[1]).toHaveValue("/tmp/prev_utf8.csv");
+    expect(pathInput("Input")).toHaveValue("/tmp/prev.csv");
+    expect(pathInput("Output")).toHaveValue("/tmp/prev_utf8.csv");
     const combos = screen.getAllByRole("combobox");
     expect(combos[0]).toHaveValue("GBK / GB2312");
     expect(combos[1]).toHaveValue("UTF-8");
@@ -325,8 +338,7 @@ describe("CsvEncodingDialog last result", () => {
     await waitFor(() => {
       expect(container.textContent).toContain("Last conversion");
     });
-    const inputs = container.querySelectorAll("input");
-    expect(inputs[0]).toHaveValue("/tmp/tab.csv");
+    expect(pathInput("Input")).toHaveValue("/tmp/tab.csv");
   });
 
   it("persists a successful run and keeps showing it after edits", async () => {
@@ -336,16 +348,14 @@ describe("CsvEncodingDialog last result", () => {
       </LanguageProvider>,
     );
 
-    const inputs = container.querySelectorAll("input");
-    fireEvent.change(inputs[0], { target: { value: "/tmp/input.csv" } });
-    fireEvent.change(inputs[1], { target: { value: "/tmp/output_utf8.csv" } });
+    setPaths("/tmp/input.csv", "/tmp/output_utf8.csv");
     pickEncoding(container, 0, "GBK / GB2312");
     fireEvent.click(screen.getByText("Convert"));
 
     await waitFor(() => {
       expect(container.textContent).toContain("Conversion successful");
     });
-    expect(container.textContent).toContain("Took 420 ms");
+    expect(container.textContent).toContain("420 ms");
     expect(container.textContent).toContain("/tmp/output_utf8.csv");
 
     const raw = window.localStorage.getItem(ENCODING_HISTORY_KEY);
@@ -360,7 +370,7 @@ describe("CsvEncodingDialog last result", () => {
     });
 
     // Editing an option clears the error but must not wipe the result.
-    fireEvent.change(inputs[0], { target: { value: "/tmp/other.csv" } });
+    setPaths("/tmp/other.csv");
     expect(container.textContent).toContain("/tmp/output_utf8.csv");
     expect(container.textContent).toContain("Last conversion");
   });

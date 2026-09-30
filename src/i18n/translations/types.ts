@@ -398,6 +398,17 @@ export interface Translations {
   sameEncoding: string;
   bytes: string;
   csvEncodingLastResult: string;
+  csvEncodingStep1: string;
+  csvEncodingStep1Hint: string;
+  csvEncodingStep2: string;
+  csvEncodingStep2Hint: string;
+  csvEncodingStep3: string;
+  csvEncodingStep3Hint: string;
+  csvEncodingSaveAs: string;
+  csvEncodingFooterHint: string;
+  csvEncodingRead: string;
+  csvEncodingWritten: string;
+  csvEncodingElapsed: string;
 
   // SeparateGoodBad
   separateGoodBad: string;
