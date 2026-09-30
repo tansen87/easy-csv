@@ -1,6 +1,8 @@
-import type { Translations } from "../types";
+import type { Translations } from "@/i18n/translations/types";
 
-/** (none) · ConfirmDialog · HomeView · UpdateDialog · Floating panel docking · Result preview (F1) · CommandPalette */
+/** (none) · ConfirmDialog · HomeView · UpdateDialog · Floating panel docking ·
+ * Result preview (F1) · CommandPalette
+ */
 export const enCommon = {
   rows: "Rows",
   confirm: "Confirm",

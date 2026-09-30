@@ -79,13 +79,21 @@ describe("sample-pipeline reveal caption (design 027 §11.2)", () => {
     const onSkipReveal = vi.fn();
     renderGuide({
       showGuide: false,
-      reveal: { caption: "Click search → drop empty amounts", step: { index: 2, total: 3 } },
+      reveal: {
+        caption: "Click dedup → drop duplicated rows",
+        progress: { installed: 2, total: 3 },
+      },
+      onAdvanceReveal: vi.fn(),
       onSkipReveal,
     });
 
     const pill = screen.getByTestId("onboarding-reveal");
-    expect(pill.textContent).toContain("Click search → drop empty amounts");
+    expect(pill.textContent).toContain("Click dedup → drop duplicated rows");
+    // The counter is steps already installed, so 2/3 must still say "Next".
     expect(pill.textContent).toContain("2/3");
+    expect(screen.getByTestId("onboarding-reveal-next").textContent).toBe(
+      "Next",
+    );
 
     fireEvent.click(screen.getByTestId("onboarding-reveal-skip"));
     expect(onSkipReveal).toHaveBeenCalledTimes(1);
@@ -96,7 +104,10 @@ describe("sample-pipeline reveal caption (design 027 §11.2)", () => {
     const onAdvanceReveal = vi.fn();
     renderGuide({
       showGuide: false,
-      reveal: { caption: "Click dedup", step: { index: 1, total: 3 } },
+      reveal: {
+        caption: "Click groupby → total by region",
+        progress: { installed: 2, total: 3 },
+      },
       onAdvanceReveal,
       onSkipReveal: vi.fn(),
     });
@@ -110,7 +121,11 @@ describe("sample-pipeline reveal caption (design 027 §11.2)", () => {
     const onAdvanceReveal = vi.fn();
     renderGuide({
       showGuide: false,
-      reveal: { caption: "Click groupby", step: { index: 3, total: 3 } },
+      reveal: {
+        caption: "All three are on the canvas",
+        progress: { installed: 3, total: 3 },
+        isComplete: true,
+      },
       onAdvanceReveal,
       onSkipReveal: vi.fn(),
     });
@@ -124,7 +139,7 @@ describe("sample-pipeline reveal caption (design 027 §11.2)", () => {
   });
 
   // The "now running it" phase has no step counter.
-  it("renders without a counter when the step is omitted", () => {
+  it("renders without a counter when the progress is omitted", () => {
     renderGuide({
       showGuide: false,
       reveal: { caption: "Three steps built — running it…" },

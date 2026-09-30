@@ -1,14 +1,14 @@
-import type { Translations } from "../types";
-import { zhCommon } from "./common";
-import { zhPipeline } from "./pipeline";
-import { zhCanvas } from "./canvas";
-import { zhDialog } from "./dialog";
-import { zhAi } from "./ai";
-import { zhSettings } from "./settings";
-import { zhHelp } from "./help";
-import { zhUpdate } from "./update";
-import { zhPlugins } from "./plugins";
-import { zhOnboarding } from "./onboarding";
+import type { Translations } from "@/i18n/translations/types";
+import { zhCommon } from "@/i18n/translations/zh/common";
+import { zhPipeline } from "@/i18n/translations/zh/pipeline";
+import { zhCanvas } from "@/i18n/translations/zh/canvas";
+import { zhDialog } from "@/i18n/translations/zh/dialog";
+import { zhAi } from "@/i18n/translations/zh/ai";
+import { zhSettings } from "@/i18n/translations/zh/settings";
+import { zhHelp } from "@/i18n/translations/zh/help";
+import { zhUpdate } from "@/i18n/translations/zh/update";
+import { zhPlugins } from "@/i18n/translations/zh/plugins";
+import { zhOnboarding } from "@/i18n/translations/zh/onboarding";
 
 /**
  * Every zh string, merged back into one flat object.

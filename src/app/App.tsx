@@ -723,35 +723,6 @@ function AppContent() {
     selectedTabId: tabsHook.selectedTabId,
   });
 
-  /**
-   * Pan the canvas so the node that produced the last result sits in the
-   * middle (design 027 §11.3). Backs the completion toast's "查看结果": for a
-   * pipeline longer than the viewport the result node is off-screen, and an
-   * action that only dismisses a toast does not help anyone find it.
-   *
-   * Keeps the user's zoom — this is a *pan*, not a zoom change — and no-ops
-   * when there is no node or no canvas instance (e.g. before the first paint).
-   */
-  const focusResultNode = useCallback(() => {
-    const tab = tabsCtl.getCurrentTab();
-    const lastStep = tab?.pipeline?.[tab.pipeline.length - 1];
-    const instance = reactFlowInstanceRef.current;
-    if (!lastStep || !instance?.getNode || !instance?.setCenter) return;
-    const node = instance.getNode(lastStep.id);
-    if (!node) return;
-
-    const width = node.width ?? node.measured?.width ?? 240;
-    const height = node.height ?? node.measured?.height ?? 120;
-    const position = node.positionAbsolute ?? node.position;
-    if (!position) return;
-
-    instance.setCenter(
-      position.x + width / 2,
-      position.y + height / 2,
-      { zoom: instance.getZoom(), duration: 400 },
-    );
-  }, [tabsCtl]);
-
   const {
     handleExecute,
     handleCancelExecution,
@@ -767,7 +738,6 @@ function AppContent() {
     defaultDelimiter: settings.defaultDelimiter,
     getCurrentTab: tabsCtl.getCurrentTab,
     getCurrentPipeline: tabsCtl.getCurrentPipeline,
-    focusResultNode,
     showToast,
     addLog,
     setTabs: tabsHook.setTabs,
@@ -1428,15 +1398,15 @@ function AppContent() {
       return { caption: t.onboardingDemoRevealRunning };
     }
     const total = demoReveal.steps.length;
-    if (demoReveal.revealed >= total) {
-      return {
-        caption: t.onboardingDemoRevealReady,
-        step: { index: total, total },
-      };
-    }
+    const isComplete = demoReveal.revealed >= total;
     return {
-      caption: demoReveal.captions[demoReveal.revealed],
-      step: { index: demoReveal.revealed + 1, total },
+      // Before the last click this names the step that click will add; once
+      // everything is installed it points at the run button.
+      caption: isComplete
+        ? t.onboardingDemoRevealReady
+        : demoReveal.captions[demoReveal.revealed],
+      progress: { installed: demoReveal.revealed, total },
+      isComplete,
     };
   }, [demoReveal, t]);
 

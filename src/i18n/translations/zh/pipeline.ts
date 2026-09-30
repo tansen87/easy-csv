@@ -1,4 +1,4 @@
-import type { Translations } from "../types";
+import type { Translations } from "@/i18n/translations/types";
 
 /** MainMenu · Variables (F3) · VersionControl · CommandList · FlowPanel · LogPanel · Execution history · ContextMenu · Pipeline Templates */
 export const zhPipeline = {
@@ -35,7 +35,7 @@ export const zhPipeline = {
   lineagePath: "血缘路径",
   sourceStep: "来源",
   noLineageData: "执行后可查看数据血缘",
-  lineageForColumn: "列的血缘：",
+  lineageForColumn: "列的血缘: ",
   variables: "管道变量",
   variableName: "名称",
   variableDefault: "默认值",
@@ -43,16 +43,16 @@ export const zhPipeline = {
   addVariable: "添加变量",
   runWithVariables: "带变量运行",
   variableInputValue: "值",
-  variableFillValues: "请为下方管道变量填写值后运行。",
+  variableFillValues: "请为下方管道变量填写值后运行",
   variablePlaceholderHint:
-    "提示：在参数值中书写 {{变量名}} 即可引用变量，可在“管道变量”面板管理默认值。",
+    "提示: 在参数值中书写 {{变量名}} 即可引用变量, 可在<管道变量>面板管理默认值",
   variableEmptyName: "变量名不能为空",
   variableDuplicateName: "变量名已存在",
-  noVariablesDetected: "暂无变量。在参数值中书写 {{变量名}} 即可创建变量。",
+  noVariablesDetected: "暂无变量. 在参数值中书写 {{变量名}} 即可创建变量",
   deleteVariable: "删除变量",
   clearAllVariables: "全部清除",
   confirmClearAllVariables:
-    "确定移除所有已声明的变量？被引用的占位符仍会继续生效。",
+    "确定移除所有已声明的变量? 被引用的占位符仍会继续生效",
   save: "保存",
   saving: "保存中...",
   saveVersion: "保存版本",
@@ -63,7 +63,7 @@ export const zhPipeline = {
   tagsPlaceholder: "标签(逗号分隔)",
   confirmDeleteVersion: "确定要删除此版本吗?",
   clearAllVersions: "清除所有版本",
-  confirmClearAllVersions: "确定要清除所有版本历史吗?此操作不可撤销.",
+  confirmClearAllVersions: "确定要清除所有版本历史吗? 此操作不可撤销.",
   versionCurrent: "当前",
   versionSteps: "个步骤",
   versionSearchPlaceholder: "搜索版本",
@@ -79,7 +79,7 @@ export const zhPipeline = {
   versionEditMessage: "编辑描述",
   versionEditTag: "编辑标签",
   confirmRestoreTitle: "恢复此版本?",
-  confirmRestoreDesc: "这将用所选版本替换当前管道.",
+  confirmRestoreDesc: "这将用所选版本替换当前管道",
   cmds: "命令",
   searchCommand: "搜索命令",
   noCommandsFound: "未找到命令",
@@ -135,7 +135,7 @@ export const zhPipeline = {
   templateSearchPlaceholder: "搜索模板",
   templateNoMatches: "无匹配模板",
   templateDescriptionPlaceholder: "可选描述",
-  noTemplates: "暂无模板,可将当前管道另存为模板以复用",
+  noTemplates: "暂无模板, 可将当前管道另存为模板以复用",
   templateApply: "套用",
   templateRename: "重命名",
   templateDelete: "删除",

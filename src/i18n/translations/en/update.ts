@@ -1,4 +1,4 @@
-/** Update dialog + update settings (design 022). */
+/** Update dialog + update settings */
 export const enUpdate = {
   updateDownloadAndInstall: "Download and install",
   updateDownloading: "Downloading…",

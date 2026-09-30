@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type {
@@ -30,11 +30,6 @@ import type { BranchProgressState } from "@/hooks/execution/runPipelineDeps";
 interface UseExecutionProps {
   selectedTabId: string;
   defaultDelimiter: string;
-  /**
-   * Pan the canvas so the node that produced the last result is centred — the
-   * completion toast's "查看结果" action (design 027 §4.3 / §11.3).
-   */
-  focusResultNode: () => void;
   getCurrentTab: () => PipelineTab;
   getCurrentPipeline: () => PipelineStep[];
   showToast: (
@@ -91,7 +86,6 @@ export function useExecution({
   setChartHeaders,
   saveVersion,
   saveExecutionHistory,
-  focusResultNode,
 }: UseExecutionProps) {
   const { t } = useLanguage();
 
@@ -125,7 +119,34 @@ export function useExecution({
     isCancelRequested: () => cancelRequestedRef.current,
   });
 
-  const [resultPreview, setResultPreview] = useState<ResultPreview[]>([]);
+  const [resultPreviewState, setResultPreviewState] = useState<
+    ResultPreview[]
+  >([]);
+  /**
+   * The tab the current previews belong to. Results are **per tab**: without
+   * this they are global state and keep showing after the user switches to
+   * another tab (or opens a fresh file there), presenting one tab's output as
+   * another tab's (2026-09-30).
+   */
+  const [resultPreviewTabId, setResultPreviewTabId] = useState<string | null>(
+    null,
+  );
+  // `selectedTabId` is a prop; the ref keeps the recorder stable while still
+  // stamping the tab that is current at the moment a run finishes.
+  const selectedTabIdRef = useRef(selectedTabId);
+  selectedTabIdRef.current = selectedTabId;
+
+  const setResultPreview = useCallback((previews: ResultPreview[]) => {
+    setResultPreviewState(previews);
+    setResultPreviewTabId(selectedTabIdRef.current);
+  }, []);
+
+  /** Only the owning tab renders its results. */
+  const resultPreview = useMemo(
+    () =>
+      resultPreviewTabId === selectedTabId ? resultPreviewState : [],
+    [resultPreviewState, resultPreviewTabId, selectedTabId],
+  );
   const [variablePrompt, setVariablePrompt] = useState<VariablePrompt | null>(
     null,
   );
@@ -147,11 +168,7 @@ export function useExecution({
         showToast,
         labels: {
           cycleDetected: t.cycleDetected,
-          pipelineCompleted: t.pipelineCompleted,
-          pipelineCompletedBranches: t.pipelineCompletedBranches,
-          viewResult: t.viewResult,
         },
-        focusResultNode,
         resolveRunDelimiter,
         setIsExecuting: (v) => setIsExecuting(v),
         setShowLogPanel,
@@ -184,11 +201,8 @@ export function useExecution({
       setTabs,
       addLog,
       showToast,
-      focusResultNode,
+      setResultPreview,
       t.cycleDetected,
-      t.pipelineCompleted,
-      t.pipelineCompletedBranches,
-      t.viewResult,
       resolveRunDelimiter,
       setIsExecuting,
       setShowLogPanel,

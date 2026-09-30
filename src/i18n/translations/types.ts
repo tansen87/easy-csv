@@ -819,7 +819,6 @@ export interface Translations {
   onboardingGestureSelect: string;
   onboardingGestureNote: string;
   onboardingSampleFailed: string;
-  onboardingDemoToast: string;
   onboardingDemoRevealAction1: string;
   onboardingDemoRevealAction2: string;
   onboardingDemoRevealAction3: string;
@@ -828,9 +827,6 @@ export interface Translations {
   onboardingDemoRevealNext: string;
   onboardingDemoRevealRun: string;
   onboardingDemoRevealSkip: string;
-  pipelineCompleted: string;
-  pipelineCompletedBranches: string;
-  viewResult: string;
   onboardingReset: string;
   onboardingResetDesc: string;
   builtinTemplatesGroup: string;

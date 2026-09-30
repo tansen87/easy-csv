@@ -261,38 +261,11 @@ export async function runPipeline(
         ? "error"
         : "success";
 
-    // Completion feedback (design 027 §4.3). The log panel already opens when a
-    // run *starts* (`setShowLogPanel(true)` above), so this is the only missing
-    // half: telling the user the run is over. Deliberately no row counts — the
-    // per-step counts are in the log panel already, and repeating them here is
-    // just noise.
-    if (!wasCancelled) {
-      const duration = ((Date.now() - runStartedAt) / 1000).toFixed(1);
-      const stepCount = currentPipeline.length;
-      const failed = status === "error";
-      const template =
-        branches.length > 1 && !failed
-          ? deps.labels.pipelineCompletedBranches
-          : deps.labels.pipelineCompleted;
-      const message = template
-        .replace("{steps}", String(stepCount))
-        .replace("{branches}", String(branches.length))
-        .replace("{duration}", duration);
-
-      showToast(message, failed ? "error" : "success", {
-        action: {
-          label: deps.labels.viewResult,
-          onClick: () => {
-            setShowLogPanel(true);
-            // "查看结果" means *see* the result: pan the canvas so the node
-            // that produced it sits in the middle, not just dismiss the toast.
-            deps.focusResultNode();
-          },
-        },
-        // Longer than the 5s default so the action button stays reachable.
-        duration: 8000,
-      });
-    }
+    // Completion feedback is the *system* notification only (see
+    // useAppBootstrap): an in-app toast duplicated it, so the design-027
+    // completion toast — with its "查看结果" action — was removed at the
+    // user's request (2026-09-30). The log panel still opens when a run
+    // starts, and `status` above still feeds the execution history.
 
     // F6: persist a compact execution record (summary only, no stdout).
     if (deps.saveExecutionHistory) {

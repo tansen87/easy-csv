@@ -1,6 +1,9 @@
-import type { Translations } from "../types";
+import type { Translations } from "@/i18n/translations/types";
 
-/** SearchForm · CsvDiff · CsvEncoding · SeparateGoodBad · BatchFilterDialog · FilterDialog · PivotDialog · DateTransformDialog · WindowDialog · TextTransformDialog · NumberTransformDialog · SplitDialog · PadDialog · ReplaceDialog · SortDialog */
+/** SearchForm · CsvDiff · CsvEncoding · SeparateGoodBad · BatchFilterDialog · FilterDialog ·
+ * PivotDialog · DateTransformDialog · WindowDialog · TextTransformDialog · NumberTransformDialog ·
+ * SplitDialog · PadDialog · ReplaceDialog · SortDialog
+ */
 export const enDialog = {
   searchMultiPatternPlaceholder: "Add search values; Enter to add",
   searchPatternConflictWarning:

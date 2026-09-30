@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
-  Hand,
   Lightbulb,
   Play,
   Plus,
@@ -20,13 +19,16 @@ export interface FirstStepGuideProps {
   gestureCardExpanded?: boolean;
   /**
    * Caption for the sample pipeline's step-by-step reveal (design 027 §11.2).
-   * Shown as a pill at the top of the canvas while the demo builds itself, so
-   * the user sees *how* each step gets added instead of receiving a finished
-   * pipeline. `step` is omitted for the "now running it" phase.
+   * Shown as a pill while the demo builds itself, so the user sees *how* each
+   * step gets added instead of receiving a finished pipeline. `progress` counts
+   * the steps **already on the canvas** (0-based at the start); it is omitted
+   * for the "now running it" phase.
    */
   reveal?: {
     caption: string;
-    step?: { index: number; total: number };
+    progress?: { installed: number; total: number };
+    /** Every step is on the canvas: the button becomes "Run it". */
+    isComplete?: boolean;
   } | null;
   /**
    * Advance the reveal — one more step, or run the pipeline once every step is
@@ -43,7 +45,7 @@ export interface FirstStepGuideProps {
 }
 
 /**
- * Canvas overlays for first-run onboarding (design 027 §4.2 / §4.6):
+ * Canvas overlays for first-run onboarding:
  * the empty-state guide card and the persistent gesture card.
  *
  * Both are **plain overlays, not nodes**: nothing here touches ReactFlow's
@@ -54,7 +56,7 @@ export interface FirstStepGuideProps {
  * There is deliberately no ghost/mock node: adding an operation has exactly one
  * entry point (the command panel, `Alt+C` / `Ctrl+K`), and inventing a
  * node-shaped second one both misleads about where the new node lands and opens
- * something else when clicked (design 027 §4.2).
+ * something else when clicked.
  */
 export const FirstStepGuide = React.memo(function FirstStepGuide({
   showGuide,
@@ -84,23 +86,25 @@ export const FirstStepGuide = React.memo(function FirstStepGuide({
             data-testid="onboarding-reveal"
             className="animate-slide-up pointer-events-auto flex max-w-full items-center gap-2.5 rounded-full border border-blue-200 bg-blue-50/95 py-1.5 pl-3 pr-2 shadow-md backdrop-blur-sm dark:border-blue-900 dark:bg-blue-950/90"
           >
-            {reveal.step && (
+            {reveal.progress && (
               <span className="shrink-0 rounded-full bg-blue-600 px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums text-white">
-                {reveal.step.index}/{reveal.step.total}
+                {reveal.progress.installed}/{reveal.progress.total}
               </span>
             )}
             <span className="min-w-0 truncate text-xs font-medium text-blue-900 dark:text-blue-100">
               {reveal.caption}
             </span>
-            {/* The reveal is click-driven: the button both advances a step and,
-                once the last one is on the canvas, runs the pipeline. */}
-            {onAdvanceReveal && reveal.step && (
+            {/* The reveal is click-driven: the button installs the next step
+                and, once *all* of them are on the canvas, runs the pipeline.
+                The label keys off `isComplete` — the progress counter alone
+                was off by one and showed "Run it" one click too early. */}
+            {onAdvanceReveal && reveal.progress && (
               <button
                 onClick={onAdvanceReveal}
                 data-testid="onboarding-reveal-next"
                 className="shrink-0 rounded-full bg-blue-600 px-2.5 py-0.5 text-[11px] font-semibold text-white transition-colors hover:bg-blue-700"
               >
-                {reveal.step.index >= reveal.step.total
+                {reveal.isComplete
                   ? t.onboardingDemoRevealRun
                   : t.onboardingDemoRevealNext}
               </button>
@@ -224,7 +228,6 @@ export const FirstStepGuide = React.memo(function FirstStepGuide({
             aria-expanded={showGestures}
             className="flex w-full items-center gap-1.5 text-[11.5px] font-bold text-foreground/80"
           >
-            <Hand className="h-3.5 w-3.5" />
             {t.onboardingGestureTitle}
             <span className="ml-auto font-medium text-muted-foreground/70">
               {showGestures

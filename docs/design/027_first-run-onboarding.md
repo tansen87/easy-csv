@@ -219,7 +219,7 @@
 
 - ❌ **不做「每步成功标记」**：不在步骤节点上加 ✓。一条管道本来就可能有很多节点，满屏绿点会让工作流看起来更复杂；成功是默认预期，不需要额外装饰。失败已经有红框 + 红字块（现状实现），这条已经够了。
 - ❌ **「结果节点 = 视觉终点」整条不做**：不做结果节点的绿色描边 / 外发光，不做节点内嵌的摘要条与按钮。结果统一通过「自动打开的日志面板 + 顶部 Toast」呈现，画布上不额外装饰任何节点 —— 结果节点就是普通节点样式，只有标题和内容不同。
-  - ✅ **例外（§11.3，用户实测后修订）**：「查看结果」动作会把画布**平移**到结果节点居中（`setCenter`，保持用户缩放）—— 只动视角，不做节点装饰，也不做 `fitView`（那会改缩放）。
+  - ❌ **完成 Toast 整个删除（§11.3，用户实测后修订）**：应用内 Toast 与既有的**系统通知**（`useAppBootstrap` 完成时 `sendNotification`）**同时弹出**，用户要求删掉带「查看结果」的那一个。执行完成的反馈只剩系统通知（可在设置里关）。
   - 代价（知情即可）：结果节点如果在视野外，用户得自己平移画布去找。因为日志面板已经自动打开、结果数据就在眼前，这个代价可以接受。
 - ❌ 结果节点上的「查看」按钮 —— 属于上一条，一并删除。
 
@@ -469,17 +469,24 @@ if (clickedNode && clickedNode !== "table-node") {
 
 **回归保护**：`builtinTemplates.test.ts` 新增「示例钉住分隔符 / 其它模板不钉」「`needsSampleData` 对副本与已替换的模板都判断正确」。
 
-### 11.3 「查看结果」把结果节点平移到画布正中（2026-09-30，用户反馈）
+### 11.3 完成 Toast 与「查看结果」居中 —— 整体移除（2026-09-30，用户反馈）
 
-**问题**：完成 Toast 的「查看结果」只是把 Toast 关掉（顺带开了日志面板）—— 用户点了它，画布却纹丝不动。管道一长，产出结果的节点在视口外，用户得自己一路找过去。
+**两次反馈的演变**：
+1. 用户先要求「查看结果」把结果节点平移到正中 → 实现了 `focusResultNode()`（`setCenter`，保持缩放）。
+2. 随后发现**执行完成会弹两个框**：应用内完成 Toast（027 §4.3）+ 既有的系统通知（`useAppBootstrap` 的 `sendNotification`）。用户要求删掉带「查看结果」的那个。
 
-**做法**：Toast 动作 = `setShowLogPanel(true)` + `focusResultNode()`。后者取**当前管道最后一步**（结果落点），用 ReactFlow 的 `setCenter(nodeCenter, { zoom: 当前缩放, duration: 400 })` 平移画布把该节点放到正中。
+**最终形态**：§4.3 的完成 Toast 整条删除，执行完成的反馈 = 系统通知（设置里可关）。`focusResultNode` / `pipelineCompleted` / `pipelineCompletedBranches` / `viewResult` 等相关代码与 i18n key 一并清除，不留死代码。
 
-- **是平移不是 `fitView`**：保持用户的缩放不动。`fitView({ nodes: [...] })` 会把视口塞满那个节点，缩放被强行拉高，反而打断用户的空间感。
-- **没有画布实例 / 没有该节点时直接 no-op**（首次渲染前 `reactFlowInstanceRef.current` 还是 null）。
-- 走 `useExecution` → `runPipelineDeps.focusResultNode` 注入，与 `setShowLogPanel` 同一条路。
+**教训**：加一个新提示前，先确认同一条事件链上**已经**有没有别的提示在响 —— 系统通知是既有行为，我加 Toast 时没有查过它。
 
-**回归保护**：`tsc` / 全量 vitest（505）/ eslint 0 error / `check:index`。
+### 11.4 Result 预览按 tab 隔离（2026-09-30，用户反馈）
+
+**问题**：`resultPreview` 是 `useExecution` 里的**全局 state**，而结果节点由 `usePipelineLayout` 据此渲染 —— 用户在 tab A 跑完，切到 tab B 打开新文件，A 的 Result 还挂在 B 的画布上。
+
+**做法**：`useExecution` 增加 `resultPreviewTabId`，在写入预览的那一刻用 `selectedTabIdRef` 盖章；对外返回的 `resultPreview` 改为 `resultPreviewTabId === selectedTabId ? state : []`。下游（App → HomeView → FlowPanel → `useCanvasSearch` / `usePipelineLayout`）拿到的永远是「当前 tab 该看的结果」，无需逐层改签名。
+
+- 切回 tab A 时 A 自己的结果**仍然还在**（不是清空，是隔离）—— 这才是「结果属于某个 tab」的语义。
+- ⚠️ 细节：盖章要用 `selectedTabIdRef`（prop 每次渲染都变，闭包会过期）；`setResultPreview` 改成稳定 useCallback 后必须补进 `runPipeline` 装配处的 deps。
 
 ### 11.2 示例改为「逐步骤装出来」（2026-09-30，用户反馈「一点进去就是一堆操作」）
 

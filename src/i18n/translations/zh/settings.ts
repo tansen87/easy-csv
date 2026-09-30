@@ -1,4 +1,4 @@
-import type { Translations } from "../types";
+import type { Translations } from "@/i18n/translations/types";
 
 /** Settings */
 export const zhSettings = {
