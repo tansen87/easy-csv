@@ -19,6 +19,7 @@ export interface Translations {
 
   // MainMenu
   file: string;
+  edit: string;
   openNewTab: string;
   savePipeline: string;
   importWorkflow: string;
@@ -31,7 +32,8 @@ export interface Translations {
   executionCancelled: string;
   commandPanel: string;
   logPanel: string;
-  morePanels: string;
+  view: string;
+  search: string;
   helpCenter: string;
   dataProfileRequiresInput: string;
   checkUpdate: string;

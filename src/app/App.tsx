@@ -18,6 +18,7 @@ import { LogPanel } from "@/modules/logs/LogPanel";
 import { ChartPanel } from "@/modules/data-preview/charts/ChartPanel";
 import { SettingsDialog } from "@/components/setting/SettingsDialog";
 import { HomeView } from "@/modules/data-preview/HomeView";
+import { CANVAS_SEARCH_EVENT } from "@/modules/pipeline/hooks/useCanvasSearch";
 import { HelpDialog } from "@/components/help/HelpDialog";
 import { getHelpContent } from "@/components/help/HelpContent";
 import { UpdateDialog } from "@/modules/dialogs/app/UpdateDialog";
@@ -37,10 +38,7 @@ import { DataProfilePanel } from "@/modules/data-preview/DataProfilePanel";
 import { AIPanel } from "@/modules/ai/AIPanel";
 import { ToastContainer } from "@/components/setting/Toast";
 import { CommandList } from "@/modules/logs/CommandList";
-import {
-  useOnboarding,
-  useAutoDismissOnboarding,
-} from "@/hooks/useOnboarding";
+import { useOnboarding, useAutoDismissOnboarding } from "@/hooks/useOnboarding";
 import {
   demoRevealCaptions,
   getBuiltinDemoTemplate,
@@ -1789,6 +1787,9 @@ function AppContent() {
               onCheckUpdate={() => void checkForUpdates()}
               onShowSettings={onShowSettings}
               onOpenPalette={() => ui.setShowCommandPalette(true)}
+              onOpenSearch={() =>
+                window.dispatchEvent(new CustomEvent(CANVAS_SEARCH_EVENT))
+              }
               onOpenCsvDiff={() => {
                 ui.setCsvDiffInitialFileA(
                   tabsHook.getCurrentTab()?.inputFile || undefined,

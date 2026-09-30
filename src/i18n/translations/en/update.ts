@@ -27,8 +27,7 @@ export const enUpdate = {
   updateFormUnknown:
     "The installation type could not be detected — download the update manually",
 
-  updateSection: "Updates",
-  settingsAutoCheckUpdate: "Check for updates on launch",
+  updateSection: "Check for updates",
   settingsAutoCheckUpdateDesc:
-    "Checks silently in the background and only flags new versions in the toolbar; it never installs anything by itself",
+    "When enabled, checks silently in the background and only flags new versions in the toolbar; it never installs anything by itself",
 };

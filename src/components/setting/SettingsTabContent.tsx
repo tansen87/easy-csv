@@ -367,7 +367,7 @@ export function SettingsTabContent({
                 </label>
               </div>
 
-              {/* Automatic update check on launch (design 022). */}
+              {/* Automatic update check on launch */}
               <div>
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <CloudDownload className="h-4 w-4" />
@@ -381,9 +381,6 @@ export function SettingsTabContent({
                     className="w-4 h-4 rounded border-input accent-foreground"
                   />
                   <div className="text-left">
-                    <p className="text-sm text-foreground">
-                      {t.settingsAutoCheckUpdate}
-                    </p>
                     <p className="text-sm text-muted-foreground">
                       {t.settingsAutoCheckUpdateDesc}
                     </p>
@@ -391,7 +388,7 @@ export function SettingsTabContent({
                 </label>
               </div>
 
-              {/* Replay the first-run guide (design 027 §5). */}
+              {/* Replay the first-run guide */}
               {onResetOnboarding && (
                 <div>
                   <h3 className="text-lg font-semibold flex items-center gap-2">

@@ -3,6 +3,7 @@ import type { Translations } from "@/i18n/translations/types";
 /** MainMenu · Variables (F3) · VersionControl · CommandList · FlowPanel · LogPanel · Execution history · ContextMenu · Pipeline Templates */
 export const zhPipeline = {
   file: "文件",
+  edit: "编辑",
   openNewTab: "新标签页打开",
   savePipeline: "保存Pipeline",
   importWorkflow: "导入工作流",
@@ -15,7 +16,8 @@ export const zhPipeline = {
   executionCancelled: "执行已取消",
   commandPanel: "命令",
   logPanel: "日志",
-  morePanels: "更多面板",
+  view: "查看",
+  search: "搜索",
   helpCenter: "帮助中心",
   dataProfileRequiresInput: "需要载入输入文件",
   dataProfile: "数据概览",

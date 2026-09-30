@@ -11,6 +11,13 @@ export interface CanvasSearchResult {
   resultId?: string;
 }
 
+/**
+ * Window event used to open the canvas search box from outside the canvas
+ * (the "View → Search" menu entry). The Ctrl+F shortcut and this signal share
+ * the same `openSearch` path inside the hook.
+ */
+export const CANVAS_SEARCH_EVENT = "easy-csv:open-canvas-search";
+
 interface UseCanvasSearchArgs {
   steps: PipelineStep[];
   resultPreview?: { id: string; label: string }[];
@@ -35,22 +42,32 @@ export function useCanvasSearch({
   );
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Ctrl+F global shortcut (handled if HelpDialog is open)
+  // Open the search box, unless a dialog is in front of the canvas
+  // (e.g. HelpDialog owns Ctrl+F while it is open).
+  const openSearch = useCallback(() => {
+    const dialog = document.querySelector('[role="dialog"]');
+    if (dialog) return;
+    setIsSearchOpen(true);
+  }, []);
+
+  // Ctrl+F global shortcut, plus the `CANVAS_SEARCH_EVENT` window signal used
+  // by the "View → Search" menu entry so both share one code path.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Block Ctrl+F regardless of case to avoid triggering browser search boxes
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "f") return;
       e.preventDefault();
       e.stopPropagation();
-      // If the dialog box is open, do not open the search box
-      // (handled if HelpDialog is open)
-      const dialog = document.querySelector('[role="dialog"]');
-      if (dialog) return;
-      setIsSearchOpen(true);
+      openSearch();
     };
+    const handleOpenRequest = () => openSearch();
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+    window.addEventListener(CANVAS_SEARCH_EVENT, handleOpenRequest);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener(CANVAS_SEARCH_EVENT, handleOpenRequest);
+    };
+  }, [openSearch]);
 
   // Focus and select search input when it opens
   useEffect(() => {

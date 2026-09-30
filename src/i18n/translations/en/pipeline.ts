@@ -5,6 +5,7 @@ import type { Translations } from "@/i18n/translations/types";
  */
 export const enPipeline = {
   file: "File",
+  edit: "Edit",
   openNewTab: "Open New Tab",
   savePipeline: "Save Pipeline",
   importWorkflow: "Import Workflow",
@@ -17,7 +18,8 @@ export const enPipeline = {
   executionCancelled: "Execution cancelled",
   commandPanel: "Command",
   logPanel: "Logs",
-  morePanels: "More Panels",
+  view: "View",
+  search: "Search",
   helpCenter: "Help Center",
   dataProfileRequiresInput: "Requires an input file",
   dataProfile: "Data Profile",

@@ -8,7 +8,9 @@ export function useUIState() {
   const [showLogPanel, setShowLogPanel] = useState(false);
   const [showCommandPanel, setShowCommandPanel] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeMenu, setActiveMenu] = useState<"file" | null>(null);
+  const [activeMenu, setActiveMenu] = useState<
+    "file" | "edit" | "view" | "help" | null
+  >(null);
   const [isMenuActivated, setIsMenuActivated] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showProgressBar, setShowProgressBar] = useState(false);
