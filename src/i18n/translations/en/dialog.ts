@@ -89,6 +89,15 @@ export const enDialog = {
     "Pick a text file and a row count per file, then click Split. Lines are copied as-is (no CSV parsing), so this also works for huge files. Output files are written next to the input as *_partN.<ext>.",
   splitLinesInvalidLinesPerFile:
     "Lines per file must be an integer of at least 1",
+  splitLinesExampleTitle: "Output preview",
+  splitLinesExampleInput: "Input {file} · {rows} rows per file",
+  splitLinesExampleNote:
+    "The number of parts depends on the input's row count; the original extension is kept.",
+  splitLinesStepFile: "Choose the file to split",
+  splitLinesStepSettings: "Split settings",
+  splitLinesStepOutput: "Output location",
+  splitLinesNoHeadersHint: "Select when the source file lacks a header",
+  splitLinesReady: "{rows} rows per file",
   // MergeExcelDialog
   mergeExcel: "Merge Excel Files",
   mergeExcelHint: "Combine the sheets of several workbooks into one table",

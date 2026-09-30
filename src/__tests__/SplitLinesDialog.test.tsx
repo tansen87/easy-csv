@@ -78,21 +78,21 @@ function renderDialog(initialInputFile = "/tmp/input.csv") {
 }
 
 describe("SplitLinesDialog options", () => {
-  it("defaults to no-headers off and 100000 rows per file", async () => {
+  it("defaults to no-headers off and 1000000 rows per file", async () => {
     renderDialog();
 
     const noHeadersBox = screen.getByLabelText(
       "No headers",
     ) as HTMLInputElement;
     expect(noHeadersBox.checked).toBe(false);
-    expect(screen.getByRole("spinbutton")).toHaveValue(100000);
+    expect(screen.getByRole("spinbutton")).toHaveValue(1000000);
 
     fireEvent.click(screen.getByRole("button", { name: "Split" }));
 
     await waitFor(() => {
       expect(mockInvoke).toHaveBeenCalledWith("split_lines", {
         path: "/tmp/input.csv",
-        linesPerFile: 100000,
+        linesPerFile: 1000000,
         outDir: null,
         noHeaders: false,
       });
@@ -169,6 +169,33 @@ describe("SplitLinesDialog options", () => {
       expect.anything(),
     );
   });
+
+  it("applies a row-count preset and previews the real part names", async () => {
+    const { container } = renderDialog("/data/logs/app.log");
+
+    // The preview names the parts after the picked file, not a generic sample.
+    expect(container.textContent).toContain("app_part1.log");
+    expect(container.textContent).toContain("app_part3.log");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Lines per file 10,000" }),
+    );
+    expect(screen.getByRole("spinbutton")).toHaveValue(10000);
+    // The presets run up to a million rows.
+    expect(
+      screen.getByRole("button", { name: "Lines per file 1,000,000" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Split" }));
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith("split_lines", {
+        path: "/data/logs/app.log",
+        linesPerFile: 10000,
+        outDir: null,
+        noHeaders: false,
+      });
+    });
+  });
 });
 
 describe("SplitLinesDialog last result", () => {
@@ -201,8 +228,10 @@ describe("SplitLinesDialog last result", () => {
       expect(container.textContent).toContain("Completed");
     });
     expect(container.textContent).toContain("Took 420 ms");
-    expect(container.textContent).toContain("Files: 3");
-    expect(container.textContent).toContain("Total rows: 5");
+    // The summary grid labels each cell for screen readers, so the assertions
+    // can read the value out of the cell instead of the concatenated text.
+    expect(screen.getByLabelText("Files: 3")).toBeInTheDocument();
+    expect(screen.getByLabelText("Total rows: 5")).toBeInTheDocument();
     expect(container.textContent).toContain("header copied");
     expect(container.textContent).toContain("/tmp/out/a_part3.csv");
 

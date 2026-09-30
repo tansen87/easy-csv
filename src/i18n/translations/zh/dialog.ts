@@ -86,6 +86,14 @@ export const zhDialog = {
   splitLinesNoResult:
     "选择文本文件并设置每个文件的行数,点击开始拆分.按原始行复制、不解析 CSV,因此也适用于超大文件.输出为输入旁的 *_partN.<ext>",
   splitLinesInvalidLinesPerFile: "每个文件行数需为不小于 1 的整数",
+  splitLinesExampleTitle: "输出示例",
+  splitLinesExampleInput: "输入 {file} · 每个文件 {rows} 行",
+  splitLinesExampleNote: "份数由输入总行数决定,文件名保留原扩展名",
+  splitLinesStepFile: "选择要拆分的文件",
+  splitLinesStepSettings: "拆分设置",
+  splitLinesStepOutput: "输出位置",
+  splitLinesNoHeadersHint: "当源文件没有表头时则选中",
+  splitLinesReady: "每 {rows} 行一份",
   // MergeExcelDialog
   mergeExcel: "合并 Excel 文件",
   mergeExcelHint: "把多个工作簿的 sheet 合并成一张表",

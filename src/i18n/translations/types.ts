@@ -436,7 +436,7 @@ export interface Translations {
   separateSelectFile: string;
   separateComplete: string;
 
-  // SplitLinesDialog (line-count split, design 021)
+  // SplitLinesDialog
   splitLines: string;
   linesPerFile: string;
   linesPerFileHint: string;
@@ -448,6 +448,16 @@ export interface Translations {
   splitLinesHeaderCopied: string;
   splitLinesNoResult: string;
   splitLinesInvalidLinesPerFile: string;
+  splitLinesExampleTitle: string;
+  /** `{file}` / `{rows}` placeholders. */
+  splitLinesExampleInput: string;
+  splitLinesExampleNote: string;
+  splitLinesStepFile: string;
+  splitLinesStepSettings: string;
+  splitLinesStepOutput: string;
+  splitLinesNoHeadersHint: string;
+  /** Footer status while idle; `{rows}` placeholder. */
+  splitLinesReady: string;
 
   // MergeExcelDialog
   mergeExcel: string;
