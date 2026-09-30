@@ -415,7 +415,6 @@ export interface Translations {
   detectFailed: string;
   delimiterForThisFile: string;
   delimiterModeLocked: string;
-  detectQuotingHint: string;
   setAsDefaultDelimiter: string;
   firstRowColumns: string;
   headerPreview: string;
@@ -435,6 +434,25 @@ export interface Translations {
   badRows: string;
   separateSelectFile: string;
   separateComplete: string;
+  separateExampleTitle: string;
+  /** `{file}` / `{columns}` placeholders. */
+  separateExampleInput: string;
+  /** `{columns}` / `{name}` placeholders. */
+  separateExampleGood: string;
+  /** `{columns}` / `{name}` placeholders. */
+  separateExampleBad: string;
+  separateStepFile: string;
+  separateStepRule: string;
+  separateStepOutput: string;
+  separateRuleHint: string;
+  separateAdvanced: string;
+  separateAdvancedHint: string;
+  separateQuotingHint: string;
+  separateNoHeadersHint: string;
+  separateStreamingHint: string;
+  /** Footer status; `{columns}` / `{delimiter}` placeholders. */
+  separateReady: string;
+  separateReadyHint: string;
 
   // SplitLinesDialog
   splitLines: string;

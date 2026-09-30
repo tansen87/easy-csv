@@ -243,7 +243,7 @@ score = 60 * [header_fields > 1]                  // 表头是最可靠的信号
 两个关键设计点:
 
 1. **表头权重(60)刻意高于正文一致度(30)的总和**。本工具的输入天然是**脏文件**——016 的验收数据 `age,name,gender` + `1,tom,man` / `2` / `2.1` / `2.3` / `3,jerry` / `4`,用 `,` 切出来的字段数是 `{3:2, 1:4, 2:1}`,主导字段数就是 1,正文一致度完全不可用;但表头 3 列是 `,` 独有的解释。只要表头能解释,就该采信表头。
-2. **`quoting` 兜底**:若在 `quoting = true` 下无可成立候选,用 `quoting = false` 再算一遍(两次都是 64 KiB 级解析,微秒量级),应对「文件本身不用引号、字段里裸出现分隔符」的情况;此时返回的 `quoting_used = false`,前端给出琥珀色提示建议关闭「启用引号」。**注意**:表头/预览仍按调用方的 `quoting` 解析,以免界面与拆分结果脱节。
+2. **`quoting` 兜底**:若在 `quoting = true` 下无可成立候选,用 `quoting = false` 再算一遍(两次都是 64 KiB 级解析,微秒量级),应对「文件本身不用引号、字段里裸出现分隔符」的情况;此时返回的 `quoting_used = false`,前端给出琥珀色提示建议启用「忽略引号」。**注意**:表头/预览仍按调用方的 `quoting` 解析,以免界面与拆分结果脱节。
 3. **并列裁决**:分数完全相同时依次比较「主导字段数(`body_mode`)→ 约定优先级」,即更丰富的切分优先(单行 `a,b;c;d;e` 会判为 `;`)。此类输入本身歧义,`confidence` 固定为 `low`。
 
 算法验证用例(直接作为单测清单):
@@ -302,7 +302,6 @@ score = 60 * [header_fields > 1]                  // 表头是最可靠的信号
 | `detectConfidenceHigh` | high confidence | 置信度高 |
 | `detectConfidenceLow` | low confidence, please verify | 置信度低,请复核 |
 | `detectFailed` | No delimiter detected; using the default | 未能识别分隔符,已使用默认值 |
-| `detectQuotingHint` | Only detected without quote parsing — consider turning quoting off | 仅在未启用引号解析时识别成功,建议关闭「启用引号」 |
 | `setAsDefaultDelimiter` | Set as default | 设为默认 |
 | `firstRowColumns` | First row | 第一行 |
 | `headerPreview` | Header | 表头 |

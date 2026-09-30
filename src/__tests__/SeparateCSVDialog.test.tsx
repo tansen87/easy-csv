@@ -277,7 +277,7 @@ describe("SeparateCSVDialog file info", () => {
           delimiter: null,
           fallbackDelimiter: ",",
           skiprows: 0,
-          quoting: true,
+          quoting: false,
         }),
       );
     });
@@ -468,5 +468,106 @@ describe("SeparateCSVDialog last result", () => {
     const openPath = await screen.findByRole("button", { name: "Open path" });
     await waitFor(() => expect(openPath).toBeDisabled());
     expect(container.textContent).toContain("Output file no longer exists");
+  });
+});
+
+describe("SeparateCSVDialog rule preview and advanced options", () => {
+  it("previews the rule with the picked file's own output names", async () => {
+    const { container } = renderDialog("/tmp/input.csv");
+
+    // The preview names the outputs after the file and reuses the probed
+    // column count, so the good/bad rule is concrete instead of abstract.
+    await waitFor(() => {
+      expect(container.textContent).toContain("6 columns → input_good.csv");
+    });
+    expect(container.textContent).toContain("Any other count → input_bad.csv");
+  });
+
+  it("states the resolved rule in the footer", async () => {
+    const { container } = renderDialog();
+
+    await waitFor(() => {
+      expect(container.textContent).toContain("Split on 6 columns");
+    });
+  });
+
+  it("collapses the advanced options by default and toggles them", () => {
+    renderDialog();
+
+    const toggle = screen.getByRole("button", { name: /Advanced options/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+  });
+});
+
+describe("SeparateCSVDialog ignore-quoting option", () => {
+  it("ignores quoting by default", async () => {
+    renderDialog();
+
+    const ignoreQuoting = screen.getByLabelText(
+      "Ignore quoting",
+    ) as HTMLInputElement;
+    expect(ignoreQuoting.checked).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Separate" }));
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith(
+        "separate_csv",
+        expect.objectContaining({ quoting: false }),
+      );
+    });
+  });
+
+  it("parses quotes again once the box is unticked", async () => {
+    renderDialog();
+
+    const ignoreQuoting = screen.getByLabelText(
+      "Ignore quoting",
+    ) as HTMLInputElement;
+    fireEvent.click(ignoreQuoting);
+    expect(ignoreQuoting.checked).toBe(false);
+
+    // The collapsed summary lists exactly the options that are on.
+    const toggle = screen.getByRole("button", { name: /Advanced options/ });
+    expect(toggle.textContent).not.toContain("Ignore quoting");
+
+    fireEvent.click(screen.getByRole("button", { name: "Separate" }));
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith(
+        "separate_csv",
+        expect.objectContaining({ quoting: true }),
+      );
+    });
+  });
+
+  it("colours only the collapsed bar, and only while something is on", async () => {
+    // Detection succeeded only without quote parsing — the parsing section must
+    // no longer react to the checkbox.
+    mockBackend({ ...MOCK_PROBE, quoting_used: false });
+    const { container } = renderDialog();
+
+    await waitFor(() => {
+      expect(container.textContent).toContain("First row: 6");
+    });
+
+    const bar = (): string =>
+      screen.getByRole("button", { name: /Advanced options/ }).className;
+    const row = (): string =>
+      (screen.getByLabelText("Ignore quoting") as HTMLInputElement)
+        .parentElement?.className ?? "";
+
+    // 忽略引号 is on by default → the collapsed bar carries the emphasis.
+    expect(bar()).toContain("text-amber-600");
+
+    fireEvent.click(screen.getByLabelText("Ignore quoting"));
+    expect(bar()).toContain("text-muted-foreground");
+
+    // The rows themselves stay neutral either way, as does the delimiter line.
+    expect(row()).toContain("text-muted-foreground");
+    expect(screen.getByText(/Detected「,」/).className).not.toContain(
+      "text-amber-600",
+    );
   });
 });

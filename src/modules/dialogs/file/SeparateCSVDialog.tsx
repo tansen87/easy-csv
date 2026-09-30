@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { X, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  X,
+  CheckCircle2,
+  AlertCircle,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
@@ -43,6 +50,59 @@ const DELIMITER_OPTIONS = [
 /** Header fields shown in the preview line. */
 const HEADER_PREVIEW_FIELDS = 8;
 
+/** Placeholder file used by the rule preview before one is picked. */
+const EXAMPLE_FILE = "orders.csv";
+
+/** `{stem, ext}` of a path, so the preview can show the real output names. */
+function splitFileName(path: string): { stem: string; ext: string } {
+  const base = path.split(/[\\/]/).pop() ?? "";
+  const dot = base.lastIndexOf(".");
+  if (dot <= 0) return { stem: base, ext: "" };
+  return { stem: base.slice(0, dot), ext: base.slice(dot) };
+}
+
+/** Numbered step card — same skeleton as MergeExcelDialog's ①②③ sections. */
+function StepSection({
+  index,
+  title,
+  children,
+}: {
+  index: number;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-border/50 p-3 space-y-2.5">
+      <div className="flex items-center gap-2">
+        <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-medium flex items-center justify-center">
+          {index}
+        </span>
+        <span className="text-[13px] font-medium text-foreground">{title}</span>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** One cell of the result summary grid (label on top, value below). */
+function StatCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      role="group"
+      aria-label={`${label}: ${value}`}
+      className="rounded-md bg-muted/60 p-2 min-w-0"
+    >
+      <p className="text-[11px] text-muted-foreground truncate">{label}</p>
+      <p
+        className="text-base font-medium text-foreground truncate"
+        title={value}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
 interface SeparateCSVDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -66,11 +126,18 @@ export function SeparateCSVDialog({
   const [inputFile, setInputFile] = useState("");
   const [outputDir, setOutputDir] = useState("");
   const [delimiterMode, setDelimiterMode] = useState(AUTO_DELIMITER);
-  const [quoting, setQuoting] = useState(true);
+  /**
+   * The checkbox is labelled "ignore quoting", while the backend flag is its
+   * inverse (`quoting: true` still parses quoted fields). Keeping the state
+   * honest here means the label matches what ticking it does — the box is on by
+   * default, so quote parsing is off unless the user turns it back on.
+   */
+  const [ignoreQuoting, setIgnoreQuoting] = useState(true);
   const [noHeaders, setNoHeaders] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [expectedColumns, setExpectedColumns] = useState("");
   const [skiprows, setSkiprows] = useState("0");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isSeparating, setIsSeparating] = useState(false);
   const [lastResult, setLastResult] = useState<StoredSeparateResult | null>(
     null,
@@ -95,7 +162,7 @@ export function SeparateCSVDialog({
       setInputFile(initialInputFile || stored?.inputFile || "");
       setOutputDir("");
       setDelimiterMode(AUTO_DELIMITER);
-      setQuoting(true);
+      setIgnoreQuoting(true);
       setNoHeaders(false);
       setStreaming(false);
       setExpectedColumns("");
@@ -138,7 +205,7 @@ export function SeparateCSVDialog({
     delimiter: delimiterMode === AUTO_DELIMITER ? null : delimiterMode,
     fallbackDelimiter: appDefaultDelimiter,
     skiprows: skiprowsValue,
-    quoting,
+    quoting: !ignoreQuoting,
     enabled: isOpen,
   });
 
@@ -147,6 +214,14 @@ export function SeparateCSVDialog({
     delimiterMode !== AUTO_DELIMITER
       ? delimiterMode
       : probe?.delimiter || appDefaultDelimiter;
+
+  /** Column count the split will judge rows against. */
+  const effectiveColumns =
+    expectedColumns.trim() !== ""
+      ? expectedColumns.trim()
+      : probe
+        ? String(probe.columns)
+        : "—";
 
   // Flag a stored result whose output files were moved/deleted meanwhile.
   useEffect(() => {
@@ -259,7 +334,7 @@ export function SeparateCSVDialog({
       const data = await invoke<SeparateResult>("separate_csv", {
         path: inputFile,
         delimiter: effectiveDelimiter,
-        quoting,
+        quoting: !ignoreQuoting,
         expectedColumns:
           expectedColumns.trim() === "" ? null : expectedColumns.trim(),
         skiprows: skip,
@@ -277,7 +352,7 @@ export function SeparateCSVDialog({
         elapsedMs: data.elapsed_ms,
         inputFile: inputFile.trim(),
         delimiter: effectiveDelimiter,
-        quoting,
+        quoting: !ignoreQuoting,
         noHeaders,
         skiprows: skip,
         streaming,
@@ -298,7 +373,7 @@ export function SeparateCSVDialog({
     inputFile,
     outputDir,
     effectiveDelimiter,
-    quoting,
+    ignoreQuoting,
     noHeaders,
     streaming,
     expectedColumns,
@@ -334,11 +409,30 @@ export function SeparateCSVDialog({
 
   const isDelimiterLowConfidence =
     probe?.source === "detected" && probe.confidence !== "high";
-  const showQuotingHint = probe !== null && !probe.quoting_used;
   const columnsMismatch =
     probe !== null &&
     expectedColumns.trim() !== "" &&
     Number(expectedColumns) !== probe.columns;
+
+  /** Concrete `{stem}_good{ext}` / `{stem}_bad{ext}` the rule preview names. */
+  const rulePreview = useMemo(() => {
+    const path = inputFile.trim();
+    const { stem, ext } = splitFileName(path === "" ? EXAMPLE_FILE : path);
+    return {
+      file: path === "" ? EXAMPLE_FILE : (path.split(/[\\/]/).pop() ?? path),
+      columns: probe ? String(probe.columns) : "?",
+      good: `${stem}_good${ext}`,
+      bad: `${stem}_bad${ext}`,
+    };
+  }, [inputFile, probe]);
+
+  /** Options that are on, surfaced on the collapsed header — which is the only
+   * place that carries the emphasis (the rows themselves stay neutral). */
+  const activeAdvancedOptions = [
+    ignoreQuoting ? t.quoting : null,
+    noHeaders ? t.noHeaders : null,
+    streaming ? t.streaming : null,
+  ].filter((label): label is string => label !== null);
 
   if (!isOpen) return null;
 
@@ -354,7 +448,7 @@ export function SeparateCSVDialog({
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
-        className="relative bg-card border border-border/50 rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] min-h-[400px] flex flex-col overflow-hidden outline-none"
+        className="relative bg-card border border-border/50 rounded-lg shadow-xl w-full max-w-2xl h-[85vh] flex flex-col overflow-hidden outline-none"
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
       >
@@ -372,230 +466,305 @@ export function SeparateCSVDialog({
           </button>
         </div>
 
-        <div className="px-4 py-3 shrink-0 space-y-2">
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-muted-foreground shrink-0">
-              {t.inputFile}
-            </label>
-            <input
-              type="text"
-              value={inputFile}
-              onChange={(e) => {
-                clearFeedback();
-                setInputFile(e.target.value);
-              }}
-              placeholder={t.inputFile}
-              className="flex-1 min-w-0 h-8 px-2 text-xs border rounded-md bg-background"
-            />
-            <Button
-              variant="secondary"
-              size="sm"
-              className="shrink-0"
-              onClick={browseInput}
-            >
-              {t.open}
-            </Button>
-          </div>
-
-          {/* File info: first row's column count + header preview */}
-          {inputFile.trim() !== "" && (
-            <div className="flex items-center gap-2 pl-1 text-[11px] leading-4">
-              {probeError ? (
-                <span className="text-red-600 truncate">
-                  {t.probeFailed}: {probeError}
-                </span>
-              ) : probe ? (
-                <>
-                  <span className="text-muted-foreground shrink-0">
-                    ✓ {t.firstRowColumns}:{" "}
-                    <span className="text-foreground font-medium">
-                      {probe.columns}
-                    </span>
-                  </span>
-                  {headerPreview && (
-                    <span className="text-muted-foreground/80 truncate min-w-0">
-                      · {t.headerPreview}: {headerPreview}
-                    </span>
-                  )}
-                </>
-              ) : isProbing ? (
-                <span className="text-muted-foreground/70">
-                  {t.probeLoading}
-                </span>
-              ) : null}
+        <ScrollArea
+          type="always"
+          hideHorizontalScrollbar
+          blockContent
+          className="flex-1 min-h-0"
+        >
+          <div className="p-4 space-y-3">
+            {/* 判定规则 */}
+            <div className="rounded-md bg-muted/40 p-2.5 space-y-1 text-[11px] text-muted-foreground">
+              <p className="font-medium text-foreground">
+                {t.separateExampleTitle}
+              </p>
+              <p>
+                {t.separateExampleInput
+                  .replace("{file}", rulePreview.file)
+                  .replace("{columns}", rulePreview.columns)}
+              </p>
+              <p className="font-mono text-foreground/80 break-all">
+                {t.separateExampleGood
+                  .replace("{columns}", rulePreview.columns)
+                  .replace("{name}", rulePreview.good)}
+              </p>
+              <p className="font-mono text-foreground/80 break-all">
+                {t.separateExampleBad
+                  .replace("{columns}", rulePreview.columns)
+                  .replace("{name}", rulePreview.bad)}
+              </p>
             </div>
-          )}
 
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-muted-foreground shrink-0">
-              {t.delimiter}
-            </label>
-            <div className="w-40 shrink-0">
-              <Select
-                value={delimiterMode}
-                onChange={(value) => {
-                  clearFeedback();
-                  setDelimiterMode(value);
-                }}
-                options={[
-                  { label: t.delimiterAuto, value: AUTO_DELIMITER },
-                  ...DELIMITER_OPTIONS,
-                ]}
-              />
-            </div>
-            <span
-              className={`truncate min-w-0 flex-1 text-[11px] ${
-                isDelimiterLowConfidence || showQuotingHint
-                  ? "text-amber-600"
-                  : "text-muted-foreground/80"
-              }`}
-            >
-              {delimiterHint}
-            </span>
-            <button
-              type="button"
-              className="text-[11px] text-primary hover:underline shrink-0 disabled:text-muted-foreground/40 disabled:no-underline"
-              onClick={handleSaveAsDefault}
-              disabled={effectiveDelimiter === appDefaultDelimiter}
-            >
-              {t.setAsDefaultDelimiter}
-            </button>
-          </div>
+            {/* 选择要检查的 CSV */}
+            <StepSection index={1} title={t.separateStepFile}>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={inputFile}
+                  onChange={(e) => {
+                    clearFeedback();
+                    setInputFile(e.target.value);
+                  }}
+                  placeholder={t.inputFile}
+                  className="flex-1 min-w-0 h-8 px-2 text-xs border rounded-md bg-background"
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={browseInput}
+                >
+                  {t.open}
+                </Button>
+              </div>
+              {inputFile.trim() !== "" && (
+                <p className="text-[11px] leading-4 min-w-0 break-all">
+                  {probeError ? (
+                    <span className="text-red-600 break-all">
+                      {t.probeFailed}: {probeError}
+                    </span>
+                  ) : probe ? (
+                    <>
+                      <span className="text-muted-foreground">
+                        ✓ {t.firstRowColumns}:{" "}
+                        <span className="text-foreground font-medium">
+                          {probe.columns}
+                        </span>
+                      </span>
+                      {headerPreview && (
+                        <span className="text-muted-foreground/80 break-all">
+                          {" "}
+                          · {t.headerPreview}: {headerPreview}
+                        </span>
+                      )}
+                    </>
+                  ) : isProbing ? (
+                    <span className="text-muted-foreground/70">
+                      {t.probeLoading}
+                    </span>
+                  ) : null}
+                </p>
+              )}
+            </StepSection>
 
-          {showQuotingHint && (
-            <p className="pl-1 text-[11px] text-amber-600">
-              {t.detectQuotingHint}
-            </p>
-          )}
-
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-muted-foreground shrink-0">
-              {t.outputDir}
-            </label>
-            <input
-              type="text"
-              value={outputDir}
-              onChange={(e) => {
-                clearFeedback();
-                setOutputDir(e.target.value);
-              }}
-              placeholder={t.inputFile}
-              className="flex-1 min-w-0 h-8 px-2 text-xs border rounded-md bg-background"
-            />
-            <Button
-              variant="secondary"
-              size="sm"
-              className="shrink-0"
-              onClick={browseOutputDir}
-            >
-              {t.open}
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label
-              className="text-xs font-medium text-muted-foreground shrink-0"
-              title={t.expectedColumnsHint}
-            >
-              {t.expectedColumns}
-            </label>
-            <input
-              type="text"
-              value={expectedColumns}
-              onChange={(e) => {
-                clearFeedback();
-                setExpectedColumns(e.target.value);
-              }}
-              placeholder={
-                probe
-                  ? `${t.expectedColumnsHint} · ${probe.columns}`
-                  : t.expectedColumnsHint
-              }
-              className="flex-1 min-w-0 h-8 px-2 text-xs border rounded-md bg-background"
-            />
-            {columnsMismatch && (
-              <span
-                className="text-[11px] text-amber-600 shrink-0"
-                title={t.expectedColumnsHint}
+            {/* 解析与判定 */}
+            <StepSection index={2} title={t.separateStepRule}>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-muted-foreground shrink-0 w-16">
+                  {t.delimiter}
+                </label>
+                <div className="w-40 shrink-0">
+                  <Select
+                    value={delimiterMode}
+                    onChange={(value) => {
+                      clearFeedback();
+                      setDelimiterMode(value);
+                    }}
+                    options={[
+                      { label: t.delimiterAuto, value: AUTO_DELIMITER },
+                      ...DELIMITER_OPTIONS,
+                    ]}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="ml-auto text-[11px] text-primary hover:underline shrink-0 disabled:text-muted-foreground/40 disabled:no-underline"
+                  onClick={handleSaveAsDefault}
+                  disabled={effectiveDelimiter === appDefaultDelimiter}
+                >
+                  {t.setAsDefaultDelimiter}
+                </button>
+              </div>
+              <p
+                className={`text-[11px] ${
+                  isDelimiterLowConfidence
+                    ? "text-amber-600"
+                    : "text-muted-foreground/80"
+                }`}
               >
-                {t.expectedColumns} {expectedColumns} ≠ {probe?.columns}
-              </span>
-            )}
-            <label className="text-xs font-medium text-muted-foreground shrink-0">
-              {t.skiprows}
-            </label>
-            <input
-              type="number"
-              min={0}
-              value={skiprows}
-              onChange={(e) => {
-                clearFeedback();
-                setSkiprows(e.target.value);
-              }}
-              className="w-20 h-8 px-2 text-xs border rounded-md bg-background"
-            />
-          </div>
+                {delimiterHint}
+              </p>
 
-          <div className="flex items-center gap-2">
-            <label className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-              <input
-                type="checkbox"
-                checked={quoting}
-                onChange={(e) => {
-                  clearFeedback();
-                  setQuoting(e.target.checked);
-                }}
-                className="accent-primary"
-              />
-              {t.quoting}
-            </label>
-            <label className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-              <input
-                type="checkbox"
-                checked={noHeaders}
-                onChange={(e) => {
-                  clearFeedback();
-                  setNoHeaders(e.target.checked);
-                }}
-                className="accent-primary"
-              />
-              {t.noHeaders}
-            </label>
-            <label className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-              <input
-                type="checkbox"
-                checked={streaming}
-                onChange={(e) => {
-                  clearFeedback();
-                  setStreaming(e.target.checked);
-                }}
-                className="accent-primary"
-              />
-              {t.streaming}
-            </label>
-            <div className="flex-1" />
-            <Button
-              variant="secondary"
-              size="sm"
-              className="shrink-0"
-              onClick={handleSeparate}
-              disabled={isSeparating}
-            >
-              {isSeparating ? t.separating : t.separateStart}
-            </Button>
-          </div>
-        </div>
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor="separate-expected-columns"
+                  className="text-xs font-medium text-muted-foreground shrink-0"
+                >
+                  {t.expectedColumns}
+                </label>
+                <input
+                  id="separate-expected-columns"
+                  type="text"
+                  value={expectedColumns}
+                  onChange={(e) => {
+                    clearFeedback();
+                    setExpectedColumns(e.target.value);
+                  }}
+                  placeholder={
+                    probe
+                      ? `${t.expectedColumnsHint} · ${probe.columns}`
+                      : t.expectedColumnsHint
+                  }
+                  className="flex-1 min-w-0 h-8 px-2 text-xs border rounded-md bg-background"
+                />
+                {columnsMismatch && (
+                  <span
+                    className="text-[11px] text-amber-600 shrink-0"
+                    title={t.expectedColumnsHint}
+                  >
+                    {t.expectedColumns} {expectedColumns} ≠ {probe?.columns}
+                  </span>
+                )}
+                <label
+                  htmlFor="separate-skiprows"
+                  className="text-xs font-medium text-muted-foreground shrink-0 ml-2"
+                >
+                  {t.skiprows}
+                </label>
+                <input
+                  id="separate-skiprows"
+                  type="number"
+                  min={0}
+                  value={skiprows}
+                  onChange={(e) => {
+                    clearFeedback();
+                    setSkiprows(e.target.value);
+                  }}
+                  className="w-20 h-8 px-2 text-xs border rounded-md bg-background"
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground/80">
+                {t.separateRuleHint}
+              </p>
+            </StepSection>
 
-        {error && (
-          <div className="px-4 py-2 bg-red-500/10 text-red-600 text-xs flex items-center gap-2 shrink-0">
-            <AlertCircle className="h-3.5 w-3.5" />
-            {error}
-          </div>
-        )}
+            {/* 输出位置 */}
+            <StepSection index={3} title={t.separateStepOutput}>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-muted-foreground shrink-0">
+                  {t.outputDir}
+                </label>
+                <input
+                  type="text"
+                  value={outputDir}
+                  onChange={(e) => {
+                    clearFeedback();
+                    setOutputDir(e.target.value);
+                  }}
+                  placeholder={t.outputPathLeaveEmpty}
+                  className="flex-1 min-w-0 h-8 px-2 text-xs border rounded-md bg-background"
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={browseOutputDir}
+                >
+                  {t.open}
+                </Button>
+              </div>
+            </StepSection>
 
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="p-4">
-            <div className="rounded border border-border/50 p-4">
+            {/* 高级选项(默认折叠,避免一屏全是开关) */}
+            <div className="space-y-3">
+              <button
+                onClick={() => setAdvancedOpen((v) => !v)}
+                aria-expanded={advancedOpen}
+                className={`w-full flex items-center gap-2 rounded-lg border p-3 text-xs transition-colors ${
+                  activeAdvancedOptions.length > 0
+                    ? "border-amber-500/50 text-amber-600"
+                    : "border-border/50 text-muted-foreground hover:bg-accent"
+                }`}
+              >
+                {advancedOpen ? (
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+                ) : (
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                )}
+                {t.separateAdvanced}
+                <span
+                  className={
+                    activeAdvancedOptions.length > 0
+                      ? "text-[11px]"
+                      : "text-[11px] text-muted-foreground/70"
+                  }
+                >
+                  {activeAdvancedOptions.length > 0
+                    ? activeAdvancedOptions.join(" · ")
+                    : t.separateAdvancedHint}
+                </span>
+              </button>
+              <div
+                className={`grid ${
+                  advancedOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                }`}
+              >
+                <div
+                  className={`overflow-hidden ${
+                    advancedOpen ? "visible" : "invisible"
+                  }`}
+                >
+                  <div className="rounded-lg border border-border/50 p-3 space-y-2">
+                    {/* Rows keep their neutral colour whether or not they are
+                        ticked — the collapsed header carries the emphasis. */}
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={ignoreQuoting}
+                          onChange={(e) => {
+                            clearFeedback();
+                            setIgnoreQuoting(e.target.checked);
+                          }}
+                          className="accent-primary"
+                        />
+                        {t.quoting}
+                      </label>
+                      <span className="text-[11px] text-muted-foreground/70">
+                        {t.separateQuotingHint}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={noHeaders}
+                          onChange={(e) => {
+                            clearFeedback();
+                            setNoHeaders(e.target.checked);
+                          }}
+                          className="accent-primary"
+                        />
+                        {t.noHeaders}
+                      </label>
+                      <span className="text-[11px] text-muted-foreground/70">
+                        {t.separateNoHeadersHint}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={streaming}
+                          onChange={(e) => {
+                            clearFeedback();
+                            setStreaming(e.target.checked);
+                          }}
+                          className="accent-primary"
+                        />
+                        {t.streaming}
+                      </label>
+                      <span className="text-[11px] text-muted-foreground/70">
+                        {t.separateStreamingHint}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 结果卡 */}
+            <div className="rounded-lg border border-border/50 p-3">
               {lastResult ? (
                 <div className="space-y-3">
                   <p className="flex flex-wrap items-center gap-2 text-xs font-medium text-green-600">
@@ -610,19 +779,29 @@ export function SeparateCSVDialog({
                         ` · ${t.elapsed} ${formatElapsed(lastResult.elapsedMs)}`}
                     </span>
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t.goodRows}: {lastResult.goodRows} · {t.badRows}:{" "}
-                    {lastResult.badRows} · {t.expectedColumns}:{" "}
-                    {lastResult.expectedColumns} · {t.delimiter}:{" "}
-                    {delimiterLabel(lastResult.delimiter)}
-                    {lastResult.noHeaders ? ` · ${t.noHeaders}` : ""}
-                    {lastResult.streaming ? ` · ${t.streaming}` : ""}
-                  </p>
-                  <div className="space-y-1.5">
-                    <p className="flex items-center gap-2 text-xs text-muted-foreground/80 break-all">
+                  <div className="grid grid-cols-4 gap-2">
+                    <StatCell
+                      label={t.goodRows}
+                      value={String(lastResult.goodRows)}
+                    />
+                    <StatCell
+                      label={t.badRows}
+                      value={String(lastResult.badRows)}
+                    />
+                    <StatCell
+                      label={t.expectedColumns}
+                      value={String(lastResult.expectedColumns)}
+                    />
+                    <StatCell
+                      label={t.delimiter}
+                      value={delimiterLabel(lastResult.delimiter)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground/80 break-all">
                       {lastResult.goodPath}
                     </p>
-                    <p className="flex items-center gap-2 text-xs text-muted-foreground/80 break-all">
+                    <p className="text-xs text-muted-foreground/80 break-all">
                       {lastResult.badPath}
                     </p>
                   </div>
@@ -632,7 +811,7 @@ export function SeparateCSVDialog({
                       {t.lastResultNoOutput}
                     </p>
                   )}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-end gap-2">
                     <Button
                       variant="secondary"
                       size="sm"
@@ -659,6 +838,27 @@ export function SeparateCSVDialog({
             </div>
           </div>
         </ScrollArea>
+
+        {error && (
+          <div className="px-4 py-2 bg-red-500/10 text-red-600 text-xs flex items-center gap-2 shrink-0">
+            <AlertCircle className="h-3.5 w-3.5" />
+            {error}
+          </div>
+        )}
+
+        {/* footer: current rule + primary action */}
+        <div className="flex items-center justify-between px-4 py-2.5 border-t border-border/50 bg-muted/20 shrink-0">
+          <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            {inputFile.trim() === ""
+              ? t.separateReadyHint
+              : t.separateReady
+                  .replace("{columns}", effectiveColumns)
+                  .replace("{delimiter}", delimiterLabel(effectiveDelimiter))}
+          </span>
+          <Button size="sm" onClick={handleSeparate} disabled={isSeparating}>
+            {isSeparating ? t.separating : t.separateStart}
+          </Button>
+        </div>
       </div>
     </div>
   );

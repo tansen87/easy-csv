@@ -5,21 +5,54 @@ import { cn } from "@/lib/utils";
 
 const ScrollArea = React.forwardRef<
   React.ComponentRef<typeof ScrollAreaPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
->(({ className, children, ...props }, ref) => (
-  <ScrollAreaPrimitive.Root
-    ref={ref}
-    className={cn("relative overflow-hidden", className)}
-    {...props}
-  >
-    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
-      {children}
-    </ScrollAreaPrimitive.Viewport>
-    <ScrollBar />
-    <ScrollBar orientation="horizontal" />
-    <ScrollAreaPrimitive.Corner />
-  </ScrollAreaPrimitive.Root>
-));
+  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
+    /**
+     * Skip the horizontal bar. Mounting it sets Radix's `scrollbarXEnabled`,
+     * which switches the viewport to `overflow-x: scroll` — i.e. content wider
+     * than the box (or even a sub-pixel overshoot) shows a horizontal bar.
+     * Vertical-only content should opt out so the box keeps `overflow-x: hidden`.
+     */
+    hideHorizontalScrollbar?: boolean;
+    /**
+     * Radix's inner wrapper is `min-width: 100%; display: table` **as an inline
+     * style**, so it grows to its widest child's min-content width — and every
+     * row inside inherits that width, which drags trailing / right-aligned
+     * controls (buttons) outside the box when a single child is too wide.
+     * Overriding it to block sizing (important, since inline styles win) keeps
+     * rows at the box width so only the over-wide child overflows.
+     */
+    blockContent?: boolean;
+  }
+>(
+  (
+    {
+      className,
+      children,
+      hideHorizontalScrollbar = false,
+      blockContent = false,
+      ...props
+    },
+    ref,
+  ) => (
+    <ScrollAreaPrimitive.Root
+      ref={ref}
+      className={cn("relative overflow-hidden", className)}
+      {...props}
+    >
+      <ScrollAreaPrimitive.Viewport
+        className={cn(
+          "h-full w-full rounded-[inherit]",
+          blockContent && "[&>div]:block!",
+        )}
+      >
+        {children}
+      </ScrollAreaPrimitive.Viewport>
+      <ScrollBar />
+      {!hideHorizontalScrollbar && <ScrollBar orientation="horizontal" />}
+      <ScrollAreaPrimitive.Corner />
+    </ScrollAreaPrimitive.Root>
+  ),
+);
 ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName;
 
 const ScrollBar = React.forwardRef<

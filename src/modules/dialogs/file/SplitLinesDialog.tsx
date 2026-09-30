@@ -84,11 +84,7 @@ function StatCell({ label, value }: { label: string; value: string }) {
       className="rounded-md bg-muted/60 p-2 min-w-0"
     >
       <p className="text-[11px] text-muted-foreground truncate">{label}</p>
-      <p
-        className="text-base font-medium text-foreground truncate"
-      >
-        {value}
-      </p>
+      <p className="text-base font-medium text-foreground truncate">{value}</p>
     </div>
   );
 }
@@ -333,9 +329,14 @@ export function SplitLinesDialog({
           </button>
         </div>
 
-        <ScrollArea type="always" className="flex-1 min-h-0">
+        <ScrollArea
+          type="always"
+          hideHorizontalScrollbar
+          blockContent
+          className="flex-1 min-h-0"
+        >
           <div className="p-4 space-y-3">
-            {/* ── 输出示例:一眼看懂会产出什么 ───────────────── */}
+            {/* 输出示例 */}
             <div className="rounded-md bg-muted/40 p-2.5 space-y-1 text-[11px] text-muted-foreground">
               <p className="font-medium text-foreground">
                 {t.splitLinesExampleTitle}
@@ -518,6 +519,8 @@ export function SplitLinesDialog({
                       names wrap, and the card must not stretch the dialog. */}
                   <ScrollArea
                     type="always"
+                    hideHorizontalScrollbar
+                    blockContent
                     className="h-24 rounded-md border border-border/50"
                   >
                     <div className="p-2 space-y-1">
