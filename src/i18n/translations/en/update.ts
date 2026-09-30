@@ -28,6 +28,7 @@ export const enUpdate = {
     "The installation type could not be detected — download the update manually",
 
   updateSection: "Check for updates",
+  settingsAutoCheckUpdate: "Check for updates on startup",
   settingsAutoCheckUpdateDesc:
     "When enabled, checks silently in the background and only flags new versions in the toolbar; it never installs anything by itself",
 };

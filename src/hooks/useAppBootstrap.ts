@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { sendNotification } from "@tauri-apps/plugin-notification";
+import type { RunSession } from "@/types/execution";
 
 interface UseAppBootstrapArgs {
   /** XAN Check + Load Settings + Recently Used Files */
@@ -19,9 +20,6 @@ interface UseAppBootstrapArgs {
   ) => Promise<void>;
   importPipelineFromPath: (filePath: string) => void | Promise<void>;
   showRefreshDialog: () => void;
-  /** Whether to send a system notification upon completion (setting item) */
-  systemNotification: boolean;
-  isExecuting: boolean;
   tabs: { id: string; inputFile?: string }[];
   showToastRef: React.RefObject<
     (message: string, type?: "info" | "success" | "warning" | "error") => void
@@ -42,8 +40,6 @@ export function useAppBootstrap({
   loadCsvData,
   importPipelineFromPath,
   showRefreshDialog,
-  systemNotification,
-  isExecuting,
   tabs,
   showToastRef,
 }: UseAppBootstrapArgs) {
@@ -126,20 +122,6 @@ export function useAppBootstrap({
     };
   }, [selectedTabId, loadCsvData, importPipelineFromPath]);
 
-  // System notification on pipeline complete
-  const prevExecutingRef = useRef(isExecuting);
-  useEffect(() => {
-    if (prevExecutingRef.current && !isExecuting && systemNotification) {
-      const now = new Date();
-      const time = now.toLocaleTimeString();
-      sendNotification({
-        title: "Easy CSV",
-        body: `Pipeline execution completed at ${time}`,
-      });
-    }
-    prevExecutingRef.current = isExecuting;
-  }, [isExecuting, systemNotification]);
-
   // Window title
   useEffect(() => {
     const updateTitle = async () => {
@@ -154,4 +136,42 @@ export function useAppBootstrap({
     };
     updateTitle();
   }, [selectedTabId, tabs, showToastRef]);
+}
+
+/**
+ * System notification per finished run (design 028 §5.3).
+ *
+ * Driven by each run's own state transition rather than a global "is anything
+ * executing" falling edge: with several tabs running at once, the old global
+ * boolean would miss finishes or report them for the wrong tab. The tab name is
+ * included so the user knows which one is done.
+ */
+export function useRunCompletionNotification(
+  runs: Record<string, RunSession>,
+  enabled: boolean,
+  tabs: { id: string; name: string }[],
+) {
+  const prevRunsRef = useRef<Record<string, RunSession>>(runs);
+
+  useEffect(() => {
+    if (enabled) {
+      for (const session of Object.values(runs)) {
+        const prev = prevRunsRef.current[session.tabId];
+        const wasActive =
+          prev?.state === "running" || prev?.state === "preparing";
+        const isFinished =
+          session.state === "done" ||
+          session.state === "error" ||
+          session.state === "cancelled";
+        if (!wasActive || !isFinished) continue;
+        const tab = tabs.find((item) => item.id === session.tabId);
+        const name = tab?.name ?? "Pipeline";
+        sendNotification({
+          title: "Easy CSV",
+          body: `${name} execution completed at ${new Date().toLocaleTimeString()}`,
+        });
+      }
+    }
+    prevRunsRef.current = runs;
+  }, [runs, enabled, tabs]);
 }

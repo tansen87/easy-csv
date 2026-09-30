@@ -38,6 +38,10 @@ interface LogPanelProps {
   onDockChange?: (patch: Partial<PanelDockState>) => void;
   /** Raise the docked bottom edge to avoid the expanded AI panel. */
   bottomOffset?: number | string;
+  /** Current tab, for the 「仅当前标签页」 log scope (design 028 §5.4). */
+  selectedTabId?: string;
+  /** Tab id → name, used for the per-line badge. */
+  tabs?: { id: string; name: string }[];
 }
 
 export const LogPanel = React.memo(function LogPanel({
@@ -50,6 +54,8 @@ export const LogPanel = React.memo(function LogPanel({
   dockState,
   onDockChange,
   bottomOffset = 0,
+  selectedTabId,
+  tabs,
 }: LogPanelProps) {
   const { t } = useLanguage();
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
@@ -59,6 +65,8 @@ export const LogPanel = React.memo(function LogPanel({
   const [activeFilter, setActiveFilter] = useState<LogEntry["type"] | "all">(
     "all",
   );
+  /** 「全部」or 「仅当前标签页」— the second is design 028 §5.4. */
+  const [tabScope, setTabScope] = useState<"all" | "current">("all");
   const [atBottom, setAtBottom] = useState(true);
   const dragStateRef = useRef({
     startX: 0,
@@ -97,10 +105,20 @@ export const LogPanel = React.memo(function LogPanel({
     }
   };
 
+  const tabNameById = useMemo(
+    () => new Map((tabs ?? []).map((tab) => [tab.id, tab.name])),
+    [tabs],
+  );
+
   const filteredLogs = useMemo(() => {
-    if (activeFilter === "all") return logs;
-    return logs.filter((log) => log.type === activeFilter);
-  }, [logs, activeFilter]);
+    const byType =
+      activeFilter === "all"
+        ? logs
+        : logs.filter((log) => log.type === activeFilter);
+    // Lines carry their tab id; scope to the selected tab only when asked.
+    if (tabScope === "all" || !selectedTabId) return byType;
+    return byType.filter((log) => log.tabId === selectedTabId);
+  }, [logs, activeFilter, tabScope, selectedTabId]);
 
   const typeCounts = useMemo(() => {
     const counts: Record<LogEntry["type"], number> = {
@@ -356,6 +374,37 @@ export const LogPanel = React.memo(function LogPanel({
           </div>
         )}
         <div className="flex items-center gap-1 ml-auto">
+          {logs.length > 0 && (
+            <div
+              className="flex items-center overflow-hidden rounded-md border border-border/60 mr-1"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                data-scope="current"
+                onClick={() => setTabScope("current")}
+                className={`px-2 h-6 text-[11px] font-medium transition-colors ${
+                  tabScope === "current"
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:bg-accent/60"
+                }`}
+              >
+                {t.logFilterCurrent}
+              </button>
+              <button
+                type="button"
+                data-scope="all"
+                onClick={() => setTabScope("all")}
+                className={`px-2 h-6 text-[11px] font-medium transition-colors ${
+                  tabScope === "all"
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:bg-accent/60"
+                }`}
+              >
+                {t.logFilterAll}
+              </button>
+            </div>
+          )}
           {onShowHistory && (
             <Tooltip content={t.historyButton}>
               <Button
@@ -448,6 +497,11 @@ export const LogPanel = React.memo(function LogPanel({
                         <span className="text-xs text-muted-foreground/70">
                           {formatTimestamp(log.timestamp)}
                         </span>
+                        {log.tabId && (
+                          <span className="rounded-full bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
+                            {tabNameById.get(log.tabId) ?? log.tabId}
+                          </span>
+                        )}
                         <Tooltip
                           content={copiedLogId === log.id ? t.copied : t.copy}
                         >

@@ -14,6 +14,9 @@ export const zhPipeline = {
   executing: "执行中",
   cancelExecution: "取消执行",
   executionCancelled: "执行已取消",
+  maxConcurrentRuns: "同时执行的标签页数上限",
+  maxConcurrentRunsDesc:
+    "超出上限的执行会排队等待,有空位时自动开始(1~16,默认 4)",
   commandPanel: "命令",
   logPanel: "日志",
   view: "查看",

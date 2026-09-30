@@ -13,6 +13,8 @@ export function useAppSettings(
   const [minimizeToTray, setMinimizeToTray] = useState(true);
   const [doubleClickFitView, setDoubleClickFitView] = useState(true);
   const [autoCheckUpdate, setAutoCheckUpdate] = useState(true);
+  /** Parallel run limit (design 028 §7.1); the backend clamps to 1..=16. */
+  const [maxConcurrentRuns, setMaxConcurrentRuns] = useState(4);
 
   const loadDefaultDelimiter = useCallback(async () => {
     try {
@@ -98,6 +100,18 @@ export function useAppSettings(
     }
   }, [showToastRef]);
 
+  const loadMaxConcurrentRuns = useCallback(async () => {
+    try {
+      const saved = await invoke<number | null>("get_max_concurrent_runs");
+      if (saved !== null) setMaxConcurrentRuns(saved);
+    } catch (error) {
+      showToastRef.current(
+        `Failed to load concurrency limit: ${error}`,
+        "error",
+      );
+    }
+  }, [showToastRef]);
+
   const loadAll = useCallback(async () => {
     await Promise.all([
       loadDefaultDelimiter(),
@@ -107,6 +121,7 @@ export function useAppSettings(
       loadMinimizeToTray(),
       loadDoubleClickFitView(),
       loadAutoCheckUpdate(),
+      loadMaxConcurrentRuns(),
     ]);
   }, [
     loadDefaultDelimiter,
@@ -116,6 +131,7 @@ export function useAppSettings(
     loadMinimizeToTray,
     loadDoubleClickFitView,
     loadAutoCheckUpdate,
+    loadMaxConcurrentRuns,
   ]);
 
   return {
@@ -133,6 +149,8 @@ export function useAppSettings(
     setDoubleClickFitView,
     autoCheckUpdate,
     setAutoCheckUpdate,
+    maxConcurrentRuns,
+    setMaxConcurrentRuns,
     loadAll,
   };
 }

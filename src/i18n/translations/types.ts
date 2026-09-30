@@ -30,6 +30,9 @@ export interface Translations {
   executing: string;
   cancelExecution: string;
   executionCancelled: string;
+  /** Parallel run limit shown in settings (design 028 §7.1). */
+  maxConcurrentRuns: string;
+  maxConcurrentRunsDesc: string;
   commandPanel: string;
   logPanel: string;
   view: string;
@@ -150,6 +153,18 @@ export interface Translations {
   importFlowFormats: string;
   starOnGitHub: string;
   branchProgress: string;
+  // Execute menu (design 028 §5.6)
+  runStateQueued: string;
+  runStatePending: string;
+  runStateDone: string;
+  runStateFailed: string;
+  /** Short "取消" used inside the execute menu rows (design 028 §5.6). */
+  cancelShort: string;
+  otherTabsRunning: string;
+  crossTabOverwriteTitle: string;
+  crossTabOverwriteMessage: string;
+  logFilterCurrent: string;
+  logFilterAll: string;
 
   // UpdateDialog
   checkForUpdates: string;
@@ -807,8 +822,6 @@ export interface Translations {
   onboardingDismiss: string;
   onboardingDismissHint: string;
   onboardingPanelHint: string;
-  onboardingExecuteNeedsStep: string;
-  onboardingExecuteHint: string;
   onboardingGestureTitle: string;
   onboardingGestureCollapse: string;
   onboardingGestureRightDrag: string;

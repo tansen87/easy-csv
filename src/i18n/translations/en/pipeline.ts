@@ -16,6 +16,9 @@ export const enPipeline = {
   executing: "Executing",
   cancelExecution: "Cancel Execution",
   executionCancelled: "Execution cancelled",
+  maxConcurrentRuns: "Concurrent executions",
+  maxConcurrentRunsDesc:
+    "Runs beyond this limit wait in line and start as soon as a slot frees up (1–16, default 4)",
   commandPanel: "Command",
   logPanel: "Logs",
   view: "View",

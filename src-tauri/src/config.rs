@@ -29,6 +29,9 @@ pub struct AppConfig {
   /// signed catalog, so a hostile proxy cannot change what gets installed —
   /// only make the transfer fail.
   pub plugin_download_prefix: Option<String>,
+  /// Maximum number of pipelines that may execute at the same time; the extra
+  /// ones wait in FIFO order (design 028 §7.1). `None` → app default (4).
+  pub max_concurrent_runs: Option<u32>,
 }
 
 impl Default for AppConfig {
@@ -42,6 +45,7 @@ impl Default for AppConfig {
       double_click_fit_view: Some(true),
       auto_check_update: Some(true),
       plugin_download_prefix: None,
+      max_concurrent_runs: None,
     }
   }
 }
@@ -516,6 +520,7 @@ pub fn load_config() -> Result<AppConfig, String> {
     get_config_string("double_click_fit_view").and_then(|v| v.parse().ok());
   let auto_check_update = get_config_string("auto_check_update").and_then(|v| v.parse().ok());
   let plugin_download_prefix = get_config_string("plugin_download_prefix");
+  let max_concurrent_runs = get_config_string("max_concurrent_runs").and_then(|v| v.parse().ok());
 
   Ok(AppConfig {
     default_delimiter: default_delimiter.or(default.default_delimiter),
@@ -527,6 +532,7 @@ pub fn load_config() -> Result<AppConfig, String> {
     double_click_fit_view: double_click_fit_view.or(default.double_click_fit_view),
     auto_check_update: auto_check_update.or(default.auto_check_update),
     plugin_download_prefix: plugin_download_prefix.or(default.plugin_download_prefix),
+    max_concurrent_runs: max_concurrent_runs.or(default.max_concurrent_runs),
   })
 }
 
@@ -559,6 +565,9 @@ pub fn save_config(config: &AppConfig) -> Result<(), String> {
     } else {
       set_config_string("plugin_download_prefix", v)?;
     }
+  }
+  if let Some(v) = config.max_concurrent_runs {
+    set_config_string("max_concurrent_runs", &v.to_string())?;
   }
   Ok(())
 }
@@ -714,6 +723,22 @@ pub async fn get_auto_detect_delimiter() -> Option<bool> {
 pub async fn set_auto_detect_delimiter(enabled: bool) -> Result<(), String> {
   let mut config = load_config()?;
   config.auto_detect_delimiter = Some(enabled);
+  save_config(&config)
+}
+
+#[tauri::command]
+pub async fn get_max_concurrent_runs() -> Option<u32> {
+  load_config().unwrap_or_default().max_concurrent_runs
+}
+
+/// Persist the parallelism limit (design 028 §7.1).
+///
+/// Clamped to 1..=16: `0` would dead-lock the queue, and a large value would
+/// let the user spawn an unbounded number of xan process chains.
+#[tauri::command]
+pub async fn set_max_concurrent_runs(value: u32) -> Result<(), String> {
+  let mut config = load_config()?;
+  config.max_concurrent_runs = Some(value.clamp(1, 16));
   save_config(&config)
 }
 

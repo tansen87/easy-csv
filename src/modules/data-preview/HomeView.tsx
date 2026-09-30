@@ -68,6 +68,10 @@ interface HomeViewProps {
   } | null;
   showProgressBar?: boolean;
   isExecuting?: boolean;
+  /** Per-tab run state, used for the tab-strip badges (design 028 §5.4). */
+  tabRuns?: Record<string, import("@/types/execution").RunSession>;
+  /** Tabs other than the current one still running — shown as a weak hint. */
+  otherRunningCount?: number;
   onCancelExecution?: () => void;
   recentFiles?: RecentFile[];
   onOpenRecentFile?: (filePath: string) => void;
@@ -175,6 +179,8 @@ export const HomeView = React.memo(function HomeView({
   onToggleVersionPanel,
   onToggleLineagePanel,
   isExecuting = false,
+  tabRuns = {},
+  otherRunningCount = 0,
   onCancelExecution,
   doubleClickFitView = true,
   onSavePipeline,
@@ -709,6 +715,50 @@ export const HomeView = React.memo(function HomeView({
                       {tab.name}
                     </button>
                   )}
+                  {/* Run state badge (design 028 §5.4): running / needs-input /
+                      finished. Informational only — it never disables the tab. */}
+                  {(() => {
+                    const run = tabRuns[tab.id];
+                    if (!run) return null;
+                    if (run.state === "queued") {
+                      return (
+                        <span className="rounded-full bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
+                          {t.runStateQueued}
+                        </span>
+                      );
+                    }
+                    if (run.state === "running") {
+                      return (
+                        <span className="flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 text-[10px] font-medium text-primary">
+                          <span className="h-1.5 w-1.5 animate-spin rounded-full border border-current border-t-transparent" />
+                          {t.executing}
+                        </span>
+                      );
+                    }
+                    if (run.state === "preparing") {
+                      return (
+                        <span className="rounded-full bg-amber-500/10 px-1.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                          {t.runStatePending}
+                        </span>
+                      );
+                    }
+                    if (run.state === "done" || run.state === "error") {
+                      return (
+                        <span
+                          className={`rounded-full px-1.5 text-[10px] font-medium ${
+                            run.state === "done"
+                              ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                              : "bg-destructive/10 text-destructive"
+                          }`}
+                        >
+                          {run.state === "done"
+                            ? t.runStateDone
+                            : t.runStateFailed}
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
                   {tabs.length > 1 && (
                     <button
                       onClick={(e) => {
@@ -728,8 +778,9 @@ export const HomeView = React.memo(function HomeView({
         </div>
       </div>
 
-      {showProgressBar && branchProgress && (
-        <div className="absolute left-1/2 top-15 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20">
+      {((showProgressBar && branchProgress) || otherRunningCount > 0) && (
+        <div className="absolute left-1/2 top-15 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 flex items-center gap-2">
+          {showProgressBar && branchProgress && (
           <div className="flex items-center gap-2 px-3 py-1.5 bg-transparent rounded-lg shadow-md pointer-events-auto">
             <span className="text-xs font-medium text-muted-foreground">
               {t.branchProgress} {branchProgress.current}/{branchProgress.total}
@@ -790,6 +841,12 @@ export const HomeView = React.memo(function HomeView({
               </button>
             )}
           </div>
+          )}
+          {otherRunningCount > 0 && (
+            <span className="text-[11px] text-muted-foreground/70 whitespace-nowrap">
+              {t.otherTabsRunning.replace("{count}", String(otherRunningCount))}
+            </span>
+          )}
         </div>
       )}
 

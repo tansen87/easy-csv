@@ -110,12 +110,6 @@ describe("useTabs delimiter resolution (design 018)", () => {
     expect(tab.delimiterConfidence).toBe("high");
     expect(tab.headers).toEqual(["a", "b"]);
     expect(tab.inputFormat).toBe("csv");
-
-    // Detection that disagrees with the configured default is reported once.
-    expect(addLog).toHaveBeenCalledWith(
-      "info",
-      expect.stringContaining('Auto-detected delimiter ";"'),
-    );
   });
 
   it("stays quiet when the detected delimiter equals the configured one", async () => {

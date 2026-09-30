@@ -247,7 +247,7 @@ export function useTabs(
                   inputFile: filePath,
                   inputFormat: data.format,
                   sourceTable: data.source_table ?? sourceTable,
-                  // Delimiter bookkeeping is a CSV-only concept (024).
+                  // Delimiter bookkeeping is a CSV-only concept.
                   defaultDelimiter: isCsv ? resolvedDelimiter : undefined,
                   delimiterSource: isCsv ? data.delimiter_source : undefined,
                   delimiterConfidence: isCsv
@@ -259,15 +259,6 @@ export function useTabs(
               : tab,
           ),
         );
-
-        // Only speak up when detection disagreed with the configured default —
-        // the common case (the file really is comma separated) stays quiet.
-        if (isCsv && !locked && resolvedDelimiter !== defaultDelimiter) {
-          addLog(
-            "info",
-            `Auto-detected delimiter "${delimiterLabel(resolvedDelimiter)}" for ${fileName}`,
-          );
-        }
       } catch (error) {
         const message = `Failed to read ${format} file: ${error}`;
         addLog("error", message);

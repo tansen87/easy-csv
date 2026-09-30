@@ -21,6 +21,7 @@ export const zhUpdate = {
   updateFormUnknown: "无法识别安装方式, 请手动下载更新",
 
   updateSection: "检查更新",
+  settingsAutoCheckUpdate: "启动后自动检查更新",
   settingsAutoCheckUpdateDesc:
     "启用后, 静默检查更新, 仅在发现新版本时在工具栏提示, 不会自动安装",
 };

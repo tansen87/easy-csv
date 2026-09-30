@@ -84,6 +84,8 @@ export function useSaveIntermediate({
         const result = await invoke<any>("execute_xan_pipeline", {
           commands,
           inputFile,
+          // Not a tracked run — a throwaway id keeps the backend contract happy.
+          runId: `save-intermediate-${Date.now()}`,
           defaultDelimiter: resolveRunDelimiter(),
         });
         if (!result.success) {

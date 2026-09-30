@@ -37,6 +37,8 @@ function renderSettings(
         onDoubleClickFitViewChange={vi.fn()}
         autoCheckUpdate={true}
         onAutoCheckUpdateChange={vi.fn()}
+        maxConcurrentRuns={4}
+        onMaxConcurrentRunsChange={vi.fn()}
         onSave={vi.fn()}
         aiConfig={aiConfig}
         onAIConfigChange={vi.fn()}

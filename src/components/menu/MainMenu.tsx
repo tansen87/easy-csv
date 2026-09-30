@@ -2,6 +2,7 @@ import React from "react";
 import { ListTree, ScrollText, Bot } from "lucide-react";
 
 import { PipelineStep } from "@/types/xan";
+import type { RunSession } from "@/types/execution";
 import { useLanguage } from "@/i18n";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/utils";
@@ -15,7 +16,16 @@ interface MainMenuProps {
   redoStack: Array<{ pipeline: PipelineStep[] }>;
   onUndo: () => void;
   onRedo: () => void;
-  onExecute: () => void;
+  /** Tab strip + run registry backing the execute menu (design 028 §5.6). */
+  tabs: { id: string; name: string }[];
+  runs: Record<string, RunSession>;
+  currentTabId: string;
+  /** Switch to a tab without running it (clicking a running row). */
+  onSelectTab: (tabId: string) => void;
+  /** Switch to a tab and start its run (clicking an idle row). */
+  onRunTab: (tabId: string) => void;
+  /** Cancel one tab's run (the "取消" button inside a running row). */
+  onCancelTab: (tabId: string) => void;
   onOpenFile: () => void;
   onOpenNewTabWithFile: () => void;
   onSavePipeline: () => void;
@@ -69,7 +79,12 @@ export const MainMenu = React.memo(function MainMenu({
   redoStack,
   onUndo,
   onRedo,
-  onExecute,
+  tabs,
+  runs,
+  currentTabId,
+  onSelectTab,
+  onRunTab,
+  onCancelTab,
   onOpenFile,
   onOpenNewTabWithFile,
   onSavePipeline,
@@ -110,9 +125,142 @@ export const MainMenu = React.memo(function MainMenu({
 }: MainMenuProps) {
   const { t } = useLanguage();
 
+  // ── Execute menu (design 028 §5.6) ────────────────────────────────────────
+  // The toolbar "执行" opens a per-tab menu instead of running immediately:
+  // the current tab is pinned on top, a thin divider separates the rest.
+  const [execMenuOpen, setExecMenuOpen] = React.useState(false);
+  const execMenuRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!execMenuOpen) return;
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (!execMenuRef.current?.contains(e.target as Node)) {
+        setExecMenuOpen(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExecMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDocMouseDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onDocMouseDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [execMenuOpen]);
+
+  const currentTab = tabs.find((tab) => tab.id === currentTabId);
+  const otherTabs = tabs.filter((tab) => tab.id !== currentTabId);
+
+  /**
+   * One row of the execute menu. Rows carry no "run" button: clicking the row
+   * runs that tab (switching to it first). A running row keeps only "取消" and
+   * shows its branch progress; clicking it just switches over to watch.
+   */
+  const renderExecRow = (
+    tab: { id: string; name: string } | undefined,
+    isCurrent: boolean,
+  ) => {
+    if (!tab) return null;
+    const run = runs[tab.id];
+    const busy = run?.state === "running";
+    const queued = run?.state === "queued";
+    const pending = run?.state === "preparing";
+    const finished = run?.state === "done" || run?.state === "error";
+    const activate = () => {
+      setExecMenuOpen(false);
+      // Running/queued rows only switch over; everyone else starts their run.
+      if (busy || queued) onSelectTab(tab.id);
+      else onRunTab(tab.id);
+    };
+    return (
+      <div
+        key={tab.id}
+        role="menuitem"
+        tabIndex={0}
+        data-tab-id={tab.id}
+        data-state={run?.state ?? "idle"}
+        onClick={activate}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            activate();
+          }
+        }}
+        className={cn(
+          "group flex h-8 cursor-pointer items-center gap-2 rounded-lg px-2.5 transition-colors hover:bg-accent/60",
+          isCurrent && "bg-muted/60",
+        )}
+      >
+        <span
+          className="max-w-[96px] truncate text-xs font-medium text-foreground"
+          title={tab.name}
+        >
+          {tab.name}
+        </span>
+        <span className="ml-auto flex items-center gap-2">
+          {busy ? (
+            <>
+              <span className="font-mono text-[11px] text-muted-foreground">
+                {t.branchProgress}{" "}
+                {run.branch ? `${run.branch.current}/${run.branch.total}` : "-"}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCancelTab(tab.id);
+                }}
+                className="rounded-md border border-destructive/30 bg-destructive/5 px-2 py-0.5 text-[11px] font-medium text-destructive hover:bg-destructive/10"
+              >
+                {t.cancelShort}
+              </button>
+            </>
+          ) : queued ? (
+            <>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                {t.runStateQueued}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCancelTab(tab.id);
+                }}
+                className="rounded-md border border-destructive/30 bg-destructive/5 px-2 py-0.5 text-[11px] font-medium text-destructive hover:bg-destructive/10"
+              >
+                {t.cancelShort}
+              </button>
+            </>
+          ) : pending ? (
+            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+              {t.runStatePending}
+            </span>
+          ) : finished ? (
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                run?.state === "done"
+                  ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                  : "bg-destructive/10 text-destructive",
+              )}
+            >
+              {run?.state === "done" ? t.runStateDone : t.runStateFailed}
+            </span>
+          ) : (
+            <span className="text-[11px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+              {t.execute}
+            </span>
+          )}
+        </span>
+      </div>
+    );
+  };
+
   // Menu-bar behaviour: a click opens a menu; while any menu is open, hovering
   // another menu button switches to it (design: File / Edit / View / Help).
   const toggleMenu = (menu: "file" | "edit" | "view" | "help") => {
+    setExecMenuOpen(false);
     if (!isMenuActivated) {
       setIsMenuActivated(true);
       setActiveMenu(menu);
@@ -122,7 +270,34 @@ export const MainMenu = React.memo(function MainMenu({
   };
 
   const hoverMenu = (menu: "file" | "edit" | "view" | "help") => {
+    // The execute menu is a peer of File/Edit/View/Help: hovering a menu-bar
+    // button while it is open hands the menu bar over to that button.
+    if (execMenuOpen) {
+      setExecMenuOpen(false);
+      setActiveMenu(menu);
+      return;
+    }
     if (activeMenu && activeMenu !== menu) setActiveMenu(menu);
+  };
+
+  /** Click on "执行": open its tab menu and disarm the other menus. */
+  const toggleExecuteMenu = () => {
+    setActiveMenu(null);
+    setIsMenuActivated(true);
+    if (!isMenuActivated) {
+      setExecMenuOpen(true);
+      return;
+    }
+    setExecMenuOpen((open) => !open);
+  };
+
+  /** Hover on "执行" while a menu is open: switch to the tab menu. */
+  const hoverExecuteMenu = () => {
+    if (execMenuOpen) return;
+    if (!activeMenu && !isMenuActivated) return;
+    setActiveMenu(null);
+    setIsMenuActivated(true);
+    setExecMenuOpen(true);
   };
 
   React.useEffect(() => {
@@ -162,13 +337,13 @@ export const MainMenu = React.memo(function MainMenu({
             {t.file}
           </button>
           {activeMenu === "file" && (
-            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 w-max">
+            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 w-[180px] p-1">
               <button
                 onClick={() => {
                   onOpenFile();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
               >
                 <span className="flex-1 text-left">{t.open}</span>
                 <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
@@ -180,7 +355,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onOpenNewTabWithFile();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
               >
                 <span className="flex-1 text-left">{t.openNewTab}</span>
                 <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
@@ -192,7 +367,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onUseOrSaveTemplate();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
               >
                 <span className="flex-1 text-left">{t.paletteTemplates}</span>
                 <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
@@ -206,10 +381,10 @@ export const MainMenu = React.memo(function MainMenu({
                   setActiveMenu(null);
                 }}
                 disabled={currentPipelineLength === 0}
-                className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors ${
                   currentPipelineLength === 0
                     ? "text-muted-foreground/40 cursor-not-allowed"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                    : "text-muted-foreground hover:bg-accent/60"
                 }`}
               >
                 <span className="flex-1 text-left">{t.savePipeline}</span>
@@ -222,7 +397,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onImportPipeline();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
               >
                 <span className="flex-1 text-left">{t.importWorkflow}</span>
                 <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
@@ -235,10 +410,10 @@ export const MainMenu = React.memo(function MainMenu({
                   setActiveMenu(null);
                 }}
                 disabled={currentPipelineLength === 0}
-                className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors ${
                   currentPipelineLength === 0
                     ? "text-muted-foreground/40 cursor-not-allowed"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                    : "text-muted-foreground hover:bg-accent/60"
                 }`}
               >
                 <span className="flex-1 text-left">{t.exportWorkflow}</span>
@@ -252,7 +427,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onOpenCsvDiff();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
               >
                 {t.csvDiff}
               </button>
@@ -261,7 +436,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onOpenCsvEncoding();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
               >
                 {t.csvEncoding}
               </button>
@@ -270,7 +445,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onOpenSeparateCsv();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
               >
                 {t.separateGoodBad}
               </button>
@@ -279,7 +454,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onOpenSplitLines();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
               >
                 {t.splitLines}
               </button>
@@ -288,7 +463,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onOpenMergeExcel();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
               >
                 {t.mergeExcel}
               </button>
@@ -310,17 +485,17 @@ export const MainMenu = React.memo(function MainMenu({
             {t.edit}
           </button>
           {activeMenu === "edit" && (
-            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 w-max">
+            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 w-[180px] p-1">
               <button
                 onClick={() => {
                   onUndo();
                   setActiveMenu(null);
                 }}
                 disabled={undoStack.length === 0}
-                className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors ${
                   undoStack.length === 0
                     ? "text-muted-foreground/40 cursor-not-allowed"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                    : "text-muted-foreground hover:bg-accent/60"
                 }`}
               >
                 <span className="flex-1 text-left">{t.undo}</span>
@@ -334,10 +509,10 @@ export const MainMenu = React.memo(function MainMenu({
                   setActiveMenu(null);
                 }}
                 disabled={redoStack.length === 0}
-                className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors ${
                   redoStack.length === 0
                     ? "text-muted-foreground/40 cursor-not-allowed"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                    : "text-muted-foreground hover:bg-accent/60"
                 }`}
               >
                 <span className="flex-1 text-left">{t.redo}</span>
@@ -368,7 +543,7 @@ export const MainMenu = React.memo(function MainMenu({
           {activeMenu === "view" && (
             <div
               role="menu"
-              className="absolute left-0 top-full mt-2 bg-card border border-border rounded-lg shadow-lg z-50 w-max p-1"
+              className="absolute left-0 top-full mt-2 bg-card border border-border rounded-lg shadow-lg z-50 w-[180px] p-1"
             >
               <button
                 role="menuitem"
@@ -376,7 +551,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onOpenPalette();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.commandPalette}
@@ -399,12 +574,12 @@ export const MainMenu = React.memo(function MainMenu({
                   }}
                   disabled={!hasInputFile}
                   className={cn(
-                    "flex items-center gap-2 w-full px-3 py-2 text-xs font-medium rounded-md transition-colors",
+                    "flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors",
                     !hasInputFile
                       ? "text-muted-foreground/40 cursor-not-allowed"
                       : showDataProfile
-                        ? "text-foreground hover:bg-accent"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                        ? "text-foreground hover:bg-accent/60"
+                        : "text-muted-foreground hover:bg-accent/60",
                   )}
                 >
                   <span className="whitespace-nowrap">{t.dataProfile}</span>
@@ -418,10 +593,10 @@ export const MainMenu = React.memo(function MainMenu({
                   setActiveMenu(null);
                 }}
                 className={cn(
-                  "flex items-center gap-2 w-full px-3 py-2 text-xs font-medium rounded-md transition-colors",
+                  "flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors",
                   showVersionPanel
-                    ? "text-foreground hover:bg-accent"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                    ? "text-foreground hover:bg-accent/60"
+                    : "text-muted-foreground hover:bg-accent/60",
                 )}
               >
                 <span className="whitespace-nowrap">{t.versionHistory}</span>
@@ -434,10 +609,10 @@ export const MainMenu = React.memo(function MainMenu({
                   setActiveMenu(null);
                 }}
                 className={cn(
-                  "flex items-center gap-2 w-full px-3 py-2 text-xs font-medium rounded-md transition-colors",
+                  "flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors",
                   showLineagePanel
-                    ? "text-foreground hover:bg-accent"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                    ? "text-foreground hover:bg-accent/60"
+                    : "text-muted-foreground hover:bg-accent/60",
                 )}
               >
                 <span className="whitespace-nowrap">{t.dataLineage}</span>
@@ -450,10 +625,10 @@ export const MainMenu = React.memo(function MainMenu({
                   setActiveMenu(null);
                 }}
                 className={cn(
-                  "flex items-center gap-2 w-full px-3 py-2 text-xs font-medium rounded-md transition-colors",
+                  "flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors",
                   showVariablePanel
-                    ? "text-foreground hover:bg-accent"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                    ? "text-foreground hover:bg-accent/60"
+                    : "text-muted-foreground hover:bg-accent/60",
                 )}
               >
                 <span className="whitespace-nowrap">{t.variables}</span>
@@ -465,7 +640,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onOpenSearch();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.search}
@@ -505,7 +680,7 @@ export const MainMenu = React.memo(function MainMenu({
           {activeMenu === "help" && (
             <div
               role="menu"
-              className="absolute left-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg z-50 w-max"
+              className="absolute left-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg z-50 w-[180px] p-1"
             >
               <button
                 role="menuitem"
@@ -513,7 +688,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onHelp();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.helpCenter}
@@ -527,10 +702,10 @@ export const MainMenu = React.memo(function MainMenu({
                 }}
                 disabled={isCheckingUpdate}
                 className={cn(
-                  "flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  "flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors",
                   isCheckingUpdate
                     ? "text-muted-foreground/40 cursor-not-allowed"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                    : "text-muted-foreground hover:bg-accent/60",
                 )}
               >
                 <span className="flex-1 text-left whitespace-nowrap">
@@ -549,38 +724,42 @@ export const MainMenu = React.memo(function MainMenu({
           {t.settings}
         </button>
 
-        {/* Design 027 §4.2 item 3: this button used to be a silent dead end —
-            greyed out with no explanation. `pointer-events-none` lets the
-            tooltip wrapper receive hover, which a disabled button would
-            otherwise swallow. */}
-        <Tooltip
-          content={
-            currentPipelineLength === 0
-              ? `${t.onboardingExecuteNeedsStep} · ${t.onboardingExecuteHint}`
-              : `${t.execute} (Ctrl+R)`
-          }
-        >
+        {/* Design 028 §5.6: "执行" became a per-tab menu. The button itself keeps
+            its label and size in every state — while a run is in flight only a
+            2px indeterminate line appears along its bottom edge (`.exec-busy`),
+            no icon is added. The menu lists the current tab first, a thin divider,
+            then the other tabs. */}
+        <div className="relative" ref={execMenuRef}>
           <button
-            onClick={onExecute}
-            disabled={currentPipelineLength === 0 || isExecuting}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              isExecuting
-                ? "text-primary opacity-70"
-                : currentPipelineLength === 0
-                  ? "text-muted-foreground/40 cursor-not-allowed pointer-events-none"
-                  : "text-primary hover:text-primary hover:bg-primary/10"
-            }`}
-          >
-            {isExecuting ? (
-              <>
-                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                {t.executing}
-              </>
-            ) : (
-              <>{t.execute}</>
+            onClick={toggleExecuteMenu}
+            onMouseEnter={hoverExecuteMenu}
+            disabled={currentPipelineLength === 0}
+            aria-haspopup="menu"
+            aria-expanded={execMenuOpen}
+            data-busy={isExecuting ? "true" : "false"}
+            className={cn(
+              "relative overflow-hidden flex items-center px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+              currentPipelineLength === 0
+                ? "text-muted-foreground/40 cursor-not-allowed"
+                : isExecuting
+                  ? "exec-busy text-muted-foreground cursor-pointer"
+                  : "text-primary hover:bg-primary/10 cursor-pointer",
             )}
+          >
+            {t.execute}
           </button>
-        </Tooltip>
+
+          {execMenuOpen && currentPipelineLength > 0 && (
+            <div
+              role="menu"
+              className="absolute left-0 top-full mt-1 z-50 w-[180px] rounded-lg border border-border bg-popover p-1 shadow-lg"
+            >
+              {renderExecRow(currentTab, true)}
+              <div className="my-1 h-px bg-border" />
+              {otherTabs.map((tab) => renderExecRow(tab, false))}
+            </div>
+          )}
+        </div>
 
         {/* Spacer */}
         <div className="flex-1" />

@@ -1,7 +1,4 @@
-import type { Dispatch, RefObject, SetStateAction } from "react";
 import type {
-  ChartConfig,
-  ChartSeries,
   ExecutionHistoryInput,
   PipelineEdge,
   PipelineStep,
@@ -9,30 +6,45 @@ import type {
   StepLineage,
 } from "@/types/xan";
 import type { BatchFilterConfig } from "@/types/xan";
-import type { OverwriteConfirm, ResultPreview } from "@/types/execution";
+import type {
+  OverwriteConfirm,
+  ResultPreview,
+  RunContext,
+  RunId,
+  RunSession,
+  RunState,
+  TabChartState,
+} from "@/types/execution";
 
 /** Cap execution stdout returned to the UI (bytes) to protect the WebView. */
 export const MAX_OUTPUT_BYTES = 2 * 1024 * 1024;
 
-export interface BranchProgressState {
-  current: number;
-  total: number;
-  name: string;
-  status: "executing" | "completed" | "error";
-}
+export type { BranchProgressState } from "@/types/execution";
 
 /**
  * Explicit dependency bag for runPipeline. No React state is closed over —
  * every side effect enters through this object, keeping the function
  * framework-free and testable.
+ *
+ * Everything that used to read "the current tab" / "the global isExecuting" is
+ * now addressed by `RunContext` (tabId + runId) or by an explicit patch, so two
+ * concurrent runs can never write into each other (design 028 §5.2).
  */
 export interface RunPipelineDeps {
-  selectedTabId: string;
-  setTabs: Dispatch<SetStateAction<PipelineTab[]>>;
-  addLog: (
-    type: "info" | "success" | "warning" | "error",
-    message: string,
-  ) => void;
+  /** Patch one run session in the registry (state, branch progress). */
+  updateRun: (runId: RunId, patch: Partial<RunSession>) => void;
+  /**
+   * Mark a run finished and schedule its registry entry to be dropped once the
+   * progress pill has been shown for a few seconds.
+   */
+  finishRun: (runId: RunId, state: RunState) => void;
+  /**
+   * Hand back the run's concurrency slot while a prompt keeps it parked, so it
+   * does not occupy one of the limited parallel runs (design 028 §7.1).
+   */
+  releaseRun: (runId: RunId) => void;
+  /** Functional update of a single tab (step errors, variables, timestamps). */
+  updateTab: (tabId: string, updater: (tab: PipelineTab) => PipelineTab) => void;
   showToast: (
     message: string,
     type?: "info" | "success" | "warning" | "error",
@@ -42,34 +54,31 @@ export interface RunPipelineDeps {
   labels: {
     cycleDetected: string;
   };
-  resolveRunDelimiter: () => string;
-  setIsExecuting: (value: boolean) => void;
   setShowLogPanel: (value: boolean) => void;
-  setShowProgressBar: (value: boolean) => void;
-  setBranchProgress: (value: BranchProgressState | null) => void;
-  progressHideTimerRef: RefObject<ReturnType<typeof setTimeout> | null>;
-  /** Frontend-only cancel flag shared with the batch loops (S7-1). */
-  resetCancelRequested: () => void;
-  setOverwriteConfirm: (value: OverwriteConfirm | null) => void;
+  /** Ask for the S6 overwrite confirmation on behalf of one run. */
+  requestOverwritePrompt: (runId: RunId, data: OverwriteConfirm) => void;
   /** Persist values at the S6 overwrite gate for the confirmed re-run. */
-  stashPendingRunValues: (values: Record<string, string>) => void;
+  stashPendingRunValues: (runId: RunId, values: Record<string, string>) => void;
   executeBatchConvert: (
+    ctx: RunContext,
     fromParams: Record<string, any>,
     toParams: Record<string, any>,
   ) => Promise<void>;
   executeBatchFilterDirect: (
+    ctx: RunContext,
     config: BatchFilterConfig,
     inputFile: string,
   ) => Promise<void>;
   executeBatchFilterWithData: (
+    ctx: RunContext,
     config: BatchFilterConfig,
     data: string,
   ) => Promise<void>;
-  setChartConfig: Dispatch<SetStateAction<ChartConfig | null>>;
-  setChartSeries: Dispatch<SetStateAction<ChartSeries[]>>;
-  setChartHeaders: Dispatch<SetStateAction<string[]>>;
+  /** Chart of one tab; `null` clears it (design 028 §5.4). */
+  setTabChart: (tabId: string, chart: TabChartState | null) => void;
   setShowChartPanel: (value: boolean) => void;
-  setResultPreview: (value: ResultPreview[]) => void;
+  /** Result previews of one tab (design 028 §5.4). */
+  setTabResultPreview: (tabId: string, previews: ResultPreview[]) => void;
   trackLineage?: (
     steps: PipelineStep[],
     edges: PipelineEdge[],

@@ -37,7 +37,7 @@ import {
 } from "recharts";
 
 interface ChartPanelProps {
-  config: ChartConfig;
+  config: ChartConfig | null;
   series: ChartSeries[];
   isVisible: boolean;
   onClose: () => void;
@@ -139,7 +139,7 @@ export const ChartPanel = React.memo(function ChartPanel({
 
       const filePath = await save({
         filters: [{ name: "SVG Images", extensions: ["svg"] }],
-        defaultPath: `chart-${config.chartType}-${config.x}.svg`,
+        defaultPath: `chart-${config?.chartType ?? "chart"}-${config?.x ?? ""}.svg`,
       });
 
       if (filePath) {

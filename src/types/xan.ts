@@ -77,6 +77,8 @@ export interface LogEntry {
   timestamp: Date;
   type: "info" | "success" | "error" | "warning";
   message: string;
+  /** Tab this line came from; absent for app-level lines (design 028 §5.4). */
+  tabId?: string;
 }
 
 export type ExecutionHistoryStatus = "success" | "error" | "cancelled";

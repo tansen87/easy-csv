@@ -58,7 +58,10 @@ import { useFileSave } from "@/hooks/fileIO/useFileSave";
 import { useImportExport } from "@/hooks/fileIO/useImportExport";
 import { useExecution } from "@/hooks/execution/useExecution";
 import { useSaveIntermediate } from "@/hooks/execution/useSaveIntermediate";
-import { useAppBootstrap } from "@/hooks/useAppBootstrap";
+import {
+  useAppBootstrap,
+  useRunCompletionNotification,
+} from "@/hooks/useAppBootstrap";
 import { useDialogStack } from "@/hooks/useDialogStack";
 import { useLanguage } from "@/i18n";
 import { translations } from "@/i18n/translations";
@@ -272,9 +275,6 @@ function AppContent() {
     return result;
   }, [session.panelStates.chartPanel?.collapsed]);
 
-  const progressHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
   const headerRef = useRef<HTMLDivElement>(null);
   const reactFlowInstanceRef = useRef<any>(null);
 
@@ -284,9 +284,6 @@ function AppContent() {
 
   // Selected step
   const [selectedStep, setSelectedStep] = useState<PipelineStep | null>(null);
-
-  // Executing state
-  const [isExecuting, setIsExecuting] = useState(false);
 
   // Variables panel (F3)
   const [showVariablePanel, setShowVariablePanel] = useState(false);
@@ -663,8 +660,6 @@ function AppContent() {
     loadCsvData: tabsHook.loadCsvData,
     importPipelineFromPath: handleImportPipelineFromPath,
     showRefreshDialog: () => ui.setShowRefreshDialog(true),
-    systemNotification: settings.systemNotification,
-    isExecuting,
     tabs: tabsHook.tabs,
     showToastRef,
   });
@@ -721,9 +716,27 @@ function AppContent() {
     selectedTabId: tabsHook.selectedTabId,
   });
 
+  const execution = useExecution({
+    selectedTabId: tabsHook.selectedTabId,
+    defaultDelimiter: settings.defaultDelimiter,
+    getCurrentTab: tabsCtl.getCurrentTab,
+    getTabById: tabsCtl.getTabById,
+    setSelectedTabId: tabsHook.setSelectedTabId,
+    maxConcurrentRuns: settings.maxConcurrentRuns,
+    showToast,
+    addLog,
+    setTabs: tabsHook.setTabs,
+    setShowLogPanel: ui.setShowLogPanel,
+    setShowChartPanel: ui.setShowChartPanel,
+    setTabChart: ui.setTabChart,
+    formatDateTime,
+    trackLineage: lineageHook.trackLineage,
+    saveVersion: versionsHook.saveVersion,
+    saveExecutionHistory: executionHistory.saveEntry,
+  });
+
   const {
     handleExecute,
-    handleCancelExecution,
     resultPreview,
     overwriteConfirm,
     confirmOverwriteExecution,
@@ -731,28 +744,50 @@ function AppContent() {
     variablePrompt,
     confirmVariables,
     cancelVariables,
-  } = useExecution({
-    selectedTabId: tabsHook.selectedTabId,
-    defaultDelimiter: settings.defaultDelimiter,
-    getCurrentTab: tabsCtl.getCurrentTab,
-    getCurrentPipeline: tabsCtl.getCurrentPipeline,
-    showToast,
-    addLog,
-    setTabs: tabsHook.setTabs,
-    setIsExecuting,
-    setShowLogPanel: ui.setShowLogPanel,
-    setShowProgressBar: ui.setShowProgressBar,
-    setBranchProgress: ui.setBranchProgress,
-    progressHideTimerRef,
-    formatDateTime,
-    trackLineage: lineageHook.trackLineage,
-    setShowChartPanel: ui.setShowChartPanel,
-    setChartConfig: ui.setChartConfig,
-    setChartSeries: ui.setChartSeries,
-    setChartHeaders: ui.setChartHeaders,
-    saveVersion: versionsHook.saveVersion,
-    saveExecutionHistory: executionHistory.saveEntry,
-  });
+  } = execution;
+
+  // ── Per-tab execution state (design 028 §5) ───────────────────────────────
+  // The toolbar button, progress pill and cancel all follow the *current* tab;
+  // runs on other tabs keep going without disabling anything here.
+  const currentRun = execution.runs[tabsHook.selectedTabId];
+  const isExecuting = execution.isTabExecuting(tabsHook.selectedTabId);
+  const otherRunningCount = Object.values(execution.runs).filter(
+    (run) =>
+      run.tabId !== tabsHook.selectedTabId &&
+      (run.state === "running" || run.state === "preparing"),
+  ).length;
+
+  useRunCompletionNotification(
+    execution.runs,
+    settings.systemNotification,
+    tabsHook.tabs,
+  );
+
+  /** Closing a tab stops its run and drops everything the tab owned (§6.2). */
+  const handleRemoveTab = useCallback(
+    (tabId: string) => {
+      execution.handleTabClosed(tabId);
+      tabsHook.removeTab(tabId);
+    },
+    [execution.handleTabClosed, tabsHook.removeTab],
+  );
+
+  /** Execute menu: click a row → switch to that tab, run it, mark pipeline saved. */
+  const handleRunTab = useCallback(
+    (tabId: string) => {
+      void execution.runTab(tabId);
+      markPipelineSaved();
+    },
+    [execution.runTab, markPipelineSaved],
+  );
+
+  /** Execute menu: cancel one tab's run (never anybody else's). */
+  const handleCancelTab = useCallback(
+    (tabId: string) => {
+      void execution.cancelRun(tabId);
+    },
+    [execution.cancelRun],
+  );
 
   const { handleSaveIntermediateAsInput } = useSaveIntermediate({
     getCurrentTab: tabsCtl.getCurrentTab,
@@ -1361,6 +1396,9 @@ function AppContent() {
       await invoke("set_auto_check_update", {
         enabled: settings.autoCheckUpdate,
       });
+      await invoke("set_max_concurrent_runs", {
+        value: settings.maxConcurrentRuns,
+      });
     } catch (error) {
       showToastRef.current(`Failed to save settings: ${error}`, "error");
     }
@@ -1776,7 +1814,12 @@ function AppContent() {
                 pipeline.redo();
                 setSelectedStep(null);
               }}
-              onExecute={handleExecuteAndMarkSaved}
+              tabs={tabsHook.tabs}
+              runs={execution.runs}
+              currentTabId={tabsHook.selectedTabId}
+              onSelectTab={tabsHook.setSelectedTabId}
+              onRunTab={handleRunTab}
+              onCancelTab={handleCancelTab}
               onOpenFile={handleOpenFile}
               onOpenNewTabWithFile={handleOpenNewTabWithFile}
               onSavePipeline={handleSavePipelineAndMarkSaved}
@@ -1856,7 +1899,7 @@ function AppContent() {
                 tabs={tabsHook.tabs}
                 selectedTabId={tabsHook.selectedTabId}
                 onTabChange={tabsHook.setSelectedTabId}
-                onRemoveTab={tabsHook.removeTab}
+                onRemoveTab={handleRemoveTab}
                 onRenameTab={tabsHook.renameTab}
                 resultPreview={resultPreview}
                 onAddCommand={handleCommandClick}
@@ -1871,10 +1914,14 @@ function AppContent() {
                 onOpenFile={handleOpenFile}
                 onImportPipeline={handleImportPipeline}
                 onOpenUrl={handleOpenUrl}
-                branchProgress={ui.branchProgress}
-                showProgressBar={ui.showProgressBar}
+                branchProgress={currentRun?.branch ?? null}
+                showProgressBar={!!currentRun?.showProgress}
+                otherRunningCount={otherRunningCount}
+                tabRuns={execution.runs}
                 isExecuting={isExecuting}
-                onCancelExecution={handleCancelExecution}
+                onCancelExecution={() =>
+                  void execution.cancelRun(tabsHook.selectedTabId)
+                }
                 recentFiles={tabsHook.recentFiles}
                 onOpenRecentFile={onOpenRecentFile}
                 reactFlowInstanceRef={reactFlowInstanceRef}
@@ -1960,6 +2007,8 @@ function AppContent() {
               session.updatePanelState("logPanel", patch)
             }
             bottomOffset={aiBottomOffset}
+            selectedTabId={tabsHook.selectedTabId}
+            tabs={tabsHook.tabs}
           />
 
           <ExecutionHistoryDialog
@@ -1971,8 +2020,8 @@ function AppContent() {
           />
 
           <ChartPanel
-            config={ui.chartConfig!}
-            series={ui.chartSeries}
+            config={ui.chartsByTab[tabsHook.selectedTabId]?.config ?? null}
+            series={ui.chartsByTab[tabsHook.selectedTabId]?.series ?? []}
             isVisible={ui.showChartPanel}
             onClose={() => ui.setShowChartPanel(false)}
             dockState={session.panelStates.chartPanel}
@@ -2006,6 +2055,8 @@ function AppContent() {
             onDoubleClickFitViewChange={settings.setDoubleClickFitView}
             autoCheckUpdate={settings.autoCheckUpdate}
             onAutoCheckUpdateChange={settings.setAutoCheckUpdate}
+            maxConcurrentRuns={settings.maxConcurrentRuns}
+            onMaxConcurrentRunsChange={settings.setMaxConcurrentRuns}
             onResetOnboarding={onboarding.reset}
             onSave={handleSaveSettings}
             aiConfig={aiConfig}
@@ -2044,16 +2095,24 @@ function AppContent() {
             onCancel={() => ui.setShowRefreshDialog(false)}
           />
 
-          {/* Several branches overwriting the same output file */}
+          {/* Several branches — or another tab — overwriting the same output file */}
           <ConfirmDialog
             isOpen={overwriteConfirm !== null}
-            title={t.branchOverwriteTitle}
+            title={
+              overwriteConfirm?.reason === "crossTab"
+                ? t.crossTabOverwriteTitle
+                : t.branchOverwriteTitle
+            }
             message={
               overwriteConfirm
-                ? t.branchOverwriteMessage.replace(
-                    "{count}",
-                    String(overwriteConfirm.branchCount),
-                  )
+                ? overwriteConfirm.reason === "crossTab"
+                  ? t.crossTabOverwriteMessage
+                      .replace("{name}", overwriteConfirm.otherTabName ?? "")
+                      .replace("{path}", overwriteConfirm.outputPath)
+                  : t.branchOverwriteMessage.replace(
+                      "{count}",
+                      String(overwriteConfirm.branchCount),
+                    )
                 : ""
             }
             onConfirm={() => void confirmOverwriteExecution()}

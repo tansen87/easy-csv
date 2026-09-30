@@ -22,6 +22,9 @@ interface SettingsDialogProps {
   onDoubleClickFitViewChange: (value: boolean) => void;
   autoCheckUpdate: boolean;
   onAutoCheckUpdateChange: (value: boolean) => void;
+  /** Parallel run limit (design 028 §7.1). */
+  maxConcurrentRuns: number;
+  onMaxConcurrentRunsChange: (value: number) => void;
   /** Clear the "intro seen" flag so the canvas guide shows again (design 027 §5). */
   onResetOnboarding?: () => void;
   onSave: () => void;
@@ -49,6 +52,8 @@ export function SettingsDialog({
   onDoubleClickFitViewChange,
   autoCheckUpdate,
   onAutoCheckUpdateChange,
+  maxConcurrentRuns,
+  onMaxConcurrentRunsChange,
   onResetOnboarding,
   onSave,
   aiConfig,
@@ -186,6 +191,8 @@ export function SettingsDialog({
             onDoubleClickFitViewChange={onDoubleClickFitViewChange}
             autoCheckUpdate={autoCheckUpdate}
             onAutoCheckUpdateChange={onAutoCheckUpdateChange}
+            maxConcurrentRuns={maxConcurrentRuns}
+            onMaxConcurrentRunsChange={onMaxConcurrentRunsChange}
             onResetOnboarding={onResetOnboarding}
             onSave={onSave}
             aiConfig={aiConfig}

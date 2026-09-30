@@ -21,6 +21,7 @@ import {
   RectangleEllipsis,
   CloudDownload,
   Lightbulb,
+  Layers,
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-shell";
 import { invoke } from "@tauri-apps/api/core";
@@ -56,6 +57,9 @@ interface SettingsTabContentProps {
   onDoubleClickFitViewChange: (value: boolean) => void;
   autoCheckUpdate: boolean;
   onAutoCheckUpdateChange: (value: boolean) => void;
+  /** Parallel run limit (design 028 §7.1); backend clamps to 1..=16. */
+  maxConcurrentRuns: number;
+  onMaxConcurrentRunsChange: (value: number) => void;
   /** Clear the "intro seen" flag so the canvas guide shows again (design 027 §5). */
   onResetOnboarding?: () => void;
   onSave: () => void;
@@ -84,6 +88,8 @@ export function SettingsTabContent({
   onDoubleClickFitViewChange,
   autoCheckUpdate,
   onAutoCheckUpdateChange,
+  maxConcurrentRuns,
+  onMaxConcurrentRunsChange,
   onResetOnboarding,
   onSave,
   aiConfig,
@@ -195,6 +201,31 @@ export function SettingsTabContent({
                     {t.noHeadersDesc}
                   </p>
                 </label>
+              </div>
+
+              {/* Concurrent executions (design 028 §7.1) */}
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Layers className="h-4 w-4" />
+                  {t.maxConcurrentRuns}
+                </h3>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    min={1}
+                    max={16}
+                    value={maxConcurrentRuns}
+                    onChange={(e) => {
+                      const next = Number.parseInt(e.target.value, 10);
+                      if (Number.isNaN(next)) return;
+                      onMaxConcurrentRunsChange(Math.min(16, Math.max(1, next)));
+                    }}
+                    className="w-20 h-8 px-2 rounded-md border border-input bg-background text-sm"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    {t.maxConcurrentRunsDesc}
+                  </p>
+                </div>
               </div>
 
               {/* Language */}

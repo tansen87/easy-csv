@@ -26,6 +26,18 @@ export const zhCommon = {
   importFlowFormats: ".xanflow 文件",
   starOnGitHub: "GitHub 点赞",
   branchProgress: "分支",
+  // 执行菜单(design 028 §5.6)
+  runStateQueued: "排队中",
+  runStatePending: "待确认",
+  runStateDone: "完成",
+  runStateFailed: "失败",
+  cancelShort: "取消",
+  otherTabsRunning: "另有 {count} 个标签页在运行",
+  crossTabOverwriteTitle: "另一个标签页正在写这个文件?",
+  crossTabOverwriteMessage:
+    "标签页「{name}」正在写入同一个输出文件:{path}。继续执行会覆盖它的结果。",
+  logFilterCurrent: "仅当前标签页",
+  logFilterAll: "全部",
   checkForUpdates: "检查更新",
   newVersionAvailable: "有新版本可用",
   currentVersion: "当前版本",

@@ -2,33 +2,15 @@ import { invoke } from "@tauri-apps/api/core";
 import { writeFile, remove } from "@tauri-apps/plugin-fs";
 import { xanCommands } from "@/data/commands";
 import { BatchFilterConfig } from "@/types/xan";
+import type { RunContext } from "@/types/execution";
 
-interface BatchFilterHooksProps {
-  defaultDelimiter: string;
-  addLog: (
-    type: "info" | "success" | "warning" | "error",
-    message: string,
-  ) => void;
-  setBranchProgress: React.Dispatch<
-    React.SetStateAction<{
-      current: number;
-      total: number;
-      name: string;
-      status: "executing" | "completed" | "error";
-    } | null>
-  >;
-  getCurrentTab: () => { inputFile?: string };
-  /** Called before each iteration; breaking out of the loop when true */
-  isCancelRequested?: () => boolean;
-}
-
-export function useBatchFilter({
-  defaultDelimiter,
-  addLog,
-  setBranchProgress,
-  getCurrentTab,
-  isCancelRequested = () => false,
-}: BatchFilterHooksProps) {
+/**
+ * Batch filter execution. Every entry point takes a `RunContext`, so the loop
+ * reads the run's own tab / delimiter / cancel flag instead of "the current
+ * tab" (design 028 §5.2) — that is what lets two tabs batch-filter at once.
+ * Logging goes through `ctx.log`, which tags every line with the run's tab.
+ */
+export function useBatchFilter() {
   const sanitizeFileName = (value: string): string => {
     // Remove all characters not allowed in Windows filenames
     // eslint-disable-next-line no-control-regex -- \x00-\x1f are control characters, which Windows also forbids in filenames
@@ -55,6 +37,7 @@ export function useBatchFilter({
   };
 
   const executeBatchFilterDirect = async (
+    ctx: RunContext,
     config: BatchFilterConfig,
     inputFilePath: string,
   ) => {
@@ -83,7 +66,7 @@ export function useBatchFilter({
         .map((v) => v.trim())
         .filter((v) => v.length > 0);
     } else {
-      addLog(
+      ctx.log(
         "info",
         `Extracting unique values from column "${config.extractColumn}"...`,
       );
@@ -101,11 +84,12 @@ export function useBatchFilter({
           },
         ],
         inputFile: inputFilePath,
-        defaultDelimiter,
+        runId: ctx.runId,
+        defaultDelimiter: ctx.delimiter,
       });
 
       if (!extractResult.success) {
-        addLog("error", `Failed to extract values: ${extractResult.error}`);
+        ctx.log("error", `Failed to extract values: ${extractResult.error}`);
         return;
       }
 
@@ -116,7 +100,7 @@ export function useBatchFilter({
     }
 
     if (values.length === 0) {
-      addLog("warning", "No values to process");
+      ctx.log("warning", "No values to process");
       return;
     }
 
@@ -137,7 +121,7 @@ export function useBatchFilter({
         ];
         const commands = [{ name: searchCmd.name, parameters: params }];
 
-        setBranchProgress({
+        ctx.onProgress({
           current: 1,
           total: 1,
           name: config.textOperator,
@@ -146,14 +130,15 @@ export function useBatchFilter({
         const result = await invoke<any>("execute_xan_pipeline", {
           commands,
           inputFile: inputFilePath,
-          defaultDelimiter,
+          runId: ctx.runId,
+          defaultDelimiter: ctx.delimiter,
         });
         if (result.success) {
-          addLog("success", `Completed: ${config.textOperator}`);
+          ctx.log("success", `Completed: ${config.textOperator}`);
         } else {
-          addLog("error", `Failed: ${result.error}`);
+          ctx.log("error", `Failed: ${result.error}`);
         }
-        setBranchProgress({
+        ctx.onProgress({
           current: 1,
           total: 1,
           name: config.textOperator,
@@ -166,19 +151,19 @@ export function useBatchFilter({
     // Execute for each value
     for (let i = 0; i < values.length; i++) {
       // Honor a pending cancel request between iterations
-      if (isCancelRequested()) {
-        addLog("warning", `Batch filter cancelled after ${i} value(s)`);
+      if (ctx.isCancelled()) {
+        ctx.log("warning", `Batch filter cancelled after ${i} value(s)`);
         break;
       }
       const value = values[i];
       const displayName =
         value.length > 20 ? value.substring(0, 20) + "..." : value;
-      addLog(
+      ctx.log(
         "info",
         `Processing value ${i + 1}/${values.length}: "${displayName}"`,
       );
 
-      setBranchProgress({
+      ctx.onProgress({
         current: i + 1,
         total: values.length,
         name: `Filtering: "${displayName}"`,
@@ -296,10 +281,11 @@ export function useBatchFilter({
         const result = await invoke<any>("execute_xan_pipeline", {
           commands,
           inputFile: inputFilePath,
-          defaultDelimiter,
+          runId: ctx.runId,
+          defaultDelimiter: ctx.delimiter,
         });
 
-        setBranchProgress({
+        ctx.onProgress({
           current: i + 1,
           total: values.length,
           name: `Filtering: "${displayName}"`,
@@ -307,16 +293,16 @@ export function useBatchFilter({
         });
 
         if (result.success) {
-          addLog(
+          ctx.log(
             "success",
             `Value "${displayName}" completed -> ${outputPath}`,
           );
         } else {
-          addLog("error", `Value "${displayName}" failed: ${result.error}`);
+          ctx.log("error", `Value "${displayName}" failed: ${result.error}`);
         }
       } catch (error) {
-        addLog("error", `Value "${displayName}" error: ${error}`);
-        setBranchProgress({
+        ctx.log("error", `Value "${displayName}" error: ${error}`);
+        ctx.onProgress({
           current: i + 1,
           total: values.length,
           name: `Filtering: "${displayName}"`,
@@ -326,19 +312,19 @@ export function useBatchFilter({
     }
 
     const successCount = values.length;
-    addLog(
+    ctx.log(
       "success",
       `Batch filter completed: ${successCount} files generated`,
     );
   };
 
   const executeBatchFilterWithData = async (
+    ctx: RunContext,
     config: BatchFilterConfig,
     inputData: string,
   ) => {
-    // Use custom output dir if provided, otherwise use current tab's input file directory
-    const currentTab = getCurrentTab();
-    const defaultInputFile = currentTab.inputFile || "";
+    // Use custom output dir if provided, otherwise use this run's input file directory
+    const defaultInputFile = ctx.inputFile || "";
     let outputDir: string;
     if (config.outputDir && config.outputDir.trim()) {
       outputDir = config.outputDir.trim();
@@ -364,7 +350,7 @@ export function useBatchFilter({
         .map((v) => v.trim())
         .filter((v) => v.length > 0);
     } else {
-      addLog(
+      ctx.log(
         "info",
         `Extracting unique values from column "${config.extractColumn}"...`,
       );
@@ -390,7 +376,7 @@ export function useBatchFilter({
     }
 
     if (values.length === 0) {
-      addLog("warning", "No values to process");
+      ctx.log("warning", "No values to process");
       return;
     }
 
@@ -411,7 +397,7 @@ export function useBatchFilter({
         ];
         const commands = [{ name: searchCmd.name, parameters: params }];
 
-        setBranchProgress({
+        ctx.onProgress({
           current: 1,
           total: 1,
           name: config.textOperator,
@@ -424,14 +410,15 @@ export function useBatchFilter({
         const result = await invoke<any>("execute_xan_pipeline", {
           commands,
           inputFile: tempInputPath,
-          defaultDelimiter,
+          runId: ctx.runId,
+          defaultDelimiter: ctx.delimiter,
         });
         if (result.success) {
-          addLog("success", `Completed: ${config.textOperator}`);
+          ctx.log("success", `Completed: ${config.textOperator}`);
         } else {
-          addLog("error", `Failed: ${result.error}`);
+          ctx.log("error", `Failed: ${result.error}`);
         }
-        setBranchProgress({
+        ctx.onProgress({
           current: 1,
           total: 1,
           name: config.textOperator,
@@ -455,19 +442,19 @@ export function useBatchFilter({
     // Execute for each value
     for (let i = 0; i < values.length; i++) {
       // Honor a pending cancel request between iterations
-      if (isCancelRequested()) {
-        addLog("warning", `Batch filter cancelled after ${i} value(s)`);
+      if (ctx.isCancelled()) {
+        ctx.log("warning", `Batch filter cancelled after ${i} value(s)`);
         break;
       }
       const value = values[i];
       const displayName =
         value.length > 20 ? value.substring(0, 20) + "..." : value;
-      addLog(
+      ctx.log(
         "info",
         `Processing value ${i + 1}/${values.length}: "${displayName}"`,
       );
 
-      setBranchProgress({
+      ctx.onProgress({
         current: i + 1,
         total: values.length,
         name: `Filtering: "${displayName}"`,
@@ -585,10 +572,11 @@ export function useBatchFilter({
         const result = await invoke<any>("execute_xan_pipeline", {
           commands,
           inputFile: tempInputPath,
-          defaultDelimiter,
+          runId: ctx.runId,
+          defaultDelimiter: ctx.delimiter,
         });
 
-        setBranchProgress({
+        ctx.onProgress({
           current: i + 1,
           total: values.length,
           name: `Filtering: "${displayName}"`,
@@ -596,16 +584,16 @@ export function useBatchFilter({
         });
 
         if (result.success) {
-          addLog(
+          ctx.log(
             "success",
             `Value "${displayName}" completed -> ${outputPath}`,
           );
         } else {
-          addLog("error", `Value "${displayName}" failed: ${result.error}`);
+          ctx.log("error", `Value "${displayName}" failed: ${result.error}`);
         }
       } catch (error) {
-        addLog("error", `Value "${displayName}" error: ${error}`);
-        setBranchProgress({
+        ctx.log("error", `Value "${displayName}" error: ${error}`);
+        ctx.onProgress({
           current: i + 1,
           total: values.length,
           name: `Filtering: "${displayName}"`,
@@ -622,7 +610,7 @@ export function useBatchFilter({
     }
 
     const successCount = values.length;
-    addLog(
+    ctx.log(
       "success",
       `Batch filter completed: ${successCount} files generated`,
     );

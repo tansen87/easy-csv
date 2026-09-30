@@ -1,14 +1,32 @@
 import type {
+  ChartConfig,
+  ChartSeries,
+  LogEntry,
   PipelineEdge,
   PipelineStep,
   PipelineTab,
   PipelineVariableType,
 } from "@/types/xan";
 
-/** Shared state for the S6 "multiple branches overwrite one output file" gate. */
+/** Progress of the branch being executed (one pill in the canvas). */
+export interface BranchProgressState {
+  current: number;
+  total: number;
+  name: string;
+  status: "executing" | "completed" | "error";
+}
+
+/** Shared state for the S6 "several writers target one output file" gate. */
 export interface OverwriteConfirm {
   branchCount: number;
   outputPath: string;
+  /**
+   * `"branches"` = two branches of this run write the same file (S6);
+   * `"crossTab"` = another tab is already writing it (design 028 §7.3).
+   */
+  reason?: "branches" | "crossTab";
+  /** Name of the other tab already writing the file (only for `crossTab`). */
+  otherTabName?: string;
 }
 
 /** Parsed execution result shown as a canvas table node (F1). */
@@ -44,4 +62,62 @@ export interface PendingRun {
   currentPipeline: PipelineStep[];
   currentTab: PipelineTab;
   inputFile: string;
+}
+
+/**
+ * Identity of one execution session: "clicked execute → everything finished"
+ * (design 028 §2.1). Generated on the frontend and threaded to the backend so
+ * a cancel only ever stops its own run.
+ */
+export type RunId = string;
+
+export type RunState =
+  /** Waiting on the variable prompt / overwrite gate. */
+  | "preparing"
+  /** Waiting for a concurrency slot (design 028 §7.1). */
+  | "queued"
+  | "running"
+  | "done"
+  | "error"
+  | "cancelled";
+
+/**
+ * Per-tab execution session. One tab holds at most one session, several tabs
+ * may hold one each — that is what makes concurrent tabs interfere-free.
+ */
+export interface RunSession {
+  runId: RunId;
+  tabId: string;
+  state: RunState;
+  /** Current branch progress, shown by the canvas pill only for this tab. */
+  branch: BranchProgressState | null;
+  /** The pill stays visible for a few seconds after the run ends. */
+  showProgress: boolean;
+  startedAt: number;
+  /** Everything the runner needs, resolved at start (never "the current tab"). */
+  snapshot: PendingRun & { delimiter: string };
+}
+
+/**
+ * Everything a running branch needs, resolved once at start so that neither the
+ * batch loops nor the delimiter resolution can drift to another tab when the
+ * user switches tabs mid-run (design 028 §5.2).
+ */
+export interface RunContext {
+  runId: RunId;
+  tabId: string;
+  inputFile: string;
+  delimiter: string;
+  /** Per-run frontend cancel flag (the backend holds the matching one). */
+  isCancelled: () => boolean;
+  onProgress: (value: BranchProgressState | null) => void;
+  /** Append a log line already tagged with this run's tab (design 028 §5.4). */
+  log: (type: LogEntry["type"], message: string) => void;
+}
+
+/** Chart produced by a `chart` branch, kept per tab (design 028 §5.4). */
+export interface TabChartState {
+  config: ChartConfig;
+  series: ChartSeries[];
+  headers: string[];
 }

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ChartConfig, ChartSeries } from "@/types/xan";
+import { useCallback, useState } from "react";
+import type { TabChartState } from "@/types/execution";
 
 export function useUIState() {
   const [showHelp, setShowHelp] = useState(false);
@@ -13,13 +13,6 @@ export function useUIState() {
   >(null);
   const [isMenuActivated, setIsMenuActivated] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
-  const [showProgressBar, setShowProgressBar] = useState(false);
-  const [branchProgress, setBranchProgress] = useState<{
-    current: number;
-    total: number;
-    name: string;
-    status: "executing" | "completed" | "error";
-  } | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [showDataProfile, setShowDataProfile] = useState(false);
   const [showRefreshDialog, setShowRefreshDialog] = useState(false);
@@ -29,9 +22,27 @@ export function useUIState() {
   const [showLineagePanel, setShowLineagePanel] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showChartPanel, setShowChartPanel] = useState(false);
-  const [chartConfig, setChartConfig] = useState<ChartConfig | null>(null);
-  const [chartSeries, setChartSeries] = useState<ChartSeries[]>([]);
-  const [chartHeaders, setChartHeaders] = useState<string[]>([]);
+  /**
+   * Chart of each tab (design 028 §5.4). Charts belong to the tab that produced
+   * them, so a second tab running a `chart` branch cannot replace the first.
+   */
+  const [chartsByTab, setChartsByTab] = useState<Record<string, TabChartState>>(
+    {},
+  );
+  const setTabChart = useCallback(
+    (tabId: string, chart: TabChartState | null) => {
+      setChartsByTab((prev) => {
+        if (!chart) {
+          if (!(tabId in prev)) return prev;
+          const next = { ...prev };
+          delete next[tabId];
+          return next;
+        }
+        return { ...prev, [tabId]: chart };
+      });
+    },
+    [],
+  );
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showCsvDiff, setShowCsvDiff] = useState(false);
   const [csvDiffInitialFileA, setCsvDiffInitialFileA] = useState<
@@ -73,10 +84,6 @@ export function useUIState() {
     setIsMenuActivated,
     showSettingsDialog,
     setShowSettingsDialog,
-    showProgressBar,
-    setShowProgressBar,
-    branchProgress,
-    setBranchProgress,
     showUpdateDialog,
     setShowUpdateDialog,
     showDataProfile,
@@ -91,12 +98,8 @@ export function useUIState() {
     setShowAIPanel,
     showChartPanel,
     setShowChartPanel,
-    chartConfig,
-    setChartConfig,
-    chartSeries,
-    setChartSeries,
-    chartHeaders,
-    setChartHeaders,
+    chartsByTab,
+    setTabChart,
     showCommandPalette,
     setShowCommandPalette,
     showCsvDiff,

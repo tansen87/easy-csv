@@ -83,7 +83,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | `docs/design/027_first-run-onboarding.md` | 首次使用引导(**§4.1/§4.2/§4.3 已实现**;§4.5「常用」分组待定): 诊断「打开文件后画布无任何提示、命令面板/日志/AI/数据概况默认全关、前进路径全是纯图标+Tooltip、置灰的『执行』无解释」等断点;方案分层 —— P0 示例数据+示例管道(`ensure_sample_data` + 内置模板;示例管道**不含导出步骤**且自动执行一次,避免往磁盘写文件的副作用;引导语并进完成 Toast 而不是弹两条)、P0 画布内「第一个步骤」引导(**收敛到命令面板这唯一入口**: 画布空态引导卡(纯文字卡片、非节点样式) + 命令面板内提示条 + 首次高亮工具栏入口图标;已实测添加入口只有命令面板 `Alt+C`/全局 `Ctrl+K`,画布右键菜单无「在此添加操作」`FlowPanel.tsx:744-762`,故不做假节点、不加右键菜单项)、P1 执行完成的**顶部 Toast**(给 `Toast.tsx` 的 `ToastProps` 加可选 `action`,带「查看结果」;不带「打开数据概况」;**日志面板自动打开是现状** `runPipeline.ts:102`,不重复做;**步骤失败红色标记也是现状** `PipelineStepNode.tsx:265-280`(`step.error` → 红框+红字块),**不做「每步成功标记」**(满屏绿点会让工作流看起来更复杂);执行结束无完成提示 `runPipeline.ts:287-290` 才是缺口;不做「结果节点=视觉终点」/fitView 定位/结果节点内嵌按钮)、内置模板库 + 帮助中心「5 分钟上手」、命令面板「常用」分组、连线手势教学卡(只教不改)。**已定三条红线: ① 连线手势一律不改**(不恢复左键连线、不改 Handle 显隐、不加连接点呼吸动画、不调 connectionMode/panOnDrag/selectionOnDrag;已实测右键连线的起手必须是操作节点 `FlowPanel.tsx:441-459` 的 `clickedNode !== "table-node"`,输入节点不能起手);**② 不做自动连线、不做任何「未连接」提示** —— 多分支是刻意设计,新节点默认自成一条分支(`buildExecutionBranches` 对无入边节点各自成支,执行时直接吃原始输入,与「连线后再跑」等价),故 `App.tsx` 的 `autoConnect=false` 是**特性不是 bug**,不得自动首尾相连、不得给孤立节点加警示徽标、不得加「自动连接新步骤」配置项;**③ 不做首启引导屏/「三扇门」式选择页**(原 §4.7 与原型 04 已删除,入门路径统一由空状态的「看看示例」主卡承担)。UI 原型(独立 HTML,不随文档分发): `docs/design/prototypes/027/01-empty-state.html`、`02-first-step-canvas.html`、`03-execute-feedback.html` |
 
-> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–027 已登记。
+| `docs/design/028_multi-tab-concurrent-execution.md` | 多标签页并发执行(**P0 + P1 已实现;P2 的 #13 并发上限设置项已实现,#12「全部停止」未做**,2026-09-30;文首实施记录): 诊断「执行是全局单例」的三处根因——前端 `isExecuting` 布尔(`App.tsx:289`,所有标签页一起置灰 `MainMenu.tsx`/命令面板/`Ctrl+R`)、后端 `CANCELLATION_FLAG` 进程级开关(`pipeline.rs`,取消误杀所有运行)、一批全局 UI 状态(`branchProgress`/`showProgressBar`/`logs`/chart)。**已实现**:引入 **`runId`(RunSession)** 贯穿前后端;后端取消标志改 **`HashMap<runId, Arc<AtomicBool>>` 注册表 + `cancel_pipeline(run_id)` + `RunGuard` RAII 注销**(**`set_pipeline_cancelled` 直接删除**,它正是「取消 A 后开 B 会擦掉取消」的 bug 源);前端 `isExecuting` → **`runsByTab`**(含 `finishRun` 的 5s 收尾计时,替代 `progressHideTimerRef`),`setTabs` 写回改 `session.tabId`(不再随切页漂移);进度/结果/图表按 tabId 路由;批处理钩子 `useBatchFilter`/`useBatchConvert` 改**每次调用传 `RunContext`**(不再捕获「当前标签页」);变量/覆盖确认对话框单可见槽 + FIFO 排队(按 runId);运行中切页不取消、关页先 `cancelRun`;完成通知改由每个 run 的状态迁移驱动(带标签页名)。**UI 定稿 §5.6 已实现**:「执行」按钮改为**标签页菜单**(当前标签页置顶 + 小横线分隔、点行即切过去执行、运行中的行只给「分支 x/y」+「取消」、行内不设执行按钮),运行中**不加图标、不改按钮尺寸**(仅 `data-busy` + `.exec-busy::after` 底部进度线,见 `src/index.css`),去掉 `▾`,不做「全部取消」;标签栏运行徽标保留;进度 pill 右侧补「另有 N 个标签页在运行」弱提示。原型 `docs/design/prototypes/028/01-execute-tab-menu.html`。**测试**:后端 181 / 前端 520(新增 `ExecuteMenu` 8 / `ExecutionConcurrency` 2 / `LogPanel` 2 / `SettingsConcurrencyControl` 3 例)。**P1 已实现**:并发上限 **4**(超出 `queued` 排队 + 注册表变化时 drain 补位,`isTabExecuting` 把 queued 算占用中;取消排队中的 run = 摘队列不起进程;S6 确认时 `releaseRun` 交回槽位)、日志 `tabId` 经 **`RunContext.log`** 贯通(runPipeline / executeBranch / 两个批处理钩子,`RunPipelineDeps.addLog` 因此删除)+ 日志面板「仅当前标签页 / 全部」切换与每行徽标、跨标签页同一输出文件的独立覆盖确认(`reason: "crossTab"`)、菜单「排队中」行与标签页名 tooltip。**P2**:#13 并发上限可在设置页改(1~16,`max_concurrent_runs` + `get/set_max_concurrent_runs`);duckdb 溢写目录按 run 隔离(`TempDir` RAII,`SET temp_directory` 指向 `EasyCsv_duckdb_spill_<pid>_<runId>`)。**未做**:#12「全部停止」入口;T5/T6/T7 仍未单独补断言。关键事实: 后端本已能并发(独立 `spawn_blocking` + 子进程,临时文件已用 `EasyCsv_duckdb_{pid}_{counter}` 唯一名),唯一阻碍是取消标志与前端全局态 |
+
+> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–028 已登记。
 
 ---
 
@@ -97,7 +99,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 63 个命令) |
 | `config.rs` | `AppConfig` 类型、SQLite 持久化(app_config/ai_config 表)、AES-256-GCM 加密存储 API Key、per-provider API Key 管理、自定义 AI provider 配置(provider=custom 时存 name/base_url/models)、配置相关命令 |
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
-| `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令(`input_table` 参数 + 入口分派:全链 duckdb → `run_duckdb_chain` 单进程串联;首步 duckdb + 非 CSV → 原生 `SourceRef` 直读 `pipeline_seq`;否则非 CSV 先 `materialize_input_to_csv` + `TempFiles` RAII 清理)、`pipeline_seq`(`current_input` 为 `SourceRef`;**相邻 duckdb 步骤用 `COPY → tmp.parquet` 交接**,duckdb→xan 边界照旧 CSV)、`build_duckdb_args`(按 `next_is_duckdb` 分派)、`set_pipeline_cancelled` 取消执行 |
+| `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令(`input_table` 参数 + 入口分派:全链 duckdb → `run_duckdb_chain` 单进程串联;首步 duckdb + 非 CSV → 原生 `SourceRef` 直读 `pipeline_seq`;否则非 CSV 先 `materialize_input_to_csv` + `TempFiles` RAII 清理)、`pipeline_seq`(`current_input` 为 `SourceRef`;**相邻 duckdb 步骤用 `COPY → tmp.parquet` 交接**,duckdb→xan 边界照旧 CSV)、`build_duckdb_args`(按 `next_is_duckdb` 分派)、`cancel_pipeline(run_id)` 取消**单次运行**(`RUN_FLAGS` 注册表 + `RunGuard`,design 028;每个 run 一个 `Arc<AtomicBool>`,替代已删除的全局 `set_pipeline_cancelled`) |
 | `plugin_catalog.rs` | 插件清单(设计 023):取 `catalogUrls` + minisign 验签(**支持多把公钥**,轮换不锁死老版本)、`parse_catalog` 形状校验(插件名/文件名白名单、sha256 格式、平台枚举)、12h 磁盘缓存 + 离线回退标 `stale`、`generatedAt` 防回滚;`is_newer` 用 semver 判可更新;按 `PLATFORM_DIR` 选资产 |
 | `plugin_install.rs` | 插件下载安装(设计 023):逐 URL 回退下载(边下边算 sha256、超过清单声明大小即中止)、size + sha256 双校验、`.staging/<name>.part` 同盘 `rename` 原子替换、Unix 置 0o755、写安装记录、`plugin://progress` 进度事件;同插件并发安装用进程内 claim 拦截 |
 | `plugins.rs` | 外部 CLI 插件管理: `plugins` 表(plugins.db)持久化、`list_plugins`/`check_plugins` 命令、`command_executable` 按命令名解析可执行文件(插件命令走插件二进制,其余走 xan.exe)。`xan` 与 `pinyin`、`duckdb` 默认注册进插件表,列表按 xan 置顶排序。⚠️ **插件二进制不在仓库里**(`src-tauri/.gitignore` 的 `*.exe` 排除了它们,仓库内只有 `readme.md`),用户在 `<数据目录>/plugins/<平台>/` 手工放置(或装到 `PATH`)。解析顺序: 路径 → `plugins/` 目录(含 `.exe` 补全)→ `PATH`,**插件目录优先于 `PATH`**。插件目录: Windows/Linux 为 `<安装目录>/plugins/<平台>/`(安装目录恒为 `<用户选择路径>/EasyCsv`,AppImage 为 `.AppImage` 所在目录下的 `EasyCsv/`),macOS 为 `~/Library/Application Support/EasyCsv/plugins/<平台>/`。应用内下载见 `docs/design/023_plugin-repository-and-in-app-install.md` |
@@ -124,6 +126,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `get/set_auto_detect_delimiter` | 分隔符自动检测总开关(设置页与输入节点徽标共用同一个值) |
 | `get/set_system_notification` | 系统通知配置命令 |
 | `get/set_minimize_to_tray` | 最小化到托盘配置命令 |
+| `get/set_max_concurrent_runs` | 同时执行的管道数上限(默认 4;落库前 clamp 1~16)。设计:`docs/design/028_multi-tab-concurrent-execution.md` §7.1 |
 | `get_ai_config()` / `set_ai_config()` | AI 配置读写(provider、model、baseUrl、providerName、models) |
 | `save_api_key()` / `load_api_key()` / `delete_api_key()` / `has_api_key()` | Per-provider API Key 加密存储(AES-256-GCM) |
 
@@ -211,7 +214,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `read_tabular_file` | tabular | 按 `TabularData`(`CsvData` 超集 + `format`/`source_table`)读取任意表格输入(024):CSV 委托 `read_csv_file` 同源逻辑;`.parquet`/`.duckdb` 经 DuckDB CLI `SELECT * … LIMIT` 有界预览,`.duckdb` 需传选中表。设计:`docs/design/024_parquet-duckdb-file-reading.md` |
 | `list_duckdb_tables` | tabular | 列出 `.duckdb` 文件的用户表/视图(只读 `ATTACH` + information_schema),供打开时的选表对话框;0 张表报错、1 张自动选中、多张弹 `DuckdbTableDialog`。设计:`docs/design/024_parquet-duckdb-file-reading.md` |
 | `execute_xan_pipeline` | pipeline | 执行多步骤 xan 管道(核心命令);`inputTable` 携带 `.duckdb` 输入选中的表。024 分派见 `pipeline.rs` 模块行 |
-| `set_pipeline_cancelled` | pipeline | 取消正在执行的管道(全局标志 + kill 子进程) |
+| `cancel_pipeline` | pipeline | **取消指定的那一次运行**(design 028):`RUN_FLAGS: HashMap<runId, Arc<AtomicBool>>` 注册表 + `RunGuard` RAII 注销,取消只作用于本 runId,不再误杀其它标签页。**取代了已删除的全局 `set_pipeline_cancelled`** |
 | `profile_csv` | csv | 调用 `xan stats` 生成数据概况统计 |
 | `diff_csv_files` | csv | 对比两个 CSV 文件(Myers diff,分页返回) |
 | `convert_csv_encoding` | csv | 转换 CSV 文件编码(64KB 流式转码),返回输出路径/读写字节数/后端耗时 |
@@ -255,6 +258,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `plugin_install::uninstall_plugin` | plugin_install | 删除本应用安装的插件二进制(解析到 PATH 或手工放置的会拒绝删除并说明原因) |
 | `get_install_form` | update | 返回运行形态(`InstallForm`)与 `can_self_update`:按 `current_exe()` 路径与 `APPIMAGE` 环境变量判定,用于对 deb / `/Applications` 下的安装**禁用一键更新**。设计:`docs/design/022_github-auto-update-and-admin-free-install.md` |
 | `get/set_auto_check_update` | config | 启动后静默检查更新的总开关(默认开;只提示,不自动安装)。设计:`docs/design/022_github-auto-update-and-admin-free-install.md` |
+| `get/set_max_concurrent_runs` | config | 同时执行的管道数上限(`max_concurrent_runs`,默认 4,落库前 clamp 1~16),超出排队。设计:`docs/design/028_multi-tab-concurrent-execution.md` §7.1 |
 
 ---
 
@@ -299,8 +303,12 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `excelMergeHistory.test.ts` | Excel 合并结果 localStorage(设计 025): 往返、坏 JSON / 缺选项字段 / 类型不符 / 未知枚举值 / 摘要结构错误、超长跳过、清除 | 9 |
 | `MergeExcelDialog.test.tsx` | Excel 合并对话框(设计 025): 默认 payload(union/first/无 sheetIndex)、三模式互斥与按需渲染、名称留空拦截、扫描预览且不预取列名、按需展开、严格报错透传、并集加宽提示、xlsx 单 sheet 提示、打开路径、输出失效 | 12 |
 | `UpdateDialog.test.tsx` | 更新对话框: 进度条落在标题栏(不在可滚动正文里)、字节数展示、未安装时无进度、安装中 Esc 与遮罩点击均不关闭 | 6 |
+| `ExecuteMenu.test.tsx` | 「执行」标签页菜单(设计 028 §5.6 / §9.2 T9+T10): 两种状态下按钮 DOM 结构一致(不加图标,只有 `data-busy`)、当前标签页置顶 + 其后紧跟小横线、切换当前标签页后重排、运行中的行只有「取消」+ 分支进度且点行仅切换、排队中的行同理、空闲行点整行 = `onRunTab`、`待确认` 行不给执行入口 | 7 |
+| `ExecutionConcurrency.test.tsx` | 并发上限(设计 028 §7.1,上限 4): 第 5 个标签页进入 `queued` 而不是起第 5 条进程链、`runPipeline` 只被调 4 次;`queued` 也算「占用中」;取消排队中的 run 直接从队列摘除、不起后端进程(mock `runPipeline` 永不 settle) | 2 |
+| `LogPanel.test.tsx` | 日志按标签页(设计 028 §5.4): 每行带标签页徽标、默认全部可见、「仅当前标签页」只留该标签页的行(无标签的 app 级日志一并隐藏)、切回「全部」恢复、未选标签页时不过滤 | 2 |
+| `SettingsConcurrencyControl.test.tsx` | 设置页并发上限(设计 028 §7.1): 回显存储值(含 min/max)、编辑后上报新值、越界输入就地 clamp(99→16、0→1) | 3 |
 
-> 全量以 `pnpm test` 为准(当前 29 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
+> 全量以 `pnpm test` 为准(当前 39 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
 
 ---
 
@@ -391,7 +399,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 文件 | 职责 |
 |------|------|
 | `usePipelineTabs.ts` | 原 `MainMenuHooks.ts`(019 §4.2 已拆分删除)的标签页/管道状态助手: getCurrentTab、getCurrentPipeline、resolveRunDelimiter、updateTabPipeline、addNewTab |
-| `hooks/execution/` | 执行引擎: `useExecution`(装配)+ `runPipeline`/`executeBranch`(依赖显式注入)+ `buildBranches`/`buildPrefixToStep`/`serializeStepParams`/`resolveDelimiter` 纯函数(+`buildBranches.test.ts`) |
+| `hooks/execution/` | 执行引擎(design 028 起按**执行会话**隔离): `useExecution`(**`runsByTab` 注册表**:`runTab` / `cancelRun(tabId)` / `handleTabClosed` / 按 runId 的对话框 FIFO 排队 + `finishRun` 的 5s 收尾计时 + **并发上限 4**(`MAX_CONCURRENT_RUNS`,超出进 `queued`,`activeRunsRef`/`runQueueRef` + drain effect 补位))+ `runPipeline` / `executeBranch`(依赖显式注入,**一律经 `RunContext`(runId + tabId + inputFile + delimiter + isCancelled + log)寻址,不再读「当前标签页」**)+ `buildBranches` / `buildPrefixToStep` / `serializeStepParams` / `resolveDelimiter` 纯函数(+`buildBranches.test.ts`)。设计: `docs/design/028_multi-tab-concurrent-execution.md` |
 | `hooks/fileIO/` | `useFileOpen`/`useFileSave`/`useImportExport` + `pipelineScript.ts`(.sh/.ps1 内容纯函数生成) |
 | `hooks/charts/processChartData.ts` | 图表数据后处理纯函数 |
 | `useSession.ts` | 会话持久化: 启动恢复标签页、防抖自动保存(800ms)、beforeunload 兜底保存;导出 `flushSession()`(跳过防抖,更新安装前调用) |
@@ -407,7 +415,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `useCsvProbe.ts` | 拆分对话框的文件探测(防抖 + 过期响应丢弃) |
 | `useOnboarding.ts` | 首次使用引导状态(027): localStorage `easy-csv-onboarding-v1` 单个标记 + 复位;读写均 try/catch 降级(存储不可用时视为「已看过」,避免每次打开都弹)。另导出 `useAutoDismissOnboarding`(用户自己加了第一个步骤即标记已看过) |
 | `useToast.ts` | Toast 通知;`showToast(msg, type, { action, duration })` 支持可选的**动作按钮**(027 §4.3 完成提示的「查看结果」) |
-| `useLogs.ts` | 执行日志 |
+| `useLogs.ts` | 执行日志(design 028): `addLog(type, message, tabId?)` —— 每行标记来源标签页,供日志面板按标签页过滤 |
 | `useUIState.ts` | UI 状态: 对话框/面板开关(含命令面板、CSV 对比、编码转换) |
 | `useBatchFilter.ts` | Batch Filter 执行逻辑(原 `BatchFilterHooks.ts`,019 §5.1 改名): 文件名清理、正则构建、批量筛选执行 |
 | `useBatchConvert.ts` | 批量格式转换(原 `BatchConvertHooks.ts`): globToRegex、getBaseName、CSV↔XLSX↔JSON 转换 invoke 调用 |
@@ -461,7 +469,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `data-preview/charts/ChartPanel.tsx` | 图表面板(recharts),折线/散点/柱状/直方图/饼图/词云/热力图,支持拖拽、最大化/还原、SVG 导出、dark mode |
 | `ai/AIPanel.tsx` | **AI 助手面板**: 聊天 UI、命令生成、一键插入管道、👍/👎反馈、意图澄清对话框、对话历史加载 |
 | `variables/VariablePanel.tsx` | 变量管理面板(F3 管道参数化) |
-| `logs/LogPanel.tsx` | 浮动日志面板,显示执行结果,支持拖拽和复制 |
+| `logs/LogPanel.tsx` | 浮动日志面板,显示执行结果,支持拖拽和复制;**按标签页过滤**(design 028 §5.4):「仅当前标签页 / 全部」切换 + 每行标签页徽标(与按级别的 chips 叠加) |
 | `logs/CommandList.tsx` | **命令面板**,可拖拽浮动面板,按分类展示命令,支持搜索和历史记录 |
 | `logs/CommandPalette.tsx` | **全局命令面板**(Ctrl/Cmd+K): 可搜索、键盘导航的动作/标签/最近文件/xan 命令列表 |
 | `modules/plugins/PluginManager.tsx` | 设置页「插件」页签: 清单加载/刷新、离线缓存提示、安装与卸载(带确认)、打开插件目录;失败保留列表只出横幅 |
@@ -555,7 +563,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 修改命令参数描述 | `src/modules/dialogs/command/lib/parameterDescriptions.ts` + `src/data/commands/index.ts`(参数 description 字段) |
 | 新增对话框 | 参考 `src/modules/dialogs/command/CommandDialog.tsx`,并在 `HomeView.tsx` 中注册状态和渲染 |
 | 修改管道执行逻辑 | `src-tauri/src/pipeline.rs` 中的 `execute_xan_pipeline` 函数 |
-| 修改管道执行取消 | `src-tauri/src/pipeline.rs`(`set_pipeline_cancelled` + `wait_with_cancel`) + `src/hooks/execution/useExecution.ts`(`handleCancelExecution`) |
+| 修改管道执行取消 | `src-tauri/src/pipeline.rs`(`RUN_FLAGS` 注册表 + `cancel_pipeline(run_id)` + `RunGuard`;`execute_xan_pipeline` 收 `run_id`,**无全局取消标志**) + `src/hooks/execution/useExecution.ts`(`cancelRun(tabId)` → `invoke("cancel_pipeline", { runId })`,前端 per-run 标志) + `src/hooks/execution/runPipelineDeps.ts`(`RunContext.isCancelled`)。设计:`docs/design/028_multi-tab-concurrent-execution.md` |
 | 修改 CSV 预览读取 | `src-tauri/src/csv.rs` 中的 `read_csv_file` 函数 |
 | 修改打开文件的分隔符检测(工作流输入节点) | `src-tauri/src/csv.rs`(`read_csv_file` 的 `resolve_read_delimiter`/`read_csv_sync`)+ `src/hooks/useTabs.ts`(`loadCsvData` + 全局模式重载规则)+ `src/components/ui/DelimiterModeSelect.tsx`(共用控件)+ `src/modules/pipeline/nodes/TableNode.tsx`(徽标)+ `src/modules/pipeline/FlowPanel.tsx`/`src/modules/data-preview/HomeView.tsx`/`src/app/App.tsx`(透传)+ `src/utils/delimiterMode.ts`(设置 ⇄ 界面值换算)+ `src/hooks/execution/resolveDelimiter.ts` + `src/hooks/usePipelineTabs.ts`(`resolveRunDelimiter`,保证执行与预览同源)。设计:`docs/design/018_open-file-delimiter-detection.md` |
 | 修改分隔符自动检测总开关 / 默认分隔符(设置页 ⇄ 输入节点同步) | `src-tauri/src/config.rs`(`auto_detect_delimiter` + `get/set_auto_detect_delimiter`、`get/set_default_delimiter`)+ `src/hooks/useAppSettings.ts` + `src/components/setting/SettingsTabContent.tsx`(分隔符区块)+ `src/components/ui/DelimiterModeSelect.tsx` + `src/app/App.tsx`(`delimiterMode`/`onDelimiterModeChange`,含即时落库)。设计:`docs/design/018_open-file-delimiter-detection.md` §3.9 |

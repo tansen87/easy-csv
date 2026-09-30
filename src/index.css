@@ -427,6 +427,35 @@
 .animate-fade-in {
   animation: fade-in 0.5s ease-out;
 }
+
+/* ── Run state of the toolbar "execute" button (design 028 §5.6.1) ──────────
+   The button keeps its label and size while a run is in flight; only a 2px
+   indeterminate line appears along its bottom edge (a ::after, so no DOM node
+   is added and nothing shifts). */
+@keyframes exec-underline {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(280%);
+  }
+}
+.exec-busy::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 38%;
+  border-radius: 999px;
+  background: var(--primary);
+  animation: exec-underline 1.15s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .exec-busy::after {
+    animation: none;
+  }
+}
 .animate-slide-up {
   animation: slide-up 0.6s ease-out;
 }

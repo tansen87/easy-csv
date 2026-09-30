@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>原型 01 · 「执行」= 标签页菜单 · 多标签页并发执行</title>
+<style>
+  :root{
+    --background:#ffffff; --foreground:#2a2a2a;
+    --muted:#f5f5f5; --muted-2:#fafafa; --muted-foreground:#8a8a8a; --muted-foreground-2:#b3b3b3;
+    --border:#e9e9e9; --border-2:#dfdfdf; --primary:#333333;
+    --run:#2563eb; --run-bg:#eff6ff; --run-border:#bfdbfe;
+    --pend:#b45309; --pend-bg:#fffbeb; --pend-border:#fde68a;
+    --danger:#dc2626; --danger-bg:#fef2f2; --danger-border:#fecaca;
+    --line:#cfcfcf;
+    --font:"Inter","Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#f0f0f0;font-family:var(--font);color:var(--foreground)}
+  .stage{padding:28px 24px 48px;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .plabel{width:min(1180px,100%);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .plabel .tag{background:#111;color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:6px}
+  .plabel h1{font-size:14px;margin:0;font-weight:600}
+  .plabel p{margin:0;font-size:12px;color:#6b6b6b}
+
+  .app{width:min(1180px,100%);height:720px;background:var(--background);border:1px solid #d8d8d8;
+       border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.12);overflow:hidden;display:flex;flex-direction:column;position:relative}
+
+  /* ── 工具栏 ─────────────────────────────────── */
+  .topbar{height:44px;flex:none;display:flex;align-items:center;gap:4px;padding:0 12px;border-bottom:1px solid var(--border);z-index:5}
+  .tbtn{width:44px;text-align:center;font-size:12px;font-weight:500;padding:5px 0;border-radius:6px;color:var(--primary)}
+  .tbtn.dim{color:#c6c6c6}
+  /* 「执行」按钮:文字恒定、尺寸恒定;运行中仅转中性色 + 底部不定进度线(伪元素,不占布局) */
+  .exec-btn{position:relative;overflow:hidden;width:52px;text-align:center;font-size:12px;font-weight:500;
+    padding:5px 0;border-radius:6px;border:1px solid var(--border-2);background:var(--muted-2);color:#8a8a8a}
+  .exec-btn.busy::after{content:"";position:absolute;left:0;bottom:0;height:2px;width:38%;background:var(--run)}
+  .spacer{flex:1}
+  .iconbtn{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--primary);font-size:13px}
+  .sep{width:1px;height:16px;background:var(--border);margin:0 6px}
+
+  /* ── 标签栏(保留运行徽标) ────────────────────── */
+  .tabbar{flex:none;height:42px;display:flex;align-items:center;gap:6px;padding:0 12px;border-bottom:1px solid var(--border);background:#fcfcfc}
+  .tab{display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--border-2);
+       background:#fff;font-size:12px;font-weight:500;color:#6b6b6b}
+  .tab.active{border-color:#c2c2c2;background:#f4f4f4;color:#111}
+  .tab .plus{margin-left:2px;color:#b9b9b9;font-size:14px;padding:0 6px}
+  .badge{display:inline-flex;align-items:center;gap:5px;height:18px;padding:0 7px;border-radius:999px;font-size:10.5px;font-weight:600;border:1px solid transparent}
+  .badge.run{color:var(--run);background:var(--run-bg);border-color:var(--run-border)}
+  .badge.pend{color:var(--pend);background:var(--pend-bg);border-color:var(--pend-border)}
+  .spin{width:9px;height:9px;flex:none;border:2px solid currentColor;border-top-color:transparent;border-radius:999px}
+  @media (prefers-reduced-motion: no-preference){ .spin{animation:spin .8s linear infinite} }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ── 画布 ───────────────────────────────────── */
+  .canvas{flex:1;position:relative;overflow:hidden;
+    background-image:radial-gradient(circle,#dcdcdc 1px,transparent 1px);background-size:22px 22px}
+
+  /* 进度 pill + 弱提示:同一条居中横排,整体压在「执行」菜单上方,互不遮挡 */
+  .topline{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;white-space:nowrap}
+  .prog-pill{display:flex;align-items:center;gap:8px;
+    padding:6px 10px;background:#fff;border:1px solid var(--border-2);border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .prog-pill .lb{font-size:11.5px;color:#8a8a8a}
+  .prog-pill .bd{display:inline-flex;align-items:center;gap:5px;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:600;
+    color:var(--run);background:var(--run-bg)}
+  .prog-pill .nm{font-size:11.5px;color:#3f3f3f;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .prog-pill .cancel{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--danger);
+    padding:2px 6px;border-radius:6px;border:1px solid var(--danger-border);background:var(--danger-bg)}
+  .weak{font-size:11px;color:#a3a3a3}
+
+  .node{position:absolute;background:#fff;border:1px solid var(--border-2);border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+  .tbl{left:40px;top:330px;width:320px;overflow:hidden}
+  .tbl-hd{display:flex;align-items:center;gap:7px;padding:9px 12px;border-bottom:1px solid var(--border);font-size:11.5px;font-weight:600}
+  .tbl-hd .fmt{font-size:10px;font-weight:600;color:#666;background:#f3f3f3;border-radius:5px;padding:1px 6px}
+  .tbl-hd .file{margin-left:auto;font-size:10.5px;font-weight:500;color:#9a9a9a;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  table{border-collapse:collapse;width:100%;font-size:11px}
+  th,td{text-align:left;padding:6px 10px;border-bottom:1px solid #f1f1f1;white-space:nowrap;color:#4a4a4a}
+  th{background:#fafafa;color:#6d6d6d;font-weight:600}
+  tr:last-child td{border-bottom:none}
+
+  .step{width:200px;height:104px;left:420px;top:385px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+  .step .sh{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11.5px;font-weight:700;color:#2f2f2f}
+  .step .sp2{font-size:10.5px;color:#909090;line-height:1.5}
+  .step .st2{margin-top:auto;font-size:10px;font-weight:600;color:#9a9a9a}
+  .res{width:220px;height:104px;left:680px;top:385px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+  .res .rh{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#2f2f2f}
+  .res .rr{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:#5f5f5f}
+  .edge{position:absolute;height:2px;background:var(--line);border-radius:2px}
+
+  /* ── 「执行」菜单(展开态) ─────────────────────── */
+  /* 真实实现里它从工具栏向下展开、盖住标签栏;原型里下移一行,以便同时看到标签栏徽标 */
+  .exec-menu{position:absolute;left:156px;top:56px;width:240px;background:#fff;border:1px solid var(--border-2);
+    border-radius:8px;box-shadow:0 16px 36px rgba(0,0,0,.16);padding:4px;z-index:20}
+  .exec-menu:before{content:"";position:absolute;top:-5px;left:22px;width:8px;height:8px;background:#fff;
+    border-left:1px solid var(--border-2);border-top:1px solid var(--border-2);transform:rotate(45deg)}
+  .mrow{display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border-radius:8px}
+  .mrow.cur{background:#f6f6f6;box-shadow:inset 2px 0 0 var(--run)}
+  .mrow .nm{font-size:12.5px;font-weight:600;color:#2f2f2f}
+  .mrow .meta{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .mrow .prog{font-family:var(--mono);font-size:10.5px;color:#8a8a8a}
+  /* 行内不设「执行」按钮:点整行即切过去并执行。运行中的行只保留「取消」。 */
+  .mrow .cancel{font-size:10.5px;font-weight:600;color:var(--danger);padding:2px 7px;border-radius:6px;
+    border:1px solid var(--danger-border);background:var(--danger-bg)}
+  .mdiv{height:1px;background:var(--border);margin:4px 8px}
+
+  /* ── 标注 ───────────────────────────────────── */
+  .pin{position:absolute;width:20px;height:20px;border-radius:999px;background:var(--run);color:#fff;
+    font-size:11px;font-weight:700;display:grid;place-items:center;z-index:30;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+  .legend{width:min(1180px,100%);display:grid;gap:8px;font-size:12px;color:#5a5a5a;line-height:1.6}
+  .legend b{color:#111}
+  .dot{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:999px;background:var(--run);color:#fff;font-size:10.5px;font-weight:700;margin-right:7px;vertical-align:1px}
+  .dotG{background:#15803d}
+  .dotA{background:#c2410c}
+  .legend code{font-family:var(--mono);font-size:11px;color:#3f3f3f;background:#f4f4f4;border-radius:4px;padding:1px 5px}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="plabel">
+    <span class="tag">原型 01</span>
+    <h1>「执行」= 标签页菜单 —— 多标签页并发执行</h1>
+    <p>对应设计 028 §5 —— 运行中不加图标/不改结构 · 当前标签页置顶并用小横线分隔 · 点行即切过去执行</p>
+  </div>
+
+  <div class="app">
+
+    <div class="topbar">
+      <div class="tbtn">文件</div>
+      <div class="tbtn dim">撤销</div>
+      <div class="tbtn dim">重做</div>
+      <div class="exec-btn busy">执行</div>
+      <div class="spacer"></div>
+      <div class="iconbtn">▤</div>
+      <div class="iconbtn">▦</div>
+      <div class="iconbtn">✦</div>
+      <div class="iconbtn">◧</div>
+      <div class="sep"></div>
+      <div class="iconbtn">⤓</div>
+      <div class="iconbtn">⚙</div>
+    </div>
+
+    <div class="tabbar">
+      <div class="tab active">A 销售数据 <span class="badge run"><span class="spin"></span>运行中</span></div>
+      <div class="tab">B 库存 <span class="badge run"><span class="spin"></span>运行中</span></div>
+      <div class="tab">C 客户 <span class="badge pend">待确认</span></div>
+      <div class="tab plus">+</div>
+    </div>
+
+    <div class="canvas">
+
+      <div class="topline">
+        <div class="prog-pill">
+          <span class="lb">分支</span>
+          <span class="bd"><span class="spin"></span>2/3</span>
+          <span class="nm">按地区汇总</span>
+          <span class="cancel">■ 取消</span>
+        </div>
+        <div class="weak">另有 1 个标签页在运行（B 库存）</div>
+      </div>
+
+      <!-- 输入节点 -->
+      <div class="node tbl">
+        <div class="tbl-hd">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#777" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          输入数据
+          <span class="fmt">CSV</span>
+          <span class="file">sample-sales.csv</span>
+        </div>
+        <table>
+          <thead><tr><th>日期</th><th>地区</th><th>品类</th><th>金额</th></tr></thead>
+          <tbody>
+            <tr><td>2026-07-01</td><td>华东</td><td>数码</td><td>1280.00</td></tr>
+            <tr><td>2026-07-01</td><td>华南</td><td>家电</td><td>3499.00</td></tr>
+            <tr><td>2026-07-02</td><td>华北</td><td>数码</td><td>860.50</td></tr>
+            <tr><td>2026-07-02</td><td>华东</td><td>服饰</td><td>329.00</td></tr>
+            <tr><td>2026-07-03</td><td>华南</td><td>数码</td><td>2140.00</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="edge" style="left:360px;top:436px;width:60px"></div>
+
+      <div class="node step">
+        <div class="sh">▸ sort</div>
+        <div class="sp2">按 地区 升序</div>
+        <div class="st2">步骤 1 / 3</div>
+      </div>
+
+      <div class="edge" style="left:620px;top:436px;width:60px"></div>
+
+      <div class="node res">
+        <div class="rh">▤ 结果</div>
+        <div class="rr"><span>地区</span><span>金额合计</span></div>
+        <div class="rr"><span>华东</span><span>1609.00</span></div>
+        <div class="rr"><span>华南</span><span>5639.00</span></div>
+      </div>
+
+      <!-- 「执行」展开的菜单 -->
+      <div class="exec-menu">
+        <div class="mrow cur">
+          <span class="nm">A 销售数据</span>
+          <span class="meta">
+            <span class="prog">分支 2/3</span>
+            <span class="cancel">取消</span>
+          </span>
+        </div>
+        <div class="mdiv"></div>
+        <div class="mrow">
+          <span class="nm">B 库存</span>
+          <span class="meta">
+            <span class="prog">分支 1/1</span>
+            <span class="cancel">取消</span>
+          </span>
+        </div>
+        <div class="mrow">
+          <span class="nm">C 客户</span>
+          <span class="meta">
+            <span class="badge pend">待确认</span>
+          </span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 标注(绝对定位于整个窗口,便于指向标签栏) -->
+    <div class="pin" style="left:216px;top:10px">1</div>
+    <div class="pin" style="left:494px;top:158px">2</div>
+    <div class="pin" style="left:494px;top:206px">3</div>
+    <div class="pin" style="left:494px;top:244px">4</div>
+    <div class="pin" style="left:430px;top:52px">5</div>
+    <div class="pin" style="left:786px;top:104px">6</div>
+
+  </div>
+
+  <div class="legend">
+    <div><span class="dot">1</span><b>运行中:不加图标、不改结构</b>。按钮文字永远是 <code>执行</code>(去掉 <code>▾</code>),宽高恒定。运行中只做两件事:文字/底色从主色转为中性灰 + 按钮底部一条 <b>2px 不定进度线</b>(<code>::after</code> 伪元素 + 绝对定位,不新增 DOM、不产生位移)。对比现状:现在是 <code>⟳ 执行中</code> —— 多一个图标、多一个字,按钮会变宽。</div>
+    <div><span class="dot">2</span><b>「执行」= 标签页菜单:当前标签页置顶,下面一条小横线</b>。这一位永远是「当前标签页」的入口 —— 它跑着就在这里看进度、点取消;它空闲就点这里开始跑。其余标签页排在小横线之下,顺序与标签栏一致。</div>
+    <div><span class="dot">3</span><b>运行中的行只保留「取消」,进度只显示「分支 x/y」</b>。不显示步骤名、不显示百分比。取消只停这一行对应标签页的那次运行 —— 图里点 A 行的取消,B 的 <code>1/1</code> 不受影响。</div>
+    <div><span class="dot">4</span><b>点整行即执行,行内没有「执行」按钮</b>。点其它标签页的行 = <b>切过去并开始执行</b>(切过去才看得到进度)。行右侧默认留空,只有 hover 时才浮出一行很淡的「点击执行」提示(可去掉)。</div>
+    <div><span class="dot">5</span><b>标签栏的运行徽标保留</b>:<span class="badge run" style="vertical-align:middle"><span class="spin"></span>运行中</span> / <span class="badge pend" style="vertical-align:middle">待确认</span>。「完成 / 失败」用绿 / 红徽标,用户看过该标签页后自动消退为普通标签。</div>
+    <div><span class="dot">6</span><b>画布里的进度 pill 仍然只属于当前标签页</b>;当还有别的标签页在跑时,右侧补一句弱提示「另有 1 个标签页在运行(B 库存)」—— 把「不是卡住了,只是别人在跑」说清楚。它<b>不</b>置灰任何东西。</div>
+    <div><span class="dot dotG">守</span>①「执行」按钮<b>不再置灰</b>:它变成菜单后,运行中照样能打开去取消或去跑别的标签页(<code>Ctrl+R</code> 与命令面板的 <code>execute</code> 也按「当前标签页」判断,不再是全局);②菜单项<b>不显示步骤名/百分比</b>,只显示分支序号,避免在 240px 宽里塞长文本;③<b>不做「全部取消」</b>——多个标签页同时在跑时逐个停;④<b>与 File / Edit / View / Help 同属菜单栏</b>:任一菜单打开后,鼠标移到别的菜单会直接切过去(既有 hover 切换行为),「执行」同样参与 —— 悬停「执行」切到本菜单、悬停其它菜单切回去,点一下才真正展开/收起。</div>
+    <div><span class="dot dotA">注</span>真实实现里这个菜单从工具栏向下展开,会<b>盖住标签栏</b>。原型里刻意下移一行,好让标签栏的运行徽标同屏可见。菜单宽固定 240px,标签页名过长时截断 + tooltip,不换行、不撑高。</div>
+    <div><span class="dot dotA">不做</span>不加 <code>▾</code> 下拉箭头;不在菜单里放「执行」按钮;不做「执行全部 / 全部取消」;不给运行中的按钮换图标或加文字;不把进度做成百分比进度条。</div>
+  </div>
+
+</div>
+</body>
+</html>

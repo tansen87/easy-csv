@@ -45,15 +45,48 @@ pub struct ExecutionResult {
   pub step_errors: std::collections::HashMap<String, String>,
 }
 
-static CANCELLATION_FLAG: OnceLock<AtomicBool> = OnceLock::new();
+/// Per-run cancellation flags, keyed by the frontend-generated `run_id`.
+///
+/// Replaces the former process-wide `CANCELLATION_FLAG`: once several tabs can
+/// execute concurrently, one cancel must never stop another tab's run
+/// (design 028 §4.1).
+static RUN_FLAGS: OnceLock<Mutex<HashMap<String, Arc<AtomicBool>>>> = OnceLock::new();
 
-fn cancellation_flag() -> &'static AtomicBool {
-  CANCELLATION_FLAG.get_or_init(|| AtomicBool::new(false))
+fn run_flags() -> &'static Mutex<HashMap<String, Arc<AtomicBool>>> {
+  RUN_FLAGS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+/// Register a fresh flag for `run_id` and hand it to the runner.
+pub(crate) fn register_run(run_id: &str) -> Arc<AtomicBool> {
+  let flag = Arc::new(AtomicBool::new(false));
+  run_flags()
+    .lock()
+    .unwrap()
+    .insert(run_id.to_string(), Arc::clone(&flag));
+  flag
+}
+
+/// Drop `run_id` from the registry. Called from [`RunGuard`]'s destructor so
+/// every exit path (success, error, cancel, panic) cleans up.
+pub(crate) fn unregister_run(run_id: &str) {
+  run_flags().lock().unwrap().remove(run_id);
+}
+
+/// RAII cleanup for one run's registry entry.
+struct RunGuard(String);
+
+impl Drop for RunGuard {
+  fn drop(&mut self) {
+    unregister_run(&self.0);
+  }
+}
+
+/// Cancel exactly one run. An unknown id is a no-op (that run already ended).
 #[tauri::command]
-pub fn set_pipeline_cancelled(cancel: bool) {
-  cancellation_flag().store(cancel, Ordering::SeqCst);
+pub fn cancel_pipeline(run_id: String) {
+  if let Some(flag) = run_flags().lock().unwrap().get(&run_id) {
+    flag.store(true, Ordering::SeqCst);
+  }
 }
 
 pub(crate) fn wait_with_cancel(
@@ -183,18 +216,11 @@ pub async fn execute_xan_pipeline(
   input_table: Option<String>,
   default_delimiter: String,
   max_output_bytes: Option<usize>,
+  run_id: String,
 ) -> Result<ExecutionResult, String> {
-  let cancel_flag = cancellation_flag();
-
-  if cancel_flag.load(Ordering::SeqCst) {
-    return Ok(ExecutionResult {
-      success: false,
-      output: String::new(),
-      error: "Execution cancelled".to_string(),
-      cancelled: true,
-      step_errors: HashMap::new(),
-    });
-  }
+  // Per-run cancel flag + registry cleanup on every exit path (design 028 §4.2).
+  let cancel_flag = register_run(&run_id);
+  let _guard = RunGuard(run_id.clone());
 
   let config = load_config()?;
   let no_headers_enabled = config.no_headers.unwrap_or(false);
@@ -214,6 +240,7 @@ pub async fn execute_xan_pipeline(
       input_table,
       default_delimiter,
       cancel_flag,
+      run_id,
       max_output_bytes,
     )
     .await;
@@ -235,6 +262,7 @@ pub async fn execute_xan_pipeline(
       let source_path = input_file.clone();
       let table = input_table;
       let sep = default_delimiter.clone();
+      let mat_flag = Arc::clone(&cancel_flag);
       let (tmp, materialized) =
         tokio::task::spawn_blocking(move || -> (PathBuf, Result<(), String>) {
           let tmp = make_temp_csv();
@@ -243,7 +271,7 @@ pub async fn execute_xan_pipeline(
               &source,
               no_headers_enabled,
               &sep,
-              cancellation_flag(),
+              mat_flag.as_ref(),
               &tmp,
             ),
             Err(e) => Err(e),
@@ -341,6 +369,7 @@ pub async fn execute_xan_pipeline(
     cmd_args_list.push(args);
   }
 
+  let exec_flag = Arc::clone(&cancel_flag);
   let output = tokio::task::spawn_blocking(
     move || -> Result<(std::process::Output, HashMap<String, String>), String> {
       let first_cmd_name = &cmd_args_list[0][0].clone();
@@ -416,9 +445,12 @@ pub async fn execute_xan_pipeline(
             .spawn()
             .map_err(|e| format!("Failed to start command: {}", e))?;
 
-          single_output_with_errors(wait_with_cancel(child, cancel_flag), first_step_id)
+          single_output_with_errors(wait_with_cancel(child, exec_flag.as_ref()), first_step_id)
         } else if is_cat_command {
-          single_output_with_errors(wait_with_cancel(first_child, cancel_flag), first_step_id)
+          single_output_with_errors(
+            wait_with_cancel(first_child, exec_flag.as_ref()),
+            first_step_id,
+          )
         } else {
           {
             let mut stdin = first_child
@@ -428,7 +460,7 @@ pub async fn execute_xan_pipeline(
             let mut buffer = vec![0; 256 * 1024];
             let mut file = input_file_handle.take().unwrap();
             loop {
-              if cancel_flag.load(Ordering::Relaxed) {
+              if exec_flag.load(Ordering::Relaxed) {
                 break;
               }
               match file.read(&mut buffer) {
@@ -446,7 +478,7 @@ pub async fn execute_xan_pipeline(
             }
           }
 
-          wait_with_cancel(first_child, cancel_flag).and_then(|output| {
+          wait_with_cancel(first_child, exec_flag.as_ref()).and_then(|output| {
             let mut step_errors = HashMap::new();
             if !output.status.success() {
               let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -593,11 +625,12 @@ pub async fn execute_xan_pipeline(
             File::open(&input_file).map_err(|e| format!("Failed to open input file: {}", e))?;
 
           let errors_clone = Arc::clone(&all_errors);
+          let feed_flag = Arc::clone(&exec_flag);
           let first_id = cmd_ids[0].clone().unwrap_or_default();
           thread::spawn(move || {
             let mut buffer = vec![0; 64 * 1024];
             loop {
-              if cancel_flag.load(Ordering::Relaxed) {
+              if feed_flag.load(Ordering::Relaxed) {
                 break;
               }
               match input_file_clone.read(&mut buffer) {
@@ -649,7 +682,7 @@ pub async fn execute_xan_pipeline(
         let mut try_wait_error = None;
 
         while final_status.is_none() && try_wait_error.is_none() {
-          if cancel_flag.load(Ordering::Relaxed) {
+          if exec_flag.load(Ordering::Relaxed) {
             for child in &mut children {
               let _ = child.kill();
             }
@@ -868,6 +901,44 @@ impl Drop for TempFiles {
       let _ = std::fs::remove_file(t);
     }
   }
+}
+
+/// RAII guard for a per-run scratch **directory** (the DuckDB spill area),
+/// removed on drop. Created inside the blocking task so it lives exactly as
+/// long as the command that uses it (design 028 §4.4).
+pub(crate) struct TempDir(PathBuf);
+
+impl TempDir {
+  /// `name` must already be unique per run (pid + run id).
+  pub(crate) fn create(name: &str) -> Option<Self> {
+    let dir = std::env::temp_dir().join(name);
+    std::fs::create_dir_all(&dir).ok()?;
+    Some(TempDir(dir))
+  }
+
+  pub(crate) fn path(&self) -> &Path {
+    &self.0
+  }
+}
+
+impl Drop for TempDir {
+  fn drop(&mut self) {
+    let _ = std::fs::remove_dir_all(&self.0);
+  }
+}
+
+/// A run id reduced to characters that are safe inside a directory name.
+fn sanitize_run_id(run_id: &str) -> String {
+  run_id
+    .chars()
+    .map(|c| {
+      if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+        c
+      } else {
+        '_'
+      }
+    })
+    .collect()
 }
 
 /// Build the [`SourceRef`] for a native (non-materialized) input file.
@@ -1250,9 +1321,10 @@ async fn run_duckdb_pipeline(
   initial_source: Option<SourceRef>,
   default_delimiter: String,
   no_headers: bool,
-  cancel_flag: &'static AtomicBool,
+  cancel_flag: Arc<AtomicBool>,
   max_output_bytes: Option<usize>,
 ) -> Result<ExecutionResult, String> {
+  let seq_flag = Arc::clone(&cancel_flag);
   let result = tokio::task::spawn_blocking(move || {
     pipeline_seq(
       &commands,
@@ -1260,7 +1332,7 @@ async fn run_duckdb_pipeline(
       initial_source,
       &default_delimiter,
       no_headers,
-      cancel_flag,
+      seq_flag.as_ref(),
     )
   })
   .await
@@ -1294,7 +1366,8 @@ async fn run_duckdb_chain(
   input_file: String,
   input_table: Option<String>,
   default_delimiter: String,
-  cancel_flag: &'static AtomicBool,
+  cancel_flag: Arc<AtomicBool>,
+  run_id: String,
   max_output_bytes: Option<usize>,
 ) -> Result<ExecutionResult, String> {
   if !Path::new(&input_file).exists() {
@@ -1314,9 +1387,23 @@ async fn run_duckdb_chain(
       .map(|p| p.value.clone())
   });
 
+  let chain_flag = Arc::clone(&cancel_flag);
+  let spill_name = format!(
+    "EasyCsv_duckdb_spill_{}_{}",
+    std::process::id(),
+    sanitize_run_id(&run_id)
+  );
   let result = tokio::task::spawn_blocking(
     move || -> Result<(std::process::Output, HashMap<String, String>), String> {
       let source = native_source(&input_file, input_table)?;
+      // Each run gets its own spill directory, so concurrent duckdb processes
+      // never share one `temp_directory` (design 028 §4.4). Falls back to the
+      // system temp dir if the folder cannot be created.
+      let spill = TempDir::create(&spill_name);
+      let spill_dir = spill
+        .as_ref()
+        .map(|dir| dir.path().to_path_buf())
+        .unwrap_or_else(std::env::temp_dir);
       let steps: Vec<tabular::ChainStep> = commands
         .iter()
         .map(|c| {
@@ -1327,12 +1414,8 @@ async fn run_duckdb_chain(
           (c.id.clone(), map.get("sql").cloned().unwrap_or_default())
         })
         .collect();
-      let (script, line_map) = tabular::build_duckdb_chain_sql(
-        &steps,
-        &source,
-        &default_delimiter,
-        &std::env::temp_dir(),
-      )?;
+      let (script, line_map) =
+        tabular::build_duckdb_chain_sql(&steps, &source, &default_delimiter, &spill_dir)?;
 
       let exe = tabular::duckdb_executable()?;
       let separator = if default_delimiter.is_empty() {
@@ -1361,7 +1444,7 @@ async fn run_duckdb_chain(
       let child = command
         .spawn()
         .map_err(|e| format!("Failed to start duckdb: {}", e))?;
-      let output = wait_with_cancel(child, cancel_flag)?;
+      let output = wait_with_cancel(child, chain_flag.as_ref())?;
 
       // Attribute the first `LINE n:` in stderr back to its step; errors in
       // the source-view region stay global.
@@ -1405,4 +1488,80 @@ async fn run_duckdb_chain(
     cancelled,
     step_errors,
   })
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  /// Design 028 §9.2 T1: cancelling one run must never touch another's flag —
+  /// this is what makes concurrent tabs interfere-free.
+  #[test]
+  fn cancel_pipeline_is_isolated_per_run() {
+    let run_a = register_run("test-run-a");
+    let run_b = register_run("test-run-b");
+
+    cancel_pipeline("test-run-a".to_string());
+
+    assert!(run_a.load(Ordering::SeqCst), "run A must be cancelled");
+    assert!(!run_b.load(Ordering::SeqCst), "run B must stay untouched");
+
+    unregister_run("test-run-a");
+    unregister_run("test-run-b");
+  }
+
+  /// A fresh run always starts uncancelled (the old global flag had to be
+  /// cleared manually, which could wipe another tab's cancel).
+  #[test]
+  fn a_new_run_starts_uncancelled() {
+    let flag = register_run("test-run-fresh");
+    assert!(!flag.load(Ordering::SeqCst));
+    unregister_run("test-run-fresh");
+  }
+
+  #[test]
+  fn unregister_run_drops_the_entry() {
+    register_run("test-run-c");
+    assert!(run_flags().lock().unwrap().contains_key("test-run-c"));
+
+    unregister_run("test-run-c");
+    assert!(!run_flags().lock().unwrap().contains_key("test-run-c"));
+  }
+
+  /// The RAII guard must unbind on every exit path, including early returns.
+  #[test]
+  fn run_guard_unbinds_on_drop() {
+    {
+      let _flag = register_run("test-run-guard");
+      let _guard = RunGuard("test-run-guard".to_string());
+      assert!(run_flags().lock().unwrap().contains_key("test-run-guard"));
+    }
+    assert!(!run_flags().lock().unwrap().contains_key("test-run-guard"));
+  }
+
+  /// Cancelling a run that already finished is a silent no-op, not a panic.
+  #[test]
+  fn cancel_unknown_run_is_a_noop() {
+    cancel_pipeline("test-run-missing".to_string());
+  }
+
+  /// Design 028 §4.4: each run gets its own spill directory, removed on drop.
+  #[test]
+  fn temp_dir_is_created_and_removed_on_drop() {
+    let path;
+    {
+      let dir = TempDir::create("EasyCsv_test_spill_dir_guard").expect("create");
+      path = dir.path().to_path_buf();
+      assert!(path.is_dir(), "spill directory must exist while held");
+    }
+    assert!(!path.exists(), "spill directory must be gone after drop");
+  }
+
+  /// Run ids reach us from the frontend, so they are sanitized before being
+  /// used inside a path.
+  #[test]
+  fn sanitize_run_id_keeps_only_safe_characters() {
+    assert_eq!(sanitize_run_id("tab-1_1727-abc"), "tab-1_1727-abc");
+    assert_eq!(sanitize_run_id("tab/1:2"), "tab_1_2");
+  }
 }

@@ -26,10 +26,6 @@ export const zhOnboarding = {
   onboardingPanelHint:
     "选中第一个操作后, 它会直接对输入数据生效(自成一条分支) - 不需要先连线",
 
-  // 置灰的「执行」补解释
-  onboardingExecuteNeedsStep: "先添加至少一个步骤",
-  onboardingExecuteHint: "Alt+C 打开命令面板",
-
   // 手势提示卡
   onboardingGestureTitle: "画布手势",
   onboardingGestureCollapse: "收起",

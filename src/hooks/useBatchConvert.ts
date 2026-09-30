@@ -1,31 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
 import { readDir } from "@tauri-apps/plugin-fs";
+import type { RunContext } from "@/types/execution";
 
-interface BatchConvertHooksProps {
-  defaultDelimiter: string;
-  addLog: (
-    type: "info" | "success" | "warning" | "error",
-    message: string,
-  ) => void;
-  setBranchProgress: React.Dispatch<
-    React.SetStateAction<{
-      current: number;
-      total: number;
-      name: string;
-      status: "executing" | "completed" | "error";
-    } | null>
-  >;
-  getCurrentTab: () => { inputFile?: string };
-  /** Called before each iteration; breaking out of the loop when true */
-  isCancelRequested?: () => boolean;
-}
-
-export function useBatchConvert({
-  defaultDelimiter,
-  addLog,
-  setBranchProgress,
-  isCancelRequested = () => false,
-}: BatchConvertHooksProps) {
+/**
+ * Batch format conversion. Takes a `RunContext` at call time so the loop uses
+ * the run's own tab / delimiter / cancel flag instead of "the current tab"
+ * (design 028 §5.2). Logging goes through `ctx.log` (tagged with the tab).
+ */
+export function useBatchConvert() {
   const globToRegex = (pattern: string): RegExp => {
     const regexStr = pattern
       .replace(/\./g, "\\.")
@@ -35,6 +17,7 @@ export function useBatchConvert({
   };
 
   const collectFiles = async (
+    ctx: RunContext,
     sourcePath: string,
     pattern: string,
     recursive: boolean,
@@ -48,14 +31,14 @@ export function useBatchConvert({
         for (const entry of entries) {
           const fullPath = `${dirPath}/${entry.name}`;
           if (entry.isDirectory && recursive) {
-            const subFiles = await collectFiles(fullPath, pattern, recursive);
+            const subFiles = await collectFiles(ctx, fullPath, pattern, recursive);
             files.push(...subFiles);
           } else if (!entry.isDirectory && regex.test(entry.name || "")) {
             files.push(fullPath);
           }
         }
       } catch (error) {
-        addLog("error", `Failed to read directory: ${dirPath} - ${error}`);
+        ctx.log("error", `Failed to read directory: ${dirPath} - ${error}`);
       }
     };
 
@@ -82,6 +65,7 @@ export function useBatchConvert({
   };
 
   const executeBatchConvert = async (
+    ctx: RunContext,
     batchFromParams: Record<string, any>,
     batchToParams: Record<string, any>,
   ) => {
@@ -108,16 +92,16 @@ export function useBatchConvert({
       } else {
         // It's a directory, collect files from it
         try {
-          const dirFiles = await collectFiles(trimmed, pattern, recursive);
+          const dirFiles = await collectFiles(ctx, trimmed, pattern, recursive);
           files.push(...dirFiles);
         } catch {
-          addLog("warning", `Cannot read directory: ${trimmed}`);
+          ctx.log("warning", `Cannot read directory: ${trimmed}`);
         }
       }
     }
 
     if (files.length === 0) {
-      addLog("warning", "No files found to convert");
+      ctx.log("warning", "No files found to convert");
       return;
     }
 
@@ -126,15 +110,15 @@ export function useBatchConvert({
 
     for (let i = 0; i < files.length; i++) {
       // Honor a pending cancel request between iterations
-      if (isCancelRequested()) {
-        addLog("warning", `Batch conversion cancelled after ${i} file(s)`);
+      if (ctx.isCancelled()) {
+        ctx.log("warning", `Batch conversion cancelled after ${i} file(s)`);
         break;
       }
       const file = files[i];
       const displayName = getBaseName(file);
 
-      addLog("info", `Processing ${i + 1}/${files.length}: ${displayName}`);
-      setBranchProgress({
+      ctx.log("info", `Processing ${i + 1}/${files.length}: ${displayName}`);
+      ctx.onProgress({
         current: i + 1,
         total: files.length,
         name: `Converting: ${displayName}`,
@@ -202,11 +186,11 @@ export function useBatchConvert({
         if (sourceIsCsv && targetIsCsv) {
           // csv -> csv: no conversion needed, just copy
           // This shouldn't happen in practice, but handle gracefully
-          addLog(
+          ctx.log(
             "warning",
             "Source and target are both CSV, no conversion needed",
           );
-          setBranchProgress({
+          ctx.onProgress({
             current: i + 1,
             total: files.length,
             name: `Converting: ${displayName}`,
@@ -278,10 +262,11 @@ export function useBatchConvert({
         const result = await invoke<any>("execute_xan_pipeline", {
           commands,
           inputFile: file,
-          defaultDelimiter,
+          runId: ctx.runId,
+          defaultDelimiter: ctx.delimiter,
         });
 
-        setBranchProgress({
+        ctx.onProgress({
           current: i + 1,
           total: files.length,
           name: `Converting: ${displayName}`,
@@ -291,12 +276,12 @@ export function useBatchConvert({
         if (result.success) {
           successCount++;
         } else {
-          addLog("error", `${displayName} failed: ${result.error}`);
+          ctx.log("error", `${displayName} failed: ${result.error}`);
           failCount++;
         }
       } catch (error) {
-        addLog("error", `${displayName} error: ${error}`);
-        setBranchProgress({
+        ctx.log("error", `${displayName} error: ${error}`);
+        ctx.onProgress({
           current: i + 1,
           total: files.length,
           name: `Converting: ${displayName}`,
@@ -307,7 +292,7 @@ export function useBatchConvert({
     }
 
     const summary = `Batch conversion completed: ${successCount} success, ${failCount} failed`;
-    addLog("success", summary);
+    ctx.log("success", summary);
   };
 
   return {

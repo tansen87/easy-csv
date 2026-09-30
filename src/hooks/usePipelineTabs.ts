@@ -54,6 +54,12 @@ export function usePipelineTabs({
     return getCurrentTab().pipeline;
   }, [getCurrentTab]);
 
+  /** Resolve a tab by id — used by the execute menu ("run that tab"). */
+  const getTabById = useCallback(
+    (tabId: string) => tabs.find((tab) => tab.id === tabId),
+    [tabs],
+  );
+
   /** Keep "what you see is what runs" (design 018). Pure impl in execution/. */
   const resolveRunDelimiterForTab = useCallback(
     () => resolveRunDelimiter(getCurrentTab(), defaultDelimiter),
@@ -155,6 +161,7 @@ export function usePipelineTabs({
   return {
     getCurrentTab,
     getCurrentPipeline,
+    getTabById,
     resolveRunDelimiter: resolveRunDelimiterForTab,
     updateTabPipeline,
     addNewTab,

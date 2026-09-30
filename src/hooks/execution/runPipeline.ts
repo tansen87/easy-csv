@@ -1,10 +1,9 @@
-import { invoke } from "@tauri-apps/api/core";
 import type {
   ExecutionHistoryInput,
   ExecutionHistoryStatus,
   PipelineStep,
 } from "@/types/xan";
-import type { PendingRun, ResultPreview } from "@/types/execution";
+import type { PendingRun, ResultPreview, RunContext } from "@/types/execution";
 import type { RunPipelineDeps } from "@/hooks/execution/runPipelineDeps";
 import { buildExecutionBranches } from "@/hooks/execution/buildBranches";
 import { executeSingleBranch } from "@/hooks/execution/executeBranch";
@@ -21,41 +20,25 @@ import {
  * (stored placeholders and the tab pipeline stay untouched, F3), split the
  * graph into branches, run each branch (normal pipeline / batch / chart),
  * then finish with previews, lineage, history and progress teardown.
+ *
+ * Everything that used to be addressed by `selectedTabId` / a global
+ * `isExecuting` now goes through `ctx` (runId + tabId), so concurrent tabs
+ * never write into each other (design 028 §5.2).
  */
 export async function runPipeline(
   pending: PendingRun,
   resolveValues: Record<string, string>,
   opts: { force?: boolean } | undefined,
+  ctx: RunContext,
   deps: RunPipelineDeps,
 ): Promise<void> {
-  const {
-    currentPipeline,
-    currentTab,
-    edges,
-    inputFile,
-    outputPath,
-    executableSteps,
-  } = pending;
-  const {
-    setTabs,
-    selectedTabId,
-    addLog,
-    showToast,
-    labels,
-    setIsExecuting,
-    setShowLogPanel,
-    setShowProgressBar,
-    setBranchProgress,
-    progressHideTimerRef,
-    setOverwriteConfirm,
-  } = deps;
+  const { currentPipeline, currentTab, edges, outputPath, executableSteps } =
+    pending;
+  const { showToast, labels, setShowLogPanel } = deps;
 
   // Resolve `{{var}}` placeholders on a deep clone; stored placeholders and
   // the tab pipeline stay untouched (F3).
   const steps = resolveStepPlaceholders(executableSteps, resolveValues);
-
-  // A fresh run starts with no pending frontend cancel request.
-  deps.resetCancelRequested();
 
   // Guard before any executing side effects:
   //  - An existing cycle in the graph must surface as a readable
@@ -68,44 +51,40 @@ export async function runPipeline(
   } catch (error) {
     const cycleErr = error as Error & { cycleNodeIds?: string[] };
     const chain = cycleErr.message.replace(/^cycle: /, "");
-    addLog("error", `${labels.cycleDetected}: ${chain}`);
+    ctx.log("error", `${labels.cycleDetected}: ${chain}`);
     showToast(
       cycleErr.cycleNodeIds ? `${labels.cycleDetected}: ${chain}` : `${error}`,
       "error",
     );
     if (cycleErr.cycleNodeIds?.length) {
-      setTabs((prev) =>
-        prev.map((tab) =>
-          tab.id === selectedTabId
-            ? {
-                ...tab,
-                pipeline: tab.pipeline.map((step) =>
-                  cycleErr.cycleNodeIds!.includes(step.id)
-                    ? { ...step, error: labels.cycleDetected }
-                    : step,
-                ),
-              }
-            : tab,
+      const cycleIds = cycleErr.cycleNodeIds;
+      deps.updateTab(ctx.tabId, (tab) => ({
+        ...tab,
+        pipeline: tab.pipeline.map((step) =>
+          cycleIds.includes(step.id)
+            ? { ...step, error: labels.cycleDetected }
+            : step,
         ),
-      );
+      }));
     }
+    deps.finishRun(ctx.runId, "error");
     return;
   }
 
   if (branches.length > 1 && outputPath && !opts?.force) {
-    deps.stashPendingRunValues(resolveValues);
-    setOverwriteConfirm({ branchCount: branches.length, outputPath });
+    // Parked until the user answers: give the slot back meanwhile (§7.1).
+    deps.releaseRun(ctx.runId);
+    deps.stashPendingRunValues(ctx.runId, resolveValues);
+    deps.requestOverwritePrompt(ctx.runId, {
+      branchCount: branches.length,
+      outputPath,
+    });
+    // Stays "preparing": the confirmed re-run resumes this same session.
     return;
   }
 
-  setIsExecuting(true);
+  deps.updateRun(ctx.runId, { state: "running", showProgress: true });
   setShowLogPanel(true);
-  setShowProgressBar(true);
-
-  if (progressHideTimerRef.current) {
-    clearTimeout(progressHideTimerRef.current);
-    progressHideTimerRef.current = null;
-  }
 
   const runStartedAt = Date.now();
   // Hoisted so the finally block can determine the final status.
@@ -121,22 +100,15 @@ export async function runPipeline(
   }[] = [];
 
   try {
-    await invoke("set_pipeline_cancelled", { cancel: false });
-    deps.setResultPreview([]);
+    deps.setTabResultPreview(ctx.tabId, []);
 
     // Clear any previous step execution errors so stale errors don't remain
-    setTabs((prev) =>
-      prev.map((tab) =>
-        tab.id === selectedTabId
-          ? {
-              ...tab,
-              pipeline: tab.pipeline.map((step) =>
-                step.error ? { ...step, error: undefined } : step,
-              ),
-            }
-          : tab,
+    deps.updateTab(ctx.tabId, (tab) => ({
+      ...tab,
+      pipeline: tab.pipeline.map((step) =>
+        step.error ? { ...step, error: undefined } : step,
       ),
-    );
+    }));
 
     // Accumulate per-step execution errors to display on the nodes
     const accumulatedErrors: Record<string, string> = {};
@@ -146,21 +118,20 @@ export async function runPipeline(
       if (branchSteps.length === 0) continue;
 
       const result = await executeSingleBranch({
+        ctx,
         branchSteps,
         index: i,
         total: branches.length,
-        inputFile,
         outputPath,
         currentTab,
         deps,
-        onBranchProgress: setBranchProgress,
         markFailed: () => {
           pipelineFailed = true;
         },
       });
 
       if (result.cancelled) {
-        addLog("warning", "Execution cancelled by user");
+        ctx.log("warning", "Execution cancelled by user");
         pipelineFailed = true;
         wasCancelled = true;
         break;
@@ -208,7 +179,7 @@ export async function runPipeline(
         }
       }
     });
-    deps.setResultPreview(previews);
+    deps.setTabResultPreview(ctx.tabId, previews);
 
     if (deps.trackLineage && !wasCancelled) {
       const headers = currentTab.headers || [];
@@ -218,27 +189,19 @@ export async function runPipeline(
 
     // Apply per-step execution errors so they render on the nodes
     if (Object.keys(accumulatedErrors).length > 0) {
-      setTabs((prev) =>
-        prev.map((tab) =>
-          tab.id === selectedTabId
-            ? {
-                ...tab,
-                pipeline: tab.pipeline.map((step) => {
-                  const err = accumulatedErrors[step.id];
-                  if (err !== undefined) {
-                    return { ...step, error: err };
-                  }
-                  return step;
-                }),
-              }
-            : tab,
-        ),
-      );
+      const errors = accumulatedErrors;
+      deps.updateTab(ctx.tabId, (tab) => ({
+        ...tab,
+        pipeline: tab.pipeline.map((step) => {
+          const err = errors[step.id];
+          return err !== undefined ? { ...step, error: err } : step;
+        }),
+      }));
     }
 
     const successCount = allResults.filter((r) => r.success).length;
     if (successCount === branches.length) {
-      addLog(
+      ctx.log(
         "success",
         `All ${branches.length} branch(es) executed successfully`,
       );
@@ -246,15 +209,13 @@ export async function runPipeline(
       try {
         await deps.saveVersion(`auto-generated`);
       } catch (versionError) {
-        addLog("warning", `Failed to auto-save version: ${versionError}`);
+        ctx.log("warning", `Failed to auto-save version: ${versionError}`);
       }
     }
   } catch (error) {
     executionError = String(error);
-    addLog("error", `${error}`);
+    ctx.log("error", `${error}`);
   } finally {
-    setIsExecuting(false);
-
     const status: ExecutionHistoryStatus = wasCancelled
       ? "cancelled"
       : pipelineFailed || executionError
@@ -287,13 +248,13 @@ export async function runPipeline(
       deps
         .saveExecutionHistory(entry)
         .catch((err) =>
-          addLog("warning", `Failed to save execution history: ${err}`),
+          ctx.log("warning", `Failed to save execution history: ${err}`),
         );
     }
 
-    progressHideTimerRef.current = setTimeout(() => {
-      setShowProgressBar(false);
-      setBranchProgress(null);
-    }, 5000);
+    deps.finishRun(
+      ctx.runId,
+      wasCancelled ? "cancelled" : pipelineFailed || executionError ? "error" : "done",
+    );
   }
 }

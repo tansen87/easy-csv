@@ -28,10 +28,6 @@ export const enOnboarding = {
   onboardingPanelHint:
     "Your first operation applies straight to the input data (its own branch) — no need to connect anything first.",
 
-  // Explanation for the disabled Execute button
-  onboardingExecuteNeedsStep: "Add at least one step first",
-  onboardingExecuteHint: "Alt+C opens the command panel",
-
   // Gesture card
   onboardingGestureTitle: "Canvas gestures",
   onboardingGestureCollapse: "Collapse",

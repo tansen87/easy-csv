@@ -2,10 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { readFile } from "@tauri-apps/plugin-fs";
 import type { ChartConfig, PipelineStep, PipelineTab } from "@/types/xan";
 import type { BatchFilterConfig } from "@/types/xan";
-import type {
-  BranchProgressState,
-  RunPipelineDeps,
-} from "@/hooks/execution/runPipelineDeps";
+import type { RunContext } from "@/types/execution";
+import type { RunPipelineDeps } from "@/hooks/execution/runPipelineDeps";
 import { MAX_OUTPUT_BYTES } from "@/hooks/execution/runPipelineDeps";
 import { serializeStepParams } from "@/hooks/execution/serializeStepParams";
 import { processChartData } from "@/hooks/charts/processChartData";
@@ -20,14 +18,14 @@ interface BranchOutcome {
 }
 
 interface ExecuteBranchArgs {
+  /** Per-run context: tabId/runId/delimiter never drift when the user switches tabs. */
+  ctx: RunContext;
   branchSteps: PipelineStep[];
   index: number;
   total: number;
-  inputFile: string;
   outputPath: string;
   currentTab: PipelineTab;
   deps: RunPipelineDeps;
-  onBranchProgress: (value: BranchProgressState | null) => void;
   markFailed: () => void;
 }
 
@@ -37,26 +35,24 @@ interface ExecuteBranchArgs {
  * or a plain xan pipeline with the output param appended.
  */
 export async function executeSingleBranch({
+  ctx,
   branchSteps,
   index,
   total,
-  inputFile,
   outputPath,
   currentTab,
   deps,
-  onBranchProgress,
   markFailed,
 }: ExecuteBranchArgs): Promise<BranchOutcome> {
-  const { addLog, resolveRunDelimiter } = deps;
   if (branchSteps.length === 0) {
     return { success: true, branchStepNames: [] };
   }
 
   const branchStepNames = branchSteps.map((s) => s.alias || s.command.name);
   const branchName = branchStepNames.join(" -> ");
-  addLog("info", `Executing branch ${index + 1}/${total}: ${branchName}`);
+  ctx.log("info", `Executing branch ${index + 1}/${total}: ${branchName}`);
 
-  onBranchProgress({
+  ctx.onProgress({
     current: index + 1,
     total,
     name: branchName,
@@ -64,7 +60,7 @@ export async function executeSingleBranch({
   });
 
   const failBranch = (error: string): BranchOutcome => {
-    onBranchProgress({
+    ctx.onProgress({
       current: index + 1,
       total,
       name: branchName,
@@ -96,6 +92,7 @@ export async function executeSingleBranch({
     const batchFromStep = branchSteps[batchFromIndex];
     const batchToStep = branchSteps[batchToIndex];
     await deps.executeBatchConvert(
+      ctx,
       batchFromStep.parameters,
       batchToStep.parameters,
     );
@@ -115,7 +112,7 @@ export async function executeSingleBranch({
     // Execute pre-batch steps as pipeline to get intermediate input
     let preBatchOutput: string | null = null;
     if (preBatchSteps.length > 0) {
-      addLog(
+      ctx.log(
         "info",
         `Executing ${preBatchSteps.length} step(s) before batch filter...`,
       );
@@ -127,17 +124,18 @@ export async function executeSingleBranch({
 
       const preResult = await invoke<any>("execute_xan_pipeline", {
         commands: preCommands,
-        inputFile,
-        defaultDelimiter: resolveRunDelimiter(),
+        inputFile: ctx.inputFile,
+        runId: ctx.runId,
+        defaultDelimiter: ctx.delimiter,
         maxOutputBytes: MAX_OUTPUT_BYTES,
       });
 
       if (!preResult.success) {
-        addLog("error", `Pre-batch steps failed: ${preResult.error}`);
+        ctx.log("error", `Pre-batch steps failed: ${preResult.error}`);
         result = preResult;
       } else {
         preBatchOutput = preResult.output || "";
-        addLog(
+        ctx.log(
           "info",
           `Pre-batch steps completed, using result as input for batch filter`,
         );
@@ -161,16 +159,16 @@ export async function executeSingleBranch({
 
       // Execute batch filter: use pre-batch output data directly if available
       if (preBatchOutput !== null) {
-        await deps.executeBatchFilterWithData(bfConfig, preBatchOutput);
+        await deps.executeBatchFilterWithData(ctx, bfConfig, preBatchOutput);
       } else {
-        await deps.executeBatchFilterDirect(bfConfig, inputFile);
+        await deps.executeBatchFilterDirect(ctx, bfConfig, ctx.inputFile);
       }
       result = { success: true, output: "" };
     }
   } else if (branchSteps.findIndex((s) => s.command.id === "chart") >= 0) {
     result = await runChartBranch({
+      ctx,
       branchSteps,
-      inputFile,
       currentTab,
       deps,
     });
@@ -205,16 +203,17 @@ export async function executeSingleBranch({
 
     result = await invoke<any>("execute_xan_pipeline", {
       commands,
-      inputFile,
+      inputFile: ctx.inputFile,
+      runId: ctx.runId,
       // The chosen table of a `.duckdb` input; null otherwise.
       inputTable: currentTab?.sourceTable ?? null,
-      defaultDelimiter: resolveRunDelimiter(),
+      defaultDelimiter: ctx.delimiter,
       maxOutputBytes: MAX_OUTPUT_BYTES,
     });
   }
 
   if (result?.cancelled) {
-    onBranchProgress({
+    ctx.onProgress({
       current: index + 1,
       total,
       name: branchName,
@@ -224,7 +223,7 @@ export async function executeSingleBranch({
     return { ...result, cancelled: true, branchStepNames };
   }
 
-  onBranchProgress({
+  ctx.onProgress({
     current: index + 1,
     total,
     name: branchName,
@@ -234,18 +233,18 @@ export async function executeSingleBranch({
   if (result.success) {
     if (result.output) {
       const output = (result.output as string).trimStart().trimEnd();
-      addLog("success", `${output}`);
+      ctx.log("success", `${output}`);
     } else {
-      addLog(
+      ctx.log(
         "info",
         `Branch ${index + 1} completed successfully with no output`,
       );
     }
   } else {
     if (result.error) {
-      addLog("error", `${result.error}`);
+      ctx.log("error", `${result.error}`);
     } else {
-      addLog("error", `Branch ${index + 1} failed with no error message`);
+      ctx.log("error", `Branch ${index + 1} failed with no error message`);
     }
   }
 
@@ -259,20 +258,19 @@ export async function executeSingleBranch({
 }
 
 interface ChartBranchArgs {
+  ctx: RunContext;
   branchSteps: PipelineStep[];
-  inputFile: string;
   currentTab: PipelineTab;
   deps: RunPipelineDeps;
 }
 
 /** `chart` command: run preceding steps (or read the raw input) and render the chart in the frontend with recharts. */
 async function runChartBranch({
+  ctx,
   branchSteps,
-  inputFile,
   currentTab,
   deps,
 }: ChartBranchArgs): Promise<any> {
-  const { resolveRunDelimiter } = deps;
   const chartStep = branchSteps.find((s) => s.command.id === "chart");
   if (!chartStep) {
     return { success: false, error: "Chart step not found" };
@@ -322,30 +320,34 @@ async function runChartBranch({
 
     const preResult = await invoke<any>("execute_xan_pipeline", {
       commands: preCommands,
-      inputFile,
-      defaultDelimiter: resolveRunDelimiter(),
+      inputFile: ctx.inputFile,
+      runId: ctx.runId,
+      defaultDelimiter: ctx.delimiter,
       maxOutputBytes: MAX_OUTPUT_BYTES,
     });
 
     if (preResult.success && preResult.output) {
       // Parse CSV output
-      parseCsvText(preResult.output as string, resolveRunDelimiter() || ",");
+      parseCsvText(preResult.output as string, ctx.delimiter || ",");
     }
   } else {
     // Use raw CSV data
-    if (inputFile) {
-      const csvContent = await readFile(inputFile);
+    if (ctx.inputFile) {
+      const csvContent = await readFile(ctx.inputFile);
       const text = new TextDecoder().decode(csvContent);
-      parseCsvText(text, resolveRunDelimiter() || ",");
+      parseCsvText(text, ctx.delimiter || ",");
     }
   }
 
   // Process data for chart
   const chartSeries = processChartData(headers, data, chartConfig);
 
-  deps.setChartConfig(chartConfig);
-  deps.setChartSeries(chartSeries);
-  deps.setChartHeaders(headers);
+  // Charts are per tab: another tab running a chart must not replace this one.
+  deps.setTabChart(ctx.tabId, {
+    config: chartConfig,
+    series: chartSeries,
+    headers,
+  });
   deps.setShowChartPanel(true);
 
   return {

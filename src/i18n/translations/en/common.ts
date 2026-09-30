@@ -30,6 +30,18 @@ export const enCommon = {
   importFlowFormats: ".xanflow files",
   starOnGitHub: "Star on GitHub",
   branchProgress: "Branch",
+  // Execute menu (design 028 §5.6)
+  runStateQueued: "Queued",
+  runStatePending: "Needs input",
+  runStateDone: "Done",
+  runStateFailed: "Failed",
+  cancelShort: "Cancel",
+  otherTabsRunning: "{count} other tab(s) running",
+  crossTabOverwriteTitle: "Another tab is writing this file?",
+  crossTabOverwriteMessage:
+    'Tab "{name}" is writing the same output file: {path}. Continuing will overwrite its result.',
+  logFilterCurrent: "Current tab only",
+  logFilterAll: "All",
   checkForUpdates: "Check for Updates",
   newVersionAvailable: "New version available",
   currentVersion: "Current version",
