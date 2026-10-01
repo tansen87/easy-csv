@@ -77,7 +77,7 @@ export interface LogEntry {
   timestamp: Date;
   type: "info" | "success" | "error" | "warning";
   message: string;
-  /** Tab this line came from; absent for app-level lines (design 028 §5.4). */
+  /** Tab this line came from; absent for app-level lines. */
   tabId?: string;
 }
 
@@ -116,7 +116,7 @@ export type DelimiterSource = "detected" | "forced" | "fallback" | "global";
 
 // --- batch filter -----------------------------------------------------------
 //
-// Moved here from the deleted `BatchFilterDialog` (design 019 §1.7). It is the
+// Moved here from the deleted `BatchFilterDialog`. It is the
 // runtime configuration of the `batch-filter` command — built by
 // MainMenuHooks from the command's parameters and consumed by
 // useBatchFilter — so it belongs with the command types, not with a dialog.
@@ -171,7 +171,7 @@ export interface CsvReadResult {
   columns: number;
 }
 
-/** Tabular input formats recognized by extension (design 024). */
+/** Tabular input formats recognized by extension. */
 export type TabularFormat = "csv" | "parquet" | "duckdb";
 
 /** Payload of the `read_tabular_file` command (superset of `CsvReadResult`). */
@@ -224,7 +224,7 @@ export interface PipelineTab {
   variables?: PipelineVariable[];
   /** Last-run values for variables, session-only. */
   runVariableValues?: Record<string, string>;
-  /** Input format of the opened file (design 024); absent for unknown types. */
+  /** Input format of the opened file; absent for unknown types. */
   inputFormat?: TabularFormat;
   /** Chosen table when the input is a `.duckdb` file. */
   sourceTable?: string;

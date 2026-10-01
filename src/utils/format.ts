@@ -14,8 +14,7 @@ export function formatElapsed(ms: number | undefined): string {
  * `"512 B"` / `"3.4 KB"` / `"12.0 MB"`.
  *
  * Hoisted out of `ExecutionHistoryDialog` so the update dialog can show
- * download progress with the same formatting (same move as `formatElapsed`,
- * see design 020).
+ * download progress with the same formatting (same move as `formatElapsed`).
  */
 export function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes < 0) return "";

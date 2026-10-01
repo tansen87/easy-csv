@@ -30,11 +30,11 @@ import { useLanguage } from "@/i18n";
 import { runPipeline } from "@/hooks/execution/runPipeline";
 import type { RunPipelineDeps } from "@/hooks/execution/runPipelineDeps";
 
-/** How long the progress pill keeps showing a finished run (design 027 parity). */
+/** How long the progress pill keeps showing a finished run. */
 const RUN_PILL_LINGER_MS = 5000;
 
 /**
- * Fallback parallelism limit (design 028 §7.1) used until settings are loaded.
+ * Fallback parallelism limit used until settings are loaded.
  * Everything beyond the limit waits in FIFO order and starts as slots free up —
  * one tab is one subprocess chain, so an unbounded number of tabs would spawn an
  * unbounded number of processes.
@@ -48,7 +48,7 @@ interface UseExecutionProps {
   /** Resolve a tab by id — used by "click a menu row to run that tab". */
   getTabById: (tabId: string) => PipelineTab | undefined;
   setSelectedTabId: (tabId: string) => void;
-  /** Parallel run limit from settings (design 028 §7.1). */
+  /** Parallel run limit from settings. */
   maxConcurrentRuns?: number;
   showToast: (
     message: string,
@@ -58,7 +58,7 @@ interface UseExecutionProps {
   setTabs: Dispatch<SetStateAction<PipelineTab[]>>;
   setShowLogPanel: (value: boolean) => void;
   setShowChartPanel: (value: boolean) => void;
-  /** Chart of one tab (design 028 §5.4). */
+  /** Chart of one tab. */
   setTabChart: (tabId: string, chart: TabChartState | null) => void;
   formatDateTime: (date: Date) => string;
   trackLineage?: (
@@ -69,7 +69,7 @@ interface UseExecutionProps {
     actualOutputRowCount?: number,
   ) => StepLineage[];
   saveVersion: (message?: string, tags?: string[]) => Promise<any>;
-  /** Persist one execution record after each run (F6). */
+  /** Persist one execution record after each run. */
   saveExecutionHistory?: (entry: ExecutionHistoryInput) => Promise<void>;
 }
 
@@ -81,7 +81,7 @@ type ActivePrompt =
 /**
  * Execution engine assembly.
  *
- * Every run is a `RunSession` keyed by its tab (design 028 §5.1): one tab holds
+ * Every run is a `RunSession` keyed by its tab: one tab holds
  * at most one session, different tabs run concurrently, and a cancel only ever
  * touches the run it was issued for. All side effects stay behind
  * `RunPipelineDeps`, so `runPipeline` itself remains framework-free.
@@ -124,7 +124,7 @@ export function useExecution({
   /** Values stashed at the S6 overwrite gate for the confirmed re-run. */
   const pendingValuesRef = useRef<Map<RunId, Record<string, string>>>(new Map());
 
-  /** Runs holding a concurrency slot, and the FIFO waiting for one (§7.1). */
+  /** Runs holding a concurrency slot, and the FIFO waiting for one. */
   const runLimit = Math.max(1, maxConcurrentRuns);
   const activeRunsRef = useRef<Set<RunId>>(new Set());
   const runQueueRef = useRef<
@@ -140,7 +140,7 @@ export function useExecution({
     Record<string, ResultPreview[]>
   >({});
 
-  // ── Dialogs: one visible slot, extra requests wait their turn ─────────────
+  // Dialogs: one visible slot, extra requests wait their turn
   const [activePrompt, setActivePrompt] = useState<ActivePrompt | null>(null);
   const promptQueueRef = useRef<ActivePrompt[]>([]);
   const promptOccupiedRef = useRef(false);
@@ -160,7 +160,7 @@ export function useExecution({
     setActivePrompt(next);
   }, []);
 
-  // ── Registry helpers ─────────────────────────────────────────────────────
+  // Registry helpers
   const updateRun = useCallback((runId: RunId, patch: Partial<RunSession>) => {
     setRuns((prev) => {
       const entry = Object.entries(prev).find(([, s]) => s.runId === runId);
@@ -198,7 +198,7 @@ export function useExecution({
   const finishRun = useCallback(
     (runId: RunId, state: RunState) => {
       // Free the concurrency slot first: the drain effect picks up the next
-      // queued run as soon as this render lands (design 028 §7.1).
+      // queued run as soon as this render lands.
       activeRunsRef.current.delete(runId);
       updateRun(runId, { state });
       const existing = timersRef.current.get(runId);
@@ -242,7 +242,7 @@ export function useExecution({
     [],
   );
 
-  // ── Batch engines (context is passed per call, never captured) ────────────
+  // Batch engines (context is passed per call, never captured)
   const { executeBatchFilterDirect, executeBatchFilterWithData } =
     useBatchFilter();
   const { executeBatchConvert } = useBatchConvert();
@@ -256,7 +256,7 @@ export function useExecution({
       isCancelled: () =>
         runFlagsRef.current.get(session.runId)?.cancelled ?? false,
       onProgress: (value) => updateRun(session.runId, { branch: value }),
-      // Every line this run produces is tagged with its tab (design 028 §5.4).
+      // Every line this run produces is tagged with its tab.
       log: (type, message) => addLog(type, message, session.tabId),
     }),
     [addLog, updateRun],
@@ -328,8 +328,8 @@ export function useExecution({
   );
 
   /**
-   * Take a slot or wait in line (design 028 §7.1). Queued runs keep their
-   * session so the tab badge / menu row can show 排队中, and are started by the
+   * Take a slot or wait in line. Queued runs keep their
+   * session so the tab badge / menu row can show Queuing (排队中), and are started by the
    * drain effect below as soon as a slot frees up.
    */
   const scheduleRun = useCallback(
@@ -361,7 +361,7 @@ export function useExecution({
 
   /**
    * Last gate before a run takes a slot: if another live tab is already writing
-   * the same output file, ask first (design 028 §7.3).
+   * the same output file, ask first.
    */
   const proceedToSchedule = useCallback(
     (
@@ -590,7 +590,7 @@ export function useExecution({
     [addLog, cancelRun, dropRun, setTabChart],
   );
 
-  // ── Dialog handlers ──────────────────────────────────────────────────────
+  // Dialog handlers
   const confirmVariables = useCallback(
     (items: { name: string; value: string }[]) => {
       const active = activePrompt;
@@ -650,7 +650,7 @@ export function useExecution({
     if (active) dropRun(active.runId);
   }, [activePrompt, closePrompt, dropRun]);
 
-  // ── Derived views ────────────────────────────────────────────────────────
+  // Derived views
   /** Only the owning tab renders its results. */
   const resultPreview = useMemo(
     () => previewsByTab[selectedTabId] ?? [],

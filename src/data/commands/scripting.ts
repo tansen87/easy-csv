@@ -1,6 +1,6 @@
 import { XanCommand } from "@/types/xan";
 
-/** Scripting (design 019 §4.5). */
+/** Scripting. */
 export const scriptingCommands: XanCommand[] = [
 {
     id: "run",

@@ -55,7 +55,7 @@ export function useSaveIntermediate({
         return;
       }
 
-      // Resolve {{var}} placeholders with declared defaults (F3).
+      // Resolve {{var}} placeholders with declared defaults.
       const values: Record<string, string> = {};
       for (const v of currentTab.variables || []) {
         values[v.name] = v.defaultValue ?? "";
@@ -84,7 +84,7 @@ export function useSaveIntermediate({
         const result = await invoke<any>("execute_xan_pipeline", {
           commands,
           inputFile,
-          // Not a tracked run — a throwaway id keeps the backend contract happy.
+          // Not a tracked run - a throwaway id keeps the backend contract happy.
           runId: `save-intermediate-${Date.now()}`,
           defaultDelimiter: resolveRunDelimiter(),
         });

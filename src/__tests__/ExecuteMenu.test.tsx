@@ -91,6 +91,7 @@ function baseProps(overrides: Record<string, unknown> = {}) {
     onToggleAIPanel: vi.fn(),
     showVariablePanel: false,
     onToggleVariablePanel: vi.fn(),
+    showSettingsDialog: false,
     ...overrides,
   };
 }
@@ -141,9 +142,7 @@ describe("execute menu (design 028 §5.6)", () => {
     const menu = container.querySelector('[role="menu"]')!;
     expect(menu).toBeTruthy();
 
-    const order = rows(container).map((row) =>
-      row.getAttribute("data-tab-id"),
-    );
+    const order = rows(container).map((row) => row.getAttribute("data-tab-id"));
     expect(order).toEqual(["a", "b", "c"]);
 
     // The divider must sit immediately after the current tab's row.
@@ -242,5 +241,176 @@ describe("execute menu (design 028 §5.6)", () => {
     expect(container.querySelector('[role="menu"]')).toBeTruthy();
     // The sibling menu is disarmed so only one menu is ever open.
     expect(props.setActiveMenu).toHaveBeenCalledWith(null);
+  });
+});
+
+describe("update check feedback on the Help button (design 022 §5.4)", () => {
+  /**
+   * The Help button is the other `aria-haspopup="menu"` trigger, so it is
+   * addressed through its own `data-checking` marker.
+   */
+  const helpButton = (container: HTMLElement) =>
+    container.querySelector(
+      '[aria-haspopup="menu"][data-checking]',
+    ) as HTMLButtonElement;
+
+  it("runs the shared bottom line while a check is in flight", () => {
+    const { container } = renderMenu({ isCheckingUpdate: true });
+    const help = helpButton(container);
+
+    expect(help).toBeTruthy();
+    expect(help.getAttribute("data-checking")).toBe("true");
+    // Same 2px indeterminate line as the execute button runs.
+    expect(help.className).toContain("update-busy");
+    // `::after` needs a positioning context and must not spill past the button.
+    expect(help.className).toContain("relative");
+    expect(help.className).toContain("overflow-hidden");
+  });
+
+  it("stays clickable while a check is in flight (a slow check must not lock Help away)", () => {
+    const { container, props } = renderMenu({ isCheckingUpdate: true });
+    const help = helpButton(container);
+
+    // The in-flight line is purely additive: the entry is never disabled and
+    // never dims to a non-interactive colour.
+    expect(help).not.toBeDisabled();
+    expect(help.className).not.toContain("cursor-not-allowed");
+    expect(help.className).not.toContain("text-muted-foreground/40");
+
+    // Clicking it still drives the menu (`activeMenu` is a controlled prop, so
+    // the assertion is on the callback rather than on local state).
+    fireEvent.click(help);
+    expect(props.setActiveMenu).toHaveBeenCalledWith("help");
+  });
+
+  it("keeps the Help menu reachable while a check is in flight", () => {
+    // `activeMenu` is owned by the caller, so render the open state directly:
+    // the menu must still hold both entries (Help Center + Check Update) while
+    // a check is running. Addressed by the `data-checking` trigger rather than
+    // by localized text so the assertion stays language-agnostic.
+    const { container } = renderMenu({
+      isCheckingUpdate: true,
+      activeMenu: "help",
+    });
+
+    const menu = container.querySelector('[role="menu"]');
+    expect(menu).toBeTruthy();
+    expect(Array.from(menu!.querySelectorAll('[role="menuitem"]')).length).toBe(
+      2,
+    );
+  });
+
+  it("carries no in-flight marker when idle", () => {
+    const { container } = renderMenu({ isCheckingUpdate: false });
+    const help = helpButton(container);
+
+    expect(help.getAttribute("data-checking")).toBe("false");
+    expect(help.className).not.toContain("update-busy");
+  });
+
+  it("keeps the check marker off the execute button, which stays `data-busy`", () => {
+    const { container } = renderMenu({ isCheckingUpdate: true });
+
+    // The execute button is still the only `data-busy` trigger — the update
+    // check must not be mistaken for a pipeline run.
+    const busy = container.querySelectorAll("[data-busy]");
+    expect(busy.length).toBe(1);
+    expect(busy[0].textContent).not.toContain("Help");
+    expect(helpButton(container).hasAttribute("data-busy")).toBe(false);
+  });
+});
+
+describe("settings entry in the toolbar", () => {
+  /** Located by its accessible name, since the label is no longer visible. */
+  const settingsButton = (container: HTMLElement) =>
+    container.querySelector(
+      'button[aria-label="Settings"]',
+    ) as HTMLButtonElement | null;
+
+  /** The 12px "open" bar rendered as a child span, if present. */
+  const underline = (button: HTMLButtonElement) =>
+    button.querySelector("span.rounded-full") as HTMLSpanElement | null;
+
+  it("is icon-only with an accessible name instead of a text label", () => {
+    const { container } = renderMenu();
+    const settings = settingsButton(container);
+
+    expect(settings).toBeTruthy();
+    // No visible text — the label lives on the icon's `aria-label`/tooltip.
+    expect(settings!.textContent).toBe("");
+    expect(settings!.querySelector("svg")).toBeTruthy();
+  });
+
+  it("sits last in the right-hand group, right of the AI toggle", () => {
+    const { container } = renderMenu();
+    const group = container.querySelector("button[aria-label='Settings']")!
+      .parentElement!.parentElement!;
+    const groupButtons = Array.from(group.querySelectorAll("button"));
+
+    // Order: command panel, log panel, AI, settings.
+    expect(groupButtons[groupButtons.length - 1]).toBe(
+      settingsButton(container),
+    );
+  });
+
+  it("opens settings when clicked", () => {
+    const { container, props } = renderMenu();
+    fireEvent.click(settingsButton(container)!);
+
+    expect(props.onShowSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("highlights while the settings dialog is open, like the panel toggles", () => {
+    const closed = renderMenu({ showSettingsDialog: false });
+    const closedClass = settingsButton(closed.container)!.className;
+    closed.unmount();
+
+    const open = renderMenu({ showSettingsDialog: true });
+    const settings = settingsButton(open.container)!;
+    const openClass = settings.className;
+
+    // `commandButtonClass(active)` swaps the hover style for the pressed look.
+    // Matched as a whole token, because `hover:bg-accent/60` also contains the
+    // substring "bg-accent".
+    const hasActiveBackground = (cls: string) =>
+      /(?:^|\s)bg-accent(?:\s|$)/.test(cls);
+
+    expect(hasActiveBackground(openClass)).toBe(true);
+    expect(openClass).not.toContain("hover:bg-accent/60");
+    expect(hasActiveBackground(closedClass)).toBe(false);
+    expect(closedClass).toContain("hover:bg-accent/60");
+    expect(settings.getAttribute("aria-expanded")).toBe("true");
+
+    // The 12px underline that marks a toggle as "open" rather than "hovered".
+    expect(underline(settings)).toBeTruthy();
+  });
+
+  it("carries the same open-state underline as the panel toggles", () => {
+    // All four right-hand buttons must agree: one 12px bar, same classes.
+    const { container } = renderMenu({
+      showSettingsDialog: true,
+      showCommandPanel: true,
+      showLogPanel: true,
+      showAIPanel: true,
+    });
+
+    const group = container.querySelector("button[aria-label='Settings']")!
+      .parentElement!.parentElement!;
+    const buttons = Array.from(group.querySelectorAll("button"));
+    expect(buttons.length).toBe(4);
+
+    const shapes = buttons.map((button) => {
+      const bar = underline(button);
+      return bar ? bar.className : null;
+    });
+
+    // Every button renders the indicator, and they are byte-identical classes.
+    expect(shapes.every((shape) => shape !== null)).toBe(true);
+    expect(new Set(shapes).size).toBe(1);
+  });
+
+  it("renders no underline while the settings dialog is closed", () => {
+    const { container } = renderMenu({ showSettingsDialog: false });
+    expect(underline(settingsButton(container)!)).toBeNull();
   });
 });

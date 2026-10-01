@@ -1,6 +1,6 @@
 import { XanCommand } from "@/types/xan";
 
-/** Split a CSV file into multiple (design 019 §4.5). */
+/** Split a CSV file into multiple. */
 export const partitionCommands: XanCommand[] = [
 {
     id: "split",

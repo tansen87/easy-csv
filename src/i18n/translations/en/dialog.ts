@@ -217,7 +217,7 @@ export const enDialog = {
   mergeExcelUnionWidened: "Union widening",
   mergeExcelUnionColumnNotInAll: "only in {present}/{total} sheet(s)",
   mergeExcelUnionNearDuplicate: "possibly the same column: {a} / {b}",
-  // DuckDB table picker (design 024)
+  // DuckDB table picker
   duckdbSelectTable: "Select Table",
   duckdbNoTables: "No tables found in this database",
   duckdbTableHint: "Choose the table to read from the DuckDB database",

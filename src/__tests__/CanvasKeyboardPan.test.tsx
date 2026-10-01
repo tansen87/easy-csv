@@ -359,7 +359,7 @@ describe("useCanvasKeyboardPan", () => {
       expect(screen.getByText("左键")).toBeTruthy();
     });
 
-    it("shows the ×2 badge when Shift is held", () => {
+    it("shows the x2 badge when Shift is held", () => {
       render(
         <KeyIndicatorOverlay
           keys={["w"]}
@@ -369,7 +369,7 @@ describe("useCanvasKeyboardPan", () => {
           labels={labels}
         />,
       );
-      expect(screen.getByText("×2")).toBeTruthy();
+      expect(screen.getByText("x2")).toBeTruthy();
     });
 
     it("hides (mounts nothing) once keys, buttons and Space are all idle", () => {

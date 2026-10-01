@@ -1,6 +1,6 @@
 import { XanCommand } from "@/types/xan";
 
-/** Combine multiple CSV files (design 019 §4.5). */
+/** Combine multiple CSV files. */
 export const combineCommands: XanCommand[] = [
   {
     id: "cat",

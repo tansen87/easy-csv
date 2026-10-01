@@ -1866,6 +1866,7 @@ function AppContent() {
               isExecuting={isExecuting}
               isCheckingUpdate={updater.isChecking}
               hasUpdate={!!updater.updateInfo?.available}
+              showSettingsDialog={ui.showSettingsDialog}
               showLogErrorBadge={
                 !ui.showLogPanel && logs.some((l) => l.type === "error")
               }

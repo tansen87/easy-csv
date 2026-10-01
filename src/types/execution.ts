@@ -21,15 +21,15 @@ export interface OverwriteConfirm {
   branchCount: number;
   outputPath: string;
   /**
-   * `"branches"` = two branches of this run write the same file (S6);
-   * `"crossTab"` = another tab is already writing it (design 028 §7.3).
+   * `"branches"` = two branches of this run write the same file;
+   * `"crossTab"` = another tab is already writing it.
    */
   reason?: "branches" | "crossTab";
   /** Name of the other tab already writing the file (only for `crossTab`). */
   otherTabName?: string;
 }
 
-/** Parsed execution result shown as a canvas table node (F1). */
+/** Parsed execution result shown as a canvas table node. */
 export interface ResultPreview {
   id: string;
   label: string;
@@ -39,14 +39,14 @@ export interface ResultPreview {
   truncated: boolean;
 }
 
-/** One variable awaiting a runtime value before execution (F3). */
+/** One variable awaiting a runtime value before execution. */
 export interface VariablePromptItem {
   name: string;
   type: PipelineVariableType;
   value: string;
 }
 
-/** Dialog state opened when the pipeline references unassigned variables (F3). */
+/** Dialog state opened when the pipeline references unassigned variables. */
 export interface VariablePrompt {
   variables: VariablePromptItem[];
 }
@@ -74,7 +74,7 @@ export type RunId = string;
 export type RunState =
   /** Waiting on the variable prompt / overwrite gate. */
   | "preparing"
-  /** Waiting for a concurrency slot (design 028 §7.1). */
+  /** Waiting for a concurrency slot. */
   | "queued"
   | "running"
   | "done"
@@ -111,11 +111,11 @@ export interface RunContext {
   /** Per-run frontend cancel flag (the backend holds the matching one). */
   isCancelled: () => boolean;
   onProgress: (value: BranchProgressState | null) => void;
-  /** Append a log line already tagged with this run's tab (design 028 §5.4). */
+  /** Append a log line already tagged with this run's tab. */
   log: (type: LogEntry["type"], message: string) => void;
 }
 
-/** Chart produced by a `chart` branch, kept per tab (design 028 §5.4). */
+/** Chart produced by a `chart` branch, kept per tab. */
 export interface TabChartState {
   config: ChartConfig;
   series: ChartSeries[];

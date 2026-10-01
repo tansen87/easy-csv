@@ -57,10 +57,10 @@ interface SettingsTabContentProps {
   onDoubleClickFitViewChange: (value: boolean) => void;
   autoCheckUpdate: boolean;
   onAutoCheckUpdateChange: (value: boolean) => void;
-  /** Parallel run limit (design 028 §7.1); backend clamps to 1..=16. */
+  /** Parallel run limit; backend clamps to 1..=16. */
   maxConcurrentRuns: number;
   onMaxConcurrentRunsChange: (value: number) => void;
-  /** Clear the "intro seen" flag so the canvas guide shows again (design 027 §5). */
+  /** Clear the "intro seen" flag so the canvas guide shows again. */
   onResetOnboarding?: () => void;
   onSave: () => void;
   aiConfig: AIConfig;
@@ -168,7 +168,7 @@ export function SettingsTabContent({
           {activeTab === "general" && (
             <div className="space-y-6">
               {/* Delimiter: auto-detection master switch + delimiter, shared
-                  with the input node's badge (design 018 §3.9). */}
+                  with the input node's badge. */}
               <div className="w-1/3">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <SeparatorVertical className="h-4 w-4" />
@@ -203,7 +203,7 @@ export function SettingsTabContent({
                 </label>
               </div>
 
-              {/* Concurrent executions (design 028 §7.1) */}
+              {/* Concurrent executions */}
               <div>
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <Layers className="h-4 w-4" />

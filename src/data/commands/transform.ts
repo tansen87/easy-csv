@@ -1,6 +1,6 @@
 import { XanCommand } from "@/types/xan";
 
-/** Add, transform, drop and move columns (design 019 §4.5). */
+/** Add, transform, drop and move columns. */
 export const transformCommands: XanCommand[] = [
 {
     id: "select",

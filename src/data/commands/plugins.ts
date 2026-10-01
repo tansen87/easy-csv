@@ -1,6 +1,6 @@
 import { XanCommand } from "@/types/xan";
 
-/** Plugins (design 019 §4.5). */
+/** Plugins. */
 export const pluginsCommands: XanCommand[] = [
 {
     id: "pinyin",

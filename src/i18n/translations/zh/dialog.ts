@@ -206,7 +206,7 @@ export const zhDialog = {
   mergeExcelUnionWidened: "并集加宽",
   mergeExcelUnionColumnNotInAll: "仅出现在 {present}/{total} 个 sheet",
   mergeExcelUnionNearDuplicate: "疑似同一列: {a} / {b}",
-  // DuckDB 表选择(设计 024)
+  // DuckDB 表选择
   duckdbSelectTable: "选择表",
   duckdbNoTables: "该数据库中没有找到表",
   duckdbTableHint: "选择要从 DuckDB 数据库读取的表",

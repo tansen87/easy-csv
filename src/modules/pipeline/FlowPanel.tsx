@@ -86,8 +86,7 @@ interface FlowPanelProps {
   onStepRemove: (stepId: string | string[], extraEdgeIds?: string[]) => void;
   // Canvas context-menu entries. They report only *what* was clicked — the
   // column and, where relevant, the transform kind. Positioning is gone with
-  // the floating dialogs (design 019 §3.1) since every entry now opens the
-  // shared centered command dialog.
+  // the floating dialogs since every entry now opens the shared centered command dialog.
   onOpenFilterDialog: (col: number) => void;
   onOpenBatchFilter: () => void;
   onOpenPivotDialog: () => void;
@@ -237,7 +236,7 @@ export function FlowPanel({
   // gesture; "menu" opens the canvas context menu instead (paste, more later).
   const [rightClickMode, setRightClickMode] = useState<"cut" | "menu">("cut");
   // The mode toggle renders as a small dot by default and expands into the
-  // vertical bar when the mouse nears the right edge (D2 follow-up).
+  // vertical bar when the mouse nears the right edge.
   const [modeBarHovered, setModeBarHovered] = useState(false);
   const [canvasMenu, setCanvasMenu] = useState<{
     x: number;

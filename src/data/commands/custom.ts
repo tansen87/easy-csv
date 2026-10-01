@@ -1,6 +1,6 @@
 import { XanCommand } from "@/types/xan";
 
-/** Output + Batch method (design 019 §4.5). */
+/** Output + Batch method. */
 export const customCommands: XanCommand[] = [
   {
     id: "output",

@@ -195,11 +195,11 @@ export function CsvDiffDialog({
     if (entry.status === "equal") {
       const leftRange =
         entry.count > 1 && entry.left_line != null
-          ? `–${entry.left_line + entry.count - 1}`
+          ? `-${entry.left_line + entry.count - 1}`
           : "";
       const rightRange =
         entry.count > 1 && entry.right_line != null
-          ? `–${entry.right_line + entry.count - 1}`
+          ? `-${entry.right_line + entry.count - 1}`
           : "";
       return (
         <tr

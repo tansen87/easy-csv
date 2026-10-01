@@ -1,5 +1,5 @@
 /**
- * Pure logic for F6 execution history: stable pipeline snapshot hashing and
+ * Pure logic for execution history: stable pipeline snapshot hashing and
  * stdout → summary stats (rows/columns/bytes/preview). Never stores full
  * stdout, keeping each persisted record small.
  */

@@ -11,7 +11,7 @@ interface DuckdbTableDialogProps {
 }
 
 /**
- * `.duckdb` table picker (design 024): the backend needs a concrete table to
+ * `.duckdb` table picker: the backend needs a concrete table to
  * build the `input` relation, so opening a database with several tables asks
  * here. Single-table databases never reach this dialog (auto-selected).
  */

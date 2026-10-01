@@ -41,11 +41,11 @@ interface ChartPanelProps {
   series: ChartSeries[];
   isVisible: boolean;
   onClose: () => void;
-  /** Persisted docking state (D2). */
+  /** Persisted docking state. */
   dockState?: PanelDockState;
-  /** Report position/collapse changes for persistence (D2). */
+  /** Report position/collapse changes for persistence. */
   onDockChange?: (patch: Partial<PanelDockState>) => void;
-  /** Top-right stack offset for the collapsed capsule (D2). */
+  /** Top-right stack offset for the collapsed capsule. */
   capsuleY?: number;
 }
 

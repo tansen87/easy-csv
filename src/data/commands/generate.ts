@@ -1,6 +1,6 @@
 import { XanCommand } from "@/types/xan";
 
-/** Generate CSV files (design 019 §4.5). */
+/** Generate CSV files. */
 export const generateCommands: XanCommand[] = [
   {
     id: "range",

@@ -21,7 +21,7 @@ use crate::plugins::{self, PLATFORM_DIR};
 
 /// Where the catalog comes from, tried in order.
 ///
-/// Unlike design 022's updater `endpoints`, this list is safe to extend because
+/// Unlike updater `endpoints`, this list is safe to extend because
 /// the fallback here is written by us and triggers on *any* failure, timeouts
 /// included (see `fetch_catalog`). The GitHub endpoint is the authoritative one;
 /// jsDelivr mirrors the same file from `main`, which reaches mainland China

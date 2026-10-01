@@ -23,7 +23,7 @@ export function useUIState() {
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showChartPanel, setShowChartPanel] = useState(false);
   /**
-   * Chart of each tab (design 028 §5.4). Charts belong to the tab that produced
+   * Chart of each tab. Charts belong to the tab that produced
    * them, so a second tab running a `chart` branch cannot replace the first.
    */
   const [chartsByTab, setChartsByTab] = useState<Record<string, TabChartState>>(

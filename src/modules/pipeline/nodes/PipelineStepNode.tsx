@@ -275,8 +275,8 @@ export function PipelineStepNode({
 
   // `animate-node-enter` plays once when the node mounts, so a step that has
   // just joined the pipeline is *seen* arriving — whether the user added it
-  // with a command click or the sample pipeline revealed it step by step
-  // (design 027 §4.1). Nodes keep their identity across ordinary pipeline
+  // with a command click or the sample pipeline revealed it step by step.
+  // Nodes keep their identity across ordinary pipeline
   // edits, so this does not replay on re-layout.
   const cardClass = `w-[220px] transition-all duration-200 hover:shadow-lg group relative animate-node-enter ${
     selected

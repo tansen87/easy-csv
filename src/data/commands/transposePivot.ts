@@ -1,6 +1,6 @@
 import { XanCommand } from "@/types/xan";
 
-/** Transpose & pivot (design 019 §4.5). */
+/** Transpose & pivot. */
 export const transposePivotCommands: XanCommand[] = [
   {
     id: "transpose",

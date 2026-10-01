@@ -11,7 +11,7 @@ interface VariableValuesDialogProps {
 }
 
 /** One-shot collection dialog shown before execution when a pipeline
- *  references unassigned variables (F3). Values are runtime-only. */
+ *  references unassigned variables. Values are runtime-only. */
 export function VariableValuesDialog({
   prompt,
   onConfirm,

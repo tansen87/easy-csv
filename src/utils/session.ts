@@ -45,7 +45,7 @@ export interface TabSnapshot {
   delimiterSource?: DelimiterSource;
   delimiterConfidence?: "high" | "low" | "none";
   delimiterMode?: DelimiterMode;
-  /** Input format of the opened file (design 024); absent for unknown types. */
+  /** Input format of the opened file; absent for unknown types. */
   inputFormat?: string;
   /** Chosen table when the input is a `.duckdb` file. */
   sourceTable?: string;

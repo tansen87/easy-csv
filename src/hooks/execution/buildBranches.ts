@@ -7,8 +7,8 @@ import type { PipelineEdge, PipelineStep } from "@/types/xan";
  * - With edges: DFS from every node with no executable in-edge.
  * - Cycles throw a readable error carrying `cycleNodeIds` so the UI can mark
  *   the involved nodes red (previously this recursed forever).
- * - Only edges sourced from an executable step contribute to in-degree
- *   (S1-4): `table-node`'s outgoing edges must not mark their target as
+ * - Only edges sourced from an executable step contribute to in-degree:
+ *   `table-node`'s outgoing edges must not mark their target as
  *   "has a dependency"; otherwise in the mixed graph (table-node→S1 plus an
  *   isolated S2) S1 would be silently skipped.
  */

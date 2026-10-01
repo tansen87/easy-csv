@@ -1,4 +1,4 @@
-//! Built-in sample data for first-run onboarding (design 027 §4.1).
+//! Built-in sample data for first-run onboarding.
 //!
 //! The CSV is embedded with `include_str!` so the app ships no extra resource
 //! files, and written next to the other per-user data (`templates/`,

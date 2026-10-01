@@ -3,7 +3,7 @@ import type { DelimiterMode } from "@/types/xan";
 /**
  * The delimiter state lives in two settings (`autoDetectDelimiter` +
  * `defaultDelimiter`) but is presented — and edited — as a single value by both
- * the settings page and the workflow's input node badge (design 018 §3.9).
+ * the settings page and the workflow's input node badge.
  *
  * These two helpers are the only translation between the two shapes, so the two
  * controls cannot drift apart:

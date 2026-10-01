@@ -26,7 +26,7 @@ export const zhCommon = {
   importFlowFormats: ".xanflow 文件",
   starOnGitHub: "GitHub 点赞",
   branchProgress: "分支",
-  // 执行菜单(design 028 §5.6)
+  // 执行菜单
   runStateQueued: "排队中",
   runStatePending: "待确认",
   runStateDone: "完成",

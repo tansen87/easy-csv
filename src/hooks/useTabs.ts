@@ -38,7 +38,7 @@ export function useTabs(
   /**
    * Surface open failures of tabular (non-CSV) inputs to the user, e.g. a
    * toast — `addLog` alone leaves the welcome page up with no visible
-   * feedback (024). The backend's "DuckDB plugin is required" message gets
+   * feedback. The backend's "DuckDB plugin is required" message gets
    * localized by the caller.
    */
   onOpenError?: (message: string) => void,
@@ -115,6 +115,7 @@ export function useTabs(
       setRecentFiles(files);
     } catch (error) {
       setRecentFiles([]);
+      console.log(error);
     }
   }, []);
 
@@ -185,7 +186,7 @@ export function useTabs(
         return;
       }
 
-      // A `.duckdb` database must be read through a concrete table (024): a
+      // A `.duckdb` database must be read through a concrete table: a
       // single table is picked automatically, several ones ask via the
       // injected callback.
       let sourceTable: string | undefined;
@@ -261,8 +262,7 @@ export function useTabs(
       } catch (error) {
         const message = `Failed to read ${format} file: ${error}`;
         addLog("error", message);
-        // CSV failures keep the log-only behaviour (regression red line for
-        // design 018/024); tabular opens must be visible (024).
+        // CSV failures keep the log-only behaviour; tabular opens must be visible.
         if (format !== "csv") {
           onOpenError?.(String(error));
         }
@@ -282,7 +282,7 @@ export function useTabs(
   // (either from the settings page or from the input node's badge) or when the
   // selected tab changes. Both controls edit the same state, so every tab
   // follows it: no per-tab divergence to reconcile. Delimiters are a CSV-only
-  // concept, so non-CSV tabs (parquet / duckdb) are never re-read here (024).
+  // concept, so non-CSV tabs (parquet / duckdb) are never re-read here.
   useEffect(() => {
     const currentTab = tabs.find((t) => t.id === selectedTabId);
     if (

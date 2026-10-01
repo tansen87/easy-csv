@@ -46,7 +46,7 @@ export function ConnectionVisualization({
         </marker>
       </defs>
 
-      {/* 贝塞尔连接线 */}
+      {/* Bessel connection line */}
       <path
         d={connectPreviewD}
         stroke="url(#connectGradient)"
@@ -56,7 +56,7 @@ export function ConnectionVisualization({
         markerEnd="url(#connectArrow)"
       />
 
-      {/* 起点标记 */}
+      {/* Starting point marker */}
       {connectStartAnchor && (
         <circle
           cx={connectStartAnchor.x}

@@ -1,6 +1,6 @@
 import { XanCommand } from "@/types/xan";
 
-/** Aggregate (design 019 §4.5). */
+/** Aggregate. */
 export const aggregateCommands: XanCommand[] = [
   {
     id: "frequency",

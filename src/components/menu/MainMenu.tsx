@@ -1,5 +1,5 @@
 import React from "react";
-import { ListTree, ScrollText, Bot } from "lucide-react";
+import { ListTree, ScrollText, Bot, Settings } from "lucide-react";
 
 import { PipelineStep } from "@/types/xan";
 import type { RunSession } from "@/types/execution";
@@ -63,6 +63,13 @@ interface MainMenuProps {
   showVariablePanel: boolean;
   onToggleVariablePanel: () => void;
   /**
+   * Whether the settings dialog is open. The Settings entry sits in the
+   * right-hand icon group, which highlights the panel it toggles; the dialog is
+   * that group's counterpart for this entry, so it drives the same
+   * `commandButtonClass(active)` state.
+   */
+  showSettingsDialog: boolean;
+  /**
    * Briefly highlight the command-panel entry while the first-run guide is up
    * (design 027 §4.2 item 3), so the card's button and the real entry point
    * become associated. Visual only — no click behaviour changes.
@@ -121,12 +128,13 @@ export const MainMenu = React.memo(function MainMenu({
   onToggleAIPanel,
   showVariablePanel,
   onToggleVariablePanel,
+  showSettingsDialog,
   highlightCommandEntry = false,
 }: MainMenuProps) {
   const { t } = useLanguage();
 
-  // ── Execute menu (design 028 §5.6) ────────────────────────────────────────
-  // The toolbar "执行" opens a per-tab menu instead of running immediately:
+  // Execute menu
+  // The toolbar "Execute" opens a per-tab menu instead of running immediately:
   // the current tab is pinned on top, a thin divider separates the rest.
   const [execMenuOpen, setExecMenuOpen] = React.useState(false);
   const execMenuRef = React.useRef<HTMLDivElement>(null);
@@ -653,23 +661,30 @@ export const MainMenu = React.memo(function MainMenu({
           )}
         </div>
 
-        {/* Help menu — help dialog + check update. While a check is running the
-            entry is disabled (no icon); the "update found" dot inherited from the
-            former standalone button lives on this button's top-right. */}
+        {/* Help menu — help dialog + check update. The entry stays clickable in
+            every state: a slow check must not lock away the Help Center. The
+            "update found" dot inherited from the former standalone button lives
+            on this button's top-right. The check itself gets the same 2px
+            indeterminate bottom line as the "执行" button (design 022 §5.4): a
+            manual check otherwise looks like a click that did nothing until the
+            dialog finally opens. The marker is `data-checking`, deliberately not
+            `data-busy` — the execute button is the only `data-busy` menu trigger
+            (ExecuteMenu.test.tsx). */}
         <div className="relative">
           <button
             onClick={() => toggleMenu("help")}
             onMouseEnter={() => hoverMenu("help")}
-            disabled={isCheckingUpdate}
             aria-haspopup="menu"
             aria-expanded={activeMenu === "help"}
+            data-checking={isCheckingUpdate ? "true" : "false"}
             className={cn(
-              "relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-              isCheckingUpdate
-                ? "text-muted-foreground/40 cursor-not-allowed"
-                : activeMenu === "help"
-                  ? "bg-accent text-foreground"
-                  : "text-primary hover:text-primary hover:bg-primary/10",
+              "relative overflow-hidden flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+              activeMenu === "help"
+                ? "bg-accent text-foreground"
+                : "text-primary hover:text-primary hover:bg-primary/10",
+              // The in-flight line is purely additive — no dimming, no
+              // `cursor-not-allowed`, no `disabled`.
+              isCheckingUpdate && "update-busy",
             )}
           >
             {t.help}
@@ -716,15 +731,7 @@ export const MainMenu = React.memo(function MainMenu({
           )}
         </div>
 
-        {/* Settings — text entry placed to the left of Execute */}
-        <button
-          onClick={onShowSettings}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-primary hover:text-primary hover:bg-primary/10 transition-colors"
-        >
-          {t.settings}
-        </button>
-
-        {/* Design 028 §5.6: "执行" became a per-tab menu. The button itself keeps
+        {/* "Execute" became a per-tab menu. The button itself keeps
             its label and size in every state — while a run is in flight only a
             2px indeterminate line appears along its bottom edge (`.exec-busy`),
             no icon is added. The menu lists the current tab first, a thin divider,
@@ -804,6 +811,24 @@ export const MainMenu = React.memo(function MainMenu({
             >
               <Bot className="h-4 w-4" />
               {showAIPanel && (
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 w-3 rounded-full bg-current" />
+              )}
+            </button>
+          </Tooltip>
+          {/* Settings sits last, right of AI, and is icon-only with a tooltip so
+              the widest label in the bar stops pushing "Execute" around. Its
+              highlight tracks the open dialog, matching the panel toggles it
+              sits beside — including the 12px underline that marks them as
+              "open" rather than merely hovered. */}
+          <Tooltip content={t.settings}>
+            <button
+              onClick={onShowSettings}
+              aria-label={t.settings}
+              aria-expanded={showSettingsDialog}
+              className={commandButtonClass(showSettingsDialog)}
+            >
+              <Settings className="h-4 w-4" />
+              {showSettingsDialog && (
                 <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 w-3 rounded-full bg-current" />
               )}
             </button>

@@ -441,7 +441,7 @@ pub fn materialize_input_to_csv(
   Ok(())
 }
 
-// --- chained duckdb SQL (design 024 §4.4.1) ----------------------------------
+// --- chained duckdb SQL ----------------------------------
 
 /// Strip trailing semicolons/whitespace and reject multi-statement SQL.
 ///
@@ -464,7 +464,7 @@ pub fn chain_query_sql(sql: &str) -> Result<String, String> {
 /// One pipeline step reduced to what the chain needs: (step id, sql).
 pub type ChainStep = (Option<String>, String);
 
-/// Build the single-process SQL script for an all-duckdb pipeline (024 §4.4.1):
+/// Build the single-process SQL script for an all-duckdb pipeline:
 ///
 /// ```sql
 /// SET temp_directory = '…';

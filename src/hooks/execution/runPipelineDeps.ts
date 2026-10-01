@@ -28,7 +28,7 @@ export type { BranchProgressState } from "@/types/execution";
  *
  * Everything that used to read "the current tab" / "the global isExecuting" is
  * now addressed by `RunContext` (tabId + runId) or by an explicit patch, so two
- * concurrent runs can never write into each other (design 028 §5.2).
+ * concurrent runs can never write into each other.
  */
 export interface RunPipelineDeps {
   /** Patch one run session in the registry (state, branch progress). */
@@ -40,7 +40,7 @@ export interface RunPipelineDeps {
   finishRun: (runId: RunId, state: RunState) => void;
   /**
    * Hand back the run's concurrency slot while a prompt keeps it parked, so it
-   * does not occupy one of the limited parallel runs (design 028 §7.1).
+   * does not occupy one of the limited parallel runs.
    */
   releaseRun: (runId: RunId) => void;
   /** Functional update of a single tab (step errors, variables, timestamps). */
@@ -74,10 +74,10 @@ export interface RunPipelineDeps {
     config: BatchFilterConfig,
     data: string,
   ) => Promise<void>;
-  /** Chart of one tab; `null` clears it (design 028 §5.4). */
+  /** Chart of one tab; `null` clears it. */
   setTabChart: (tabId: string, chart: TabChartState | null) => void;
   setShowChartPanel: (value: boolean) => void;
-  /** Result previews of one tab (design 028 §5.4). */
+  /** Result previews of one tab. */
   setTabResultPreview: (tabId: string, previews: ResultPreview[]) => void;
   trackLineage?: (
     steps: PipelineStep[],

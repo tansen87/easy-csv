@@ -1,6 +1,6 @@
 import { XanCommand } from "@/types/xan";
 
-/** Explore & visualize (design 019 §4.5). */
+/** Explore & visualize. */
 export const exploreCommands: XanCommand[] = [
   {
     id: "view",

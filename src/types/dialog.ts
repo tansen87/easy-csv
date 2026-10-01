@@ -3,7 +3,7 @@
  *
  * Sunk here from `components/dialog/CommandDialog.tsx` and
  * `components/dialog/commands/types.ts` to break the
- * `CommandDialog` ⇄ `commands/` dependency cycle (design 019 §3.2 / P2).
+ * `CommandDialog` ⇄ `commands/` dependency cycle.
  *
  * Dependency direction after the move:
  *
@@ -97,7 +97,7 @@ export interface CommandFormProps {
   onStepUpdate?: (stepId: string, parameters: Record<string, any>) => void;
   setCommandDialog: (dialog: CommandDialogState | null) => void;
   headers?: string[];
-  /** Chosen table when the input is a `.duckdb` file (design 024). */
+  /** Chosen table when the input is a `.duckdb` file. */
   sourceTable?: string;
 }
 
@@ -170,7 +170,7 @@ export const COMMAND_LABELS: Record<CommandDialogType, string> = {
 //
 // The canvas context menu already knows *which* transform the user picked; it
 // used to hand that to one of 11 bespoke floating dialogs, each of which
-// rebuilt the command parameters by hand (design 019 §3.1, problem P1). Those
+// rebuilt the command parameters by hand. Those
 // dialogs are gone: the menu now passes this context to the single
 // `CommandDialog` entry, and `buildCommandInitialParams` turns it into
 // prefilled parameters. Keeping the kinds here means the menu and the pure

@@ -17,13 +17,13 @@ import {
 
 /**
  * Execute the stashed run: resolve `{{var}}` placeholders on a deep clone
- * (stored placeholders and the tab pipeline stay untouched, F3), split the
+ * (stored placeholders and the tab pipeline stay untouched), split the
  * graph into branches, run each branch (normal pipeline / batch / chart),
  * then finish with previews, lineage, history and progress teardown.
  *
  * Everything that used to be addressed by `selectedTabId` / a global
  * `isExecuting` now goes through `ctx` (runId + tabId), so concurrent tabs
- * never write into each other (design 028 §5.2).
+ * never write into each other.
  */
 export async function runPipeline(
   pending: PendingRun,
@@ -37,7 +37,7 @@ export async function runPipeline(
   const { showToast, labels, setShowLogPanel } = deps;
 
   // Resolve `{{var}}` placeholders on a deep clone; stored placeholders and
-  // the tab pipeline stay untouched (F3).
+  // the tab pipeline stay untouched.
   const steps = resolveStepPlaceholders(executableSteps, resolveValues);
 
   // Guard before any executing side effects:
@@ -72,7 +72,7 @@ export async function runPipeline(
   }
 
   if (branches.length > 1 && outputPath && !opts?.force) {
-    // Parked until the user answers: give the slot back meanwhile (§7.1).
+    // Parked until the user answers: give the slot back meanwhile.
     deps.releaseRun(ctx.runId);
     deps.stashPendingRunValues(ctx.runId, resolveValues);
     deps.requestOverwritePrompt(ctx.runId, {
@@ -91,7 +91,7 @@ export async function runPipeline(
   let pipelineFailed = false;
   let wasCancelled = false;
   let executionError: string | null = null;
-  // Accumulated branch results, read by the finally block (F6).
+  // Accumulated branch results, read by the finally block.
   const allResults: {
     success: boolean;
     output?: string;
@@ -158,7 +158,7 @@ export async function runPipeline(
       }
     }
 
-    // Build canvas result previews from successful branch outputs (F1)
+    // Build canvas result previews from successful branch outputs
     const runTs = Date.now();
     const previews: ResultPreview[] = [];
     allResults.forEach((r, i) => {
@@ -228,7 +228,7 @@ export async function runPipeline(
     // user's request (2026-09-30). The log panel still opens when a run
     // starts, and `status` above still feeds the execution history.
 
-    // F6: persist a compact execution record (summary only, no stdout).
+    // Persist a compact execution record (summary only, no stdout).
     if (deps.saveExecutionHistory) {
       const summary = buildOutputSummary(allResults);
       const entry: ExecutionHistoryInput = {

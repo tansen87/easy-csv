@@ -325,8 +325,8 @@ export const duckdbTemplates: DuckdbTemplate[] = [
     sql: "SELECT * FROM input LIMIT 100;",
   },
   {
-    // `table_name` is substituted with the tab's selected `.duckdb` table
-    // (design 024); without a duckdb input the placeholder stays as-is.
+    // `table_name` is substituted with the tab's selected `.duckdb` table;
+    // without a duckdb input the placeholder stays as-is.
     key: "duckdb-table",
     label: "DuckDB TABLE",
     sql: "SELECT * FROM src.table_name LIMIT 100;",

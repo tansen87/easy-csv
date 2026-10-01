@@ -6,7 +6,7 @@ import {
 import type { Translations } from "@/i18n/translations/types";
 
 /**
- * Built-in pipeline templates (design 027 §4.1).
+ * Built-in pipeline templates.
  *
  * These ship with the app so the template library is never an empty list for a
  * new user, and so the empty-state "see an example" card has a target that

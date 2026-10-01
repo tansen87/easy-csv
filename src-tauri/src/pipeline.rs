@@ -48,8 +48,7 @@ pub struct ExecutionResult {
 /// Per-run cancellation flags, keyed by the frontend-generated `run_id`.
 ///
 /// Replaces the former process-wide `CANCELLATION_FLAG`: once several tabs can
-/// execute concurrently, one cancel must never stop another tab's run
-/// (design 028 §4.1).
+/// execute concurrently, one cancel must never stop another tab's run.
 static RUN_FLAGS: OnceLock<Mutex<HashMap<String, Arc<AtomicBool>>>> = OnceLock::new();
 
 fn run_flags() -> &'static Mutex<HashMap<String, Arc<AtomicBool>>> {
@@ -218,7 +217,7 @@ pub async fn execute_xan_pipeline(
   max_output_bytes: Option<usize>,
   run_id: String,
 ) -> Result<ExecutionResult, String> {
-  // Per-run cancel flag + registry cleanup on every exit path (design 028 §4.2).
+  // Per-run cancel flag + registry cleanup on every exit path.
   let cancel_flag = register_run(&run_id);
   let _guard = RunGuard(run_id.clone());
 
@@ -232,7 +231,7 @@ pub async fn execute_xan_pipeline(
     .map(|c| is_duckdb(&c.name))
     .unwrap_or(false);
 
-  // All-duckdb pipeline: one process, one chained SQL script (024 §4.4.1).
+  // All-duckdb pipeline: one process, one chained SQL script.
   if all_duckdb {
     return run_duckdb_chain(
       commands,

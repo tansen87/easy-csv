@@ -5,7 +5,7 @@ import {
 } from "@/types/xan";
 
 /**
- * Pure helpers for F3 pipeline parameterization: variable placeholders
+ * Pure helpers for pipeline parameterization: variable placeholders
  * (`{{name}}`) are allowed only in parameter *values* (never inside moonblade
  * expressions). These functions are intentionally side-effect free.
  */

@@ -32,7 +32,7 @@ interface CommandListProps {
   onDockChange?: (patch: Partial<PanelDockState>) => void;
   /**
    * Show the "your first operation applies straight to the input" strip. True
-   * while the current pipeline is still empty (design 027 §4.2 item 2): the
+   * while the current pipeline is still empty: the
    * teaching lands exactly where the user clicks, inside the single entry point
    * for adding operations.
    */
@@ -313,7 +313,7 @@ export const CommandList = React.memo(function CommandList({
         </Button>
       </div>
 
-      {/* In-place first-step teaching (design 027 §4.2 item 2). */}
+      {/* In-place first-step teaching. */}
       {showFirstStepHint && (
         <div
           className="flex items-start gap-2 border-b border-blue-200/70 bg-blue-50/70 px-3 py-2 dark:border-blue-900/60 dark:bg-blue-950/30"

@@ -1,6 +1,6 @@
 import { XanCommand } from "@/types/xan";
 
-/** Format, convert & recombobulate (design 019 §4.5). */
+/** Format, convert & recombobulate. */
 export const formatCommands: XanCommand[] = [
   {
     id: "rename",

@@ -24,7 +24,7 @@ interface UseFileSaveProps {
 /**
  * Save the current pipeline as a runnable `.ps1` / `.sh` script. The script
  * mirrors the delimiter the tab was actually read with, not the global
- * fallback setting (design 018 §3.5).
+ * fallback setting.
  */
 export function useFileSave({
   getCurrentPipeline,

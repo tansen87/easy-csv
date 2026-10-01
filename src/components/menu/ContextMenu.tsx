@@ -48,8 +48,8 @@ interface ContextMenuState {
 interface ContextMenuProps {
   contextMenu: ContextMenuState;
   onClose: () => void;
-  // Entries report what was clicked; the floating dialogs they used to open —
-  // and therefore their x/y — are gone (design 019 §3.1).
+  // Entries report what was clicked; the floating dialogs they used to open -
+  // and therefore their x/y - are gone.
   onOpenFilterDialog: (col: number) => void;
   onOpenBatchFilter: () => void;
   onOpenPivotDialog: () => void;

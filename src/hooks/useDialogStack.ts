@@ -7,7 +7,7 @@ export interface DialogState<P = unknown> {
 }
 
 /**
- * Unified dialog switch stack (019 §4.4, resolves 007 D4 Esc semantics):
+ * Unified dialog switch stack:
  *
  * - one state bag replaces scattered `showXxx` / `setShowXxx` pairs;
  * - dialogs are tracked in open order, `Esc` closes only the topmost one;
@@ -50,7 +50,7 @@ export function useDialogStack<K extends string>(options?: {
     setStates({});
   }, []);
 
-  // Esc closes only the topmost dialog (007 D4).
+  // Esc closes only the topmost dialog.
   useEffect(() => {
     if (!escEnabled) return;
     const handleKeyDown = (e: KeyboardEvent) => {

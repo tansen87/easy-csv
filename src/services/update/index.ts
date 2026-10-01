@@ -1,5 +1,5 @@
 /**
- * Auto-update service (design 022).
+ * Auto-update service.
  *
  * The single place that talks to `@tauri-apps/plugin-updater` and
  * `@tauri-apps/plugin-process`, so UI code never imports them directly and the

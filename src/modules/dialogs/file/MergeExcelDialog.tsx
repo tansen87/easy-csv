@@ -61,7 +61,7 @@ export interface ExcelMergeResult {
   } | null;
   /** Backend-reported duration; optional for older payloads/mocks. */
   elapsed_ms?: number;
-  /** 026: per-output summaries (one per selected sheet name for by_sheet). */
+  /** Per-output summaries (one per selected sheet name for by_sheet). */
   outputs?: {
     path: string;
     source_file_count: number;
@@ -164,7 +164,7 @@ const OUTPUT_FORMAT_OPTIONS: {
   { value: "xlsx", label: "XLSX" },
 ];
 
-/** Output shape options (design 026 §7). `split` is the single-workbook
+/** Output shape options. `split` is the single-workbook
  * degenerate case of `by_sheet` — the same option covers it. The example
  * panel below the select explains the selected mode in plain language. */
 const SHAPE_OPTIONS: {
@@ -179,7 +179,7 @@ const SHAPE_OPTIONS: {
   { value: "multi_sheet", labelKey: "mergeExcelShapeMultiSheet" },
 ];
 
-/** Default source column per shape (design 026 §7): within a by-sheet output
+/** Default source column per shape: within a by-sheet output
  * every part shares the sheet name, so `file` is the meaningful default. */
 const SHAPE_SOURCE_COLUMN_DEFAULT: Record<ExcelOutputShape, ExcelSourceColumn> =
   {
@@ -219,7 +219,7 @@ export function MergeExcelDialog({
   const [sourceColumnName, setSourceColumnName] = useState("source");
   const [outputPathInput, setOutputPathInput] = useState("");
   const [outputFormat, setOutputFormat] = useState<ExcelOutputFormat>("xlsx");
-  // Output shape (design 026). `split` is accepted from old records and shown
+  // Output shape. `split` is accepted from old records and shown
   // as `by_sheet` — the same pipeline covers both.
   const [outputShape, setOutputShape] = useState<ExcelOutputShape>("single");
   /** Sheet names the user checked for `by_sheet` (initially empty — an
@@ -339,7 +339,7 @@ export function MergeExcelDialog({
     [sources, recursive, extensions],
   );
 
-  // Debounced auto-scan when the discovery options change (design 025 §3.7).
+  // Debounced auto-scan when the discovery options change.
   useEffect(() => {
     if (!isOpen || sources.length === 0) return;
     const key = scanKey;
@@ -384,8 +384,7 @@ export function MergeExcelDialog({
   );
 
   // Auto-scan once when the user switches to "指定名称" or the by-sheet shape
-  // without results, so the sheet name candidates are not empty (025 §3.7 /
-  // 026 §7).
+  // without results, so the sheet name candidates are not empty.
   useEffect(() => {
     if (
       isOpen &&
@@ -452,12 +451,12 @@ export function MergeExcelDialog({
       return;
     }
     if (sheetMode === "name" && sheetName.trim() === "") {
-      // Decided: no silent fallback to the first sheet (design 025 §3.7).
+      // Decided: no silent fallback to the first sheet.
       setError(t.mergeExcelSheetNameEmpty);
       return;
     }
     // By-sheet output requires an explicit selection — never a silent
-    // fallback to "all sheet names" (design 026 §4.1).
+    // fallback to "all sheet names".
     if (shape === "by_sheet" && sheetFilter.length === 0) {
       setError(t.mergeExcelSheetFilterEmpty);
       return;
@@ -610,7 +609,7 @@ export function MergeExcelDialog({
 
         <ScrollArea type="always" className="flex-1 min-h-0">
           <div className="p-4 space-y-3">
-            {/* ── 合并方式(design 026 §7,对话框最顶部)───────── */}
+            {/* Merge method */}
             <div className="px-3 space-y-2">
               <div className="flex items-center gap-2">
                 <label className="text-xs text-muted-foreground shrink-0 w-24">
@@ -623,7 +622,7 @@ export function MergeExcelDialog({
                       clearFeedback();
                       const next = v as ExcelOutputShape;
                       setOutputShape(next);
-                      // The meaningful source column differs per shape (§7).
+                      // The meaningful source column differs per shape.
                       setSourceColumn(SHAPE_SOURCE_COLUMN_DEFAULT[next]);
                     }}
                     options={SHAPE_OPTIONS.map((o) => ({
@@ -658,7 +657,7 @@ export function MergeExcelDialog({
               </div>
             </div>
 
-            {/* ── ① 选择要合并的文件 ────────────────────────── */}
+            {/* Select the files to merge */}
             <section className="rounded-lg border border-border/50 p-3">
               <div className="flex items-center gap-2 mb-2.5">
                 <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-medium flex items-center justify-center">
@@ -818,7 +817,7 @@ export function MergeExcelDialog({
               ))}
             </section>
 
-            {/* ── ② 合并哪些 sheet ──────────────────────────── */}
+            {/* Which sheets should be merged */}
             <section className="rounded-lg border border-border/50 p-3">
               <div className="flex items-center gap-2 mb-2.5">
                 <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-medium flex items-center justify-center">
@@ -931,7 +930,7 @@ export function MergeExcelDialog({
               )}
             </section>
 
-            {/* ── ③ 输出 ────────────────────────────────────── */}
+            {/* Output */}
             <section className="rounded-lg border border-border/50 p-3">
               <div className="flex items-center gap-2 mb-2.5">
                 <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-medium flex items-center justify-center">
@@ -947,7 +946,7 @@ export function MergeExcelDialog({
                 </label>
                 {shape === "multi_sheet" ? (
                   // A multi-sheet workbook can only be xlsx (CSV has no
-                  // sheets) — locked, not hidden (§7).
+                  // sheets) — locked, not hidden.
                   <span className="text-xs text-foreground px-2 py-1.5 rounded-md bg-muted/60">
                     XLSX
                   </span>
@@ -989,7 +988,7 @@ export function MergeExcelDialog({
               )}
             </section>
 
-            {/* ── 高级选项(默认折叠) ────────────────────────── */}
+            {/* Advanced Options (Default Folding) */}
             <button
               onClick={() => setAdvancedOpen((v) => !v)}
               className="w-full flex items-center gap-2 rounded-lg border border-border/50 p-3 text-xs text-muted-foreground hover:bg-accent transition-colors"
@@ -1094,7 +1093,7 @@ export function MergeExcelDialog({
               </div>
             )}
 
-            {/* ── 结果卡 ────────────────────────────────────── */}
+            {/* Result card */}
             <div className="rounded-lg border border-border/50 p-3">
               {lastResult ? (
                 <div className="space-y-3">

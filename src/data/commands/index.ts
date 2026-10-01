@@ -16,7 +16,7 @@ import { pluginsCommands } from "./plugins";
 /**
  * All xan commands, in the canonical order the command list renders them.
  *
- * Split out of the former 4,188-line `data/commands.ts` (design 019 §4.5);
+ * Split out of the former 4,188-line `data/commands.ts`;
  * this barrel keeps `@/data/commands` working unchanged — `commands.test.ts`
  * covers all 59 commands through it and is deliberately left untouched.
  */

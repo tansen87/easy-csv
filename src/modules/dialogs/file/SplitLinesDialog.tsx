@@ -127,7 +127,7 @@ export function SplitLinesDialog({
   useEffect(() => {
     if (isOpen) {
       const stored = loadLastSplitLinesResult();
-      // Back-fill the options too (design 020 precedent): splitting with the
+      // Back-fill the options too: splitting with the
       // same row count is a repeat operation, so "pick a file and go" works.
       setInputFile(initialInputFile || stored?.inputFile || "");
       setOutputDir(stored?.outDirInput ?? "");
@@ -336,7 +336,7 @@ export function SplitLinesDialog({
           className="flex-1 min-h-0"
         >
           <div className="p-4 space-y-3">
-            {/* 输出示例 */}
+            {/* Output Example */}
             <div className="rounded-md bg-muted/40 p-2.5 space-y-1 text-[11px] text-muted-foreground">
               <p className="font-medium text-foreground">
                 {t.splitLinesExampleTitle}
@@ -360,7 +360,7 @@ export function SplitLinesDialog({
               <p>{t.splitLinesExampleNote}</p>
             </div>
 
-            {/* 选择要拆分的文件 */}
+            {/* Select the file to be split */}
             <StepSection index={1} title={t.splitLinesStepFile}>
               <div className="flex items-center gap-2">
                 <input
@@ -384,7 +384,7 @@ export function SplitLinesDialog({
               </div>
             </StepSection>
 
-            {/* 拆分设置 */}
+            {/* Split settings */}
             <StepSection index={2} title={t.splitLinesStepSettings}>
               <div className="flex items-center gap-2">
                 <label
@@ -448,7 +448,7 @@ export function SplitLinesDialog({
               </div>
             </StepSection>
 
-            {/* 输出位置 */}
+            {/* Output location */}
             <StepSection index={3} title={t.splitLinesStepOutput}>
               <div className="flex items-center gap-2">
                 <label className="text-xs font-medium text-muted-foreground shrink-0">
@@ -475,7 +475,7 @@ export function SplitLinesDialog({
               </div>
             </StepSection>
 
-            {/* 结果卡 */}
+            {/* Result card */}
             <div className="rounded-lg border border-border/50 p-3">
               {lastResult ? (
                 <div className="space-y-3">

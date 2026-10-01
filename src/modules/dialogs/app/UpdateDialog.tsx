@@ -91,7 +91,7 @@ export function UpdateDialog({
 
   // The updater cannot write to a deb / unpacked install, nor to an app bundle
   // in a system directory, so the one-click path is withheld there and the
-  // manual download is promoted instead (design 022 §3.4–§3.6).
+  // manual download is promoted instead.
   const canSelfUpdate = installForm?.canSelfUpdate ?? true;
   const formLabel = installFormLabel(t, installForm);
   const blockedReason = canSelfUpdate ? null : formLabel;

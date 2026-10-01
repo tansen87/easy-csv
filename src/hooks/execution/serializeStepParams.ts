@@ -9,7 +9,7 @@ export interface CliParam {
 /**
  * Serialize a step's parameters to CLI param entries.
  *
- * `search` multi-pattern (S1): `add-pattern` is emitted as repeated `-P`
+ * `search` multi-pattern: `add-pattern` is emitted as repeated `-P`
  * flags (OR). xan requires a positional `<pattern>` as the first mode, so if
  * the main `pattern` is empty but the list has values, the first value is
  * promoted to the positional pattern and the rest become `-P`.

@@ -105,7 +105,7 @@ interface HomeViewProps {
   onOpenCommandPalette?: () => void;
   onSaveIntermediate?: (stepId: string) => void;
   pipelineSavedAt?: number;
-  /** Delimiter the selected tab's input file was read with (design 018). */
+  /** Delimiter the selected tab's input file. */
   delimiter?: string;
   delimiterMode?: DelimiterMode;
   delimiterSource?: DelimiterSource;
@@ -115,7 +115,7 @@ interface HomeViewProps {
   /** Chosen table when the input is a `.duckdb` file. */
   sourceTable?: string;
   onDelimiterChange?: (mode: DelimiterMode) => void;
-  /** First-run guide card over the canvas (design 027 §4.2). */
+  /** First-run guide card over the canvas. */
   showOnboardingGuide?: boolean;
   /** xan command count, shown in the guide card's add-step line. */
   commandCount?: number;
@@ -130,7 +130,7 @@ interface HomeViewProps {
     caption: string;
     step?: { index: number; total: number };
   } | null;
-  /** Advance the reveal one step, then run it (click-driven, design 027 §11.2). */
+  /** Advance the reveal one step, then run it (click-driven). */
   onAdvanceDemoReveal?: () => void;
   onSkipDemoReveal?: () => void;
 }
@@ -238,7 +238,7 @@ export const HomeView = React.memo(function HomeView({
   }, []);
 
   /**
-   * Single entry point for every canvas context-menu action (design 019 §3.1).
+   * Single entry point for every canvas context-menu action.
    *
    * The menu reports *what* the user clicked — column index plus the transform
    * kind — and `buildCommandInitialParams` (pure, unit-tested) turns that into
@@ -375,7 +375,7 @@ export const HomeView = React.memo(function HomeView({
 
           {/* Action cards */}
           <div className="flex items-stretch gap-4 mb-8">
-            {/* Recommended first step for a brand-new user (design 027 §4.1):
+            {/* Recommended first step for a brand-new user:
                 one click gets sample data + a pipeline that already ran. */}
             <button
               onClick={onLoadDemo}
@@ -448,8 +448,7 @@ export const HomeView = React.memo(function HomeView({
             </button>
           </div>
 
-          {/* Three-step mental model (design 027 §4.1) — establishes what this
-              canvas is for before the user clicks anything. */}
+          {/* Three-step mental model - establishes what this canvas is for before the user clicks anything. */}
           <div className="flex items-center gap-2.5 mb-8 px-5 py-3 rounded-2xl border border-dashed border-border/80 bg-card/40">
             {[
               t.onboardingFlowOpenData,
@@ -715,8 +714,7 @@ export const HomeView = React.memo(function HomeView({
                       {tab.name}
                     </button>
                   )}
-                  {/* Run state badge (design 028 §5.4): running / needs-input /
-                      finished. Informational only — it never disables the tab. */}
+                  {/* Run state badge: running / needs-input / finished. Informational only - it never disables the tab. */}
                   {(() => {
                     const run = tabRuns[tab.id];
                     if (!run) return null;

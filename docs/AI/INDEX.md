@@ -303,7 +303,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `excelMergeHistory.test.ts` | Excel 合并结果 localStorage(设计 025): 往返、坏 JSON / 缺选项字段 / 类型不符 / 未知枚举值 / 摘要结构错误、超长跳过、清除 | 9 |
 | `MergeExcelDialog.test.tsx` | Excel 合并对话框(设计 025): 默认 payload(union/first/无 sheetIndex)、三模式互斥与按需渲染、名称留空拦截、扫描预览且不预取列名、按需展开、严格报错透传、并集加宽提示、xlsx 单 sheet 提示、打开路径、输出失效 | 12 |
 | `UpdateDialog.test.tsx` | 更新对话框: 进度条落在标题栏(不在可滚动正文里)、字节数展示、未安装时无进度、安装中 Esc 与遮罩点击均不关闭 | 6 |
-| `ExecuteMenu.test.tsx` | 「执行」标签页菜单(设计 028 §5.6 / §9.2 T9+T10): 两种状态下按钮 DOM 结构一致(不加图标,只有 `data-busy`)、当前标签页置顶 + 其后紧跟小横线、切换当前标签页后重排、运行中的行只有「取消」+ 分支进度且点行仅切换、排队中的行同理、空闲行点整行 = `onRunTab`、`待确认` 行不给执行入口 | 7 |
+| `ExecuteMenu.test.tsx` | 「执行」标签页菜单(设计 028 §5.6 / §9.2 T9+T10): 两种状态下按钮 DOM 结构一致(不加图标,只有 `data-busy`)、当前标签页置顶 + 其后紧跟小横线、切换当前标签页后重排、运行中的行只有「取消」+ 分支进度且点行仅切换、排队中的行同理、空闲行点整行 = `onRunTab`、`待确认` 行不给执行入口;另含**检查更新期间「帮助」按钮的进行中反馈**(设计 022 §5.4:`data-checking` + `.update-busy`、**检查中仍可点击且不置灰**、菜单两行入口仍在、空闲时不带该标记、且不占用执行按钮的 `data-busy`),以及**工具栏「设置」入口**(图标化 + `aria-label`、位于右侧按钮组末尾即 AI 右侧、点击调 `onShowSettings`、**对话框打开期间高亮 + 与三个面板开关完全相同的小横线**、关闭时不渲染横线、`aria-expanded`) | 19 |
 | `ExecutionConcurrency.test.tsx` | 并发上限(设计 028 §7.1,上限 4): 第 5 个标签页进入 `queued` 而不是起第 5 条进程链、`runPipeline` 只被调 4 次;`queued` 也算「占用中」;取消排队中的 run 直接从队列摘除、不起后端进程(mock `runPipeline` 永不 settle) | 2 |
 | `LogPanel.test.tsx` | 日志按标签页(设计 028 §5.4): 每行带标签页徽标、默认全部可见、「仅当前标签页」只留该标签页的行(无标签的 app 级日志一并隐藏)、切回「全部」恢复、未选标签页时不过滤 | 2 |
 | `SettingsConcurrencyControl.test.tsx` | 设置页并发上限(设计 028 §7.1): 回显存储值(含 min/max)、编辑后上报新值、越界输入就地 clamp(99→16、0→1) | 3 |
@@ -538,7 +538,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 |------|------|
 | `expression/ExpressionEditor.tsx` | 主组件: textarea + 同步高亮层 + 自动补全下拉 |
 | `expression/highlight.ts` · `autocomplete.ts` | 语法高亮分词器 / 补全引擎 |
-| `menu/MainMenu.tsx` | 顶部工具栏: 文件菜单、撤销/重做、执行、命令面板、帮助/设置 |
+| `menu/MainMenu.tsx` | 顶部工具栏: 文件菜单、撤销/重做、执行、命令面板、帮助、**设置**。运行中的「执行」按钮挂 `data-busy` + `.exec-busy`(设计 028 §5.6.1);**检查更新期间「帮助」按钮挂 `data-checking` + `.update-busy`**(设计 022 §5.4,复用同一条底部横条;标记刻意不复用 `data-busy`,见 `ExecuteMenu.test.tsx` 的定位方式)。**「帮助」按钮任何状态都可点击**(横条是纯叠加,不置灰、不 `disabled`、不 `cursor-not-allowed`),慢检查不得把「帮助中心」锁在门外。**「设置」入口在右侧按钮组末尾(AI 右侧)、只出图标 + tooltip**(`aria-label` 承载可访问名);**对话框打开期间用 `commandButtonClass(true)` 高亮 + 同款 12px 底部小横线**(与命令面板/日志/AI 三个面板开关的激活态完全一致:同底色、同横线类名,另配 `aria-expanded`) |
 | `menu/ContextMenu.tsx` | 表格列右键菜单: 快速筛选、替换、透视、变换、排序(019 §3.1 后只**报告**上下文,不再自己拼参数) |
 | `menu/CanvasContextMenu.tsx` | 画布空白处右键菜单 |
 | `setting/ThemeProvider.tsx` | 主题上下文(dark/light/system)— 019 §2.1 计划迁往 `app/providers/` |

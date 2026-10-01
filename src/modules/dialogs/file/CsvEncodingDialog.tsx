@@ -91,7 +91,7 @@ export function CsvEncodingDialog({
 
   const isSameEncoding = sourceEncoding === targetEncoding;
 
-  /** Only feedback is cleared on edit — the last result stays visible. */
+  /** Only feedback is cleared on edit - the last result stays visible. */
   const clearFeedback = useCallback(() => {
     setError(null);
     setIsStaleResult(true);
@@ -297,7 +297,7 @@ export function CsvEncodingDialog({
 
         <ScrollArea type="always" className="flex-1 min-h-0">
           <div className="p-4 space-y-3">
-            {/* 选择文件 */}
+            {/* Select file */}
             <section className="rounded-lg border border-border/50 p-3">
               <div className="flex items-center gap-2 mb-2.5">
                 <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-medium flex items-center justify-center">
@@ -336,7 +336,7 @@ export function CsvEncodingDialog({
               </p>
             </section>
 
-            {/* 编码设置 */}
+            {/* Encoding setting */}
             <section className="rounded-lg border border-border/50 p-3">
               <div className="flex items-center gap-2 mb-2.5">
                 <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-medium flex items-center justify-center">
@@ -384,7 +384,7 @@ export function CsvEncodingDialog({
               </p>
             </section>
 
-            {/* 输出文件 */}
+            {/* Output file */}
             <section className="rounded-lg border border-border/50 p-3">
               <div className="flex items-center gap-2 mb-2.5">
                 <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-medium flex items-center justify-center">
@@ -430,7 +430,7 @@ export function CsvEncodingDialog({
               </div>
             )}
 
-            {/* 结果卡 */}
+            {/* Result card */}
             <div className="rounded-lg border border-border/50 p-3">
               {lastResult ? (
                 <div className="space-y-3">

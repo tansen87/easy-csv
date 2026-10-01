@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 /**
- * First-run onboarding state (design 027 §4.2 / §5).
+ * First-run onboarding state.
  *
  * One flag, stored in `localStorage`, meaning "the canvas guide has been shown
  * and dismissed". Like the other `easy-csv-*` keys it is read/written behind
@@ -68,7 +68,7 @@ export function useOnboarding(): UseOnboardingResult {
 }
 
 /**
- * Mark the guide as seen once the user has added a step themselves — the guide
+ * Mark the guide as seen once the user has added a step themselves - the guide
  * has done its job and must not come back. Kept as a hook so the effect lives
  * where the state does.
  */

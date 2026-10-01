@@ -112,7 +112,7 @@ export function KeyIndicatorOverlay({
       )}
       {shift && (
         <kbd className="h-[22px] px-1.5 flex items-center rounded bg-primary/10 text-[10px] text-primary font-medium border border-primary/20">
-          ×2
+          x2
         </kbd>
       )}
     </div>

@@ -4,7 +4,7 @@
  * options that produced it. Stored in localStorage so the dialog can still
  * show the outcome after it is closed — or after the app is restarted.
  *
- * Mirrors `splitLinesHistory.ts` / `separateHistory.ts` (design 021 / 017).
+ * Mirrors `splitLinesHistory.ts` / `separateHistory.ts`.
  * Unlike the split (arbitrary part count → stores a directory), the merge
  * produces exactly ONE output file, so the record keeps the file path itself.
  */
@@ -46,9 +46,9 @@ export interface StoredExcelMergeResult {
     notInAllParts: { column: string; presentIn: number; total: number }[];
     nearDuplicateColumns: [string, string][];
   } | null;
-  /** Result (026): per-output summaries; absent for 025-era records. */
+  /** Result: per-output summaries; absent for 025-era records. */
   outputs?: StoredOutputSummary[];
-  /** Result (026): renames applied to output/sheet names (original → final). */
+  /** Result: renames applied to output/sheet names (original → final). */
   nameMappings?: [string, string][];
   /** ISO 8601 timestamp of when the merge finished. */
   finishedAt: string;
@@ -66,7 +66,7 @@ export interface StoredExcelMergeResult {
   align: ExcelAlign;
   sourceColumn: ExcelSourceColumn;
   outputPathInput: string;
-  /** Optional (026): sheet names the user checked for `by_sheet`. */
+  /** Optional: sheet names the user checked for `by_sheet`. */
   sheetFilter?: string[];
 }
 

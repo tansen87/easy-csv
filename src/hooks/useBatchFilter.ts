@@ -7,7 +7,7 @@ import type { RunContext } from "@/types/execution";
 /**
  * Batch filter execution. Every entry point takes a `RunContext`, so the loop
  * reads the run's own tab / delimiter / cancel flag instead of "the current
- * tab" (design 028 §5.2) — that is what lets two tabs batch-filter at once.
+ * tab" - that is what lets two tabs batch-filter at once.
  * Logging goes through `ctx.log`, which tags every line with the run's tab.
  */
 export function useBatchFilter() {

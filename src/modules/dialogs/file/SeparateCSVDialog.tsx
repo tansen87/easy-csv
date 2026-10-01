@@ -61,7 +61,7 @@ function splitFileName(path: string): { stem: string; ext: string } {
   return { stem: base.slice(0, dot), ext: base.slice(dot) };
 }
 
-/** Numbered step card — same skeleton as MergeExcelDialog's ①②③ sections. */
+/** Numbered step card — same skeleton as MergeExcelDialog's 123 sections. */
 function StepSection({
   index,
   title,
@@ -473,7 +473,7 @@ export function SeparateCSVDialog({
           className="flex-1 min-h-0"
         >
           <div className="p-4 space-y-3">
-            {/* 判定规则 */}
+            {/* Determination Rules */}
             <div className="rounded-md bg-muted/40 p-2.5 space-y-1 text-[11px] text-muted-foreground">
               <p className="font-medium text-foreground">
                 {t.separateExampleTitle}
@@ -495,7 +495,7 @@ export function SeparateCSVDialog({
               </p>
             </div>
 
-            {/* 选择要检查的 CSV */}
+            {/* Select CSV to check */}
             <StepSection index={1} title={t.separateStepFile}>
               <div className="flex items-center gap-2">
                 <input
@@ -547,7 +547,7 @@ export function SeparateCSVDialog({
               )}
             </StepSection>
 
-            {/* 解析与判定 */}
+            {/* Analysis and Judgment */}
             <StepSection index={2} title={t.separateStepRule}>
               <div className="flex items-center gap-2">
                 <label className="text-xs font-medium text-muted-foreground shrink-0 w-16">
@@ -638,7 +638,7 @@ export function SeparateCSVDialog({
               </p>
             </StepSection>
 
-            {/* 输出位置 */}
+            {/* Output location */}
             <StepSection index={3} title={t.separateStepOutput}>
               <div className="flex items-center gap-2">
                 <label className="text-xs font-medium text-muted-foreground shrink-0">
@@ -665,7 +665,7 @@ export function SeparateCSVDialog({
               </div>
             </StepSection>
 
-            {/* 高级选项(默认折叠,避免一屏全是开关) */}
+            {/* Advanced options */}
             <div className="space-y-3">
               <button
                 onClick={() => setAdvancedOpen((v) => !v)}
@@ -763,7 +763,7 @@ export function SeparateCSVDialog({
               </div>
             </div>
 
-            {/* 结果卡 */}
+            {/* Result card */}
             <div className="rounded-lg border border-border/50 p-3">
               {lastResult ? (
                 <div className="space-y-3">

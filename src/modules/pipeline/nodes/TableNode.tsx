@@ -17,7 +17,7 @@ export interface TableNodeData {
   onRename: (col: number, newName: string) => void;
   onSave: () => void;
   onDelete?: () => void;
-  /** Delimiter the file was read with, and how it was resolved (design 018). */
+  /** Delimiter the file was read with, and how it was resolved. */
   delimiter?: string;
   delimiterMode?: DelimiterMode;
   delimiterSource?: DelimiterSource;
@@ -60,7 +60,7 @@ export function TableNode({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Delimiter badge: a compact readout that opens the shared delimiter control
-  // on click (design 018 §3.7/§3.9). The control edits the app-wide mode, so
+  // on click. The control edits the app-wide mode, so
   // the settings page shows the very same value.
   const delimiterLocked = !!delimiterMode && delimiterMode !== "auto";
   const delimiterDotClass = delimiterLocked
@@ -239,7 +239,7 @@ export function TableNode({
           />
         </div>
         {/* Non-CSV inputs (parquet / duckdb) have no delimiter: show a
-            read-only format badge instead of the delimiter one (024). */}
+            read-only format badge instead of the delimiter one. */}
         {inputFormat && inputFormat !== "csv" && (
           <span
             className="nodrag shrink-0 flex items-center h-6 px-1.5 rounded-md border bg-muted/40 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"

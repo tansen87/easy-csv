@@ -1,4 +1,4 @@
-/** Plugin catalog management (design 023). */
+/** Plugin catalog management. */
 export { PluginManager } from "./PluginManager";
 export { PluginRow } from "./PluginRow";
 export { PluginSetupDialog } from "./PluginSetupDialog";

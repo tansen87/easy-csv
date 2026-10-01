@@ -1,6 +1,6 @@
 import type { Translations } from "@/i18n/translations/types";
 
-/** MainMenu · Variables (F3) · VersionControl · CommandList · FlowPanel · LogPanel · Execution history · ContextMenu · Pipeline Templates */
+/** MainMenu · Variables · VersionControl · CommandList · FlowPanel · LogPanel · Execution history · ContextMenu · Pipeline Templates */
 export const zhPipeline = {
   file: "文件",
   edit: "编辑",

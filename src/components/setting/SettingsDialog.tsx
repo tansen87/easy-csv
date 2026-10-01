@@ -22,10 +22,10 @@ interface SettingsDialogProps {
   onDoubleClickFitViewChange: (value: boolean) => void;
   autoCheckUpdate: boolean;
   onAutoCheckUpdateChange: (value: boolean) => void;
-  /** Parallel run limit (design 028 §7.1). */
+  /** Parallel run limit. */
   maxConcurrentRuns: number;
   onMaxConcurrentRunsChange: (value: number) => void;
-  /** Clear the "intro seen" flag so the canvas guide shows again (design 027 §5). */
+  /** Clear the "intro seen" flag so the canvas guide shows again. */
   onResetOnboarding?: () => void;
   onSave: () => void;
   aiConfig: AIConfig;

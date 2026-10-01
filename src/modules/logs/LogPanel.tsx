@@ -38,7 +38,7 @@ interface LogPanelProps {
   onDockChange?: (patch: Partial<PanelDockState>) => void;
   /** Raise the docked bottom edge to avoid the expanded AI panel. */
   bottomOffset?: number | string;
-  /** Current tab, for the 「仅当前标签页」 log scope (design 028 §5.4). */
+  /** Current tab, for the 「仅当前标签页」 log scope. */
   selectedTabId?: string;
   /** Tab id → name, used for the per-line badge. */
   tabs?: { id: string; name: string }[];
@@ -65,7 +65,7 @@ export const LogPanel = React.memo(function LogPanel({
   const [activeFilter, setActiveFilter] = useState<LogEntry["type"] | "all">(
     "all",
   );
-  /** 「全部」or 「仅当前标签页」— the second is design 028 §5.4. */
+  /** 「全部」or 「仅当前标签页」. */
   const [tabScope, setTabScope] = useState<"all" | "current">("all");
   const [atBottom, setAtBottom] = useState(true);
   const dragStateRef = useRef({

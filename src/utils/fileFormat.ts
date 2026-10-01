@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { DuckdbTableInfo, TabularFormat } from "@/types/xan";
 
 /**
- * Single source of truth for "what kind of data file is this" (design 024).
+ * Single source of truth for "what kind of data file is this".
  * The backend's `detect_input_format` treats unknown extensions as CSV; the
  * frontend is stricter — unknown extensions return `null` and keep the old
  * "please use the from command" behaviour.

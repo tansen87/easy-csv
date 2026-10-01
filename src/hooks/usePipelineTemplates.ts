@@ -16,7 +16,7 @@ import {
  * `delete_pipeline_template`. Each mutation upserts by `id` and reloads so the
  * React state stays the single consistent view.
  *
- * Built-in templates (design 027 §4.4) are **not** persisted: they are merged in
+ * Built-in templates are **not** persisted: they are merged in
  * on the fly, ahead of the user's own, so a fresh install no longer opens an
  * empty library. They are read-only — renaming or deleting one is a no-op, and
  * "copy to my templates" is how a user adopts one.

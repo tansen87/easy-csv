@@ -1,6 +1,6 @@
 import { XanCommand } from "@/types/xan";
 
-/** Sort & deduplicate (design 019 §4.5). */
+/** Sort & deduplicate. */
 export const sortDedupCommands: XanCommand[] = [
 {
     id: "sort",

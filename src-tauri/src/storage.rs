@@ -39,7 +39,7 @@ pub async fn load_pipeline_versions(pipeline_id: String) -> Result<String, Strin
   }
 }
 
-// ── Pipeline templates ────────────────────────────────────────────────
+// Pipeline templates
 
 fn templates_path() -> std::path::PathBuf {
   get_resources_dir().join("templates").join("templates.json")
@@ -346,7 +346,7 @@ pub async fn toggle_devtools(window: tauri::Window) -> Result<(), String> {
   Ok(())
 }
 
-// ── Execution history (F6) ────────────────────────────────────────────────
+// Execution history
 // SQLite-backed execution records. Only summary stats are stored (no full
 // stdout), keeping each row small; the newest `EXECUTION_HISTORY_MAX` rows
 // are kept and older ones pruned on every save.

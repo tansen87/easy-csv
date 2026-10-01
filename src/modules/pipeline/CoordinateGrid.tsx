@@ -40,7 +40,7 @@ export function CoordinateGrid() {
 
   const s = "var(--muted-foreground)";
 
-  // Fade grid out as you zoom out to reduce visual noise (P3)
+  // Fade grid out as you zoom out to reduce visual noise
   const gridOpacity = Math.min(1, Math.max(0.15, zoom));
 
   return (

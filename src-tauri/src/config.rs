@@ -20,17 +20,17 @@ pub struct AppConfig {
   pub show_execution_notification: Option<bool>,
   pub minimize_to_tray: Option<bool>,
   pub double_click_fit_view: Option<bool>,
-  /// Master switch for the silent update check that runs shortly after launch
-  /// (design 022). Checking never installs anything by itself.
+  /// Master switch for the silent update check that runs shortly after launch.
+  /// Checking never installs anything by itself.
   pub auto_check_update: Option<bool>,
   /// Optional URL prefix prepended to plugin download URLs, for users behind a
-  /// slow or blocked route to GitHub (design 023 §6). Purely a transport hint:
+  /// slow or blocked route to GitHub. Purely a transport hint:
   /// every download is still checked against the size and sha256 pinned in the
   /// signed catalog, so a hostile proxy cannot change what gets installed —
   /// only make the transfer fail.
   pub plugin_download_prefix: Option<String>,
   /// Maximum number of pipelines that may execute at the same time; the extra
-  /// ones wait in FIFO order (design 028 §7.1). `None` → app default (4).
+  /// ones wait in FIFO order. `None` → app default (4).
   pub max_concurrent_runs: Option<u32>,
 }
 

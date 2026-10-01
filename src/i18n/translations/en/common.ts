@@ -1,7 +1,7 @@
 import type { Translations } from "@/i18n/translations/types";
 
 /** (none) · ConfirmDialog · HomeView · UpdateDialog · Floating panel docking ·
- * Result preview (F1) · CommandPalette
+ * Result preview · CommandPalette
  */
 export const enCommon = {
   rows: "Rows",
@@ -30,7 +30,7 @@ export const enCommon = {
   importFlowFormats: ".xanflow files",
   starOnGitHub: "Star on GitHub",
   branchProgress: "Branch",
-  // Execute menu (design 028 §5.6)
+  // Execute menu
   runStateQueued: "Queued",
   runStatePending: "Needs input",
   runStateDone: "Done",

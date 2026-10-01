@@ -1,6 +1,6 @@
 /**
  * Shared i18n type surface. Split out of the former single-file
- * `i18n/translations.ts` (design 019 §4.6).
+ * `i18n/translations.ts`.
  */
 
 export type Language = "en" | "zh" | "system";
@@ -57,7 +57,7 @@ export interface Translations {
   noLineageData: string;
   lineageForColumn: string;
 
-  // Variables (F3 pipeline parameterization)
+  // Variables
   variables: string;
   variableName: string;
   variableDefault: string;
@@ -140,7 +140,7 @@ export interface Translations {
   executePipelinesHint: string;
   newTab: string;
 
-  // SearchForm (009 S1 multi-pattern)
+  // SearchForm
   searchMultiPatternPlaceholder: string;
   searchPatternConflictWarning: string;
 
@@ -153,12 +153,12 @@ export interface Translations {
   importFlowFormats: string;
   starOnGitHub: string;
   branchProgress: string;
-  // Execute menu (design 028 §5.6)
+  // Execute menu
   runStateQueued: string;
   runStatePending: string;
   runStateDone: string;
   runStateFailed: string;
-  /** Short "取消" used inside the execute menu rows (design 028 §5.6). */
+  /** Short "取消" used inside the execute menu rows. */
   cancelShort: string;
   otherTabsRunning: string;
   crossTabOverwriteTitle: string;
@@ -804,7 +804,7 @@ export interface Translations {
   templateImportFailed: string;
   paletteTemplates: string;
 
-  // First-run onboarding (design 027)
+  // First-run onboarding
   onboardingStartTitle: string;
   onboardingStartDesc: string;
   onboardingAddStep: string;

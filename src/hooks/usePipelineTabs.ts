@@ -60,7 +60,7 @@ export function usePipelineTabs({
     [tabs],
   );
 
-  /** Keep "what you see is what runs" (design 018). Pure impl in execution/. */
+  /** Keep "what you see is what runs". Pure impl in execution/. */
   const resolveRunDelimiterForTab = useCallback(
     () => resolveRunDelimiter(getCurrentTab(), defaultDelimiter),
     [getCurrentTab, defaultDelimiter],

@@ -27,7 +27,7 @@ interface UseAppBootstrapArgs {
 }
 
 /**
- * App-level bootstrap and global listeners (019 §4.4 useAppBootstrap):
+ * App-level bootstrap and global listeners (useAppBootstrap):
  * startup init + session restore, F12/F5 handling, drag-and-drop file open,
  * system notification on pipeline completion and the window title sync.
  */
@@ -139,7 +139,7 @@ export function useAppBootstrap({
 }
 
 /**
- * System notification per finished run (design 028 §5.3).
+ * System notification per finished run.
  *
  * Driven by each run's own state transition rather than a global "is anything
  * executing" falling edge: with several tabs running at once, the old global

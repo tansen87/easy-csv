@@ -93,7 +93,7 @@ export function useCanvasSearch({
       });
     }
 
-    // Search result preview nodes (F1)
+    // Search result preview nodes
     for (const r of resultPreview || []) {
       if (r.label.toLowerCase().includes(query)) {
         results.push({

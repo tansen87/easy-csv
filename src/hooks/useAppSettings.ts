@@ -13,7 +13,7 @@ export function useAppSettings(
   const [minimizeToTray, setMinimizeToTray] = useState(true);
   const [doubleClickFitView, setDoubleClickFitView] = useState(true);
   const [autoCheckUpdate, setAutoCheckUpdate] = useState(true);
-  /** Parallel run limit (design 028 §7.1); the backend clamps to 1..=16. */
+  /** Parallel run limit; the backend clamps to 1..=16. */
   const [maxConcurrentRuns, setMaxConcurrentRuns] = useState(4);
 
   const loadDefaultDelimiter = useCallback(async () => {

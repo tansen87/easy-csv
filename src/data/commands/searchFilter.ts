@@ -1,6 +1,6 @@
 import { XanCommand } from "@/types/xan";
 
-/** Search & filter (design 019 §4.5). */
+/** Search & filter. */
 export const searchFilterCommands: XanCommand[] = [
 {
     id: "search",

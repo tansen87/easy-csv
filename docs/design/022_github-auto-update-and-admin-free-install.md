@@ -30,6 +30,25 @@
   避免「重装后旧数据盖掉新数据」。→ ⚠️ **该布局已于 2026-09-27 修订,见下方「实施记录 · 修订」**。
 - **`formatBytes` 上提**:`ExecutionHistoryDialog` 里的私有 `formatBytes` 移到
   `utils/format.ts` 供更新对话框复用(同 020 把 `formatElapsed` 上提的做法)。
+- **补·手动检查的进行中反馈(2026-10-01)**:手动「检查更新」此前在结果出来前**没有任何
+  可见反馈** —— 菜单项点完即关,`check()` 有 30s 超时,慢网络下像「点了没反应」。
+  现在「帮助」按钮在检查期间挂 `data-checking="true"` + `.update-busy`,复用「执行」
+  按钮那条 2px 不确定横条。**关键取舍**:CSS 从 `.exec-busy::after` 抽成共享的
+  `@keyframes busy-underline` + `.exec-busy::after, .update-busy::after`(design 028
+  §5.6.1 的视觉规则单一来源,不复制第二份);标记**刻意不用 `data-busy`** ——
+  `ExecuteMenu.test.tsx` 以 `[aria-haspopup="menu"][data-busy]` 定位执行按钮,而「帮助」
+  按钮同样是 `aria-haspopup="menu"` 的菜单触发器,复用会撞上「执行按钮是唯一 `data-busy`
+  触发器」这条断言。
+  **已知行为**:该标记由 `useUpdater.isChecking` 驱动,而 `silent` 只影响「失败不弹 Toast」,
+  **不**跳过 `setIsChecking(true)` —— 所以启动 5s 后的静默检查**同样**会让帮助按钮短暂出现
+  这条横线。判定为可接受:它只是一条 2px 弱提示,不弹窗、不打扰,「静默」的契约是不打断用户
+  (不弹对话框、失败不报错),而非零视觉反馈;若日后要让它彻底无声,应改的是
+  `check()` 的 `setIsChecking` 与 `silent` 的关系,而不是在 UI 侧特判。
+  **补·不再禁用「帮助」按钮(2026-10-01)**:原先检查期间该按钮带 `disabled`,再加置灰与
+  `cursor-not-allowed`。这等于用一个最长 30s 的慢检查把「帮助中心」一起锁在门外 ——
+  用户此刻最想做的恰恰可能是去查更新/帮助说明。现在横条是**纯叠加**:去掉 `disabled`、
+  去掉置灰与 `cursor-not-allowed`,按钮保持常态配色与 hover,点击照常开合菜单(菜单里
+  「检查更新」一项仍按原逻辑在检查中置灰,避免重复触发)。
 - **验证状态**:`cargo check` 通过;`pnpm typecheck` / `vitest run`(26 文件 383 例)/
   `eslint` 全通过(存量 13 个 error 均与本设计无关)。真实 `tauri build` 见文末「构建验证」。
 - **未做**:§8 的 V1–V11 需要在真实环境执行(V1/V3/V4 需标准用户账户与旧目录样本);

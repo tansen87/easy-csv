@@ -304,7 +304,7 @@ export function parseAIResponse(
           explanation: parsed.explanation,
         });
       }
-    } catch (e) {
+    } catch (err) {
       const blockContent = match[1];
       const result = parseJSONBlock(blockContent);
       if (result) {
@@ -318,6 +318,7 @@ export function parseAIResponse(
           }
         });
       }
+      console.log(err);
     }
     lastIndex = match.index + match[0].length;
   }

@@ -188,7 +188,7 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Panel z-index layers (D2): base(canvas) < panel < floating < modal < toast < tooltip */
+/* Panel z-index layers: base(canvas) < panel < floating < modal < toast < tooltip */
 :root {
   --z-panel: 10;
   --z-floating: 40;
@@ -386,7 +386,7 @@
 }
 
 /**
- * Entrance for a step node that has just joined the pipeline (design 027 §4.1:
+ * Entrance for a step node that has just joined the pipeline:
  * the sample pipeline is revealed step by step so a new user sees *how* a step
  * gets added instead of being handed a finished pipeline).
  */
@@ -428,11 +428,16 @@
   animation: fade-in 0.5s ease-out;
 }
 
-/* ── Run state of the toolbar "execute" button (design 028 §5.6.1) ──────────
-   The button keeps its label and size while a run is in flight; only a 2px
+/* In-flight feedback for a toolbar button
+   A button whose work is in flight keeps its label and size; only a 2px
    indeterminate line appears along its bottom edge (a ::after, so no DOM node
-   is added and nothing shifts). */
-@keyframes exec-underline {
+   is added and nothing shifts). The host button needs `relative` and
+   `overflow-hidden`. Two callers share it:
+     - `.exec-busy`   - "Execute" while a run is in flight;
+     - `.update-busy` - Help while an update check is in flight, so a manual
+                        check is visible instead of looking
+                        like a click that did nothing. */
+@keyframes busy-underline {
   0% {
     transform: translateX(-100%);
   }
@@ -440,7 +445,8 @@
     transform: translateX(280%);
   }
 }
-.exec-busy::after {
+.exec-busy::after,
+.update-busy::after {
   content: "";
   position: absolute;
   left: 0;
@@ -449,10 +455,11 @@
   width: 38%;
   border-radius: 999px;
   background: var(--primary);
-  animation: exec-underline 1.15s ease-in-out infinite;
+  animation: busy-underline 1.15s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .exec-busy::after {
+  .exec-busy::after,
+  .update-busy::after {
     animation: none;
   }
 }

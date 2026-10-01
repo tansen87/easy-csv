@@ -28,7 +28,7 @@ interface PipelineTemplateDialogProps {
   onDelete: (id: string) => void;
   onExport: (id: string) => void;
   onImport: () => void;
-  /** Adopt a built-in template into the user's own library (design 027 §4.4). */
+  /** Adopt a built-in template into the user's own library. */
   onCopyToMine: (id: string) => void;
 }
 
@@ -129,9 +129,8 @@ export function PipelineTemplateDialog({
   const myList = filteredTemplates.filter((tpl) => !isBuiltinTemplate(tpl.id));
 
   /**
-   * One template row. Built-ins (design 027 §4.4) are read-only: no rename and
-   * no delete, but "copy to my templates" so the user can adopt and then edit
-   * one.
+   * One template row. Built-ins are read-only: no rename and no delete, 
+   * but "copy to my templates" so the user can adopt and then edit one.
    */
   const renderTemplateRow = (tpl: PipelineTemplate) => {
     const isRenaming = renamingId === tpl.id;

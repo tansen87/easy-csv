@@ -1,4 +1,4 @@
-//! Excel multi-file merge (design 025): turn the sheets of N workbooks —
+//! Excel multi-file merge: turn the sheets of N workbooks —
 //! possibly spread over several folders — into ONE table.
 //!
 //! Reading/writing Excel is delegated to `xan` (`from` / `cat rows` / `to`);
@@ -14,7 +14,7 @@
 //! - `--paths` entries are resolved against the child's cwd → must be absolute.
 //! - `to xlsx` always writes a single sheet named `Sheet1`.
 //!
-//! Concurrency is deliberately NOT used here (§2.6 of design 025): peak memory
+//! Concurrency is deliberately NOT used here: peak memory
 //! stays `max(single sheet)` instead of `K × max`, which is the property the
 //! whole design is built around.
 //!
@@ -72,7 +72,7 @@ pub struct ExcelScanResult {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExcelMergeRequest {
-  /// Output shape (design 026 §2): `"single"`(default, one merged table) |
+  /// Output shape: `"single"`(default, one merged table) |
   /// `"by_sheet"`(one file per selected sheet name) | `"multi_sheet"`(one
   /// workbook, one output sheet per source workbook). `"split"` is accepted
   /// as an alias of `by_sheet` (single-workbook degenerate case).
@@ -105,7 +105,7 @@ pub struct ExcelMergeRequest {
   /// Empty = next to the first input.
   #[serde(default)]
   pub output_dir: Option<String>,
-  /// Explicitly selected sheet names for `by_sheet` (design 026 §4.1: the
+  /// Explicitly selected sheet names for `by_sheet` (the
   /// user must pick at least one — an empty list is rejected, never silently
   /// widened to "all names").
   #[serde(default)]
@@ -170,9 +170,9 @@ pub struct ExcelMergeResult {
   pub skipped: Vec<String>,
   /// Non-fatal problems (unreadable workbooks, …) surfaced to the dialog.
   pub warnings: Vec<String>,
-  /// Only for `align = union`: makes the widening visible (§3.5).
+  /// Only for `align = union`: makes the widening visible.
   pub union_summary: Option<UnionSummary>,
-  /// Per-output summaries (design 026). `single`/`multi_sheet` produce
+  /// Per-output summaries. `single`/`multi_sheet` produce
   /// exactly one entry, `by_sheet` one per selected sheet name. The
   /// top-level fields mirror the first entry for backward compatibility
   /// with the 025 payload shape.
@@ -218,10 +218,10 @@ pub(crate) enum OutputFormat {
   Xlsx,
 }
 
-/// Output shape (design 026 §2).
+/// Output shape.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum OutputShape {
-  /// One merged table (design 025 behavior).
+  /// One merged table.
   Single,
   /// One output file per user-selected sheet name.
   BySheet,
@@ -294,7 +294,7 @@ fn parse_output_format(v: &str) -> Result<OutputFormat, String> {
 fn parse_output_shape(v: &str) -> Result<OutputShape, String> {
   match v {
     "single" => Ok(OutputShape::Single),
-    // `split` (design 026 §4.4) is the single-workbook degenerate case of
+    // `split` is the single-workbook degenerate case of
     // `by_sheet` and shares its whole pipeline.
     "by_sheet" | "split" => Ok(OutputShape::BySheet),
     "multi_sheet" => Ok(OutputShape::MultiSheet),
@@ -678,7 +678,7 @@ pub(crate) fn resolve_parts(
   Ok((parts, pre_skipped))
 }
 
-// --- output planning (design 026) --------------------------------------------
+// --- output planning --------------------------------------------
 
 /// Windows reserved device names (case-insensitive); they cannot be used as a
 /// file name even when carrying an extension (`CON.csv` is reserved too).
@@ -710,7 +710,7 @@ fn is_windows_reserved(name: &str) -> bool {
   )
 }
 
-/// Make a sheet name safe as an output *file* name (design 026 §4.2). Sheet
+/// Make a sheet name safe as an output *file* name. Sheet
 /// names already exclude `\/:*?[]`, but workbook stems may contain other
 /// offenders; trailing dots/spaces are silently dropped by Windows (leaving a
 /// name that "doesn't match"), so they are trimmed here instead.
@@ -732,7 +732,7 @@ pub(crate) fn sanitize_filename(name: &str) -> String {
   }
 }
 
-/// Make a name safe as an output *worksheet* name (design 026 §5.1): Excel
+/// Make a name safe as an output *worksheet* name: Excel
 /// allows at most 31 characters, forbids `\/:?*[]`, a leading/trailing
 /// apostrophe, and reserves `History` (case-insensitive).
 pub(crate) fn sanitize_sheet_name(name: &str) -> String {
@@ -753,8 +753,8 @@ pub(crate) fn sanitize_sheet_name(name: &str) -> String {
   trimmed.chars().take(31).collect()
 }
 
-/// Case-insensitive dedup of output names in encounter order (design 026
-/// §4.2/§5.1): the first occurrence keeps its name, later collisions get
+/// Case-insensitive dedup of output names in encounter order:
+/// the first occurrence keeps its name, later collisions get
 /// `_2`, `_3`, … Returns the final names plus the (original → final) renames
 /// (empty when nothing collided).
 pub(crate) fn dedup_names(names: Vec<String>) -> (Vec<String>, Vec<(String, String)>) {
@@ -789,7 +789,7 @@ fn workbook_stem(path: &str) -> String {
     .unwrap_or_else(|| "workbook".to_string())
 }
 
-/// One planned output (design 026 §6): a name plus the parts that make it up.
+/// One planned output: a name plus the parts that make it up.
 /// - `single`: exactly one plan; `name` is unused (the output path comes from
 ///   the request via `resolve_output_path`).
 /// - `by_sheet`: one plan per selected sheet name (`name` = sanitized output
@@ -832,7 +832,7 @@ pub(crate) fn plan_outputs(
       ))
     }
     OutputShape::BySheet => {
-      // The user explicitly picks which sheet names to merge (§4.1): trim,
+      // The user explicitly picks which sheet names to merge: trim,
       // keep order, drop exact duplicates. An empty selection is an error —
       // never a silent fallback to "all names".
       let mut names: Vec<String> = Vec::new();
@@ -877,7 +877,7 @@ pub(crate) fn plan_outputs(
     }
     OutputShape::MultiSheet => {
       // One output workbook; one output sheet per selected (workbook, sheet).
-      // Sheet naming (§5.1): workbook stem for `first`/`name`, `stem#sheet`
+      // Sheet naming: workbook stem for `first`/`name`, `stem#sheet`
       // for `all` (which yields several sheets per workbook).
       let mut parts: Vec<SelectedSheet> = Vec::new();
       let mut out_sheets: Vec<String> = Vec::new();
@@ -1153,7 +1153,7 @@ pub(crate) fn write_paths_list(dest: &Path, parts: &[PathBuf]) -> Result<(), Str
 }
 
 /// `YYYYMMDD_HHMMSS` tag embedded in *default* output names so repeated runs
-/// never overwrite each other (design 026: fixed default names like
+/// never overwrite each other (fixed default names like
 /// `s1.xlsx` made every re-run silently overwrite the previous result).
 /// Explicit output paths keep overwrite semantics — the user chose that
 /// exact file.
@@ -1456,7 +1456,7 @@ fn merge_sync(request: ExcelMergeRequest) -> Result<ExcelMergeResult, String> {
         .map(|s| s.path.clone())
         .unwrap_or_else(|| PathBuf::from("."));
       for (index, plan) in plans.iter().enumerate() {
-        // `single` keeps the 025 output resolution; `by_sheet` emits one
+        // `single` keeps the output resolution; `by_sheet` emits one
         // `{name}_{run_ts}.{ext}` file per plan into the requested output
         // directory (timestamped — a re-run must not overwrite it).
         let output = if shape == OutputShape::Single {
@@ -1531,7 +1531,7 @@ fn merge_sync(request: ExcelMergeRequest) -> Result<ExcelMergeResult, String> {
   let _ = fs::remove_dir_all(&dir);
 
   // Top-level fields mirror the first output for backward compatibility with
-  // the 025 payload shape (design 026 §6).
+  // the payload shape.
   let first = outputs.first();
   Ok(ExcelMergeResult {
     output_path: first.map(|o| o.path.clone()).unwrap_or_default(),
@@ -1552,7 +1552,7 @@ fn merge_sync(request: ExcelMergeRequest) -> Result<ExcelMergeResult, String> {
   })
 }
 
-// --- per-output execution (design 026) ---------------------------------------
+// --- per-output execution ---------------------------------------
 
 /// Output directory for `by_sheet`: the explicit request value, else next to
 /// the first input.
@@ -1775,7 +1775,7 @@ fn run_single_sheet_output(
   })
 }
 
-/// Write the `multi_sheet` output (design 026 §5): each converted part becomes
+/// Write the `multi_sheet` output: each converted part becomes
 /// one worksheet named after its `sheet_name` (sanitized + deduped by
 /// `plan_outputs`). No alignment is involved — every worksheet is a single
 /// part — and every cell is written as text (the pipeline's data semantics
@@ -1845,7 +1845,7 @@ fn run_multi_sheet_output(
 }
 
 /// Write each converted part as one worksheet of a single xlsx workbook
-/// (`rust_xlsxwriter`; design 026 §5.2). Row/column indices are zero-based
+/// (`rust_xlsxwriter`). Row/column indices are zero-based
 /// `RowNum`/`ColNum`; the writer rejects values beyond the xlsx limits
 /// (1,048,576 rows × 16,384 columns), which surfaces as a readable error.
 fn write_multi_sheet_xlsx(parts: &[ConvertedPart], out: &Path) -> Result<(), String> {

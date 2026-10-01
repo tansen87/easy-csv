@@ -43,7 +43,7 @@ interface UsePipelineLayoutArgs {
 
 /**
  * Canvas layout reconciliation: recompute node/edge layout when data changes,
- * inject result-preview nodes (F1) with position memory, and apply
+ * inject result-preview nodes with position memory, and apply
  * selection/highlight as visual-only node properties.
  */
 export function usePipelineLayout({

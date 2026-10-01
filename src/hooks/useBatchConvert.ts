@@ -4,8 +4,8 @@ import type { RunContext } from "@/types/execution";
 
 /**
  * Batch format conversion. Takes a `RunContext` at call time so the loop uses
- * the run's own tab / delimiter / cancel flag instead of "the current tab"
- * (design 028 §5.2). Logging goes through `ctx.log` (tagged with the tab).
+ * the run's own tab / delimiter / cancel flag instead of "the current tab".
+ * Logging goes through `ctx.log` (tagged with the tab).
  */
 export function useBatchConvert() {
   const globToRegex = (pattern: string): RegExp => {
