@@ -42,7 +42,7 @@ export const zhOnboarding = {
   // 示例数据
   onboardingSampleFailed: "示例数据准备失败：{error}",
   // 示例逐步骤回放: 每一步都写明「这一步是怎么加进来的」
-  onboardingDemoRevealAction1: "打开命令面板, 点 search → 去掉金额为空的行",
+  onboardingDemoRevealAction1: "打开命令(Alt+C), 点 search → 去掉金额为空的行",
   onboardingDemoRevealAction2: "再点 dedup → 去掉完全重复的行",
   onboardingDemoRevealAction3: "最后点 groupby → 按地区汇总金额",
   onboardingDemoRevealRunning: "三步装好了, 正在跑一遍…",

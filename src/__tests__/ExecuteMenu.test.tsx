@@ -61,6 +61,7 @@ function baseProps(overrides: Record<string, unknown> = {}) {
     onImportPipeline: vi.fn(),
     onExportPipeline: vi.fn(),
     onUseOrSaveTemplate: vi.fn(),
+    onLoadDemo: vi.fn(),
     onHelp: vi.fn(),
     onCheckUpdate: vi.fn(),
     onShowSettings: vi.fn(),
@@ -285,9 +286,9 @@ describe("update check feedback on the Help button (design 022 §5.4)", () => {
 
   it("keeps the Help menu reachable while a check is in flight", () => {
     // `activeMenu` is owned by the caller, so render the open state directly:
-    // the menu must still hold both entries (Help Center + Check Update) while
-    // a check is running. Addressed by the `data-checking` trigger rather than
-    // by localized text so the assertion stays language-agnostic.
+    // the menu must still hold every entry (View Example + Help Center + Check
+    // Update) while a check is running. Addressed by the `data-checking` trigger
+    // rather than by localized text so the assertion stays language-agnostic.
     const { container } = renderMenu({
       isCheckingUpdate: true,
       activeMenu: "help",
@@ -296,7 +297,7 @@ describe("update check feedback on the Help button (design 022 §5.4)", () => {
     const menu = container.querySelector('[role="menu"]');
     expect(menu).toBeTruthy();
     expect(Array.from(menu!.querySelectorAll('[role="menuitem"]')).length).toBe(
-      2,
+      3,
     );
   });
 

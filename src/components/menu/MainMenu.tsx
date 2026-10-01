@@ -16,7 +16,7 @@ interface MainMenuProps {
   redoStack: Array<{ pipeline: PipelineStep[] }>;
   onUndo: () => void;
   onRedo: () => void;
-  /** Tab strip + run registry backing the execute menu (design 028 §5.6). */
+  /** Tab strip + run registry backing the execute menu. */
   tabs: { id: string; name: string }[];
   runs: Record<string, RunSession>;
   currentTabId: string;
@@ -32,6 +32,8 @@ interface MainMenuProps {
   onImportPipeline: () => void;
   onExportPipeline: () => void;
   onUseOrSaveTemplate: () => void;
+  /** Opens the built-in sample. Sits first in the Help menu. */
+  onLoadDemo: () => void;
   onHelp: () => void;
   onCheckUpdate: () => void;
   onShowSettings: () => void;
@@ -70,8 +72,8 @@ interface MainMenuProps {
    */
   showSettingsDialog: boolean;
   /**
-   * Briefly highlight the command-panel entry while the first-run guide is up
-   * (design 027 §4.2 item 3), so the card's button and the real entry point
+   * Briefly highlight the command-panel entry while the first-run guide is up,
+   * so the card's button and the real entry point
    * become associated. Visual only — no click behaviour changes.
    */
   highlightCommandEntry?: boolean;
@@ -98,6 +100,7 @@ export const MainMenu = React.memo(function MainMenu({
   onImportPipeline,
   onExportPipeline,
   onUseOrSaveTemplate,
+  onLoadDemo,
   onHelp,
   onCheckUpdate,
   onShowSettings,
@@ -697,6 +700,18 @@ export const MainMenu = React.memo(function MainMenu({
               role="menu"
               className="absolute left-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg z-50 w-[180px] p-1"
             >
+              <button
+                role="menuitem"
+                onClick={() => {
+                  onLoadDemo();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+              >
+                <span className="flex-1 text-left whitespace-nowrap">
+                  {t.viewSample}
+                </span>
+              </button>
               <button
                 role="menuitem"
                 onClick={() => {

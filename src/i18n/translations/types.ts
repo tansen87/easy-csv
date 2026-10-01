@@ -30,7 +30,7 @@ export interface Translations {
   executing: string;
   cancelExecution: string;
   executionCancelled: string;
-  /** Parallel run limit shown in settings (design 028 §7.1). */
+  /** Parallel run limit shown in settings. */
   maxConcurrentRuns: string;
   maxConcurrentRunsDesc: string;
   commandPanel: string;
@@ -38,6 +38,8 @@ export interface Translations {
   view: string;
   search: string;
   helpCenter: string;
+  /** First row of the Help menu: opens the built-in sample. */
+  viewSample: string;
   dataProfileRequiresInput: string;
   checkUpdate: string;
   help: string;
@@ -176,7 +178,7 @@ export interface Translations {
   cancel: string;
   update: string;
 
-  // UpdateDialog — install / progress / install-form gating (design 022).
+  // UpdateDialog — install / progress / install-form gating.
   // Values live in `{zh,en}/update.ts`.
   updateDownloadAndInstall: string;
   updateDownloading: string;

@@ -1826,6 +1826,7 @@ function AppContent() {
               onImportPipeline={handleImportPipeline}
               onExportPipeline={handleExportPipelineAndMarkSaved}
               onUseOrSaveTemplate={openTemplates}
+              onLoadDemo={handleLoadDemo}
               onHelp={onHelp}
               onCheckUpdate={() => void checkForUpdates()}
               onShowSettings={onShowSettings}

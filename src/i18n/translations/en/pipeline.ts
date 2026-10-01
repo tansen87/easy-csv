@@ -24,6 +24,7 @@ export const enPipeline = {
   view: "View",
   search: "Search",
   helpCenter: "Help Center",
+  viewSample: "View Example",
   dataProfileRequiresInput: "Requires an input file",
   dataProfile: "Data Profile",
   checkUpdate: "Check Update",

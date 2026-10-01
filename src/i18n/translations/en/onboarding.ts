@@ -46,7 +46,7 @@ export const enOnboarding = {
   onboardingSampleFailed: "Could not prepare the sample data: {error}",
   // Step-by-step replay: each caption names the action that added the step.
   onboardingDemoRevealAction1:
-    "Open the command panel, click search → drop empty amounts",
+    "Open the command (Alt+C), click search → drop empty amounts",
   onboardingDemoRevealAction2: "Click dedup → drop exactly duplicated rows",
   onboardingDemoRevealAction3: "Click groupby → total the amount by region",
   onboardingDemoRevealRunning: "Three steps built — running it…",
