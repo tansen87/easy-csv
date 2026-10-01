@@ -311,8 +311,12 @@ describe("MergeExcelDialog", () => {
     mockBackend({ fileExists: false });
     renderDialog();
 
+    // The `file_exists` probe resolves asynchronously, and the button stays
+    // enabled while it is in flight (design 025 §3.7). Await the settled state
+    // instead of asserting right after the first paint — the same idiom as the
+    // split / separate / encoding dialogs.
     const reveal = await screen.findByText(t("openPath"));
-    expect(reveal).toBeDisabled();
+    await waitFor(() => expect(reveal).toBeDisabled());
     expect(
       await screen.findByText(t("lastResultNoOutput")),
     ).toBeInTheDocument();

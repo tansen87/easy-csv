@@ -39,7 +39,6 @@ tauri-plugin-process = "^2"
 # feature (no platform-linux/macos feature exists as of 5.0.2), so the macOS/
 # Linux interception ideas from design 012 W4 are not applicable.
 tauri-plugin-prevent-default = { version = "^5", features = ["platform-windows"] }
-rusqlite = { version = "^0.40.2", features = ["bundled"] }
 aes-gcm = "^0.11.0"
 sha2 = "^0.11.0"
 hex = "^0.4"
@@ -47,6 +46,7 @@ rand = "0.8"
 hostname = "^0.4"
 whoami = "^2.1.2"
 dirs = "^6"
+chrono = "^0.4.45"
 csv = "^1.4"
 similar = "^3"
 encoding_rs = "^0.8"
@@ -54,25 +54,18 @@ serde = { version = "^1", features = ["derive"] }
 serde_json = "^1"
 tokio = { version = "^1.53.1", features = ["rt", "process", "fs", "io-util"] }
 reqwest = { version = "^0.13.4", features = ["json", "stream"] }
+rusqlite = { version = "^0.40.2", features = ["bundled"] }
+rust_xlsxwriter = "0.99"
 futures-util = "0.3"
-chrono = "^0.4.45"
-# Plugin catalog verification (design 023). Both are already in Cargo.lock via
+# Plugin catalog verification. Both are already in Cargo.lock via
 # tauri-plugin-updater, so promoting them to direct dependencies adds no new
 # code to the build:
-#   minisign-verify — the same crate the updater uses to check `.sig` assets
-#   semver          — comparing an installed plugin version with the catalog's
+#   minisign-verify - the same crate the updater uses to check `.sig` assets
+#   semver          - comparing an installed plugin version with the catalog's
 minisign-verify = "0.2"
 semver = "1"
 
-# Multi-sheet xlsx writing (design 026, output shape C). `xan to xlsx` can only
-# emit a single sheet, so one-workbook-multi-sheet output needs a real writer.
-# This is the documented exception to the "no new deps for a format" rule
-# (designs 024/025): the *read* side has xan, the *write* side had nothing —
-# the alternative was hand-rolling OOXML with the correctness risk on the
-# delivered data.
-rust_xlsxwriter = "0.99"
-
-# Test-only: generate minimal xlsx fixtures on the fly (design 025). Same
+# Test-only: generate minimal xlsx fixtures on the fly. Same
 # version already in Cargo.lock via tauri; Stored entries need no extra
 # features, so this adds no new crate to the build.
 [dev-dependencies]
