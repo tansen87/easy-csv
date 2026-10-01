@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { DuckdbTableInfo, PipelineTab, TabularReadResult } from "@/types/xan";
 import { formatDateTime } from "@/utils/format";
-import { delimiterLabel } from "@/utils/separateHistory";
 import {
   detectTabularFormat,
   duckdbTableName,

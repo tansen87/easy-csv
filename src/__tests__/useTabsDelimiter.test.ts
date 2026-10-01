@@ -89,7 +89,7 @@ beforeEach(() => {
 describe("useTabs delimiter resolution (design 018)", () => {
   it("detects the delimiter while auto-detection is on", async () => {
     mockBackend(";");
-    const { result, addLog } = setup(",", true);
+    const { result } = setup(",", true);
 
     await act(async () => {
       await result.current.loadCsvData("tab-1", "/tmp/a.csv");
