@@ -9,7 +9,7 @@ export function useUIState() {
   const [showCommandPanel, setShowCommandPanel] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeMenu, setActiveMenu] = useState<
-    "file" | "edit" | "view" | "help" | null
+    "file" | "edit" | "view" | "tools" | "help" | null
   >(null);
   const [isMenuActivated, setIsMenuActivated] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);

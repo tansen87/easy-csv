@@ -20,6 +20,8 @@ export interface Translations {
   // MainMenu
   file: string;
   edit: string;
+  /** Third menu-bar entry: one-shot file utilities (diff/encoding/separate/split/merge). */
+  tools: string;
   openNewTab: string;
   savePipeline: string;
   importWorkflow: string;
@@ -267,10 +269,67 @@ export interface Translations {
   chartType: string;
   xAxis: string;
   yAxis: string;
+  xAxisLabel: string;
+  yAxisLabel: string;
+  bins: string;
+  color: string;
+  width: string;
+  height: string;
   category: string;
   title: string;
   noData: string;
   download: string;
+  exportPng: string;
+  /** Localised chart-type names for the picker (no raw `histogram` ids). */
+  chartTypeLine: string;
+  chartTypeScatter: string;
+  chartTypeBar: string;
+  chartTypeHistogram: string;
+  chartTypePie: string;
+  chartTypeWordcloud: string;
+  chartTypeHeatmap: string;
+  /** Legend roles and sorting controls. */
+  chartLegendY: string;
+  chartLegendX: string;
+  chartSort: string;
+  chartSortDesc: string;
+  chartSortAsc: string;
+  chartSortNone: string;
+  /** Number formatting options. */
+  chartNumberFormat: string;
+  chartFormatAuto: string;
+  chartFormatInteger: string;
+  chartFormatDecimal1: string;
+  chartFormatDecimal2: string;
+  chartFormatPercent: string;
+  chartFormatCompact: string;
+  /** Explanatory legends for word cloud / heatmap. */
+  chartWordcloudHint: string;
+  chartHeatmapScaleLow: string;
+  chartHeatmapScaleHigh: string;
+  chartHeatmapScaleUnit: string;
+  /** Chart / data-table view toggle. */
+  chartViewChart: string;
+  chartViewTable: string;
+  chartCopyCsv: string;
+  chartCopied: string;
+  chartShare: string;
+  /** Empty and error states. */
+  chartNoRowsTitle: string;
+  chartNoRowsHint: string;
+  chartColumnNotFoundTitle: string;
+  chartColumnNotFoundHint: string;
+  chartNoNumericTitle: string;
+  chartNoNumericHint: string;
+  chartDroppedRows: string;
+  chartTruncated: string;
+  chartHeatmapCount: string;
+  /** Category filter dropdown over the legend (029 follow-up). */
+  chartFilter: string;
+  chartSelectAll: string;
+  chartDeselectAll: string;
+  chartAllHiddenTitle: string;
+  chartAllHiddenHint: string;
 
   // DataProfile
   dataProfile: string;

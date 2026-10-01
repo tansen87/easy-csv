@@ -8,8 +8,8 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/utils";
 
 interface MainMenuProps {
-  activeMenu: "file" | "edit" | "view" | "help" | null;
-  setActiveMenu: (menu: "file" | "edit" | "view" | "help" | null) => void;
+  activeMenu: "file" | "edit" | "view" | "tools" | "help" | null;
+  setActiveMenu: (menu: "file" | "edit" | "view" | "tools" | "help" | null) => void;
   isMenuActivated: boolean;
   setIsMenuActivated: (activated: boolean) => void;
   undoStack: Array<{ pipeline: PipelineStep[] }>;
@@ -269,8 +269,8 @@ export const MainMenu = React.memo(function MainMenu({
   };
 
   // Menu-bar behaviour: a click opens a menu; while any menu is open, hovering
-  // another menu button switches to it (design: File / Edit / View / Help).
-  const toggleMenu = (menu: "file" | "edit" | "view" | "help") => {
+  // another menu button switches to it (design: File / Edit / View / Tools / Help).
+  const toggleMenu = (menu: "file" | "edit" | "view" | "tools" | "help") => {
     setExecMenuOpen(false);
     if (!isMenuActivated) {
       setIsMenuActivated(true);
@@ -280,8 +280,8 @@ export const MainMenu = React.memo(function MainMenu({
     }
   };
 
-  const hoverMenu = (menu: "file" | "edit" | "view" | "help") => {
-    // The execute menu is a peer of File/Edit/View/Help: hovering a menu-bar
+  const hoverMenu = (menu: "file" | "edit" | "view" | "tools" | "help") => {
+    // The execute menu is a peer of File/Edit/View/Tools/Help: hovering a menu-bar
     // button while it is open hands the menu bar over to that button.
     if (execMenuOpen) {
       setExecMenuOpen(false);
@@ -431,52 +431,6 @@ export const MainMenu = React.memo(function MainMenu({
                 <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
                   Ctrl+E
                 </kbd>
-              </button>
-              <div className="border-t border-border my-1" />
-              <button
-                onClick={() => {
-                  onOpenCsvDiff();
-                  setActiveMenu(null);
-                }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
-              >
-                {t.csvDiff}
-              </button>
-              <button
-                onClick={() => {
-                  onOpenCsvEncoding();
-                  setActiveMenu(null);
-                }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
-              >
-                {t.csvEncoding}
-              </button>
-              <button
-                onClick={() => {
-                  onOpenSeparateCsv();
-                  setActiveMenu(null);
-                }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
-              >
-                {t.separateGoodBad}
-              </button>
-              <button
-                onClick={() => {
-                  onOpenSplitLines();
-                  setActiveMenu(null);
-                }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
-              >
-                {t.splitLines}
-              </button>
-              <button
-                onClick={() => {
-                  onOpenMergeExcel();
-                  setActiveMenu(null);
-                }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
-              >
-                {t.mergeExcel}
               </button>
             </div>
           )}
@@ -664,11 +618,100 @@ export const MainMenu = React.memo(function MainMenu({
           )}
         </div>
 
+        {/* Tools menu — one-shot file utilities that never touch the pipeline:
+            diff / encoding conversion / separate good-bad rows / split by line
+            count / merge Excel workbooks. They open a dialog and call one
+            backend command; unlike the File menu they do not participate in the
+            pipeline lifecycle (open / new tab / templates / save / import /
+            export), so they live in their own menu. */}
+        <div className="relative">
+          <button
+            onClick={() => toggleMenu("tools")}
+            onMouseEnter={() => hoverMenu("tools")}
+            aria-haspopup="menu"
+            aria-expanded={activeMenu === "tools"}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              activeMenu === "tools"
+                ? "bg-accent text-foreground"
+                : "text-primary hover:text-primary hover:bg-primary/10"
+            }`}
+          >
+            {t.tools}
+          </button>
+          {activeMenu === "tools" && (
+            <div
+              role="menu"
+              className="absolute left-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg z-50 w-[180px] p-1"
+            >
+              <button
+                role="menuitem"
+                onClick={() => {
+                  onOpenCsvDiff();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+              >
+                <span className="flex-1 text-left whitespace-nowrap">
+                  {t.csvDiff}
+                </span>
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  onOpenCsvEncoding();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+              >
+                <span className="flex-1 text-left whitespace-nowrap">
+                  {t.csvEncoding}
+                </span>
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  onOpenSeparateCsv();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+              >
+                <span className="flex-1 text-left whitespace-nowrap">
+                  {t.separateGoodBad}
+                </span>
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  onOpenSplitLines();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+              >
+                <span className="flex-1 text-left whitespace-nowrap">
+                  {t.splitLines}
+                </span>
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  onOpenMergeExcel();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+              >
+                <span className="flex-1 text-left whitespace-nowrap">
+                  {t.mergeExcel}
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Help menu — help dialog + check update. The entry stays clickable in
             every state: a slow check must not lock away the Help Center. The
             "update found" dot inherited from the former standalone button lives
             on this button's top-right. The check itself gets the same 2px
-            indeterminate bottom line as the "执行" button (design 022 §5.4): a
+            indeterminate bottom line as the "Execute" button: a
             manual check otherwise looks like a click that did nothing until the
             dialog finally opens. The marker is `data-checking`, deliberately not
             `data-busy` — the execute button is the only `data-busy` menu trigger

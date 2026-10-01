@@ -4,6 +4,7 @@ import type { Translations } from "@/i18n/translations/types";
 export const zhPipeline = {
   file: "文件",
   edit: "编辑",
+  tools: "工具",
   openNewTab: "新标签页打开",
   savePipeline: "保存Pipeline",
   importWorkflow: "导入工作流",

@@ -6,6 +6,7 @@ import type { Translations } from "@/i18n/translations/types";
 export const enPipeline = {
   file: "File",
   edit: "Edit",
+  tools: "Tools",
   openNewTab: "Open New Tab",
   savePipeline: "Save Pipeline",
   importWorkflow: "Import Workflow",
@@ -18,7 +19,7 @@ export const enPipeline = {
   executionCancelled: "Execution cancelled",
   maxConcurrentRuns: "Concurrent executions",
   maxConcurrentRunsDesc:
-    "Runs beyond this limit wait in line and start as soon as a slot frees up (1–16, default 4)",
+    "Runs beyond this limit wait in line and start as soon as a slot frees up (1-16, default 4)",
   commandPanel: "Command",
   logPanel: "Logs",
   view: "View",

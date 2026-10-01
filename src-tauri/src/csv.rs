@@ -1883,6 +1883,114 @@ pub async fn probe_csv_file(
   .map_err(|e| format!("Task join error: {e}"))?
 }
 
+/// Result of parsing CSV text for the chart branch.
+///
+/// The chart path used to split CSV in JavaScript (`split("\n")` +
+/// `split(delimiter)`), which silently broke quoted fields such as
+/// `"Smith, John",42` and produced columns that disagreed with the preview
+/// table. Parsing through the same `csv` crate as the preview removes that
+/// whole class of bug and keeps the two views on one source of truth.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ParsedTable {
+  pub headers: Vec<String>,
+  pub rows: Vec<Vec<String>>,
+  /// True when `limit` cut the table short, so the caller can warn instead of
+  /// quietly charting a fraction of the data (design 029 §3.2).
+  pub truncated: bool,
+  /// Total data rows seen (before any limit), for the truncation notice.
+  pub total_rows: usize,
+}
+
+/// How many data rows the chart path may pull at most.
+///
+/// The renderer only ever draws what fits on screen, so a hard cap keeps a
+/// runaway intermediate result from freezing the UI. Callers must surface
+/// `truncated` rather than pretending the table is complete.
+const CHART_MAX_ROWS: usize = 50_000;
+
+fn parse_csv_text_sync(
+  text: &str,
+  delimiter: Option<&str>,
+  has_headers: bool,
+  limit: usize,
+) -> Result<ParsedTable, String> {
+  let delim = delimiter
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+    .map(|s| s.as_bytes()[0])
+    .unwrap_or(b',');
+
+  let mut rdr = csv::ReaderBuilder::new()
+    .delimiter(delim)
+    .has_headers(has_headers)
+    .flexible(true)
+    .from_reader(text.as_bytes());
+
+  let mut headers: Vec<String> = if has_headers {
+    rdr
+      .headers()
+      .map_err(|e| format!("Failed to read headers: {}", e))?
+      .iter()
+      .map(|s| s.to_string())
+      .collect()
+  } else {
+    Vec::new()
+  };
+
+  let mut rows: Vec<Vec<String>> = Vec::new();
+  let mut total_rows = 0usize;
+
+  for result in rdr.records() {
+    let record = result.map_err(|e| format!("Failed to read row: {}", e))?;
+    total_rows += 1;
+
+    if !has_headers && headers.is_empty() {
+      headers = (0..record.len())
+        .map(|i| format!("column_{}", i + 1))
+        .collect();
+    }
+
+    if rows.len() < limit {
+      rows.push(record.iter().map(|s| s.to_string()).collect());
+    }
+  }
+
+  Ok(ParsedTable {
+    headers,
+    rows,
+    truncated: total_rows > limit,
+    total_rows,
+  })
+}
+
+/// Parse CSV **text** into headers + rows using the same `csv` crate as the
+/// preview table.
+///
+/// The chart branch receives its rows as pipeline stdout (or a raw file), so a
+/// text-in command avoids writing a temp file per run. Quoted delimiters,
+/// embedded newlines and escaped quotes are all handled by the parser instead of
+/// by hand-rolled string splitting. Design: `docs/design/029_chart-readability.md`
+/// §3.1.
+#[tauri::command]
+pub async fn parse_csv_text(
+  text: String,
+  delimiter: Option<String>,
+  has_headers: Option<bool>,
+  limit: Option<usize>,
+) -> Result<ParsedTable, String> {
+  let limit = limit.unwrap_or(CHART_MAX_ROWS);
+  tokio::task::spawn_blocking(move || {
+    parse_csv_text_sync(
+      &text,
+      delimiter.as_deref(),
+      has_headers.unwrap_or(true),
+      limit,
+    )
+  })
+  .await
+  .map_err(|e| format!("Task join error: {e}"))?
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -3352,5 +3460,75 @@ mod tests {
     let _ = std::fs::remove_file(&missing);
     let err = read_csv_sync(missing.to_str().unwrap(), None, None, None).unwrap_err();
     assert!(err.contains("Failed to open"), "{err}");
+  }
+
+  #[test]
+  fn parse_csv_text_keeps_quoted_delimiters_in_one_cell() {
+    // The hand-rolled `split(",")` this replaces turned this row into three
+    // fields and shifted every following column.
+    let text = "name,age\n\"Smith, John\",42\n";
+    let parsed = parse_csv_text_sync(text, None, true, 100).unwrap();
+
+    assert_eq!(parsed.headers, vec!["name", "age"]);
+    assert_eq!(parsed.rows.len(), 1);
+    assert_eq!(parsed.rows[0], vec!["Smith, John", "42"]);
+  }
+
+  #[test]
+  fn parse_csv_text_keeps_embedded_newlines_in_one_cell() {
+    let text = "id,note\n1,\"line one\nline two\"\n2,plain\n";
+    let parsed = parse_csv_text_sync(text, None, true, 100).unwrap();
+
+    assert_eq!(parsed.rows.len(), 2);
+    assert_eq!(parsed.rows[0][1], "line one\nline two");
+    assert_eq!(parsed.rows[1][1], "plain");
+  }
+
+  #[test]
+  fn parse_csv_text_unescapes_doubled_quotes() {
+    let text = "id,quote\n1,\"say \"\"hi\"\"\"\n";
+    let parsed = parse_csv_text_sync(text, None, true, 100).unwrap();
+    assert_eq!(parsed.rows[0][1], "say \"hi\"");
+  }
+
+  #[test]
+  fn parse_csv_text_reports_truncation() {
+    let text = "a\n1\n2\n3\n4\n";
+    let parsed = parse_csv_text_sync(text, None, true, 2).unwrap();
+
+    assert_eq!(parsed.rows.len(), 2);
+    assert_eq!(parsed.total_rows, 4);
+    assert!(parsed.truncated, "limit 2 of 4 rows must report truncated");
+
+    let full = parse_csv_text_sync(text, None, true, 10).unwrap();
+    assert!(!full.truncated);
+    assert_eq!(full.total_rows, 4);
+  }
+
+  #[test]
+  fn parse_csv_text_honours_a_custom_delimiter() {
+    let text = "a;b\n1;2\n";
+    let parsed = parse_csv_text_sync(text, Some(";"), true, 100).unwrap();
+    assert_eq!(parsed.headers, vec!["a", "b"]);
+    assert_eq!(parsed.rows[0], vec!["1", "2"]);
+  }
+
+  #[test]
+  fn parse_csv_text_synthesises_headers_when_absent() {
+    let text = "1,2\n3,4\n";
+    let parsed = parse_csv_text_sync(text, None, false, 100).unwrap();
+
+    assert_eq!(parsed.headers, vec!["column_1", "column_2"]);
+    assert_eq!(parsed.rows.len(), 2);
+  }
+
+  #[test]
+  fn parse_csv_text_keeps_ragged_rows() {
+    // `flexible(true)`: a short/long row must not abort the whole table, since
+    // the chart path still needs whatever data is readable.
+    let text = "a,b,c\n1,2,3\n4,5\n";
+    let parsed = parse_csv_text_sync(text, None, true, 100).unwrap();
+    assert_eq!(parsed.rows.len(), 2);
+    assert_eq!(parsed.rows[1].len(), 2);
   }
 }

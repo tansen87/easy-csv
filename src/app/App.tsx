@@ -2031,6 +2031,7 @@ function AppContent() {
               session.updatePanelState("chartPanel", patch)
             }
             capsuleY={collapsedStack.chartPanel}
+            chartState={ui.chartsByTab[tabsHook.selectedTabId] ?? null}
           />
 
           <HelpDialog

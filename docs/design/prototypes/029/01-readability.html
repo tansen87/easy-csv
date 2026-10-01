@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>原型 01 · 图表可读性优化 · 改造前 / 改造后</title>
+<style>
+  :root{
+    --bg:#ffffff; --fg:#2a2a2a; --muted:#f5f5f5; --muted-2:#fafafa;
+    --mfg:#8a8a8a; --mfg2:#b3b3b3; --border:#e9e9e9; --border-2:#dfdfdf;
+    --primary:#333;
+    --ok:#15803d; --ok-bg:#f0fdf4; --bad:#b91c1c; --bad-bg:#fef2f2;
+    --font:"Inter","Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#f0f0f0;font-family:var(--font);color:var(--fg)}
+  .stage{padding:28px 24px 56px;display:flex;flex-direction:column;align-items:center;gap:22px}
+  .plabel{width:min(1180px,100%);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .plabel .tag{background:#111;color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:6px}
+  .plabel h1{font-size:14px;margin:0;font-weight:600}
+  .plabel p{margin:0;font-size:12px;color:#6b6b6b}
+  .card{width:min(1180px,100%);background:#fff;border:1px solid #d8d8d8;border-radius:12px;
+        box-shadow:0 10px 28px rgba(0,0,0,.10);overflow:hidden}
+  .card > h2{margin:0;font-size:13px;font-weight:650;padding:11px 16px;border-bottom:1px solid var(--border);background:#fcfcfc}
+  .card > h2 .n{display:inline-block;min-width:20px;height:20px;line-height:20px;text-align:center;
+        background:#111;color:#fff;border-radius:5px;font-size:11px;margin-right:8px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  .col{padding:16px}
+  .col + .col{border-left:1px dashed var(--border-2)}
+  .ch{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
+        padding:3px 9px;border-radius:999px;margin-bottom:12px}
+  .ch.before{color:var(--bad);background:var(--bad-bg)}
+  .ch.after{color:var(--ok);background:var(--ok-bg)}
+  .note{font-size:11.5px;color:var(--mfg);margin:10px 0 0;line-height:1.65}
+  .note b{color:#3f3f3f}
+
+  /* ── 面板外壳:模拟 ChartPanel ─────────────────── */
+  .panel{border:1px solid var(--border-2);border-radius:10px;overflow:hidden;background:#fff}
+  .panel .bar{display:flex;align-items:center;justify-content:space-between;gap:8px;
+        padding:8px 10px;border-bottom:1px solid var(--border);background:#fcfcfc}
+  .panel .ttl{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;min-width:0}
+  .panel .ttl .cn{font-weight:400;color:var(--mfg);font-size:11px}
+  .panel .acts{display:flex;gap:2px;color:var(--mfg);font-size:12px;flex:none}
+  .panel .acts span{width:20px;height:20px;display:grid;place-items:center;border-radius:5px}
+  .panel .body{padding:10px}
+
+  /* ── 图例 ─────────────────────────────────────── */
+  .legend{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+        padding:6px 2px 10px;border-bottom:1px solid var(--border);margin-bottom:10px}
+  .lg{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#3f3f3f;cursor:pointer}
+  .lg i{width:11px;height:11px;border-radius:2px;flex:none}
+  .legend .scale{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--mfg)}
+  .legend .scale .ramp{width:96px;height:10px;border-radius:3px;
+        background:linear-gradient(90deg,#3b82f6,#8884d8,#fbbf24,#dc2626)}
+
+  /* ── 柱状图 ───────────────────────────────────── */
+  .bars{display:flex;align-items:flex-end;gap:10px;height:168px;
+        border-left:1px solid var(--border);border-bottom:1px solid var(--border);padding:0 8px 0 10px;position:relative}
+  .bars .gl{position:absolute;left:0;right:0;border-top:1px dashed #eee;pointer-events:none}
+  .bars .gl span{position:absolute;left:-2px;transform:translate(-100%,-50%);
+        font-size:9.5px;color:var(--mfg2);font-family:var(--mono)}
+  .bcol{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:4px}
+  .bcol .v{font-size:9.5px;color:var(--mfg);font-family:var(--mono)}
+  .bcol .bar2{width:100%;border-radius:3px 3px 0 0;background:#8884d8}
+  .xlab{display:flex;gap:10px;padding:5px 8px 0 10px}
+  .xlab span{flex:1;text-align:center;font-size:10px;color:var(--mfg)}
+  .xticks{display:flex;flex-direction:column;gap:29px;justify-content:flex-end;
+        position:absolute;left:-4px;bottom:0;font-size:9.5px;color:var(--mfg2);font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="plabel">
+    <span class="tag">原型 029</span>
+    <h1>图表可读性优化 · 改造前 / 改造后</h1>
+    <p>对应 <code>docs/design/029_chart-readability.md</code> §4 · 仅示意视觉与交互方向,不是最终实现</p>
+  </div>
+
+  <!-- ① 柱状图:排序 + 图例 + 数值格式 + 数据标签 (§4.1 / §4.2 / §4.3 / §5.3) -->
+  <div class="card">
+    <h2><span class="n">1</span>柱状图 · 排序 + 图例 + 数值格式</h2>
+    <div class="cols">
+      <div class="col">
+        <span class="ch before">改造前</span>
+        <div class="panel">
+          <div class="bar">
+            <div class="ttl">销售额<span class="cn">(category: 地区)</span></div>
+            <div class="acts">⤓ ⤢ ⌄ ✕</div>
+          </div>
+          <div class="body">
+            <!-- 无图例;按输入顺序;数值无格式 -->
+            <div class="bars">
+              <div class="gl" style="bottom:75%"><span>1200000</span></div>
+              <div class="gl" style="bottom:50%"><span>800000</span></div>
+              <div class="gl" style="bottom:25%"><span>400000</span></div>
+              <div class="bcol"><div class="v">523100.5</div><div class="bar2" style="height:38%"></div></div>
+              <div class="bcol"><div class="v">1189450.25</div><div class="bar2" style="height:86%"></div></div>
+              <div class="bcol"><div class="v">287640</div><div class="bar2" style="height:21%"></div></div>
+              <div class="bcol"><div class="v">912300</div><div class="bar2" style="height:66%"></div></div>
+              <div class="bcol"><div class="v">76420.9</div><div class="bar2" style="height:6%"></div></div>
+            </div>
+            <div class="xlab"><span>华东</span><span>华南</span><span>华北</span><span>西南</span><span>东北</span></div>
+          </div>
+        </div>
+        <p class="note">
+          <b>问题:</b>① 没有图例 → 看不出柱子画的是「销售额」还是「订单数」;<br>
+          ② 按文件行序 → 「谁最大」要靠自己数;<br>
+          ③ 刻度 <code>1200000</code> 占满宽度,数值 <code>1189450.25</code> 位数过长;<br>
+          ④ 想知道具体值只能 hover。
+        </p>
+      </div>
+
+      <div class="col">
+        <span class="ch after">改造后</span>
+        <div class="panel">
+          <div class="bar">
+            <div class="ttl">销售额<span class="cn">(category: 地区)</span></div>
+            <div class="acts">⤓ ⤢ ⌄ ✕</div>
+          </div>
+          <div class="body">
+            <!-- 统一图例:单系列也显示「Y: 列名」;右侧可切排序 -->
+            <div class="legend">
+              <span class="lg"><i style="background:#8884d8"></i>销售额<span style="color:#b3b3b3">(Y)</span></span>
+              <span class="lg" style="margin-left:auto;color:#8a8a8a">排序:降序 ⌄</span>
+            </div>
+            <div class="bars">
+              <div class="gl" style="bottom:80%"><span>1.2M</span></div>
+              <div class="gl" style="bottom:60%"><span>900k</span></div>
+              <div class="gl" style="bottom:40%"><span>600k</span></div>
+              <div class="gl" style="bottom:20%"><span>300k</span></div>
+              <div class="bcol"><div class="v">1.19M</div><div class="bar2" style="height:86%"></div></div>
+              <div class="bcol"><div class="v">912.3k</div><div class="bar2" style="height:66%"></div></div>
+              <div class="bcol"><div class="v">523.1k</div><div class="bar2" style="height:38%"></div></div>
+              <div class="bcol"><div class="v">287.6k</div><div class="bar2" style="height:21%"></div></div>
+              <div class="bcol"><div class="v">76.4k</div><div class="bar2" style="height:6%"></div></div>
+            </div>
+            <div class="xlab"><span>华南</span><span>西南</span><span>华东</span><span>华北</span><span>东北</span></div>
+          </div>
+        </div>
+        <p class="note">
+          <b>改动:</b>① 图例写明 <code>销售额 (Y)</code> → 无需查配置;<br>
+          ② 默认降序 → 第一名一眼可见(可切升序/原始顺序);<br>
+          ③ 刻度缩写 <code>1.2M</code>、柱顶数值标签 → 不必 hover;<br>
+          ④ 数值统一按量级定小数位。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 统一 tooltip (§4.4) -->
+  <div class="card">
+    <h2><span class="n">2</span>统一 Tooltip · 值 + 占比 + 暗色可读</h2>
+    <div class="cols">
+      <div class="col">
+        <span class="ch before">改造前</span>
+        <div style="display:flex;justify-content:center;padding:16px 0">
+          <!-- 模拟 recharts 默认 tooltip:仅设了背景/边框色,未设文字色 -->
+          <div style="background:#1f2937;border:1px solid #374151;border-radius:4px;
+                      padding:8px 10px;font-size:12px;color:#6b7280;
+                      font-family:var(--mono);box-shadow:0 6px 18px rgba(0,0,0,.28)">
+            销售额 : 1189450.25
+          </div>
+        </div>
+        <p class="note">
+          <b>问题:</b>只传了 <code>contentStyle={{backgroundColor,borderColor}}</code>,<b>没设文字颜色</b> →
+          暗色下沿用面向浅色底的默认字色,对比度不足(左图灰字压深底);<br>
+          数值无格式、无占比;系列多时看不出哪行是哪条线。
+        </p>
+      </div>
+      <div class="col">
+        <span class="ch after">改造后</span>
+        <div style="display:flex;justify-content:center;padding:16px 0">
+          <div style="background:#1f2937;border:1px solid #374151;border-radius:6px;
+                      padding:9px 11px;font-size:12px;color:#e5e7eb;min-width:210px;
+                      box-shadow:0 6px 18px rgba(0,0,0,.28)">
+            <div style="font-weight:600;margin-bottom:7px;font-size:12px">华南</div>
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+              <i style="width:9px;height:9px;border-radius:2px;background:#8884d8;flex:none"></i>
+              <span style="color:#cbd5e1">销售额</span>
+              <b style="margin-left:auto;font-family:var(--mono)">1,189,450.25</b>
+              <span style="color:#94a3b8;font-size:11px;font-family:var(--mono)">34.1%</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px">
+              <i style="width:9px;height:9px;border-radius:2px;background:#82ca9d;flex:none"></i>
+              <span style="color:#cbd5e1">订单数</span>
+              <b style="margin-left:auto;font-family:var(--mono)">8,240</b>
+              <span style="color:#94a3b8;font-size:11px;font-family:var(--mono)">21.5%</span>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          <b>改动:</b>显式指定暗/亮两套文字色;色块对齐系列;<b>完整数值</b>(轴上是缩写) + <b>占比</b>;
+          词云也能 hover 出词频;热力图 tooltip 归并到同一组件。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 热力图色阶图例 + 单元格格式 (§4.1 / §4.3) -->
+  <div class="card">
+    <h2><span class="n">3</span>热力图 · 色阶图例 + 单元格数值</h2>
+    <div class="cols">
+      <div class="col">
+        <span class="ch before">改造前</span>
+        <div class="panel">
+          <div class="bar"><div class="ttl">图表: heatmap</div><div class="acts">⤓ ⤢ ⌄ ✕</div></div>
+          <div class="body">
+            <!-- 无图例;单元格固定 toFixed(1) → 整数显示成 12.0 -->
+            <div style="display:flex;gap:2px;font-size:9px;color:#8a8a8a;margin-bottom:3px;padding-left:52px">
+              <span style="width:46px;text-align:center">A</span>
+              <span style="width:46px;text-align:center">B</span>
+              <span style="width:46px;text-align:center">C</span>
+            </div>
+            <div style="display:flex;gap:2px;align-items:center">
+              <div style="width:50px;font-size:9px;color:#8a8a8a;text-align:right;padding-right:5px">周五</div>
+              <div style="width:46px;height:20px;background:#3b82f6;color:#fff;font-size:9px;display:grid;place-items:center">12.0</div>
+              <div style="width:46px;height:20px;background:#ffc82e;color:#000;font-size:9px;display:grid;place-items:center">48.0</div>
+              <div style="width:46px;height:20px;background:#d73027;color:#fff;font-size:9px;display:grid;place-items:center">7.0</div>
+            </div>
+            <div style="display:flex;gap:2px;align-items:center;margin-top:2px">
+              <div style="width:50px;font-size:9px;color:#8a8a8a;text-align:right;padding-right:5px">周六</div>
+              <div style="width:46px;height:20px;background:#8ed7f5;color:#000;font-size:9px;display:grid;place-items:center">3.0</div>
+              <div style="width:46px;height:20px;background:#d73027;color:#fff;font-size:9px;display:grid;place-items:center">52.0</div>
+              <div style="width:46px;height:20px;background:#fbbf24;color:#000;font-size:9px;display:grid;place-items:center">21.0</div>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          <b>问题:</b>① 颜色深浅代表什么,图上没有任何说明;<br>
+          ② 单元格固定 <code>toFixed(1)</code> → 计数 <code>12</code> 显示成 <code>12.0</code>;<br>
+          ③ 标题是英文 <code>heatmap</code>;tooltip 里 <code>Count:</code> 也是硬编码英文。
+        </p>
+      </div>
+      <div class="col">
+        <span class="ch after">改造后</span>
+        <div class="panel">
+          <div class="bar"><div class="ttl">图表: 热力图<span class="cn">(X: 时段 · Y: 星期)</span></div><div class="acts">⤓ ⤢ ⌄ ✕</div></div>
+          <div class="body">
+            <div class="legend">
+              <span class="lg"><i style="background:#3b82f6"></i>时段</span>
+              <span class="scale">低
+                <span class="ramp"></span>
+              高 · 计数</span>
+            </div>
+            <div style="display:flex;gap:2px;font-size:9px;color:#8a8a8a;margin-bottom:3px;padding-left:52px">
+              <span style="width:46px;text-align:center">A</span>
+              <span style="width:46px;text-align:center">B</span>
+              <span style="width:46px;text-align:center">C</span>
+            </div>
+            <div style="display:flex;gap:2px;align-items:center">
+              <div style="width:50px;font-size:9px;color:#8a8a8a;text-align:right;padding-right:5px">周五</div>
+              <div style="width:46px;height:20px;background:#3b82f6;color:#fff;font-size:9px;display:grid;place-items:center">12</div>
+              <div style="width:46px;height:20px;background:#ffc82e;color:#000;font-size:9px;display:grid;place-items:center">48</div>
+              <div style="width:46px;height:20px;background:#d73027;color:#fff;font-size:9px;display:grid;place-items:center">7</div>
+            </div>
+            <div style="display:flex;gap:2px;align-items:center;margin-top:2px">
+              <div style="width:50px;font-size:9px;color:#8a8a8a;text-align:right;padding-right:5px">周六</div>
+              <div style="width:46px;height:20px;background:#8ed7f5;color:#000;font-size:9px;display:grid;place-items:center">3</div>
+              <div style="width:46px;height:20px;background:#d73027;color:#fff;font-size:9px;display:grid;place-items:center">52</div>
+              <div style="width:46px;height:20px;background:#fbbf24;color:#000;font-size:9px;display:grid;place-items:center">21</div>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          <b>改动:</b>① 右上角色阶图例「低 → 高 · 计数」→ 颜色有了含义;<br>
+          ② 整数按计数格式显示(不补 <code>.0</code>);<br>
+          ③ 标题与 tooltip 全部走 i18n;轴含义写在标题旁。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 词云:确定性布局 + 字号含义 (§4.7 / §4.1) -->
+  <div class="card">
+    <h2><span class="n">4</span>词云 · 字号含义 + 布局稳定</h2>
+    <div class="cols">
+      <div class="col">
+        <span class="ch before">改造前</span>
+        <div class="panel">
+          <div class="bar"><div class="ttl">图表: wordcloud</div><div class="acts">⤓ ⤢ ⌄ ✕</div></div>
+          <div class="body" style="height:170px;position:relative;overflow:hidden;background:#fcfcfc;border:1px solid var(--border)">
+            <!-- 模拟:随机角度 + 随机位置 + 可能重叠 -->
+            <span style="position:absolute;left:12px;top:60px;font-size:40px;color:#8884d8;font-weight:bold">数据</span>
+            <span style="position:absolute;left:120px;top:40px;font-size:26px;color:#82ca9d">分析</span>
+            <span style="position:absolute;left:132px;top:78px;font-size:22px;color:#ffc658;transform:rotate(-90deg)">报表</span>
+            <span style="position:absolute;left:210px;top:20px;font-size:16px;color:#ff7300">流程</span>
+            <span style="position:absolute;left:250px;top:95px;font-size:14px;color:#0088fe;transform:rotate(90deg)">清洗</span>
+            <span style="position:absolute;left:60px;top:120px;font-size:13px;color:#00C49F">导出</span>
+            <span style="position:absolute;left:170px;top:130px;font-size:12px;color:#FFBB28">合并</span>
+          </div>
+        </div>
+        <p class="note">
+          <b>问题:</b>① 没有任何地方说明「字号 / 颜色」代表什么;<br>
+          ② 布局在 render 中现算(<code>Math.random()</code>)→ <b>切主题、点显隐都会整个重新洗牌</b>,词的位置每次都变;<br>
+          ③ 重叠检测判据粗糙,50 次找不到位置就直接放弃 → 允许重叠(左图「报表/流程」已贴上);<br>
+          ④ 长词按 <code>-100px</code> 估算,可能出界。
+        </p>
+      </div>
+      <div class="col">
+        <span class="ch after">改造后</span>
+        <div class="panel">
+          <div class="bar"><div class="ttl">图表: 词云<span class="cn">(来源列: 备注)</span></div><div class="acts">⤓ ⤢ ⌄ ✕</div></div>
+          <div class="body">
+            <div class="legend" style="padding-bottom:8px">
+              <span class="lg" style="cursor:default;color:#8a8a8a">字号 = 出现频次 · 颜色仅区分用</span>
+            </div>
+            <div style="height:150px;position:relative;overflow:hidden;background:#fcfcfc;border:1px solid var(--border)">
+              <!-- 确定性布局:固定角度、固定位置、无重叠 -->
+              <span style="position:absolute;left:26px;top:52px;font-size:34px;color:#8884d8;font-weight:bold">数据</span>
+              <span style="position:absolute;left:118px;top:30px;font-size:24px;color:#82ca9d">分析</span>
+              <span style="position:absolute;left:196px;top:38px;font-size:20px;color:#ffc658">报表</span>
+              <span style="position:absolute;left:132px;top:74px;font-size:15px;color:#ff7300">流程</span>
+              <span style="position:absolute;left:36px;top:104px;font-size:14px;color:#0088fe">清洗</span>
+              <span style="position:absolute;left:236px;top:92px;font-size:13px;color:#00C49F">导出</span>
+              <span style="position:absolute;left:130px;top:118px;font-size:12px;color:#FFBB28">合并</span>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          <b>改动:</b>① 顶部写明「字号 = 出现频次」;<br>
+          ② 改为确定性布局(同一份数据结果恒定)→ 切主题 / 点显隐不再洗牌;<br>
+          ③ 碰撞检测按实际文字宽高,并保证全部词可放下;<br>
+          ④ 角度收敛为少数几档(而非 5 档随机),观感更整齐。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ 明暗配色 + 隐藏行为一致 (§4.6 / §3.6) -->
+  <div class="card">
+    <h2><span class="n">5</span>配色令牌化 + 隐藏行为统一</h2>
+    <div class="cols">
+      <div class="col">
+        <span class="ch before">改造前</span>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div style="flex:1;min-width:230px;background:#fff;border:1px solid var(--border-2);border-radius:8px;padding:10px">
+            <div style="font-size:10.5px;color:#8a8a8a;margin-bottom:8px">亮色 · 饼图 8 色写死</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <i style="width:22px;height:22px;border-radius:3px;background:#8884d8"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#82ca9d"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#ffc658"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#ff7300"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#0088fe"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#00C49F"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#FFBB28"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#FF8042"></i>
+            </div>
+          </div>
+          <div style="flex:1;min-width:230px;background:#1f2937;border:1px solid #374151;border-radius:8px;padding:10px">
+            <div style="font-size:10.5px;color:#9ca3af;margin-bottom:8px">暗色 · 同一套色(未调整)</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <i style="width:22px;height:22px;border-radius:3px;background:#8884d8"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#82ca9d"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#ffc658"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#ff7300"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#0088fe"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#00C49F"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#FFBB28"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#FF8042"></i>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          <b>问题:</b>色值写死在组件里(饼图 8 色、词云 18 色彩虹),与主题无关、不随暗色调整;<br>
+          隐藏系列有<b>三套并行机制</b>:线/柱用 <code>stroke="transparent"</code>(仍在 DOM)、饼图从数据过滤、热力图灰底 + <code>opacity:0.3</code>;<br>
+          隐藏一个系列会导致<b>其它系列颜色重新分配</b>。
+        </p>
+      </div>
+      <div class="col">
+        <span class="ch after">改造后</span>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div style="flex:1;min-width:230px;background:#fff;border:1px solid var(--border-2);border-radius:8px;padding:10px">
+            <div style="font-size:10.5px;color:#8a8a8a;margin-bottom:8px">亮色 · 语义色板</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <i style="width:22px;height:22px;border-radius:3px;background:#4f46e5"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#0d9488"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#d97706"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#dc2626"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#2563eb"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#7c3aed"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#15803d"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#be185d"></i>
+            </div>
+          </div>
+          <div style="flex:1;min-width:230px;background:#1f2937;border:1px solid #374151;border-radius:8px;padding:10px">
+            <div style="font-size:10.5px;color:#9ca3af;margin-bottom:8px">暗色 · 提亮后的同序色板</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <i style="width:22px;height:22px;border-radius:3px;background:#818cf8"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#2dd4bf"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#fbbf24"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#f87171"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#60a5fa"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#a78bfa"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#4ade80"></i>
+              <i style="width:22px;height:22px;border-radius:3px;background:#f472b6"></i>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          <b>改动:</b>① 亮/暗两套语义色板,顺序固定 → 同一类目颜色跨刷新稳定;<br>
+          ② 隐藏统一为<b>从数据过滤</b>(不再靠 <code>transparent</code> 占位),四种图行为一致;<br>
+          ③ 隐藏后其它系列颜色不重排。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑥ 图-表切换 (§5.1) -->
+  <div class="card">
+    <h2><span class="n">6</span>图-表切换 · 「图看不出结论时」的退路(可选 P2)</h2>
+    <div class="cols">
+      <div class="col">
+        <span class="ch before">改造前</span>
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                    height:190px;border:1px dashed var(--border-2);border-radius:8px;background:#fcfcfc">
+          <div style="font-size:12px;color:#8a8a8a">图上没有它想看的那个数</div>
+          <div style="font-size:11.5px;color:#b3b3b3;margin-top:6px">→ 只能自己回预览表里翻 → 或改配置重跑</div>
+        </div>
+        <p class="note"><b>问题:</b>面板内没有第二视图。想知道准确数值、或想按别的列排序,只能离开图表或重新配置执行。</p>
+      </div>
+      <div class="col">
+        <span class="ch after">改造后</span>
+        <div class="panel">
+          <div class="bar">
+            <div class="ttl">销售额<span class="cn">(category: 地区)</span></div>
+            <div class="acts">⤓ ⤢ ⌄ ✕</div>
+          </div>
+          <div class="body">
+            <div style="display:flex;gap:4px;margin-bottom:10px">
+              <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;background:#f4f4f4;border:1px solid #d8d8d8">图表</span>
+              <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;color:#8a8a8a;border:1px solid transparent">数据表</span>
+              <span style="margin-left:auto;font-size:10.5px;color:#8a8a8a;align-self:center">复制 CSV</span>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:11px">
+              <thead>
+                <tr style="color:#8a8a8a;text-align:left">
+                  <th style="font-weight:500;padding:4px 6px;border-bottom:1px solid var(--border)">地区</th>
+                  <th style="font-weight:500;padding:4px 6px;border-bottom:1px solid var(--border);text-align:right">销售额</th>
+                  <th style="font-weight:500;padding:4px 6px;border-bottom:1px solid var(--border);text-align:right">占比</th>
+                </tr>
+              </thead>
+              <tbody style="font-family:var(--mono)">
+                <tr><td style="padding:3px 6px">华南</td><td style="padding:3px 6px;text-align:right">1,189,450.25</td><td style="padding:3px 6px;text-align:right;color:#8a8a8a">34.1%</td></tr>
+                <tr><td style="padding:3px 6px">西南</td><td style="padding:3px 6px;text-align:right">912,300.00</td><td style="padding:3px 6px;text-align:right;color:#8a8a8a">26.2%</td></tr>
+                <tr><td style="padding:3px 6px">华东</td><td style="padding:3px 6px;text-align:right">523,100.50</td><td style="padding:3px 6px;text-align:right;color:#8a8a8a">15.0%</td></tr>
+                <tr><td style="padding:3px 6px">华北</td><td style="padding:3px 6px;text-align:right">287,640.00</td><td style="padding:3px 6px;text-align:right;color:#8a8a8a">8.2%</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p class="note">
+          <b>改动:</b>面板内「图表 / 数据表」两态;表用<b>同一份聚合口径</b>(不会图和表对不上),带排序与复制 CSV。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="plabel">
+    <p>边界状态(引号列错位、非数值归零、列名不存在、2 MB 截断、暗色导出)见 <code>02-edge-states.html</code></p>
+  </div>
+
+</div>
+</body>
+</html>

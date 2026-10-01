@@ -7,6 +7,7 @@ import type {
   PipelineTab,
   PipelineVariableType,
 } from "@/types/xan";
+import type { ChartDataIssue } from "@/hooks/charts/processChartData";
 
 /** Progress of the branch being executed (one pill in the canvas). */
 export interface BranchProgressState {
@@ -120,4 +121,14 @@ export interface TabChartState {
   config: ChartConfig;
   series: ChartSeries[];
   headers: string[];
+  /** Raw parsed rows, so the panel can offer a data-table view. */
+  rows?: string[][];
+  /** Rows whose value could not be parsed as a number. */
+  droppedRows?: number;
+  /** Column/emptiness diagnosis when nothing could be drawn. */
+  issue?: ChartDataIssue;
+  /** Data was cut short before shaping, so aggregates are incomplete. */
+  truncated?: boolean;
+  /** Data rows available in full (before truncation). */
+  totalRows?: number;
 }

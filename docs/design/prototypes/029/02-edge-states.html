@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>原型 02 · 图表边界状态 · 过度影响理解的 6 个失败模式</title>
+<style>
+  :root{
+    --bg:#fff; --fg:#2a2a2a; --muted:#f5f5f5; --muted-2:#fafafa;
+    --mfg:#8a8a8a; --mfg2:#b3b3b3; --border:#e9e9e9; --border-2:#dfdfdf;
+    --ok:#15803d; --ok-bg:#f0fdf4; --ok-bd:#bbf7d0;
+    --bad:#b91c1c; --bad-bg:#fef2f2; --bad-bd:#fecaca;
+    --warn:#b45309; --warn-bg:#fffbeb; --warn-bd:#fde68a;
+    --font:"Inter","Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#f0f0f0;font-family:var(--font);color:var(--fg)}
+  .stage{padding:28px 24px 56px;display:flex;flex-direction:column;align-items:center;gap:22px}
+  .plabel{width:min(1180px,100%);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .plabel .tag{background:#111;color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:6px}
+  .plabel h1{font-size:14px;margin:0;font-weight:600}
+  .plabel p{margin:0;font-size:12px;color:#6b6b6b}
+
+  .card{width:min(1180px,100%);background:#fff;border:1px solid #d8d8d8;border-radius:12px;
+        box-shadow:0 10px 28px rgba(0,0,0,.10);overflow:hidden}
+  .card > h2{margin:0;font-size:13px;font-weight:650;padding:11px 16px;border-bottom:1px solid var(--border);background:#fcfcfc;
+        display:flex;align-items:center;gap:8px}
+  .card > h2 .n{display:inline-block;min-width:20px;height:20px;line-height:20px;text-align:center;
+        background:#111;color:#fff;border-radius:5px;font-size:11px;flex:none}
+  .card > h2 .sev{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;margin-left:auto}
+  .sev.p0{color:#fff;background:#b91c1c}
+  .sev.p1{color:#b45309;background:#fffbeb;border:1px solid #fde68a}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  .col{padding:16px}
+  .col + .col{border-left:1px dashed var(--border-2)}
+  .ch{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
+        padding:3px 9px;border-radius:999px;margin-bottom:12px}
+  .ch.before{color:var(--bad);background:var(--bad-bg)}
+  .ch.after{color:var(--ok);background:var(--ok-bg)}
+  .note{font-size:11.5px;color:var(--mfg);margin:10px 0 0;line-height:1.65}
+  .note b{color:#3f3f3f}
+  code{font-family:var(--mono);font-size:11px;background:#f4f4f4;padding:1px 4px;border-radius:3px}
+
+  .panel{border:1px solid var(--border-2);border-radius:10px;overflow:hidden;background:#fff}
+  .panel .bar{display:flex;align-items:center;justify-content:space-between;gap:8px;
+        padding:8px 10px;border-bottom:1px solid var(--border);background:#fcfcfc}
+  .panel .ttl{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;min-width:0}
+  .panel .ttl .cn{font-weight:400;color:var(--mfg);font-size:11px}
+  .panel .acts{display:flex;gap:2px;color:var(--mfg);font-size:12px;flex:none}
+  .panel .body{padding:10px}
+
+  /* 表格 */
+  .tbl{width:100%;border-collapse:collapse;font-size:11px}
+  .tbl th{font-weight:500;color:var(--mfg);text-align:left;padding:4px 6px;border-bottom:1px solid var(--border)}
+  .tbl td{padding:3px 6px;font-family:var(--mono)}
+  .tbl .bad{background:var(--bad-bg);color:var(--bad)}
+
+  /* 空/错状态卡 */
+  .state{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:8px;font-size:11.5px;line-height:1.6}
+  .state.err{background:var(--bad-bg);border:1px solid var(--bad-bd);color:#7f1d1d}
+  .state.warn{background:var(--warn-bg);border:1px solid var(--warn-bd);color:#78350f}
+  .state.info{background:var(--muted-2);border:1px solid var(--border-2);color:#3f3f3f}
+  .state .ic{flex:none;font-size:13px;line-height:1.3}
+  .state .t{font-weight:650;margin-bottom:2px}
+  .state ul{margin:5px 0 0;padding-left:16px}
+  .state li{margin:2px 0}
+  .state .mono{font-family:var(--mono);background:rgba(0,0,0,.05);padding:1px 4px;border-radius:3px}
+
+  /* 模拟折线 */
+  .spark{position:relative;height:96px;border-left:1px solid var(--border);border-bottom:1px solid var(--border)}
+  .spark svg{display:block;width:100%;height:100%;overflow:visible}
+
+  /* 明暗导出对照 */
+  .exp{border:1px solid var(--border-2);border-radius:8px;padding:10px;min-height:104px}
+  .exp .cap{font-size:10.5px;margin-bottom:7px}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="plabel">
+    <span class="tag">原型 029 · 2/2</span>
+    <h1>图表的 6 个「看起来对、其实是错」的失败模式</h1>
+    <p>对应 <code>docs/design/029_chart-readability.md</code> §3(P0 正确性)· 左列 = 今天的行为,右列 = 建议</p>
+  </div>
+
+  <!-- ① CSV 解析 → 引号列错位(最严重) -->
+  <div class="card">
+    <h2><span class="n">1</span>含逗号的引号字段 → 整表列错位<span class="sev p0">P0 · 会撒谎</span></h2>
+    <div class="cols">
+      <div class="col">
+        <span class="ch before">今天的行为</span>
+        <p class="note" style="margin:0 0 10px">
+          源文件一行是 <code>"Smith, John",42</code>。chart 分支不用 Rust 的 csv 解析器,
+          而是在 JS 里 <code>line.split(",")</code>,只剥掉首尾引号:
+        </p>
+        <div class="panel">
+          <div class="body">
+            <table class="tbl">
+              <thead><tr><th>列 0</th><th>列 1</th><th>列 2</th></tr></thead>
+              <tbody>
+                <tr class="bad"><td>"Smith</td><td>John"</td><td>42</td></tr>
+                <tr class="bad"><td>"Lee</td><td>Anna"</td><td>37</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p class="note">
+          <b>后果:</b>列整体错位 → 图表拿 <code>John"</code> 当数值列 → <code>parseFloat</code> 得 <code>NaN</code> →
+          按 §3.3 变成 <code>0</code> → <b>整张图全是 0,却不报错</b>。<br>
+          <b>同一文件的预览表却是对的</b>(预览走 Rust <code>csv</code> crate),用户只会更困惑。
+        </p>
+      </div>
+      <div class="col">
+        <span class="ch after">建议</span>
+        <p class="note" style="margin:0 0 10px">
+          chart 分支改为复用后端读取能力(新增 <code>read_chart_source</code> 或复用
+          <code>read_tabular_file</code>),<b>不在 JS 里再实现一遍 CSV 解析</b>。
+        </p>
+        <div class="panel">
+          <div class="body">
+            <table class="tbl">
+              <thead><tr><th>name</th><th>age</th></tr></thead>
+              <tbody>
+                <tr><td>Smith, John</td><td>42</td></tr>
+                <tr><td>Lee, Anna</td><td>37</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p class="note">
+          <b>收益:</b>预览与图表<b>同源</b>,引号内逗号/换行、转义引号 <code>""</code> 全部正确;
+          从根上消掉"两套解析实现"这个持续成本。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 非数值 → 0 -->
+  <div class="card">
+    <h2><span class="n">2</span>非数值单元格被静默当成 0 → 假谷底<span class="sev p0">P0 · 会撒谎</span></h2>
+    <div class="cols">
+      <div class="col">
+        <span class="ch before">今天的行为</span>
+        <div class="panel">
+          <div class="body">
+            <div class="spark">
+              <svg viewBox="0 0 300 96" preserveAspectRatio="none">
+                <polyline points="10,26 70,20 130,88 190,22 250,18 290,24"
+                  fill="none" stroke="#8884d8" stroke-width="2"/>
+                <circle cx="130" cy="88" r="3.5" fill="#dc2626"/>
+              </svg>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:9.5px;color:#b3b3b3;padding-top:4px;font-family:var(--mono)">
+              <span>1月</span><span>2月</span><span>3月</span><span>4月</span><span>5月</span><span>6月</span>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          3 月的原始值是 <code>N/A</code>。代码 <code>parseFloat(row[y]) || 0</code> 把它变成 <b>0</b>:
+        </p>
+        <div class="state err" style="margin-top:8px">
+          <span class="ic">▲</span>
+          <div>
+            <div class="t">图上出现一个不存在的暴跌</div>
+            折线一路正常,3 月突然砸到 0 —— 看起来像"业务崩了",实际只是缺数据。<br>
+            同理:柱状图会长出一个 0 值柱;散点图在 <span class="mono">y=0</span> 堆一排点;
+            带千分位的 <span class="mono">1,234</span> 也会变成 <span class="mono">1</span>。
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <span class="ch after">建议</span>
+        <div class="panel">
+          <div class="body">
+            <div class="spark">
+              <svg viewBox="0 0 300 96" preserveAspectRatio="none">
+                <polyline points="10,26 70,20" fill="none" stroke="#8884d8" stroke-width="2"/>
+                <polyline points="130,88 190,22 250,18 290,24"
+                  fill="none" stroke="#8884d8" stroke-width="2" stroke-dasharray="4 3"/>
+                <circle cx="130" cy="88" r="3.5" fill="#fff" stroke="#8884d8" stroke-width="2"/>
+              </svg>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:9.5px;color:#b3b3b3;padding-top:4px;font-family:var(--mono)">
+              <span>1月</span><span>2月</span><span>3月</span><span>4月</span><span>5月</span><span>6月</span>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          <code>parseFloat</code> 得 <code>NaN</code> 时写入 <code>null</code>(而非 0),
+          交给 recharts 断开(<code>connectNulls=false</code>),缺口本身成为信息:
+        </p>
+        <div class="state warn" style="margin-top:8px">
+          <span class="ic">!</span>
+          <div>
+            <div class="t">3 行非数值已跳过</div>
+            3 月的值为空,折线在此断开 · <span class="mono">1月,2月,4月…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 列名不存在 -->
+  <div class="card">
+    <h2><span class="n">3</span>x 列名写错 → 空白图,零提示<span class="sev p0">P0 · 会撒谎</span></h2>
+    <div class="cols">
+      <div class="col">
+        <span class="ch before">今天的行为</span>
+        <div class="panel">
+          <div class="bar"><div class="ttl">销售额<span class="cn">(category: 地区)</span></div><div class="acts">⤓ ⤢ ⌄ ✕</div></div>
+          <div class="body">
+            <div style="height:130px;border-left:1px solid var(--border);border-bottom:1px solid var(--border);
+                        margin:10px 8px 0 10px;position:relative">
+              <div style="position:absolute;left:6px;top:50%;transform:translateY(-50%);
+                          font-size:11px;color:#b3b3b3">（空白坐标轴，无任何文字）</div>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          <code>processChartData</code> 里 <code>if (xIndex === -1) return []</code> → 返回空数组,
+          面板照常打开:<b>标题正常、坐标轴空着,和"文件没数据"长得一模一样</b>。
+        </p>
+        <div class="state err" style="margin-top:8px">
+          <span class="ic">▲</span>
+          <div>
+            <div class="t">用户会得出的错误结论</div>
+            "这个文件是空的" / "软件坏了" —— 实际只是把列名 <span class="mono">region</span> 打成了 <span class="mono">Region</span>。
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <span class="ch after">建议</span>
+        <div class="panel">
+          <div class="bar"><div class="ttl">销售额</div><div class="acts">⤓ ⤢ ⌄ ✕</div></div>
+          <div class="body">
+            <div class="state err">
+              <span class="ic">▲</span>
+              <div>
+                <div class="t">找不到列「Region」</div>
+                请检查 x 列名是否与文件一致。该文件可用的列:
+                <ul>
+                  <li><span class="mono">region</span> · <span class="mono">sales</span> · <span class="mono">orders</span></li>
+                </ul>
+                <div style="margin-top:6px;color:#9a3412">提示:列名区分大小写。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          <code>processChartData</code> 改为返回带原因的结构(如
+          <code>{ error: "column_not_found", available: [...] }</code>),
+          面板内写清<b>原因 + 可用列 + 下一步</b>,而不是给一张空图。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 2MB 截断 -->
+  <div class="card">
+    <h2><span class="n">4</span>输出超 2 MB 被静默截断 → 图缺一大截<span class="sev p0">P0 · 会撒谎</span></h2>
+    <div class="cols">
+      <div class="col">
+        <span class="ch before">今天的行为</span>
+        <div class="panel">
+          <div class="bar"><div class="ttl">按日统计</div><div class="acts">⤓ ⤢ ⌄ ✕</div></div>
+          <div class="body">
+            <div class="spark">
+              <svg viewBox="0 0 300 96" preserveAspectRatio="none">
+                <polyline points="10,70 60,60 110,52 160,44 210,36 250,30"
+                  fill="none" stroke="#8884d8" stroke-width="2"/>
+                <line x1="250" y1="4" x2="250" y2="96" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="3 3"/>
+              </svg>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:9.5px;color:#b3b3b3;padding-top:4px;font-family:var(--mono)">
+              <span>1月</span><span></span><span></span><span></span><span></span><span>6月</span>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          <code>maxOutputBytes = 2 * 1024 * 1024</code>(<code>runPipelineDeps.ts:20</code>)。
+          前置步骤输出超限时,<b>拿到的是被截断的 CSV,解析仍然"成功"</b>,图照画 ——
+          只是 6 月之后凭空消失,而且<b>均值、求和、极值全部偏小</b>。
+        </p>
+      </div>
+      <div class="col">
+        <span class="ch after">建议</span>
+        <div class="panel">
+          <div class="bar"><div class="ttl">按日统计</div><div class="acts">⤓ ⤢ ⌄ ✕</div></div>
+          <div class="body">
+            <div class="state warn" style="margin-bottom:10px">
+              <span class="ic">!</span>
+              <div>
+                <div class="t">数据超过 2 MB,图表仅基于前部分行</div>
+                统计量(均值 / 求和)可能不完整。建议先用 filter 步骤缩减数据,或改用「数据表」视图查看完整结果。
+              </div>
+            </div>
+            <div class="spark" style="opacity:.85">
+              <svg viewBox="0 0 300 96" preserveAspectRatio="none">
+                <polyline points="10,70 60,60 110,52 160,44 210,36 250,30"
+                  fill="none" stroke="#8884d8" stroke-width="2"/>
+                <line x1="250" y1="4" x2="250" y2="96" stroke="#b45309" stroke-width="1.5" stroke-dasharray="3 3"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          后端回传 <code>truncated</code> 标记 → 面板顶部显示明确横幅,
+          并把截断位置在图上标出来。宁可承认数据不全,也不要给一张看不出问题的图。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ 三种"空"长得一样 -->
+  <div class="card">
+    <h2><span class="n">5</span>三种不同的「空」,今天是同一张脸<span class="sev p0">P0 · 会撒谎</span></h2>
+    <div class="cols">
+      <div class="col">
+        <span class="ch before">今天的行为</span>
+        <p class="note" style="margin:0 0 10px">
+          现状不一致:<b>饼图 / 词云 / 热力图</b>给一句 <code>无数据可显示</code>,
+          而 <b>line / bar / scatter 什么都不给</b> —— 只留空坐标轴。
+        </p>
+        <div class="panel">
+          <div class="body">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div class="state info">
+                <span class="ic">·</span>
+                <div><div class="t">情形 A:文件真的没有数据行</div>
+                  <span style="color:#8a8a8a">饼图/词云显示「无数据可显示」;折线图显示空白轴</span></div>
+              </div>
+              <div class="state info">
+                <span class="ic">·</span>
+                <div><div class="t">情形 B:x 列名不存在</div>
+                  <span style="color:#8a8a8a">饼图/词云显示「无数据可显示」;折线图显示空白轴</span></div>
+              </div>
+              <div class="state info">
+                <span class="ic">·</span>
+                <div><div class="t">情形 C:列存在,但该列全是空值</div>
+                  <span style="color:#8a8a8a">饼图/词云显示「无数据可显示」;折线图显示空白轴</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          <b>核心问题:</b>三种完全不同、<b>修法也完全不同</b>的情况(换文件 / 改列名 / 查数据质量),
+          给出了同一句无信息的提示 —— 用户无从知道下一步做什么。
+        </p>
+      </div>
+      <div class="col">
+        <span class="ch after">建议</span>
+        <p class="note" style="margin:0 0 10px">
+          统一为空/错状态组件,按<b>原因</b>分派,每种都给出<b>下一步动作</b>。
+        </p>
+        <div class="panel">
+          <div class="body">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div class="state info">
+                <span class="ic">∅</span>
+                <div><div class="t">没有可绘制的数据</div>
+                  输入文件没有数据行。
+                  <div style="margin-top:5px;color:#6b6b6b">→ 检查上一步筛选条件是否过严</div></div>
+              </div>
+              <div class="state err">
+                <span class="ic">▲</span>
+                <div><div class="t">找不到列「Region」</div>
+                  列名不匹配,该文件可用列:
+                  <span class="mono">region</span> <span class="mono">sales</span> <span class="mono">orders</span>
+                  <div style="margin-top:5px;color:#9a3412">→ 修改 x 列名后重新执行</div></div>
+              </div>
+              <div class="state warn">
+                <span class="ic">!</span>
+                <div><div class="t">列「sales」没有可用的数值</div>
+                  共 1,204 行,全部为空或非数值(如 <span class="mono">N/A</span>、<span class="mono">-</span>)。
+                  <div style="margin-top:5px">→ 用 map 步骤清理该列,或改选其它列</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          <b>与 §3.4 同源:</b>都由 <code>processChartData</code> 返回结构化原因驱动。
+          顺带把英文标题漏出也一并解决(今天面板标题会直接显示 <code>heatmap</code>)。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑥ 暗色导出 -->
+  <div class="card">
+    <h2><span class="n">6</span>暗色主题下导出的图几乎不可见<span class="sev p1">P1 · 可用性问题</span></h2>
+    <div class="cols">
+      <div class="col">
+        <span class="ch before">今天的行为</span>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div class="exp" style="flex:1;min-width:220px;background:#fff;border-color:#e9e9e9">
+            <div class="cap" style="color:#8a8a8a">界面 · 暗色模式</div>
+            <div style="background:#1f2937;border-radius:6px;padding:10px">
+              <div style="font-size:11px;color:#e5e7eb;margin-bottom:8px">销售额</div>
+              <div style="display:flex;align-items:flex-end;gap:6px;height:56px;
+                          border-left:1px solid #4b5563;border-bottom:1px solid #4b5563;padding:0 6px">
+                <i style="flex:1;height:70%;background:#8884d8;border-radius:2px 2px 0 0"></i>
+                <i style="flex:1;height:92%;background:#8884d8;border-radius:2px 2px 0 0"></i>
+                <i style="flex:1;height:45%;background:#8884d8;border-radius:2px 2px 0 0"></i>
+              </div>
+              <div style="font-size:9px;color:#e5e7eb;padding-top:4px">屏幕上看没问题(深底浅字)</div>
+            </div>
+          </div>
+          <div class="exp" style="flex:1;min-width:220px;background:#fff">
+            <div class="cap" style="color:#8a8a8a">导出 SVG · 暗色下导出</div>
+            <div style="background:#fff;border:1px solid #eee;border-radius:6px;padding:10px">
+              <div style="font-size:11px;color:#f3f4f6;margin-bottom:8px">销售额</div>
+              <div style="display:flex;align-items:flex-end;gap:6px;height:56px;
+                          border-left:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;padding:0 6px">
+                <i style="flex:1;height:70%;background:#8884d8;border-radius:2px 2px 0 0"></i>
+                <i style="flex:1;height:92%;background:#8884d8;border-radius:2px 2px 0 0"></i>
+                <i style="flex:1;height:45%;background:#8884d8;border-radius:2px 2px 0 0"></i>
+              </div>
+              <div style="font-size:9px;color:#f3f4f6;padding-top:4px">↑ 白底 + 近白字</div>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          导出时固定插入 <code>fill="white"</code> 底矩形(<code>ChartPanel.tsx:127-134</code>),
+          而文字颜色在暗色下是 <code>#e5e7eb</code>(<code>:97</code>)→
+          <b>白底 + 近白字</b>:标题、坐标轴标签、图例基本消失(上右图)。
+        </p>
+      </div>
+      <div class="col">
+        <span class="ch after">建议</span>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div class="exp" style="flex:1;min-width:220px">
+            <div class="cap" style="color:#8a8a8a">导出 SVG · 导出走「文档模式」</div>
+            <div style="background:#fff;border:1px solid #eee;border-radius:6px;padding:10px">
+              <div style="font-size:11px;color:#2a2a2a;margin-bottom:8px">销售额</div>
+              <div style="display:flex;align-items:flex-end;gap:6px;height:56px;
+                          border-left:1px solid #d8d8d8;border-bottom:1px solid #d8d8d8;padding:0 6px">
+                <i style="flex:1;height:70%;background:#4f46e5;border-radius:2px 2px 0 0"></i>
+                <i style="flex:1;height:92%;background:#4f46e5;border-radius:2px 2px 0 0"></i>
+                <i style="flex:1;height:45%;background:#4f46e5;border-radius:2px 2px 0 0"></i>
+              </div>
+              <div style="font-size:9px;color:#2a2a2a;padding-top:4px">白底 + 深色字 + 深色网格 ✓</div>
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          <b>做法:</b>导出与界面主题<b>解耦</b> —— 始终输出适合文档/幻灯片的"白底深字"配色;
+          或提供一个「白底 / 跟随当前主题」选项。<br>
+          顺带可加 <b>PNG 导出</b>(当前只有 SVG),方便直接贴进文档。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="plabel">
+    <p>可读性方向(排序 / 图例 / 数值格式 / tooltip / 图-表切换)见 <code>01-readability.html</code></p>
+    <p style="width:100%">原型为独立 HTML,仅用于确认视觉与交互方向 —— 确认后再动代码。</p>
+  </div>
+
+</div>
+</body>
+</html>

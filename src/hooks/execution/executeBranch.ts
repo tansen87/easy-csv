@@ -6,7 +6,7 @@ import type { RunContext } from "@/types/execution";
 import type { RunPipelineDeps } from "@/hooks/execution/runPipelineDeps";
 import { MAX_OUTPUT_BYTES } from "@/hooks/execution/runPipelineDeps";
 import { serializeStepParams } from "@/hooks/execution/serializeStepParams";
-import { processChartData } from "@/hooks/charts/processChartData";
+import { processChartDataWithIssues } from "@/hooks/charts/processChartData";
 
 interface BranchOutcome {
   success: boolean;
@@ -295,20 +295,32 @@ async function runChartBranch({
   const precedingSteps = branchSteps.filter((s) => s.command.id !== "chart");
   let headers = currentTab.headers || [];
   let data = currentTab.data || [];
+  let truncated = false;
+  let totalRows = data.length;
 
-  const parseCsvText = (text: string, delimiter: string) => {
-    const lines = text.trim().split("\n");
-    if (lines.length === 0) return;
-    headers = lines[0]
-      .split(delimiter)
-      .map((h: string) => h.trim().replace(/^"|"$/g, ""));
-    data = lines
-      .slice(1)
-      .map((line: string) =>
-        line
-          .split(delimiter)
-          .map((cell: string) => cell.trim().replace(/^"|"$/g, "")),
-      );
+  /**
+   * Parse CSV through the backend `csv` crate instead of splitting strings here.
+   *
+   * The old local `split("\n")` + `split(delimiter)` broke on quoted fields
+   * (`"Smith, John",42` became three columns) and disagreed with the preview
+   * table, which already parses in Rust.
+   */
+  const parseCsvText = async (text: string, delimiter: string) => {
+    const parsed = await invoke<{
+      headers: string[];
+      rows: string[][];
+      truncated: boolean;
+      total_rows: number;
+    }>("parse_csv_text", {
+      text,
+      delimiter,
+      hasHeaders: true,
+    });
+
+    headers = parsed.headers;
+    data = parsed.rows;
+    truncated = parsed.truncated;
+    totalRows = parsed.total_rows;
   };
 
   if (precedingSteps.length > 0) {
@@ -327,26 +339,39 @@ async function runChartBranch({
     });
 
     if (preResult.success && preResult.output) {
-      // Parse CSV output
-      parseCsvText(preResult.output as string, ctx.delimiter || ",");
+      await parseCsvText(preResult.output as string, ctx.delimiter || ",");
     }
   } else {
     // Use raw CSV data
     if (ctx.inputFile) {
       const csvContent = await readFile(ctx.inputFile);
       const text = new TextDecoder().decode(csvContent);
-      parseCsvText(text, ctx.delimiter || ",");
+      await parseCsvText(text, ctx.delimiter || ",");
     }
   }
 
+  // A 2 MB stdout cap silently dropped rows before; surfacing the truncation
+  // keeps the chart from presenting partial data as complete.
+  if (truncated) {
+    ctx.log(
+      "info",
+      `Chart data was truncated: showing the first ${data.length} of ${totalRows} rows. Averages and totals may be incomplete.`,
+    );
+  }
+
   // Process data for chart
-  const chartSeries = processChartData(headers, data, chartConfig);
+  const processed = processChartDataWithIssues(headers, data, chartConfig);
 
   // Charts are per tab: another tab running a chart must not replace this one.
   deps.setTabChart(ctx.tabId, {
     config: chartConfig,
-    series: chartSeries,
+    series: processed.series,
     headers,
+    rows: data,
+    droppedRows: processed.droppedRows,
+    issue: processed.issue,
+    truncated,
+    totalRows,
   });
   deps.setShowChartPanel(true);
 

@@ -85,7 +85,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | `docs/design/028_multi-tab-concurrent-execution.md` | 多标签页并发执行(**P0 + P1 已实现;P2 的 #13 并发上限设置项已实现,#12「全部停止」未做**,2026-09-30;文首实施记录): 诊断「执行是全局单例」的三处根因——前端 `isExecuting` 布尔(`App.tsx:289`,所有标签页一起置灰 `MainMenu.tsx`/命令面板/`Ctrl+R`)、后端 `CANCELLATION_FLAG` 进程级开关(`pipeline.rs`,取消误杀所有运行)、一批全局 UI 状态(`branchProgress`/`showProgressBar`/`logs`/chart)。**已实现**:引入 **`runId`(RunSession)** 贯穿前后端;后端取消标志改 **`HashMap<runId, Arc<AtomicBool>>` 注册表 + `cancel_pipeline(run_id)` + `RunGuard` RAII 注销**(**`set_pipeline_cancelled` 直接删除**,它正是「取消 A 后开 B 会擦掉取消」的 bug 源);前端 `isExecuting` → **`runsByTab`**(含 `finishRun` 的 5s 收尾计时,替代 `progressHideTimerRef`),`setTabs` 写回改 `session.tabId`(不再随切页漂移);进度/结果/图表按 tabId 路由;批处理钩子 `useBatchFilter`/`useBatchConvert` 改**每次调用传 `RunContext`**(不再捕获「当前标签页」);变量/覆盖确认对话框单可见槽 + FIFO 排队(按 runId);运行中切页不取消、关页先 `cancelRun`;完成通知改由每个 run 的状态迁移驱动(带标签页名)。**UI 定稿 §5.6 已实现**:「执行」按钮改为**标签页菜单**(当前标签页置顶 + 小横线分隔、点行即切过去执行、运行中的行只给「分支 x/y」+「取消」、行内不设执行按钮),运行中**不加图标、不改按钮尺寸**(仅 `data-busy` + `.exec-busy::after` 底部进度线,见 `src/index.css`),去掉 `▾`,不做「全部取消」;标签栏运行徽标保留;进度 pill 右侧补「另有 N 个标签页在运行」弱提示。原型 `docs/design/prototypes/028/01-execute-tab-menu.html`。**测试**:后端 181 / 前端 520(新增 `ExecuteMenu` 8 / `ExecutionConcurrency` 2 / `LogPanel` 2 / `SettingsConcurrencyControl` 3 例)。**P1 已实现**:并发上限 **4**(超出 `queued` 排队 + 注册表变化时 drain 补位,`isTabExecuting` 把 queued 算占用中;取消排队中的 run = 摘队列不起进程;S6 确认时 `releaseRun` 交回槽位)、日志 `tabId` 经 **`RunContext.log`** 贯通(runPipeline / executeBranch / 两个批处理钩子,`RunPipelineDeps.addLog` 因此删除)+ 日志面板「仅当前标签页 / 全部」切换与每行徽标、跨标签页同一输出文件的独立覆盖确认(`reason: "crossTab"`)、菜单「排队中」行与标签页名 tooltip。**P2**:#13 并发上限可在设置页改(1~16,`max_concurrent_runs` + `get/set_max_concurrent_runs`);duckdb 溢写目录按 run 隔离(`TempDir` RAII,`SET temp_directory` 指向 `EasyCsv_duckdb_spill_<pid>_<runId>`)。**未做**:#12「全部停止」入口;T5/T6/T7 仍未单独补断言。关键事实: 后端本已能并发(独立 `spawn_blocking` + 子进程,临时文件已用 `EasyCsv_duckdb_{pid}_{counter}` 唯一名),唯一阻碍是取消标志与前端全局态 |
 
-> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–028 已登记。
+| `docs/design/029_chart-readability.md` | 图表可读性优化(**P0 + P1 已实现,2026-10-01;P2 未做**;文首「实施记录」): 把诉求分三层且**按此优先级排序** —— **P0 正确性**(不画出会撒谎的图)、**P1 可读性**(本次主体)、**P2 增强**(未做)。**已实现(全部)**: ① **chart 分支不再在 JS 里切 CSV** —— 后端新增 `csv::parse_csv_text`(复用 `csv` crate、`flexible(true)`、`CHART_MAX_ROWS=50000`,已注册进 `lib.rs`),`executeBranch` 删除 `text.trim().split("\n")` + `line.split(delimiter)` 的手写解析 → 含逗号的引号字段/引号内换行/`""` 转义都正确,**图表与预览表同源**;② 命令回传 `truncated`/`total_rows`,`TabChartState` 带上截断标记 → 面板琥珀提示 + 日志,不再静默画部分数据;③ `parseNumericCell` 把非数值判为 `null`(不再 `\|\| 0`),顺带让千分位 `1,234` 正确解析,折线 `connectNulls={false}` 断线 + 面板「已跳过 N 行非数值」;④ `xIndex === -1` 改返回 `column_not_found` + 可用列列表,面板渲染错误卡(与「文件没数据」区分开);⑤ 导出前把 `text`/`line` 改为深色,始终输出白底深字的文档配色;⑥ 隐藏系列四图统一为**过滤数据**(删掉 `stroke="transparent"` 占位);⑦ 新增 `chartTypeLine`…`chartTypeHeatmap` 等键,面板标题、直方图轴名、热力图 tooltip、表单标签与类型下拉全部走 i18n(不再漏 `line`/`heatmap`)。**P1 八项也全部实现**: 新建 `src/modules/data-preview/charts/ChartPrimitives.tsx`(`ChartLegend` + `ChartTooltip`)—— **单系列图例也渲染**并标注 `(Y 轴)`,热力图给色阶图例、词云给「字号=出现频次」;排序 `defaultSortFor`(柱/饼/热力图默认降序、折线保持原序 + 三态下拉);`formatNumber`(auto/integer/decimal1/decimal2/percent/compact,轴 `compact` + tooltip 完整千分位,修掉热力图 `12.0`);9 处 recharts tooltip 收敛为共享组件(显式文字色 + 值 + 占比);Y 轴标签回退列名 + 长类目名 `angle=-30`/`preserveStartEnd`;`CATEGORY_COLORS` 按索引分配(隐藏不再换色)、`HEAT_RAMP` 渐变;词云改**阿基米德螺线确定性布局**(无 `Math.random()`,按文字宽高碰撞检测);三类空状态分别给原因与下一步。**P2 未做**: 均值线、数据标签、对数轴、可达性、聚合口径、PNG 导出、拆 `ChartPanel.tsx`。**验证**: `cargo test --lib` 188 通过(新增 7 个 `parse_csv_text` 用例)、`chartReadability.test.ts` 20 通过、`ChartPanelRender.test.tsx` 11 通过(服务端渲染断言)、`tsc` 与 `eslint` 0 error。原型(独立 HTML,不随文档分发): `docs/design/prototypes/029/01-readability.html`(改造前/后并排:排序+图例+数值格式、统一 tooltip、热力图色阶图例、词云稳定布局、明暗配色、图-表切换)、`02-edge-states.html`(六个失败模式:引号列错位、非数值归零、列名不存在、2MB 截断、三种「空」、暗色导出) |
+
+> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–029 已登记。
 
 ---
 
@@ -103,7 +105,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `plugin_catalog.rs` | 插件清单(设计 023):取 `catalogUrls` + minisign 验签(**支持多把公钥**,轮换不锁死老版本)、`parse_catalog` 形状校验(插件名/文件名白名单、sha256 格式、平台枚举)、12h 磁盘缓存 + 离线回退标 `stale`、`generatedAt` 防回滚;`is_newer` 用 semver 判可更新;按 `PLATFORM_DIR` 选资产 |
 | `plugin_install.rs` | 插件下载安装(设计 023):逐 URL 回退下载(边下边算 sha256、超过清单声明大小即中止)、size + sha256 双校验、`.staging/<name>.part` 同盘 `rename` 原子替换、Unix 置 0o755、写安装记录、`plugin://progress` 进度事件;同插件并发安装用进程内 claim 拦截 |
 | `plugins.rs` | 外部 CLI 插件管理: `plugins` 表(plugins.db)持久化、`list_plugins`/`check_plugins` 命令、`command_executable` 按命令名解析可执行文件(插件命令走插件二进制,其余走 xan.exe)。`xan` 与 `pinyin`、`duckdb` 默认注册进插件表,列表按 xan 置顶排序。⚠️ **插件二进制不在仓库里**(`src-tauri/.gitignore` 的 `*.exe` 排除了它们,仓库内只有 `readme.md`),用户在 `<数据目录>/plugins/<平台>/` 手工放置(或装到 `PATH`)。解析顺序: 路径 → `plugins/` 目录(含 `.exe` 补全)→ `PATH`,**插件目录优先于 `PATH`**。插件目录: Windows/Linux 为 `<安装目录>/plugins/<平台>/`(安装目录恒为 `<用户选择路径>/EasyCsv`,AppImage 为 `.AppImage` 所在目录下的 `EasyCsv/`),macOS 为 `~/Library/Application Support/EasyCsv/plugins/<平台>/`。应用内下载见 `docs/design/023_plugin-repository-and-in-app-install.md` |
-| `csv.rs` | `CsvData` 类型、`read_csv_file`(自动检测分隔符)/`profile_csv`/`diff_csv_files`/`convert_csv_encoding`/`separate_csv`/`probe_csv_file` 命令。`read_csv_sync` 为 `pub(crate)`,被 `tabular.rs` 的 `read_tabular_file` 复用(024) |
+| `csv.rs` | `CsvData` 类型、`read_csv_file`(自动检测分隔符)/`profile_csv`/`diff_csv_files`/`convert_csv_encoding`/`separate_csv`/`probe_csv_file` 命令;`parse_csv_text`(设计 029)按 CSV 文本解析出 `headers`+`rows`,复用同一个 `csv` crate(引号/内嵌换行/`""` 转义都正确),并回传 `truncated`/`total_rows`,供图表分支取数(替代原先在 JS 里 `split("\n")` 的手写解析)。`read_csv_sync` 为 `pub(crate)`,被 `tabular.rs` 的 `read_tabular_file` 复用(024) |
 | `tabular.rs` | 非 CSV 表格输入(024):`InputFormat`(`detect_input_format` 按扩展名判 parquet/duckdb/csv,未知一律 Csv)+ `SourceRef`(Csv/Parquet/Duckdb{path,table})+ SQL 转义(`quote_literal`/`quote_ident`/`path_literal`/`qualified_ident`)+ `list_duckdb_tables`(只读 ATTACH 列表)+ `read_tabular_file`(`TabularData` = CsvData 超集 + `format`/`source_table`;CSV 委托 `read_csv_sync`)+ `materialize_input_to_csv`(xan 只吃 CSV,`-separator` 对齐 default_delimiter)+ **`build_duckdb_chain_sql`**(全链 duckdb 单进程脚本:临时表 + 重定义 `input` 视图 + DROP,返回行号→步骤映射)+ `step_for_line`/`first_error_line`(错误归因)。所有 DuckDB 调用走 `plugins::resolve_plugin_executable("duckdb")` |
 | `storage.rs` | 历史记录、最近文件、数据概况缓存、版本/血缘存储、窗口标题、开发者工具命令 |
 | `ai.rs` | AI 对话代理: `call_ai` 命令,转发到 DeepSeek / Qwen / GLM |
@@ -224,6 +226,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `merge_excel_sources` | excel_merge | Excel 多文件合并(设计 025): 逐 sheet `xan from` 转临时 CSV(需要来源列时用 csv crate 自建首列,绕开 `--source-column` 在 `-U` 下静默消失)→ 写前预检(`plan_alignment` + `union_summary`)→ `cat rows [-U\|-I] --paths` 流式拼接 → `to xlsx`/`fmt` 原子落盘;单线程,峰值内存 = max(单个 sheet) |
 | `read_excel_header` | excel_merge | 取某工作簿某 sheet 的表头行(对话框列名按需展开用);`sheet_to_csv` + 首行解析,空 sheet 返回空数组 |
 | `probe_csv_file` | csv | 探测文件头部(64 KiB):自动检测分隔符 + 返回第一行列数与表头预览,供拆分对话框显示文件信息。设计:`docs/design/017_separate-dialog-ux.md` |
+| `parse_csv_text` | csv | 把 CSV **文本**解析为 `headers`+`rows`(设计 029 §3.1):`flexible(true)`、`has_headers` 可选(无表头时合成 `column_N`)、上限 `CHART_MAX_ROWS=50000` 并回传 `truncated`/`total_rows`。图表分支用它替代前端手写 `split`,使图表与预览表同源 |
 | `load_profile_cache` / `save_profile_cache` | storage | 数据概况缓存(基于文件 mtime,LRU 淘汰,上限50条) |
 | `check_xan_installed` | xan | 检查 xan.exe 是否已解压 |
 | `get/set_default_delimiter` | config | 读写默认分隔符配置(检测关闭时使用 / 检测失败时兜底) |
@@ -268,10 +271,27 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | 文件 | 职责 |
 |------|------|
-| `vitest.config.ts` | vitest 配置: jsdom 环境、`@/` 别名、`src/test/setup.ts` 作为 setup |
-| `src/test/setup.ts` | Mock 全局 API: `@tauri-apps/api/core` (invoke)、`@tauri-apps/plugin-dialog`、`@tauri-apps/plugin-fs`、localStorage、matchMedia、scrollIntoView |
+| `vitest.config.ts` | vitest 配置: jsdom 环境、`@/` 别名、`src/test/setup.ts` 作为 setup、**`test.env` 钉住 `NODE_ENV=test`**(见下方「React.act 陷阱」) |
+| `src/test/setup.ts` | Mock 全局 API: `@tauri-apps/api/core` (invoke)、`@tauri-apps/plugin-dialog`、`@tauri-apps/plugin-fs`、localStorage、matchMedia、scrollIntoView、**`ResizeObserver` 桩**(jsdom 没有,图表面板等挂载时要用);开头有**守卫**:React 若解析到 production 构建(无 `React.act`)立即抛出可执行报错 |
 
 运行测试: `pnpm test`
+
+### ⚠️ React.act 陷阱(2026-10-01 已修复)
+
+**症状**:大量渲染类用例同时失败,统一报 `TypeError: React.act is not a function`。
+
+**根因**:`@testing-library/react` 依赖 `React.act`,而它**只存在于 React 的开发构建**。当 shell/profile 已导出 `NODE_ENV=production` 时,React 解析到 production 构建,`React.act` 为 `undefined` → 每个基于 `render()` 的用例都炸。
+
+**修复**:`vitest.config.ts` 的 `test.env` 声明 `NODE_ENV: "test"`,使 `pnpm test` 在任何 shell 下行为一致;`src/test/setup.ts` 另加守卫,把同类回归变成一条可执行的报错,而不是几百条相同的失败。
+
+**排查命令**(确认是否被该问题影响):
+
+```bash
+NODE_ENV=production node -e "console.log(typeof require('react').act)"  # undefined = 命中该陷阱
+NODE_ENV=test       node -e "console.log(typeof require('react').act)"  # function  = 正常
+```
+
+**注意**:CI workflow 未设 `NODE_ENV`,本身不受影响;该问题只在**本地 shell 已导出 `NODE_ENV=production`** 时出现(此前记录为 84 个用例失败,修复前已扩大到 205 个)。
 
 ### 测试文件 (`src/__tests__/`)
 
@@ -293,6 +313,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `initialParams.test.ts` | 命令入口预填参数纯函数 `buildCommandInitialParams`(设计 019 §3.1): 各画布入口(筛选/排序/文本/数值/切割/补位/替换/日期)与旧对话框默认输出一致、无列时不猜 | 28 |
 | `csv.test.ts` | CSV 工具函数 |  |
 | `versionDiff.test.ts` | 版本差异计算 |  |
+| `chartReadability.test.ts` | 图表可读性纯函数(设计 029): `parseNumericCell` 区分「缺失」与真 0、千分位解析、`processChartDataWithIssues` 三类 issue(列不存在/无数据/无可用数值)、null 不归零、`defaultSortFor` 与三态排序、饼图重复类目聚合、`colorForIndex` 颜色稳定、`formatNumber` 各模式与 em dash | 20 |
+| `ChartPanelRender.test.tsx` | 图表面板渲染(设计 029): 单系列也出 Y 轴图例、图表类型显示中文而非 `heatmap` 原始 id、缺列渲染错误卡并列出可用列、数据表视图入口、跳行/截断提示、词云字号说明、热力图色阶图例与整数单元格;数据表用 `ScrollArea`(断言 Radix viewport + 两向 `overflow:scroll` + sticky 表头);**「actually draws a chart」用例组** —— 5 种 recharts 图各断言 `.recharts-surface`/`.recharts-wrapper` 存在,专防「图例在、图没了」这类回归(见 029 修复记录);**「图例单行滚动 + 分类筛选」用例组**(多分类图例不折行、`筛选 n/m` 计数、取消全选→提示并保留筛选入口、全选→恢复、复选框与图例同步);另含 `ChartLegend`/`ChartTooltip` 单测 | 27 |
+| `SampleFileChart.test.tsx` | 内置示例文件端到端(设计 029): 以 `src-tauri/samples/easy-csv-sample-sales.csv`(经 Vite `?raw` 导入)驱动真实塑形 + 渲染,断言中文表头(`日期,地区,品类,金额,数量`)、219 行、`地区 vs 金额` 成单系列且 `droppedRows=4`(该文件 4 行金额为空)、渲染出 `.recharts-wrapper`/`.recharts-surface` 且有柱体、7 种图不崩;即用户报障「x=地区/y=金额 无图像」的回归防线 | 4 |
 | `executionHistory.test.ts` | 执行历史持久化 |  |
 | `panelDock.test.ts` | 面板停靠状态 |  |
 | `params.test.ts` | 参数构造工具 |  |
@@ -308,7 +331,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `LogPanel.test.tsx` | 日志按标签页(设计 028 §5.4): 每行带标签页徽标、默认全部可见、「仅当前标签页」只留该标签页的行(无标签的 app 级日志一并隐藏)、切回「全部」恢复、未选标签页时不过滤 | 2 |
 | `SettingsConcurrencyControl.test.tsx` | 设置页并发上限(设计 028 §7.1): 回显存储值(含 min/max)、编辑后上报新值、越界输入就地 clamp(99→16、0→1) | 3 |
 
-> 全量以 `pnpm test` 为准(当前 39 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
+> 全量以 `pnpm test` 为准(当前 42 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
 
 ---
 
@@ -427,7 +450,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 文件 | 职责 |
 |------|------|
 | `i18n/index.tsx` | 语言上下文 Provider,持久化到 localStorage |
-| `i18n/translations/types.ts` | `Language`/`EffectiveLanguage`/`Translations` 接口(**745 key** 的类型契约,2026-09-30 实测;新增的是 027 引导/内置模板文案) |
+| `i18n/translations/types.ts` | `Language`/`EffectiveLanguage`/`Translations` 接口(**807 key** 的类型契约,2026-10-01 实测(`Object.keys(translations.zh|en)` 各 807,两语言数量一致);最近新增的是图表可读性(029)的类型名/图例/排序/数值格式/空状态文案) |
 | `i18n/translations/{en,zh}/<domain>.ts` | 按域拆分的字符串(019 §4.6): `common`/`pipeline`/`canvas`/`dialog`/`ai`/`settings`/`help`/`update`/`plugins`/`onboarding`,各域 `satisfies Partial<Translations>` |
 | `i18n/translations/{en,zh}/index.ts` | 合并回一个扁平对象,类型为 `Translations`(缺 key 直接编译报错) |
 | `i18n/translations/index.ts` | `translations` 聚合出口,`@/i18n/translations` 路径不变 |
@@ -466,7 +489,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 |------|------|
 | `data-preview/HomeView.tsx` | **主工作区**,管理命令对话框状态、标签页、右键菜单、表格列重命名 |
 | `data-preview/DataProfilePanel.tsx` | 数据概况右侧栏,展示字段统计,支持固定搜索框 |
-| `data-preview/charts/ChartPanel.tsx` | 图表面板(recharts),折线/散点/柱状/直方图/饼图/词云/热力图,支持拖拽、最大化/还原、SVG 导出、dark mode |
+| `data-preview/charts/ChartPanel.tsx` | 图表面板(recharts),折线/散点/柱状/直方图/饼图/词云/热力图,支持拖拽、最大化/还原、SVG 导出、dark mode。**029 起**:统一图例(单系列也显示)、排序三态、数值格式(轴向缩写/tooltip 完整值)、数据表视图(**表体用共享 `ScrollArea`**;`min-w-full` 以保留横向滚动)+ 复制 CSV;**图例为单行横向 `ScrollArea`**(分类多时不折行、不挤占图表区)+**分类多选筛选下拉**(`CategoryFilter`,含全选/取消全选,与图例共用 `hiddenSeries`)、截断与跳行提示、按原因区分的空/错状态;隐藏系列统一为过滤数据;导出走白底深色的「文档配色」;图表类型名走 i18n |
 | `ai/AIPanel.tsx` | **AI 助手面板**: 聊天 UI、命令生成、一键插入管道、👍/👎反馈、意图澄清对话框、对话历史加载 |
 | `variables/VariablePanel.tsx` | 变量管理面板(F3 管道参数化) |
 | `logs/LogPanel.tsx` | 浮动日志面板,显示执行结果,支持拖拽和复制;**按标签页过滤**(design 028 §5.4):「仅当前标签页 / 全部」切换 + 每行标签页徽标(与按级别的 chips 叠加) |
@@ -538,7 +561,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 |------|------|
 | `expression/ExpressionEditor.tsx` | 主组件: textarea + 同步高亮层 + 自动补全下拉 |
 | `expression/highlight.ts` · `autocomplete.ts` | 语法高亮分词器 / 补全引擎 |
-| `menu/MainMenu.tsx` | 顶部工具栏: 文件菜单、撤销/重做、执行、命令面板、帮助、**设置**。**帮助菜单第一行为「查看示例」**(调用 `onLoadDemo` → `App.tsx` 的 `handleLoadDemo`,与空状态「看看示例」同一个 action,design 027 §4.1),其后依次是「帮助中心」「检查更新」。运行中的「执行」按钮挂 `data-busy` + `.exec-busy`(设计 028 §5.6.1);**检查更新期间「帮助」按钮挂 `data-checking` + `.update-busy`**(设计 022 §5.4,复用同一条底部横条;标记刻意不复用 `data-busy`,见 `ExecuteMenu.test.tsx` 的定位方式)。**「帮助」按钮任何状态都可点击**(横条是纯叠加,不置灰、不 `disabled`、不 `cursor-not-allowed`),慢检查不得把「帮助中心」锁在门外。**「设置」入口在右侧按钮组末尾(AI 右侧)、只出图标 + tooltip**(`aria-label` 承载可访问名);**对话框打开期间用 `commandButtonClass(true)` 高亮 + 同款 12px 底部小横线**(与命令面板/日志/AI 三个面板开关的激活态完全一致:同底色、同横线类名,另配 `aria-expanded`) |
+| `menu/MainMenu.tsx` | 顶部工具栏: **文件菜单**、撤销/重做、**工具菜单**、执行、命令面板、帮助、**设置**。菜单栏顺序为 文件 / 编辑 / 查看 / 工具 / 帮助。**「工具」菜单承载一次性文件工具**(CSV 对比、CSV 编码转换、拆分好/坏行、按行拆分、合并 Excel 文件),它们只开对话框 + 调一个后端命令、不进画布也不参与管道生命周期,故与「文件」菜单的打开/新建标签/模板/保存/导入/导出分开。**帮助菜单第一行为「查看示例」**(调用 `onLoadDemo` → `App.tsx` 的 `handleLoadDemo`,与空状态「看看示例」同一个 action,design 027 §4.1),其后依次是「帮助中心」「检查更新」。运行中的「执行」按钮挂 `data-busy` + `.exec-busy`(设计 028 §5.6.1);**检查更新期间「帮助」按钮挂 `data-checking` + `.update-busy`**(设计 022 §5.4,复用同一条底部横条;标记刻意不复用 `data-busy`,见 `ExecuteMenu.test.tsx` 的定位方式)。**「帮助」按钮任何状态都可点击**(横条是纯叠加,不置灰、不 `disabled`、不 `cursor-not-allowed`),慢检查不得把「帮助中心」锁在门外。**「设置」入口在右侧按钮组末尾(AI 右侧)、只出图标 + tooltip**(`aria-label` 承载可访问名);**对话框打开期间用 `commandButtonClass(true)` 高亮 + 同款 12px 底部小横线**(与命令面板/日志/AI 三个面板开关的激活态完全一致:同底色、同横线类名,另配 `aria-expanded`) |
 | `menu/ContextMenu.tsx` | 表格列右键菜单: 快速筛选、替换、透视、变换、排序(019 §3.1 后只**报告**上下文,不再自己拼参数) |
 | `menu/CanvasContextMenu.tsx` | 画布空白处右键菜单 |
 | `setting/ThemeProvider.tsx` | 主题上下文(dark/light/system)— 019 §2.1 计划迁往 `app/providers/` |
@@ -572,8 +595,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 修改 CSV 对比功能 | `src/modules/dialogs/file/CsvDiffDialog.tsx` + `src-tauri/src/csv.rs`(`diff_csv_files`) |
 | 修改 CSV 编码转换 | `src/modules/dialogs/file/CsvEncodingDialog.tsx` + `src-tauri/src/csv.rs`(`convert_csv_encoding`)+ `src/utils/encodingHistory.ts`(上次记录持久化)。设计:`docs/design/020_encoding-conversion-history.md` |
 | 修改拆分好/坏行 | `src/modules/dialogs/file/SeparateCSVDialog.tsx` + `src-tauri/src/csv.rs`(`separate_csv`/`separate_stream`/`probe_csv_file`)+ `src/hooks/useCsvProbe.ts` + `src/utils/separateHistory.ts` + `src-tauri/src/storage.rs`(`reveal_paths`) |
-| 修改按行拆分(按行数切成多份) | `src/modules/dialogs/file/SplitLinesDialog.tsx` + `src-tauri/src/csv.rs`(`split_lines`/`split_lines_stream`/`split_lines_to_files`)+ `src/utils/splitLinesHistory.ts` + `src/components/menu/MainMenu.tsx`(File 菜单入口)+ `src-tauri/src/storage.rs`(`reveal_paths`)。设计:`docs/design/021_split-lines-by-line-count.md` |
-| 修改 Excel 多文件合并(多工作簿/sheet 合成一张表) | `src/modules/dialogs/file/MergeExcelDialog.tsx` + `src-tauri/src/excel_merge.rs`(`scan_excel_sources`/`merge_excel_sources`/`read_excel_header`)+ `src/utils/excelMergeHistory.ts` + `src/components/menu/MainMenu.tsx`(File 菜单入口)+ `src/components/ui/Select.tsx`(可选 `ariaLabel`)。设计:`docs/design/025_excel-multi-file-merge.md` |
+| 修改按行拆分(按行数切成多份) | `src/modules/dialogs/file/SplitLinesDialog.tsx` + `src-tauri/src/csv.rs`(`split_lines`/`split_lines_stream`/`split_lines_to_files`)+ `src/utils/splitLinesHistory.ts` + `src/components/menu/MainMenu.tsx`(工具菜单入口)+ `src-tauri/src/storage.rs`(`reveal_paths`)。设计:`docs/design/021_split-lines-by-line-count.md` |
+| 修改 Excel 多文件合并(多工作簿/sheet 合成一张表) | `src/modules/dialogs/file/MergeExcelDialog.tsx` + `src-tauri/src/excel_merge.rs`(`scan_excel_sources`/`merge_excel_sources`/`read_excel_header`)+ `src/utils/excelMergeHistory.ts` + `src/components/menu/MainMenu.tsx`(工具菜单入口)+ `src/components/ui/Select.tsx`(可选 `ariaLabel`)。设计:`docs/design/025_excel-multi-file-merge.md` |
 | 修改会话保存/恢复 | `src/hooks/useSession.ts` + `src/utils/session.ts` + `src-tauri/src/session.rs` |
 | 修改自动更新 / 免提权安装 | `src-tauri/tauri.conf.json`(`bundle.targets`/`installMode`/`createUpdaterArtifacts`/`plugins.updater`)+ `src-tauri/src/update.rs`(`get_install_form`)+ `src-tauri/src/config.rs`(`get_resources_dir` 的就地布局、不可写回退与反向迁移)+ `src-tauri/nsis/hooks.nsh`(装入 `<用户选择路径>\EasyCsv` + 卸载时按「删除应用数据」勾选框删除该目录,配合 `bundle.windows.nsis.installerHooks`)+ `src/services/update/index.ts` + `src/hooks/useUpdater.ts` + `src/modules/dialogs/app/UpdateDialog.tsx` + `src/hooks/useSession.ts`(`flushSession`)+ `.github/workflows/release.yml`。设计:`docs/design/022_github-auto-update-and-admin-free-install.md` |
 | 修改首次使用引导 / 示例数据(027 §4.1/§4.2, **P0 已实现**) | 后端: `src-tauri/src/samples.rs`(`ensure_sample_data`,幂等写入 `<数据目录>/samples/`)+ `src-tauri/samples/easy-csv-sample-sales.csv`(嵌入的示例数据,**LF 字节由 `.gitattributes` 钉住**)+ `src-tauri/src/lib.rs`(注册命令)。前端: `src/hooks/useOnboarding.ts` + `src/components/onboarding/FirstStepGuide.tsx`(画布空态引导卡 + 手势卡,覆盖层,`pointer-events-none`)+ `src/data/templates/builtin.ts`(5 个内置模板,文案走 i18n)+ `src/hooks/usePipelineTemplates.ts`(内置与用户模板合并)+ `src/modules/data-preview/HomeView.tsx`(「看看示例」卡 + 三步流程条 + 渲染引导层)+ `src/app/App.tsx`(`handleLoadDemo` + 示例自动执行一次 + `showOnboardingGuide`)+ `src/modules/logs/CommandList.tsx`(首个操作提示条)+ `src/components/menu/MainMenu.tsx`(置灰「执行」的 Tooltip、入口图标高亮、**帮助菜单第一行「查看示例」**)+ `src/components/setting/SettingsTabContent.tsx`(重新显示引导)。设计: `docs/design/027_first-run-onboarding.md` |
@@ -616,7 +639,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 修改 Tauri 插件/权限 | `src-tauri/tauri.conf.json` + `src-tauri/capabilities/default.json` |
 | 修改系统托盘/窗口行为 | `src-tauri/src/main.rs` 中的 `setup()` 和 `on_window_event` |
 | 修改数据概况功能 | `src/modules/data-preview/DataProfilePanel.tsx` + `src-tauri/src/csv.rs` 中的 `profile_csv` + `src-tauri/src/storage.rs` 中的缓存函数 |
-| 修改图表功能 | `src/modules/data-preview/charts/ChartPanel.tsx`(图表渲染+拖拽+导出) + `src/modules/dialogs/command/forms/`(ChartForm) + `src/hooks/execution/executeBranch.ts`(chart 分支)+ `src/hooks/charts/processChartData.ts` + `src/types/xan.ts`(ChartConfig等类型) |
+| 修改图表功能 | `src/modules/data-preview/charts/ChartPanel.tsx`(图表渲染+拖拽+导出+图例/排序/表视图) + `src/modules/data-preview/charts/ChartPrimitives.tsx`(共享 `ChartLegend`/`ChartTooltip`) + `src/hooks/charts/processChartData.ts`(纯函数塑形 + `ChartDataIssue` 诊断 + `defaultSortFor`) + `src/hooks/execution/executeBranch.ts`(chart 分支取数,经后端 `parse_csv_text`) + `src-tauri/src/csv.rs`(`parse_csv_text`) + `src/utils/format.ts`(`formatNumber`) + `src/types/execution.ts`(`TabChartState`) + `src/modules/dialogs/command/forms/chart.tsx`(ChartForm) + `src/types/xan.ts`(ChartConfig 等类型)。设计与验收: `docs/design/029_chart-readability.md` |
 | 修改图表命令文档 | `src/docs/cmd/chart.md`(英文) / `docs/cmd_zh/chart.md`(中文) |
 | 管道步骤复制粘贴 | `src/modules/pipeline/FlowPanel.tsx` 中的 `handleCopyStep`/`handlePasteStep` |
 | 管道步骤自动连线 | `src/app/App.tsx` 中的 `handleCommandClick`(仅 AI 添加时 `autoConnect=true` 自动连线) |

@@ -7,44 +7,48 @@ import { useLanguage } from "@/i18n";
 
 export function ChartForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
-  const { effectiveLanguage } = useLanguage();
+  const { effectiveLanguage, t } = useLanguage();
   const chartType = (commandDialog.params["chart-type"] as string) || "line";
+
+  // Localised names: the picker used to show raw ids such as `histogram`,
+  // which told a Chinese user nothing.
+  const chartTypeOptions = [
+    { label: t.chartTypeLine, value: "line" },
+    { label: t.chartTypeScatter, value: "scatter" },
+    { label: t.chartTypeBar, value: "bar" },
+    { label: t.chartTypeHistogram, value: "histogram" },
+    { label: t.chartTypePie, value: "pie" },
+    { label: t.chartTypeWordcloud, value: "wordcloud" },
+    { label: t.chartTypeHeatmap, value: "heatmap" },
+  ];
+
+  const desc = (name: string) =>
+    getParameterDescription("chart", name, effectiveLanguage);
+
   return (
     <CommandFormShell {...props} scrollHeight="26vh">
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-sm font-medium">chart-type</label>
+          <label className="text-sm font-medium">{t.chartType}</label>
           <Select
             value={commandDialog.params["chart-type"] ?? "line"}
             onChange={(value) =>
               updateParam(commandDialog, setCommandDialog, "chart-type", value)
             }
-            options={[
-              { label: "line", value: "line" },
-              { label: "scatter", value: "scatter" },
-              { label: "bar", value: "bar" },
-              { label: "histogram", value: "histogram" },
-              { label: "pie", value: "pie" },
-              { label: "wordcloud", value: "wordcloud" },
-              { label: "heatmap", value: "heatmap" },
-            ]}
-            placeholder="Select chart type..."
+            options={chartTypeOptions}
+            placeholder={t.chartType}
             size="md"
           />
         </div>
         <div>
-          <label className="text-sm font-medium">x column *</label>
+          <label className="text-sm font-medium">{t.xAxis} *</label>
           <input
             type="text"
             value={commandDialog.params.x ?? ""}
             onChange={(e) =>
               updateParam(commandDialog, setCommandDialog, "x", e.target.value)
             }
-            placeholder={getParameterDescription(
-              "chart",
-              "x",
-              effectiveLanguage,
-            )}
+            placeholder={desc("x")}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             autoFocus
           />
@@ -58,7 +62,7 @@ export function ChartForm(props: CommandFormProps) {
         chartType === "heatmap") && (
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-sm font-medium">y column</label>
+            <label className="text-sm font-medium">{t.yAxis}</label>
             <input
               type="text"
               value={commandDialog.params.y ?? ""}
@@ -70,17 +74,13 @@ export function ChartForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder={getParameterDescription(
-                "chart",
-                "y",
-                effectiveLanguage,
-              )}
+              placeholder={desc("y")}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
           {chartType !== "histogram" && (
             <div>
-              <label className="text-sm font-medium">category</label>
+              <label className="text-sm font-medium">{t.category}</label>
               <input
                 type="text"
                 value={commandDialog.params.category ?? ""}
@@ -92,11 +92,7 @@ export function ChartForm(props: CommandFormProps) {
                     e.target.value,
                   )
                 }
-                placeholder={getParameterDescription(
-                  "chart",
-                  "category",
-                  effectiveLanguage,
-                )}
+                placeholder={desc("category")}
                 className="w-full h-8 px-3 text-sm border rounded-md bg-background"
               />
             </div>
@@ -106,7 +102,7 @@ export function ChartForm(props: CommandFormProps) {
       {chartType === "histogram" && (
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-sm font-medium">bins (histogram)</label>
+            <label className="text-sm font-medium">{t.bins}</label>
             <input
               type="number"
               min={1}
@@ -119,11 +115,7 @@ export function ChartForm(props: CommandFormProps) {
                   parseInt(e.target.value) || 10,
                 )
               }
-              placeholder={getParameterDescription(
-                "chart",
-                "bins",
-                effectiveLanguage,
-              )}
+              placeholder={desc("bins")}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -131,7 +123,7 @@ export function ChartForm(props: CommandFormProps) {
       )}
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-sm font-medium">title</label>
+          <label className="text-sm font-medium">{t.title}</label>
           <input
             type="text"
             value={commandDialog.params.title ?? ""}
@@ -143,17 +135,13 @@ export function ChartForm(props: CommandFormProps) {
                 e.target.value,
               )
             }
-            placeholder={getParameterDescription(
-              "chart",
-              "title",
-              effectiveLanguage,
-            )}
+            placeholder={desc("title")}
             className="w-full h-8 px-3 text-sm border rounded-md bg-background"
           />
         </div>
         {chartType !== "pie" && chartType !== "wordcloud" && (
           <div>
-            <label className="text-sm font-medium">x-label</label>
+            <label className="text-sm font-medium">{t.xAxisLabel}</label>
             <input
               type="text"
               value={commandDialog.params["x-label"] ?? ""}
@@ -165,11 +153,7 @@ export function ChartForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder={getParameterDescription(
-                "chart",
-                "x-label",
-                effectiveLanguage,
-              )}
+              placeholder={desc("x-label")}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -178,7 +162,7 @@ export function ChartForm(props: CommandFormProps) {
       {chartType !== "pie" && chartType !== "wordcloud" && (
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-sm font-medium">y-label</label>
+            <label className="text-sm font-medium">{t.yAxisLabel}</label>
             <input
               type="text"
               value={commandDialog.params["y-label"] ?? ""}
@@ -190,11 +174,7 @@ export function ChartForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              placeholder={getParameterDescription(
-                "chart",
-                "y-label",
-                effectiveLanguage,
-              )}
+              placeholder={desc("y-label")}
               className="w-full h-8 px-3 text-sm border rounded-md bg-background"
             />
           </div>
@@ -202,7 +182,7 @@ export function ChartForm(props: CommandFormProps) {
       )}
       <div className="grid grid-cols-3 gap-2">
         <div>
-          <label className="text-sm font-medium">color</label>
+          <label className="text-sm font-medium">{t.color}</label>
           <div className="flex gap-2">
             <input
               type="color"
@@ -234,7 +214,7 @@ export function ChartForm(props: CommandFormProps) {
           </div>
         </div>
         <div>
-          <label className="text-sm font-medium">width</label>
+          <label className="text-sm font-medium">{t.width}</label>
           <input
             type="number"
             value={commandDialog.params.width ?? 600}
@@ -251,7 +231,7 @@ export function ChartForm(props: CommandFormProps) {
           />
         </div>
         <div>
-          <label className="text-sm font-medium">height</label>
+          <label className="text-sm font-medium">{t.height}</label>
           <input
             type="number"
             value={commandDialog.params.height ?? 400}
