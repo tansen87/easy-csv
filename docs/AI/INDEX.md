@@ -87,7 +87,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | `docs/design/029_chart-readability.md` | 图表可读性优化(**P0 + P1 已实现,2026-10-01;P2 未做**;文首「实施记录」): 把诉求分三层且**按此优先级排序** —— **P0 正确性**(不画出会撒谎的图)、**P1 可读性**(本次主体)、**P2 增强**(未做)。**已实现(全部)**: ① **chart 分支不再在 JS 里切 CSV** —— 后端新增 `csv::parse_csv_text`(复用 `csv` crate、`flexible(true)`、`CHART_MAX_ROWS=50000`,已注册进 `lib.rs`),`executeBranch` 删除 `text.trim().split("\n")` + `line.split(delimiter)` 的手写解析 → 含逗号的引号字段/引号内换行/`""` 转义都正确,**图表与预览表同源**;② 命令回传 `truncated`/`total_rows`,`TabChartState` 带上截断标记 → 面板琥珀提示 + 日志,不再静默画部分数据;③ `parseNumericCell` 把非数值判为 `null`(不再 `\|\| 0`),顺带让千分位 `1,234` 正确解析,折线 `connectNulls={false}` 断线 + 面板「已跳过 N 行非数值」;④ `xIndex === -1` 改返回 `column_not_found` + 可用列列表,面板渲染错误卡(与「文件没数据」区分开);⑤ 导出前把 `text`/`line` 改为深色,始终输出白底深字的文档配色;⑥ 隐藏系列四图统一为**过滤数据**(删掉 `stroke="transparent"` 占位);⑦ 新增 `chartTypeLine`…`chartTypeHeatmap` 等键,面板标题、直方图轴名、热力图 tooltip、表单标签与类型下拉全部走 i18n(不再漏 `line`/`heatmap`)。**P1 八项也全部实现**: 新建 `src/modules/data-preview/charts/ChartPrimitives.tsx`(`ChartLegend` + `ChartTooltip`)—— **单系列图例也渲染**并标注 `(Y 轴)`,热力图给色阶图例、词云给「字号=出现频次」;排序 `defaultSortFor`(柱/饼/热力图默认降序、折线保持原序 + 三态下拉);`formatNumber`(auto/integer/decimal1/decimal2/percent/compact,轴 `compact` + tooltip 完整千分位,修掉热力图 `12.0`);9 处 recharts tooltip 收敛为共享组件(显式文字色 + 值 + 占比);Y 轴标签回退列名 + 长类目名 `angle=-30`/`preserveStartEnd`;`CATEGORY_COLORS` 按索引分配(隐藏不再换色)、`HEAT_RAMP` 渐变;词云改**阿基米德螺线确定性布局**(无 `Math.random()`,按文字宽高碰撞检测);三类空状态分别给原因与下一步。**P2 未做**: 均值线、数据标签、对数轴、可达性、聚合口径、PNG 导出、拆 `ChartPanel.tsx`。**验证**: `cargo test --lib` 188 通过(新增 7 个 `parse_csv_text` 用例)、`chartReadability.test.ts` 20 通过、`ChartPanelRender.test.tsx` 11 通过(服务端渲染断言)、`tsc` 与 `eslint` 0 error。原型(独立 HTML,不随文档分发): `docs/design/prototypes/029/01-readability.html`(改造前/后并排:排序+图例+数值格式、统一 tooltip、热力图色阶图例、词云稳定布局、明暗配色、图-表切换)、`02-edge-states.html`(六个失败模式:引号列错位、非数值归零、列名不存在、2MB 截断、三种「空」、暗色导出) |
 
-> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–029 已登记。
+| `docs/design/030_settings-navigation.md` | 设置导航改版:目录 + 搜索 + 每设置一行(**设计稿 v2,已实现 2026-10-11;文末 §11 实施记录**): 诊断「设置弹窗 = 三段控件(通用/AI/插件)+ 单列滚动 + 底部两按钮」的六个问题 —— ① `通用` 一列 10 段首尾相连,**无目录、无分组、无页内定位**(`SettingsTabContent.tsx:168-441` 是单列 `space-y-6`;三段控件只切「大 tab」);② 段落顺序是历史堆积,不是语义分组(分隔符 / 并发上限 / 主题 / 系统托盘 / 检查更新 / 新手引导同处一列);③ **横向浪费放大纵向问题**(弹窗 `max-w-4xl` 896px,但每段只占 `w-1/3` 或 `w-[300px]`);④ 无锚点可引用(帮助中心只能写「往下滚」);⑤ **没有搜索**(想找「托盘」只能滚 + 眼扫);⑥ **一处真实归类错误** —— `SettingsTabContent.tsx:715-723` 的「清除执行历史」(`clear_execution_history`)被塞进 AI tab 的「清除AI学习数据」组。**方案**:左栏 = 搜索框(吸顶)+ **分组目录(8 条,当前分组高亮)**,右栏 = 吸顶分组标题 + **每个设置一行**(150px 标题 · 描述(可截断) · 控件右对齐,行高 34~36px);形态对齐 macOS「系统设置」(搜索在侧栏顶 / 侧栏是分类 / 内容每项一行)。**搜索**:匹配 `title` + `desc` + **人工 `keywords` 别名表**(如 主题 → dark / theme / 暗色);空格分词按 AND;中文按子串;**跨分组过滤但保留分组标题**(不打散、不按相关度重排 —— 设置项不该跳来跳去);命中子串用 `<mark>` 高亮;**界面上不出现任何计数**(分组条数与搜索结果数都不显示 —— 列表本身就是计数),结果条数只走一个 sr-only 的 `aria-live` 播报给读屏;清空用输入框内的 **✕**(刻意不用「清除」二字 —— 同屏已有 4 个「清除(数据)」按钮);侧栏把不匹配分组**降灰**(不隐藏不重排,保住方位感),点灰分组 = 先清空搜索再跳过去;搜索期间关闭滚动联动。**目录只到分组级、不镜像 18 个条目**的理由:条目级查找已由搜索承担,镜像会把行高压到 18~20px、768px 高窗口必然滚动,并与右侧列表形成「同一份名单出现两次」的冗余。**滚动联动**:取「视口顶部之上最近的分组标题」,基于「元素顶边相对滚动容器顶边」的位置比较(`getBoundingClientRect`)而**不用** `IntersectionObserver`(后者在「短分组 + 快速滚动」下会在两组间抖动);点击跳转把焦点移给组标题(`tabIndex={-1}`)并锁定约 350ms,免得高亮闪一串。**两条契约(均有双向比对的契约测试)**:行 id 唯一且被锚点 / 搜索 / 测试共用;分组在左栏与右栏各出现一次、由同一份数据渲染。**密度收益**:现状每项约 76px(标题 + 描述 + 控件三行)→ 34~36px,18 项从 1578px 降到 902px(57%)—— 先有行密度,搜索才有意义。**三处呈现订正**:①「清除执行历史」移到「帮助与数据」;②「自定义服务商设置」改常显行(不满足条件时禁用 + 说明,不再凭空出现/消失);③ AI 的四按钮簇拆成 4 个独立行(于是每一行都能被搜到)。**红线**:不改任何设置项的取值域 / 默认值 / 落库时机(只有上面三处**呈现**变更);不引入路由或深链;插件组的列表 UI(`PluginManager` / `PluginRow` 及其测试)已删除(§11.13);不改弹窗 `max-w-4xl` / `h-[72vh]`;不给行加图标。**开放问题**:侧栏去留(去掉后每行描述可用宽度从约 380px 增到约 540px,形态变 VS Code 式「搜索 + 一条列表」)、分组粒度(7 组 vs 6 组 vs 8 组)、`/` 作为搜索快捷键、「恢复默认」与「保存设置」的语义不一致(分隔符 / 语言 / 主题按下即落库,其余 6 项要按保存 —— 建议单开一稿)。**实施(2026-10-11)**: P0 九项全部落地 —— 新增 `settingsSections.ts`(6 组 / 18 行 / `keywords` 别名表)、`SettingsRow.tsx`、`SettingsSearch.tsx`、`SettingsNav.tsx`、`utils/settingsSearch.ts`、`hooks/useScrollSpy.ts`;`SettingsTabContent.tsx` 811 → 644 行(只负责「每种控件怎么渲染」);新增 45 个用例(前端 46 文件 / 632 例全绿,`tsc` 与 `eslint` 均 0 error)。与文档不一致处见 §11.2:① **实际是 8 组不是 7 组**(文档写错,已订正);② 搜索**额外匹配分组名**(否则无行的插件组搜不到);③ 滚动联动改用 `getBoundingClientRect`(`offsetTop` 的参照系是 `offsetParent`,在 Radix 里不稳);④ 行布局需要「一行一描述」,新增 7 条描述文案;⑤ 插件目录改为**一插件一行**(`components/setting/PluginSection.tsx` + `PluginEntryRow.tsx`),旧的列表 UI(`PluginManager` / `PluginRow` 及其测试)已删除,逻辑在 `usePluginCatalog` + `services/plugins` 里保留;⑥ 插件行不做整行点击委托(带 2~4 个动作,误点会触发下载);⑦ 分组标题加大加深(`15px / 600`);⑧ **分组容器改用圆角卡片(方案 B,02 号原型拍板)**:组名退到卡片外成 `12px` 灰色小标、不再吸顶,每组分一张 `rounded-xl border` 卡片,行装在卡片里;当前分组仍由左栏高亮 + scroll-spy 指示。⑨ **「并发上限」并入「数据读取」、数据读取再与「帮助与数据」合并为「数据与帮助」并排到第 2 位(界面第 1)** —— 分组 8 → 6,行数不变(18),`settingsGroupConcurrency` / `settingsGroupData` / `settingsGroupHelpData` 键删除,新增 `settingsGroupDataHelp`。**后续反馈(同日)**:去掉两侧全部计数(§11 里 11.6 起逐条记录)、底部动作改为浮在底部中间不再占独立区域、删掉左栏底部快捷键提示、分组「运行管道」更名「并发上限」、「清除执行历史」的归类订正落地;**插件组不再嵌入 `PluginManager` 面板** —— 该组无行,改为标题行携带摘要(计数 + 打开目录 + 获取最新版本,见 `components/setting/PluginSection.tsx`),目录与计数逻辑保留、只是不再有列表入口。 原型(独立 HTML,不随文档分发): `docs/design/prototypes/030/01-settings-directory.html`(改造前 / 改造后 · 浏览态 / 改造后 · 搜索态 三张 + 9 处编号标注 + 三条交互说明)、`docs/design/prototypes/030/02-group-cards.html`(分组容器改用卡片:现状 / 方案 A 卡片即分组 / 方案 B iOS 内嵌分组 + 对比表,待拍板) |
+
+> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–030 已登记。
 
 ---
 
@@ -330,8 +332,13 @@ NODE_ENV=test       node -e "console.log(typeof require('react').act)"  # functi
 | `ExecutionConcurrency.test.tsx` | 并发上限(设计 028 §7.1,上限 4): 第 5 个标签页进入 `queued` 而不是起第 5 条进程链、`runPipeline` 只被调 4 次;`queued` 也算「占用中」;取消排队中的 run 直接从队列摘除、不起后端进程(mock `runPipeline` 永不 settle) | 2 |
 | `LogPanel.test.tsx` | 日志按标签页(设计 028 §5.4): 每行带标签页徽标、默认全部可见、「仅当前标签页」只留该标签页的行(无标签的 app 级日志一并隐藏)、切回「全部」恢复、未选标签页时不过滤 | 2 |
 | `SettingsConcurrencyControl.test.tsx` | 设置页并发上限(设计 028 §7.1): 回显存储值(含 min/max)、编辑后上报新值、越界输入就地 clamp(99→16、0→1) | 3 |
+| `settingsSearch.test.ts` | 设置搜索纯函数(设计 030 §4.3): 分词与大小写、命中标题 / 描述 / `keywords` 别名(如 `dark` → 主题)、**逐词 AND(跨行的两词不相加)**、分组名命中则整组保留、无行的摘要组(插件)靠分组名可搜、空查询原样返回、顺序不变、零命中;`highlightSegments` 多段命中 / 重叠区间合并 / 正则元字符按字面 / 空串 | 19 |
+| `SettingsRow.test.tsx` | 一行 = 一项设置(设计 030 §4.2): `id` / `data-settings-row` / `tabIndex`、点行触发委托、**点控件不重复触发**(开关不被切两次)、无委托时没有 `cursor-pointer`、命中子串包 `<mark>` | 7 |
+| `SettingsNav.test.tsx` | 设置目录(设计 030 §4.4): 每分组一条、只有当前项带 `aria-current`、点击上报 id、不匹配项**降灰但保留**、文本里**不含任何数字**(旧有的底部提示行已按反馈删除)、`↑↓`/`Home`/`End` 移动焦点 | 5 |
+| `PluginSection.test.tsx` | 插件组(设计 030 §4.1 / §11.11): 标题摘要(计数 `2/3`、打开插件目录调 `reveal_paths`、获取最新版本以 `refresh: true` 重取清单)+ 行: 每个目录条目一行并显示状态、点「下载」调 `install_plugin`、「更新」只在后端说 `update_available` 时出现、卸载入口只给 `source: "registry"` 的二进制、下载前缀行存在 | 7 |
+| `SettingsDialog.test.tsx` | 设置弹窗(设计 030): **两条契约测试**(每个定义的行都渲染 / 目录组数与内容标题一一对应)、按标题与 `keywords` 别名过滤且保留分组标题、空状态、`Esc` 先清空搜索再关闭、`/` 聚焦搜索、目录点击滚动并聚焦组标题、底部浮动的「恢复默认」(六个值)与「保存」、关闭时不渲染。mock 掉 `@/modules/plugins` | 13 |
 
-> 全量以 `pnpm test` 为准(当前 42 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
+> 全量以 `pnpm test` 为准(当前 46 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
 
 ---
 
@@ -350,7 +357,7 @@ NODE_ENV=test       node -e "console.log(typeof require('react').act)"  # functi
 | `modules/ai/` | AI 助手面板 |
 | `modules/variables/` | 变量管理面板 |
 | `modules/logs/` | 日志面板、命令列表、全局命令面板 |
-| `modules/plugins/` | 插件管理域(设计 023): `PluginManager`(设置页页签)、`PluginRow`(单条:状态/版本/来源/下载/更新/卸载/进度/取消)、`PluginSetupDialog`(启动引导缺 xan)、`DownloadPrefixSetting`(下载加速前缀输入框) |
+| `modules/plugins/` | 插件管理域(设计 023;**2026-10-11 起设置页改用 `components/setting/PluginSection*`,本目录里旧的列表 UI 已删除**): `PluginSetupDialog`(启动引导缺 xan)、`DownloadPrefixSetting`(已改成一行的下载前缀设置) |
 
 ### 入口与全局
 
@@ -373,6 +380,7 @@ NODE_ENV=test       node -e "console.log(typeof require('react').act)"  # functi
 | `utils/fileFormat.ts` | 表格输入格式的唯一真相(024): `detectTabularFormat`(csv/parquet/duckdb,未知 → null)、`isCsvFile`、`duckdbTableName`(非 main schema 补限定名)、`listDuckdbTables`(invoke `list_duckdb_tables`) |
 | `utils/session.ts` | 会话快照序列化: `stripStepCommand`/`reconstructStep`/`serializeTabSnapshot`/`deserializeTabSnapshot` |
 | `utils/format.ts` | `formatDateTime` / `formatElapsed` / `formatBytes`(后两者由 020、022 从业务文件上提复用) |
+| `utils/settingsSearch.ts` | **设置搜索的纯函数**(设计 030 §4.3): `parseQuery` / `filterSettings`(空查询原样返回、逐词 AND、跨分组过滤并丢弃零命中分组、命中分组名则整组保留)/ `countMatches` / `highlightSegments`(按字面匹配,正则元字符不当模式;重叠区间合并) |
 | `utils/params.ts` · `utils/platform.ts` · `utils/separateHistory.ts` · `utils/executionHistory.ts` · `utils/versionDiff.ts` · `utils/panelDock.ts` · `utils/csv.ts` | 其余纯函数工具(参数构造、平台判断、拆分结果/执行历史持久化、版本差异、面板停靠、CSV 工具) |
 
 ### 服务层 (`services/`)
@@ -495,8 +503,6 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `logs/LogPanel.tsx` | 浮动日志面板,显示执行结果,支持拖拽和复制;**按标签页过滤**(design 028 §5.4):「仅当前标签页 / 全部」切换 + 每行标签页徽标(与按级别的 chips 叠加) |
 | `logs/CommandList.tsx` | **命令面板**,可拖拽浮动面板,按分类展示命令,支持搜索和历史记录 |
 | `logs/CommandPalette.tsx` | **全局命令面板**(Ctrl/Cmd+K): 可搜索、键盘导航的动作/标签/最近文件/xan 命令列表 |
-| `modules/plugins/PluginManager.tsx` | 设置页「插件」页签: 清单加载/刷新、离线缓存提示、安装与卸载(带确认)、打开插件目录;失败保留列表只出横幅 |
-| `modules/plugins/PluginRow.tsx` | 单个插件的行: 已装/缺失徽标、必需徽标、可更新徽标、来源标签(registry/manual/path)、大小、二进制路径、下载/更新/卸载/主页/定位按钮、下载进度条 + 进度条旁的「取消」按钮 |
 | `modules/plugins/PluginSetupDialog.tsx` | 启动时缺 xan 的引导: 一键下载安装 + 打开插件目录的手动兜底;不走 `usePluginCatalog`(只管一个插件) |
 | `modules/plugins/DownloadPrefixSetting.tsx` | 「下载加速前缀」输入框(设计 023 §6): 读/存 `get_/set_plugin_download_prefix`,保存后回读后端规范化结果,清除时发 `null`;校验失败由后端文案透出 |
 ### 业务模块 — 对话框 (`modules/dialogs/`)
@@ -565,8 +571,16 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `menu/ContextMenu.tsx` | 表格列右键菜单: 快速筛选、替换、透视、变换、排序(019 §3.1 后只**报告**上下文,不再自己拼参数) |
 | `menu/CanvasContextMenu.tsx` | 画布空白处右键菜单 |
 | `setting/ThemeProvider.tsx` | 主题上下文(dark/light/system)— 019 §2.1 计划迁往 `app/providers/` |
-| `setting/SettingsDialog.tsx` | 设置对话框容器 — 019 §2.1 计划迁往 `modules/dialogs/app/` |
-| `setting/SettingsTabContent.tsx` | 设置内容: 语言、主题、分隔符(自动检测总开关)、无表头、通知、历史上限、AI 配置、AI 学习数据管理 |
+| `setting/SettingsDialog.tsx` | 设置弹窗外壳(设计 030): 头部标题 + 两栏(左目录 / 右内容,各自滚动)+ **浮在底部中间的「恢复默认 / 保存设置」**(不占独立区域);持有搜索 query 与滚动联动;`/` 聚焦搜索、有查询时 `Esc` 先清空再关闭 — 019 §2.1 计划迁往 `modules/dialogs/app/` |
+| `setting/SettingsTabContent.tsx` | 设置内容(**设计 030 §11.15 起是「弱化组名 + 圆角卡片」**): 每分组一组名一行卡片 + 每个设置一行 + 搜索空状态 + 清除数据确认框;插件组按 `summary` 在标题行挂 `PluginSummary`(没有内容行);只负责「每种控件怎么渲染」,结构与文案在 `settingsSections.ts` |
+| `setting/settingsSections.ts` | **设置目录的单一数据源**(设计 030 §0.4): 6 组 / 18 行(并发上限并入数据读取、数据读取又与帮助与数据合并为「数据与帮助」并排到第 2 位,界面第 1)+ `keywords` 别名表 + `dangerous` 标记 + `summary`(插件组无行、由标题行携带摘要);`buildSettingsModel(t)` 解析文案;`sectionElementId` / `rowElementId` 供锚点、目录与契约测试共用 |
+| `setting/SettingsNav.tsx` | **设置目录**(设计 030 §4.4): 8 条分组 + 当前项高亮 + 点击跳转 + 搜索期间降灰(不隐藏、不重排);条数与底部提示行都不放 |
+| `setting/SettingsRow.tsx` | **一行 = 一项设置**(设计 030 §4.2): `176px 标题 · 描述(可截断)· 控件右对齐`,行高 36px;整行点击委托给控件、**危险行例外**;搜索命中包 `<mark>` |
+| `setting/SettingsGroupCard.tsx` | 分组卡片容器(设计 030 §11.15,方案 B): `rounded-xl border bg-card shadow-sm overflow-hidden`,行放里面且最后一行去底边线 |
+| `setting/SettingsSectionHeading.tsx` | 分组**弱化小标**(设计 030 §11.15,方案 B):卡片外的 `12px / muted-foreground` 一行,**不再吸顶**;通用分组与插件组共用同一份样式(**刻意不带 z-index**,否则会盖住滚动条,见 §11.5) |
+| `setting/PluginSection.tsx` | **插件组**(设计 030 §11.11): 唯一持有插件目录的地方(`usePluginCatalog`),渲染标题行摘要(计数 · 打开插件目录 · 获取最新版本)+ 每插件一行 + 下载前缀行 + 卸载确认框 |
+| `setting/PluginEntryRow.tsx` | **一个插件 = 一行**(设计 030 §11.11): 标题=插件名,描述=一行状态(必需 · 已安装 / 未安装 · 有新版 · 版本 · 体积),控件=项目主页 / 打开目录 / 卸载 / 下载 / 更新(下载中改显取消 + 百分比);状态全部由后端字段决定 |
+| `setting/SettingsSearch.tsx` | **设置搜索框**(设计 030 §4.3): 清空用输入框内的 ✕ 图标(**刻意不用「清除」二字**);界面不显示任何计数,结果条数只走 `sr-only` 的 `aria-live` 播报 |
 | `setting/Toast.tsx` | Toast 通知系统 — 019 §2.1 计划迁往 `components/ui/` |
 | `help/HelpContent.ts` · `HelpContentCn.ts` | 英文/中文帮助内容(Markdown) |
 | `help/HelpDialog.tsx` | 帮助对话框,支持 Ctrl+F 搜索 |
@@ -611,6 +625,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 修改设置选择器样式 | `src/components/setting/SettingsTabContent.tsx` |
 | 修改国际化文本 | `src/i18n/translations/` |
 | 修改设置项 | `src/components/setting/SettingsTabContent.tsx` |
+| 修改设置目录 / 搜索 / 行布局 | 结构: `src/components/setting/settingsSections.ts`(**唯一数据源**)+ `src/components/setting/{SettingsNav,SettingsRow,SettingsSearch,SettingsTabContent,SettingsDialog}.tsx`;搜索纯函数: `src/utils/settingsSearch.ts`;滚动联动: `src/hooks/useScrollSpy.ts`;文案: `src/i18n/translations/{zh,en}/settings.ts`。设计: `docs/design/030_settings-navigation.md` |
 | 修改应用配置持久化 | `src-tauri/src/config.rs` 中的 `load_config`/`save_config` 函数 |
 | 修改 Batch Filter 功能 | `src/hooks/useBatchFilter.ts` + `src/modules/dialogs/command/forms/batch-filter.tsx` + `src/data/commands/index.ts` |
 | 修改 Batch Convert 功能 | `src/hooks/useBatchConvert.ts` + `src/hooks/execution/`(deps 注入 `executeBatchConvert`) |
@@ -662,9 +677,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 测试命令面板 | `src/__tests__/CommandPalette.test.tsx` |
 | 测试 CSV 对比对话框 | `src/__tests__/initialParams.test.ts` |
 | 测试编码转换对话框 | `src/__tests__/CsvEncodingDialog.test.tsx` |
-| 测试插件管理页签 | `src/__tests__/PluginManager.test.tsx` |
 | 修改测试 mock/setup | `src/test/setup.ts` |
 | 修改 vitest 配置 | `vitest.config.ts` |
 | 新增/修改 CLI 插件 | `plugins/<name>/`(独立 crate)+ `src/data/commands/index.ts`(命令定义)+ `src/modules/dialogs/command/forms/pinyin.tsx`(表单)+ `src-tauri/src/plugins.rs`(后端注册)+ `src/docs/cmd/<name>.md` 与 `docs/cmd_zh/<name>.md`(帮助文档,改后跑 `pnpm generate-help`)。若要让用户能**应用内下载**它,还要:插件仓库 `easy-csv-plugins` 的 `catalog.json` 加条目 + `plugin_catalog.rs`/`plugin_install.rs`(设计 `docs/design/023_plugin-repository-and-in-app-install.md`) |
 | 修改插件仓库 / 应用内插件下载(**P0 + P1 已实现**;设计 `docs/design/023_plugin-repository-and-in-app-install.md`) | 后端:`src-tauri/src/plugin_catalog.rs`(取清单 + 验签 + 12h 缓存 + 防回滚 + **逐源回退**)+ `src-tauri/src/plugin_install.rs`(下载 + 校验 + 原子落盘 + 进度事件 + **取消**)+ `src-tauri/src/config.rs`(下载加速前缀的读写与校验)+ `src-tauri/plugin-signing.pub`(验签公钥,**支持多把**)+ `src-tauri/src/plugins.rs`(`plugins` 表新增四列)。前端:`src/services/plugins/index.ts` + `src/hooks/usePluginCatalog.ts` + `src/modules/plugins/`。**清单源有两条**:GitHub release(权威)+ jsDelivr `@main`(镜像,靠 CI 把 `catalog.json` 提交回 main 才成立) |
-| 修改插件管理设置页 | `src/components/setting/SettingsTabContent.tsx`(plugins 页签 → `<PluginManager showToast>`)+ `src/modules/plugins/`(前端)+ `src-tauri/src/{plugin_catalog,plugin_install,plugins,config}.rs`(后端)。已支持下载/更新/卸载/打开目录/**取消下载**/**下载加速前缀**;设计: `docs/design/023_plugin-repository-and-in-app-install.md` |
+| 修改设置里的插件区(设计 030 §11.11 起是「一插件一行」) | `src/components/setting/PluginSection.tsx`(持有目录,渲染标题行摘要 + 每插件一行 + 下载前缀行 + 卸载确认)+ `src/components/setting/PluginEntryRow.tsx`(一个条目 = 一行)+ `src/modules/plugins/DownloadPrefixSetting.tsx`(已改成一行的下载前缀)+ `src/components/setting/{settingsSections,SettingsTabContent}.tsx`(`summary: "plugins"`);**旧的自成一体的目录面板 `PluginManager` / `PluginRow` 已不再挂载但保留在代码里**+ `src/modules/plugins/`(前端)+ `src-tauri/src/{plugin_catalog,plugin_install,plugins,config}.rs`(后端)。已支持下载/更新/卸载/打开目录/**取消下载**/**下载加速前缀**;设计: `docs/design/023_plugin-repository-and-in-app-install.md` |

@@ -1,36 +1,16 @@
-import { useState, useCallback, useRef } from "react";
-import {
-  Save,
-  RotateCcw,
-  Languages,
-  SunMoon,
-  Bell,
-  Minimize2,
-  Check,
-  Bot,
-  Key,
-  Brain,
-  ExternalLink,
-  Trash2,
-  Database,
-  Server,
-  Plus,
-  X,
-  MousePointer2,
-  SeparatorVertical,
-  RectangleEllipsis,
-  CloudDownload,
-  Lightbulb,
-  Layers,
-} from "lucide-react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { ChevronDown, ExternalLink, Plus, Trash2, X } from "lucide-react";
 import { open } from "@tauri-apps/plugin-shell";
 import { invoke } from "@tauri-apps/api/core";
+
 import { Button } from "@/components/ui/Button";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Select } from "@/components/ui/Select";
 import { DelimiterModeSelect } from "@/components/ui/DelimiterModeSelect";
-import { PluginManager } from "@/modules/plugins";
-import type { DelimiterMode } from "@/types/xan";
+import { PluginSection } from "./PluginSection";
+import { SettingsGroupCard } from "./SettingsGroupCard";
+import { SettingsSectionHeading } from "./SettingsSectionHeading";
+import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n";
 import {
   AIConfig,
@@ -39,12 +19,28 @@ import {
   isBuiltinProvider,
 } from "@/services/ai/types";
 import { loadProviderApiKey } from "@/services/ai";
+import type { DelimiterMode } from "@/types/xan";
+import { SettingsRow } from "./SettingsRow";
+import {
+  sectionElementId,
+  type SettingsGroupModel,
+  type SettingsRowModel,
+} from "./settingsSections";
 
+/**
+ * The settings content pane: a scrolling list of
+ * `sticky group heading + one row per setting`. Structure lives in
+ * `settingsSections.ts`; this file only knows how to render each control.
+ */
 interface SettingsTabContentProps {
-  activeTab: "general" | "ai" | "plugins";
+  /** Search-filtered groups, in definition order. */
+  groups: SettingsGroupModel[];
+  /** Current query, used for `<mark>` highlighting only. */
+  query: string;
+  /** Scroll container handle - the dialog's scroll spy watches it. */
+  scrollRootRef: React.RefObject<HTMLDivElement | null>;
   theme: "dark" | "light" | "system";
   onThemeChange: (theme: "dark" | "light" | "system") => void;
-  /** `"auto"` = detect on open; a concrete delimiter turns detection off. */
   delimiterMode: DelimiterMode;
   onDelimiterModeChange: (mode: DelimiterMode) => void;
   noHeaders: boolean;
@@ -62,18 +58,93 @@ interface SettingsTabContentProps {
   onMaxConcurrentRunsChange: (value: number) => void;
   /** Clear the "intro seen" flag so the canvas guide shows again. */
   onResetOnboarding?: () => void;
-  onSave: () => void;
   aiConfig: AIConfig;
   onAIConfigChange: (config: AIConfig) => void;
-  /** Used by the plugins tab to report install/remove outcomes. */
+  /** Used by the plugins / clear-data actions to report outcomes. */
   showToast: (
     message: string,
     type?: "info" | "success" | "warning" | "error",
   ) => void;
 }
 
+type ClearTarget = "conversations" | "feedback" | "corrections" | "history";
+
+/** Row id → which dataset its 「清除」 button wipes. */
+const CLEAR_TARGETS: Record<string, ClearTarget> = {
+  "clear-execution-history": "history",
+  "ai-clear-conversations": "conversations",
+  "ai-clear-feedback": "feedback",
+  "ai-clear-corrections": "corrections",
+};
+
+const CLEAR_COMMANDS: Record<ClearTarget, string> = {
+  conversations: "clear_conversations",
+  feedback: "clear_feedback",
+  corrections: "clear_corrections",
+  history: "clear_execution_history",
+};
+
+const CHECKBOX_CLASS =
+  "h-4 w-4 rounded border-input accent-foreground cursor-pointer";
+
+/** Shared three-way picker (language / theme) — replaces two copies of the old markup. */
+function SegmentChoice<T extends string>({
+  value,
+  options,
+  onChange,
+  ariaLabel,
+  disabled,
+}: {
+  value: T;
+  options: { label: string; value: T }[];
+  onChange: (value: T) => void;
+  ariaLabel: string;
+  disabled?: boolean;
+}) {
+  const index = Math.max(
+    0,
+    options.findIndex((option) => option.value === value),
+  );
+  return (
+    <div
+      role="radiogroup"
+      aria-label={ariaLabel}
+      className="relative grid h-8 w-[210px] grid-cols-3 rounded-md border border-border/60 bg-muted/50 p-0.5"
+    >
+      <div
+        className="absolute bottom-0.5 top-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out"
+        style={{
+          width: "calc(33.333% - 1px)",
+          left: `calc(${(index * 100) / 3}% + 1px)`,
+        }}
+      />
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          role="radio"
+          aria-checked={option.value === value}
+          disabled={disabled}
+          onClick={() => onChange(option.value)}
+          className={cn(
+            "relative z-10 rounded-md text-[11px] font-medium transition-colors",
+            option.value === value
+              ? "text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
+            disabled && "opacity-60",
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function SettingsTabContent({
-  activeTab,
+  groups,
+  query,
+  scrollRootRef,
   theme,
   onThemeChange,
   delimiterMode,
@@ -91,26 +162,49 @@ export function SettingsTabContent({
   maxConcurrentRuns,
   onMaxConcurrentRunsChange,
   onResetOnboarding,
-  onSave,
   aiConfig,
   onAIConfigChange,
   showToast,
 }: SettingsTabContentProps) {
-  const [isThemeTransitioning, setIsThemeTransitioning] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [isSaveClicked, setIsSaveClicked] = useState(false);
-  const [isResetClicked, setIsResetClicked] = useState(false);
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { language, setLanguage, t } = useLanguage();
-  const [clearTarget, setClearTarget] = useState<
-    "conversations" | "feedback" | "corrections" | "history" | null
-  >(null);
+  const [clearTarget, setClearTarget] = useState<ClearTarget | null>(null);
   const [clearing, setClearing] = useState(false);
+  const [customExpanded, setCustomExpanded] = useState(false);
+  const [themeTransitioning, setThemeTransitioning] = useState(false);
+  const themeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const numberRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const passwordRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const checkboxRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const selectRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const handleClearData = useCallback(async () => {
+    if (!clearTarget) return;
+    setClearing(true);
+    try {
+      await invoke(CLEAR_COMMANDS[clearTarget]);
+    } catch (error) {
+      console.error("Failed to clear data:", error);
+    } finally {
+      setClearing(false);
+      setClearTarget(null);
+    }
+  }, [clearTarget]);
+
+  const handleThemeChange = useCallback(
+    (next: "dark" | "light" | "system") => {
+      if (themeTimerRef.current) clearTimeout(themeTimerRef.current);
+      setThemeTransitioning(true);
+      themeTimerRef.current = setTimeout(() => {
+        onThemeChange(next);
+        setThemeTransitioning(false);
+      }, 50);
+    },
+    [onThemeChange],
+  );
 
   const updateCustomModels = useCallback(
     (models: string[]) => {
-      const cleaned = models.map((m) => m.trim()).filter((m) => m.length > 0);
+      const cleaned = models.map((model) => model.trim()).filter(Boolean);
       onAIConfigChange({
         ...aiConfig,
         models,
@@ -122,672 +216,519 @@ export function SettingsTabContent({
     [aiConfig, onAIConfigChange],
   );
 
-  const handleClearData = useCallback(async () => {
-    if (!clearTarget) return;
-    setClearing(true);
-    try {
-      const cmdMap = {
-        conversations: "clear_conversations",
-        feedback: "clear_feedback",
-        corrections: "clear_corrections",
-        history: "clear_execution_history",
-      };
-      await invoke(cmdMap[clearTarget]);
-    } catch (error) {
-      console.error("Failed to clear data:", error);
-    } finally {
-      setClearing(false);
-      setClearTarget(null);
-    }
-  }, [clearTarget]);
-
-  const handleThemeChange = useCallback(
-    (newTheme: "dark" | "light" | "system") => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-
-      setIsThemeTransitioning(true);
-
-      timeoutRef.current = setTimeout(() => {
-        onThemeChange(newTheme);
-        setIsThemeTransitioning(false);
-      }, 50);
-    },
-    [onThemeChange],
+  const providerOptions = useMemo(
+    () =>
+      PROVIDERS.map((provider) => ({
+        label: provider.name,
+        value: provider.id,
+      })),
+    [],
   );
 
+  const modelOptions = useMemo(
+    () =>
+      isBuiltinProvider(aiConfig.provider)
+        ? (
+            AVAILABLE_MODELS[
+              aiConfig.provider as keyof typeof AVAILABLE_MODELS
+            ] || []
+          ).map((model) => ({ label: model.name, value: model.id }))
+        : (aiConfig.models || [])
+            .map((model) => model.trim())
+            .filter(Boolean)
+            .map((model) => ({ label: model, value: model })),
+    [aiConfig.provider, aiConfig.models],
+  );
+
+  /** Whole-row delegation: it does what clicking the control would do. */
+  const focusSelect = (id: string) => () =>
+    selectRefs.current[id]?.querySelector<HTMLInputElement>("input")?.focus();
+
+  const renderControl = (row: SettingsRowModel) => {
+    switch (row.control) {
+      case "delimiter":
+        return (
+          <div
+            ref={(node) => {
+              selectRefs.current[row.id] = node;
+            }}
+          >
+            <DelimiterModeSelect
+              value={delimiterMode}
+              onChange={onDelimiterModeChange}
+              placeholder={t.selectDelimiter}
+              size="sm"
+              width={160}
+              listMaxHeight="max-h-36"
+            />
+          </div>
+        );
+
+      case "checkbox": {
+        const checked =
+          row.id === "no-headers"
+            ? noHeaders
+            : row.id === "notification"
+              ? systemNotification
+              : row.id === "tray"
+                ? minimizeToTray
+                : row.id === "fit-view"
+                  ? doubleClickFitView
+                  : autoCheckUpdate;
+        const change =
+          row.id === "no-headers"
+            ? onNoHeadersChange
+            : row.id === "notification"
+              ? onSystemNotificationChange
+              : row.id === "tray"
+                ? onMinimizeToTrayChange
+                : row.id === "fit-view"
+                  ? onDoubleClickFitViewChange
+                  : onAutoCheckUpdateChange;
+        return (
+          <input
+            ref={(node) => {
+              checkboxRefs.current[row.id] = node;
+            }}
+            type="checkbox"
+            checked={checked}
+            aria-label={row.title}
+            onChange={(event) => change(event.target.checked)}
+            className={CHECKBOX_CLASS}
+          />
+        );
+      }
+
+      case "number":
+        return (
+          <input
+            ref={(node) => {
+              numberRefs.current[row.id] = node;
+            }}
+            type="number"
+            min={1}
+            max={16}
+            aria-label={row.title}
+            value={maxConcurrentRuns}
+            onChange={(event) => {
+              const next = Number.parseInt(event.target.value, 10);
+              if (Number.isNaN(next)) return;
+              onMaxConcurrentRunsChange(Math.min(16, Math.max(1, next)));
+            }}
+            className="h-8 w-16 rounded-md border border-input bg-background px-2 text-xs"
+          />
+        );
+
+      case "language":
+        return (
+          <SegmentChoice
+            ariaLabel={row.title}
+            value={language}
+            onChange={setLanguage}
+            options={[
+              { label: t.system, value: "system" as const },
+              { label: "中文", value: "zh" as const },
+              { label: "English", value: "en" as const },
+            ]}
+          />
+        );
+
+      case "theme":
+        return (
+          <SegmentChoice
+            ariaLabel={row.title}
+            value={theme}
+            onChange={handleThemeChange}
+            disabled={themeTransitioning}
+            options={[
+              { label: t.system, value: "system" as const },
+              { label: t.light, value: "light" as const },
+              { label: t.dark, value: "dark" as const },
+            ]}
+          />
+        );
+
+      case "action":
+        return (
+          <Button variant="secondary" size="sm" onClick={onResetOnboarding}>
+            {t.onboardingReset}
+          </Button>
+        );
+
+      case "disclosure": {
+        const enabled = aiConfig.provider === "custom";
+        return (
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={!enabled}
+            aria-expanded={customExpanded}
+            onClick={() => setCustomExpanded((open) => !open)}
+          >
+            {customExpanded ? t.settingsCollapse : t.settingsExpand}
+            <ChevronDown
+              className={cn(
+                "h-3 w-3 transition-transform",
+                customExpanded && "rotate-180",
+              )}
+            />
+          </Button>
+        );
+      }
+
+      case "provider":
+        return (
+          <div
+            ref={(node) => {
+              selectRefs.current[row.id] = node;
+            }}
+          >
+            <Select
+              ariaLabel={row.title}
+              value={aiConfig.provider}
+              onChange={async (provider) => {
+                const next = provider as string;
+                const apiKey = await loadProviderApiKey(next);
+                if (next === "custom") {
+                  onAIConfigChange({ ...aiConfig, provider: next, apiKey });
+                } else {
+                  const model =
+                    AVAILABLE_MODELS[next as keyof typeof AVAILABLE_MODELS]?.[0]
+                      ?.id || "";
+                  onAIConfigChange({
+                    ...aiConfig,
+                    provider: next,
+                    model,
+                    baseUrl: "",
+                    apiKey,
+                  });
+                }
+              }}
+              options={providerOptions}
+              placeholder={t.aiSelectProvider}
+              size="sm"
+              width={160}
+            />
+          </div>
+        );
+
+      case "model":
+        return (
+          <div
+            ref={(node) => {
+              selectRefs.current[row.id] = node;
+            }}
+          >
+            <Select
+              ariaLabel={row.title}
+              value={aiConfig.model}
+              onChange={(model) => onAIConfigChange({ ...aiConfig, model })}
+              options={modelOptions}
+              placeholder={t.aiSelectModel}
+              size="sm"
+              width={160}
+            />
+          </div>
+        );
+
+      case "apiKey":
+        return (
+          <input
+            ref={(node) => {
+              passwordRefs.current[row.id] = node;
+            }}
+            type="password"
+            aria-label={row.title}
+            value={aiConfig.apiKey}
+            onChange={(event) =>
+              onAIConfigChange({ ...aiConfig, apiKey: event.target.value })
+            }
+            placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
+            className="h-8 w-[240px] rounded-md border border-input bg-background px-2 text-xs"
+          />
+        );
+
+      case "danger": {
+        const target = CLEAR_TARGETS[row.id];
+        return (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={() => target && setClearTarget(target)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {t.settingsClear}
+          </Button>
+        );
+      }
+    }
+  };
+
+  const activate = (row: SettingsRowModel) => {
+    if (row.dangerous) return undefined;
+    switch (row.control) {
+      case "checkbox":
+        // Delegation toggles the switch — that is what clicking the row means
+        // on macOS, and clicking the checkbox itself is not double-counted
+        // (SettingsRow ignores clicks that land on a control).
+        return () => checkboxRefs.current[row.id]?.click();
+      case "number":
+        return () => numberRefs.current[row.id]?.focus();
+      case "apiKey":
+        return () => passwordRefs.current[row.id]?.focus();
+      // Every dropdown focuses its combobox, which opens it (`Select` opens on
+      // focus) — the delimiter one has to be in this list too, or clicking its
+      // row did nothing while the AI dropdowns worked.
+      case "delimiter":
+      case "provider":
+      case "model":
+        return focusSelect(row.id);
+      case "action":
+        return onResetOnboarding;
+      case "disclosure":
+        return () => setCustomExpanded((open) => !open);
+      // Danger rows already returned above (`if (row.dangerous)`), but the kind
+      // is still part of the union — listing it keeps the switch exhaustive.
+      case "danger":
+        return undefined;
+      // A three-way picker has no single "activate" meaning, so its row stays
+      // inert. Listing it explicitly (instead of a `default`) makes the switch
+      // exhaustive: a new control kind cannot silently end up inert.
+      case "language":
+      case "theme":
+        return undefined;
+      default: {
+        const unhandled: never = row.control;
+        return unhandled;
+      }
+    }
+  };
+
   return (
-    <div
-      className="h-full flex flex-col bg-background"
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      {/* Content Area */}
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="p-6">
-          {activeTab === "general" && (
-            <div className="space-y-6">
-              {/* Delimiter: auto-detection master switch + delimiter, shared
-                  with the input node's badge. */}
-              <div className="w-1/3">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <SeparatorVertical className="h-4 w-4" />
-                  {t.csvDelimiter}
-                </h3>
-                <DelimiterModeSelect
-                  value={delimiterMode}
-                  onChange={onDelimiterModeChange}
-                  placeholder={t.selectDelimiter}
-                  size="sm"
-                />
-                <p className="text-sm text-muted-foreground">
-                  {t.delimiterDesc}
-                </p>
-              </div>
-              {/* No Headers */}
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <RectangleEllipsis className="h-4 w-4" />
-                  {t.noHeaders}
-                </h3>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={noHeaders}
-                    onChange={(e) => onNoHeadersChange(e.target.checked)}
-                    className="w-4 h-4 rounded border-input accent-foreground"
+    // `flex-1 min-h-0`, not `h-full`: this pane sits *below* the dialog's search
+    // bar in a flex column, so `height: 100%` would measure the parent's full
+    // height and push the bottom ~53px of the list outside the dialog's clip.
+    <div className="flex min-h-0 flex-1 flex-col bg-background">
+      <ScrollArea
+        ref={scrollRootRef}
+        className="min-h-0 flex-1"
+        hideHorizontalScrollbar
+        blockContent
+      >
+        {/* `pb-16` leaves room for the dialog's floating footer buttons, which
+            sit over this pane's bottom-centre (design 030 §4.1). */}
+        <div
+          className="px-4 pb-16"
+          onContextMenu={(event) => event.preventDefault()}
+        >
+          {groups.map((group) => (
+            <section key={group.id}>
+              {/* Deliberately **no** z-index: `position: sticky` already paints
+                  the heading above the (static) rows, and the scroll bar is a
+                  sibling that comes later in the DOM — so it stays on top. With
+                  a z-index here the heading (which spans to the right edge, the
+                  bar's track) painted over the bar and made it disappear. */}
+              {/* The plugin group renders itself: its rows are dynamic (one per
+                  catalogue entry) and it owns the catalogue once, so the heading
+                  summary and the rows cannot disagree. */}
+              {group.summary === "plugins" ? (
+                <section className="mb-6">
+                  <PluginSection
+                    sectionId={sectionElementId(group.id)}
+                    name={group.name}
+                    showToast={showToast}
                   />
-                  <p className="text-sm text-muted-foreground">
-                    {t.noHeadersDesc}
-                  </p>
-                </label>
-              </div>
-
-              {/* Concurrent executions */}
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Layers className="h-4 w-4" />
-                  {t.maxConcurrentRuns}
-                </h3>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="number"
-                    min={1}
-                    max={16}
-                    value={maxConcurrentRuns}
-                    onChange={(e) => {
-                      const next = Number.parseInt(e.target.value, 10);
-                      if (Number.isNaN(next)) return;
-                      onMaxConcurrentRunsChange(Math.min(16, Math.max(1, next)));
-                    }}
-                    className="w-20 h-8 px-2 rounded-md border border-input bg-background text-sm"
+                </section>
+              ) : (
+                <section className="mb-6">
+                  <SettingsSectionHeading
+                    id={sectionElementId(group.id)}
+                    name={group.name}
                   />
-                  <p className="text-sm text-muted-foreground">
-                    {t.maxConcurrentRunsDesc}
-                  </p>
-                </div>
-              </div>
+                  <SettingsGroupCard>
+                    {group.rows.map((row) => (
+                      <React.Fragment key={row.id}>
+                        <SettingsRow
+                          id={row.id}
+                          title={row.title}
+                          description={row.description}
+                          highlight={query}
+                          onActivate={activate(row)}
+                        >
+                          {renderControl(row)}
+                        </SettingsRow>
 
-              {/* Language */}
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Languages className="h-4 w-4" />
-                  {t.language}
-                </h3>
-                <div className="grid grid-cols-3 bg-muted/50 rounded-md border border-border/50 relative w-[300px]">
-                  <div
-                    className={`absolute top-0.5 bottom-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${
-                      language === "zh"
-                        ? "left-[calc(33.333%+1px)]"
-                        : language === "en"
-                          ? "left-[calc(66.666%)]"
-                          : "left-0.5"
-                    }`}
-                    style={{ width: "calc(33.333% - 1px)" }}
-                  />
-                  <button
-                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
-                      language === "system"
-                        ? "text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    onClick={() => setLanguage("system")}
-                  >
-                    {t.system}
-                  </button>
-                  <button
-                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
-                      language === "zh"
-                        ? "text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    onClick={() => setLanguage("zh")}
-                  >
-                    中文
-                  </button>
-                  <button
-                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
-                      language === "en"
-                        ? "text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    onClick={() => setLanguage("en")}
-                  >
-                    English
-                  </button>
-                </div>
-              </div>
-
-              {/* Theme */}
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <SunMoon className="h-4 w-4" />
-                  {t.theme}
-                </h3>
-                <div className="grid grid-cols-3 bg-muted/50 rounded-md border border-border/50 relative w-[300px]">
-                  <div
-                    className={`absolute top-0.5 bottom-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${
-                      theme === "light"
-                        ? "left-[calc(33.333%+1px)]"
-                        : theme === "dark"
-                          ? "left-[calc(66.666%)]"
-                          : "left-0.5"
-                    }`}
-                    style={{ width: "calc(33.333% - 1px)" }}
-                  />
-                  <button
-                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
-                      theme === "system"
-                        ? "text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    } ${isThemeTransitioning ? "pointer-events-none opacity-60" : ""}`}
-                    onClick={() => handleThemeChange("system")}
-                    disabled={isThemeTransitioning}
-                  >
-                    {t.system}
-                  </button>
-                  <button
-                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
-                      theme === "light"
-                        ? "text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    } ${isThemeTransitioning ? "pointer-events-none opacity-60" : ""}`}
-                    onClick={() => handleThemeChange("light")}
-                    disabled={isThemeTransitioning}
-                  >
-                    {t.light}
-                  </button>
-                  <button
-                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
-                      theme === "dark"
-                        ? "text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    } ${isThemeTransitioning ? "pointer-events-none opacity-60" : ""}`}
-                    onClick={() => handleThemeChange("dark")}
-                    disabled={isThemeTransitioning}
-                  >
-                    {t.dark}
-                  </button>
-                </div>
-              </div>
-
-              {/* Execution Notification */}
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Bell className="h-4 w-4" />
-                  {t.systemNotification}
-                </h3>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={systemNotification}
-                    onChange={(e) =>
-                      onSystemNotificationChange(e.target.checked)
-                    }
-                    className="w-4 h-4 rounded border-input accent-foreground"
-                  />
-                  <div className="text-left">
-                    <p className="text-sm text-muted-foreground">
-                      {t.systemNotificationDesc}
-                    </p>
-                  </div>
-                </label>
-              </div>
-
-              {/* Minimize to Tray */}
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Minimize2 className="h-4 w-4" />
-                  {t.minimizeToTray}
-                </h3>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={minimizeToTray}
-                    onChange={(e) => onMinimizeToTrayChange(e.target.checked)}
-                    className="w-4 h-4 rounded border-input accent-foreground"
-                  />
-                  <div className="text-left">
-                    <p className="text-sm text-muted-foreground">
-                      {t.minimizeToTrayDesc}
-                    </p>
-                  </div>
-                </label>
-              </div>
-
-              {/* Double-click Canvas to Fit View */}
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <MousePointer2 className="h-4 w-4" />
-                  {t.doubleClickFitView}
-                </h3>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={doubleClickFitView}
-                    onChange={(e) =>
-                      onDoubleClickFitViewChange(e.target.checked)
-                    }
-                    className="w-4 h-4 rounded border-input accent-foreground"
-                  />
-                  <div className="text-left">
-                    <p className="text-sm text-muted-foreground">
-                      {t.doubleClickFitViewDesc}
-                    </p>
-                  </div>
-                </label>
-              </div>
-
-              {/* Automatic update check on launch */}
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <CloudDownload className="h-4 w-4" />
-                  {t.updateSection}
-                </h3>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={autoCheckUpdate}
-                    onChange={(e) => onAutoCheckUpdateChange(e.target.checked)}
-                    className="w-4 h-4 rounded border-input accent-foreground"
-                  />
-                  <div className="text-left">
-                    <p className="text-sm text-muted-foreground">
-                      {t.settingsAutoCheckUpdateDesc}
-                    </p>
-                  </div>
-                </label>
-              </div>
-
-              {/* Replay the first-run guide */}
-              {onResetOnboarding && (
-                <div>
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <Lightbulb className="h-4 w-4" />
-                    {t.onboardingReset}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {t.onboardingResetDesc}
-                  </p>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={onResetOnboarding}
-                  >
-                    {t.onboardingReset}
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "ai" && (
-            <div className="space-y-6">
-              {/* Provider Selection */}
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Bot className="h-4 w-4" />
-                  {t.aiProvider}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {t.aiProviderDesc}
-                </p>
-                <Select
-                  value={aiConfig.provider}
-                  onChange={async (provider) => {
-                    const typedProvider = provider as string;
-                    const newKey = await loadProviderApiKey(typedProvider);
-                    if (typedProvider === "custom") {
-                      onAIConfigChange({
-                        ...aiConfig,
-                        provider: typedProvider,
-                        apiKey: newKey,
-                      });
-                    } else {
-                      const model =
-                        AVAILABLE_MODELS[
-                          typedProvider as keyof typeof AVAILABLE_MODELS
-                        ]?.[0]?.id || "";
-                      onAIConfigChange({
-                        ...aiConfig,
-                        provider: typedProvider,
-                        model,
-                        baseUrl: "",
-                        apiKey: newKey,
-                      });
-                    }
-                  }}
-                  options={PROVIDERS.map((p) => ({
-                    label: p.name,
-                    value: p.id,
-                  }))}
-                  placeholder={t.aiSelectProvider}
-                  size="sm"
-                />
-              </div>
-
-              {/* Model Selection */}
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Brain className="h-4 w-4" />
-                  {t.aiModel}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {t.aiModelDesc}
-                </p>
-                <Select
-                  value={aiConfig.model}
-                  onChange={(model) => onAIConfigChange({ ...aiConfig, model })}
-                  options={
-                    isBuiltinProvider(aiConfig.provider)
-                      ? (
-                          AVAILABLE_MODELS[
-                            aiConfig.provider as keyof typeof AVAILABLE_MODELS
-                          ] || []
-                        ).map((m) => ({
-                          label: m.name,
-                          value: m.id,
-                        }))
-                      : (aiConfig.models || [])
-                          .map((m) => m.trim())
-                          .filter((m) => m.length > 0)
-                          .map((m) => ({
-                            label: m,
-                            value: m,
-                          }))
-                  }
-                  placeholder={t.aiSelectModel}
-                  size="sm"
-                />
-              </div>
-
-              {/* Custom Provider Settings (only when provider is custom) */}
-              {aiConfig.provider === "custom" && (
-                <div className="space-y-4 border rounded-md p-3 bg-muted/20">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <Server className="h-4 w-4" />
-                    {t.aiCustomProviderSettings}
-                  </h3>
-                  <div>
-                    <label className="block text-sm font-medium">
-                      {t.aiProviderName}
-                    </label>
-                    <input
-                      type="text"
-                      value={aiConfig.providerName || ""}
-                      onChange={(e) =>
-                        onAIConfigChange({
-                          ...aiConfig,
-                          providerName: e.target.value,
-                        })
-                      }
-                      placeholder="Provider"
-                      className="w-full h-7 px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium">
-                      {t.aiBaseUrl}
-                    </label>
-                    <input
-                      type="text"
-                      value={aiConfig.baseUrl}
-                      onChange={(e) =>
-                        onAIConfigChange({
-                          ...aiConfig,
-                          baseUrl: e.target.value,
-                        })
-                      }
-                      placeholder="https://api.example.com/v1"
-                      className="w-full h-7 px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      {t.aiModels}
-                    </label>
-                    <div className="space-y-2">
-                      {(aiConfig.models && aiConfig.models.length > 0
-                        ? aiConfig.models
-                        : [""]
-                      ).map((model, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={model}
-                            onChange={(e) => {
-                              const models = [
-                                ...(aiConfig.models &&
-                                aiConfig.models.length > 0
+                        {row.id === "ai-custom-provider" && customExpanded && (
+                          <div className="space-y-3 border-b border-border/60 bg-muted/20 px-3 py-3">
+                            <div>
+                              <label className="block text-[11.5px] font-medium">
+                                {t.aiProviderName}
+                              </label>
+                              <input
+                                type="text"
+                                value={aiConfig.providerName || ""}
+                                onChange={(event) =>
+                                  onAIConfigChange({
+                                    ...aiConfig,
+                                    providerName: event.target.value,
+                                  })
+                                }
+                                placeholder="Provider"
+                                className="mt-1 h-8 w-[280px] rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11.5px] font-medium">
+                                {t.aiBaseUrl}
+                              </label>
+                              <input
+                                type="text"
+                                value={aiConfig.baseUrl}
+                                onChange={(event) =>
+                                  onAIConfigChange({
+                                    ...aiConfig,
+                                    baseUrl: event.target.value,
+                                  })
+                                }
+                                placeholder="https://api.example.com/v1"
+                                className="mt-1 h-8 w-full max-w-[420px] rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                              />
+                            </div>
+                            <div>
+                              <span className="block text-[11.5px] font-medium">
+                                {t.aiModels}
+                              </span>
+                              <div className="mt-1 space-y-2">
+                                {(aiConfig.models && aiConfig.models.length > 0
                                   ? aiConfig.models
-                                  : [""]),
-                              ];
-                              models[index] = e.target.value;
-                              updateCustomModels(models);
-                            }}
-                            placeholder="Kimi-K2.6"
-                            className="flex-1 h-7 px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                          />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const models = [...(aiConfig.models || [])];
-                              models.splice(index, 1);
-                              updateCustomModels(models);
-                            }}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() =>
-                        updateCustomModels([...(aiConfig.models || []), ""])
-                      }
-                    >
-                      <Plus className="h-3 w-3" />
-                      {t.aiAddModel}
-                    </Button>
-                  </div>
-                </div>
+                                  : [""]
+                                ).map((model, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <input
+                                      type="text"
+                                      value={model}
+                                      onChange={(event) => {
+                                        const models = [
+                                          ...(aiConfig.models &&
+                                          aiConfig.models.length > 0
+                                            ? aiConfig.models
+                                            : [""]),
+                                        ];
+                                        models[index] = event.target.value;
+                                        updateCustomModels(models);
+                                      }}
+                                      placeholder="Kimi-K2.6"
+                                      className="h-8 w-[240px] rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                                    />
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      aria-label={t.remove}
+                                      onClick={() => {
+                                        const models = [
+                                          ...(aiConfig.models || []),
+                                        ];
+                                        models.splice(index, 1);
+                                        updateCustomModels(models);
+                                      }}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="mt-2"
+                                onClick={() =>
+                                  updateCustomModels([
+                                    ...(aiConfig.models || []),
+                                    "",
+                                  ])
+                                }
+                              >
+                                <Plus className="h-3 w-3" />
+                                {t.aiAddModel}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Where to get a token / check the balance — only the
+                        built-in providers have a console to point at. */}
+                        {row.id === "ai-api-key" &&
+                          isBuiltinProvider(aiConfig.provider) && (
+                            <div className="flex flex-wrap items-center gap-4 border-b border-border/60 px-3 py-2 text-[11px]">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  open(
+                                    aiConfig.provider === "deepseek"
+                                      ? "https://platform.deepseek.com/api_keys"
+                                      : aiConfig.provider === "qwen"
+                                        ? "https://bailian.console.aliyun.com/?apiKey=1"
+                                        : "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
+                                  )
+                                }
+                                className="inline-flex cursor-pointer items-center gap-1 text-primary hover:underline"
+                              >
+                                {t.aiGetToken}
+                                <ExternalLink className="h-3 w-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  open(
+                                    aiConfig.provider === "deepseek"
+                                      ? "https://platform.deepseek.com/account_topup"
+                                      : aiConfig.provider === "qwen"
+                                        ? "https://bailian.console.aliyun.com/"
+                                        : "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
+                                  )
+                                }
+                                className="inline-flex cursor-pointer items-center gap-1 text-primary hover:underline"
+                              >
+                                {t.aiCheckBalance}
+                                <ExternalLink className="h-3 w-3" />
+                              </button>
+                            </div>
+                          )}
+                      </React.Fragment>
+                    ))}
+                  </SettingsGroupCard>
+                </section>
               )}
+            </section>
+          ))}
 
-              {/* API Key */}
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Key className="h-4 w-4" />
-                  {t.aiApiKey}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {t.aiApiKeyDesc}
-                </p>
-                <input
-                  type="password"
-                  value={aiConfig.apiKey}
-                  onChange={(e) =>
-                    onAIConfigChange({ ...aiConfig, apiKey: e.target.value })
-                  }
-                  placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
-                  className="w-full h-7 px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-                <p className="text-xs text-muted-foreground mt-2 flex items-center gap-3">
-                  {isBuiltinProvider(aiConfig.provider) && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        open(
-                          aiConfig.provider === "deepseek"
-                            ? "https://platform.deepseek.com/api_keys"
-                            : aiConfig.provider === "qwen"
-                              ? "https://bailian.console.aliyun.com/?apiKey=1"
-                              : "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
-                        )
-                      }
-                      className="text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
-                    >
-                      {t.aiGetToken}
-                      <ExternalLink className="h-3 w-3" />
-                    </button>
-                  )}
-                  {isBuiltinProvider(aiConfig.provider) && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        open(
-                          aiConfig.provider === "deepseek"
-                            ? "https://platform.deepseek.com/account_topup"
-                            : aiConfig.provider === "qwen"
-                              ? "https://bailian.console.aliyun.com/"
-                              : "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
-                        )
-                      }
-                      className="text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
-                    >
-                      {t.aiCheckBalance}
-                      <ExternalLink className="h-3 w-3" />
-                    </button>
-                  )}
-                </p>
-              </div>
-
-              {/* AI Learning Data */}
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Database className="h-4 w-4" />
-                  {t.aiClearData}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-1">
-                  {t.aiClearDataDesc}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => setClearTarget("conversations")}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    {t.aiClearConversations}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => setClearTarget("feedback")}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    {t.aiClearFeedback}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => setClearTarget("corrections")}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    {t.aiClearCorrections}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => setClearTarget("history")}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    {t.clearExecutionHistory}
-                  </Button>
-                </div>
-              </div>
+          {groups.length === 0 && (
+            <div className="flex flex-col items-center gap-2 py-16 text-center">
+              <p className="text-xs text-foreground">
+                {t.settingsSearchEmpty.replace("{query}", query)}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {t.settingsSearchEmptyHint}
+              </p>
             </div>
           )}
-
-          {activeTab === "plugins" && <PluginManager showToast={showToast} />}
         </div>
       </ScrollArea>
 
-      {/* Footer */}
-      <div className="p-4 flex justify-end gap-2 shrink-0">
-        <Button
-          variant="secondary"
-          onClick={() => {
-            onThemeChange("light");
-            onDelimiterModeChange("auto");
-            onNoHeadersChange(false);
-            onSystemNotificationChange(true);
-            onMinimizeToTrayChange(true);
-            onDoubleClickFitViewChange(true);
-            setIsResetClicked(true);
-            if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
-            resetTimeoutRef.current = setTimeout(
-              () => setIsResetClicked(false),
-              3000,
-            );
-          }}
-        >
-          {isResetClicked ? (
-            <Check className="h-4 w-4" />
-          ) : (
-            <RotateCcw className="h-4 w-4" />
-          )}
-          {t.resetToDefaults}
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => {
-            onSave();
-            setIsSaveClicked(true);
-            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-            saveTimeoutRef.current = setTimeout(
-              () => setIsSaveClicked(false),
-              3000,
-            );
-          }}
-        >
-          {isSaveClicked ? (
-            <Check className="h-4 w-4" />
-          ) : (
-            <Save className="h-4 w-4" />
-          )}
-          {t.saveSettings}
-        </Button>
-      </div>
-
-      {/* Clear Data Confirmation Dialog */}
       {clearTarget && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg p-4 w-[min(400px,calc(100vw-32px))]">
-            <h3 className="text-lg font-medium mb-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-[min(400px,calc(100vw-32px))] rounded-lg bg-background p-4">
+            <h3 className="mb-2 text-lg font-medium">
               {t.aiClearConfirmTitle}
             </h3>
-            <p className="text-sm text-muted-foreground mb-3">
+            <p className="mb-3 text-sm text-muted-foreground">
               {t.aiClearConfirmDesc}
             </p>
-            <div className="flex justify-end gap-2 mt-3">
+            <div className="mt-3 flex justify-end gap-2">
               <Button
                 variant="secondary"
                 onClick={() => setClearTarget(null)}

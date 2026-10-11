@@ -1,7 +1,6 @@
 /** Plugin catalog & in-app install */
 export const zhPlugins = {
   plugins: "插件",
-  pluginDesc: "外部 CLI 插件, 可按需下载安装",
   pluginNone: "暂无可用插件",
   pluginInstalled: "已安装",
   pluginMissing: "未安装",

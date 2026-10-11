@@ -2,6 +2,18 @@ import { describe, it, expect, vi } from "vitest";
 import { render, fireEvent } from "@testing-library/react";
 import { LanguageProvider } from "@/i18n";
 import { SettingsTabContent } from "@/components/setting/SettingsTabContent";
+import { buildSettingsModel } from "@/components/setting/settingsSections";
+import { filterSettings } from "@/utils/settingsSearch";
+import type { Translations } from "@/i18n/translations/types";
+
+// Structure lives in `settingsSections`; these suites only care about one
+// control, so the model is built from a stub `t` (titles become their keys).
+const stubT = new Proxy({}, {
+  get: (_target, key) => String(key),
+}) as unknown as Translations;
+const groups = filterSettings(buildSettingsModel(stubT), "");
+// The scroll container handle the dialog normally supplies.
+const scrollRootRef = { current: null } as React.RefObject<HTMLDivElement | null>;
 import type { DelimiterMode } from "@/types/xan";
 
 /**
@@ -23,7 +35,9 @@ function renderSettings(maxConcurrentRuns: number) {
   const utils = render(
     <LanguageProvider>
       <SettingsTabContent
-        activeTab="general"
+        groups={groups}
+        query=""
+        scrollRootRef={scrollRootRef}
         theme="light"
         onThemeChange={vi.fn()}
         delimiterMode={"auto" as DelimiterMode}
@@ -40,7 +54,6 @@ function renderSettings(maxConcurrentRuns: number) {
         onAutoCheckUpdateChange={vi.fn()}
         maxConcurrentRuns={maxConcurrentRuns}
         onMaxConcurrentRunsChange={onMaxConcurrentRunsChange}
-        onSave={vi.fn()}
         aiConfig={aiConfig}
         onAIConfigChange={vi.fn()}
         showToast={vi.fn()}

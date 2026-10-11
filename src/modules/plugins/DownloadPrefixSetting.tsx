@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { SettingsRow } from "@/components/setting/SettingsRow";
 import { useLanguage } from "@/i18n";
 import {
   describePluginError,
@@ -18,12 +19,12 @@ interface DownloadPrefixSettingProps {
 }
 
 /**
- * The download acceleration prefix.
+ * The download acceleration prefix, as a settings row.
  *
  * A transport hint and nothing more: the prefix is tried before each asset's
  * direct URL, and a download that comes back wrong is rejected by the sha256
  * pinned in the signed catalog regardless of who served it. That is what makes
- * it safe to hand this knob to the user at all — the worst a bad proxy can do is
+ * it safe to hand this knob to the user at all - the worst a bad proxy can do is
  * fail.
  */
 export function DownloadPrefixSetting({
@@ -33,6 +34,7 @@ export function DownloadPrefixSetting({
   const [prefix, setPrefix] = useState("");
   const [stored, setStored] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,7 +45,7 @@ export function DownloadPrefixSetting({
         setPrefix(value ?? "");
       })
       .catch(() => {
-        // A failure here only means the field starts empty; the tab still works.
+        // A failure here only means the field starts empty; the page still works.
       });
     return () => {
       cancelled = true;
@@ -76,45 +78,44 @@ export function DownloadPrefixSetting({
   const isDirty = prefix.trim() !== (stored ?? "");
 
   return (
-    <div className="border border-border rounded-md p-3 space-y-2">
-      <div>
-        <h4 className="text-sm font-medium">{t.pluginPrefixTitle}</h4>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {t.pluginPrefixDesc}
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
-        <input
-          type="text"
-          value={prefix}
-          spellCheck={false}
-          placeholder={t.pluginPrefixPlaceholder}
-          onChange={(event) => setPrefix(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && isDirty) void persist(prefix);
-          }}
-          className="flex-1 h-7 px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-        />
+    <SettingsRow
+      id="plugin-download-prefix"
+      title={t.pluginPrefixTitle}
+      description={t.pluginPrefixDesc}
+      onActivate={() => inputRef.current?.focus()}
+    >
+      <input
+        ref={inputRef}
+        type="text"
+        aria-label={t.pluginPrefixTitle}
+        value={prefix}
+        spellCheck={false}
+        placeholder={t.pluginPrefixPlaceholder}
+        onChange={(event) => setPrefix(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && isDirty) void persist(prefix);
+        }}
+        className="h-7 w-[180px] rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+      />
+      <Button
+        variant="secondary"
+        size="sm"
+        disabled={isSaving || !isDirty}
+        onClick={() => void persist(prefix)}
+      >
+        {t.pluginPrefixSave}
+      </Button>
+      <Tooltip content={t.pluginPrefixClear}>
         <Button
-          variant="secondary"
+          variant="ghost"
           size="sm"
-          disabled={isSaving || !isDirty}
-          onClick={() => void persist(prefix)}
+          aria-label={t.pluginPrefixClear}
+          disabled={isSaving || !stored}
+          onClick={() => void persist(null)}
         >
-          {t.pluginPrefixSave}
+          <Trash2 className="h-3.5 w-3.5" />
         </Button>
-        <Tooltip content={t.pluginPrefixClear}>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={t.pluginPrefixClear}
-            disabled={isSaving || !stored}
-            onClick={() => void persist(null)}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </Tooltip>
-      </div>
-    </div>
+      </Tooltip>
+    </SettingsRow>
   );
 }

@@ -59,17 +59,21 @@ const ScrollBar = React.forwardRef<
   React.ComponentRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>,
   React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>
 >(({ className, orientation = "vertical", ...props }, ref) => (
-  <ScrollAreaPrimitive.ScrollAreaScrollbar
-    ref={ref}
-    orientation={orientation}
-    className={cn(
-      "flex touch-none select-none transition-colors",
-      orientation === "vertical" &&
-        "h-full w-2.5 border-l border-l-transparent p-[1px]",
-      orientation === "horizontal" &&
-        "h-2.5 flex-col border-t border-t-transparent p-[1px]",
-      className,
-    )}
+    <ScrollAreaPrimitive.ScrollAreaScrollbar
+      ref={ref}
+      orientation={orientation}
+      className={cn(
+        // `z-panel` keeps the bar above the scrolled content: it overlays the
+        // viewport's right edge, so a sticky section header that carries a
+        // z-index of its own would otherwise paint across it and make the bar
+        // appear to vanish mid-scroll.
+        "z-panel flex touch-none select-none transition-colors",
+        orientation === "vertical" &&
+          "h-full w-2.5 border-l border-l-transparent p-[1px]",
+        orientation === "horizontal" &&
+          "h-2.5 flex-col border-t border-t-transparent p-[1px]",
+        className,
+      )}
     {...props}
   >
     <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full bg-border" />

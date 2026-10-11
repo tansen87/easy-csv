@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>原型 02 · 分组用卡片区分:两种方案对照</title>
+<style>
+  :root{
+    --background:#ffffff; --foreground:#2a2a2a; --muted:#f5f5f5; --muted-2:#fafafa;
+    --muted-foreground:#8a8a8a; --muted-foreground-2:#b3b3b3;
+    --border:#e9e9e9; --border-2:#dfdfdf; --border-quiet:#f2f2f2;
+    --primary:#2a2a2a; --accent:#f2f2f2; --card:#ffffff;
+    --shadow-card:0 1px 2px rgba(0,0,0,.04);
+    --font:"Inter","Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#f0f0f0;font-family:var(--font);color:var(--foreground)}
+  .stage{padding:28px 24px 56px;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .plabel{width:min(1000px,100%);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .plabel .tag{background:#111;color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:6px}
+  .plabel h1{font-size:14px;margin:0;font-weight:600}
+  .plabel p{margin:0;font-size:12px;color:#6b6b6b}
+
+  .wrap{width:min(1000px,100%);display:flex;flex-direction:column;gap:14px}
+  .cap{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .cap b{font-size:13px}
+  .cap span{font-size:12px;color:#6b6b6b}
+  .cap .state{font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;border:1px solid transparent}
+  .cap .state.now{color:#7c4a03;background:#fffbeb;border-color:#fde68a}
+  .cap .state.rec{color:#15803d;background:#f0fdf4;border-color:#bbf7d0}
+  .cap .state.alt{color:#1d4ed8;background:#eff6ff;border-color:#bfdbfe}
+
+  .dlg{width:900px;height:620px;background:var(--background);border:1px solid #d8d8d8;border-radius:12px;
+       box-shadow:0 12px 32px rgba(0,0,0,.12);overflow:hidden;display:flex;flex-direction:column}
+  .dlg-head{height:52px;flex:none;display:flex;align-items:center;justify-content:space-between;
+            padding:0 16px;border-bottom:1px solid var(--border);background:var(--muted-2)}
+  .dlg-title{font-size:13px;font-weight:600}
+  .xbtn{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:#8a8a8a}
+  .dlg-foot-note{height:40px;flex:none;display:flex;align-items:center;justify-content:center;
+                 font-size:11px;color:#b0b0b0;border-top:1px solid var(--border)}
+
+  .body-2col{flex:1;min-height:0;display:flex}
+  .side{width:200px;flex:none;border-right:1px solid var(--border);background:#fcfcfc;
+        padding:0 8px;display:flex;flex-direction:column;overflow:hidden}
+  .ssearch{flex:none;height:28px;margin:10px 0 6px;display:flex;align-items:center;gap:6px;
+           border:1px solid var(--border-2);border-radius:7px;background:#fff;padding:0 8px;font-size:11px;color:#b3b3b3}
+  .ssearch .mg{width:11px;height:11px;flex:none;border:1.5px solid #c2c2c2;border-radius:50%;position:relative}
+  .ssearch .mg::after{content:"";position:absolute;right:-3px;bottom:-3px;width:5px;height:1.5px;
+                      background:#c2c2c2;transform:rotate(45deg);border-radius:2px}
+  .glist{flex:1;min-height:0;display:flex;flex-direction:column;gap:1px;overflow:hidden}
+  .gitem{display:flex;align-items:center;height:30px;padding:0 9px;border-radius:7px;
+         font-size:12px;color:#6b6b6b;position:relative;flex:none}
+  .gitem.on{background:var(--accent);color:#111;font-weight:600}
+  .gitem.on::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:2px;border-radius:999px;background:var(--primary)}
+  .gitem.dim{color:#c8c8c8}
+
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
+  .searchbar{flex:none;height:44px;display:flex;align-items:center;gap:10px;padding:0 20px;border-bottom:1px solid var(--border)}
+  .sinput{flex:1;min-width:0;height:28px;display:flex;align-items:center;gap:7px;
+          border:1px solid var(--border-2);border-radius:7px;background:#fff;padding:0 9px;font-size:11.5px;color:#b3b3b3}
+  .sinput .mg{width:11px;height:11px;flex:none;border:1.5px solid #c2c2c2;border-radius:50%;position:relative}
+  .sinput .mg::after{content:"";position:absolute;right:-3px;bottom:-3px;width:5px;height:1.5px;
+                     background:#c2c2c2;transform:rotate(45deg);border-radius:2px}
+  .mbody{flex:1;min-height:0;padding:16px 20px;overflow:hidden;position:relative}
+
+  /* ── 行(三种方案共用)────────────────────────── */
+  .srow{display:grid;grid-template-columns:150px minmax(0,1fr) auto;align-items:center;gap:14px;
+        min-height:36px;padding:0 6px}
+  .srow + .srow{border-top:1px solid var(--border-quiet)}
+  .rt{font-size:12.5px;font-weight:500;color:#1f1f1f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rd{font-size:11px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rc{justify-self:end;display:flex;align-items:center;gap:8px}
+  .cb{width:15px;height:15px;border:1.4px solid #b9b9b9;border-radius:4px;flex:none;background:#fff}
+  .cb.on{background:var(--primary);border-color:var(--primary);position:relative}
+  .cb.on::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;
+                border-width:0 1.8px 1.8px 0;transform:rotate(45deg)}
+  .segv{width:210px;height:26px;display:grid;grid-template-columns:repeat(3,1fr);
+        background:var(--muted);border:1px solid var(--border-2);border-radius:6px;padding:2px;position:relative}
+  .segv .thumb{position:absolute;top:2px;bottom:2px;left:2px;width:calc(33.333% - 1px);background:var(--primary);border-radius:5px}
+  .segv i{position:relative;z-index:1;font-style:normal;font-size:10.5px;color:var(--muted-foreground);
+          display:grid;place-items:center;white-space:nowrap}
+  .segv i.on{color:#fff}
+  .sel{width:150px;height:26px;border:1px solid var(--border-2);border-radius:6px;background:#fff;
+       display:flex;align-items:center;justify-content:space-between;padding:0 8px;font-size:11px;color:#6b6b6b}
+  .sel .caret{width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #b3b3b3}
+
+  /* ── 现状:吸顶标题 + 平铺行 ─────────────────── */
+  .flat .ghead{position:sticky;top:0;background:#fff;padding:10px 0 6px;font-size:15px;font-weight:600;
+               color:#2a2a2a;border-bottom:1px solid var(--border)}
+  .flat .srow{border-bottom:1px solid var(--border-quiet)}
+  .flat .srow + .srow{border-top:0}
+
+  /* ── 方案 A:卡片即分组,组名在卡片头 ─────────── */
+  .cards{display:flex;flex-direction:column;gap:16px}
+  .gcard{border:1px solid var(--border-2);border-radius:12px;background:var(--card);
+         box-shadow:var(--shadow-card);overflow:hidden}
+  .gcard-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
+              padding:11px 16px 10px;border-bottom:1px solid var(--border)}
+  .gcard-head .gname{font-size:15px;font-weight:600;color:#2a2a2a}
+  .gcard-head .gcount{font-size:11.5px;color:var(--muted-foreground)}
+  .gcard-head .gactions{display:flex;align-items:center;gap:8px}
+  .gcard-body{padding:2px 16px 4px}
+  .gcard .srow:last-child{border-bottom:0}
+  .gcard .actions{display:flex;align-items:center;gap:6px}
+  .iconbtn{width:26px;height:26px;border-radius:6px;border:1px solid transparent;display:grid;place-items:center;color:#8a8a8a;background:#fff}
+  .iconbtn .ic{width:13px;height:13px;border:1.5px solid #9a9a9a;border-radius:3px}
+  .iconbtn .ic.round{border-radius:50%}
+  .bsm{height:26px;padding:0 10px;border-radius:6px;border:1px solid var(--border-2);background:var(--muted);
+       font-size:11px;color:#4a4a4a;display:inline-flex;align-items:center;gap:5px}
+
+  /* ── 方案 B:iOS 内嵌分组,组名在卡片外 ────────── */
+  .glabel{padding:0 2px 6px;font-size:12px;font-weight:500;color:var(--muted-foreground)}
+
+  /* ── 标注 / 图例 / 说明 ─────────────────────── */
+  .pin-n{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:999px;flex:none;
+         background:var(--bad,#b91c1c);color:#fff;font-size:10px;font-weight:700;font-family:var(--mono);box-shadow:0 0 0 2px #fff}
+  .pin-n.g{background:#15803d}
+  .pin-n.b{background:#1d4ed8}
+  .legend{width:min(1000px,100%);background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .legend ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+  .legend li{font-size:12px;line-height:1.6;color:#4a4a4a}
+  code{font-family:var(--mono);font-size:11px;background:var(--muted);border:1px solid var(--border);
+       border-radius:4px;padding:0 4px}
+  .compare{width:min(1000px,100%);background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .compare table{width:100%;border-collapse:collapse;font-size:12px}
+  .compare th,.compare td{padding:9px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;line-height:1.6}
+  .compare th{background:var(--muted-2);font-weight:600;font-size:11.5px;color:#4a4a4a}
+  .compare td:first-child{font-weight:600;white-space:nowrap}
+  .compare tr:last-child td{border-bottom:0}
+  .yes{color:#15803d;font-weight:600}
+  .no{color:#b91c1c;font-weight:600}
+  .ask{width:min(1000px,100%);background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px}
+  .ask h3{margin:0 0 6px;font-size:12.5px;font-weight:600;color:#7c4a03}
+  .ask ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
+  .ask li{font-size:12px;line-height:1.6;color:#7c4a03}
+  .scope{width:min(1000px,100%);font-size:11.5px;color:#8a8a8a;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="plabel">
+    <span class="tag">原型 02</span>
+    <h1>分组用卡片区分:两种方案对照</h1>
+    <p>对应 <code>docs/design/030_settings-navigation.md</code> · 现状是「吸顶标题 + 平铺行」,分组靠一条 1px 分隔线,扫一眼拉不开层级</p>
+  </div>
+
+  <!-- ══════════════ 现状 ══════════════ -->
+  <div class="wrap">
+    <div class="cap">
+      <b>现状</b>
+      <span class="state now">15px / 600 吸顶标题 + 平铺行</span>
+      <span>分组之间只有一条标题底边,行与行的分隔线又和它同权重</span>
+    </div>
+
+    <div class="dlg">
+      <div class="dlg-head">
+        <span class="dlg-title">设置</span>
+        <div class="xbtn" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7"/></svg>
+        </div>
+      </div>
+      <div class="body-2col">
+        <nav class="side">
+          <div class="ssearch"><span class="mg"></span>搜索设置</div>
+          <div class="glist">
+            <div class="gitem on">界面</div>
+            <div class="gitem">数据与帮助</div>
+            <div class="gitem">窗口行为</div>
+            <div class="gitem">更新</div>
+            <div class="gitem">AI</div>
+            <div class="gitem">插件</div>
+          </div>
+        </nav>
+        <div class="main">
+          <div class="searchbar"><div class="sinput"><span class="mg"></span>搜索设置(支持别名,如 dark / tray / delimiter)</div></div>
+          <div class="mbody flat">
+            <div class="ghead">数据读取</div>
+            <div class="srow"><div class="rt">分隔符</div><div class="rd">用于读取 CSV 数据的字段分隔符</div><div class="rc"><div class="sel">自动检测<span class="caret"></span></div></div></div>
+            <div class="srow"><div class="rt">无表头</div><div class="rd">启用后, 第一行将不被视为表头</div><div class="rc"><span class="cb"></span></div></div>
+            <div class="srow"><div class="rt">同时执行的标签页数上限</div><div class="rd">超出的标签页会排队等待</div><div class="rc"><div class="sel" style="width:70px;justify-content:center">4</div></div></div>
+            <div class="ghead">界面</div>
+            <div class="srow"><div class="rt">语言</div><div class="rd">界面语言, 可跟随系统</div><div class="rc"><div class="segv"><div class="thumb"></div><i class="on">跟随系统</i><i>中文</i><i>English</i></div></div></div>
+            <div class="srow"><div class="rt">主题</div><div class="rd">界面配色, 可跟随系统</div><div class="rc"><div class="segv"><div class="thumb"></div><i>跟随系统</i><i class="on">浅色</i><i>深色</i></div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="dlg-foot-note">↑ 标题与行之间只隔一条线,三个分组在视觉上是同一张纸</div>
+    </div>
+  </div>
+
+  <!-- ══════════════ 方案 A ══════════════ -->
+  <div class="wrap">
+    <div class="cap">
+      <b>方案 A · 卡片即分组</b>
+      <span class="state rec">推荐</span>
+      <span>每个分组一张圆角卡片,组名是卡片头;吸顶标题取消(卡片本身就是分组)</span>
+    </div>
+
+    <div class="dlg">
+      <div class="dlg-head">
+        <span class="dlg-title">设置</span>
+        <div class="xbtn" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7"/></svg>
+        </div>
+      </div>
+      <div class="body-2col">
+        <nav class="side">
+          <div class="ssearch"><span class="mg"></span>搜索设置</div>
+          <div class="glist">
+            <div class="gitem on">界面</div>
+            <div class="gitem">数据与帮助</div>
+            <div class="gitem">窗口行为</div>
+            <div class="gitem">更新</div>
+            <div class="gitem">AI</div>
+            <div class="gitem">插件</div>
+          </div>
+        </nav>
+        <div class="main">
+          <div class="searchbar"><div class="sinput"><span class="mg"></span>搜索设置(支持别名,如 dark / tray / delimiter)</div></div>
+          <div class="mbody">
+            <div class="cards">
+
+              <section class="gcard">
+                <div class="gcard-head">
+                  <span class="gname">数据读取 <span class="pin-n g" style="margin-left:4px">1</span></span>
+                </div>
+                <div class="gcard-body">
+                  <div class="srow"><div class="rt">分隔符</div><div class="rd">用于读取 CSV 数据的字段分隔符</div><div class="rc"><div class="sel">自动检测<span class="caret"></span></div></div></div>
+                  <div class="srow"><div class="rt">无表头</div><div class="rd">启用后, 第一行将不被视为表头</div><div class="rc"><span class="cb"></span></div></div>
+                  <div class="srow"><div class="rt">同时执行的标签页数上限</div><div class="rd">超出的标签页会排队等待</div><div class="rc"><div class="sel" style="width:70px;justify-content:center">4</div></div></div>
+                </div>
+              </section>
+
+              <section class="gcard">
+                <div class="gcard-head"><span class="gname">界面</span></div>
+                <div class="gcard-body">
+                  <div class="srow"><div class="rt">语言</div><div class="rd">界面语言, 可跟随系统</div><div class="rc"><div class="segv"><div class="thumb"></div><i class="on">跟随系统</i><i>中文</i><i>English</i></div></div></div>
+                  <div class="srow"><div class="rt">主题</div><div class="rd">界面配色, 可跟随系统</div><div class="rc"><div class="segv"><div class="thumb"></div><i>跟随系统</i><i class="on">浅色</i><i>深色</i></div></div></div>
+                </div>
+              </section>
+
+              <section class="gcard">
+                <div class="gcard-head">
+                  <span class="gname">插件 <span class="pin-n g" style="margin-left:4px">2</span></span>
+                  <span class="gactions">
+                    <span class="gcount" style="font-size:11.5px;color:#8a8a8a">2/3</span>
+                    <span class="iconbtn" title="打开插件目录"><span class="ic round"></span></span>
+                    <span class="bsm">获取最新版本</span>
+                  </span>
+                </div>
+                <div class="gcard-body">
+                  <div class="srow"><div class="rt">xan</div><div class="rd">必需 · 已安装 · v0.61.0 · 18.0 MB</div><div class="rc"><span class="actions"><span class="iconbtn"><span class="ic"></span></span><span class="iconbtn"><span class="ic round"></span></span><span class="iconbtn"><span class="ic"></span></span></span></div></div>
+                </div>
+              </section>
+
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dlg-foot-note">↑ 卡片的圆角 + 边框 + 卡间留白就是分组;组名在卡片头里,仍然 15px / 600</div>
+    </div>
+
+    <div class="legend">
+      <ol>
+        <li><b>一张卡片 = 一个分组</b> —— 圆角 12px + 1px 边框 + 极浅投影 + 卡间 16px 留白,分组边界一眼可辨,不再依赖一条分隔线。</li>
+        <li><b>组名放进卡片头</b>,仍是 <code>15px / 600</code>,下面一条分隔线与行隔开 —— 上一轮「加大加深」的要求原样保留,只是从「悬在列表上」变成「长在卡片上」。</li>
+        <li><b>吸顶分组标题随之取消</b> —— 卡片 <code>overflow-hidden</code> 会让 <code>position: sticky</code> 失效;当前分组由<b>左栏高亮 + scroll-spy</b> 指示(它们不受影响)。</li>
+        <li><b>行样式不变</b> —— 仍是 <code>150px 标题 · 描述 · 控件</code> 三列、36px 高;卡片只是包住它们,行内分隔线改在行与行之间(卡片首尾不留线)。</li>
+        <li><b>插件组同样成立</b> —— 计数 / 打开目录 / 获取最新版本就在卡片头里(和现在挂在标题行是同一个位置语义),下面是每个插件一行。</li>
+        <li><b>锚点与滚动联动不变</b> —— <code>settings-section-*</code> 从标题挪到卡片元素上,左栏点击跳转、scroll-spy 高亮的逻辑照旧。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ══════════════ 方案 B ══════════════ -->
+  <div class="wrap">
+    <div class="cap">
+      <b>方案 B · iOS 内嵌分组</b>
+      <span class="state alt">备选</span>
+      <span>组名退到卡片外,变成一行弱化的灰色小标;卡片里只有行</span>
+    </div>
+
+    <div class="dlg">
+      <div class="dlg-head">
+        <span class="dlg-title">设置</span>
+        <div class="xbtn" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7"/></svg>
+        </div>
+      </div>
+      <div class="body-2col">
+        <nav class="side">
+          <div class="ssearch"><span class="mg"></span>搜索设置</div>
+          <div class="glist">
+            <div class="gitem on">界面</div>
+            <div class="gitem">数据与帮助</div>
+            <div class="gitem">窗口行为</div>
+            <div class="gitem">更新</div>
+            <div class="gitem">AI</div>
+            <div class="gitem">插件</div>
+          </div>
+        </nav>
+        <div class="main">
+          <div class="searchbar"><div class="sinput"><span class="mg"></span>搜索设置(支持别名,如 dark / tray / delimiter)</div></div>
+          <div class="mbody">
+            <div class="cards">
+              <section>
+                <div class="glabel">数据读取</div>
+                <div class="gcard"><div class="gcard-body">
+                  <div class="srow"><div class="rt">分隔符</div><div class="rd">用于读取 CSV 数据的字段分隔符</div><div class="rc"><div class="sel">自动检测<span class="caret"></span></div></div></div>
+                  <div class="srow"><div class="rt">无表头</div><div class="rd">启用后, 第一行将不被视为表头</div><div class="rc"><span class="cb"></span></div></div>
+                </div></div>
+              </section>
+              <section>
+                <div class="glabel">界面 <span class="pin-n b" style="margin-left:4px">3</span></div>
+                <div class="gcard"><div class="gcard-body">
+                  <div class="srow"><div class="rt">语言</div><div class="rd">界面语言, 可跟随系统</div><div class="rc"><div class="segv"><div class="thumb"></div><i class="on">跟随系统</i><i>中文</i><i>English</i></div></div></div>
+                  <div class="srow"><div class="rt">主题</div><div class="rd">界面配色, 可跟随系统</div><div class="rc"><div class="segv"><div class="thumb"></div><i>跟随系统</i><i class="on">浅色</i><i>深色</i></div></div></div>
+                </div></div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dlg-foot-note">↑ 组名是 12px 灰色小标(iOS 风格)—— 分组清楚,但组名不再突出</div>
+    </div>
+
+    <div class="legend">
+      <ol>
+        <li><b>组名在卡片外</b>,12px 灰色 —— 这是 iOS「设置」的做法,卡片自身承担全部分组感。</li>
+        <li><b>与上一轮诉求冲突</b>:你刚要求把组名加大加深以突出显示,B 会把它弱化回小灰字。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ══════════════ 对比与拍板 ══════════════ -->
+  <div class="compare">
+    <table>
+      <tr><th style="width:150px"></th><th>现状(吸顶标题 + 平铺行)</th><th>方案 A · 卡片即分组(推荐)</th><th>方案 B · iOS 内嵌分组</th></tr>
+      <tr><td>分组可辨度</td><td class="no">弱</td><td class="yes">强(边框 + 圆角 + 留白)</td><td class="yes">强</td></tr>
+      <tr><td>组名突出</td><td class="yes">强(15px / 600)</td><td class="yes">强(原样保留在卡片头)</td><td class="no">弱(12px 灰色小标)</td></tr>
+      <tr><td>吸顶「当前分组名」</td><td class="yes">有</td><td class="no">无(由左栏高亮替代)</td><td class="no">无</td></tr>
+      <tr><td>滚动时的视觉噪音</td><td>标题贴顶、行分隔线贯穿</td><td>卡片随滚动整体进出,无贴顶元素</td><td>同 A</td></tr>
+      <tr><td>插件组的摘要位置</td><td>标题行</td><td>卡片头(同语义)</td><td>组名行右侧</td></tr>
+      <tr><td>实现成本</td><td>—</td><td>中:分组容器 + 行分隔线改到行间;吸顶逻辑删除</td><td>中:同 A,外加组名外置</td></tr>
+    </table>
+  </div>
+
+  <div class="ask">
+    <h3>需要拍板</h3>
+    <ul>
+      <li><b>选 A 还是 B</b>:A 保留「组名突出」(上一轮的诉求),B 换来更接近 iOS 的观感但组名弱化。二选一后我再动代码。</li>
+      <li><b>吸顶分组标题取消是否接受</b>:两个卡片方案下,<code>position: sticky</code> 都会失效(卡片 <code>overflow-hidden</code>),当前分组改由左栏高亮指示 —— 这是卡片方案唯一的实际损失。</li>
+      <li><b>卡片头的底色</b>:原型里是纯白 + 一条分隔线;也可以给卡片头铺一层 <code>bg-muted/40</code> 让分组感更强,但会更"重"。</li>
+    </ul>
+  </div>
+
+  <div class="scope">
+    本原型只表达分组容器的差异:行、搜索、左栏目录、滚动联动、插件摘要的位置语义均与已实现版本一致。
+    卡片只影响「分组容器」这一层,不改任何设置项与行为。色值取自 <code>src/index.css</code> 的浅色令牌。
+  </div>
+
+</div>
+</body>
+</html>

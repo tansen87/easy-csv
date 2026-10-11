@@ -136,6 +136,29 @@ export interface Translations {
   delimiterDesc: string;
   language: string;
 
+  // Settings - directory navigation
+  settingsSearchPlaceholder: string;
+  /** `{query}` placeholder. */
+  settingsSearchEmpty: string;
+  settingsSearchEmptyHint: string;
+  /** `{count}` placeholder; announced to screen readers only. */
+  settingsSearchResults: string;
+  settingsNavHintClear: string;
+  settingsGroupAppearance: string;
+  settingsGroupDataHelp: string;
+  settingsGroupWindow: string;
+  settingsGroupUpdate: string;
+  settingsClear: string;
+  settingsExpand: string;
+  settingsCollapse: string;
+  settingsLanguageDesc: string;
+  settingsThemeDesc: string;
+  clearExecutionHistoryDesc: string;
+  aiClearConversationsDesc: string;
+  aiClearFeedbackDesc: string;
+  aiClearCorrectionsDesc: string;
+  aiCustomProviderSettingsDesc: string;
+
   // CommandList
   cmds: string;
   searchCommand: string;
@@ -384,7 +407,6 @@ export interface Translations {
 
   // Plugins
   plugins: string;
-  pluginDesc: string;
   pluginNone: string;
   pluginInstalled: string;
   pluginMissing: string;

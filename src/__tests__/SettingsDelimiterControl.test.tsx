@@ -2,6 +2,18 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { LanguageProvider } from "@/i18n";
 import { SettingsTabContent } from "@/components/setting/SettingsTabContent";
+import { buildSettingsModel } from "@/components/setting/settingsSections";
+import { filterSettings } from "@/utils/settingsSearch";
+import type { Translations } from "@/i18n/translations/types";
+
+// Structure lives in `settingsSections`; these suites only care about one
+// control, so the model is built from a stub `t` (titles become their keys).
+const stubT = new Proxy({}, {
+  get: (_target, key) => String(key),
+}) as unknown as Translations;
+const groups = filterSettings(buildSettingsModel(stubT), "");
+// The scroll container handle the dialog normally supplies.
+const scrollRootRef = { current: null } as React.RefObject<HTMLDivElement | null>;
 import type { DelimiterMode } from "@/types/xan";
 
 // Design 018 §3.9: the settings page and the workflow's input node badge are
@@ -22,7 +34,9 @@ function renderSettings(
   const utils = render(
     <LanguageProvider>
       <SettingsTabContent
-        activeTab="general"
+        groups={groups}
+        query=""
+        scrollRootRef={scrollRootRef}
         theme="light"
         onThemeChange={vi.fn()}
         delimiterMode={delimiterMode}
@@ -39,7 +53,6 @@ function renderSettings(
         onAutoCheckUpdateChange={vi.fn()}
         maxConcurrentRuns={4}
         onMaxConcurrentRunsChange={vi.fn()}
-        onSave={vi.fn()}
         aiConfig={aiConfig}
         onAIConfigChange={vi.fn()}
         showToast={vi.fn()}
@@ -112,10 +125,6 @@ describe("settings page delimiter control (design 018 §3.9)", () => {
     expect(onDelimiterModeChange).toHaveBeenCalledWith("auto");
   });
 
-  it("resets the delimiter to auto-detection with the other settings", () => {
-    const { onDelimiterModeChange } = renderSettings("|");
-
-    fireEvent.click(screen.getByRole("button", { name: /Reset|默认/ }));
-    expect(onDelimiterModeChange).toHaveBeenCalledWith("auto");
-  });
+  // The reset button moved to the dialog footer with the 030 layout; its effect
+  // on the delimiter is asserted in `SettingsDialog.test.tsx`.
 });

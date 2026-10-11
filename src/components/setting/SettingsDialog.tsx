@@ -1,11 +1,39 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { X } from "lucide-react";
-import { SettingsTabContent } from "@/components/setting/SettingsTabContent";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, RotateCcw, Save, X } from "lucide-react";
+
+import { Button } from "@/components/ui/Button";
 import { useLanguage } from "@/i18n";
 import { useTheme } from "@/components/setting/ThemeProvider";
+import { useScrollSpy } from "@/hooks/useScrollSpy";
 import { AIConfig } from "@/services/ai/types";
 import type { DelimiterMode } from "@/types/xan";
+import { countMatches, filterSettings } from "@/utils/settingsSearch";
+import { SettingsNav } from "./SettingsNav";
+import { SettingsSearch } from "./SettingsSearch";
+import { SettingsTabContent } from "./SettingsTabContent";
+import {
+  SECTION_ID_PREFIX,
+  SETTINGS_GROUP_IDS,
+  buildSettingsModel,
+  sectionElementId,
+} from "./settingsSections";
 
+/**
+ * The settings dialog. Two columns inside one frame:
+ *
+ * ```
+ * ┌ title ────────────────────────────────── ✕ ┐
+ * │ directory   │ search                        │
+ * │ (7 groups)  │ sticky group heading          │
+ * │             │ one row per setting           │
+ * ├─────────────┴───────────────────────────────┤
+ * │                    [reset] [save]           │
+ * └─────────────────────────────────────────────┘
+ * ```
+ *
+ * The dialog owns the search query and the layout; the directory answers "where
+ * else can I go", the search answers "where is the one I want".
+ */
 interface SettingsDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -37,6 +65,18 @@ interface SettingsDialogProps {
   ) => void;
 }
 
+/** Typing `/` must not steal the keystroke from a field the user is in. */
+function isTextEntry(element: Element | null): boolean {
+  if (!element) return false;
+  const tag = element.tagName;
+  return (
+    tag === "INPUT" ||
+    tag === "TEXTAREA" ||
+    tag === "SELECT" ||
+    (element as HTMLElement).isContentEditable
+  );
+}
+
 export function SettingsDialog({
   isOpen,
   onClose,
@@ -60,50 +100,122 @@ export function SettingsDialog({
   onAIConfigChange,
   showToast,
 }: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<"general" | "ai" | "plugins">(
-    "general",
-  );
   const { t } = useLanguage();
   const { theme, setTheme } = useTheme();
+  const [query, setQuery] = useState("");
+  const [isSaveClicked, setIsSaveClicked] = useState(false);
+  const [isResetClicked, setIsResetClicked] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const scrollRootRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const model = useMemo(() => buildSettingsModel(t), [t]);
+  const filtered = useMemo(() => filterSettings(model, query), [model, query]);
+  const searching = query.length > 0;
+  const resultCount = useMemo(() => countMatches(filtered), [filtered]);
+  const dimmedIds = useMemo(() => {
+    const kept = new Set(filtered.map((group) => group.id));
+    return new Set(model.filter((group) => !kept.has(group.id)).map((g) => g.id));
+  }, [model, filtered]);
+
+  // Scroll-linked highlight. Off while searching: "the group I am in" has no
+  // meaning in a filtered list, and a stale highlight would mislead.
+  const { activeId, lockTo } = useScrollSpy(SETTINGS_GROUP_IDS, scrollRootRef, {
+    idPrefix: SECTION_ID_PREFIX,
+    enabled: isOpen && !searching,
+  });
+
+  const handleNavigate = useCallback(
+    (groupId: string) => {
+      const section = document.getElementById(sectionElementId(groupId));
+      if (!section) return;
+      lockTo(groupId);
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Keyboard users land on the heading, so the next Tab walks that group's
+      // rows instead of restarting at the top of the dialog.
+      section.focus({ preventScroll: true });
+    },
+    [lockTo],
+  );
+
+  const handleReset = useCallback(() => {
+    // Same six values the pre-030 footer reset — the set is unchanged.
+    setTheme("light");
+    onDelimiterModeChange("auto");
+    onNoHeadersChange(false);
+    onSystemNotificationChange(true);
+    onMinimizeToTrayChange(true);
+    onDoubleClickFitViewChange(true);
+    setIsResetClicked(true);
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    resetTimerRef.current = setTimeout(() => setIsResetClicked(false), 3000);
+  }, [
+    setTheme,
+    onDelimiterModeChange,
+    onNoHeadersChange,
+    onSystemNotificationChange,
+    onMinimizeToTrayChange,
+    onDoubleClickFitViewChange,
+  ]);
+
+  const handleSave = useCallback(() => {
+    onSave();
+    setIsSaveClicked(true);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => setIsSaveClicked(false), 3000);
+  }, [onSave]);
 
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
+    (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        // First Escape clears the search, a second one closes the dialog.
+        if (query.length > 0) setQuery("");
+        else onClose();
         return;
       }
-      if (e.key === "Tab" && dialogRef.current) {
+      if (event.key === "/" && !isTextEntry(document.activeElement)) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+      if (event.key === "Tab" && dialogRef.current) {
         const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
         );
         if (focusable.length === 0) return;
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
           last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
           first.focus();
         }
       }
     },
-    [onClose],
+    [onClose, query],
   );
 
   useEffect(() => {
-    if (isOpen) {
-      dialogRef.current?.focus();
-    }
+    if (isOpen) dialogRef.current?.focus();
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen) {
-      window.addEventListener("keydown", handleKeyDown);
-    }
+    if (!isOpen) return;
+    window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, handleKeyDown]);
+
+  useEffect(
+    () => () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    },
+    [],
+  );
 
   if (!isOpen) return null;
 
@@ -118,87 +230,87 @@ export function SettingsDialog({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        aria-label={t.settings}
         tabIndex={-1}
-        className="relative bg-card rounded-lg shadow-xl w-full max-w-4xl h-[72vh] overflow-hidden outline-none flex flex-col"
+        className="relative flex h-[72vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-card shadow-xl outline-none"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 py-3 bg-muted/20">
-          <div className="flex items-center">
-            <div className="grid grid-cols-3 bg-muted/50 rounded-md p-0.5 border border-border/50 relative h-8">
-              <div
-                className={`absolute top-0.5 bottom-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out ${
-                  activeTab === "ai"
-                    ? "left-[calc(33.333%+1px)]"
-                    : activeTab === "plugins"
-                      ? "left-[calc(66.666%+1px)]"
-                      : "left-0.5"
-                }`}
-                style={{ width: "calc(33.333% - 1px)" }}
-              />
-              <button
-                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
-                  activeTab === "general"
-                    ? "text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                onClick={() => setActiveTab("general")}
-              >
-                {t.general}
-              </button>
-              <button
-                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
-                  activeTab === "ai"
-                    ? "text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                onClick={() => setActiveTab("ai")}
-              >
-                {t.ai}
-              </button>
-              <button
-                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 relative z-10 ${
-                  activeTab === "plugins"
-                    ? "text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                onClick={() => setActiveTab("plugins")}
-              >
-                {t.plugins}
-              </button>
-            </div>
-          </div>
+        <div className="flex flex-none items-center justify-between border-b border-border bg-muted/20 px-4 py-3">
+          <h2 className="text-sm font-medium">{t.settings}</h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+            aria-label={t.close}
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="flex-1 min-h-0">
-          <SettingsTabContent
-            activeTab={activeTab}
-            theme={theme}
-            onThemeChange={setTheme}
-            delimiterMode={delimiterMode}
-            onDelimiterModeChange={onDelimiterModeChange}
-            noHeaders={noHeaders}
-            onNoHeadersChange={onNoHeadersChange}
-            systemNotification={systemNotification}
-            onSystemNotificationChange={onSystemNotificationChange}
-            minimizeToTray={minimizeToTray}
-            onMinimizeToTrayChange={onMinimizeToTrayChange}
-            doubleClickFitView={doubleClickFitView}
-            onDoubleClickFitViewChange={onDoubleClickFitViewChange}
-            autoCheckUpdate={autoCheckUpdate}
-            onAutoCheckUpdateChange={onAutoCheckUpdateChange}
-            maxConcurrentRuns={maxConcurrentRuns}
-            onMaxConcurrentRunsChange={onMaxConcurrentRunsChange}
-            onResetOnboarding={onResetOnboarding}
-            onSave={onSave}
-            aiConfig={aiConfig}
-            onAIConfigChange={onAIConfigChange}
-            showToast={showToast}
+
+        <div className="flex min-h-0 flex-1">
+          <SettingsNav
+            groups={model.map((group) => ({ id: group.id, name: group.name }))}
+            activeId={searching ? null : activeId}
+            dimmedIds={dimmedIds}
+            onNavigate={handleNavigate}
           />
+          <div className="relative flex min-w-0 flex-1 flex-col">
+            <SettingsSearch
+              value={query}
+              onChange={setQuery}
+              resultCount={resultCount}
+              inputRef={searchInputRef}
+            />
+            <SettingsTabContent
+              groups={filtered}
+              query={query}
+              scrollRootRef={scrollRootRef}
+              theme={theme}
+              onThemeChange={setTheme}
+              delimiterMode={delimiterMode}
+              onDelimiterModeChange={onDelimiterModeChange}
+              noHeaders={noHeaders}
+              onNoHeadersChange={onNoHeadersChange}
+              systemNotification={systemNotification}
+              onSystemNotificationChange={onSystemNotificationChange}
+              minimizeToTray={minimizeToTray}
+              onMinimizeToTrayChange={onMinimizeToTrayChange}
+              doubleClickFitView={doubleClickFitView}
+              onDoubleClickFitViewChange={onDoubleClickFitViewChange}
+              autoCheckUpdate={autoCheckUpdate}
+              onAutoCheckUpdateChange={onAutoCheckUpdateChange}
+              maxConcurrentRuns={maxConcurrentRuns}
+              onMaxConcurrentRunsChange={onMaxConcurrentRunsChange}
+              onResetOnboarding={onResetOnboarding}
+              aiConfig={aiConfig}
+              onAIConfigChange={onAIConfigChange}
+              showToast={showToast}
+            />
+
+            {/* Floating actions, bottom-centre of the content pane (not the
+                whole dialog: the directory column is not part of the centre).
+                Deliberately not a footer band — no divider, no reserved strip;
+                the list keeps the full height and scrolls under these two, and
+                `SettingsTabContent` carries extra bottom padding so the last row
+                can still be scrolled clear of them. */}
+            <div className="absolute bottom-3 left-1/2 z-panel flex -translate-x-1/2 items-center gap-2">
+              <Button variant="secondary" onClick={handleReset}>
+                {isResetClicked ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <RotateCcw className="h-4 w-4" />
+                )}
+                {t.resetToDefaults}
+              </Button>
+              <Button variant="secondary" onClick={handleSave}>
+                {isSaveClicked ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                {t.saveSettings}
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

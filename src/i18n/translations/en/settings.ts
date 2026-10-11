@@ -25,4 +25,29 @@ export const enSettings = {
   selectDelimiter: "Select delimiter",
   delimiterDesc: "The field delimiter for reading CSV data",
   language: "Language",
+
+  // Directory navigation
+  settingsSearchPlaceholder:
+    "Search settings (aliases such as dark / tray / delimiter)",
+  settingsSearchEmpty: "No settings match \u201c{query}\u201d",
+  settingsSearchEmptyHint:
+    "Try \u201ctray\u201d, \u201cdark\u201d or \u201cconcurrency\u201d",
+  settingsSearchResults: "{count} results",
+  settingsNavHintClear: "Esc clears the search",
+  settingsGroupAppearance: "Appearance",
+  settingsGroupDataHelp: "Data & help",
+  settingsGroupWindow: "Window",
+  settingsGroupUpdate: "Updates",
+  settingsClear: "Clear",
+  settingsExpand: "Expand",
+  settingsCollapse: "Collapse",
+  settingsLanguageDesc: "Interface language, can follow the system",
+  settingsThemeDesc: "Interface colours, can follow the system",
+  clearExecutionHistoryDesc: "Delete every execution history record",
+  aiClearConversationsDesc: "Delete your conversations with the AI",
+  aiClearFeedbackDesc:
+    "Delete the \u201chelpful / not helpful\u201d feedback records",
+  aiClearCorrectionsDesc: "Delete the AI correction rules",
+  aiCustomProviderSettingsDesc:
+    "Name, base URL and model list used by a custom provider",
 } satisfies Partial<Translations>;

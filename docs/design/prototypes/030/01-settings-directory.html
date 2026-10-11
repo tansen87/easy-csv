@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>原型 01 · 设置导航改版:目录 + 搜索 + 每设置一行</title>
+<style>
+  :root{
+    --background:#ffffff; --foreground:#2a2a2a;
+    --muted:#f5f5f5; --muted-2:#fafafa; --muted-foreground:#8a8a8a; --muted-foreground-2:#b3b3b3;
+    --border:#e9e9e9; --border-2:#dfdfdf; --border-quiet:#f2f2f2; --primary:#333333;
+    --accent:#f2f2f2; --mark:#fbeec6;
+    --note:#b45309; --note-bg:#fffbeb; --note-border:#fde68a;
+    --bad:#b91c1c; --bad-bg:#fef2f2; --bad-border:#fecaca;
+    --good:#15803d; --good-bg:#f0fdf4; --good-border:#bbf7d0;
+    --font:"Inter","Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#f0f0f0;font-family:var(--font);color:var(--foreground)}
+  .stage{padding:28px 24px 56px;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .plabel{width:min(1000px,100%);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .plabel .tag{background:#111;color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:6px}
+  .plabel h1{font-size:14px;margin:0;font-weight:600}
+  .plabel p{margin:0;font-size:12px;color:#6b6b6b}
+
+  .wrap{width:min(1000px,100%);display:flex;flex-direction:column;gap:14px}
+  .cap{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .cap b{font-size:13px}
+  .cap span{font-size:12px;color:#6b6b6b}
+  .cap .state{font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;border:1px solid transparent}
+  .cap .state.before{color:var(--bad);background:var(--bad-bg);border-color:var(--bad-border)}
+  .cap .state.after{color:var(--good);background:var(--good-bg);border-color:var(--good-border)}
+
+  /* ── 弹窗外壳 ───────────────────────────────── */
+  .dlg{width:900px;height:620px;background:var(--background);border:1px solid #d8d8d8;border-radius:12px;
+       box-shadow:0 12px 32px rgba(0,0,0,.12);overflow:hidden;display:flex;flex-direction:column}
+  .dlg-head{height:52px;flex:none;display:flex;align-items:center;justify-content:space-between;
+            padding:0 16px;border-bottom:1px solid var(--border);background:var(--muted-2)}
+  .dlg-title{font-size:13px;font-weight:600}
+  .dlg-foot{height:56px;flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;
+            padding:0 16px;border-top:1px solid var(--border)}
+  .xbtn{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:#8a8a8a;border:1px solid transparent}
+  .btn{height:30px;padding:0 12px;border-radius:7px;border:1px solid var(--border-2);background:var(--muted);
+       font-size:12px;font-weight:500;color:#4a4a4a;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+
+  /* 三段控件(改造前) */
+  .seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--muted);
+       border:1px solid var(--border-2);border-radius:8px;padding:2px;position:relative;height:32px;min-width:240px}
+  .seg-thumb{position:absolute;top:2px;bottom:2px;left:2px;width:calc(33.333% - 1px);background:var(--primary);border-radius:6px}
+  .seg-btn{position:relative;z-index:1;border:0;background:transparent;font-family:inherit;font-size:12px;
+           font-weight:500;color:var(--muted-foreground);border-radius:6px}
+  .seg-btn.on{color:#fff}
+
+  /* ── 改造前:单列 + 假滚动条 ───────────────────── */
+  .body-1col{flex:1;min-height:0;display:flex;position:relative}
+  .col{flex:1;min-width:0;padding:20px 24px;display:flex;flex-direction:column;gap:18px;overflow:hidden;position:relative}
+  .col .sec{display:flex;flex-direction:column;gap:5px;flex:none}
+  .sec-title{font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px;color:#1f1f1f}
+  .sec-title .ico{width:12px;height:12px;flex:none;border-radius:50%;background:#dedede}
+  .sec-desc{font-size:11.5px;color:var(--muted-foreground);margin:0;line-height:1.55}
+  .narrow{width:33%;min-width:260px}
+  .box{height:30px;border:1px solid var(--border-2);border-radius:7px;background:#fff;display:flex;align-items:center;
+       padding:0 10px;font-size:11.5px;color:#6b6b6b;justify-content:space-between}
+  .box .caret{width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #b3b3b3}
+  .seg3{display:grid;grid-template-columns:repeat(3,1fr);background:var(--muted);border:1px solid var(--border-2);
+        border-radius:7px;padding:2px;height:30px;width:300px;position:relative}
+  .seg3 i{position:relative;z-index:1;font-style:normal;font-size:11.5px;color:var(--muted-foreground);display:grid;place-items:center}
+  .seg3 i.on{color:#fff}
+  .seg3 .seg-thumb{width:calc(33.333% - 1px)}
+  .cbrow{display:flex;align-items:center;gap:9px}
+  .cb{width:15px;height:15px;border:1.4px solid #b9b9b9;border-radius:4px;flex:none;background:#fff}
+  .cb.on{background:var(--primary);border-color:var(--primary);position:relative}
+  .cb.on::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;
+                border-width:0 1.8px 1.8px 0;transform:rotate(45deg)}
+  .deadzone{position:absolute;top:0;right:10px;bottom:0;width:38%;border-left:1px dashed var(--border-2);
+            display:grid;place-items:center;pointer-events:none}
+  .deadzone span{font-size:11px;color:#b0b0b0;transform:rotate(-4deg)}
+  .fakescroll{width:10px;flex:none;background:var(--muted-2);border-left:1px solid var(--border);position:relative}
+  .fakescroll .thumb{position:absolute;left:2px;right:2px;top:10px;height:26%;background:#cfcfcf;border-radius:999px}
+  .fadeout{position:absolute;left:0;right:10px;bottom:0;height:72px;pointer-events:none;
+           background:linear-gradient(to bottom,rgba(255,255,255,0),#fff)}
+  .fadeout .more{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:11px;color:#b0b0b0;white-space:nowrap}
+
+  /* ── 改造后:左栏 + 右栏 ───────────────────────── */
+  .body-2col{flex:1;min-height:0;display:flex}
+  .side{width:200px;flex:none;border-right:1px solid var(--border);background:#fcfcfc;
+        padding:0 8px;display:flex;flex-direction:column;overflow:hidden;position:relative}
+  .ssearch{flex:none;height:28px;margin:10px 0 6px;display:flex;align-items:center;gap:6px;
+           border:1px solid var(--border-2);border-radius:7px;background:#fff;padding:0 8px;
+           font-size:11px;color:#b3b3b3}
+  .ssearch .mg{width:11px;height:11px;flex:none;border:1.5px solid #c2c2c2;border-radius:50%;position:relative}
+  .ssearch .mg::after{content:"";position:absolute;right:-3px;bottom:-3px;width:5px;height:1.5px;
+                      background:#c2c2c2;transform:rotate(45deg);border-radius:2px}
+  .glist{flex:1;min-height:0;display:flex;flex-direction:column;gap:1px}
+  .gitem{display:flex;align-items:center;height:30px;padding:0 9px;border-radius:7px;
+         font-size:12px;color:#6b6b6b;position:relative;flex:none}
+  .gitem.on{background:var(--accent);color:#111;font-weight:600}
+  .gitem.on::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:2px;border-radius:999px;background:var(--primary)}
+  .gitem.dim{color:#c8c8c8}
+
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
+  .searchbar{flex:none;height:44px;display:flex;align-items:center;gap:10px;padding:0 22px;
+             border-bottom:1px solid var(--border)}
+  .sinput{flex:1;min-width:0;height:28px;display:flex;align-items:center;gap:7px;
+          border:1px solid var(--border-2);border-radius:7px;background:#fff;padding:0 9px;
+          font-size:11.5px;color:#b3b3b3}
+  .sinput.filled{border-color:#c6c6c6}
+  .sinput .q{color:#2a2a2a;font-weight:500}
+  .sinput .mg{width:11px;height:11px;flex:none;border:1.5px solid #c2c2c2;border-radius:50%;position:relative}
+  .sinput .mg::after{content:"";position:absolute;right:-3px;bottom:-3px;width:5px;height:1.5px;
+                     background:#c2c2c2;transform:rotate(45deg);border-radius:2px}
+  /* 清空搜索用输入框内的 ✕,不用文字按钮 —— 否则会和行内「清除(数据)」撞成同一个词 */
+  .sx{width:10px;height:10px;margin-left:auto;position:relative;flex:none}
+  .sx::before,.sx::after{content:"";position:absolute;top:4.4px;left:0;width:10px;height:1.4px;
+                         background:#b3b3b3;border-radius:2px}
+  .sx::before{transform:rotate(45deg)}
+  .sx::after{transform:rotate(-45deg)}
+
+  .mbody{flex:1;min-height:0;padding:0 22px;overflow:hidden;position:relative}
+  .ghead{background:#fff;padding:14px 0 7px;font-size:11.5px;font-weight:600;color:#111;
+         border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+
+  /* ── 一行 = 一项设置 ─────────────────────────── */
+  .srow{display:grid;grid-template-columns:150px minmax(0,1fr) auto;align-items:center;gap:14px;
+        min-height:34px;padding:0 6px;border-bottom:1px solid var(--border-quiet)}
+  .srow.hot{background:#fafafa;border-radius:6px}
+  .rt{font-size:12.5px;font-weight:500;color:#1f1f1f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rd{font-size:11px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rc{justify-self:end;display:flex;align-items:center;gap:8px}
+  mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 1px}
+
+  .sel{width:150px;height:26px;border:1px solid var(--border-2);border-radius:6px;background:#fff;
+       display:flex;align-items:center;justify-content:space-between;padding:0 8px;font-size:11px;color:#6b6b6b}
+  .sel .caret{width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #b3b3b3}
+  .num{width:56px;height:26px;border:1px solid var(--border-2);border-radius:6px;background:#fff;
+       display:grid;place-items:center;font-size:11.5px;color:#4a4a4a}
+  .pin{width:210px;height:26px}
+  .segv{width:210px;height:26px;display:grid;grid-template-columns:repeat(3,1fr);
+        background:var(--muted);border:1px solid var(--border-2);border-radius:6px;padding:2px;position:relative}
+  .segv .seg-thumb{width:calc(33.333% - 1px)}
+  .segv i{position:relative;z-index:1;font-style:normal;font-size:10.5px;color:var(--muted-foreground);
+          display:grid;place-items:center;white-space:nowrap}
+  .segv i.on{color:#fff}
+  .pw{width:240px;height:26px;border:1px solid var(--border-2);border-radius:6px;background:#fff;
+      display:flex;align-items:center;padding:0 9px;font-size:11.5px;color:#b3b3b3}
+  .bsm{height:26px;padding:0 10px;border-radius:6px;border:1px solid var(--border-2);background:var(--muted);
+       font-size:11px;color:#4a4a4a;display:inline-flex;align-items:center;gap:5px;font-family:inherit;white-space:nowrap}
+  .bsm.danger{color:var(--bad);border-color:var(--bad-border);background:var(--bad-bg)}
+  .bsm.off{color:#c4c4c4;background:var(--muted-2)}
+  .bsm .chev{width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;
+             border-top:5px solid currentColor;opacity:.7}
+
+  /* ── 标注 ───────────────────────────────────── */
+  .pin-n{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:999px;flex:none;
+         background:var(--bad);color:#fff;font-size:10px;font-weight:700;font-family:var(--mono);box-shadow:0 0 0 2px #fff}
+  .pin-n.g{background:var(--good)}
+  .legend{width:min(1000px,100%);background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .legend ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+  .legend li{font-size:12px;line-height:1.6;color:#4a4a4a}
+  code{font-family:var(--mono);font-size:11px;background:var(--muted);border:1px solid var(--border);
+       border-radius:4px;padding:0 4px}
+
+  .notes{width:min(1000px,100%);display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .note{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .note h3{margin:0 0 6px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:7px}
+  .note h3 .n{width:16px;height:16px;border-radius:5px;background:var(--primary);color:#fff;font-size:10px;
+              font-weight:700;display:grid;place-items:center}
+  .note p{margin:0;font-size:11.5px;color:#5f5f5f;line-height:1.65}
+  .note p + p{margin-top:6px}
+  .ask{width:min(1000px,100%);background:var(--note-bg);border:1px solid var(--note-border);border-radius:10px;padding:12px 14px}
+  .ask h3{margin:0 0 6px;font-size:12.5px;font-weight:600;color:#7c4a03}
+  .ask ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
+  .ask li{font-size:12px;line-height:1.6;color:#7c4a03}
+  .scope{width:min(1000px,100%);font-size:11.5px;color:#8a8a8a;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="plabel">
+    <span class="tag">原型 01</span>
+    <h1>设置导航改版:目录 + 搜索 + 每设置一行</h1>
+    <p>对应 <code>docs/design/030_settings-navigation.md</code>(v2)· 尺寸按 1280×800 窗口的实际取值绘制(弹窗 896px × 72vh)· 三张:改造前 / 改造后 · 浏览态 / 改造后 · 搜索态</p>
+  </div>
+
+  <!-- ══════════════ 改造前 ══════════════ -->
+  <div class="wrap">
+    <div class="cap">
+      <b>改造前</b>
+      <span class="state before">现状 · 0.7.0</span>
+      <span>三段控件只切大 tab;<code>通用</code> 一列 10 段,每段三行高度,且没有搜索</span>
+    </div>
+
+    <div class="dlg">
+      <div class="dlg-head">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="seg">
+            <div class="seg-thumb"></div>
+            <button class="seg-btn on">通用</button>
+            <button class="seg-btn">AI</button>
+            <button class="seg-btn">插件</button>
+          </div>
+          <span class="pin-n">1</span>
+        </div>
+        <div class="xbtn" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7"/></svg>
+        </div>
+      </div>
+
+      <div class="body-1col">
+        <div class="col">
+          <span class="pin-n" style="position:absolute;top:18px;left:6px">2</span>
+
+          <div class="sec">
+            <div class="sec-title"><span class="ico"></span>分隔符</div>
+            <div class="narrow"><div class="box">自动检测<span class="caret"></span></div></div>
+            <p class="sec-desc">用于读取 CSV 数据的字段分隔符</p>
+          </div>
+
+          <div class="sec">
+            <div class="sec-title"><span class="ico"></span>无表头</div>
+            <div class="cbrow"><span class="cb"></span><p class="sec-desc">启用后, 第一行将不被视为表头</p></div>
+          </div>
+
+          <div class="sec">
+            <div class="sec-title"><span class="ico"></span>同时执行的标签页数上限</div>
+            <div class="cbrow"><span class="box" style="width:70px;justify-content:center">4</span>
+              <p class="sec-desc">超出的标签页会排队等待</p></div>
+          </div>
+
+          <div class="sec">
+            <div class="sec-title"><span class="ico"></span>语言</div>
+            <div class="seg3"><div class="seg-thumb"></div><i class="on">跟随系统</i><i>中文</i><i>English</i></div>
+          </div>
+
+          <div class="sec">
+            <div class="sec-title"><span class="ico"></span>主题</div>
+            <div class="seg3"><div class="seg-thumb"></div><i>跟随系统</i><i>浅色</i><i>深色</i></div>
+          </div>
+
+          <div class="sec">
+            <div class="sec-title"><span class="ico"></span>系统通知</div>
+            <div class="cbrow"><span class="cb on"></span><p class="sec-desc">启用后, 管道执行完成后显示系统通知</p></div>
+          </div>
+
+          <div class="sec">
+            <div class="sec-title"><span class="ico"></span>系统托盘</div>
+            <div class="cbrow"><span class="cb on"></span><p class="sec-desc">启用后, 关闭窗口将最小化到系统托盘而非退出应用</p></div>
+          </div>
+
+          <div class="sec">
+            <div class="sec-title"><span class="ico"></span>适配视图</div>
+            <div class="cbrow"><span class="cb on"></span><p class="sec-desc">启用后, 双击画布空白区域将自动缩放视图</p></div>
+          </div>
+
+          <div class="sec">
+            <div class="sec-title"><span class="ico"></span>检查更新</div>
+            <div class="cbrow"><span class="cb on"></span><p class="sec-desc">启动后自动检查新版本</p></div>
+          </div>
+        </div>
+
+        <div class="deadzone"><span>896px 的弹窗,右半边常年空白</span><span class="pin-n" style="position:absolute;top:14px;right:14px">3</span></div>
+
+        <div class="fakescroll">
+          <div class="thumb"></div>
+          <span class="pin-n" style="position:absolute;top:120px;left:-9px">4</span>
+        </div>
+        <div class="fadeout"><span class="more">↓ 下面还有「检查更新」「重新显示新手引导」—— 这里只画到可见范围</span></div>
+      </div>
+
+      <div class="dlg-foot">
+        <button class="btn">恢复默认</button>
+        <button class="btn">保存设置</button>
+      </div>
+    </div>
+
+    <div class="legend">
+      <ol>
+        <li><b>只切「大 tab」,不解决页内定位</b> —— <code>SettingsDialog.tsx:127-168</code> 的三段控件对 <code>通用</code> 内部的 10 个段落毫无帮助。</li>
+        <li><b>顺序是历史堆积,不是语义分组</b> —— 分隔符 / 无表头 / 并发上限 / 语言 / 主题 / 通知 / 托盘 / 适配视图 / 检查更新 / 新手引导同处一列。</li>
+        <li><b>横向浪费放大纵向问题</b> —— 每段只占 <code>w-1/3</code> 或 <code>w-[300px]</code>,右半边常年空白,而一列还要滚两个多屏幕。</li>
+        <li><b>没有搜索,也没有结构可依</b> —— 想改第 7 项「系统托盘」只能一路往下滚,且唯一的入口是滚回去。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ══════════════ 改造后 · 浏览态 ══════════════ -->
+  <div class="wrap">
+    <div class="cap">
+      <b>改造后 · 浏览态</b>
+      <span class="state after">v2</span>
+      <span>左栏 = 搜索框 + 分组目录(8 条)· 右栏 = 吸顶分组标题 + 每设置一行(三列)</span>
+    </div>
+
+    <div class="dlg">
+      <div class="dlg-head">
+        <span class="dlg-title">设置</span>
+        <div class="xbtn" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7"/></svg>
+        </div>
+      </div>
+
+      <div class="body-2col">
+        <nav class="side">
+          <div class="ssearch"><span class="mg"></span>搜索设置</div>
+          <div class="glist">
+            <div class="gitem on">界面</div>
+            <div class="gitem">数据与帮助</div>
+            <div class="gitem">窗口行为</div>
+            <div class="gitem">更新</div>
+            <div class="gitem">AI</div>
+            <div class="gitem">插件</div>
+          </div>
+        </nav>
+
+        <div class="main">
+          <div class="searchbar">
+            <div class="sinput"><span class="mg"></span>搜索设置(支持别名,如 dark / tray / delimiter)</div>
+            <span class="pin-n g" style="flex:none">6</span>
+          </div>
+
+          <div class="mbody">
+            <div class="ghead">窗口行为<span class="pin-n g" style="margin-left:auto">7</span></div>
+
+            <div class="srow">
+              <div class="rt">系统通知</div>
+              <div class="rd">管道执行完成后显示系统通知</div>
+              <div class="rc"><span class="cb on"></span></div>
+            </div>
+            <div class="srow hot">
+              <div class="rt">系统托盘</div>
+              <div class="rd">关闭窗口时最小化到托盘而非退出</div>
+              <div class="rc"><span class="cb on"></span></div>
+            </div>
+            <div class="srow">
+              <div class="rt">适配视图</div>
+              <div class="rd">双击画布空白区域自动缩放视图</div>
+              <div class="rc"><span class="cb on"></span></div>
+            </div>
+
+            <div class="ghead">更新</div>
+            <div class="srow">
+              <div class="rt">检查更新</div>
+              <div class="rd">启动后自动检查新版本</div>
+              <div class="rc"><span class="cb on"></span></div>
+            </div>
+
+            <div class="ghead">帮助与数据</div>
+            <div class="srow">
+              <div class="rt">重新显示新手引导</div>
+              <div class="rd">清除「已看过引导」标记,下次打开文件时重新显示</div>
+              <div class="rc"><button class="bsm">重新显示</button></div>
+            </div>
+            <div class="srow">
+              <div class="rt">清除执行历史</div>
+              <div class="rd">删除所有执行历史记录</div>
+              <div class="rc"><button class="bsm danger">清除</button></div>
+            </div>
+
+            <div class="ghead">AI<span class="pin-n g" style="margin-left:auto">8</span></div>
+            <div class="srow">
+              <div class="rt">服务提供商</div>
+              <div class="rd">选择 AI 服务提供商</div>
+              <div class="rc"><div class="sel">DeepSeek<span class="caret"></span></div></div>
+            </div>
+            <div class="srow">
+              <div class="rt">模型</div>
+              <div class="rd">当前服务商可用的模型</div>
+              <div class="rc"><div class="sel">deepseek-chat<span class="caret"></span></div></div>
+            </div>
+            <div class="srow">
+              <div class="rt">自定义服务商设置</div>
+              <div class="rd">仅在选择「自定义」服务商时可用</div>
+              <div class="rc"><button class="bsm off">展开<span class="chev"></span></button></div>
+            </div>
+            <div class="srow">
+              <div class="rt">API Key</div>
+              <div class="rd">调用凭据, 仅保存在本机</div>
+              <div class="rc"><div class="pw">sk-••••••••••••••••</div></div>
+            </div>
+            <div class="srow">
+              <div class="rt">清除对话历史</div>
+              <div class="rd">删除与 AI 的对话记录</div>
+              <div class="rc"><button class="bsm danger">清除</button></div>
+            </div>
+            <div class="srow">
+              <div class="rt">清除反馈记录</div>
+              <div class="rd">删除「有帮助 / 没帮助」反馈</div>
+              <div class="rc"><button class="bsm danger">清除</button></div>
+            </div>
+            <div class="srow">
+              <div class="rt">清除纠正规则</div>
+              <div class="rd">删除 AI 纠正规则</div>
+              <div class="rc"><button class="bsm danger">清除</button></div>
+            </div>
+          </div>
+          <div class="fadeout"><span class="more">↓ 1080p 下这条列表还要再滚约 1/3 屏(所以有了搜索)</span></div>
+        </div>
+      </div>
+
+      <div class="dlg-foot">
+        <button class="btn">恢复默认</button>
+        <button class="btn">保存设置</button>
+      </div>
+    </div>
+
+    <div class="legend">
+      <ol>
+        <li><b>目录收敛到分组级</b> —— 8 条分组;条目级查找交给搜索。把 18 条塞进 184px 宽的侧栏会压到 18~20px 行高、在 768px 高窗口必然滚动,而且与右侧列表形成"同一份名单出现两次"的冗余。</li>
+        <li><b>搜索框在右栏顶部、吸顶</b> —— 它过滤的是列表,就该挨着列表;左栏只有 184px,放不下输入框 + 结果数 + 清除。</li>
+        <li><b>每个设置一行</b> —— <code>150px 标题 | 描述(可截断) | 控件右对齐</code>,行高 34~36px。现状每项约 76px,密度翻倍是这次最直接的收益。</li>
+        <li><b>整行可点 = 委托给该行控件</b>(开关行点任意处即切换、下拉行点任意处即展开),与 macOS「系统设置」一致;<b>危险行例外</b> —— 四个「清除…」行只有按钮本身可点,点描述就删数据是不可接受的。</li>
+        <li><b>三处呈现订正</b> —— ① 「清除执行历史」从 AI 组移到「帮助与数据」(<code>SettingsTabContent.tsx:715-723</code>);② 「自定义服务商设置」改常显行,不满足条件时禁用 + 说明,不再凭空出现/消失;③ AI 的四按钮簇拆成 4 个独立行(于是每一行都能被搜到)。</li>
+        <li><b>当前分组高亮</b> —— 取「视口顶部之上最近的分组标题」,基于 <code>offsetTop</code> 比较而非 <code>IntersectionObserver</code>(后者在短分组快速滚动时会在两组间抖动)。</li>
+        <li><b>分组标题吸顶</b> —— 滚到哪一组,标题贴在顶边,与左栏的分组名对上。</li>
+        <li><b>不给行加图标</b> —— 18 行各配一个图标会把「一眼扫完一列」变成「看图标猜含义」,行高也会被迫加高。高度与注意力全留给标题 / 描述 / 控件三列。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ══════════════ 改造后 · 搜索态 ══════════════ -->
+  <div class="wrap">
+    <div class="cap">
+      <b>改造后 · 搜索态</b>
+      <span class="state after">v2</span>
+      <span>查询「清除」→ 跨 2 个分组命中 4 行;分组标题保留,左栏不匹配的分组降灰</span>
+    </div>
+
+    <div class="dlg">
+      <div class="dlg-head">
+        <span class="dlg-title">设置</span>
+        <div class="xbtn" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7"/></svg>
+        </div>
+      </div>
+
+      <div class="body-2col">
+        <nav class="side">
+          <div class="ssearch"><span class="mg"></span>搜索设置</div>
+          <div class="glist">
+            <div class="gitem dim">界面</div>
+            <div class="gitem on">数据与帮助</div>
+            <div class="gitem dim">窗口行为</div>
+            <div class="gitem dim">更新</div>
+            <div class="gitem on">AI</div>
+            <div class="gitem dim">插件</div>
+          </div>
+        </nav>
+
+        <div class="main">
+          <div class="searchbar">
+            <div class="sinput filled"><span class="mg"></span><span class="q">清除</span><span class="sx"></span></div>
+            <span class="pin-n g" style="flex:none">9</span>
+          </div>
+
+          <div class="mbody">
+            <div class="ghead">帮助与数据</div>
+            <div class="srow">
+              <div class="rt"><mark>清除</mark>执行历史</div>
+              <div class="rd">删除所有执行历史记录</div>
+              <div class="rc"><button class="bsm danger">清除</button></div>
+            </div>
+
+            <div class="ghead">AI</div>
+            <div class="srow">
+              <div class="rt"><mark>清除</mark>对话历史</div>
+              <div class="rd">删除与 AI 的对话记录</div>
+              <div class="rc"><button class="bsm danger">清除</button></div>
+            </div>
+            <div class="srow">
+              <div class="rt"><mark>清除</mark>反馈记录</div>
+              <div class="rd">删除「有帮助 / 没帮助」反馈</div>
+              <div class="rc"><button class="bsm danger">清除</button></div>
+            </div>
+            <div class="srow">
+              <div class="rt"><mark>清除</mark>纠正规则</div>
+              <div class="rd">删除 AI 纠正规则</div>
+              <div class="rc"><button class="bsm danger">清除</button></div>
+            </div>
+
+            <div style="padding:14px 0;font-size:11px;color:#b3b3b3;line-height:1.7">
+              浏览态下这一段是「更新 / 帮助与数据 / AI」的完整列表;搜索后只剩 4 行 —— 零命中的分组被隐藏,命中的分组标题保留下来当作上下文。<br />
+              左栏把不匹配的分组降灰(不隐藏、不重排,保住方位感),点灰分组会<b>先清空搜索再跳过去</b>。<br />
+              搜索期间滚动联动关闭 —— 此时「当前分组」没有意义,继续高亮会误导。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dlg-foot">
+        <button class="btn">恢复默认</button>
+        <button class="btn">保存设置</button>
+      </div>
+    </div>
+
+    <div class="legend">
+      <ol>
+        <li><b>匹配标题 + 描述 + 别名</b> —— 例如输入 <code>dark</code> 能命中的是「主题」(<code>keywords</code> 里带了 <code>dark / theme / 暗色 / 配色</code>)。别名表是人工数据,不进 i18n。</li>
+        <li><b>分词按 AND</b> —— <code>托盘 通知</code> 只留同时命中的行;大小写不敏感;中文按子串匹配(不做分词)。</li>
+        <li><b>命中高亮</b> —— 用 <code>&lt;mark&gt;</code>,标题与描述都高亮(读屏可识别)。</li>
+        <li><b>不打散、不按相关度重排</b> —— 结果保持与浏览态一致的顺序。设置项不该"跳来跳去"。</li>
+        <li><b>界面上不出现任何计数</b> —— 分组条数与搜索结果数都不显示(列表本身就是计数);结果数只走一个 sr-only 的 <code>aria-live</code> 播报,给读屏用。清空是输入框内的 ✕ 图标,<b>刻意不用「清除」两个字</b> —— 这一屏已经有 4 个「清除(数据)」按钮了,同一个词不能有两种含义。</li>
+        <li><b>键盘</b> —— 焦点不在输入框时按 <code>/</code> 聚焦;<code>Esc</code> 清空;焦点在搜索框时 <code>↑</code>/<code>↓</code> 移到结果行、<code>Enter</code> 触发。</li>
+        <li><b>空状态</b> —— <code>没有匹配「xxx」的设置</code> + 一行建议:<code>试试「托盘」「暗色」「并发」</code>。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ══════════════ 说明 ══════════════ -->
+  <div class="notes">
+    <div class="note">
+      <h3><span class="n">A</span>搜索</h3>
+      <p>解决的问题是「知道名字、不想滚」。它<b>不</b>取代目录:目录回答「我还能去哪」,搜索回答「我要的那一项在哪」。</p>
+      <p>不做模糊 / 拼音匹配 —— 18 项规模下别名表的收益远高于模糊匹配的实现与调参成本;条目翻倍后再议。</p>
+    </div>
+    <div class="note">
+      <h3><span class="n">B</span>每设置一行</h3>
+      <p>三列网格:标题 150px、描述 <code>minmax(0,1fr)</code>、控件右对齐。窗口变窄时<b>先截描述</b>,标题不换行。</p>
+      <p>行高从约 76px 降到 34~36px(约 2 倍密度)。<b>先有行密度,搜索才有意义</b> —— 列表还那么长的话,搜索只能是补丁。</p>
+    </div>
+    <div class="note">
+      <h3><span class="n">C</span>目录</h3>
+      <p>8 条分组,点击跳到该组并把<b>焦点移给组标题</b>(<code>tabIndex={-1}</code>),键盘用户跳过去的 Tab 落点就在这一组的行里。</p>
+      <p>契约:行 id 唯一;分组在左栏与右栏各出现一次、由同一份数据渲染。两条都有契约测试双向比对。</p>
+    </div>
+  </div>
+
+  <div class="ask">
+    <h3>需要拍板(详见设计文档 §8)</h3>
+    <ul>
+      <li><b>侧栏是否保留</b>:保留 = 常驻方位感 + 同组内跳转;去掉 = 每行描述可用宽度从约 380px 增到约 540px,形态变成 VS Code 的「搜索 + 一条列表」。</li>
+      <li><b>分组粒度</b>:本稿 7 组 / 18 行。备选 6 组(把「更新」并入「帮助与数据」)或 8 组(拆开 AI)。</li>
+      <li><b><code>/</code> 作为搜索快捷键</b>是否可接受(现有快捷键有 <code>Ctrl+K</code> / <code>Alt+C</code> / <code>Ctrl+R</code> 等;<code>/</code> 只在焦点不在输入框时生效)。</li>
+      <li><b>「恢复默认 / 保存设置」的语义不一致</b>(语言、主题、分隔符按下即落库,其余 6 项要按保存):建议<b>不</b>在本次统一,单开一稿。</li>
+    </ul>
+  </div>
+
+  <div class="scope">
+    本原型只表达结构:分组、搜索、行布局与联动。设置项的取值域、默认值、落库时机与文案均与 0.7.0 一致,
+    相对现状只有三处<b>呈现</b>变更(「清除执行历史」归类、「自定义服务商设置」常显、AI 四按钮拆行)。
+    色值取自 <code>src/index.css</code> 的浅色令牌;插件管理是唯一不是一行的条目(整块嵌入 <code>PluginManager</code>)。
+  </div>
+
+</div>
+</body>
+</html>

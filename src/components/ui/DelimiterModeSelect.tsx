@@ -8,6 +8,10 @@ export interface DelimiterModeSelectProps {
   onChange: (mode: DelimiterMode) => void;
   size?: "sm" | "md";
   width?: string | number;
+  /** Overrides the inner combobox height (default `h-8`). */
+  height?: string;
+  /** The open dropdown's max height, as a class (default `max-h-40`). */
+  listMaxHeight?: string;
   placeholder?: string;
 }
 
@@ -24,6 +28,8 @@ export function DelimiterModeSelect({
   onChange,
   size = "sm",
   width,
+  height,
+  listMaxHeight,
   placeholder,
 }: DelimiterModeSelectProps) {
   const { t } = useLanguage();
@@ -43,6 +49,8 @@ export function DelimiterModeSelect({
       placeholder={placeholder ?? t.csvDelimiter}
       size={size}
       width={width}
+      height={height}
+      listMaxHeight={listMaxHeight}
     />
   );
 }

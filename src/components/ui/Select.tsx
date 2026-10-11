@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronDown } from "lucide-react";
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
+import { cn } from "@/lib/utils";
 import { ScrollBar } from "@/components/ui/ScrollArea";
 
 interface SelectProps {
@@ -11,6 +12,17 @@ interface SelectProps {
   size?: "sm" | "md";
   /** Container width. Defaults to full width of the parent. */
   width?: string | number;
+  /**
+   * Overrides the input's height (the default is `h-8`). `cn` is tail-merge, so
+   * a later `h-7` wins — useful when a dense row needs
+   * a shorter control to match its neighbours.
+   */
+  height?: string;
+  /**
+   * The open dropdown's max height, as a class (default `max-h-36`). Pass e.g.
+   * `max-h-48` to show more options before the list starts scrolling.
+   */
+  listMaxHeight?: string;
   /**
    * Accessible name forwarded to the internal `input[role=combobox]`. The
    * rendered markup has no label element, so without this the combobox has no
@@ -26,6 +38,8 @@ export function Select({
   placeholder = "Search or select...",
   size = "sm",
   width,
+  height,
+  listMaxHeight = "max-h-40",
   ariaLabel,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -126,10 +140,12 @@ export function Select({
     }
   }, [activeIndex]);
 
-  const inputClassName =
+  const inputClassName = cn(
     size === "md"
       ? "w-full h-8 px-3 pr-8 text-sm border rounded-md bg-background"
-      : "w-full h-8 px-3 pr-8 text-xs border rounded-md bg-background";
+      : "w-full h-8 px-3 pr-8 text-xs border rounded-md bg-background",
+    height,
+  );
 
   const iconSize = size === "md" ? "h-3 w-3" : "h-3 w-3";
 
@@ -176,11 +192,11 @@ export function Select({
       {isOpen && (
         <div
           role="listbox"
-          className="absolute z-50 w-full border rounded-md bg-background shadow-lg mt-1"
+          className="absolute z-50 w-full border rounded-md bg-background shadow-lg mt-0.5"
         >
           <ScrollAreaPrimitive.Root className="relative overflow-hidden">
-            <ScrollAreaPrimitive.Viewport className="w-full max-h-40 overflow-y-auto px-2 rounded-[inherit]">
-              <div className="p-1" ref={listRef}>
+            <ScrollAreaPrimitive.Viewport className={cn("w-full overflow-y-auto px-2 rounded-[inherit]", listMaxHeight)}>
+              <div className="p-0.5" ref={listRef}>
                 {filteredOptions.length > 0 ? (
                   filteredOptions.map((opt, index) => (
                     <button

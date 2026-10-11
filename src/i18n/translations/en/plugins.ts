@@ -1,7 +1,6 @@
 /** Plugin catalog & in-app install */
 export const enPlugins = {
   plugins: "Plugins",
-  pluginDesc: "External CLI plugins, downloadable on demand",
   pluginNone: "No plugins available",
   pluginInstalled: "Installed",
   pluginMissing: "Not installed",
