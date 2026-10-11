@@ -457,12 +457,6 @@
   background: var(--primary);
   animation: busy-underline 1.15s ease-in-out infinite;
 }
-@media (prefers-reduced-motion: reduce) {
-  .exec-busy::after,
-  .update-busy::after {
-    animation: none;
-  }
-}
 .animate-slide-up {
   animation: slide-up 0.6s ease-out;
 }
