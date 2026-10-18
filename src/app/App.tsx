@@ -2199,7 +2199,7 @@ function AppContent() {
               <div className="h-full bg-card border-l border-border/50 shadow-lg">
                 <DataProfilePanel
                   filePath={tabsHook.getCurrentTab()?.inputFile || ""}
-                  delimiter={settings.defaultDelimiter}
+                  delimiter={tabsCtl.resolveRunDelimiter()}
                   isVisible={ui.showDataProfile}
                   onClose={() => ui.setShowDataProfile(false)}
                 />

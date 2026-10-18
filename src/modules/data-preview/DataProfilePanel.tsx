@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { BarChart3, Hash, Search, Type, X } from "lucide-react";
+import { Hash, Search, Type, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
@@ -174,7 +174,6 @@ export const DataProfilePanel = React.memo(function DataProfilePanel({
     >
       <div className="p-3 border-b bg-card/80 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-muted-foreground" />
           <span className="font-semibold text-sm">{t.dataProfile}</span>
         </div>
         <Button

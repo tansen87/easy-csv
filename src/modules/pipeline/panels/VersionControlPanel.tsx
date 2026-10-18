@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import {
   Tag,
   Clock,
-  GitBranch,
   Trash2,
   RotateCcw,
   Plus,
@@ -451,7 +450,6 @@ export function VersionControlPanel({
       <div className="p-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold flex items-center gap-2">
-            <GitBranch className="h-4 w-4" />
             {t.versionHistory}
           </h3>
           <div className="flex items-center gap-1">

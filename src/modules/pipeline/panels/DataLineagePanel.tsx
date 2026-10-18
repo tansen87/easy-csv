@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
-  GitMerge,
   Search,
   ChevronDown,
   ChevronRight,
@@ -126,7 +125,6 @@ export function DataLineagePanel({
       >
         <div className="h-12 border-b border-border/50 flex items-center justify-between px-4 bg-card shrink-0">
           <div className="flex items-center gap-3">
-            <GitMerge className="h-4 w-4 text-primary" />
             <span className="text-sm font-semibold">{t.dataLineage}</span>
             <span className="text-xs text-muted-foreground">
               {lineageData.length} {t.rows}
@@ -202,7 +200,6 @@ export function DataLineagePanel({
       <div className="px-3 py-2 border-b border-border/50 shrink-0">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold flex items-center gap-2">
-            <GitMerge className="h-4 w-4" />
             {t.dataLineage}
           </h3>
           <div className="flex items-center gap-1">
