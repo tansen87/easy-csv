@@ -115,9 +115,16 @@ describe("PluginSection heading (design 030 §4.1)", () => {
     routeInvoke(catalog([entry({ installed: true })]));
     renderSection();
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Open plugin folder" }),
-    );
+    // The trigger is on screen from the first render but stays `disabled` until
+    // the catalogue (which carries `plugin_dir`) has loaded — a click on a
+    // disabled button is a silent no-op, which under a slow full-suite run made
+    // this test fail before `reveal_paths` was ever reached. Wait for it to
+    // become clickable, not merely for it to exist.
+    const button = await screen.findByRole("button", {
+      name: "Open plugin folder",
+    });
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
 
     await waitFor(() =>
       expect(mockInvoke).toHaveBeenCalledWith("reveal_paths", {
@@ -130,7 +137,9 @@ describe("PluginSection heading (design 030 §4.1)", () => {
     routeInvoke(catalog([entry()]));
     renderSection();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Refresh catalog" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Refresh catalog" }),
+    );
 
     await waitFor(() =>
       expect(mockInvoke).toHaveBeenCalledWith("get_plugin_catalog", {
@@ -226,7 +235,9 @@ describe("PluginSection rows (design 030 §11.12)", () => {
       rowOf(container, "xan").querySelector('button[aria-label^="Uninstall"]'),
     ).toBeTruthy();
     expect(
-      rowOf(container, "manual").querySelector('button[aria-label^="Uninstall"]'),
+      rowOf(container, "manual").querySelector(
+        'button[aria-label^="Uninstall"]',
+      ),
     ).toBeNull();
   });
 });

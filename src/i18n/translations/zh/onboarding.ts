@@ -55,23 +55,11 @@ export const zhOnboarding = {
   onboardingReset: "重新显示新手引导",
   onboardingResetDesc: "清除「已看过引导」标记, 下次打开文件时重新显示",
 
-  // 内置模板
-  builtinTemplatesGroup: "内置模板",
+  // 模板库
   myTemplatesGroup: "我的模板",
-  copyToMyTemplates: "复制到我的模板",
-  builtinTemplateCopied: "已复制到我的模板：{name}",
   builtinTplDemoName: "示例",
   builtinTplDemoDesc:
     "含一份示例销售数据, 三步清理并汇总. 打开即可运行, 不需要准备文件",
-  builtinTplCleanName: "快速清洗",
-  builtinTplCleanDesc: "去掉整行为空的行, 再去重. 对任何文件都能直接用",
-  builtinTplProfileName: "先摸清数据",
-  builtinTplProfileDesc: "先看列名, 再看每列的统计(类型、空值数、最值)",
-  builtinTplGroupName: "按第一列分组计数",
-  builtinTplGroupDesc:
-    "按第一列分组统计行数. 把「0」改成你的列名即可按任意列汇总",
-  builtinTplTopName: "排序并取前 100 行",
-  builtinTplTopDesc: "按第一列排序后取前 100 行. 把「0」改成你的列名即可",
   builtinStepSearchAmount: "1 去掉金额为空的行",
   builtinStepDedup: "2 去除重复行",
   builtinStepGroupByRegion: "3 按地区汇总金额",

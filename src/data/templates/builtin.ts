@@ -6,19 +6,18 @@ import {
 import type { Translations } from "@/i18n/translations/types";
 
 /**
- * Built-in pipeline templates.
+ * The sample ("see an example") pipeline.
  *
- * These ship with the app so the template library is never an empty list for a
- * new user, and so the empty-state "see an example" card has a target that
- * needs no file of the user's own.
+ * The template library now ships no built-in templates of its own; all that is
+ * left here is the demo that the empty-state "see an example" card and the help
+ * menu's "view sample" open, so a new user has something that needs no file of
+ * their own.
  *
- * Every template here was **verified against the real `xan` binary** — a
- * template that fails the first time it is run is worse than no template. The
- * column-agnostic ones use xan's 0-based column indices (`0` = first column) so
- * they work on whatever file the user has open.
+ * It was **verified against the real `xan` binary** — a demo that fails the
+ * first time it is run is worse than no demo.
  *
  * Names, descriptions and step aliases are resolved from `t` at build time
- * rather than hard-coded, so the library is bilingual like the rest of the UI.
+ * rather than hard-coded, so it is bilingual like the rest of the UI.
  *
  * `created` / `updated` are static on purpose: built-ins must be identical
  * across runs, otherwise the template list would reorder itself.
@@ -44,14 +43,6 @@ export type BuiltinTemplateLabels = Pick<
   Translations,
   | "builtinTplDemoName"
   | "builtinTplDemoDesc"
-  | "builtinTplCleanName"
-  | "builtinTplCleanDesc"
-  | "builtinTplProfileName"
-  | "builtinTplProfileDesc"
-  | "builtinTplGroupName"
-  | "builtinTplGroupDesc"
-  | "builtinTplTopName"
-  | "builtinTplTopDesc"
   | "builtinStepSearchAmount"
   | "builtinStepDedup"
   | "builtinStepGroupByRegion"
@@ -174,24 +165,6 @@ export function buildBuiltinTemplates(
         defaultDelimiter: ",",
       },
     ),
-    template("quick-clean", t.builtinTplCleanName, t.builtinTplCleanDesc, [
-      step("builtin-clean-1", "search", { "non-empty": true }),
-      step("builtin-clean-2", "dedup", {}),
-    ], { fromTableNode: true }),
-    template("profile", t.builtinTplProfileName, t.builtinTplProfileDesc, [
-      step("builtin-profile-1", "headers", {}),
-      step("builtin-profile-2", "stats", {}),
-    ], { fromTableNode: true }),
-    template("group-summary", t.builtinTplGroupName, t.builtinTplGroupDesc, [
-      step("builtin-group-1", "groupby", {
-        columns: "0",
-        expression: 'count() as "行数"',
-      }),
-    ], { fromTableNode: true }),
-    template("sort-and-top", t.builtinTplTopName, t.builtinTplTopDesc, [
-      step("builtin-top-1", "sort", { select: "0" }),
-      step("builtin-top-2", "head", { limit: 100 }),
-    ], { fromTableNode: true }),
   ];
 }
 

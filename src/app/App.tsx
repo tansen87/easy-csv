@@ -1132,20 +1132,6 @@ function AppContent() {
     }
   }, [templateStore, templateToDelete]);
 
-  /** Adopt a built-in template into the user's own library (design 027 §4.4). */
-  const handleCopyTemplateToMine = useCallback(
-    async (id: string) => {
-      const copy = await templateStore.copyToMyTemplates(id);
-      if (copy) {
-        showToast(
-          t.builtinTemplateCopied.replace("{name}", copy.name),
-          "success",
-        );
-      }
-    },
-    [templateStore, showToast, t],
-  );
-
   const handleExportTemplate = useCallback(
     async (id: string) => {
       const template = templateStore.templates.find((tpl) => tpl.id === id);
@@ -2141,7 +2127,6 @@ function AppContent() {
             }}
             onExport={(id) => void handleExportTemplate(id)}
             onImport={() => void handleImportTemplate()}
-            onCopyToMine={(id) => void handleCopyTemplateToMine(id)}
           />
 
           <ConfirmDialog

@@ -1,20 +1,10 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from "react";
-import {
-  X,
-  Check,
-  Play,
-  Pencil,
-  Trash2,
-  Download,
-  CopyPlus,
-  Search,
-} from "lucide-react";
+import { X, Check, Play, Pencil, Trash2, Download, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { useLanguage } from "@/i18n";
 import { PipelineTemplate } from "@/types/xan";
-import { isBuiltinTemplate } from "@/data/templates/builtin";
 
 interface PipelineTemplateDialogProps {
   isOpen: boolean;
@@ -28,8 +18,6 @@ interface PipelineTemplateDialogProps {
   onDelete: (id: string) => void;
   onExport: (id: string) => void;
   onImport: () => void;
-  /** Adopt a built-in template into the user's own library. */
-  onCopyToMine: (id: string) => void;
 }
 
 export function PipelineTemplateDialog({
@@ -44,7 +32,6 @@ export function PipelineTemplateDialog({
   onDelete,
   onExport,
   onImport,
-  onCopyToMine,
 }: PipelineTemplateDialogProps) {
   const { t } = useLanguage();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -123,18 +110,9 @@ export function PipelineTemplateDialog({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, handleKeyDown]);
 
-  const builtinList = filteredTemplates.filter((tpl) =>
-    isBuiltinTemplate(tpl.id),
-  );
-  const myList = filteredTemplates.filter((tpl) => !isBuiltinTemplate(tpl.id));
-
-  /**
-   * One template row. Built-ins are read-only: no rename and no delete, 
-   * but "copy to my templates" so the user can adopt and then edit one.
-   */
+  /** One template row, with its rename / export / delete actions. */
   const renderTemplateRow = (tpl: PipelineTemplate) => {
     const isRenaming = renamingId === tpl.id;
-    const builtin = isBuiltinTemplate(tpl.id);
     return (
       <li
         key={tpl.id}
@@ -189,60 +167,41 @@ export function PipelineTemplateDialog({
             </>
           ) : (
             <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onApply(tpl.id)}
-              >
+              <Button variant="ghost" size="sm" onClick={() => onApply(tpl.id)}>
                 <Play className="h-3.5 w-3.5 mr-1" />
                 {t.templateApply}
               </Button>
-              {builtin && (
-                <Tooltip content={t.copyToMyTemplates}>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onCopyToMine(tpl.id)}
-                  >
-                    <CopyPlus className="h-3.5 w-3.5" />
-                  </Button>
-                </Tooltip>
-              )}
-              {!builtin && (
-                <>
-                  <Tooltip content={t.templateRename}>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setRenamingId(tpl.id);
-                        setRenameName(tpl.name);
-                        setRenameDesc(tpl.description || "");
-                      }}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                  </Tooltip>
-                  <Tooltip content={t.templateExport}>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onExport(tpl.id)}
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                    </Button>
-                  </Tooltip>
-                  <Tooltip content={t.templateDelete}>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onDelete(tpl.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </Tooltip>
-                </>
-              )}
+              <Tooltip content={t.templateRename}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setRenamingId(tpl.id);
+                    setRenameName(tpl.name);
+                    setRenameDesc(tpl.description || "");
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              </Tooltip>
+              <Tooltip content={t.templateExport}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onExport(tpl.id)}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                </Button>
+              </Tooltip>
+              <Tooltip content={t.templateDelete}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onDelete(tpl.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </Tooltip>
             </>
           )}
         </div>
@@ -269,7 +228,7 @@ export function PipelineTemplateDialog({
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
-        className="relative bg-card rounded-lg shadow-xl w-full max-w-lg overflow-hidden outline-none"
+        className="relative bg-card rounded-lg shadow-xl w-full max-w-2xl overflow-hidden outline-none"
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
       >
@@ -307,11 +266,6 @@ export function PipelineTemplateDialog({
             placeholder={t.templateDescriptionPlaceholder}
             className="w-full h-8 px-2 rounded-md bg-muted text-sm text-foreground outline-none border border-transparent focus:border-primary disabled:opacity-50"
           />
-          {!canSave && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              {t.noTemplates}
-            </p>
-          )}
         </div>
 
         {/* Saved templates list */}
@@ -329,7 +283,7 @@ export function PipelineTemplateDialog({
             </div>
           </div>
         )}
-        <ScrollArea className="h-64">
+        <ScrollArea className="h-64" hideHorizontalScrollbar blockContent>
           <div className="px-4 py-3">
             {templates.length === 0 ? (
               <div className="py-10 text-center text-sm text-muted-foreground">
@@ -341,25 +295,14 @@ export function PipelineTemplateDialog({
               </div>
             ) : (
               <div className="space-y-4">
-                {[
-                  {
-                    key: "builtin",
-                    label: t.builtinTemplatesGroup,
-                    list: builtinList,
-                  },
-                  { key: "mine", label: t.myTemplatesGroup, list: myList },
-                ]
-                  .filter((group) => group.list.length > 0)
-                  .map((group) => (
-                    <div key={group.key}>
-                      <h4 className="mb-1.5 px-0.5 text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
-                        {group.label}
-                      </h4>
-                      <ul className="space-y-2">
-                        {group.list.map(renderTemplateRow)}
-                      </ul>
-                    </div>
-                  ))}
+                <div>
+                  <h4 className="mb-1.5 px-0.5 text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                    {t.myTemplatesGroup}
+                  </h4>
+                  <ul className="space-y-2">
+                    {filteredTemplates.map(renderTemplateRow)}
+                  </ul>
+                </div>
               </div>
             )}
           </div>

@@ -56,32 +56,16 @@ export const enOnboarding = {
   onboardingDemoRevealRun: "Run it",
   onboardingDemoRevealSkip: "Skip",
 
-
   // Settings
   onboardingReset: "Show the intro again",
   onboardingResetDesc:
     "Clears the “intro seen” flag so the guide reappears the next time you open a file.",
 
-  // Built-in templates
-  builtinTemplatesGroup: "Built-in",
+  // Template library
   myTemplatesGroup: "Mine",
-  copyToMyTemplates: "Copy to my templates",
-  builtinTemplateCopied: "Copied to my templates: {name}",
   builtinTplDemoName: "Example",
   builtinTplDemoDesc:
     "Ships with sample sales data and a three-step clean-up. Runs as soon as you open it.",
-  builtinTplCleanName: "Quick clean",
-  builtinTplCleanDesc:
-    "Drops rows that are empty all the way across, then removes duplicates. Works on any file.",
-  builtinTplProfileName: "Get to know the data",
-  builtinTplProfileDesc:
-    "Lists the column names, then the per-column statistics (type, empty count, extremes).",
-  builtinTplGroupName: "Count rows per first column",
-  builtinTplGroupDesc:
-    "Groups by the first column and counts rows. Change “0” to your own column name.",
-  builtinTplTopName: "Sort and take the top 100",
-  builtinTplTopDesc:
-    "Sorts by the first column, then keeps the first 100 rows. Change “0” to your column name.",
   builtinStepSearchAmount: "1 Drop rows with an empty amount",
   builtinStepDedup: "2 Remove duplicate rows",
   builtinStepGroupByRegion: "3 Total the amount by region",

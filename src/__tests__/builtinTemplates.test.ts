@@ -113,7 +113,10 @@ describe("the demo template", () => {
     const demo = getBuiltinDemoTemplate(t);
     const [search, dedup, groupby] = demo.snapshot.pipeline;
 
-    expect(search.parameters).toMatchObject({ select: "金额", "non-empty": true });
+    expect(search.parameters).toMatchObject({
+      select: "金额",
+      "non-empty": true,
+    });
     expect(dedup.parameters).toEqual({});
     expect(groupby.parameters).toEqual({
       columns: "地区",
@@ -137,15 +140,6 @@ describe("the demo template", () => {
   it("pins the delimiter of its own sample data", () => {
     const demo = getBuiltinDemoTemplate(t);
     expect(demo.snapshot.defaultDelimiter).toBe(",");
-  });
-
-  // Templates that run on the user's own file must NOT pin a delimiter: the
-  // tab's detected one is the only correct choice there.
-  it("leaves the delimiter unset for templates that run on the user's file", () => {
-    for (const tpl of templates) {
-      if (tpl.id === BUILTIN_DEMO_ID) continue;
-      expect(tpl.snapshot.defaultDelimiter).toBeUndefined();
-    }
   });
 
   /**
@@ -178,9 +172,13 @@ describe("resolveBuiltinSnapshot", () => {
   });
 
   it("returns snapshots without an input file unchanged", () => {
-    const clean = templates.find((tpl) => tpl.id === "builtin:quick-clean")!;
-    expect(resolveBuiltinSnapshot(clean, "/data/sample.csv")).toBe(
-      clean.snapshot,
+    const demo = getBuiltinDemoTemplate(t);
+    const noInput = {
+      ...demo,
+      snapshot: { ...demo.snapshot, inputFile: undefined },
+    };
+    expect(resolveBuiltinSnapshot(noInput, "/data/sample.csv")).toBe(
+      noInput.snapshot,
     );
   });
 
@@ -189,14 +187,19 @@ describe("resolveBuiltinSnapshot", () => {
   // user's own copy of the demo is covered too.
   it("detects which templates still need the sample written", () => {
     const demo = getBuiltinDemoTemplate(t);
+    const noInput = {
+      ...demo,
+      snapshot: { ...demo.snapshot, inputFile: undefined },
+    };
     expect(needsSampleData(demo)).toBe(true);
     expect(needsSampleData({ ...demo, id: "tpl-user-copy" })).toBe(true);
-    expect(
-      needsSampleData(templates.find((tpl) => tpl.id === "builtin:quick-clean")!),
-    ).toBe(false);
+    expect(needsSampleData(noInput)).toBe(false);
 
     // Once substituted, the placeholder is gone and the normal path applies.
-    const applied = { ...demo, snapshot: resolveBuiltinSnapshot(demo, "/s.csv") };
+    const applied = {
+      ...demo,
+      snapshot: resolveBuiltinSnapshot(demo, "/s.csv"),
+    };
     expect(needsSampleData(applied)).toBe(false);
   });
 });
