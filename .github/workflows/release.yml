@@ -134,6 +134,25 @@ jobs:
           console.log(`ok: ${decoded.split("\n")[0]}`);
           NODE
 
+      - name: Read changelog for release notes
+        id: changelog
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          FILE="docs/changelog/CHANGELOG-${VERSION}.md"
+          if [ ! -f "$FILE" ]; then
+            echo "::error::Missing $FILE. Add the changelog before tagging a release."
+            exit 1
+          fi
+          # Drop the top-level title and the version heading: the release title
+          # already says the version. Leading blank lines are trimmed too.
+          BODY=$(sed -e '/^# Changelog$/d' -e '/^## \[/d' "$FILE" | sed '/./,$!d')
+          {
+            echo "body<<__CHANGELOG_EOF__"
+            echo "$BODY"
+            echo "__CHANGELOG_EOF__"
+          } >> "$GITHUB_OUTPUT"
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -147,12 +166,12 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: "EasyCsv v__VERSION__"
-          releaseBody: |
-            See the assets to download and install this version.
-
-            In-app updates resolve `latest.json` from GitHub Releases, so this
-            release has to be **published** rather than left as a draft: assets
-            of a draft are not served by `/releases/latest/download/`.
+          # `tauri-action` freezes this into `latest.json`'s `notes` at build
+          # time; the in-app updater reads that manifest, not the GitHub release
+          # page. Use the version's changelog so every release shows its own
+          # notes (editing the release body afterwards does NOT update the
+          # manifest — see design 022 §4).
+          releaseBody: ${{ steps.changelog.outputs.body }}
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

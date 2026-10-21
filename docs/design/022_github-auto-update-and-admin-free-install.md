@@ -648,9 +648,11 @@ curl -sS -L https://github.com/tansen87/easy-csv/releases/latest/download/latest
 不在校验范围内 —— 但不许动 `platforms` 里的 `url` / `signature`,那会让所有平台的更新一起失效。
 上传后 CDN 可能缓存几分钟;应用下一次检查就会拿到新文案。
 
-**避免反复改的写法**:既然 `notes` 在构建时就冻结了,`releaseBody` 里就别放"以后想改"的长文案 ——
-改成一句指向仓库内 changelog 的说明(那份文件随时可改,且应用里能点开),例如
-「See docs/changelog/CHANGELOG-<version>.md for details.」
+**避免反复改的写法**(2026-10-21 起已实现):既然 `notes` 在构建时就冻结了,`releaseBody` 不再写死文案 ——
+`release.yml` 先读取仓库内的 `docs/changelog/CHANGELOG-<version>.md`,去掉标题与版本行后作为 `releaseBody`
+传给 `tauri-action`。这样每版的应用内说明就是该版 changelog 的正文,无需发布后再改;
+缺 changelog 时发布步骤会直接报错(`Missing docs/changelog/CHANGELOG-<version>.md`)。
+发布后若仍要临时改文案,依旧只能替换 `latest.json` 的 `notes`(见上)。
 
 ---
 
