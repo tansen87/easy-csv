@@ -13,7 +13,7 @@ const SESSION: UpdateSession = {
   version: "0.7.0",
   currentVersion: "0.6.0",
   notes: "## What changed\n\n- every single line of it",
-  date: "2026-09-27",
+  date: "2026-09-27T10:20:30Z",
   update: null,
 };
 
@@ -52,6 +52,13 @@ function scrollRegion(container: HTMLElement): Element | null {
 }
 
 describe("UpdateDialog progress placement", () => {
+  it("shows only the date part of the published timestamp", () => {
+    renderDialog();
+    const published = screen.getByText(/Published/);
+    expect(published.textContent).toContain("2026-09-27");
+    expect(published.textContent).not.toContain("T10:20");
+  });
+
   it("keeps the progress in the header, out of the scrolling release notes", () => {
     const { container } = renderDialog({
       isInstalling: true,

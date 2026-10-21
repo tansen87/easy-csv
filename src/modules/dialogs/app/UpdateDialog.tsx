@@ -167,7 +167,7 @@ export function UpdateDialog({
                 </button>
                 {updateInfo.date && (
                   <span className="ml-3">
-                    {t.updatePublishedAt}: {updateInfo.date}
+                    {t.updatePublishedAt}: {updateInfo.date.slice(0, 10)}
                   </span>
                 )}
               </div>

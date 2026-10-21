@@ -331,7 +331,7 @@ NODE_ENV=test       node -e "console.log(typeof require('react').act)"  # functi
 | `SplitLinesDialog.test.tsx` | 按行拆分对话框(设计 021): 行数/无表头/输出目录选项、校验拦截、上次记录回填与展示、打开路径、目录失效 | 9 |
 | `excelMergeHistory.test.ts` | Excel 合并结果 localStorage(设计 025): 往返、坏 JSON / 缺选项字段 / 类型不符 / 未知枚举值 / 摘要结构错误、超长跳过、清除 | 9 |
 | `MergeExcelDialog.test.tsx` | Excel 合并对话框(设计 025): 默认 payload(union/first/无 sheetIndex)、三模式互斥与按需渲染、名称留空拦截、扫描预览且不预取列名、按需展开、严格报错透传、并集加宽提示、xlsx 单 sheet 提示、打开路径、输出失效 | 12 |
-| `UpdateDialog.test.tsx` | 更新对话框: 进度条落在标题栏(不在可滚动正文里)、字节数展示、未安装时无进度、安装中 Esc 与遮罩点击均不关闭 | 6 |
+| `UpdateDialog.test.tsx` | 更新对话框: 发布时间只显示 `YYYY-MM-DD`、进度条落在标题栏(不在可滚动正文里)、字节数展示、未安装时无进度、安装中 Esc 与遮罩点击均不关闭 | 7 |
 | `ExecuteMenu.test.tsx` | 「执行」标签页菜单(设计 028 §5.6 / §9.2 T9+T10): 两种状态下按钮 DOM 结构一致(不加图标,只有 `data-busy`)、当前标签页置顶 + 其后紧跟小横线、切换当前标签页后重排、运行中的行只有「取消」+ 分支进度且点行仅切换、排队中的行同理、空闲行点整行 = `onRunTab`、`待确认` 行不给执行入口;另含**检查更新期间「帮助」按钮的进行中反馈**(设计 022 §5.4:`data-checking` + `.update-busy`、**检查中仍可点击且不置灰**、菜单三行入口仍在(查看示例 + 帮助中心 + 检查更新)、空闲时不带该标记、且不占用执行按钮的 `data-busy`),以及**工具栏「设置」入口**(图标化 + `aria-label`、位于右侧按钮组末尾即 AI 右侧、点击调 `onShowSettings`、**对话框打开期间高亮 + 与三个面板开关完全相同的小横线**、关闭时不渲染横线、`aria-expanded`) | 19 |
 | `ExecutionConcurrency.test.tsx` | 并发上限(设计 028 §7.1,上限 4): 第 5 个标签页进入 `queued` 而不是起第 5 条进程链、`runPipeline` 只被调 4 次;`queued` 也算「占用中」;取消排队中的 run 直接从队列摘除、不起后端进程(mock `runPipeline` 永不 settle) | 2 |
 | `LogPanel.test.tsx` | 日志按标签页(设计 028 §5.4): 每行带标签页徽标、默认全部可见、「仅当前标签页」只留该标签页的行(无标签的 app 级日志一并隐藏)、切回「全部」恢复、未选标签页时不过滤 | 2 |
