@@ -53,7 +53,7 @@ export function MultiValueInput({
       {normalizedValues.map((v, i) => (
         <span
           key={`${v}-${i}`}
-          className="inline-flex items-center gap-1 text-xs bg-accent/60 border border-border rounded px-1.5 py-0.5"
+          className="inline-flex items-center gap-1 max-w-full min-w-0 text-xs bg-accent/60 border border-border rounded px-1.5 py-0.5 break-all"
         >
           {v}
           <button

@@ -40,12 +40,7 @@ import {
   CanvasContextMenu,
   type CanvasMenuItem,
 } from "@/components/menu/CanvasContextMenu";
-import type {
-  NumberTransformKind,
-  PadKind,
-  SliceKind,
-  TextTransformKind,
-} from "@/types/dialog";
+import type { QuickActionRequest } from "@/types/dialog";
 import {
   Copy,
   Trash2,
@@ -84,26 +79,9 @@ interface FlowPanelProps {
   onStepClick: (step: PipelineStep) => void;
   onStepAliasUpdate: (stepId: string, alias: string) => void;
   onStepRemove: (stepId: string | string[], extraEdgeIds?: string[]) => void;
-  // Canvas context-menu entries. They report only *what* was clicked — the
-  // column and, where relevant, the transform kind. Positioning is gone with
-  // the floating dialogs since every entry now opens the shared centered command dialog.
-  onOpenFilterDialog: (col: number) => void;
-  onOpenBatchFilter: () => void;
-  onOpenPivotDialog: () => void;
-  onOpenDateTransformDialog: (col: number) => void;
-  onOpenSliceDialog: (col: number, sliceType: SliceKind) => void;
-  onOpenReplaceDialog: (col: number) => void;
-  onOpenWindowDialog: (col: number) => void;
-  onOpenPadDialog: (col: number, padType: PadKind) => void;
-  onOpenSortDialog: (col: number) => void;
-  onOpenTextTransformDialog: (
-    col: number,
-    transformType: TextTransformKind,
-  ) => void;
-  onOpenNumberTransformDialog: (
-    col: number,
-    transformType: NumberTransformKind,
-  ) => void;
+  // Canvas context-menu entries report *what* was clicked (column + transform
+  // kind + right-click coordinates); HomeView opens the anchored quick dialog.
+  onQuickAction: (request: QuickActionRequest) => void;
   onTableRename: (col: number, newName: string) => void;
   onSave: () => void;
   onTableDelete?: () => void;
@@ -141,17 +119,7 @@ export function FlowPanel({
   onStepClick,
   onStepAliasUpdate,
   onStepRemove,
-  onOpenFilterDialog,
-  onOpenBatchFilter,
-  onOpenPivotDialog,
-  onOpenDateTransformDialog,
-  onOpenSliceDialog,
-  onOpenReplaceDialog,
-  onOpenWindowDialog,
-  onOpenPadDialog,
-  onOpenSortDialog,
-  onOpenTextTransformDialog,
-  onOpenNumberTransformDialog,
+  onQuickAction,
   onTableRename,
   onSave,
   onTableDelete,
@@ -844,18 +812,9 @@ export function FlowPanel({
             row: null,
             col: tableContextMenu.col,
           }}
+          headers={headers}
           onClose={closeTableContextMenu}
-          onOpenFilterDialog={onOpenFilterDialog}
-          onOpenBatchFilter={() => onOpenBatchFilter()}
-          onOpenPivotDialog={onOpenPivotDialog}
-          onOpenDateTransformDialog={onOpenDateTransformDialog}
-          onOpenTextTransformDialog={onOpenTextTransformDialog}
-          onOpenSliceDialog={onOpenSliceDialog}
-          onOpenReplaceDialog={onOpenReplaceDialog}
-          onOpenWindowDialog={onOpenWindowDialog}
-          onOpenPadDialog={onOpenPadDialog}
-          onOpenNumberTransformDialog={onOpenNumberTransformDialog}
-          onOpenSortDialog={onOpenSortDialog}
+          onSelect={onQuickAction}
         />
       )}
 

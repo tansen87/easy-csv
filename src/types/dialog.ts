@@ -166,15 +166,11 @@ export const COMMAND_LABELS: Record<CommandDialogType, string> = {
   duckdb: "DuckDB SQL",
 };
 
-// --- canvas entry context ---------------------------------------------------
+// --- canvas entry kinds -----------------------------------------------------
 //
-// The canvas context menu already knows *which* transform the user picked; it
-// used to hand that to one of 11 bespoke floating dialogs, each of which
-// rebuilt the command parameters by hand. Those
-// dialogs are gone: the menu now passes this context to the single
-// `CommandDialog` entry, and `buildCommandInitialParams` turns it into
-// prefilled parameters. Keeping the kinds here means the menu and the pure
-// function can never drift apart.
+// The table context menu knows *which* transform sub-entry the user picked.
+// `QuickActionRequest` (modules/dialogs/quick/types.ts) carries these kinds to
+// the guided dialog, whose pure builder turns them into xan parameters.
 
 export type TextTransformKind =
   | "len"
@@ -199,28 +195,31 @@ export type SliceKind = "left" | "right" | "slice" | "split";
 
 export type PadKind = "pad" | "lpad";
 
-/**
- * Several menu entries (date transform, replace, split, pad, text/number
- * transforms) all resolve to the `map` command, so the context needs a
- * discriminator to say which expression scaffold to prefill.
- */
-export type MapScaffold =
-  /** `col("x") as "x"` — a no-op starting point. */
-  | "identity"
-  /** `strftime(datetime(...))` with the legacy default formats. */
+export type QuickActionKind =
+  | "filter"
+  | "sort"
+  | "replace"
+  | "pivot"
   | "date"
-  /** `replace(col("x"), "", "")`. */
-  | "replace";
+  | "text-transform"
+  | "number-transform"
+  | "slice"
+  | "pad"
+  | "window"
+  | "batch-filter";
 
-/** Everything a context-menu / table-column trigger knows about its target. */
-export interface CommandEntryContext {
-  /** Index of the column the user right-clicked. */
+/** Everything the table context menu knows when a quick action is opened. */
+export interface QuickActionRequest {
+  kind: QuickActionKind;
+  /** Right-click coordinates, used to anchor the floating dialog. */
+  x: number;
+  y: number;
+  /** Index of the right-clicked column (absent for pivot / batch filter). */
   col?: number;
-  /** Headers of the table the user right-clicked, used to resolve `col`. */
-  headers?: string[];
+  headers: string[];
+  /** Sub-kind preselected by the menu sub-item. */
   textTransform?: TextTransformKind;
   numberTransform?: NumberTransformKind;
   slice?: SliceKind;
   pad?: PadKind;
-  mapScaffold?: MapScaffold;
 }

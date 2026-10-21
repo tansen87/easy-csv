@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/ScrollArea";
 import { X, FolderOpen, FileUp, Star, Clock, File, Square, Play } from "lucide-react";
 import {
@@ -15,13 +15,15 @@ import {
 } from "@/types/xan";
 import { xanCommands } from "@/data/commands";
 import { useLanguage } from "@/i18n";
-import { ContextMenu } from "@/components/menu/ContextMenu";
 import {
   CommandDialog,
   CommandDialogState,
 } from "@/modules/dialogs/command/CommandDialog";
-import { buildCommandInitialParams } from "@/modules/dialogs/command/lib/initialParams";
-import type { CommandDialogType, CommandEntryContext } from "@/types/dialog";
+import { QuickActionDialog } from "@/modules/dialogs/quick/QuickActionDialog";
+import type {
+  QuickActionRequest,
+  QuickBuildResult,
+} from "@/modules/dialogs/quick/types";
 import { FlowPanel } from "@/modules/pipeline/FlowPanel";
 import { FirstStepGuide } from "@/components/onboarding/FirstStepGuide";
 import { VersionControlPanel } from "@/modules/pipeline/panels/VersionControlPanel";
@@ -206,12 +208,7 @@ export const HomeView = React.memo(function HomeView({
 }: HomeViewProps) {
   const { t } = useLanguage();
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    row: number | null;
-    col: number;
-  } | null>(null);
+  const [quickAction, setQuickAction] = useState<QuickActionRequest | null>(null);
 
   const [commandDialog, setCommandDialog] = useState<CommandDialogState | null>(
     null,
@@ -233,28 +230,30 @@ export const HomeView = React.memo(function HomeView({
   const edges = currentTab?.edges || [];
   const inputPosition = currentTab?.inputPosition;
 
-  const closeContextMenu = useCallback(() => {
-    setContextMenu(null);
+  /**
+   * Right-click quick actions: FlowPanel reports the clicked column, transform
+   * kind and pointer position; the guided dialog anchors itself there.
+   */
+  const handleQuickAction = useCallback((request: QuickActionRequest) => {
+    setQuickAction(request);
   }, []);
 
-  /**
-   * Single entry point for every canvas context-menu action.
-   *
-   * The menu reports *what* the user clicked — column index plus the transform
-   * kind — and `buildCommandInitialParams` (pure, unit-tested) turns that into
-   * prefilled parameters for the unified `CommandDialog`. Previously each action
-   * opened its own floating dialog with a second copy of the parameter-building
-   * logic.
-   */
-  const openCommandFromContext = useCallback(
-    (type: CommandDialogType, context: CommandEntryContext) => {
-      setCommandDialog({
-        type,
-        params: buildCommandInitialParams(type, { ...context, headers }),
-      });
+  const handleQuickApply = useCallback(
+    (result: QuickBuildResult) => {
+      const command = xanCommands.find((cmd) => cmd.id === result.type);
+      if (command) {
+        onAddCommand(command, result.params, result.alias);
+      }
+      setQuickAction(null);
     },
-    [headers],
+    [onAddCommand],
   );
+
+  /** Hand the guided draft over to the full parameter form. */
+  const handleQuickAdvanced = useCallback((result: QuickBuildResult) => {
+    setQuickAction(null);
+    setCommandDialog({ type: result.type, params: result.params });
+  }, []);
 
   const handleTableRename = useCallback((col: number, newName: string) => {
     setRenamedColumns((prev) => ({ ...prev, [col]: newName }));
@@ -282,24 +281,6 @@ export const HomeView = React.memo(function HomeView({
       onTableDelete();
     }
   }, [onTableDelete]);
-
-  const closeAllDialogsRef = useRef(() => {
-    closeContextMenu();
-  });
-
-  useEffect(() => {
-    closeAllDialogsRef.current = () => {
-      closeContextMenu();
-    };
-  }, [closeContextMenu]);
-
-  useEffect(() => {
-    const handleClickOutside = () => {
-      closeAllDialogsRef.current();
-    };
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
 
   if (!inputFile && pipeline.length === 0) {
     return (
@@ -539,36 +520,7 @@ export const HomeView = React.memo(function HomeView({
           }}
           onStepAliasUpdate={onStepAliasUpdate || (() => {})}
           onStepRemove={onStepDelete || (() => {})}
-          onOpenFilterDialog={(col) =>
-            openCommandFromContext("search", { col })
-          }
-          onOpenBatchFilter={() => openCommandFromContext("batch-filter", {})}
-          onOpenPivotDialog={() => openCommandFromContext("pivot", {})}
-          onOpenDateTransformDialog={(col) =>
-            openCommandFromContext("map", { col, mapScaffold: "date" })
-          }
-          onOpenSliceDialog={(col, sliceType) =>
-            openCommandFromContext("map", { col, slice: sliceType })
-          }
-          onOpenReplaceDialog={(col) =>
-            openCommandFromContext("map", { col, mapScaffold: "replace" })
-          }
-          onOpenWindowDialog={(col) =>
-            openCommandFromContext("window", { col })
-          }
-          onOpenPadDialog={(col, padType) =>
-            openCommandFromContext("map", { col, pad: padType })
-          }
-          onOpenSortDialog={(col) => openCommandFromContext("sort", { col })}
-          onOpenTextTransformDialog={(col, transformType) =>
-            openCommandFromContext("map", { col, textTransform: transformType })
-          }
-          onOpenNumberTransformDialog={(col, transformType) =>
-            openCommandFromContext("map", {
-              col,
-              numberTransform: transformType,
-            })
-          }
+          onQuickAction={handleQuickAction}
           onTableRename={handleTableRename}
           onSave={handleSaveRenames}
           onTableDelete={handleTableDelete}
@@ -848,40 +800,12 @@ export const HomeView = React.memo(function HomeView({
         </div>
       )}
 
-      {contextMenu && (
-        <ContextMenu
-          contextMenu={contextMenu}
-          onClose={closeContextMenu}
-          onOpenFilterDialog={(col) =>
-            openCommandFromContext("search", { col })
-          }
-          onOpenBatchFilter={() => openCommandFromContext("batch-filter", {})}
-          onOpenPivotDialog={() => openCommandFromContext("pivot", {})}
-          onOpenDateTransformDialog={(col) =>
-            openCommandFromContext("map", { col, mapScaffold: "date" })
-          }
-          onOpenTextTransformDialog={(col, transformType) =>
-            openCommandFromContext("map", { col, textTransform: transformType })
-          }
-          onOpenNumberTransformDialog={(col, transformType) =>
-            openCommandFromContext("map", {
-              col,
-              numberTransform: transformType,
-            })
-          }
-          onOpenSliceDialog={(col, sliceType) =>
-            openCommandFromContext("map", { col, slice: sliceType })
-          }
-          onOpenReplaceDialog={(col) =>
-            openCommandFromContext("map", { col, mapScaffold: "replace" })
-          }
-          onOpenWindowDialog={(col) =>
-            openCommandFromContext("window", { col })
-          }
-          onOpenPadDialog={(col, padType) =>
-            openCommandFromContext("map", { col, pad: padType })
-          }
-          onOpenSortDialog={(col) => openCommandFromContext("sort", { col })}
+      {quickAction && (
+        <QuickActionDialog
+          request={quickAction}
+          onApply={handleQuickApply}
+          onAdvanced={handleQuickAdvanced}
+          onClose={() => setQuickAction(null)}
         />
       )}
 

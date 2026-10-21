@@ -32,8 +32,8 @@ import {
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import type {
   NumberTransformKind,
-  PadKind,
-  SliceKind,
+  QuickActionKind,
+  QuickActionRequest,
   TextTransformKind,
 } from "@/types/dialog";
 import { useLanguage } from "@/i18n";
@@ -47,39 +47,17 @@ interface ContextMenuState {
 
 interface ContextMenuProps {
   contextMenu: ContextMenuState;
+  headers: string[];
   onClose: () => void;
-  // Entries report what was clicked; the floating dialogs they used to open -
-  // and therefore their x/y - are gone.
-  onOpenFilterDialog: (col: number) => void;
-  onOpenBatchFilter: () => void;
-  onOpenPivotDialog: () => void;
-  onOpenDateTransformDialog: (col: number) => void;
-  onOpenTextTransformDialog: (col: number, transformType: TextTransformKind) => void;
-  onOpenSliceDialog: (col: number, sliceType: SliceKind) => void;
-  onOpenReplaceDialog: (col: number) => void;
-  onOpenWindowDialog: (col: number) => void;
-  onOpenPadDialog: (col: number, padType: PadKind) => void;
-  onOpenNumberTransformDialog: (
-    col: number,
-    transformType: NumberTransformKind,
-  ) => void;
-  onOpenSortDialog: (col: number) => void;
+  /** Entries report what was clicked; the floating dialog anchors itself. */
+  onSelect: (request: QuickActionRequest) => void;
 }
 
 export function ContextMenu({
   contextMenu,
+  headers,
   onClose,
-  onOpenFilterDialog,
-  onOpenBatchFilter,
-  onOpenPivotDialog,
-  onOpenDateTransformDialog,
-  onOpenTextTransformDialog,
-  onOpenSliceDialog,
-  onOpenReplaceDialog,
-  onOpenWindowDialog,
-  onOpenPadDialog,
-  onOpenNumberTransformDialog,
-  onOpenSortDialog,
+  onSelect,
 }: ContextMenuProps) {
   const { t } = useLanguage();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -87,6 +65,21 @@ export function ContextMenu({
     x: contextMenu.x,
     y: contextMenu.y,
   });
+
+  const emit = (
+    kind: QuickActionKind,
+    extra: Partial<QuickActionRequest> = {},
+  ) => {
+    onClose();
+    onSelect({
+      kind,
+      x: contextMenu.x,
+      y: contextMenu.y,
+      col: contextMenu.col,
+      headers,
+      ...extra,
+    });
+  };
 
   useEffect(() => {
     const updatePosition = () => {
@@ -226,8 +219,7 @@ export function ContextMenu({
         className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
         onClick={(e) => {
           e.stopPropagation();
-          onClose();
-          onOpenFilterDialog(contextMenu.col);
+          emit("filter");
         }}
       >
         <Filter className="h-4 w-4 text-muted-foreground" />
@@ -238,8 +230,7 @@ export function ContextMenu({
         className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
         onClick={(e) => {
           e.stopPropagation();
-          onClose();
-          onOpenBatchFilter();
+          emit("batch-filter");
         }}
       >
         <FunnelPlus className="h-4 w-4 text-muted-foreground" />
@@ -250,8 +241,7 @@ export function ContextMenu({
         className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
         onClick={(e) => {
           e.stopPropagation();
-          onClose();
-          onOpenReplaceDialog(contextMenu.col);
+          emit("replace");
         }}
       >
         <Replace className="h-4 w-4 text-muted-foreground" />
@@ -262,8 +252,7 @@ export function ContextMenu({
         className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
         onClick={(e) => {
           e.stopPropagation();
-          onClose();
-          onOpenPivotDialog();
+          emit("pivot");
         }}
       >
         <Grid3X3 className="h-4 w-4 text-muted-foreground" />
@@ -274,8 +263,7 @@ export function ContextMenu({
         className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
         onClick={(e) => {
           e.stopPropagation();
-          onClose();
-          onOpenDateTransformDialog(contextMenu.col);
+          emit("date");
         }}
       >
         <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -286,8 +274,7 @@ export function ContextMenu({
         className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
         onClick={(e) => {
           e.stopPropagation();
-          onClose();
-          onOpenWindowDialog(contextMenu.col);
+          emit("window");
         }}
       >
         <LayoutGrid className="h-4 w-4 text-muted-foreground" />
@@ -329,28 +316,23 @@ export function ContextMenu({
                     className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onClose();
-                      // Map the menu entry onto its canvas action. Previously
-                      // this sniffed `transformType.startsWith("split")` and
-                      // stripped the prefix, which turned the plain `split`
-                      // entry into an empty string; the mapping is explicit
-                      // now, and the remaining entries are text transforms.
+                      // Explicit mapping: the plain `split` entry used to be
+                      // mangled by a `startsWith("split")` sniff.
                       const value = option.transformType;
                       if (value === "splitLeft") {
-                        onOpenSliceDialog(contextMenu.col, "left");
+                        emit("slice", { slice: "left" });
                       } else if (value === "splitRight") {
-                        onOpenSliceDialog(contextMenu.col, "right");
+                        emit("slice", { slice: "right" });
                       } else if (value === "slice") {
-                        onOpenSliceDialog(contextMenu.col, "slice");
+                        emit("slice", { slice: "slice" });
                       } else if (value === "split") {
-                        onOpenSliceDialog(contextMenu.col, "split");
+                        emit("slice", { slice: "split" });
                       } else if (value === "pad") {
-                        onOpenPadDialog(contextMenu.col, "pad");
+                        emit("pad", { pad: "pad" });
                       } else {
-                        onOpenTextTransformDialog(
-                          contextMenu.col,
-                          value as TextTransformKind,
-                        );
+                        emit("text-transform", {
+                          textTransform: value as TextTransformKind,
+                        });
                       }
                     }}
                   >
@@ -398,11 +380,9 @@ export function ContextMenu({
                   className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onClose();
-                    onOpenNumberTransformDialog(
-                      contextMenu.col,
-                      option.transformType as NumberTransformKind,
-                    );
+                    emit("number-transform", {
+                      numberTransform: option.transformType as NumberTransformKind,
+                    });
                   }}
                 >
                   <Icon className="h-4 w-4 text-muted-foreground" />
@@ -418,8 +398,7 @@ export function ContextMenu({
         className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
         onClick={(e) => {
           e.stopPropagation();
-          onClose();
-          onOpenSortDialog(contextMenu.col);
+          emit("sort");
         }}
       >
         <ArrowUpDown className="h-4 w-4 text-muted-foreground" />

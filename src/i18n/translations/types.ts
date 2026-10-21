@@ -856,6 +856,9 @@ export interface Translations {
   replaceReplacement: string;
   replaceRegex: string;
   replaceIgnoreCase: string;
+  replaceAlias: string;
+  quickAdvanced: string;
+  quickAdvancedHint: string;
 
   // SortDialog
   sortAction: string;

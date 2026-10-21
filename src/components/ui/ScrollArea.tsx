@@ -22,6 +22,15 @@ const ScrollArea = React.forwardRef<
      * rows at the box width so only the over-wide child overflows.
      */
     blockContent?: boolean;
+    /**
+     * Extra classes for the internal viewport. The viewport's default `h-full`
+     * needs a definite parent height, so auto-height containers that only set a
+     * `max-height` must instead cap the viewport itself (e.g.
+     * `max-h-[...] overflow-y-auto`) — see design 031 §5.
+     */
+    viewportClassName?: string;
+    /** Inline style for the internal viewport (used for computed max-heights). */
+    viewportStyle?: React.CSSProperties;
   }
 >(
   (
@@ -30,6 +39,8 @@ const ScrollArea = React.forwardRef<
       children,
       hideHorizontalScrollbar = false,
       blockContent = false,
+      viewportClassName,
+      viewportStyle,
       ...props
     },
     ref,
@@ -43,7 +54,9 @@ const ScrollArea = React.forwardRef<
         className={cn(
           "h-full w-full rounded-[inherit]",
           blockContent && "[&>div]:block!",
+          viewportClassName,
         )}
+        style={viewportStyle}
       >
         {children}
       </ScrollAreaPrimitive.Viewport>

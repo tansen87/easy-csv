@@ -68,7 +68,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `docs/design/016_separate-good-bad-rows.md` | 拆分好/坏行(已实现): 共享 `flexible(true)` reader/writer 重序列化、坏行向前归并、streaming 常量内存大文件方案 |
 | `docs/design/017_separate-dialog-ux.md` | 拆分对话框体验优化(已实现): `probe_csv_file` 首次行列数/表头预览、分隔符检测算法(表头权重 60 > 正文 30)、上次结果 localStorage、`reveal_paths` |
 | `docs/design/018_open-file-delimiter-detection.md` | 打开文件的分隔符自动检测 + 自动检测总开关(已实现): `read_csv_file` 支持自动检测并回传 `delimiter_source`、标签页记录解析值、输入节点分隔符徽标、执行侧改用标签页解析值("所见即所跑");设置页与输入节点徽标**共用同一个 `DelimiterModeSelect`**(自动检测 / 5 个分隔符),双向同步 + 即时落库(`auto_detect_delimiter` 配置项) |
-| `docs/design/019_frontend-structure-refactor.md` | 前端目录结构与巨型文件重构方案(**阶段 0/1 已实施 + 2.1–2.4/2.7 与 3.1–3.4/3.8 已实施;2.2/2.3 为部分实施,2.5/2.6 与 3.5–3.7 未实施**): 已完成——类型下沉到 `types/dialog.ts` 解除循环依赖、`VariableHint` 移入 `ui/`、11 个旧浮动对话框收敛为 `openCommandFromContext()` → `buildCommandInitialParams()`(纯函数,配单测) → `CommandDialog` 并删除、`components/dialog/**` 四分为 `modules/dialogs/{command,file,app,common}`、命令表单一命令一文件(`forms/<命令id>.tsx`)、`data/commands.ts` 拆为 `data/commands/` 目录、`i18n/translations.ts` 拆为 `{en,zh}/<domain>.ts`、`components/panel/**` 迁往 `modules/{pipeline,data-preview,ai,variables,logs}`、`ui/` 统一 PascalCase、`hooks/` 统一 `useXxx`、ESLint 安全网(`import/no-cycle` + `import/parsers`)。未完成——`FlowPanel` JSX 再拆(≤600 目标未达)、`AppLayout`/`useDialogStack` 全量接入(`App.tsx` 已迁 `src/app/`)、`ChartPanel` 拆分、HomeView Props 收敛、`SettingsTabContent`/`ai/context.ts` 等中型拆分、`setting/` 三个文件迁往 `app/providers` 与 `ui/`、`max-lines`/CI 门禁、`scripts/check-index.ts` |
+| `docs/design/019_frontend-structure-refactor.md` | 前端目录结构与巨型文件重构方案(**阶段 0/1 已实施 + 2.1–2.4/2.7 与 3.1–3.4/3.8 已实施;2.2/2.3 为部分实施,2.5/2.6 与 3.5–3.7 未实施**): 已完成——类型下沉到 `types/dialog.ts` 解除循环依赖、`VariableHint` 移入 `ui/`、11 个旧浮动对话框收敛为 `openCommandFromContext()` → `buildCommandInitialParams()`(纯函数,配单测) → `CommandDialog` 并删除(**该右键浮窗已由设计 031 于 2026-10-21 恢复为引导式浮窗;统一层保留为「高级参数」入口**)、`components/dialog/**` 四分为 `modules/dialogs/{command,file,app,common}`、命令表单一命令一文件(`forms/<命令id>.tsx`)、`data/commands.ts` 拆为 `data/commands/` 目录、`i18n/translations.ts` 拆为 `{en,zh}/<domain>.ts`、`components/panel/**` 迁往 `modules/{pipeline,data-preview,ai,variables,logs}`、`ui/` 统一 PascalCase、`hooks/` 统一 `useXxx`、ESLint 安全网(`import/no-cycle` + `import/parsers`)。未完成——`FlowPanel` JSX 再拆(≤600 目标未达)、`AppLayout`/`useDialogStack` 全量接入(`App.tsx` 已迁 `src/app/`)、`ChartPanel` 拆分、HomeView Props 收敛、`SettingsTabContent`/`ai/context.ts` 等中型拆分、`setting/` 三个文件迁往 `app/providers` 与 `ui/`、`max-lines`/CI 门禁、`scripts/check-index.ts` |
 
 | `docs/design/020_encoding-conversion-history.md` | CSV 编码转换保留上次记录(已实现): 复用 017 的「上次结果」模式——`easy-csv-encoding-last` 持久化(输出路径/字节数/完成时间/耗时)、打开时回填输入输出路径与源/目标编码、「打开路径」(`reveal_paths`)与「清除记录」、输出文件被删则置灰提示;后端 `CsvEncodingResult` 增加 `elapsed_ms`;`formatElapsed` 由 `utils/separateHistory.ts` 上提到 `utils/format.ts` |
 | `docs/design/021_split-lines-by-line-count.md` | 按行拆分(已实现): 移植上游 `split_lines`(来源文件已删除,节选见该设计文档 §2)—— 不解析 CSV 的**原始行**切分(`read_until(b'\n')` 字节保真、常量内存、可处理超大文件),`no_headers` 选项(首行按数据行),输出 `{stem}_part{N}{ext}`(N 从 1、保留扩展名);File 菜单「拆分好/坏行」下方新入口 + `easy-csv-split-lines-last` 上次记录(存输出目录而非全部分片路径) |
@@ -89,7 +89,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | `docs/design/030_settings-navigation.md` | 设置导航改版:目录 + 搜索 + 每设置一行(**设计稿 v2,已实现 2026-10-11;文末 §11 实施记录**): 诊断「设置弹窗 = 三段控件(通用/AI/插件)+ 单列滚动 + 底部两按钮」的六个问题 —— ① `通用` 一列 10 段首尾相连,**无目录、无分组、无页内定位**(`SettingsTabContent.tsx:168-441` 是单列 `space-y-6`;三段控件只切「大 tab」);② 段落顺序是历史堆积,不是语义分组(分隔符 / 并发上限 / 主题 / 系统托盘 / 检查更新 / 新手引导同处一列);③ **横向浪费放大纵向问题**(弹窗 `max-w-4xl` 896px,但每段只占 `w-1/3` 或 `w-[300px]`);④ 无锚点可引用(帮助中心只能写「往下滚」);⑤ **没有搜索**(想找「托盘」只能滚 + 眼扫);⑥ **一处真实归类错误** —— `SettingsTabContent.tsx:715-723` 的「清除执行历史」(`clear_execution_history`)被塞进 AI tab 的「清除AI学习数据」组。**方案**:左栏 = 搜索框(吸顶)+ **分组目录(8 条,当前分组高亮)**,右栏 = 吸顶分组标题 + **每个设置一行**(150px 标题 · 描述(可截断) · 控件右对齐,行高 34~36px);形态对齐 macOS「系统设置」(搜索在侧栏顶 / 侧栏是分类 / 内容每项一行)。**搜索**:匹配 `title` + `desc` + **人工 `keywords` 别名表**(如 主题 → dark / theme / 暗色);空格分词按 AND;中文按子串;**跨分组过滤但保留分组标题**(不打散、不按相关度重排 —— 设置项不该跳来跳去);命中子串用 `<mark>` 高亮;**界面上不出现任何计数**(分组条数与搜索结果数都不显示 —— 列表本身就是计数),结果条数只走一个 sr-only 的 `aria-live` 播报给读屏;清空用输入框内的 **✕**(刻意不用「清除」二字 —— 同屏已有 4 个「清除(数据)」按钮);侧栏把不匹配分组**降灰**(不隐藏不重排,保住方位感),点灰分组 = 先清空搜索再跳过去;搜索期间关闭滚动联动。**目录只到分组级、不镜像 18 个条目**的理由:条目级查找已由搜索承担,镜像会把行高压到 18~20px、768px 高窗口必然滚动,并与右侧列表形成「同一份名单出现两次」的冗余。**滚动联动**:取「视口顶部之上最近的分组标题」,基于「元素顶边相对滚动容器顶边」的位置比较(`getBoundingClientRect`)而**不用** `IntersectionObserver`(后者在「短分组 + 快速滚动」下会在两组间抖动);点击跳转把焦点移给组标题(`tabIndex={-1}`)并锁定约 350ms,免得高亮闪一串。**两条契约(均有双向比对的契约测试)**:行 id 唯一且被锚点 / 搜索 / 测试共用;分组在左栏与右栏各出现一次、由同一份数据渲染。**密度收益**:现状每项约 76px(标题 + 描述 + 控件三行)→ 34~36px,18 项从 1578px 降到 902px(57%)—— 先有行密度,搜索才有意义。**三处呈现订正**:①「清除执行历史」移到「帮助与数据」;②「自定义服务商设置」改常显行(不满足条件时禁用 + 说明,不再凭空出现/消失);③ AI 的四按钮簇拆成 4 个独立行(于是每一行都能被搜到)。**红线**:不改任何设置项的取值域 / 默认值 / 落库时机(只有上面三处**呈现**变更);不引入路由或深链;插件组的列表 UI(`PluginManager` / `PluginRow` 及其测试)已删除(§11.13);不改弹窗 `max-w-4xl` / `h-[72vh]`;不给行加图标。**开放问题**:侧栏去留(去掉后每行描述可用宽度从约 380px 增到约 540px,形态变 VS Code 式「搜索 + 一条列表」)、分组粒度(7 组 vs 6 组 vs 8 组)、`/` 作为搜索快捷键、「恢复默认」与「保存设置」的语义不一致(分隔符 / 语言 / 主题按下即落库,其余 6 项要按保存 —— 建议单开一稿)。**实施(2026-10-11)**: P0 九项全部落地 —— 新增 `settingsSections.ts`(6 组 / 18 行 / `keywords` 别名表)、`SettingsRow.tsx`、`SettingsSearch.tsx`、`SettingsNav.tsx`、`utils/settingsSearch.ts`、`hooks/useScrollSpy.ts`;`SettingsTabContent.tsx` 811 → 644 行(只负责「每种控件怎么渲染」);新增 45 个用例(前端 46 文件 / 632 例全绿,`tsc` 与 `eslint` 均 0 error)。与文档不一致处见 §11.2:① **实际是 8 组不是 7 组**(文档写错,已订正);② 搜索**额外匹配分组名**(否则无行的插件组搜不到);③ 滚动联动改用 `getBoundingClientRect`(`offsetTop` 的参照系是 `offsetParent`,在 Radix 里不稳);④ 行布局需要「一行一描述」,新增 7 条描述文案;⑤ 插件目录改为**一插件一行**(`components/setting/PluginSection.tsx` + `PluginEntryRow.tsx`),旧的列表 UI(`PluginManager` / `PluginRow` 及其测试)已删除,逻辑在 `usePluginCatalog` + `services/plugins` 里保留;⑥ 插件行不做整行点击委托(带 2~4 个动作,误点会触发下载);⑦ 分组标题加大加深(`15px / 600`);⑧ **分组容器改用圆角卡片(方案 B,02 号原型拍板)**:组名退到卡片外成 `12px` 灰色小标、不再吸顶,每组分一张 `rounded-xl border` 卡片,行装在卡片里;当前分组仍由左栏高亮 + scroll-spy 指示。⑨ **「并发上限」并入「数据读取」、数据读取再与「帮助与数据」合并为「数据与帮助」并排到第 2 位(界面第 1)** —— 分组 8 → 6,行数不变(18),`settingsGroupConcurrency` / `settingsGroupData` / `settingsGroupHelpData` 键删除,新增 `settingsGroupDataHelp`。**后续反馈(同日)**:去掉两侧全部计数(§11 里 11.6 起逐条记录)、底部动作改为浮在底部中间不再占独立区域、删掉左栏底部快捷键提示、分组「运行管道」更名「并发上限」、「清除执行历史」的归类订正落地;**插件组不再嵌入 `PluginManager` 面板** —— 该组无行,改为标题行携带摘要(计数 + 打开目录 + 获取最新版本,见 `components/setting/PluginSection.tsx`),目录与计数逻辑保留、只是不再有列表入口。 原型(独立 HTML,不随文档分发): `docs/design/prototypes/030/01-settings-directory.html`(改造前 / 改造后 · 浏览态 / 改造后 · 搜索态 三张 + 9 处编号标注 + 三条交互说明)、`docs/design/prototypes/030/02-group-cards.html`(分组容器改用卡片:现状 / 方案 A 卡片即分组 / 方案 B iOS 内嵌分组 + 对比表,待拍板) |
 
-> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–030 已登记。
+| `docs/design/031_quick-action-dialogs.md` | 右键快捷操作恢复引导式浮窗(**已实现 2026-10-21**): 覆盖筛选(文本/数值)、排序、替换、透视、日期、文本/数值变换、切片、补位、窗口、批量筛选共 11 类;新增 `src/modules/dialogs/quick/`(types / `buildQuickCommand` 纯函数 / `computeAnchoredPosition` / `QuickActionShell` 非模态浮窗 / 11 个表单)。右键在坐标处浮出,Apply 由 `buildQuickCommand` 生成命令+参数+别名;底部「高级参数」带当前值跳现有 `CommandDialog`。`initialParams.ts` 及其 28 例测试删除,断言迁入 `quickCommandParams.test.ts`。`CommandDialog`/`COMMAND_FORMS` 行为不变 |
+
+> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–031 已登记。
 
 ---
 
@@ -312,7 +314,9 @@ NODE_ENV=test       node -e "console.log(typeof require('react').act)"  # functi
 | `fileFormat.test.ts` | `detectTabularFormat` 扩展名识别(大小写、`.db` 别名、未知 → null)、`isCsvFile`、`duckdbTableName`(设计 024) | 6 |
 | `delimiterMode.test.ts` | 分隔符单一状态的换算(设计 018 §3.9): 设置 ⇄ 界面值、六种模式往返一致(锁住设置页与输入节点不漂移) | 6 |
 | `SettingsDelimiterControl.test.tsx` | 设置页分隔符控件(设计 018 §3.9): auto/锁定两种显示、6 个选项与顺序、选择回调、「恢复默认」复位为 auto | 6 |
-| `initialParams.test.ts` | 命令入口预填参数纯函数 `buildCommandInitialParams`(设计 019 §3.1): 各画布入口(筛选/排序/文本/数值/切割/补位/替换/日期)与旧对话框默认输出一致、无列时不猜 | 28 |
+| `quickCommandParams.test.ts` | 右键快速操作的参数构建(设计 031): 11 类草稿 → 命令/参数/别名;筛选文本与数值、正则转义、strip 控制字符、replace 正则字面量、split 多索引、pivot 的 agg/groupby/pivot 分派、window 表达式、无效输入返回 null | 17 |
+| `quickPosition.test.ts` | 浮窗锚点定位(设计 031): 原位、右溢出左翻、下溢出上翻、右下角双向翻转、负值夹取、自定义边距 | 6 |
+| `QuickActionDialog.test.tsx` | 快速操作浮窗(设计 031): 非模态无遮罩、右键坐标定位、Apply 回调、无列时禁用、高级参数交接、Esc/外点关闭、点内部不关闭、筛选浮窗高度与滚动容器、透视列/行列表使用 ScrollArea、筛选文本/数值切换 | 10 |
 | `csv.test.ts` | CSV 工具函数 |  |
 | `versionDiff.test.ts` | 版本差异计算 |  |
 | `chartReadability.test.ts` | 图表可读性纯函数(设计 029): `parseNumericCell` 区分「缺失」与真 0、千分位解析、`processChartDataWithIssues` 三类 issue(列不存在/无数据/无可用数值)、null 不归零、`defaultSortFor` 与三态排序、饼图重复类目聚合、`colorForIndex` 颜色稳定、`formatNumber` 各模式与 em dash | 20 |
@@ -338,7 +342,7 @@ NODE_ENV=test       node -e "console.log(typeof require('react').act)"  # functi
 | `PluginSection.test.tsx` | 插件组(设计 030 §4.1 / §11.11): 标题摘要(计数 `2/3`、打开插件目录调 `reveal_paths`、获取最新版本以 `refresh: true` 重取清单)+ 行: 每个目录条目一行并显示状态、点「下载」调 `install_plugin`、「更新」只在后端说 `update_available` 时出现、卸载入口只给 `source: "registry"` 的二进制、下载前缀行存在 | 7 |
 | `SettingsDialog.test.tsx` | 设置弹窗(设计 030): **两条契约测试**(每个定义的行都渲染 / 目录组数与内容标题一一对应)、按标题与 `keywords` 别名过滤且保留分组标题、空状态、`Esc` 先清空搜索再关闭、`/` 聚焦搜索、目录点击滚动并聚焦组标题、底部浮动的「恢复默认」(六个值)与「保存」、关闭时不渲染。mock 掉 `@/modules/plugins` | 13 |
 
-> 全量以 `pnpm test` 为准(当前 46 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
+> 全量以 `pnpm test` 为准(当前 48 个文件)。`check:index`(`pnpm check:index`)会校验本文件登记的路径真实存在。
 
 ---
 
@@ -353,7 +357,7 @@ NODE_ENV=test       node -e "console.log(typeof require('react').act)"  # functi
 |------|------|
 | `modules/pipeline/` | 管道画布域: `FlowPanel`、`nodes/`、`overlays/`、`hooks/`、`lib/`(布局/切割几何)、`panels/`(版本控制/血缘) |
 | `modules/data-preview/` | 数据查看域: `HomeView`(主工作区)、`DataProfilePanel`、`charts/ChartPanel` |
-| `modules/dialogs/` | 对话框域,四分: `command/`(统一命令入口 + 61 个表单)、`file/`、`app/`、`common/` |
+| `modules/dialogs/` | 对话框域,四分: `command/`(统一命令入口 + 61 个表单)、`quick/`(右键引导式浮窗 + 11 个表单,设计 031)、`file/`、`app/`、`common/` |
 | `modules/ai/` | AI 助手面板 |
 | `modules/variables/` | 变量管理面板 |
 | `modules/logs/` | 日志面板、命令列表、全局命令面板 |
@@ -473,7 +477,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 
 | 文件 | 职责 |
 |------|------|
-| `pipeline/FlowPanel.tsx` | **可视化管道编辑器主组件**,组合子组件,管理状态和事件处理;右键拖拽连线(贝塞尔实时预览)、切刀、节点拖拽 |
+| `pipeline/FlowPanel.tsx` | **可视化管道编辑器主组件**,组合子组件,管理状态和事件处理;右键拖拽连线(贝塞尔实时预览)、切刀、节点拖拽;**输入数据表格的右键菜单**(`tableContextMenu`)把 `QuickActionRequest` 交给 HomeView 打开快速浮窗(设计 031) |
 | `pipeline/nodes/TableNode.tsx` | 输入数据表格节点,支持表头重命名和右键菜单;四方向连接点;表头行的**分隔符徽标**(设计 018);非 CSV 输入(parquet/duckdb)改为只读格式徽标、不显示分隔符控件(设计 024) |
 | `pipeline/nodes/PipelineStepNode.tsx` | 管道步骤节点,支持别名编辑、参数展示、切割动画 |
 | `pipeline/nodes/ResultTableNode.tsx` | 结果表节点(F1) |
@@ -495,7 +499,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 
 | 文件 | 职责 |
 |------|------|
-| `data-preview/HomeView.tsx` | **主工作区**,管理命令对话框状态、标签页、右键菜单、表格列重命名 |
+| `data-preview/HomeView.tsx` | **主工作区**,管理命令对话框状态、标签页、快速操作浮窗(设计 031)、表格列重命名 |
 | `data-preview/DataProfilePanel.tsx` | 数据概况右侧栏,展示字段统计,支持固定搜索框 |
 | `data-preview/charts/ChartPanel.tsx` | 图表面板(recharts),折线/散点/柱状/直方图/饼图/词云/热力图,支持拖拽、最大化/还原、SVG 导出、dark mode。**029 起**:统一图例(单系列也显示)、排序三态、数值格式(轴向缩写/tooltip 完整值)、数据表视图(**表体用共享 `ScrollArea`**;`min-w-full` 以保留横向滚动)+ 复制 CSV;**图例为单行横向 `ScrollArea`**(分类多时不折行、不挤占图表区)+**分类多选筛选下拉**(`CategoryFilter`,含全选/取消全选,与图例共用 `hiddenSeries`)、截断与跳行提示、按原因区分的空/错状态;隐藏系列统一为过滤数据;导出走白底深色的「文档配色」;图表类型名走 i18n |
 | `ai/AIPanel.tsx` | **AI 助手面板**: 聊天 UI、命令生成、一键插入管道、👍/👎反馈、意图澄清对话框、对话历史加载 |
@@ -516,12 +520,24 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `command/CommandDialog.tsx` | **统一入口**: 居中外壳 + Esc/焦点圈闭,按 `commandDialog.type` 从 `COMMAND_FORMS` 取表单渲染 |
 | `command/CommandFormShell.tsx` | 可复用表单包装器(原 `CommandFormWrapper.tsx`): ScrollArea + Cancel/Add/Update 按钮 + `handleCommandSubmit` |
 | `command/index.ts` | `COMMAND_FORMS` 映射表(命令 id → 表单组件)+ 桶文件导出 |
-| `command/lib/initialParams.ts` | **`buildCommandInitialParams()` 纯函数**(019 §3.1): 把右键菜单上下文换算成预填参数,消除 11 个旧对话框的手工拼参(双实现);配 `__tests__/initialParams.test.ts` |
 | `command/lib/helpers.ts` | `handleCommandSubmit()` 提交处理 + `updateParam()` |
 | `command/lib/parameterDescriptions.ts` | `getParameterDescription()` 参数描述查询,支持中英文 |
 | `command/forms/<命令 id>.tsx` | **61 个命令表单,一个命令一个文件**(019 §3.4),文件名即命令 id;`_shared.tsx` 收纳 `SearchForm` 专用的 `Checkbox`/`TextField`/`PatternListInput` |
 
-> 019 §3.1 后,画布右键的筛选/排序/透视/日期/文本/数值/切割/补位/替换/窗口/批量筛选入口全部经 `HomeView.openCommandFromContext()` → `buildCommandInitialParams()` → `CommandDialog`,**每个命令只有一处参数构建实现**;原有的 11 个浮动小窗已删除。
+> 输入数据右键(筛选/排序/透视/日期/文本/数值/切片/补位/替换/窗口/批量筛选)经 `FlowPanel` 的 `tableContextMenu` → `ContextMenu.onSelect(QuickActionRequest)` → `HomeView` → `QuickActionDialog`(设计 031)打开引导式浮窗;底部「高级参数」把同一份 `buildQuickCommand()` 结果交给 `CommandDialog`,统一层仍是原始参数的唯一编辑入口。019 时代的 `command/lib/initialParams.ts` 已随 031 删除。
+
+#### `quick/` — 右键引导式浮窗(设计 031)
+
+| 文件 | 职责 |
+|------|------|
+| `quick/QuickActionDialog.tsx` | 按 `kind` 分发 11 个引导表单 |
+| `quick/QuickActionShell.tsx` | 非模态浮窗外壳:右键坐标定位、视口避让、标题栏拖动、Esc/外点关闭、「取消 / 高级参数 / 应用」 |
+| `quick/types.ts` | `QuickDraft` 判别联合、`QuickBuildResult`、`QuickAliasLabels`(`QuickActionRequest` 在 `src/types/dialog.ts`) |
+| `quick/lib/buildQuickCommand.ts` | **唯一**把引导字段换算成 xan 参数与别名的纯函数 |
+| `quick/lib/position.ts` | `computeAnchoredPosition()`:右/下溢出翻转 + 边距夹取 |
+| `quick/lib/labels.ts` | `useQuickAliasLabels()`:别名与运算符文案走 i18n |
+| `quick/lib/dateFormats.ts` · `quick/lib/windowFunctions.ts` | 旧日期格式表 / 窗口函数表与表达式生成 |
+| `quick/forms/*` | 筛选/排序/替换/透视/日期/文本/数值/切片/补位/窗口/批量筛选(批量筛选字段体与统一表单共用 `BatchFilterFields`) |
 
 #### `file/` · `app/` · `common/`
 
@@ -568,7 +584,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `expression/ExpressionEditor.tsx` | 主组件: textarea + 同步高亮层 + 自动补全下拉 |
 | `expression/highlight.ts` · `autocomplete.ts` | 语法高亮分词器 / 补全引擎 |
 | `menu/MainMenu.tsx` | 顶部工具栏: **文件菜单**、撤销/重做、**工具菜单**、执行、命令面板、帮助、**设置**。菜单栏顺序为 文件 / 编辑 / 查看 / 工具 / 帮助。**「工具」菜单承载一次性文件工具**(CSV 对比、CSV 编码转换、拆分好/坏行、按行拆分、合并 Excel 文件),它们只开对话框 + 调一个后端命令、不进画布也不参与管道生命周期,故与「文件」菜单的打开/新建标签/模板/保存/导入/导出分开。**帮助菜单第一行为「查看示例」**(调用 `onLoadDemo` → `App.tsx` 的 `handleLoadDemo`,与空状态「看看示例」同一个 action,design 027 §4.1),其后依次是「帮助中心」「检查更新」。运行中的「执行」按钮挂 `data-busy` + `.exec-busy`(设计 028 §5.6.1);**检查更新期间「帮助」按钮挂 `data-checking` + `.update-busy`**(设计 022 §5.4,复用同一条底部横条;标记刻意不复用 `data-busy`,见 `ExecuteMenu.test.tsx` 的定位方式)。**「帮助」按钮任何状态都可点击**(横条是纯叠加,不置灰、不 `disabled`、不 `cursor-not-allowed`),慢检查不得把「帮助中心」锁在门外。**「设置」入口在右侧按钮组末尾(AI 右侧)、只出图标 + tooltip**(`aria-label` 承载可访问名);**对话框打开期间用 `commandButtonClass(true)` 高亮 + 同款 12px 底部小横线**(与命令面板/日志/AI 三个面板开关的激活态完全一致:同底色、同横线类名,另配 `aria-expanded`) |
-| `menu/ContextMenu.tsx` | 表格列右键菜单: 快速筛选、替换、透视、变换、排序(019 §3.1 后只**报告**上下文,不再自己拼参数) |
+| `menu/ContextMenu.tsx` | 表格列右键菜单: 快速筛选、替换、透视、变换、排序;**只上报** `QuickActionRequest`(列 + 子类型 + 右键坐标),由快速浮窗负责参数(设计 031) |
 | `menu/CanvasContextMenu.tsx` | 画布空白处右键菜单 |
 | `setting/ThemeProvider.tsx` | 主题上下文(dark/light/system)— 019 §2.1 计划迁往 `app/providers/` |
 | `setting/SettingsDialog.tsx` | 设置弹窗外壳(设计 030): 头部标题 + 两栏(左目录 / 右内容,各自滚动)+ **浮在底部中间的「恢复默认 / 保存设置」**(不占独立区域);持有搜索 query 与滚动联动;`/` 聚焦搜索、有查询时 `Esc` 先清空再关闭 — 019 §2.1 计划迁往 `modules/dialogs/app/` |
@@ -597,6 +613,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 新增/修改 xan 命令定义 | `src/data/commands/index.ts` |
 | 新增/修改命令参数类型 | `src/types/xan.ts` |
 | 新增/修改命令表单 | `src/modules/dialogs/command/` 目录,按分类选择对应 Form 文件,在 `index.ts` 注册到 `COMMAND_FORMS` |
+| 新增/修改右键引导表单 | `src/modules/dialogs/quick/forms/<kind>QuickForm.tsx` + `quick/QuickActionDialog.tsx` 分发 + `quick/lib/buildQuickCommand.ts`(参数/别名唯一实现)+ `src/__tests__/quickCommandParams.test.ts`。设计:`docs/design/031_quick-action-dialogs.md` |
 | 修改命令参数描述 | `src/modules/dialogs/command/lib/parameterDescriptions.ts` + `src/data/commands/index.ts`(参数 description 字段) |
 | 新增对话框 | 参考 `src/modules/dialogs/command/CommandDialog.tsx`,并在 `HomeView.tsx` 中注册状态和渲染 |
 | 修改管道执行逻辑 | `src-tauri/src/pipeline.rs` 中的 `execute_xan_pipeline` 函数 |
@@ -620,7 +637,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 修改连线方向/锚点(上下/左右连接点) | `src/modules/pipeline/lib/layout.ts`(`resolveHandles`/`handleAnchor`) + `pipeline/nodes/`(Handle 定义) |
 | 修改右键连线交互/预览 | `src/modules/pipeline/FlowPanel.tsx`(`handleCutStart`/`handleCutMove`/`handleCutEnd`) + `pipeline/overlays/ConnectionVisualization.tsx`(贝塞尔渲染) + `layout.ts`(`pickStartHandle`/`buildConnectPreviewPath`/`transformBezierPath`) |
 | 修改菜单/快捷键 | `src/components/menu/MainMenu.tsx` + `src/hooks/useKeyboardShortcuts.ts` |
-| 修改右键菜单 | `src/components/menu/ContextMenu.tsx` |
+| 修改右键菜单 | `src/components/menu/ContextMenu.tsx`(菜单项 → `onSelect(QuickActionRequest)`)+ `src/modules/dialogs/quick/QuickActionDialog.tsx`(浮窗分发) |
 | 修改主题/样式 | `src/index.css` + `src/components/setting/ThemeProvider.tsx` |
 | 修改设置选择器样式 | `src/components/setting/SettingsTabContent.tsx` |
 | 修改国际化文本 | `src/i18n/translations/` |
@@ -661,11 +678,11 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 修改表达式编辑器 | `src/components/expression/` 目录: `ExpressionEditor.tsx`(主组件) + `highlight.ts`(高亮) + `autocomplete.ts`(补全) |
 | 修改函数定义/补全列表 | `src/data/functions.ts`(200+函数定义) |
 | 修改拖拽交互行为 | `src/modules/pipeline/FlowPanel.tsx`(管道节点拖拽) + `src/modules/logs/CommandList.tsx`(命令面板拖拽) + `src/hooks/useDraggable.ts`(通用拖拽逻辑) |
-| 修改右键菜单选项/行为 | `src/components/menu/ContextMenu.tsx` |
+| 修改右键菜单选项/行为 | `src/components/menu/ContextMenu.tsx` + `src/modules/dialogs/quick/QuickActionDialog.tsx` + `src/modules/dialogs/quick/QuickActionShell.tsx`(定位/拖动/关闭) |
 | 修改动画/过渡效果 | `src/index.css`(关键帧定义) + 各组件内联动画逻辑 |
 | 修改 Toast/通知样式 | `src/components/setting/Toast.tsx` |
 | 修改 Tooltip 组件 | `src/components/ui/Tooltip.tsx` |
-| 修改表格列交互(重命名/右键) | `src/modules/data-preview/HomeView.tsx` |
+| 修改表格列交互(重命名/右键) | `src/modules/pipeline/nodes/TableNode.tsx`(右键上报)+ `src/modules/pipeline/FlowPanel.tsx`(`tableContextMenu`)+ `src/components/menu/ContextMenu.tsx` + `src/modules/dialogs/quick/`(设计 031) |
 | 修改管道节点样式 | `src/modules/pipeline/nodes/PipelineStepNode.tsx` |
 | 修改切割动画效果 | `src/modules/pipeline/lib/cutGeometry.ts` + `src/modules/pipeline/overlays/CutVisualization.tsx` |
 | 修改 xan.exe 解压/查找 | `src-tauri/src/xan.rs` |
@@ -675,7 +692,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 测试 Batch Filter 逻辑 | `src/__tests__/BatchFilterHooks.test.ts` |
 | 测试 Batch Convert 逻辑 | `src/__tests__/BatchConvertHooks.test.ts` |
 | 测试命令面板 | `src/__tests__/CommandPalette.test.tsx` |
-| 测试 CSV 对比对话框 | `src/__tests__/initialParams.test.ts` |
+| 测试右键快速操作(参数/定位/浮窗) | `src/__tests__/quickCommandParams.test.ts` · `src/__tests__/quickPosition.test.ts` · `src/__tests__/QuickActionDialog.test.tsx` |
 | 测试编码转换对话框 | `src/__tests__/CsvEncodingDialog.test.tsx` |
 | 修改测试 mock/setup | `src/test/setup.ts` |
 | 修改 vitest 配置 | `vitest.config.ts` |
