@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from "react";
-import { X, Check, Play, Pencil, Trash2, Download, Search } from "lucide-react";
+import { X, Check, Pencil, Trash2, Download, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ScrollArea } from "@/components/ui/ScrollArea";
@@ -168,7 +168,6 @@ export function PipelineTemplateDialog({
           ) : (
             <>
               <Button variant="ghost" size="sm" onClick={() => onApply(tpl.id)}>
-                <Play className="h-3.5 w-3.5 mr-1" />
                 {t.templateApply}
               </Button>
               <Tooltip content={t.templateRename}>

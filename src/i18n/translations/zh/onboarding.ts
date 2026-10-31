@@ -37,7 +37,6 @@ export const zhOnboarding = {
   onboardingGesturePan: "拖拽平移画布",
   onboardingGestureLeftDrag: "左键拖拽",
   onboardingGestureSelect: "空白处框选节点",
-  onboardingGestureNote: "连线起点必须是操作节点, 输入节点不能起手",
 
   // 示例数据
   onboardingSampleFailed: "示例数据准备失败：{error}",

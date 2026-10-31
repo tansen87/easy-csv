@@ -918,7 +918,6 @@ export interface Translations {
   onboardingGesturePan: string;
   onboardingGestureLeftDrag: string;
   onboardingGestureSelect: string;
-  onboardingGestureNote: string;
   onboardingSampleFailed: string;
   onboardingDemoRevealAction1: string;
   onboardingDemoRevealAction2: string;

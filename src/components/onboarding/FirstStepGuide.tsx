@@ -261,9 +261,6 @@ export const FirstStepGuide = React.memo(function FirstStepGuide({
                   <span className="min-w-0">{meaning}</span>
                 </div>
               ))}
-              <div className="mt-2 border-t border-dashed border-border pt-2 text-[10px] leading-relaxed text-muted-foreground/70">
-                {t.onboardingGestureNote}
-              </div>
             </div>
           )}
         </div>

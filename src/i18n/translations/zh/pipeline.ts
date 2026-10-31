@@ -6,7 +6,7 @@ export const zhPipeline = {
   edit: "编辑",
   tools: "工具",
   openNewTab: "新标签页打开",
-  savePipeline: "保存Pipeline",
+  savePipeline: "保存为脚本",
   importWorkflow: "导入工作流",
   exportWorkflow: "导出工作流",
   undo: "撤销",

@@ -39,8 +39,6 @@ export const enOnboarding = {
   onboardingGesturePan: "drag to pan the canvas",
   onboardingGestureLeftDrag: "Left-drag",
   onboardingGestureSelect: "on empty space to box-select nodes",
-  onboardingGestureNote:
-    "A connection must start on a step node, not on the input node",
 
   // Sample data
   onboardingSampleFailed: "Could not prepare the sample data: {error}",
