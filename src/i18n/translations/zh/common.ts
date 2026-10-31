@@ -36,8 +36,9 @@ export const zhCommon = {
   crossTabOverwriteTitle: "另一个标签页正在写这个文件?",
   crossTabOverwriteMessage:
     "标签页「{name}」正在写入同一个输出文件:{path}。继续执行会覆盖它的结果。",
-  logFilterCurrent: "仅当前标签页",
+  logFilterCurrent: "当前标签页",
   logFilterAll: "全部",
+  logLevelFilter: "日志级别过滤",
   checkForUpdates: "检查更新",
   newVersionAvailable: "有新版本可用",
   currentVersion: "当前版本",

@@ -123,7 +123,6 @@ export const zhPipeline = {
   historyButton: "历史",
   noHistoryYet: "暂无执行记录",
   historyLoading: "正在加载执行历史...",
-  historySummaryHint: "点击记录查看输出摘要",
   historyColumns: "列数",
   historyRows: "行数",
   historyBytes: "大小",

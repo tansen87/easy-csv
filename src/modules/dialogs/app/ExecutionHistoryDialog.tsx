@@ -108,7 +108,7 @@ export function ExecutionHistoryDialog({
       <div
         role="dialog"
         aria-modal="true"
-        className="relative bg-card border rounded-xl shadow-xl w-full max-w-2xl flex flex-col outline-none max-h-[80vh]"
+        className="relative bg-card border rounded-xl shadow-xl w-full max-w-2xl flex flex-col outline-none h-[80vh] overflow-hidden"
         onContextMenu={(e) => e.preventDefault()}
         style={{ left: offset.x, top: offset.y }}
       >
@@ -163,9 +163,6 @@ export function ExecutionHistoryDialog({
               </div>
             ) : (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground/70 px-1">
-                  {t.historySummaryHint}
-                </p>
                 {history.map((entry) => {
                   const expanded = expandedId === entry.id;
                   const summary = parseSummary(entry.outputSummary);

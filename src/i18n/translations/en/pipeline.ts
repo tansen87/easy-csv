@@ -129,7 +129,6 @@ export const enPipeline = {
   historyButton: "History",
   noHistoryYet: "No execution history yet",
   historyLoading: "Loading execution history...",
-  historySummaryHint: "Click a record to view its output summary",
   historyColumns: "Columns",
   historyRows: "Rows",
   historyBytes: "Size",

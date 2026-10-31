@@ -21,6 +21,7 @@ import React, {
 import { Card } from "@/components/ui/Card";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { LogEntry, PanelDockState } from "@/types/xan";
 import { useLanguage } from "@/i18n";
@@ -140,18 +141,6 @@ export const LogPanel = React.memo(function LogPanel({
       ts.getMonth() === now.getMonth() &&
       ts.getDate() === now.getDate();
     return sameDay ? ts.toLocaleTimeString() : ts.toLocaleString();
-  };
-
-  const chipClass = (active: boolean, type: LogEntry["type"] | "all") => {
-    const base =
-      "flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-full border transition-colors";
-    if (!active) {
-      return `${base} bg-transparent border-border/50 text-muted-foreground/70 hover:bg-muted`;
-    }
-    if (type === "all") {
-      return `${base} bg-primary/15 border-primary/30 text-primary font-medium`;
-    }
-    return `${base} ${getLogBgColor(type)} font-medium ${getLogColor(type)}`;
   };
 
   const getViewport = () =>
@@ -345,32 +334,28 @@ export const LogPanel = React.memo(function LogPanel({
         </div>
         {logs.length > 0 && (
           <div
-            className="flex-1 min-w-0 flex items-center justify-center gap-1 overflow-hidden"
+            className="flex-1 min-w-0 flex items-center justify-center"
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <button
-              type="button"
-              onClick={() => setActiveFilter("all")}
-              className={chipClass(activeFilter === "all", "all")}
-            >
-              {t.allLogs}
-              <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 text-[10px] font-semibold rounded-full bg-primary/15 text-primary/80 leading-none">
-                {logs.length}
-              </span>
-            </button>
-            {(["info", "success", "warning", "error"] as const).map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setActiveFilter(type)}
-                className={chipClass(activeFilter === type, type)}
-              >
-                {type}
-                <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 text-[10px] font-semibold rounded-full bg-primary/15 text-primary/80 leading-none">
-                  {typeCounts[type]}
-                </span>
-              </button>
-            ))}
+            <div className="w-full max-w-[140px]">
+              <Select
+                value={activeFilter}
+                onChange={(value) =>
+                  setActiveFilter(value as LogEntry["type"] | "all")
+                }
+                options={[
+                  { label: `${t.allLogs} (${logs.length})`, value: "all" },
+                  ...(["info", "success", "warning", "error"] as const).map(
+                    (type) => ({
+                      label: `${type} (${typeCounts[type]})`,
+                      value: type,
+                    }),
+                  ),
+                ]}
+                height="h-6"
+                ariaLabel={t.logLevelFilter}
+              />
+            </div>
           </div>
         )}
         <div className="flex items-center gap-1 ml-auto">

@@ -192,6 +192,7 @@ export interface Translations {
   crossTabOverwriteMessage: string;
   logFilterCurrent: string;
   logFilterAll: string;
+  logLevelFilter: string;
 
   // UpdateDialog
   checkForUpdates: string;
@@ -271,7 +272,6 @@ export interface Translations {
   historyButton: string;
   noHistoryYet: string;
   historyLoading: string;
-  historySummaryHint: string;
   historyColumns: string;
   historyRows: string;
   historyBytes: string;

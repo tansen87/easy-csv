@@ -40,8 +40,9 @@ export const enCommon = {
   crossTabOverwriteTitle: "Another tab is writing this file?",
   crossTabOverwriteMessage:
     'Tab "{name}" is writing the same output file: {path}. Continuing will overwrite its result.',
-  logFilterCurrent: "Current tab only",
+  logFilterCurrent: "Current tab",
   logFilterAll: "All",
+  logLevelFilter: "Log level filter",
   checkForUpdates: "Check for Updates",
   newVersionAvailable: "New version available",
   currentVersion: "Current version",
