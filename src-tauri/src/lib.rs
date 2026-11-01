@@ -2,6 +2,7 @@ pub mod ai;
 pub mod ai_memory;
 pub mod config;
 pub mod csv;
+pub mod csv_excel;
 pub mod excel_merge;
 pub mod pipeline;
 pub mod plugin_catalog;
@@ -56,6 +57,7 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     csv::separate_csv,
     csv::split_lines,
     csv::enumerate_by_group,
+    csv_excel::csv_to_xlsx,
     csv::probe_csv_file,
     csv::parse_csv_text,
     excel_merge::merge_excel_sources,

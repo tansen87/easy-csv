@@ -56,7 +56,7 @@ pub struct CsvDiffResult {
 /// otherwise the head of the file is sampled (64 KiB, see [`read_head_sample`])
 /// and scored by [`detect_delimiter_with_fallback`]. When detection is
 /// inconclusive the caller-supplied fallback (default `,`) is used.
-fn resolve_read_delimiter(
+pub(crate) fn resolve_read_delimiter(
   file_path: &str,
   delimiter: Option<&str>,
   fallback_delimiter: Option<&str>,

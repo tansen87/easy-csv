@@ -67,6 +67,10 @@ export function useUIState() {
   const [showEnumerateByGroup, setShowEnumerateByGroup] = useState(false);
   const [enumerateByGroupInitialInput, setEnumerateByGroupInitialInput] =
     useState<string | undefined>(undefined);
+  const [showCsvToExcel, setShowCsvToExcel] = useState(false);
+  const [csvToExcelInitialInput, setCsvToExcelInitialInput] = useState<
+    string | undefined
+  >(undefined);
 
   return {
     showHelp,
@@ -129,5 +133,9 @@ export function useUIState() {
     setShowEnumerateByGroup,
     enumerateByGroupInitialInput,
     setEnumerateByGroupInitialInput,
+    showCsvToExcel,
+    setShowCsvToExcel,
+    csvToExcelInitialInput,
+    setCsvToExcelInitialInput,
   };
 }

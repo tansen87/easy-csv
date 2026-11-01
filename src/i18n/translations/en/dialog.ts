@@ -159,6 +159,34 @@ export const enDialog = {
   groupEnumExampleInput: "Input {file} · group column \"{column}\"",
   groupEnumExampleNote:
     "Rows of the same group are numbered 1, 2, 3…; the new column is placed first.",
+  // CsvToExcelDialog
+  csvToExcel: "CSV to Excel",
+  excelHint: "Convert a CSV file into an xlsx workbook",
+  excelStepFile: "Input file",
+  excelStepSettings: "Conversion settings",
+  excelStepOutput: "Output location",
+  excelSelectFile: "Please select an input file",
+  excelMode: "Output shape",
+  excelModeSingle: "Single sheet",
+  excelModeMulti: "Split across sheets",
+  excelChunkSize: "Rows per sheet",
+  excelChunkSizeHint:
+    "The header is repeated on every sheet; rows are written in chunks of this size.",
+  excelChunkSizeError: "Rows per sheet must be a whole number greater than 0",
+  excelStart: "Convert",
+  excelRunning: "Converting...",
+  excelLastResult: "Last conversion",
+  excelNoResult:
+    "Pick a CSV file, choose an output shape, then run the conversion.",
+  excelRows: "Data rows",
+  excelSheets: "Worksheets",
+  excelColumns: "Columns",
+  excelReady: "Output: {sheets}",
+  excelReadyHint: "Pick a file to load its columns",
+  excelExampleTitle: "Output preview",
+  excelExampleInput: "{file} → Excel ({mode})",
+  excelExampleNote:
+    "Values are written as text. The header is kept as the first row.",
   // MergeExcelDialog
   mergeExcel: "Merge Excel Files",
   mergeExcelHint: "Combine the sheets of several workbooks into one table",

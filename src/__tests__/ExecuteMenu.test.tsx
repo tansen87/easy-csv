@@ -6,7 +6,7 @@ import { MainMenu } from "@/components/menu/MainMenu";
 import type { RunSession } from "@/types/execution";
 
 /**
- * Execute menu (design 028 §5.6 / §9.2 T9 + T10).
+ * Execute menu.
  *
  * The toolbar "执行" button is a per-tab menu: the current tab is pinned on top,
  * a thin divider separates the others, clicking a row runs that tab, and a
@@ -72,6 +72,7 @@ function baseProps(overrides: Record<string, unknown> = {}) {
     onOpenSeparateCsv: vi.fn(),
     onOpenSplitLines: vi.fn(),
     onOpenEnumerateByGroup: vi.fn(),
+    onOpenCsvToExcel: vi.fn(),
     onOpenMergeExcel: vi.fn(),
     isExecuting: false,
     isCheckingUpdate: false,

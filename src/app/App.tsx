@@ -34,6 +34,7 @@ import { SeparateCSVDialog } from "@/modules/dialogs/file/SeparateCSVDialog";
 import { DuckdbTableDialog } from "@/modules/dialogs/file/DuckdbTableDialog";
 import { SplitLinesDialog } from "@/modules/dialogs/file/SplitLinesDialog";
 import { EnumerateByGroupDialog } from "@/modules/dialogs/file/EnumerateByGroupDialog";
+import { CsvToExcelDialog } from "@/modules/dialogs/file/CsvToExcelDialog";
 import { MergeExcelDialog } from "@/modules/dialogs/file/MergeExcelDialog";
 import { DataProfilePanel } from "@/modules/data-preview/DataProfilePanel";
 import { AIPanel } from "@/modules/ai/AIPanel";
@@ -1656,6 +1657,19 @@ function AppContent() {
         },
       },
       {
+        id: "csv-to-excel",
+        label: t.csvToExcel,
+        description: t.excelHint,
+        group: t.paletteActions,
+        groupIcon: Zap,
+        onSelect: () => {
+          ui.setCsvToExcelInitialInput(
+            tabsHook.getCurrentTab()?.inputFile || undefined,
+          );
+          ui.setShowCsvToExcel(true);
+        },
+      },
+      {
         id: "merge-excel",
         label: t.mergeExcel,
         description: t.mergeExcelHint,
@@ -1703,6 +1717,7 @@ function AppContent() {
       "csv-encoding": "csvEncoding",
       "separate-good-bad": "separateGoodBad",
       "enumerate-by-group": "enumerateByGroup",
+      "csv-to-excel": "csvToExcel",
       "use-or-save-template": "paletteTemplates",
     };
     const actionsWithSearch: PaletteItem[] = actions.map((a) => {
@@ -1864,6 +1879,12 @@ function AppContent() {
                   tabsHook.getCurrentTab()?.inputFile || undefined,
                 );
                 ui.setShowEnumerateByGroup(true);
+              }}
+              onOpenCsvToExcel={() => {
+                ui.setCsvToExcelInitialInput(
+                  tabsHook.getCurrentTab()?.inputFile || undefined,
+                );
+                ui.setShowCsvToExcel(true);
               }}
               onOpenMergeExcel={() => {
                 ui.setMergeExcelInitialInput(
@@ -2196,6 +2217,14 @@ function AppContent() {
             isOpen={ui.showEnumerateByGroup}
             onClose={() => ui.setShowEnumerateByGroup(false)}
             initialInputFile={ui.enumerateByGroupInitialInput}
+            defaultDelimiter={settings.defaultDelimiter}
+            onShowToast={showToast}
+          />
+
+          <CsvToExcelDialog
+            isOpen={ui.showCsvToExcel}
+            onClose={() => ui.setShowCsvToExcel(false)}
+            initialInputFile={ui.csvToExcelInitialInput}
             defaultDelimiter={settings.defaultDelimiter}
             onShowToast={showToast}
           />

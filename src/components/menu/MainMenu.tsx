@@ -44,6 +44,7 @@ interface MainMenuProps {
   onOpenSeparateCsv: () => void;
   onOpenSplitLines: () => void;
   onOpenEnumerateByGroup: () => void;
+  onOpenCsvToExcel: () => void;
   onOpenMergeExcel: () => void;
   isExecuting: boolean;
   isCheckingUpdate: boolean;
@@ -112,6 +113,7 @@ export const MainMenu = React.memo(function MainMenu({
   onOpenSeparateCsv,
   onOpenSplitLines,
   onOpenEnumerateByGroup,
+  onOpenCsvToExcel,
   onOpenMergeExcel,
   isExecuting,
   isCheckingUpdate,
@@ -704,6 +706,18 @@ export const MainMenu = React.memo(function MainMenu({
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.enumerateByGroup}
+                </span>
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  onOpenCsvToExcel();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+              >
+                <span className="flex-1 text-left whitespace-nowrap">
+                  {t.csvToExcel}
                 </span>
               </button>
               <button

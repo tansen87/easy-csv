@@ -618,6 +618,34 @@ export interface Translations {
   groupEnumExampleInput: string;
   groupEnumExampleNote: string;
 
+  // CsvToExcelDialog
+  csvToExcel: string;
+  excelHint: string;
+  excelStepFile: string;
+  excelStepSettings: string;
+  excelStepOutput: string;
+  excelSelectFile: string;
+  excelMode: string;
+  excelModeSingle: string;
+  excelModeMulti: string;
+  excelChunkSize: string;
+  excelChunkSizeHint: string;
+  excelChunkSizeError: string;
+  excelStart: string;
+  excelRunning: string;
+  excelLastResult: string;
+  excelNoResult: string;
+  excelRows: string;
+  excelSheets: string;
+  excelColumns: string;
+  /** Footer status; `{sheets}` placeholder. */
+  excelReady: string;
+  excelReadyHint: string;
+  excelExampleTitle: string;
+  /** `{file}` / `{mode}` placeholders. */
+  excelExampleInput: string;
+  excelExampleNote: string;
+
   // MergeExcelDialog
   mergeExcel: string;
   mergeExcelHint: string;
