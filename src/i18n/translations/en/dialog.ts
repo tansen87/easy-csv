@@ -129,6 +129,36 @@ export const enDialog = {
   splitLinesStepOutput: "Output location",
   splitLinesNoHeadersHint: "Select when the source file lacks a header",
   splitLinesReady: "{rows} rows per file",
+  // EnumerateByGroupDialog
+  enumerateByGroup: "Number Rows by Group",
+  enumerateHint: "Add a per-group sequence number as the first column",
+  groupByColumn: "Group col",
+  indexColumnName: "Index column name",
+  groupEnumAssumeSorted: "Groups are already contiguous",
+  groupEnumAssumeSortedHint:
+    "Numbering restarts when the group column changes. Leave off when one group appears in several separate runs.",
+  groupEnumFlexible: "Allow rows with a different field count",
+  groupEnumFlexibleHint:
+    "A ragged row stops the run with an error instead of silently shifting columns.",
+  groupEnumNoResult:
+    "Pick a CSV file, choose the group column, then click Number. The output adds an index column and is written next to the input as *_group_enum.<ext>.",
+  groupEnumStart: "Number",
+  groupEnumRunning: "Numbering...",
+  groupEnumLastResult: "Last group numbering",
+  groupEnumRows: "Data rows",
+  groupEnumGroups: "Groups",
+  groupEnumStepFile: "Choose the CSV file",
+  groupEnumStepSettings: "Numbering settings",
+  groupEnumStepOutput: "Output location",
+  groupEnumSelectFile: "Please select an input file",
+  groupEnumSelectColumn: "Please select a group column",
+  groupEnumEmptyIndexName: "Index column name cannot be empty",
+  groupEnumReady: "Group by \"{column}\" · index column \"{index}\"",
+  groupEnumReadyHint: "Pick a file to load its columns",
+  groupEnumExampleTitle: "Output preview",
+  groupEnumExampleInput: "Input {file} · group column \"{column}\"",
+  groupEnumExampleNote:
+    "Rows of the same group are numbered 1, 2, 3…; the new column is placed first.",
   // MergeExcelDialog
   mergeExcel: "Merge Excel Files",
   mergeExcelHint: "Combine the sheets of several workbooks into one table",

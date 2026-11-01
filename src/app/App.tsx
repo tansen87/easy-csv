@@ -33,6 +33,7 @@ import { CsvEncodingDialog } from "@/modules/dialogs/file/CsvEncodingDialog";
 import { SeparateCSVDialog } from "@/modules/dialogs/file/SeparateCSVDialog";
 import { DuckdbTableDialog } from "@/modules/dialogs/file/DuckdbTableDialog";
 import { SplitLinesDialog } from "@/modules/dialogs/file/SplitLinesDialog";
+import { EnumerateByGroupDialog } from "@/modules/dialogs/file/EnumerateByGroupDialog";
 import { MergeExcelDialog } from "@/modules/dialogs/file/MergeExcelDialog";
 import { DataProfilePanel } from "@/modules/data-preview/DataProfilePanel";
 import { AIPanel } from "@/modules/ai/AIPanel";
@@ -1642,6 +1643,19 @@ function AppContent() {
         },
       },
       {
+        id: "enumerate-by-group",
+        label: t.enumerateByGroup,
+        description: t.enumerateHint,
+        group: t.paletteActions,
+        groupIcon: Zap,
+        onSelect: () => {
+          ui.setEnumerateByGroupInitialInput(
+            tabsHook.getCurrentTab()?.inputFile || undefined,
+          );
+          ui.setShowEnumerateByGroup(true);
+        },
+      },
+      {
         id: "merge-excel",
         label: t.mergeExcel,
         description: t.mergeExcelHint,
@@ -1688,6 +1702,7 @@ function AppContent() {
       "csv-diff": "csvDiff",
       "csv-encoding": "csvEncoding",
       "separate-good-bad": "separateGoodBad",
+      "enumerate-by-group": "enumerateByGroup",
       "use-or-save-template": "paletteTemplates",
     };
     const actionsWithSearch: PaletteItem[] = actions.map((a) => {
@@ -1843,6 +1858,12 @@ function AppContent() {
                   tabsHook.getCurrentTab()?.inputFile || undefined,
                 );
                 ui.setShowSplitLines(true);
+              }}
+              onOpenEnumerateByGroup={() => {
+                ui.setEnumerateByGroupInitialInput(
+                  tabsHook.getCurrentTab()?.inputFile || undefined,
+                );
+                ui.setShowEnumerateByGroup(true);
               }}
               onOpenMergeExcel={() => {
                 ui.setMergeExcelInitialInput(
@@ -2168,6 +2189,14 @@ function AppContent() {
             isOpen={ui.showSplitLines}
             onClose={() => ui.setShowSplitLines(false)}
             initialInputFile={ui.splitLinesInitialInput}
+            onShowToast={showToast}
+          />
+
+          <EnumerateByGroupDialog
+            isOpen={ui.showEnumerateByGroup}
+            onClose={() => ui.setShowEnumerateByGroup(false)}
+            initialInputFile={ui.enumerateByGroupInitialInput}
+            defaultDelimiter={settings.defaultDelimiter}
             onShowToast={showToast}
           />
 

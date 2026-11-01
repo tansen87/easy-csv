@@ -588,6 +588,36 @@ export interface Translations {
   /** Footer status while idle; `{rows}` placeholder. */
   splitLinesReady: string;
 
+  // EnumerateByGroupDialog
+  enumerateByGroup: string;
+  enumerateHint: string;
+  groupByColumn: string;
+  indexColumnName: string;
+  groupEnumAssumeSorted: string;
+  groupEnumAssumeSortedHint: string;
+  /** Allows rows whose field count differs from the header. */
+  groupEnumFlexible: string;
+  groupEnumFlexibleHint: string;
+  groupEnumNoResult: string;
+  groupEnumStart: string;
+  groupEnumRunning: string;
+  groupEnumLastResult: string;
+  groupEnumRows: string;
+  groupEnumGroups: string;
+  groupEnumStepFile: string;
+  groupEnumStepSettings: string;
+  groupEnumStepOutput: string;
+  groupEnumSelectFile: string;
+  groupEnumSelectColumn: string;
+  groupEnumEmptyIndexName: string;
+  /** Footer status; `{column}` / `{index}` placeholders. */
+  groupEnumReady: string;
+  groupEnumReadyHint: string;
+  groupEnumExampleTitle: string;
+  /** `{file}` / `{column}` placeholders. */
+  groupEnumExampleInput: string;
+  groupEnumExampleNote: string;
+
   // MergeExcelDialog
   mergeExcel: string;
   mergeExcelHint: string;

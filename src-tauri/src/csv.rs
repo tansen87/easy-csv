@@ -1498,6 +1498,298 @@ pub async fn split_lines(
   .map_err(|e| format!("Task join error: {e}"))?
 }
 
+// --- Numbering rows within groups ---
+
+/// Result of numbering rows inside their group.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GroupEnumerateResult {
+  /// The CSV that was written, with the index column prepended.
+  pub output_path: String,
+  /// Data rows processed (the header is not counted).
+  pub total_rows: usize,
+  /// Distinct groups in unsorted mode; contiguous runs in sorted mode.
+  pub group_count: usize,
+  pub index_column: String,
+  pub group_by_column: String,
+  pub sorted: bool,
+  pub delimiter: String,
+  pub elapsed_ms: u64,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct GroupEnumerateCounts {
+  total_rows: usize,
+  group_count: usize,
+}
+
+/// Output file: `{stem}_group_enum{ext}`, next to the input or in `out_dir`.
+fn group_enum_output_path(path: &str, out_dir: Option<&str>) -> std::path::PathBuf {
+  let p = std::path::Path::new(path);
+  let stem = p
+    .file_stem()
+    .map(|s| s.to_string_lossy().into_owned())
+    .unwrap_or_default();
+  let ext = p
+    .extension()
+    .map(|e| format!(".{}", e.to_string_lossy()))
+    .unwrap_or_default();
+  let dir = match out_dir {
+    Some(d) if !d.trim().is_empty() => std::path::PathBuf::from(d),
+    _ => p
+      .parent()
+      .map(std::path::Path::to_path_buf)
+      .unwrap_or_default(),
+  };
+  dir.join(format!("{stem}_group_enum{ext}"))
+}
+
+/// Streaming core of group numbering.
+///
+/// The group column is resolved against the header once; every record then
+/// gets its occurrence number as the first output field. Group keys stay as
+/// bytes (no lossy UTF-8 round-trip), and `ByteRecord`s are reused per row.
+///
+/// `sorted` selects the constant-memory path: the counter only tracks the
+/// current run and resets when the group value changes. Without it a map of
+/// distinct group values is kept, which is exact even when a group appears in
+/// several non-adjacent runs.
+fn enumerate_by_group_stream<R, W>(
+  input: R,
+  delimiter: u8,
+  quoting: bool,
+  flexible: bool,
+  skiprows: usize,
+  index_column: &str,
+  group_by_column: &str,
+  sorted: bool,
+  output: W,
+) -> Result<GroupEnumerateCounts, String>
+where
+  R: Read,
+  W: Write,
+{
+  let quote_style = if quoting {
+    csv::QuoteStyle::Necessary
+  } else {
+    csv::QuoteStyle::Never
+  };
+
+  let mut rdr = csv::ReaderBuilder::new()
+    // The header is read manually after `skiprows`, so the reader must not
+    // swallow the first record itself — otherwise a data row would be lost.
+    .has_headers(false)
+    .delimiter(delimiter)
+    .flexible(flexible)
+    .quoting(quoting)
+    .from_reader(input);
+
+  let mut rec = csv::ByteRecord::new();
+  for _ in 0..skiprows {
+    match rdr.read_byte_record(&mut rec) {
+      Ok(false) => return Err("No rows remain after skipping the requested rows".to_string()),
+      Ok(true) => {}
+      Err(e) => return Err(format!("Failed to skip rows before header: {e}")),
+    }
+  }
+  if !rdr
+    .read_byte_record(&mut rec)
+    .map_err(|e| format!("Failed to parse header line: {e}"))?
+  {
+    return Err("Input file is empty (missing header)".to_string());
+  }
+  let header = rec.clone();
+  if header.is_empty() {
+    return Err("Input file has an empty header line".to_string());
+  }
+
+  let group_col = header
+    .iter()
+    .position(|h| h == group_by_column.as_bytes())
+    .ok_or_else(|| {
+      let available = header
+        .iter()
+        .take(12)
+        .map(|h| String::from_utf8_lossy(h).into_owned())
+        .collect::<Vec<_>>()
+        .join(", ");
+      let suffix = if header.len() > 12 { ", …" } else { "" };
+      format!(
+        "Group column \"{group_by_column}\" not found. Available columns: {available}{suffix}"
+      )
+    })?;
+
+  let mut wtr = csv::WriterBuilder::new()
+    .delimiter(delimiter)
+    .flexible(flexible)
+    .quote_style(quote_style)
+    .from_writer(output);
+
+  let mut out_header = csv::ByteRecord::new();
+  out_header.push_field(index_column.as_bytes());
+  for field in header.iter() {
+    out_header.push_field(field);
+  }
+  wtr
+    .write_byte_record(&out_header)
+    .map_err(|e| format!("Failed to write header: {e}"))?;
+
+  let mut group_counter = HashMap::<Vec<u8>, usize>::new();
+  let mut current_group: Option<Vec<u8>> = None;
+  let mut current_count = 0usize;
+  let mut total_rows = 0usize;
+  let mut group_count = 0usize;
+  let mut out_record = csv::ByteRecord::new();
+
+  loop {
+    match rdr.read_byte_record(&mut rec) {
+      Ok(true) => {}
+      Ok(false) => break,
+      Err(e) => {
+        return Err(format!(
+          "Failed to parse row {}: {e}",
+          total_rows + skiprows + 2
+        ));
+      }
+    }
+
+    if rec.len() <= group_col {
+      return Err(format!(
+        "Row {} has {} field(s); cannot read group column \"{group_by_column}\"",
+        total_rows + skiprows + 2,
+        rec.len()
+      ));
+    }
+
+    let key = &rec[group_col];
+    let count = if sorted {
+      match current_group.as_deref() {
+        Some(prev) if prev == key => current_count += 1,
+        _ => {
+          current_group = Some(key.to_vec());
+          current_count = 1;
+          group_count += 1;
+        }
+      }
+      current_count
+    } else {
+      match group_counter.get_mut(key) {
+        Some(counter) => {
+          *counter += 1;
+          *counter
+        }
+        None => {
+          group_counter.insert(key.to_vec(), 1);
+          1
+        }
+      }
+    };
+
+    out_record.clear();
+    out_record.push_field(count.to_string().as_bytes());
+    for field in rec.iter() {
+      out_record.push_field(field);
+    }
+    wtr
+      .write_byte_record(&out_record)
+      .map_err(|e| format!("Failed to write row {}: {e}", total_rows + skiprows + 2))?;
+    total_rows += 1;
+  }
+
+  wtr
+    .flush()
+    .map_err(|e| format!("Failed to flush output file: {e}"))?;
+
+  Ok(GroupEnumerateCounts {
+    total_rows,
+    group_count: if sorted {
+      group_count
+    } else {
+      group_counter.len()
+    },
+  })
+}
+
+/// Add a per-group occurrence number as the first column of a CSV file.
+///
+/// The group column is matched by header name. `sorted` should be set when the
+/// same group's rows are already adjacent: numbering then resets whenever the
+/// group value changes and only the current group is kept in memory. Without
+/// it a map of every distinct group is used, so non-adjacent runs still share
+/// one counter.
+///
+/// Output is written next to the input (or into `out_dir`) as
+/// `{stem}_group_enum{ext}` and keeps the input's delimiter and quoting style.
+#[tauri::command]
+pub async fn enumerate_by_group(
+  path: String,
+  group_by_column: String,
+  index_column: String,
+  sorted: Option<bool>,
+  skiprows: Option<usize>,
+  quoting: Option<bool>,
+  flexible: Option<bool>,
+  delimiter: Option<String>,
+  out_dir: Option<String>,
+) -> Result<GroupEnumerateResult, String> {
+  tokio::task::spawn_blocking(move || -> Result<GroupEnumerateResult, String> {
+    let started = std::time::Instant::now();
+
+    let group_by_column = group_by_column.trim().to_string();
+    if group_by_column.is_empty() {
+      return Err("Please select a group column".to_string());
+    }
+    let index_column = index_column.trim().to_string();
+    if index_column.is_empty() {
+      return Err("Index column name cannot be empty".to_string());
+    }
+
+    let delim = match delimiter
+      .as_deref()
+      .map(str::trim)
+      .filter(|s| !s.is_empty())
+    {
+      Some(d) => d.as_bytes()[0],
+      None => resolve_read_delimiter(&path, None, None)?.0,
+    };
+
+    let output_path = group_enum_output_path(&path, out_dir.as_deref());
+    if let Some(dir) = output_path.parent() {
+      std::fs::create_dir_all(dir)
+        .map_err(|e| format!("Failed to create output directory: {e}"))?;
+    }
+
+    const GROUP_ENUM_BUF_SIZE: usize = 1 << 20; // 1 MiB
+    let input = File::open(&path).map_err(|e| format!("Failed to open input file: {e}"))?;
+    let output =
+      File::create(&output_path).map_err(|e| format!("Failed to create output file: {e}"))?;
+
+    let counts = enumerate_by_group_stream(
+      BufReader::with_capacity(GROUP_ENUM_BUF_SIZE, input),
+      delim,
+      quoting.unwrap_or(true),
+      flexible.unwrap_or(false),
+      skiprows.unwrap_or(0),
+      &index_column,
+      &group_by_column,
+      sorted.unwrap_or(false),
+      BufWriter::with_capacity(GROUP_ENUM_BUF_SIZE, output),
+    )?;
+
+    Ok(GroupEnumerateResult {
+      output_path: output_path.to_string_lossy().into_owned(),
+      total_rows: counts.total_rows,
+      group_count: counts.group_count,
+      index_column,
+      group_by_column,
+      sorted: sorted.unwrap_or(false),
+      delimiter: (delim as char).to_string(),
+      elapsed_ms: started.elapsed().as_millis() as u64,
+    })
+  })
+  .await
+  .map_err(|e| format!("Task join error: {e}"))?
+}
+
 // File probing: first-row columns + delimiter detection
 
 /// Candidate delimiters for automatic detection, mirroring the list offered in
@@ -3047,6 +3339,148 @@ mod tests {
     assert_eq!(dir.to_string_lossy().replace('\\', "/"), "/out");
     assert_eq!(stem, "b");
     assert_eq!(ext, ".txt");
+  }
+
+  // enumerate_by_group (prepend a per-group counter)
+
+  fn enumerate_in_memory(
+    input: &[u8],
+    sorted: bool,
+    index: &str,
+    group: &str,
+  ) -> (String, GroupEnumerateCounts) {
+    let mut out = Vec::new();
+    let counts = enumerate_by_group_stream(
+      Cursor::new(input),
+      b',',
+      true,
+      false,
+      0,
+      index,
+      group,
+      sorted,
+      &mut out,
+    )
+    .unwrap();
+    (String::from_utf8(out).unwrap(), counts)
+  }
+
+  #[test]
+  fn enumerate_by_group_counts_all_occurrences_when_unsorted() {
+    let input = "name,grp\na,x\nb,x\nc,y\nd,x\n";
+    let (out, counts) = enumerate_in_memory(input.as_bytes(), false, "idx", "grp");
+
+    assert_eq!(counts.total_rows, 4);
+    assert_eq!(counts.group_count, 2);
+    assert_eq!(out, "idx,name,grp\n1,a,x\n2,b,x\n1,c,y\n3,d,x\n");
+  }
+
+  #[test]
+  fn enumerate_by_group_sorted_resets_on_each_run() {
+    let input = "name,grp\na,x\nb,x\nc,y\nd,x\n";
+    let (out, counts) = enumerate_in_memory(input.as_bytes(), true, "idx", "grp");
+
+    assert_eq!(counts.total_rows, 4);
+    // x, y, x are three contiguous runs, so the last x restarts at 1.
+    assert_eq!(counts.group_count, 3);
+    assert_eq!(out, "idx,name,grp\n1,a,x\n2,b,x\n1,c,y\n1,d,x\n");
+  }
+
+  #[test]
+  fn enumerate_by_group_preserves_quoted_fields() {
+    let input = "name,grp,note\na,x,\"hello, world\"\nb,y,plain\n";
+    let (out, counts) = enumerate_in_memory(input.as_bytes(), false, "idx", "grp");
+
+    assert_eq!(counts.total_rows, 2);
+    assert_eq!(
+      out,
+      "idx,name,grp,note\n1,a,x,\"hello, world\"\n1,b,y,plain\n"
+    );
+  }
+
+  #[test]
+  fn enumerate_by_group_errors_on_missing_or_short_group_columns() {
+    let missing = enumerate_by_group_stream(
+      Cursor::new(b"name,grp\na,x\n".as_slice()),
+      b',',
+      true,
+      false,
+      0,
+      "idx",
+      "nope",
+      false,
+      Vec::<u8>::new(),
+    )
+    .unwrap_err();
+    assert!(missing.contains("not found"), "{missing}");
+
+    let short = enumerate_by_group_stream(
+      Cursor::new(b"name,grp\na,x\nlonely\n".as_slice()),
+      b',',
+      true,
+      true,
+      0,
+      "idx",
+      "grp",
+      false,
+      Vec::<u8>::new(),
+    )
+    .unwrap_err();
+    assert!(short.contains("Row 3"), "{short}");
+  }
+
+  #[test]
+  fn enumerate_by_group_skiprows_applies_before_the_header() {
+    let input = "junk\nname,grp\na,x\nb,y\n";
+    let mut out = Vec::new();
+    let counts = enumerate_by_group_stream(
+      Cursor::new(input.as_bytes()),
+      b',',
+      true,
+      true,
+      1,
+      "idx",
+      "grp",
+      false,
+      &mut out,
+    )
+    .unwrap();
+
+    assert_eq!(counts.total_rows, 2);
+    assert_eq!(
+      String::from_utf8(out).unwrap(),
+      "idx,name,grp\n1,a,x\n1,b,y\n"
+    );
+  }
+
+  #[test]
+  fn enumerate_by_group_strict_mode_rejects_ragged_rows() {
+    let err = enumerate_by_group_stream(
+      Cursor::new(b"name,grp,extra\na,x\n".as_slice()),
+      b',',
+      true,
+      false,
+      0,
+      "idx",
+      "grp",
+      false,
+      Vec::<u8>::new(),
+    )
+    .unwrap_err();
+    assert!(err.contains("fields"), "{err}");
+  }
+
+  #[test]
+  fn group_enum_output_path_uses_a_suffix_and_optional_dir() {
+    let next_to_input = group_enum_output_path("/data/a/b.csv", None)
+      .to_string_lossy()
+      .replace('\\', "/");
+    assert_eq!(next_to_input, "/data/a/b_group_enum.csv");
+
+    let in_out_dir = group_enum_output_path("/data/a/b.csv", Some("/out"))
+      .to_string_lossy()
+      .replace('\\', "/");
+    assert_eq!(in_out_dir, "/out/b_group_enum.csv");
   }
 
   #[test]

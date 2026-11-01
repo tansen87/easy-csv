@@ -43,6 +43,7 @@ interface MainMenuProps {
   onOpenCsvEncoding: () => void;
   onOpenSeparateCsv: () => void;
   onOpenSplitLines: () => void;
+  onOpenEnumerateByGroup: () => void;
   onOpenMergeExcel: () => void;
   isExecuting: boolean;
   isCheckingUpdate: boolean;
@@ -110,6 +111,7 @@ export const MainMenu = React.memo(function MainMenu({
   onOpenCsvEncoding,
   onOpenSeparateCsv,
   onOpenSplitLines,
+  onOpenEnumerateByGroup,
   onOpenMergeExcel,
   isExecuting,
   isCheckingUpdate,
@@ -620,10 +622,11 @@ export const MainMenu = React.memo(function MainMenu({
 
         {/* Tools menu — one-shot file utilities that never touch the pipeline:
             diff / encoding conversion / separate good-bad rows / split by line
-            count / merge Excel workbooks. They open a dialog and call one
-            backend command; unlike the File menu they do not participate in the
-            pipeline lifecycle (open / new tab / templates / save / import /
-            export), so they live in their own menu. */}
+            count / number rows by group / merge Excel workbooks. They open a
+            dialog and call one backend command; unlike the File menu they do
+            not participate in the pipeline lifecycle (open / new tab /
+            templates / save / import / export), so they live in their own
+            menu. */}
         <div className="relative">
           <button
             onClick={() => toggleMenu("tools")}
@@ -689,6 +692,18 @@ export const MainMenu = React.memo(function MainMenu({
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.splitLines}
+                </span>
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  onOpenEnumerateByGroup();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+              >
+                <span className="flex-1 text-left whitespace-nowrap">
+                  {t.enumerateByGroup}
                 </span>
               </button>
               <button

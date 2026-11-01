@@ -71,6 +71,7 @@ function baseProps(overrides: Record<string, unknown> = {}) {
     onOpenCsvEncoding: vi.fn(),
     onOpenSeparateCsv: vi.fn(),
     onOpenSplitLines: vi.fn(),
+    onOpenEnumerateByGroup: vi.fn(),
     onOpenMergeExcel: vi.fn(),
     isExecuting: false,
     isCheckingUpdate: false,

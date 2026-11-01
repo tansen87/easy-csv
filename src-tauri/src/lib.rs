@@ -55,6 +55,7 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     csv::convert_csv_encoding,
     csv::separate_csv,
     csv::split_lines,
+    csv::enumerate_by_group,
     csv::probe_csv_file,
     csv::parse_csv_text,
     excel_merge::merge_excel_sources,

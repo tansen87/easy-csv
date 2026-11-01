@@ -64,6 +64,9 @@ export function useUIState() {
   const [mergeExcelInitialInput, setMergeExcelInitialInput] = useState<
     string | undefined
   >(undefined);
+  const [showEnumerateByGroup, setShowEnumerateByGroup] = useState(false);
+  const [enumerateByGroupInitialInput, setEnumerateByGroupInitialInput] =
+    useState<string | undefined>(undefined);
 
   return {
     showHelp,
@@ -122,5 +125,9 @@ export function useUIState() {
     setShowMergeExcel,
     mergeExcelInitialInput,
     setMergeExcelInitialInput,
+    showEnumerateByGroup,
+    setShowEnumerateByGroup,
+    enumerateByGroupInitialInput,
+    setEnumerateByGroupInitialInput,
   };
 }
