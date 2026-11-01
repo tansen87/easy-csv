@@ -27,7 +27,7 @@ const EXCEL_MAX_COLUMNS: usize = 16_384;
 /// Rows available for data once the repeated header takes row 1.
 const MAX_DATA_ROWS_PER_SHEET: usize = EXCEL_MAX_ROWS - 1;
 /// Rows per worksheet when the caller does not pick a size.
-const DEFAULT_CHUNK_SIZE: usize = 1_000_000;
+const DEFAULT_CHUNK_SIZE: usize = 100_000;
 const BUF_SIZE: usize = 1 << 20;
 
 #[derive(Debug, Serialize)]

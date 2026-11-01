@@ -44,7 +44,7 @@ const DELIMITER_OPTIONS = [
 ];
 
 /** Rows per worksheet when split mode is on. */
-const DEFAULT_CHUNK_SIZE = 1_000_000;
+const DEFAULT_CHUNK_SIZE = 100_000;
 
 /** Header fields shown in the preview line. */
 const HEADER_PREVIEW_FIELDS = 8;
