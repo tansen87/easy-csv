@@ -889,7 +889,7 @@ export function FlowPanel({
 
       {/* Multi-select floating action bar */}
       {selectedNodeIds.size > 0 && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-card border border-border/70 rounded-lg shadow-lg px-2 py-1.5">
+        <div className="absolute top-1 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-card border border-border/70 rounded-lg shadow-lg px-2 py-1.5">
           <span className="px-1.5 text-xs font-medium text-muted-foreground tabular-nums">
             {selectedNodeIds.size}
           </span>
