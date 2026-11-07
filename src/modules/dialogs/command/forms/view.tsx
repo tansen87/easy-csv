@@ -91,7 +91,7 @@ export function ViewForm(props: CommandFormProps) {
                 },
               })
             }
-            className="h-3.5 w-3.5 accent-foreground"
+            className="h-3.5 w-3.5 accent-primary"
           />
           <label htmlFor="view-all" className="text-sm cursor-pointer">
             all
@@ -110,7 +110,7 @@ export function ViewForm(props: CommandFormProps) {
                 e.target.checked,
               )
             }
-            className="h-3.5 w-3.5 accent-foreground"
+            className="h-3.5 w-3.5 accent-primary"
           />
           <label htmlFor="view-expand" className="text-sm cursor-pointer">
             expand
@@ -129,7 +129,7 @@ export function ViewForm(props: CommandFormProps) {
                 e.target.checked,
               )
             }
-            className="h-3.5 w-3.5 accent-foreground"
+            className="h-3.5 w-3.5 accent-primary"
           />
           <label htmlFor="view-hide-info" className="text-sm cursor-pointer">
             hide-info

@@ -110,7 +110,7 @@ export function BatchToForm(props: CommandFormProps) {
                       },
                     })
                   }
-                  className="h-3.5 w-3.5 accent-foreground"
+                  className="h-3.5 w-3.5 accent-primary"
                 />
                 nulls
               </label>
@@ -127,7 +127,7 @@ export function BatchToForm(props: CommandFormProps) {
                       },
                     })
                   }
-                  className="h-3.5 w-3.5 accent-foreground"
+                  className="h-3.5 w-3.5 accent-primary"
                 />
                 omit
               </label>

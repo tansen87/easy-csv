@@ -136,7 +136,7 @@ export function ReplaceQuickForm({
                     onChange={(e) =>
                       updatePair(index, "regex", e.target.checked)
                     }
-                    className="h-3 w-3 accent-foreground"
+                    className="h-3 w-3 accent-primary"
                   />
                   {t.replaceRegex}
                 </label>
@@ -147,7 +147,7 @@ export function ReplaceQuickForm({
                     onChange={(e) =>
                       updatePair(index, "ignoreCase", e.target.checked)
                     }
-                    className="h-3 w-3 accent-foreground"
+                    className="h-3 w-3 accent-primary"
                   />
                   {t.replaceIgnoreCase}
                 </label>

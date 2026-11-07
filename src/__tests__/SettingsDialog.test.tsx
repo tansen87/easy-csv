@@ -226,6 +226,12 @@ describe("settings dialog — whole-row activation (design 030 §4.2)", () => {
     const row = container.querySelector(
       '[data-settings-row="no-headers"]',
     ) as HTMLElement;
+    const checkbox = row.querySelector(
+      'input[type="checkbox"]',
+    ) as HTMLInputElement;
+
+    // The control must follow the accent, not stay on a neutral colour.
+    expect(checkbox.className).toContain("accent-primary");
 
     fireEvent.click(row);
 

@@ -66,7 +66,7 @@ export function EnumForm(props: CommandFormProps) {
                 e.target.checked,
               )
             }
-            className="h-3.5 w-3.5 accent-foreground"
+            className="h-3.5 w-3.5 accent-primary"
           />
           Byte Offset
         </label>
@@ -82,7 +82,7 @@ export function EnumForm(props: CommandFormProps) {
                 e.target.checked,
               )
             }
-            className="h-3.5 w-3.5 accent-foreground"
+            className="h-3.5 w-3.5 accent-primary"
           />
           accumulate
         </label>

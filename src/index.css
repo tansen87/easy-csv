@@ -666,3 +666,11 @@
 .expr-editor-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: var(--muted-foreground);
 }
+
+/* Checkboxes and radios follow the active accent (design 034). Unlayered on
+   purpose: Tailwind's `accent-*` utilities live in a layer, so a plain rule
+   here always wins instead of leaving the control on a neutral colour. */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--brand);
+}

@@ -159,7 +159,7 @@ export function BatchFilterFields({ params, onChange }: BatchFilterFieldsProps) 
           type="checkbox"
           checked={params["case-insensitive"] || false}
           onChange={(e) => update({ "case-insensitive": e.target.checked })}
-          className="h-3.5 w-3.5 accent-foreground"
+          className="h-3.5 w-3.5 accent-primary"
         />
         {t.ignoreCase}
       </label>

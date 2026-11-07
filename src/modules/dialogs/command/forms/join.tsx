@@ -198,7 +198,7 @@ export function JoinForm(props: CommandFormProps) {
                   e.target.checked,
                 )
               }
-              className="h-3.5 w-3.5 accent-foreground"
+              className="h-3.5 w-3.5 accent-primary"
             />
             {n}
           </label>
@@ -223,7 +223,7 @@ export function JoinForm(props: CommandFormProps) {
                       e.target.checked,
                     )
                   }
-                  className="h-3.5 w-3.5 accent-foreground"
+                  className="h-3.5 w-3.5 accent-primary"
                 />
                 {n}
               </label>
@@ -242,7 +242,7 @@ export function JoinForm(props: CommandFormProps) {
                     e.target.checked,
                   )
                 }
-                className="h-3.5 w-3.5 accent-foreground"
+                className="h-3.5 w-3.5 accent-primary"
               />
               parallel
             </label>

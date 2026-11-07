@@ -22,7 +22,7 @@ export function CountForm(props: CommandFormProps) {
                 e.target.checked,
               )
             }
-            className="h-3.5 w-3.5 accent-foreground"
+            className="h-3.5 w-3.5 accent-primary"
           />
           human-readable
         </label>
@@ -38,7 +38,7 @@ export function CountForm(props: CommandFormProps) {
                 e.target.checked,
               )
             }
-            className="h-3.5 w-3.5 accent-foreground"
+            className="h-3.5 w-3.5 accent-primary"
           />
           approx
         </label>
@@ -54,7 +54,7 @@ export function CountForm(props: CommandFormProps) {
                 e.target.checked,
               )
             }
-            className="h-3.5 w-3.5 accent-foreground"
+            className="h-3.5 w-3.5 accent-primary"
           />
           check-alignment
         </label>
@@ -70,7 +70,7 @@ export function CountForm(props: CommandFormProps) {
                 e.target.checked,
               )
             }
-            className="h-3.5 w-3.5 accent-foreground"
+            className="h-3.5 w-3.5 accent-primary"
           />
           parallel
         </label>

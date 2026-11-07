@@ -43,7 +43,7 @@ export function FilterForm(props: CommandFormProps) {
                 e.target.checked,
               )
             }
-            className="h-3.5 w-3.5 accent-foreground"
+            className="h-3.5 w-3.5 accent-primary"
           />
           invert-match
         </label>

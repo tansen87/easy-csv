@@ -140,7 +140,7 @@ export function FilterQuickForm({
                   type="checkbox"
                   checked={ignoreCase}
                   onChange={(e) => setIgnoreCase(e.target.checked)}
-                  className="h-3.5 w-3.5 accent-foreground"
+                  className="h-3.5 w-3.5 accent-primary"
                 />
                 {t.ignoreCase}
               </label>

@@ -69,7 +69,7 @@ export function SortQuickForm({
           type="checkbox"
           checked={numeric}
           onChange={(e) => setNumeric(e.target.checked)}
-          className="h-3.5 w-3.5 accent-foreground"
+          className="h-3.5 w-3.5 accent-primary"
         />
         {t.sortNumeric}
       </label>

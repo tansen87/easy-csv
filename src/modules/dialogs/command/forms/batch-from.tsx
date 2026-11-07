@@ -149,7 +149,7 @@ export function BatchFromForm(props: CommandFormProps) {
                 },
               })
             }
-            className="h-3.5 w-3.5 accent-foreground"
+            className="h-3.5 w-3.5 accent-primary"
           />
           Search subdirectories
         </label>
@@ -278,7 +278,7 @@ export function BatchFromForm(props: CommandFormProps) {
                       },
                     })
                   }
-                  className="h-3.5 w-3.5 accent-foreground"
+                  className="h-3.5 w-3.5 accent-primary"
                 />
                 sort-keys
               </label>
@@ -295,7 +295,7 @@ export function BatchFromForm(props: CommandFormProps) {
                       },
                     })
                   }
-                  className="h-3.5 w-3.5 accent-foreground"
+                  className="h-3.5 w-3.5 accent-primary"
                 />
                 single-object
               </label>

@@ -40,7 +40,7 @@ export function RunForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              className="h-3.5 w-3.5 accent-foreground"
+              className="h-3.5 w-3.5 accent-primary"
             />
             Pipeline
           </label>
@@ -58,7 +58,7 @@ export function RunForm(props: CommandFormProps) {
                   e.target.value,
                 )
               }
-              className="h-3.5 w-3.5 accent-foreground"
+              className="h-3.5 w-3.5 accent-primary"
             />
             Script
           </label>
@@ -122,7 +122,7 @@ export function RunForm(props: CommandFormProps) {
               e.target.checked,
             )
           }
-          className="h-3.5 w-3.5 accent-foreground"
+          className="h-3.5 w-3.5 accent-primary"
         />
         tee
       </label>

@@ -39,7 +39,7 @@ export function ShuffleForm(props: CommandFormProps) {
                 e.target.checked,
               )
             }
-            className="h-3.5 w-3.5 accent-foreground"
+            className="h-3.5 w-3.5 accent-primary"
           />
           external
         </label>
