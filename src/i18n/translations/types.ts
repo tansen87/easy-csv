@@ -298,6 +298,13 @@ export interface Translations {
   historyStatusSuccess: string;
   historyStatusError: string;
   historyStatusCancelled: string;
+  historyRefresh: string;
+  historyCountUnit: string;
+  historySearchPlaceholder: string;
+  historyEmptyHint: string;
+  historyNoMatches: string;
+  historyRowsUnit: string;
+  historyOutputPreview: string;
   clearExecutionHistory: string;
 
   // Result preview

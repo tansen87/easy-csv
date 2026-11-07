@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
-import { X, History, RefreshCw, ChevronDown, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { X, RefreshCw, ChevronDown, ChevronRight, Search, Hand } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { ExecutionHistoryEntry, ExecutionHistoryStatus } from "@/types/xan";
 import { useLanguage } from "@/i18n";
@@ -35,18 +36,16 @@ function parseSummary(raw: string): ParsedSummary {
   }
 }
 
-function statusClass(status: ExecutionHistoryStatus): string {
-  switch (status) {
-    case "success":
-      return "bg-success-soft border-success/30 text-success";
-    case "error":
-      return "bg-danger-soft border-danger/30 text-danger";
-    case "cancelled":
-      return "bg-warning-soft border-warning/30 text-warning";
-  }
-}
+const STATUS_DOT_CLASS: Record<ExecutionHistoryStatus, string> = {
+  success: "bg-success",
+  error: "bg-danger",
+  cancelled: "bg-warning",
+};
 
-function statusLabel(t: any, status: ExecutionHistoryStatus): string {
+function statusLabel(
+  t: { historyStatusSuccess: string; historyStatusError: string; historyStatusCancelled: string },
+  status: ExecutionHistoryStatus,
+): string {
   switch (status) {
     case "success":
       return t.historyStatusSuccess;
@@ -55,6 +54,25 @@ function statusLabel(t: any, status: ExecutionHistoryStatus): string {
     case "cancelled":
       return t.historyStatusCancelled;
   }
+}
+
+const pad2 = (value: number) => String(value).padStart(2, "0");
+
+/** `MM-DD HH:mm:ss` this year, `YY-MM-DD HH:mm` for older runs. */
+function formatStartedAt(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const month = pad2(date.getMonth() + 1);
+  const day = pad2(date.getDate());
+  const minutes = `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+  if (date.getFullYear() !== new Date().getFullYear()) {
+    return `${String(date.getFullYear()).slice(-2)}-${month}-${day} ${minutes}`;
+  }
+  return `${month}-${day} ${minutes}:${pad2(date.getSeconds())}`;
+}
+
+function formatDuration(ms: number): string {
+  return ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${ms} ms`;
 }
 
 /** F6: persisted execution history viewer (time/status/duration/version +
@@ -68,9 +86,27 @@ export function ExecutionHistoryDialog({
 }: ExecutionHistoryDialogProps) {
   const { t } = useLanguage();
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
+
+  const filteredHistory = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return history;
+    return history.filter((entry) => {
+      const text = [
+        entry.tabName,
+        entry.tabId,
+        entry.versionId ?? "",
+        statusLabel(t, entry.status),
+        entry.startedAt,
+      ]
+        .join(" ")
+        .toLowerCase();
+      return text.includes(q);
+    });
+  }, [history, searchQuery, t]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     isDragging.current = true;
@@ -91,12 +127,30 @@ export function ExecutionHistoryDialog({
       isDragging.current = false;
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     };
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "grabbing";
+    document.body.style.userSelect = "none";
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    setSearchQuery("");
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
+
+  const displayedCount = searchQuery.trim()
+    ? filteredHistory.length
+    : history.length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -108,126 +162,188 @@ export function ExecutionHistoryDialog({
       <div
         role="dialog"
         aria-modal="true"
-        className="relative bg-card border rounded-xl shadow-xl w-full max-w-2xl flex flex-col outline-none h-[80vh] overflow-hidden"
+        className="relative flex h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border bg-card shadow-xl outline-none"
         onContextMenu={(e) => e.preventDefault()}
         style={{ left: offset.x, top: offset.y }}
       >
         <div
-          className="flex items-center justify-between px-4 py-3 border-b select-none cursor-move"
+          className="relative flex h-[52px] shrink-0 cursor-grab items-center gap-2.5 border-b border-border px-5 select-none active:cursor-grabbing"
           onMouseDown={handleMouseDown}
         >
-          <h3 className="text-sm font-semibold flex items-center gap-2">
-            <History className="h-4 w-4" />
+          <Hand className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <span className="text-[15px] font-medium text-foreground">
             {t.executionHistory}
-          </h3>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={onRefresh}
-              disabled={loading}
-              className="px-2"
+          </span>
+          <span className="font-mono text-[10.5px] text-muted-foreground tabular-nums">
+            {displayedCount}
+            {t.historyCountUnit ? ` ${t.historyCountUnit}` : ""}
+          </span>
+
+          {history.length > 0 && (
+            <div
+              className="absolute left-1/2 top-1/2 w-[240px] -translate-x-1/2 -translate-y-1/2"
+              onMouseDown={(e) => e.stopPropagation()}
             >
-              <RefreshCw
-                className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t.historySearchPlaceholder}
+                aria-label={t.historySearchPlaceholder}
+                className="h-7 w-full rounded-md border border-transparent bg-muted pl-[26px] pr-2 text-[11px] text-foreground outline-none focus:border-primary"
               />
-            </Button>
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={onClose}
-              className="px-2"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            </div>
+          )}
+
+          <div className="ml-auto flex items-center gap-0.5">
+            <Tooltip content={t.historyRefresh}>
+              <Button
+                variant="ghost"
+                size="xs"
+                aria-label={t.historyRefresh}
+                onClick={onRefresh}
+                disabled={loading}
+                className="h-7 w-7 p-0"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
+                />
+              </Button>
+            </Tooltip>
+            <Tooltip content={t.close}>
+              <Button
+                variant="ghost"
+                size="xs"
+                aria-label={t.close}
+                onClick={onClose}
+                className="h-7 w-7 p-0"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </Tooltip>
           </div>
         </div>
 
         <ScrollArea className="flex-1 min-h-0">
-          <div className="p-3">
+          <div className="py-1">
             {loading && history.length === 0 ? (
-              <div className="text-center py-12 text-sm text-muted-foreground">
+              <p className="px-5 py-6 text-[12.5px] text-muted-foreground">
                 {t.historyLoading}
-              </div>
+              </p>
             ) : history.length === 0 ? (
-              <div className="text-center py-12 px-4">
-                <div className="w-14 h-14 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
-                  <History className="h-7 w-7 text-muted-foreground/50" />
-                </div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+              <div className="px-5 py-6">
+                <p className="text-[12.5px] font-medium text-muted-foreground">
                   {t.noHistoryYet}
                 </p>
-                <p className="text-xs text-muted-foreground/70">
-                  {t.executePipelineHint}
+                <p className="mt-0.5 text-[11.5px] text-muted-foreground/70">
+                  {t.historyEmptyHint}
+                </p>
+              </div>
+            ) : filteredHistory.length === 0 ? (
+              <div className="px-5 py-6">
+                <p className="text-[12.5px] font-medium text-muted-foreground">
+                  {t.historyNoMatches}
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {history.map((entry) => {
-                  const expanded = expandedId === entry.id;
-                  const summary = parseSummary(entry.outputSummary);
-                  return (
-                    <div
-                      key={entry.id}
-                      className="border rounded-lg overflow-hidden bg-muted/20"
+              filteredHistory.map((entry) => {
+                const expanded = expandedId === entry.id;
+                const summary = parseSummary(entry.outputSummary);
+                return (
+                  <div
+                    key={entry.id}
+                    className="relative border-b border-border last:border-b-0"
+                  >
+                    {expanded && (
+                      <span className="absolute inset-y-0 left-0 w-0.5 bg-primary" />
+                    )}
+                    <button
+                      type="button"
+                      className="flex h-14 w-full items-center gap-2 px-5 text-left transition-colors hover:bg-muted/30"
+                      onClick={() =>
+                        setExpandedId(expanded ? null : entry.id)
+                      }
                     >
-                      <button
-                        type="button"
-                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent/50 transition-colors"
-                        onClick={() =>
-                          setExpandedId(expanded ? null : entry.id)
-                        }
-                      >
+                      <span className="w-7 shrink-0 font-mono text-[10.5px] text-muted-foreground tabular-nums">
+                        {String(entry.id).padStart(3, "0")}
+                      </span>
+                      <span
+                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT_CLASS[entry.status]}`}
+                      />
+                      <span className="w-16 shrink-0 text-[11px] text-muted-foreground">
+                        {statusLabel(t, entry.status)}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+                        {entry.tabName || entry.tabId}
+                      </span>
+                      <span className="w-[92px] shrink-0 font-mono text-[10.5px] text-muted-foreground tabular-nums">
+                        {formatStartedAt(entry.startedAt)}
+                      </span>
+                      <span className="w-12 shrink-0 text-right font-mono text-[10.5px] text-muted-foreground tabular-nums">
+                        {formatDuration(entry.durationMs)}
+                      </span>
+                      <span className="w-[72px] shrink-0 text-right font-mono text-[10.5px] text-muted-foreground tabular-nums">
+                        {entry.rows.toLocaleString()} {t.historyRowsUnit}
+                      </span>
+                      <span className="grid w-5 shrink-0 place-items-center text-muted-foreground">
                         {expanded ? (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <ChevronDown className="h-3.5 w-3.5" />
                         ) : (
-                          <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <ChevronRight className="h-3.5 w-3.5" />
                         )}
-                        <span
-                          className={`text-[11px] px-2 py-0.5 rounded-full border font-medium flex-shrink-0 ${statusClass(entry.status)}`}
-                        >
-                          {statusLabel(t, entry.status)}
-                        </span>
-                        <span className="text-sm font-medium min-w-0 truncate flex-1">
-                          {entry.tabName || entry.tabId}
-                        </span>
-                        <span className="text-xs text-muted-foreground/70 flex-shrink-0 hidden sm:inline">
-                          {entry.startedAt}
-                        </span>
-                      </button>
-                      {expanded && (
-                        <div className="px-4 pb-3 pt-1 border-t bg-background/40">
-                          <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground mb-2">
-                            <span>
-                              {t.historyDuration}:{" "}
-                              {entry.durationMs >= 1000
-                                ? `${(entry.durationMs / 1000).toFixed(1)}s`
-                                : `${entry.durationMs}ms`}
-                            </span>
-                            <span>
-                              {t.historyVersion}: {entry.versionId || "—"}
-                            </span>
-                            <span>
-                              {t.historyColumns}: {summary.columns}
-                            </span>
-                            <span>
-                              {t.historyRows}: {summary.rows}
-                            </span>
-                            <span>
-                              {t.historyBytes}: {formatBytes(summary.bytes)}
-                            </span>
-                          </div>
-                          {summary.preview.length > 0 && (
-                            <pre className="text-[11px] leading-relaxed font-mono bg-muted/40 rounded-md p-2 overflow-x-auto text-foreground/80 whitespace-pre-wrap break-words">
+                      </span>
+                    </button>
+
+                    {expanded && (
+                      <div className="border-t border-border bg-muted/20 px-5 pb-4 pl-12 pt-3">
+                        <div className="mb-3.5 flex gap-7">
+                          {[
+                            { key: t.historyDuration, value: formatDuration(entry.durationMs) },
+                            {
+                              key: t.historyVersion,
+                              value: entry.versionId
+                                ? entry.versionId.slice(0, 6)
+                                : "—",
+                              title: entry.versionId ?? undefined,
+                            },
+                            { key: t.historyColumns, value: String(summary.columns) },
+                            { key: t.historyRows, value: summary.rows.toLocaleString() },
+                            { key: t.historyBytes, value: formatBytes(summary.bytes) },
+                          ].map((cell) => (
+                            <div key={cell.key} className="flex flex-col gap-0.5">
+                              <span className="text-[10.5px] text-muted-foreground">
+                                {cell.key}
+                              </span>
+                              <span
+                                className="font-mono text-[12.5px] text-foreground tabular-nums"
+                                title={cell.title}
+                              >
+                                {cell.value}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        {summary.preview.length > 0 && (
+                          <>
+                            <p className="mb-1 text-[10.5px] text-muted-foreground">
+                              {t.historyOutputPreview.replace(
+                                "{n}",
+                                String(summary.preview.length),
+                              )}
+                            </p>
+                            <pre className="m-0 whitespace-pre-wrap break-words rounded-md border border-border bg-card p-2 font-mono text-[11px] leading-[18px] text-foreground">
                               {summary.preview.join("\n")}
                             </pre>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </ScrollArea>

@@ -2,12 +2,13 @@ import React from "react";
 import { Card } from "@/components/ui/Card";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
+import { Tooltip } from "@/components/ui/Tooltip";
 import {
   ChevronRight,
   ChevronDown,
-  ListTree,
   HelpCircle,
   Search,
+  Hand,
   Sparkles,
   X,
 } from "lucide-react";
@@ -287,10 +288,10 @@ export const CommandList = React.memo(function CommandList({
           className="flex items-center gap-2 cursor-grab active:cursor-grabbing select-none"
           onMouseDown={handleMouseDown}
         >
-          <div className="flex bg-primary text-primary-foreground shadow-sm items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium">
-            <ListTree className="h-3.5 w-3.5" />
+          <Hand className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-[13px] font-medium text-foreground">
             {t.cmds}
-          </div>
+          </span>
         </div>
         <div className="relative flex-1 min-w-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60 z-10 pointer-events-none" />
@@ -303,14 +304,17 @@ export const CommandList = React.memo(function CommandList({
             className="w-full pl-8 pr-3 py-1.5 text-xs border border-border/50 rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
           />
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className="h-6 px-2 text-xs font-medium hover:bg-accent hover:text-foreground"
-        >
-          <X className="h-3 w-3" />
-        </Button>
+        <Tooltip content={t.close}>
+          <Button
+            variant="ghost"
+            size="xs"
+            aria-label={t.close}
+            onClick={onClose}
+            className="h-7 w-7 p-0"
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </Tooltip>
       </div>
 
       {/* In-place first-step teaching. */}
