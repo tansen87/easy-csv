@@ -1,341 +1,434 @@
 import { useMemo } from "react";
-import ReactFlow, {
-  Node,
-  Edge,
-  MarkerType,
-  MiniMap,
-  Controls,
-  Background,
-  BackgroundVariant,
-} from "reactflow";
-import "reactflow/dist/style.css";
+import { useLanguage } from "@/i18n";
 import { StepLineage } from "@/types/xan";
-
-const TYPE_COLORS: Record<
-  string,
-  { bg: string; text: string; border: string }
-> = {
-  string: { bg: "#dbeafe", text: "#1e40af", border: "#93c5fd" },
-  number: { bg: "#dcfce7", text: "#166534", border: "#86efac" },
-  date: { bg: "#f3e8ff", text: "#6b21a8", border: "#d8b4fe" },
-  boolean: { bg: "#fef3c7", text: "#92400e", border: "#fcd34d" },
-};
+import {
+  Lane,
+  TraceStep,
+  buildColumnTrace,
+  buildLanes,
+} from "@/modules/pipeline/panels/lib/columnLineage";
 
 interface LineageGraphProps {
-  lineageData: StepLineage[];
-  highlightedColumn?: string | null;
-  onColumnClick?: (columnName: string) => void;
+  lineage: StepLineage[];
+  /** 当前追踪的列（结果列名或源列名） */
+  tracedColumn?: string | null;
+  /** 搜索词：命中的泳道保持亮，其余压暗 */
+  query?: string;
+  onTrace?: (name: string) => void;
 }
 
-function ColumnNode({ data }: { data: any }) {
-  const colors = TYPE_COLORS[data.type] || TYPE_COLORS.string;
-  const isHighlighted = data.isHighlighted;
-  const isDimmed = data.isDimmed;
+const LANE_H = 46;
+const LANE_TOP = 168;
+const PAD = 24;
+const LABEL_W = 166;
+const LANE_START = PAD + LABEL_W + 10;
+const FIRST_GATE = LANE_START + 120;
+const GATE_GAP = 192;
+const HEAD_NUM_Y = 100;
+const HEAD_NAME_Y = 120;
+const HEAD_CMD_Y = 136;
+const GATE_TOP = 148;
 
-  return (
-    <div
-      className="px-3 py-2 rounded-md text-xs font-medium cursor-pointer transition-all"
-      style={{
-        backgroundColor: colors.bg,
-        color: colors.text,
-        border: `1.5px solid ${isHighlighted ? "#3b82f6" : colors.border}`,
-        opacity: isDimmed ? 0.3 : 1,
-        boxShadow: isHighlighted ? "0 0 0 2px rgba(59,130,246,0.3)" : "none",
-        minWidth: 100,
-        maxWidth: 220,
-      }}
-      onClick={() => data.onColumnClick?.(data.label)}
-    >
-      <div className="truncate leading-relaxed">{data.label}</div>
-      <div className="text-[10px] opacity-60 mt-1">{data.type}</div>
-    </div>
-  );
+const TRACED_STROKE = "stroke-primary";
+const LANE_STROKE =
+  "stroke-[color-mix(in_oklab,var(--foreground)_22%,transparent)]";
+
+/** 粗略估个文本宽度，用来给泳道上的标签片留位置（CJK 按全宽算） */
+function textWidth(text: string, mono: boolean): number {
+  let width = 0;
+  for (const char of text) {
+    const cjk = /[\u3000-\u9fff]/.test(char);
+    width += cjk ? (mono ? 9.5 : 10.5) : mono ? 5.9 : 6.4;
+  }
+  return width;
 }
 
-function StepNode({ data }: { data: any }) {
-  const isDimmed = data.isDimmed;
-
-  return (
-    <div
-      className="px-4 py-3 rounded-lg text-xs transition-all"
-      style={{
-        backgroundColor: isDimmed ? "#f1f5f9" : "#f8fafc",
-        border: `1.5px solid ${isDimmed ? "#e2e8f0" : "#cbd5e1"}`,
-        opacity: isDimmed ? 0.3 : 1,
-        minWidth: 140,
-      }}
-    >
-      <div className="font-semibold text-foreground truncate">
-        {data.commandName}
-      </div>
-      <div className="text-[10px] text-muted-foreground mt-1.5">
-        {data.inputRowCount} → {data.outputRowCount} rows
-      </div>
-      {data.transformations.length > 0 && (
-        <div className="text-[10px] text-muted-foreground/70 mt-1 truncate">
-          {data.transformations[0].description}
-        </div>
-      )}
-    </div>
-  );
-}
-
-const lineageNodeTypes = {
-  columnNode: ColumnNode,
-  stepNode: StepNode,
-};
-
-const COL_W = 100;
-const COL_GAP = 5;
-const COL_H = 44;
-const STEP_W = 160;
-const STEP_H = 70;
-const ROW_GAP = 30;
-
+/**
+ * 全屏泳道图（设计 045）：列是泳道，步骤是竖线。
+ *
+ * 只有发生变化的列在竖线上留下节点（改类型 / 生成 / 改名 / 移除），
+ * 其余列只穿过竖线，行数写在竖线下方。
+ */
 export function LineageGraph({
-  lineageData,
-  highlightedColumn,
-  onColumnClick,
+  lineage,
+  tracedColumn,
+  query = "",
+  onTrace,
 }: LineageGraphProps) {
-  const { nodes, edges } = useMemo(() => {
-    if (lineageData.length === 0) return { nodes: [], edges: [] };
+  const { t } = useLanguage();
 
-    const nodeMap = new Map<string, Node>();
-    const edgeList: Edge[] = [];
-    let edgeId = 0;
+  const lanes = useMemo(() => buildLanes(lineage), [lineage]);
+  const traced = useMemo(
+    () => (tracedColumn ? buildColumnTrace(lineage, tracedColumn) : null),
+    [lineage, tracedColumn],
+  );
 
-    const highlightSet = new Set<string>();
-    if (highlightedColumn) {
-      lineageData.forEach((step) => {
-        step.inputSchema.forEach((col) => {
-          if (col.name === highlightedColumn)
-            highlightSet.add(`${step.stepId}-in-${col.name}`);
-        });
-        step.outputSchema.forEach((col) => {
-          if (col.name === highlightedColumn)
-            highlightSet.add(`${step.stepId}-out-${col.name}`);
-        });
-      });
-    }
+  if (lineage.length === 0) return null;
 
-    const hasHighlight = highlightSet.size > 0;
+  const stepCount = lineage.length;
+  const gateX = (index: number) => FIRST_GATE + index * GATE_GAP;
+  const laneEnd = gateX(stepCount - 1) + 44;
+  const width = Math.max(laneEnd + 204, 1120);
+  const axisY = LANE_TOP + Math.max(lanes.length, 1) * LANE_H + 40;
+  const height = axisY + 104;
+  const keyword = query.trim().toLowerCase();
 
-    // Layout: column rows alternate with step rows
-    lineageData.forEach((step, stepIndex) => {
-      const inputCols = step.inputSchema;
-      const outputCols = step.outputSchema;
+  const first = lineage[0];
+  const last = lineage[stepCount - 1];
 
-      const inputRowY = stepIndex * (STEP_H + ROW_GAP + COL_H + ROW_GAP);
-      const stepRowY = inputRowY + COL_H + ROW_GAP;
-      const outputRowY = stepRowY + STEP_H + ROW_GAP;
+  const isTracedLane = (lane: Lane) =>
+    Boolean(
+      traced &&
+        lane.sourceName === traced.sourceName &&
+        lane.finalName === traced.finalName,
+    );
 
-      // Create input column nodes (horizontal row)
-      const inputTotalW =
-        inputCols.length * COL_W + Math.max(0, inputCols.length - 1) * COL_GAP;
-      const inputStartX = -inputTotalW / 2;
+  const isDimmed = (lane: Lane) => {
+    if (!keyword) return false;
+    return (
+      !lane.sourceName.toLowerCase().includes(keyword) &&
+      !lane.finalName.toLowerCase().includes(keyword)
+    );
+  };
 
-      inputCols.forEach((col, i) => {
-        const nodeId = `input-${step.stepId}-${col.name}`;
-        const x = inputStartX + i * (COL_W + COL_GAP);
-        nodeMap.set(nodeId, {
-          id: nodeId,
-          type: "columnNode",
-          position: { x, y: inputRowY },
-          data: {
-            label: col.name,
-            type: col.type,
-            isHighlighted:
-              highlightSet.has(nodeId) ||
-              (!hasHighlight && highlightedColumn === col.name),
-            isDimmed:
-              hasHighlight &&
-              !highlightSet.has(nodeId) &&
-              highlightedColumn !== col.name,
-            onColumnClick,
-          },
-        });
-      });
+  const laneOpacity = (lane: Lane) => (isDimmed(lane) ? 0.28 : 1);
 
-      // Create step node (centered)
-      nodeMap.set(`step-${step.stepId}`, {
-        id: `step-${step.stepId}`,
-        type: "stepNode",
-        position: { x: -STEP_W / 2, y: stepRowY },
-        data: {
-          commandName: step.commandName,
-          inputRowCount: step.inputRowCount,
-          outputRowCount: step.outputRowCount,
-          transformations: step.transformations,
-          isDimmed:
-            hasHighlight &&
-            !Array.from(highlightSet).some((id) => id.includes(step.stepId)),
-        },
-      });
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className="h-full w-full"
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label={t.dataLineage}
+    >
+      {/* 表头：来源 / 结果 */}
+      <text x={PAD} y={64} className="fill-foreground text-[12px]">
+        {t.lineageSourceNode}
+      </text>
+      <text
+        x={PAD}
+        y={82}
+        className="fill-muted-foreground font-mono text-[9.5px]"
+      >
+        {first.inputRowCount} {t.lineageRowsUnit} · {first.inputSchema.length}{" "}
+        {t.lineageColumnsUnit}
+      </text>
+      <text
+        x={laneEnd + 14}
+        y={64}
+        className="fill-foreground text-[12px]"
+      >
+        {t.lineageResultNode}
+      </text>
+      <text
+        x={laneEnd + 14}
+        y={82}
+        className="fill-muted-foreground font-mono text-[9.5px]"
+      >
+        {last.outputRowCount} {t.lineageRowsUnit} ·{" "}
+        {last.outputSchema.length} {t.lineageColumnsUnit}
+      </text>
 
-      // Edges: input cols → step
-      inputCols.forEach((col) => {
-        const inputColId = `input-${step.stepId}-${col.name}`;
-        const isEdgeHighlighted = highlightSet.has(inputColId);
-        edgeList.push({
-          id: `e-${inputColId}-step-${step.stepId}-${edgeId++}`,
-          source: inputColId,
-          target: `step-${step.stepId}`,
-          type: "smoothstep",
-          animated: isEdgeHighlighted,
-          style: {
-            stroke: isEdgeHighlighted
-              ? "#3b82f6"
-              : hasHighlight
-                ? "#cbd5e1"
-                : "#94a3b8",
-            strokeWidth: isEdgeHighlighted ? 2 : 1,
-            opacity: hasHighlight && !isEdgeHighlighted ? 0.3 : 1,
-          },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: isEdgeHighlighted
-              ? "#3b82f6"
-              : hasHighlight
-                ? "#cbd5e1"
-                : "#94a3b8",
-          },
-        });
-      });
+      {/* 步骤竖线 + 头部 + 行数 */}
+      {lineage.map((step, index) => {
+        const x = gateX(index);
+        const previous = lineage[index - 1];
+        const changed =
+          !previous || previous.outputRowCount !== step.outputRowCount;
+        return (
+          <g key={step.stepId}>
+            <line
+              x1={x}
+              y1={GATE_TOP}
+              x2={x}
+              y2={axisY - 26}
+              className="stroke-[color-mix(in_oklab,var(--foreground)_14%,transparent)]"
+              strokeWidth={1}
+            />
+            <text
+              x={x}
+              y={HEAD_NUM_Y}
+              textAnchor="middle"
+              className="fill-muted-foreground/70 font-mono text-[9.5px]"
+            >
+              {String(index + 1).padStart(2, "0")}
+            </text>
+            <text
+              x={x}
+              y={HEAD_NAME_Y}
+              textAnchor="middle"
+              className="fill-foreground text-[11.5px]"
+            >
+              {step.alias || step.commandName}
+            </text>
+            {step.alias && (
+              <text
+                x={x}
+                y={HEAD_CMD_Y}
+                textAnchor="middle"
+                className="fill-muted-foreground font-mono text-[9.5px]"
+              >
+                {step.commandName}
+              </text>
+            )}
+            <text
+              x={x}
+              y={axisY}
+              textAnchor="middle"
+              className={
+                changed
+                  ? "fill-foreground font-mono text-[10px] tabular-nums"
+                  : "fill-muted-foreground/60 font-mono text-[10px] tabular-nums"
+              }
+            >
+              {step.outputRowCount} {t.lineageRowsUnit}
+            </text>
+          </g>
+        );
+      })}
 
-      // Create output column nodes (horizontal row)
-      const outputTotalW =
-        outputCols.length * COL_W +
-        Math.max(0, outputCols.length - 1) * COL_GAP;
-      const outputStartX = -outputTotalW / 2;
+      {/* 泳道 */}
+      {lanes.map((lane, index) => {
+        const y = LANE_TOP + index * LANE_H;
+        const tracedLane = isTracedLane(lane);
+        const events = lane.steps;
+        const bornHere =
+          events[0]?.kind === "derived" && events[0].columnIn === null;
+        const x0 = bornHere ? gateX(events[0].index - 1) : LANE_START;
+        const tail = events[events.length - 1];
+        const x1 =
+          !lane.survives && tail?.kind === "removed"
+            ? gateX(tail.index - 1)
+            : laneEnd;
+        const dim = laneOpacity(lane);
 
-      outputCols.forEach((col, i) => {
-        const nodeId = `output-${step.stepId}-${col.name}`;
-        const x = outputStartX + i * (COL_W + COL_GAP);
-        nodeMap.set(nodeId, {
-          id: nodeId,
-          type: "columnNode",
-          position: { x, y: outputRowY },
-          data: {
-            label: col.name,
-            type: col.type,
-            isHighlighted:
-              highlightSet.has(nodeId) ||
-              (!hasHighlight && highlightedColumn === col.name),
-            isDimmed:
-              hasHighlight &&
-              !highlightSet.has(nodeId) &&
-              highlightedColumn !== col.name,
-            onColumnClick,
-          },
-        });
-      });
+        return (
+          <g
+            key={lane.key}
+            opacity={dim}
+            className={onTrace ? "cursor-pointer" : undefined}
+            onClick={() => onTrace?.(lane.finalName)}
+          >
+            <title>{`${lane.sourceName} → ${lane.finalName}`}</title>
+            {/* 命中区域 */}
+            <line
+              x1={x0}
+              y1={y}
+              x2={x1}
+              y2={y}
+              stroke="transparent"
+              strokeWidth={16}
+            />
+            <line
+              x1={x0}
+              y1={y}
+              x2={x1}
+              y2={y}
+              className={tracedLane ? TRACED_STROKE : LANE_STROKE}
+              strokeWidth={tracedLane ? 2 : 1}
+            />
 
-      // Edges: step → output cols
-      outputCols.forEach((col) => {
-        const outputColId = `output-${step.stepId}-${col.name}`;
-        const isEdgeHighlighted = highlightSet.has(outputColId);
-        edgeList.push({
-          id: `e-step-${step.stepId}-${outputColId}-${edgeId++}`,
-          source: `step-${step.stepId}`,
-          target: outputColId,
-          type: "smoothstep",
-          animated: isEdgeHighlighted,
-          style: {
-            stroke: isEdgeHighlighted
-              ? "#3b82f6"
-              : hasHighlight
-                ? "#cbd5e1"
-                : "#94a3b8",
-            strokeWidth: isEdgeHighlighted ? 2 : 1,
-            opacity: hasHighlight && !isEdgeHighlighted ? 0.3 : 1,
-          },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: isEdgeHighlighted
-              ? "#3b82f6"
-              : hasHighlight
-                ? "#cbd5e1"
-                : "#94a3b8",
-          },
-        });
-      });
+            {/* 源列名 */}
+            <text
+              x={LANE_START - 14}
+              y={y - 2}
+              textAnchor="end"
+              className={
+                tracedLane
+                  ? "fill-primary text-[12px]"
+                  : lane.survives
+                    ? "fill-foreground text-[12px]"
+                    : "fill-muted-foreground text-[12px]"
+              }
+            >
+              {lane.sourceName}
+            </text>
+            <text
+              x={LANE_START - 14}
+              y={y + 12}
+              textAnchor="end"
+              className="fill-muted-foreground/60 font-mono text-[9.5px]"
+            >
+              {lane.sourceType}
+            </text>
 
-      // Connect output cols to next step's input cols (if not last step)
-      if (stepIndex < lineageData.length - 1) {
-        const nextStep = lineageData[stepIndex + 1];
-        outputCols.forEach((col) => {
-          const outputColId = `output-${step.stepId}-${col.name}`;
-          const nextInputColId = `input-${nextStep.stepId}-${col.name}`;
-          if (nodeMap.has(nextInputColId)) {
-            const isEdgeHighlighted =
-              highlightSet.has(outputColId) && highlightSet.has(nextInputColId);
-            edgeList.push({
-              id: `e-${outputColId}-${nextInputColId}-${edgeId++}`,
-              source: outputColId,
-              target: nextInputColId,
-              type: "smoothstep",
-              animated: isEdgeHighlighted,
-              style: {
-                stroke: isEdgeHighlighted
-                  ? "#3b82f6"
-                  : hasHighlight
-                    ? "#cbd5e1"
-                    : "#94a3b8",
-                strokeWidth: isEdgeHighlighted ? 2 : 1,
-                opacity: hasHighlight && !isEdgeHighlighted ? 0.3 : 1,
-              },
-            });
-          }
-        });
-      }
-    });
+            {/* 结果列名 */}
+            {lane.survives && x1 === laneEnd && (
+              <>
+                <text
+                  x={laneEnd + 14}
+                  y={y - 2}
+                  className={
+                    tracedLane
+                      ? "fill-primary text-[12px]"
+                      : "fill-foreground text-[12px]"
+                  }
+                >
+                  {lane.finalName}
+                </text>
+                <text
+                  x={laneEnd + 14}
+                  y={y + 12}
+                  className="fill-muted-foreground/60 font-mono text-[9.5px]"
+                >
+                  {lane.finalType}
+                </text>
+              </>
+            )}
 
-    return { nodes: Array.from(nodeMap.values()), edges: edgeList };
-  }, [lineageData, highlightedColumn, onColumnClick]);
+            {/* 变化节点 */}
+            {events.map((event) => (
+              <LaneEvent
+                key={`${lane.key}-${event.index}`}
+                event={event}
+                x={gateX(event.index - 1)}
+                y={y}
+                traced={tracedLane}
+                groupKeyLabel={t.lineageGroupKey}
+              />
+            ))}
 
-  if (lineageData.length === 0) {
-    return null;
+            {!lane.survives && tail?.kind === "removed" && (
+              <text
+                x={gateX(tail.index - 1) + 12}
+                y={y + 4}
+                className="fill-muted-foreground/70 text-[9.5px]"
+              >
+                {t.lineageRemoved}
+              </text>
+            )}
+          </g>
+        );
+      })}
+
+      {/* 图例 */}
+      <line
+        x1={PAD}
+        y1={height - 34}
+        x2={PAD + 28}
+        y2={height - 34}
+        className={TRACED_STROKE}
+        strokeWidth={2}
+      />
+      <text
+        x={PAD + 36}
+        y={height - 30}
+        className="fill-muted-foreground/70 text-[9.5px]"
+      >
+        {t.lineageTracedLane}
+      </text>
+      <line
+        x1={PAD + 120}
+        y1={height - 34}
+        x2={PAD + 148}
+        y2={height - 34}
+        className={LANE_STROKE}
+        strokeWidth={1}
+      />
+      <text
+        x={PAD + 156}
+        y={height - 30}
+        className="fill-muted-foreground/70 text-[9.5px]"
+      >
+        {t.lineageOtherLane}
+      </text>
+      <path
+        d={`M${PAD + 226} ${height - 38} l8 8 M${PAD + 234} ${height - 38} l-8 8`}
+        className="stroke-muted-foreground/70"
+        strokeWidth={1.2}
+        fill="none"
+      />
+      <text
+        x={PAD + 246}
+        y={height - 30}
+        className="fill-muted-foreground/70 text-[9.5px]"
+      >
+        {t.lineageRemovedHere}
+      </text>
+      <text
+        x={width - PAD}
+        y={height - 30}
+        textAnchor="end"
+        className="fill-muted-foreground/70 text-[9.5px]"
+      >
+        {t.lineageGraphHint}
+      </text>
+    </svg>
+  );
+}
+
+interface LaneEventProps {
+  event: TraceStep;
+  x: number;
+  y: number;
+  traced: boolean;
+  groupKeyLabel: string;
+}
+
+function LaneEvent({
+  event,
+  x,
+  y,
+  traced,
+  groupKeyLabel,
+}: LaneEventProps) {
+  if (event.kind === "kept") {
+    return event.groupKey ? (
+      <text
+        x={x + 12}
+        y={y - 10}
+        className="fill-muted-foreground/70 text-[9.5px]"
+      >
+        {groupKeyLabel}
+      </text>
+    ) : null;
   }
 
+  if (event.kind === "removed") {
+    return (
+      <path
+        d={`M${x - 4} ${y - 4} l8 8 M${x + 4} ${y - 4} l-8 8`}
+        className="stroke-muted-foreground"
+        strokeWidth={1.2}
+        fill="none"
+      />
+    );
+  }
+
+  const label =
+    event.kind === "cast"
+      ? `${event.typeIn} → ${event.typeOut}`
+      : event.columnOut || "";
+  const mono = event.kind === "cast";
+  const chipWidth = textWidth(label, mono) + 16;
+
   return (
-    <div className="w-full h-full">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={lineageNodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.3 }}
-        proOptions={{ hideAttribution: true }}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable={false}
-        zoomOnScroll={true}
-        zoomOnPinch={true}
-        panOnDrag={true}
-        minZoom={0.1}
-        maxZoom={2}
+    <g>
+      <rect
+        x={x - chipWidth / 2}
+        y={y - 11}
+        width={chipWidth}
+        height={22}
+        rx={6}
+        className={
+          traced
+            ? "fill-background stroke-primary"
+            : "fill-background stroke-[color-mix(in_oklab,var(--foreground)_22%,transparent)]"
+        }
+        strokeWidth={traced ? 1.2 : 1}
+      />
+      <text
+        x={x}
+        y={y + 3.5}
+        textAnchor="middle"
+        className={
+          mono
+            ? "fill-muted-foreground font-mono text-[9.5px]"
+            : "fill-foreground text-[10.5px]"
+        }
       >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={16}
-          size={1}
-          color="#e2e8f0"
-        />
-        <MiniMap
-          pannable
-          zoomable
-          nodeColor={(node) => {
-            if (node.type === "stepNode") return "#94a3b8";
-            const type = node.data?.type;
-            if (type === "number") return "#86efac";
-            if (type === "date") return "#d8b4fe";
-            if (type === "boolean") return "#fcd34d";
-            return "#93c5fd";
-          }}
-          style={{ width: 160, height: 100 }}
-        />
-        <Controls showInteractive={false} />
-      </ReactFlow>
-    </div>
+        {label}
+      </text>
+    </g>
   );
 }

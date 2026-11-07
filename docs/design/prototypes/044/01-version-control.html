@@ -1,0 +1,1386 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 01 · 版本控制面板改版</title>
+<style>
+  /* ── tokens · 与 src/index.css 对齐 ───────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.7 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --border-strong:oklch(0.855 0 0);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+
+    --success:oklch(0.52 0.09 150);
+    --warning:oklch(0.55 0.1 72);
+    --danger:oklch(0.577 0.245 27.325);
+
+    --canvas:oklch(0.976 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-win:0 24px 60px -24px oklch(0.2 0.02 80 / 26%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-pop:0 12px 28px -10px oklch(0.2 0.02 80 / 26%),0 1px 3px oklch(0.2 0.02 80 / 8%);
+
+    --ease:cubic-bezier(.2,0,0,1);
+  }
+  html.dark,.dark{
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.52 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(1 0 0 / 7%);
+    --border-strong:oklch(1 0 0 / 16%);
+
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 12%,transparent);
+
+    --success:oklch(0.72 0.09 152);
+    --warning:oklch(0.76 0.1 78);
+    --danger:oklch(0.704 0.191 22.216);
+
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.105 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-win:0 24px 60px -24px oklch(0 0 0 / 60%),0 2px 6px oklch(0 0 0 / 30%);
+    --shadow-pop:0 12px 28px -10px oklch(0 0 0 / 60%),0 1px 3px oklch(0 0 0 / 40%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;-webkit-font-smoothing:antialiased;
+  }
+  .i{width:14px;height:14px;stroke:currentColor;stroke-width:1.5;fill:none;
+     stroke-linecap:round;stroke-linejoin:round;display:block}
+  .i.sm{width:12px;height:12px}
+
+  /* ── 设计稿舞台 ──────────────────────────────────────────────────── */
+  #sheet{width:1240px;margin:0 auto;padding:28px 0 80px}
+  .stage-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding-bottom:18px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar h1{margin:0;font-size:16px;font-weight:500}
+  .stage-bar p{margin:5px 0 0;font-size:12px;color:var(--muted-fg);max-width:720px;line-height:1.6}
+  .seg{display:flex;gap:2px;padding:2px;border-radius:8px;background:var(--bg);border:1px solid var(--border)}
+  .seg button{
+    appearance:none;border:0;background:transparent;font:inherit;font-size:11.5px;color:var(--muted-fg);
+    height:24px;padding:0 11px;border-radius:6px;cursor:pointer;
+    transition:background-color .15s var(--ease),color .15s var(--ease);
+  }
+  .seg button.on{background:var(--brand);color:var(--brand-fg)}
+
+  /* ── 方向 ────────────────────────────────────────────────────────── */
+  .direction{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:0;
+    border:1px solid var(--border);border-radius:10px;background:var(--card);
+    margin-bottom:40px;overflow:hidden;
+  }
+  .direction div{padding:12px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;letter-spacing:.02em;color:var(--muted-fg-2);margin-bottom:5px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.55;color:var(--fg)}
+
+  /* ── 帧 ──────────────────────────────────────────────────────────── */
+  .frame + .frame{margin-top:52px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span:last-child{color:var(--muted-fg-2)}
+
+  .win{
+    position:relative;width:1200px;height:760px;display:flex;flex-direction:column;overflow:hidden;
+    background:var(--bg);color:var(--fg);
+    border:1px solid var(--border-strong);border-radius:8px;box-shadow:var(--shadow-win);
+  }
+  .dark .win{border-color:var(--border)}
+
+  /* ── 标题栏 ──────────────────────────────────────────────────────── */
+  .titlebar{flex:none;height:40px;display:flex;align-items:center;background:var(--card);
+            border-bottom:1px solid var(--border-soft);user-select:none}
+  .brand{padding-left:16px;font-size:12.5px;font-weight:500;letter-spacing:.005em;white-space:nowrap}
+  .menus{display:flex;align-items:center;gap:2px;margin-left:18px}
+  .menus button{
+    appearance:none;border:0;background:transparent;font:inherit;font-size:11.5px;font-weight:500;
+    color:var(--brand);height:26px;padding:0 11px;border-radius:6px;
+    transition:background-color .12s var(--ease),color .12s var(--ease);
+  }
+  .menus button:hover{background:var(--muted);color:var(--fg)}
+  .menus button.on{background:var(--muted);color:var(--fg)}
+  .tb-right{margin-left:auto;display:flex;align-items:center;gap:2px;padding-right:8px}
+  .tb-btn{appearance:none;border:0;background:transparent;color:var(--muted-fg);width:26px;height:26px;
+          display:grid;place-items:center;border-radius:6px;
+          transition:background-color .12s var(--ease),color .12s var(--ease)}
+  .tb-btn:hover{background:var(--muted);color:var(--fg)}
+  .win-ctl{display:flex;height:40px}
+  .win-ctl i{display:grid;place-items:center;width:44px;color:var(--muted-fg);font-style:normal}
+  .win-ctl svg{width:10px;height:10px;stroke:currentColor;stroke-width:1.2;fill:none}
+
+  /* ── 画布 ────────────────────────────────────────────────────────── */
+  .canvas{
+    position:relative;flex:1 1 auto;min-height:0;overflow:hidden;
+    background-color:var(--canvas);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:20px 20px;background-position:10px 10px;
+  }
+  .tabs{position:absolute;left:8px;top:6px;display:flex;align-items:center;gap:2px;height:30px}
+  .tab{display:flex;align-items:center;gap:6px;height:24px;padding:0 9px;font-size:11.5px;
+       color:var(--muted-fg);border:1px solid transparent;border-radius:6px}
+  .tab.on{background:var(--card);border-color:var(--border);color:var(--fg)}
+  .tab .d{width:5px;height:5px;border-radius:50%;background:var(--border-strong)}
+  .tab.on .d{background:var(--brand)}
+  .node{position:absolute;background:var(--card);border:1px solid var(--border);border-radius:10px;
+        box-shadow:0 1px 2px oklch(0.2 0.02 80 / 5%)}
+  .n-head{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;border-bottom:1px solid var(--border-soft)}
+  .n-head b{font-size:11.5px;font-weight:500}
+  .n-head em{font-style:normal;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);margin-left:auto}
+  .n-table{left:44px;top:62px;width:300px}
+  .nt{padding:2px 0 6px}
+  .nt .r{display:grid;grid-template-columns:22px 1fr 1fr 1fr;height:16px;align-items:center;padding:0 10px}
+  .nt .r span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);white-space:nowrap;
+              overflow:hidden;text-overflow:ellipsis;padding-right:8px}
+  .nt .r.h span{color:var(--muted-fg-2);font-size:9px}
+  .nt .r:nth-child(2n){background:color-mix(in oklab,var(--muted) 55%,transparent)}
+  .n-step{left:412px;top:86px;width:198px;overflow:hidden}
+  .n-step .gut{position:absolute;left:0;top:0;bottom:0;width:28px;display:grid;place-items:center;
+               border-right:1px solid var(--border-soft);
+               font-family:var(--mono);font-size:10px;color:var(--muted-fg-2)}
+  .n-step .in{padding:8px 10px 9px 38px}
+  .n-step b{font-size:12px;font-weight:500}
+  .n-step p{margin:5px 0 0;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);line-height:1.5}
+  .n-step.s2{top:214px}
+  .n-step.s3{top:342px}
+  .n-res{left:672px;top:150px;width:190px;height:112px}
+  .n-res .bd{padding:10px;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);line-height:1.7}
+  .edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .zoom{position:absolute;left:14px;bottom:14px;display:flex;flex-direction:column;
+        background:var(--card);border:1px solid var(--border);border-radius:7px;overflow:hidden}
+  .zoom i{display:grid;place-items:center;width:24px;height:24px;color:var(--muted-fg)}
+  .zoom i + i{border-top:1px solid var(--border-soft)}
+
+  /* ══════════════════════════════════════════════════════════════════
+     现状 · VersionControlPanel.tsx 当前实现
+     ══════════════════════════════════════════════════════════════════ */
+  .b-panel{position:absolute;top:0;right:0;bottom:0;width:320px;background:var(--card);
+           border-left:1px solid color-mix(in oklab,var(--border) 50%,transparent);
+           box-shadow:-8px 0 24px -12px oklch(0.2 0.02 80 / 22%);
+           display:flex;flex-direction:column;overflow:hidden}
+  .b-top{padding:12px 12px 0}
+  .b-h{display:flex;align-items:center;justify-content:space-between}
+  .b-h h3{margin:0;font-size:14px;font-weight:600}
+  .b-ibs{display:flex;align-items:center;gap:4px}
+  .b-ib{appearance:none;border:0;background:transparent;color:var(--fg);width:24px;height:24px;
+        display:grid;place-items:center;border-radius:6px}
+  .b-ib:hover{background:var(--brand-soft);color:var(--brand)}
+  .b-search{position:relative;margin-top:8px}
+  .b-search svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--muted-fg);width:12px;height:12px}
+  .b-search input{width:100%;height:28px;padding:0 8px 0 26px;font:inherit;font-size:12px;
+                  border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--fg)}
+  .b-diff{flex:none;height:240px;overflow:hidden;padding:12px}
+  .b-diff-h{display:flex;align-items:center;justify-content:space-between}
+  .b-diff-h span{font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px}
+  .b-sel{margin-top:8px;height:28px;display:flex;align-items:center;justify-content:space-between;
+         padding:0 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--fg)}
+  .b-diff-h .b-ib{width:20px;height:20px}
+  .b-dlist{margin-top:8px;display:grid;gap:2px;font-size:10px;line-height:14px}
+  .b-dlist .ok{color:var(--success)}
+  .b-dlist .bad{color:var(--danger)}
+  .b-dlist .warn{color:var(--warning)}
+  .b-dlist .plain{color:var(--muted-fg)}
+  .b-list{flex:1 1 auto;min-height:0;overflow:hidden;padding:0 12px 12px;display:grid;gap:8px;align-content:start}
+  .b-card{border:1px solid color-mix(in oklab,var(--border) 50%,transparent);border-radius:10px;padding:12px;
+          transition:all .15s}
+  .b-card.sel{border-color:color-mix(in oklab,var(--brand) 70%,transparent);
+              background:color-mix(in oklab,var(--brand) 10%,transparent)}
+  .b-card .row1{display:flex;align-items:flex-start;justify-content:space-between}
+  .b-msg{font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px;min-width:0}
+  .b-msg span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .b-cur{flex:none;font-size:9px;padding:1px 4px;background:var(--brand);color:var(--brand-fg);border-radius:3px}
+  .b-time{display:flex;align-items:center;gap:4px;margin-top:4px;font-size:10px;color:var(--muted-fg)}
+  .b-sum{margin-top:4px;font-size:10px;color:var(--muted-fg)}
+  .b-sum .ok{color:var(--success)}
+  .b-sum .bad{color:var(--danger)}
+  .b-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+  .b-tag{display:inline-flex;align-items:center;gap:4px;padding:1px 6px;font-size:10px;
+         background:var(--brand-soft);color:var(--brand);border-radius:4px}
+  .b-tag i{font-style:normal;font-size:10px;opacity:.7}
+  .b-acts{display:flex;align-items:center;gap:4px;margin-left:8px;flex:none}
+  .b-acts .b-ib2{appearance:none;border:0;background:transparent;color:var(--fg);width:20px;height:20px;
+                 display:grid;place-items:center;border-radius:4px}
+  .b-acts .b-ib2 svg{width:12px;height:12px}
+
+  /* ══════════════════════════════════════════════════════════════════
+     改后 · 版本账本
+     ══════════════════════════════════════════════════════════════════ */
+  .v-panel{position:absolute;top:0;right:0;bottom:0;width:320px;background:var(--card);
+           border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+
+  /* 头部 */
+  .v-head{flex:none;padding:12px 16px 0}
+  .v-hrow{display:flex;align-items:center;gap:8px;height:28px}
+  .v-title{font-size:13px;font-weight:500;letter-spacing:.01em}
+  .v-hacts{margin-left:auto;display:flex;align-items:center;gap:2px}
+  .v-save{appearance:none;border:1px solid transparent;background:var(--brand-soft);color:var(--brand);
+          height:26px;padding:0 9px 0 7px;border-radius:7px;display:flex;align-items:center;gap:5px;
+          font:inherit;font-size:11.5px;font-weight:500;cursor:pointer;
+          transition:background-color .12s var(--ease)}
+  .v-save:hover{background:color-mix(in oklab,var(--brand) 15%,transparent)}
+  .v-save svg{width:12px;height:12px}
+  .v-x{appearance:none;border:0;background:transparent;color:var(--muted-fg);width:26px;height:26px;
+       display:grid;place-items:center;border-radius:7px;cursor:pointer;
+       transition:background-color .12s var(--ease),color .12s var(--ease)}
+  .v-x:hover{background:var(--muted);color:var(--fg)}
+
+  /* 状态行 */
+  .v-meta{display:flex;align-items:center;gap:6px;height:20px;margin-top:2px;
+          font-size:11px;color:var(--muted-fg);font-variant-numeric:tabular-nums}
+  .v-meta .dirty{color:var(--fg)}
+  .v-meta .sep{color:var(--muted-fg-2);opacity:.6}
+
+  /* 搜索 */
+  .v-search{position:relative;margin-top:10px}
+  .v-search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted-fg-2);
+                width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+  .v-search input{width:100%;height:32px;padding:0 26px 0 28px;font:inherit;font-size:12px;color:var(--fg);
+                  border:1px solid var(--border);border-radius:8px;background:var(--card);
+                  transition:border-color .12s var(--ease),box-shadow .12s var(--ease)}
+  .v-search input::placeholder{color:var(--muted-fg-2)}
+  .v-search input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 2px var(--brand-soft)}
+  .v-search kbd{position:absolute;right:8px;top:50%;transform:translateY(-50%);
+                font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);
+                border:1px solid var(--border);border-radius:4px;padding:0 3px;line-height:13px}
+
+  /* 账本列表 */
+  .v-list{flex:1 1 auto;min-height:0;overflow:hidden;padding:8px 0 0}
+  .vrow{position:relative;display:grid;grid-template-columns:20px minmax(0,1fr) 24px;
+        align-items:center;gap:8px;padding:10px 16px;min-height:56px;cursor:default;
+        transition:background-color .12s var(--ease)}
+  .vrow:hover{background:color-mix(in oklab,var(--muted) 70%,transparent)}
+  .vrow.sel{background:var(--muted)}
+  .vrow.sel::after{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--brand)}
+  .gut{position:relative;align-self:stretch;display:flex;justify-content:center}
+  .gut::before{content:"";position:absolute;top:-9px;bottom:-9px;width:1px;background:var(--border)}
+  .vrow:first-child .gut::before{top:26px}
+  .vrow:last-child .gut::before{bottom:calc(100% - 26px)}
+  .gut i{position:relative;width:7px;height:7px;border-radius:50%;margin-top:12px;z-index:1;
+         background:var(--card);border:1px solid var(--border-strong)}
+  .vrow.cur .gut i{background:var(--brand);border-color:var(--brand)}
+  .vmsg{font-size:12.5px;line-height:18px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vmsg.mut{color:var(--muted-fg)}
+  .vline2{display:flex;align-items:center;gap:5px;margin-top:2px;height:16px;
+          font-size:10.5px;color:var(--muted-fg);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .vline2 .sep{color:var(--muted-fg-2);opacity:.6}
+  .vline2 .add{color:var(--success)}
+  .vline2 .del{color:var(--danger)}
+  .vline2 .tags{margin-left:2px;color:var(--muted-fg);overflow:hidden;text-overflow:ellipsis}
+  .vline2 .gap{margin-left:auto}
+  .vcur{font-size:10.5px;color:var(--brand);white-space:nowrap}
+  .vmore{appearance:none;border:0;background:transparent;color:var(--muted-fg-2);width:24px;height:24px;
+         display:grid;place-items:center;border-radius:6px;opacity:.6;cursor:pointer;
+         transition:opacity .12s var(--ease),background-color .12s var(--ease),color .12s var(--ease)}
+  .vrow:hover .vmore,.vrow.sel .vmore,.vrow:focus-within .vmore{opacity:1}
+  .vmore:hover{background:var(--card);color:var(--fg)}
+
+  /* 行内展开 · diff */
+  .vexp{position:relative;background:var(--muted);padding:2px 16px 14px 44px;display:grid;gap:8px}
+  .vexp::before{content:"";position:absolute;left:26px;top:0;bottom:0;width:1px;background:var(--border)}
+  .vexp-h{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--muted-fg)}
+  .vexp-pick{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 6px;border-radius:6px;
+             background:var(--card);border:1px solid var(--border);color:var(--fg);font-size:11px}
+  .vexp-pick svg{width:10px;height:10px;color:var(--muted-fg-2)}
+  .vd{display:grid;gap:3px;font-size:11px;line-height:15px}
+  .vd .l{display:grid;grid-template-columns:12px minmax(0,1fr);gap:4px;align-items:baseline}
+  .vd .g{font-family:var(--mono);font-size:11px;font-weight:500}
+  .vd .add .g{color:var(--success)}
+  .vd .del .g{color:var(--danger)}
+  .vd .mod .g{color:var(--warning)}
+  .vd .t{color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vd .t em{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--muted-fg)}
+  .vd .none{color:var(--muted-fg);font-size:11px}
+  .vexp-f{display:flex;align-items:center;gap:8px;margin-top:2px}
+  .vexp-f .btn{appearance:none;height:26px;padding:0 10px;border-radius:6px;font:inherit;font-size:11px;
+               border:1px solid var(--border);background:var(--card);color:var(--fg);cursor:pointer;
+               transition:background-color .12s var(--ease)}
+  .vexp-f .btn:hover{background:var(--muted)}
+  .vexp-f .del-link{appearance:none;border:0;background:transparent;font:inherit;font-size:11px;
+                    color:var(--muted-fg);cursor:pointer;padding:0 2px;margin-left:auto}
+  .vexp-f .del-link:hover{color:var(--danger)}
+
+  /* 底部 */
+  .v-foot{flex:none;height:36px;display:flex;align-items:center;gap:8px;padding:0 16px;
+          border-top:1px solid var(--border-soft)}
+  .v-seg{display:flex;gap:2px;padding:2px;border-radius:7px;background:var(--muted)}
+  .v-seg button{appearance:none;border:0;background:transparent;font:inherit;font-size:10.5px;
+                color:var(--muted-fg);height:20px;padding:0 8px;border-radius:5px;cursor:pointer;
+                transition:background-color .12s var(--ease),color .12s var(--ease)}
+  .v-seg button.on{background:var(--card);color:var(--fg)}
+  .v-clr{appearance:none;border:0;background:transparent;font:inherit;font-size:10.5px;
+         color:var(--muted-fg);margin-left:auto;cursor:pointer;padding:0}
+  .v-clr:hover{color:var(--danger)}
+
+  /* 空状态 */
+  .v-empty{padding:24px 16px;display:grid;gap:8px;justify-items:start}
+  .v-empty h4{margin:0;font-size:12.5px;font-weight:500}
+  .v-empty p{margin:0;font-size:11px;line-height:1.65;color:var(--muted-fg)}
+  .v-empty .btn{margin-top:6px;appearance:none;height:28px;padding:0 10px 0 8px;border-radius:7px;
+                border:1px solid var(--border);background:var(--card);color:var(--fg);
+                font:inherit;font-size:11.5px;display:flex;align-items:center;gap:6px;cursor:pointer}
+
+  /* 新建版本 composer */
+  .v-comp{padding:12px 16px 16px;display:grid;gap:10px}
+  .v-comp h4{margin:0;font-size:12px;font-weight:500;color:var(--muted-fg)}
+  .v-comp input.desc{width:100%;height:32px;padding:0 9px;font:inherit;font-size:12px;color:var(--fg);
+                     border:1px solid var(--border);border-radius:7px;background:var(--card)}
+  .v-comp input.desc::placeholder{color:var(--muted-fg-2)}
+  .v-comp .chipbox{display:flex;align-items:center;flex-wrap:wrap;gap:4px;min-height:30px;padding:3px 6px;
+                   border:1px solid var(--border);border-radius:7px;background:var(--card)}
+  .v-comp .chip{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 5px;border-radius:4px;
+                background:var(--muted);font-size:10.5px;color:var(--fg)}
+  .v-comp .chip b{font-weight:400;color:var(--muted-fg-2)}
+  .v-comp .chipbox input{flex:1 1 60px;min-width:60px;height:20px;border:0;background:transparent;
+                         font:inherit;font-size:11px;color:var(--fg);padding:0}
+  .v-comp .chipbox input::placeholder{color:var(--muted-fg-2)}
+  .v-comp .facts{font-size:10.5px;color:var(--muted-fg);font-variant-numeric:tabular-nums;line-height:1.6}
+  .v-comp .acts{display:flex;align-items:center;gap:8px}
+  .v-comp .primary{appearance:none;border:0;height:28px;padding:0 12px;border-radius:7px;
+                   background:var(--brand);color:var(--brand-fg);font:inherit;font-size:11.5px;font-weight:500;cursor:pointer}
+  .v-comp .ghost{appearance:none;border:0;background:transparent;font:inherit;font-size:11.5px;
+                 color:var(--muted-fg);cursor:pointer;padding:0 4px}
+  .v-comp .kbd{margin-left:auto;display:flex;align-items:center;gap:3px;font-family:var(--mono);
+               font-size:9.5px;color:var(--muted-fg-2)}
+  .v-comp .kbd b{font-weight:400;border:1px solid var(--border);border-radius:4px;padding:0 3px;line-height:13px}
+
+  /* 弹出菜单 */
+  .pop{position:absolute;background:var(--card);border:1px solid var(--border);border-radius:9px;
+       box-shadow:var(--shadow-pop);padding:4px;width:150px;z-index:5}
+  .pop button{appearance:none;border:0;background:transparent;font:inherit;font-size:11.5px;color:var(--fg);
+              height:26px;width:100%;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:6px;
+              cursor:pointer;text-align:left}
+  .pop button:hover{background:var(--muted)}
+  .pop button svg{width:12px;height:12px;color:var(--muted-fg)}
+  .pop .hr{height:1px;background:var(--border-soft);margin:4px 6px}
+  .pop .danger{color:var(--danger)}
+  .pop .danger svg{color:var(--danger)}
+
+  /* 查看菜单（勾选修正） */
+  .vmenu{position:absolute;top:40px;left:150px;width:196px;background:var(--card);
+         border:1px solid var(--border);border-radius:9px;box-shadow:var(--shadow-pop);padding:4px;z-index:6}
+  .vmenu button{appearance:none;border:0;background:transparent;font:inherit;font-size:11.5px;color:var(--muted-fg);
+                height:28px;width:100%;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:6px;
+                cursor:pointer;text-align:left}
+  .vmenu button:hover{background:var(--muted)}
+  .vmenu .lbl{flex:1;white-space:nowrap}
+  .vmenu kbd{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);border:1px solid var(--border);
+             border-radius:4px;padding:0 3px;line-height:13px}
+  .vmenu .tick{width:12px;color:var(--brand)}
+  .vmenu .hr{height:1px;background:var(--border-soft);margin:4px 6px}
+  .vmenu .on{color:var(--fg)}
+  .vmenu .off{color:var(--muted-fg-2)}
+
+  /* 标注 */
+  .pin{position:absolute;display:flex;align-items:center;gap:6px;z-index:9}
+  .pin b{width:16px;height:16px;border-radius:50%;background:var(--danger);color:#fff;
+         font-family:var(--mono);font-size:9.5px;font-weight:500;display:grid;place-items:center;flex:none;
+         box-shadow:0 1px 2px oklch(0.2 0.02 80 / 25%)}
+  .pin.after b{background:var(--brand)}
+  .pin span{font-size:10.5px;line-height:1.35;color:var(--fg);background:var(--card);
+            border:1px solid var(--border);border-radius:5px;padding:2px 6px;max-width:190px;
+            box-shadow:0 1px 2px oklch(0.2 0.02 80 / 8%)}
+  .pin.left{flex-direction:row-reverse}
+  .num.after{background:var(--brand)}
+  /* 现状帧:只在面板边缘挂编号,解释留给下方表格 */
+  .num{position:absolute;width:16px;height:16px;border-radius:50%;background:var(--danger);color:#fff;
+       font-family:var(--mono);font-size:9.5px;font-weight:500;display:grid;place-items:center;
+       box-shadow:0 1px 2px oklch(0.2 0.02 80 / 25%);z-index:9}
+
+  /* ── 状态细节 ────────────────────────────────────────────────────── */
+  .tiles{display:grid;grid-template-columns:repeat(3,320px);gap:24px 32px}
+  .tile{display:grid;gap:8px;align-content:start}
+  .tile-cap{font-family:var(--mono);font-size:10px;letter-spacing:.02em;color:var(--muted-fg)}
+  .tile-cap b{font-family:var(--font);font-size:11px;font-weight:500;color:var(--fg);margin-right:6px}
+  .card320{position:relative;width:320px;background:var(--card);border:1px solid var(--border);
+           border-radius:10px;overflow:hidden;height:330px;display:flex;flex-direction:column}
+  .card320.tall{height:364px;overflow:visible}
+
+  /* ── 图例 / 说明 ─────────────────────────────────────────────────── */
+  .legend{width:1200px;border-top:1px solid var(--border);margin-top:8px}
+  .legend table{width:100%;border-collapse:collapse;font-size:11.5px;line-height:1.65}
+  .legend th{text-align:left;font-weight:500;font-size:10.5px;color:var(--muted-fg-2);
+             padding:10px 12px 8px 0;border-bottom:1px solid var(--border-soft);white-space:nowrap}
+  .legend td{padding:9px 12px 9px 0;border-bottom:1px solid var(--border-soft);vertical-align:top}
+  .legend td:first-child{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);width:34px}
+  .legend td:nth-child(2){width:44%;color:var(--muted-fg)}
+  .notes{width:1200px;margin-top:28px;display:grid;grid-template-columns:1fr 1fr;gap:8px 36px}
+  .notes h3{grid-column:1/-1;margin:0 0 6px;font-size:12px;font-weight:500}
+  .notes p{margin:0;font-size:11.5px;line-height:1.7;color:var(--muted-fg)}
+  .notes p b{font-weight:500;color:var(--fg)}
+  .notes code{font-family:var(--mono);font-size:10.5px;color:var(--fg);background:var(--muted);
+              padding:1px 4px;border-radius:3px}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div>
+      <div class="eyebrow">044 · 版本控制</div>
+      <h1>版本控制面板改版</h1>
+      <p>「查看 → 版本控制」打开的是画布右侧 320px 的吸附面板。这次只改这块面板:把版本卡改成提交日志式的账本行,把对比从固定占位的面板移到行内。管道语义、版本数据结构、保存/恢复/删除的行为都不动。</p>
+    </div>
+    <div class="seg">
+      <button class="on" data-theme="light">亮色</button>
+      <button data-theme="dark">暗色</button>
+    </div>
+  </div>
+
+  <dl class="direction">
+    <div><dt>产品</dt><dd>给分析 CSV 的人用的可视化管道工具。这条侧栏负责把当前管道存成可回退的快照,并看清两版之间的差别。</dd></div>
+    <div><dt>性格</dt><dd>冷静、精确、可核对。像一次提交前的 diff 审查,不像一张卡片墙。</dd></div>
+    <div><dt>世界</dt><dd>代码评审与提交日志:细线、等宽数字、连续的竖轨。纸面安静,颜色只在差别上出现。</dd></div>
+    <div><dt>两个瞬间</dt><dd>① 行内展开的 diff,增删改三行就能读完一次改动 ② 保存版本的书写区,实时告诉你这一版改了几个步骤。</dd></div>
+    <div><dt>签名</dt><dd>左侧一条连续的竖轨,当前版本的点是实心的。轨道贯通整份历史,是这条面板唯一的装饰。</dd></div>
+  </dl>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       01 现状
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>01</span><b>现状</b><span>VersionControlPanel.tsx · 320px · 选中一个版本后的样子</span></div>
+    <div class="win">
+      <div class="titlebar">
+        <span class="brand">EasyCSV</span>
+        <div class="menus">
+          <button>文件</button><button>编辑</button><button class="on">查看</button><button>工具</button><button>帮助</button>
+        </div>
+        <div class="tb-right">
+          <button class="tb-btn" aria-label="AI 助手"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></button>
+          <button class="tb-btn" aria-label="设置"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+        </div>
+        <div class="win-ctl">
+          <i><svg viewBox="0 0 10 10"><path d="M2 5h6"/></svg></i>
+          <i><svg viewBox="0 0 10 10"><rect x="2" y="2" width="6" height="6"/></svg></i>
+          <i><svg viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6"/></svg></i>
+        </div>
+      </div>
+
+      <div class="canvas">
+        <div class="tabs">
+          <div class="tab on"><span class="d"></span>sales_2026_q3.csv</div>
+          <div class="tab"><span class="d"></span>按品类汇总</div>
+          <div class="tab" style="color:var(--muted-fg-2)">+</div>
+        </div>
+        <div class="node n-table">
+          <div class="n-head"><b>sales_2026_q3.csv</b><em>1 284 行</em></div>
+          <div class="nt">
+            <div class="r h"><span></span><span>日期</span><span>地区</span><span>金额</span></div>
+            <div class="r"><span>1</span><span>2026-07-02</span><span>华东</span><span>1,280</span></div>
+            <div class="r"><span>2</span><span>2026-07-02</span><span>华北</span><span>940</span></div>
+            <div class="r"><span>3</span><span>2026-07-03</span><span>华南</span><span>1,610</span></div>
+            <div class="r"><span>4</span><span>2026-07-03</span><span>华东</span><span>2,050</span></div>
+            <div class="r"><span>5</span><span>2026-07-04</span><span>西南</span><span>760</span></div>
+          </div>
+        </div>
+        <div class="node n-step">
+          <div class="gut">01</div>
+          <div class="in"><b>筛选已完成</b><p>filter<br>status = 已完成</p></div>
+        </div>
+        <div class="node n-step s2">
+          <div class="gut">02</div>
+          <div class="in"><b>去重</b><p>dedup<br>order_id</p></div>
+        </div>
+        <div class="node n-step s3">
+          <div class="gut">03</div>
+          <div class="in"><b>按品类分组</b><p>groupby<br>品类 → sum(金额)</p></div>
+        </div>
+        <div class="node n-res">
+          <div class="n-head"><b>结果</b><em>42 行</em></div>
+          <div class="bd">品类 · 金额合计<br>家电 · 128,400<br>服饰 · 96,220<br>食品 · 51,880</div>
+        </div>
+        <svg class="edges" viewBox="0 0 1200 720" preserveAspectRatio="none">
+          <path d="M344 150 C 378 150, 380 148, 412 148" fill="none" stroke="var(--border-strong)" stroke-width="1.2"/>
+          <path d="M511 196 C 511 205, 511 205, 511 214" fill="none" stroke="var(--border-strong)" stroke-width="1.2"/>
+          <path d="M511 324 C 511 333, 511 333, 511 342" fill="none" stroke="var(--border-strong)" stroke-width="1.2"/>
+          <path d="M610 384 C 640 384, 645 260, 672 220" fill="none" stroke="var(--border-strong)" stroke-width="1.2"/>
+        </svg>
+        <div class="zoom">
+          <i><svg class="i sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></i>
+          <i><svg class="i sm" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></i>
+        </div>
+
+        <!-- 现状面板 -->
+        <aside class="b-panel">
+          <div class="b-top">
+            <div class="b-h">
+              <h3>版本控制</h3>
+              <div class="b-ibs">
+                <button class="b-ib" aria-label="清除所有版本"><svg class="i sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></button>
+                <button class="b-ib" aria-label="时间线视图"><svg class="i sm" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="12" r="2"/><circle cx="6" cy="18" r="2"/><path d="M8 6h5a3 3 0 0 1 3 3v1M8 18h5a3 3 0 0 0 3-3v-1"/></svg></button>
+                <button class="b-ib" aria-label="保存版本"><svg class="i sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+                <button class="b-ib" aria-label="关闭"><svg class="i sm" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+            </div>
+            <div class="b-search">
+              <svg viewBox="0 0 24 24" class="i sm"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+              <input placeholder="搜索版本" />
+            </div>
+          </div>
+
+          <div class="b-diff">
+            <div class="b-diff-h">
+              <span><svg class="i sm" viewBox="0 0 24 24"><path d="M8 6h9M8 12h9M8 18h9M4 6h.01M4 12h.01M4 18h.01"/></svg>对比</span>
+              <button class="b-ib" aria-label="关闭对比"><svg class="i sm" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+            </div>
+            <div class="b-sel">与当前工作区对比<svg class="i sm" viewBox="0 0 24 24" style="color:var(--muted-fg-2)"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="b-dlist">
+              <div class="ok">+ 2 个新增步骤: 去重, 按品类分组</div>
+              <div class="bad">- 1 个新增步骤: 排序</div>
+              <div class="warn">~ 1 个修改步骤: 筛选 → 筛选</div>
+              <div class="plain">+ 2 条连接: step-2 → step-3, step-3 → result</div>
+            </div>
+          </div>
+
+          <div class="b-list">
+            <div class="b-card">
+              <div class="row1">
+                <div class="b-msg"><span>首版: 导入与筛选</span><span class="b-cur">当前</span></div>
+                <div class="b-acts">
+                  <button class="b-ib2" aria-label="重命名"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16v4z"/></svg></button>
+                  <button class="b-ib2" aria-label="添加标签"><svg class="i" viewBox="0 0 24 24"><path d="M4 4h9l7 8-7 8H4z"/></svg></button>
+                  <button class="b-ib2" aria-label="恢复"><svg class="i" viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 2 6M4 5v5h5"/></svg></button>
+                  <button class="b-ib2" aria-label="删除"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></button>
+                </div>
+              </div>
+              <div class="b-time"><svg class="i sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>2026/11/7 20:12:00</div>
+              <div class="b-tags"><span class="b-tag"><svg class="i sm" viewBox="0 0 24 24" style="width:9px;height:9px"><path d="M4 4h9l7 8-7 8H4z"/></svg>发布前<i>x</i></span></div>
+            </div>
+
+            <div class="b-card sel">
+              <div class="row1">
+                <div class="b-msg"><span>加上去重</span></div>
+                <div class="b-acts">
+                  <button class="b-ib2" aria-label="重命名"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16v4z"/></svg></button>
+                  <button class="b-ib2" aria-label="添加标签"><svg class="i" viewBox="0 0 24 24"><path d="M4 4h9l7 8-7 8H4z"/></svg></button>
+                  <button class="b-ib2" aria-label="恢复"><svg class="i" viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 2 6M4 5v5h5"/></svg></button>
+                  <button class="b-ib2" aria-label="删除"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></button>
+                </div>
+              </div>
+              <div class="b-time"><svg class="i sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>2026/11/7 18:40:12</div>
+              <div class="b-sum"><span class="ok">+2</span> <span class="bad">-1</span> 个新增步骤</div>
+            </div>
+
+            <div class="b-card">
+              <div class="row1">
+                <div class="b-msg"><span>改分组口径</span></div>
+                <div class="b-acts">
+                  <button class="b-ib2" aria-label="重命名"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16v4z"/></svg></button>
+                  <button class="b-ib2" aria-label="添加标签"><svg class="i" viewBox="0 0 24 24"><path d="M4 4h9l7 8-7 8H4z"/></svg></button>
+                  <button class="b-ib2" aria-label="恢复"><svg class="i" viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 2 6M4 5v5h5"/></svg></button>
+                  <button class="b-ib2" aria-label="删除"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></button>
+                </div>
+              </div>
+              <div class="b-time"><svg class="i sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>2026/11/7 11:02:37</div>
+              <div class="b-sum"><span class="ok">+1</span> <span class="bad">-1</span> 个新增步骤</div>
+            </div>
+
+            <div class="b-card">
+              <div class="row1">
+                <div class="b-msg"><span>补 region 列</span></div>
+                <div class="b-acts">
+                  <button class="b-ib2" aria-label="重命名"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16v4z"/></svg></button>
+                  <button class="b-ib2" aria-label="添加标签"><svg class="i" viewBox="0 0 24 24"><path d="M4 4h9l7 8-7 8H4z"/></svg></button>
+                  <button class="b-ib2" aria-label="恢复"><svg class="i" viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 2 6M4 5v5h5"/></svg></button>
+                  <button class="b-ib2" aria-label="删除"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></button>
+                </div>
+              </div>
+              <div class="b-time"><svg class="i sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>2026/11/6 17:05:44</div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="num" style="right:330px;top:12px">3</div>
+        <div class="num" style="right:330px;top:150px">2</div>
+        <div class="num" style="right:330px;top:330px">4</div>
+        <div class="num" style="right:330px;top:362px">5</div>
+        <div class="num" style="right:330px;top:452px">6</div>
+        <div class="num" style="right:330px;top:520px">1</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       02 改后 · 列表
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>02</span><b>改后 · 列表</b><span>每版一行 56px,竖轨贯通,颜色只留给差别 · 编号对应下表</span></div>
+    <div class="win">
+      <div class="titlebar">
+        <span class="brand">EasyCSV</span>
+        <div class="menus">
+          <button>文件</button><button>编辑</button><button class="on">查看</button><button>工具</button><button>帮助</button>
+        </div>
+        <div class="tb-right">
+          <button class="tb-btn" aria-label="AI 助手"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></button>
+          <button class="tb-btn" aria-label="设置"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+        </div>
+        <div class="win-ctl">
+          <i><svg viewBox="0 0 10 10"><path d="M2 5h6"/></svg></i>
+          <i><svg viewBox="0 0 10 10"><rect x="2" y="2" width="6" height="6"/></svg></i>
+          <i><svg viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6"/></svg></i>
+        </div>
+      </div>
+
+      <div class="canvas">
+        <div class="tabs">
+          <div class="tab on"><span class="d"></span>sales_2026_q3.csv</div>
+          <div class="tab"><span class="d"></span>按品类汇总</div>
+          <div class="tab" style="color:var(--muted-fg-2)">+</div>
+        </div>
+        <div class="node n-table">
+          <div class="n-head"><b>sales_2026_q3.csv</b><em>1 284 行</em></div>
+          <div class="nt">
+            <div class="r h"><span></span><span>日期</span><span>地区</span><span>金额</span></div>
+            <div class="r"><span>1</span><span>2026-07-02</span><span>华东</span><span>1,280</span></div>
+            <div class="r"><span>2</span><span>2026-07-02</span><span>华北</span><span>940</span></div>
+            <div class="r"><span>3</span><span>2026-07-03</span><span>华南</span><span>1,610</span></div>
+            <div class="r"><span>4</span><span>2026-07-03</span><span>华东</span><span>2,050</span></div>
+            <div class="r"><span>5</span><span>2026-07-04</span><span>西南</span><span>760</span></div>
+          </div>
+        </div>
+        <div class="node n-step">
+          <div class="gut">01</div>
+          <div class="in"><b>筛选已完成</b><p>filter<br>status = 已完成</p></div>
+        </div>
+        <div class="node n-step s2">
+          <div class="gut">02</div>
+          <div class="in"><b>去重</b><p>dedup<br>order_id</p></div>
+        </div>
+        <div class="node n-step s3">
+          <div class="gut">03</div>
+          <div class="in"><b>按品类分组</b><p>groupby<br>品类 → sum(金额)</p></div>
+        </div>
+        <div class="node n-res">
+          <div class="n-head"><b>结果</b><em>42 行</em></div>
+          <div class="bd">品类 · 金额合计<br>家电 · 128,400<br>服饰 · 96,220<br>食品 · 51,880</div>
+        </div>
+        <svg class="edges" viewBox="0 0 1200 720" preserveAspectRatio="none">
+          <path d="M344 150 C 378 150, 380 148, 412 148" fill="none" stroke="var(--border-strong)" stroke-width="1.2"/>
+          <path d="M511 196 C 511 205, 511 205, 511 214" fill="none" stroke="var(--border-strong)" stroke-width="1.2"/>
+          <path d="M511 324 C 511 333, 511 333, 511 342" fill="none" stroke="var(--border-strong)" stroke-width="1.2"/>
+          <path d="M610 384 C 640 384, 645 260, 672 220" fill="none" stroke="var(--border-strong)" stroke-width="1.2"/>
+        </svg>
+        <div class="zoom">
+          <i><svg class="i sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></i>
+          <i><svg class="i sm" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></i>
+        </div>
+
+        <!-- 改后面板 -->
+        <aside class="v-panel">
+          <div class="v-head">
+            <div class="v-hrow">
+              <span class="v-title">版本控制</span>
+              <div class="v-hacts">
+                <button class="v-save"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>保存版本</button>
+                <button class="v-x" aria-label="关闭版本控制"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+            </div>
+            <div class="v-meta">
+              <span>9 个版本</span>
+              <span class="sep">·</span>
+              <span class="dirty">当前工作区有未保存改动</span>
+            </div>
+            <div class="v-search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+              <input placeholder="搜索版本与标签" />
+            </div>
+          </div>
+
+          <div class="v-list">
+            <div class="vrow cur">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">首版: 导入与筛选</div>
+                <div class="vline2"><span>今天 20:12</span><span class="sep">·</span><span>4 步</span><span class="sep">·</span><span>3 连接</span><span class="tags">#发布前</span><span class="gap"></span><span class="vcur">当前</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">加上去重</div>
+                <div class="vline2"><span>今天 18:40</span><span class="sep">·</span><span>4 步</span><span class="sep">·</span><span>3 连接</span><span class="gap"></span><span class="add">+2</span><span class="del">−1</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">改分组口径</div>
+                <div class="vline2"><span>今天 11:02</span><span class="sep">·</span><span>4 步</span><span class="sep">·</span><span>2 连接</span><span class="gap"></span><span class="add">+1</span><span class="del">−1</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">补 region 列</div>
+                <div class="vline2"><span>昨天 17:05</span><span class="sep">·</span><span>3 步</span><span class="sep">·</span><span>2 连接</span><span class="gap"></span><span class="add">+1</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">换成 sum(金额)</div>
+                <div class="vline2"><span>昨天 09:40</span><span class="sep">·</span><span>3 步</span><span class="sep">·</span><span>2 连接</span><span class="gap"></span><span class="del">−1</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">排序改金额降序</div>
+                <div class="vline2"><span>11月5日 16:22</span><span class="sep">·</span><span>3 步</span><span class="sep">·</span><span>2 连接</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">去掉空行</div>
+                <div class="vline2"><span>11月5日 14:08</span><span class="sep">·</span><span>2 步</span><span class="sep">·</span><span>1 连接</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">初稿: 只导入</div>
+                <div class="vline2"><span>11月4日 19:31</span><span class="sep">·</span><span>1 步</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg mut">试水: 先看前 100 行</div>
+                <div class="vline2"><span>11月4日 10:15</span><span class="sep">·</span><span>1 步</span><span class="tags">#试水</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+          </div>
+
+          <div class="v-foot">
+            <div class="v-seg">
+              <button class="on">列表</button>
+              <button>时间线</button>
+            </div>
+            <button class="v-clr">清除所有版本</button>
+          </div>
+        </aside>
+
+        <div class="num after" style="right:330px;top:138px">4</div>
+        <div class="num after" style="right:330px;top:194px">6</div>
+        <div class="num after" style="right:330px;top:306px">3</div>
+        <div class="num after" style="right:330px;top:418px">1</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       03 改后 · 展开对比
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>03</span><b>改后 · 行内展开</b><span>点一行就地展开 diff,列表不被推走 · 编号对应下表</span></div>
+    <div class="win">
+      <div class="titlebar">
+        <span class="brand">EasyCSV</span>
+        <div class="menus">
+          <button>文件</button><button>编辑</button><button class="on">查看</button><button>工具</button><button>帮助</button>
+        </div>
+        <div class="tb-right">
+          <button class="tb-btn" aria-label="AI 助手"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3"/></svg></button>
+        </div>
+        <div class="win-ctl">
+          <i><svg viewBox="0 0 10 10"><path d="M2 5h6"/></svg></i>
+          <i><svg viewBox="0 0 10 10"><rect x="2" y="2" width="6" height="6"/></svg></i>
+          <i><svg viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6"/></svg></i>
+        </div>
+      </div>
+
+      <div class="canvas">
+        <div class="tabs">
+          <div class="tab on"><span class="d"></span>sales_2026_q3.csv</div>
+          <div class="tab"><span class="d"></span>按品类汇总</div>
+        </div>
+        <div class="node n-table">
+          <div class="n-head"><b>sales_2026_q3.csv</b><em>1 284 行</em></div>
+          <div class="nt">
+            <div class="r h"><span></span><span>日期</span><span>地区</span><span>金额</span></div>
+            <div class="r"><span>1</span><span>2026-07-02</span><span>华东</span><span>1,280</span></div>
+            <div class="r"><span>2</span><span>2026-07-02</span><span>华北</span><span>940</span></div>
+            <div class="r"><span>3</span><span>2026-07-03</span><span>华南</span><span>1,610</span></div>
+            <div class="r"><span>4</span><span>2026-07-03</span><span>华东</span><span>2,050</span></div>
+            <div class="r"><span>5</span><span>2026-07-04</span><span>西南</span><span>760</span></div>
+          </div>
+        </div>
+        <div class="node n-step">
+          <div class="gut">01</div>
+          <div class="in"><b>筛选已完成</b><p>filter<br>status = 已完成</p></div>
+        </div>
+        <div class="node n-step s2">
+          <div class="gut">02</div>
+          <div class="in"><b>去重</b><p>dedup<br>order_id</p></div>
+        </div>
+        <div class="node n-step s3">
+          <div class="gut">03</div>
+          <div class="in"><b>按品类分组</b><p>groupby<br>品类 → sum(金额)</p></div>
+        </div>
+        <div class="zoom">
+          <i><svg class="i sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></i>
+          <i><svg class="i sm" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></i>
+        </div>
+
+        <aside class="v-panel">
+          <div class="v-head">
+            <div class="v-hrow">
+              <span class="v-title">版本控制</span>
+              <div class="v-hacts">
+                <button class="v-save"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>保存版本</button>
+                <button class="v-x" aria-label="关闭版本控制"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+            </div>
+            <div class="v-meta">
+              <span>9 个版本</span>
+              <span class="sep">·</span>
+              <span class="dirty">当前工作区有未保存改动</span>
+            </div>
+            <div class="v-search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+              <input placeholder="搜索版本与标签" />
+            </div>
+          </div>
+
+          <div class="v-list">
+            <div class="vrow cur">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">首版: 导入与筛选</div>
+                <div class="vline2"><span>今天 20:12</span><span class="sep">·</span><span>4 步</span><span class="sep">·</span><span>3 连接</span><span class="tags">#发布前</span><span class="gap"></span><span class="vcur">当前</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">加上去重</div>
+                <div class="vline2"><span>今天 18:40</span><span class="sep">·</span><span>4 步</span><span class="sep">·</span><span>3 连接</span><span class="gap"></span><span class="add">+2</span><span class="del">−1</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+
+            <div class="vrow sel">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">改分组口径</div>
+                <div class="vline2"><span>今天 11:02</span><span class="sep">·</span><span>4 步</span><span class="sep">·</span><span>2 连接</span><span class="gap"></span><span class="add">+1</span><span class="del">−1</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+            <div class="vexp">
+              <div class="vexp-h">
+                对比
+                <span class="vexp-pick">当前工作区<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9l6 6 6-6"/></svg></span>
+              </div>
+              <div class="vd">
+                <div class="l add"><span class="g">+</span><span class="t">按品类分组</span></div>
+                <div class="l del"><span class="g">−</span><span class="t">排序</span></div>
+                <div class="l mod"><span class="g">~</span><span class="t">筛选</span></div>
+              </div>
+              <div class="vexp-f">
+                <button class="btn">恢复此版本</button>
+                <button class="del-link">删除</button>
+              </div>
+            </div>
+
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">补 region 列</div>
+                <div class="vline2"><span>昨天 17:05</span><span class="sep">·</span><span>3 步</span><span class="sep">·</span><span>2 连接</span><span class="gap"></span><span class="add">+1</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">换成 sum(金额)</div>
+                <div class="vline2"><span>昨天 09:40</span><span class="sep">·</span><span>3 步</span><span class="sep">·</span><span>2 连接</span><span class="gap"></span><span class="del">−1</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">排序改金额降序</div>
+                <div class="vline2"><span>11月5日 16:22</span><span class="sep">·</span><span>3 步</span><span class="sep">·</span><span>2 连接</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">去掉空行</div>
+                <div class="vline2"><span>11月5日 14:08</span><span class="sep">·</span><span>2 步</span><span class="sep">·</span><span>1 连接</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+          </div>
+
+          <div class="v-foot">
+            <div class="v-seg">
+              <button class="on">列表</button>
+              <button>时间线</button>
+            </div>
+            <button class="v-clr">清除所有版本</button>
+          </div>
+        </aside>
+
+        <div class="num after" style="right:330px;top:330px">2</div>
+        <div class="num after" style="right:330px;top:396px">4</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       04 改后 · 暗色
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame dark">
+    <div class="cap"><span>04</span><b>改后 · 暗色</b><span>轨道与头发丝撑起层次,不用阴影</span></div>
+    <div class="win">
+      <div class="titlebar">
+        <span class="brand">EasyCSV</span>
+        <div class="menus">
+          <button>文件</button><button>编辑</button><button class="on">查看</button><button>工具</button><button>帮助</button>
+        </div>
+        <div class="tb-right">
+          <button class="tb-btn" aria-label="AI 助手"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3"/></svg></button>
+        </div>
+        <div class="win-ctl">
+          <i><svg viewBox="0 0 10 10"><path d="M2 5h6"/></svg></i>
+          <i><svg viewBox="0 0 10 10"><rect x="2" y="2" width="6" height="6"/></svg></i>
+          <i><svg viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6"/></svg></i>
+        </div>
+      </div>
+
+      <div class="canvas">
+        <div class="tabs">
+          <div class="tab on"><span class="d"></span>sales_2026_q3.csv</div>
+          <div class="tab"><span class="d"></span>按品类汇总</div>
+        </div>
+        <div class="node n-table">
+          <div class="n-head"><b>sales_2026_q3.csv</b><em>1 284 行</em></div>
+          <div class="nt">
+            <div class="r h"><span></span><span>日期</span><span>地区</span><span>金额</span></div>
+            <div class="r"><span>1</span><span>2026-07-02</span><span>华东</span><span>1,280</span></div>
+            <div class="r"><span>2</span><span>2026-07-02</span><span>华北</span><span>940</span></div>
+            <div class="r"><span>3</span><span>2026-07-03</span><span>华南</span><span>1,610</span></div>
+            <div class="r"><span>4</span><span>2026-07-03</span><span>华东</span><span>2,050</span></div>
+            <div class="r"><span>5</span><span>2026-07-04</span><span>西南</span><span>760</span></div>
+          </div>
+        </div>
+        <div class="node n-step">
+          <div class="gut">01</div>
+          <div class="in"><b>筛选已完成</b><p>filter<br>status = 已完成</p></div>
+        </div>
+        <div class="node n-step s2">
+          <div class="gut">02</div>
+          <div class="in"><b>去重</b><p>dedup<br>order_id</p></div>
+        </div>
+        <div class="node n-step s3">
+          <div class="gut">03</div>
+          <div class="in"><b>按品类分组</b><p>groupby<br>品类 → sum(金额)</p></div>
+        </div>
+        <div class="zoom">
+          <i><svg class="i sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></i>
+          <i><svg class="i sm" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></i>
+        </div>
+
+        <aside class="v-panel">
+          <div class="v-head">
+            <div class="v-hrow">
+              <span class="v-title">版本控制</span>
+              <div class="v-hacts">
+                <button class="v-save"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>保存版本</button>
+                <button class="v-x" aria-label="关闭版本控制"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+            </div>
+            <div class="v-meta">
+              <span>9 个版本</span>
+              <span class="sep">·</span>
+              <span class="dirty">当前工作区有未保存改动</span>
+            </div>
+            <div class="v-search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+              <input placeholder="搜索版本与标签" />
+            </div>
+          </div>
+
+          <div class="v-list">
+            <div class="vrow cur">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">首版: 导入与筛选</div>
+                <div class="vline2"><span>今天 20:12</span><span class="sep">·</span><span>4 步</span><span class="sep">·</span><span>3 连接</span><span class="tags">#发布前</span><span class="gap"></span><span class="vcur">当前</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+            <div class="vrow sel">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">加上去重</div>
+                <div class="vline2"><span>今天 18:40</span><span class="sep">·</span><span>4 步</span><span class="sep">·</span><span>3 连接</span><span class="gap"></span><span class="add">+2</span><span class="del">−1</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+            <div class="vexp">
+              <div class="vexp-h">
+                对比
+                <span class="vexp-pick">当前工作区<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9l6 6 6-6"/></svg></span>
+              </div>
+              <div class="vd">
+                <div class="l add"><span class="g">+</span><span class="t">去重</span></div>
+                <div class="l add"><span class="g">+</span><span class="t">按品类分组</span></div>
+                <div class="l del"><span class="g">−</span><span class="t">排序</span></div>
+                <div class="l mod"><span class="g">~</span><span class="t">筛选</span></div>
+              </div>
+              <div class="vexp-f">
+                <button class="btn">恢复此版本</button>
+                <button class="del-link">删除</button>
+              </div>
+            </div>
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">改分组口径</div>
+                <div class="vline2"><span>今天 11:02</span><span class="sep">·</span><span>4 步</span><span class="sep">·</span><span>2 连接</span><span class="gap"></span><span class="add">+1</span><span class="del">−1</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">补 region 列</div>
+                <div class="vline2"><span>昨天 17:05</span><span class="sep">·</span><span>3 步</span><span class="sep">·</span><span>2 连接</span><span class="gap"></span><span class="add">+1</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">换成 sum(金额)</div>
+                <div class="vline2"><span>昨天 09:40</span><span class="sep">·</span><span>3 步</span><span class="sep">·</span><span>2 连接</span><span class="gap"></span><span class="del">−1</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+            <div class="vrow">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">排序改金额降序</div>
+                <div class="vline2"><span>11月5日 16:22</span><span class="sep">·</span><span>3 步</span><span class="sep">·</span><span>2 连接</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+          </div>
+
+          <div class="v-foot">
+            <div class="v-seg">
+              <button class="on">列表</button>
+              <button>时间线</button>
+            </div>
+            <button class="v-clr">清除所有版本</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       05 状态细节
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>05</span><b>状态细节</b><span>空 / 保存 / 无结果 / 行菜单 / 查看菜单</span></div>
+    <div class="tiles">
+
+      <!-- 空状态 -->
+      <div class="tile">
+        <div class="tile-cap"><b>空状态</b>第一次打开版本控制</div>
+        <div class="card320">
+          <div class="v-head">
+            <div class="v-hrow">
+              <span class="v-title">版本控制</span>
+              <div class="v-hacts">
+                <button class="v-save"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>保存版本</button>
+                <button class="v-x" aria-label="关闭版本控制"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+            </div>
+            <div class="v-search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+              <input placeholder="搜索版本与标签" />
+            </div>
+          </div>
+          <div class="v-empty">
+            <h4>还没有保存过版本</h4>
+            <p>保存一次快照,之后就能对比两次改动、或退回其中任一版。当前管道 4 个步骤。</p>
+            <button class="btn"><svg class="i sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>保存当前管道</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 保存 composer -->
+      <div class="tile">
+        <div class="tile-cap"><b>保存版本</b>描述可以留空,存为未命名</div>
+        <div class="card320">
+          <div class="v-head">
+            <div class="v-hrow">
+              <span class="v-title">版本控制</span>
+              <div class="v-hacts">
+                <button class="v-x" aria-label="关闭版本控制"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+            </div>
+            <div class="v-meta"><span>9 个版本</span><span class="sep">·</span><span class="dirty">当前工作区有未保存改动</span></div>
+          </div>
+          <div class="v-comp">
+            <h4>保存当前管道为版本</h4>
+            <input class="desc" placeholder="这一版改了什么" value="加上地区维度,金额改成合计" />
+            <div class="chipbox">
+              <span class="chip"><b>#</b>发布前</span>
+              <span class="chip"><b>#</b>q3</span>
+              <input placeholder="添加标签,回车确认" />
+            </div>
+            <div class="facts">4 个步骤 · 3 条连接 · 与「首版: 导入与筛选」相比 +1 −0</div>
+            <div class="acts">
+              <button class="primary">保存版本</button>
+              <button class="ghost">取消</button>
+              <span class="kbd"><b>Ctrl</b><b>↵</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 搜索无结果 -->
+      <div class="tile">
+        <div class="tile-cap"><b>搜索</b>没有匹配时保留查询词</div>
+        <div class="card320">
+          <div class="v-head">
+            <div class="v-hrow">
+              <span class="v-title">版本控制</span>
+              <div class="v-hacts">
+                <button class="v-save"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>保存版本</button>
+                <button class="v-x" aria-label="关闭版本控制"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+            </div>
+            <div class="v-search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+              <input placeholder="搜索版本与标签" value="透视" />
+              <kbd>✕</kbd>
+            </div>
+          </div>
+          <div class="v-empty">
+            <h4>没有匹配「透视」的版本</h4>
+            <p>搜索会查版本描述与标签,不查步骤内容。</p>
+            <button class="btn">清除搜索</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 行菜单 -->
+      <div class="tile">
+        <div class="tile-cap"><b>行菜单</b>一个入口,四个动作</div>
+        <div class="card320 tall">
+          <div class="v-head">
+            <div class="v-hrow">
+              <span class="v-title">版本控制</span>
+              <div class="v-hacts">
+                <button class="v-save"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>保存版本</button>
+                <button class="v-x" aria-label="关闭版本控制"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+            </div>
+            <div class="v-search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+              <input placeholder="搜索版本与标签" />
+            </div>
+          </div>
+          <div class="v-list">
+            <div class="vrow cur">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">首版: 导入与筛选</div>
+                <div class="vline2"><span>今天 20:12</span><span class="sep">·</span><span>4 步</span><span class="sep">·</span><span>3 连接</span><span class="gap"></span><span class="vcur">当前</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+            <div class="vrow sel" style="background:transparent">
+              <span class="gut"><i></i></span>
+              <div>
+                <div class="vmsg">加上去重</div>
+                <div class="vline2"><span>今天 18:40</span><span class="sep">·</span><span>4 步</span><span class="sep">·</span><span>3 连接</span><span class="gap"></span><span class="add">+2</span><span class="del">−1</span></div>
+              </div>
+              <button class="vmore" aria-label="版本操作" style="opacity:1;background:var(--muted)"><svg class="i sm" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+            </div>
+          </div>
+          <div class="pop" style="right:14px;top:206px">
+            <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 20h4l10-10-4-4L4 16v4z"/></svg>重命名</button>
+            <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h9l7 8-7 8H4z"/></svg>添加标签</button>
+            <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a8 8 0 1 1 2 6M4 5v5h5"/></svg>恢复此版本</button>
+            <div class="hr"></div>
+            <button class="danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>删除版本</button>
+          </div>
+          <div class="v-foot">
+            <div class="v-seg">
+              <button class="on">列表</button>
+              <button>时间线</button>
+            </div>
+            <button class="v-clr">清除所有版本</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 查看菜单 -->
+      <div class="tile">
+        <div class="tile-cap"><b>查看菜单</b>补上可见的勾选状态</div>
+        <div class="card320">
+          <div class="titlebar" style="border-bottom:1px solid var(--border-soft);border-radius:0">
+            <div class="menus" style="margin-left:14px">
+              <button>文件</button><button>编辑</button><button class="on">查看</button>
+            </div>
+          </div>
+          <div class="vmenu" style="top:44px;left:8px">
+            <button><span class="lbl">命令面板</span><kbd>Ctrl+K</kbd></button>
+            <div class="hr"></div>
+            <button><span class="tick"></span><span class="lbl">数据概况</span></button>
+            <button class="on"><span class="tick"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg></span><span class="lbl">版本控制</span></button>
+            <button><span class="tick"></span><span class="lbl">数据血缘</span></button>
+            <button><span class="tick"></span><span class="lbl">变量</span></button>
+            <div class="hr"></div>
+            <button><span class="lbl">在画布中搜索</span><kbd>Ctrl+F</kbd></button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       诊断与改法
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="legend">
+    <table>
+      <thead>
+        <tr><th>#</th><th>现状</th><th>改法</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>每版一张带边框的卡片,12px 内边距里再塞 4 个 20px 图标、时间、差异、标签。320px 宽一屏只放得下 4 张,版本一多就是滚不完的卡片墙。</td>
+          <td>改成提交日志式的一行一版:56px 高、两行文字、无卡片边框。同样的高度能看 4 倍数量的版本。</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>对比面板固定在列表上方、写死 <code>h-60</code>(240px),选中任何一版都会把列表挤掉一大半;取消对比要点两次。</td>
+          <td>diff 落进被选中的那一行里,高度跟着改动条数走(三条改动约 120px)。再点一次收起,列表位置不跳。</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>头部四个 24px 图标(清除 / 视图切换 / 新建 / 关闭),行内四个 20px 图标(重命名 / 标签 / 恢复 / 删除),全部只有 Tooltip,没有 aria-label;两个删除图标形状相同、位置只差 300px。</td>
+          <td>行内只留一个 <code>⋯</code>(重命名 / 添加标签 / 恢复 / 删除);头部只留「保存版本」和关闭。清除所有版本移到面板底部,和行操作分开。</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>恢复(替换当前管道)和删除(不可逆)并排同权重、同尺寸、同色,误触代价不对等;当前版本只是一个 9px 实心主色块。</td>
+          <td>恢复升为展开区里的按钮,删除退成红色文字;当前版本用「实心轨道点 + 一个词」表示,不抢视觉。</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><code>toLocaleString()</code> 出来是 <code>2026/11/7 20:12:00</code>,每条宽度不同、秒数没有意义,一列对不齐。</td>
+          <td>相对时间(今天 / 昨天 / M月D日 + HH:mm)+ <code>tabular-nums</code>;完整时间放 <code>title</code>。</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>同一条目里出现 5 种颜色:当前实心主色、+N 绿、−N 红、~N 黄、标签主色胶囊。没有落点,眼睛不知道该看哪。</td>
+          <td>只有 diff 保留语义色;<code>+2 −1</code> 用等宽小字排在元信息行末尾;标签变成 <code>#发布前</code> 这样的弱文字。</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>新建版本必须在输入框里写描述才能保存(<code>disabled={!newMessage.trim()}</code>),但列表里明明有「未命名版本」的文案。</td>
+          <td>允许留空存为未命名;保存区独立占位,写清「4 个步骤 · 3 条连接 · 与上一版 +1」,<code>Ctrl+Enter</code> 保存、<code>Esc</code> 取消。</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>空状态只有一行灰字「暂无版本记录」,不解释这个面板做什么,也没有动作入口(新建图标在头部,没有提示)。</td>
+          <td>两句话 + 一个「保存当前管道」按钮,并报出当前步骤数,让用户知道会存下什么。</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td>「查看」里的四个面板项都写了 <code>aria-checked</code>,界面上却没有勾选标记,看不出哪个面板是开着的。</td>
+          <td>左侧补 12px 勾选位(关闭时留白不占位跳动),品牌色勾。</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="notes">
+    <h3>交互与实现要点</h3>
+    <p><b>行</b>　点击行 = 展开 / 收起对比;选中行底色 <code>--muted</code> + 左侧 2px 品牌竖条。整行可键盘聚焦(↑↓ 移动、Enter 展开、Esc 收起)。</p>
+    <p><b>⋯ 菜单</b>　常显但很轻(60%),行 hover / 聚焦 / 展开时加深;菜单项顺序:重命名、添加标签、恢复此版本、删除版本。恢复与删除都保留现有确认框。</p>
+    <p><b>时间</b>　新增 <code>formatRelativeTime()</code>:24 小时内「今天 HH:mm」、48 小时内「昨天 HH:mm」、同年「M月D日」、跨年「YYYY年M月D日」。<code>title</code> 给 <code>toLocaleString()</code> 原值。</p>
+    <p><b>未保存改动</b>　头部那一行由 <code>diffSnapshots(currentSnapshot, 当前版本快照)</code> 是否为空推出,不新增状态。无改动时整行不渲染。</p>
+    <p><b>对比基线</b>　沿用 <code>compareTargetId</code>:默认「当前工作区」,也可选另一个版本;方向仍按新旧排序,新增在上、删除在下。</p>
+    <p><b>保存</b>　描述允许为空 → 落库为空字符串,列表用「未命名版本」渲染(现有键)。标签输入改为回车成 chip、退格删最后一个。</p>
+    <p><b>宽度</b>　面板保持 320,画布布局常量、<code>top-10 right-0 bottom-0</code> 的吸附方式、数据血缘面板的 <code>right-80</code> 让位逻辑都不动。</p>
+    <p><b>i18n</b>　新增:<code>versionPanelSubtitle</code>、<code>versionDirtyHint</code>、<code>versionMetaSteps</code>(复用 <code>versionSteps</code>)、<code>versionUntitledHint</code>、<code>versionSaveFacts</code>、<code>versionNoMatchTitle</code>、<code>versionNoMatchHint</code>、<code>versionClearSearch</code>、<code>versionMenuRename</code>、<code>versionMenuTag</code>、<code>versionMenuRestore</code>、<code>versionMenuDelete</code>、<code>versionListMode</code>、<code>versionTimelineMode</code>、<code>versionEmptyTitle</code>、<code>versionEmptyDesc</code>、<code>versionSaveCurrent</code>。删除:<code>timelineView</code> / <code>listView</code>(按钮文案改为常显双段)。</p>
+    <p style="grid-column:1/-1"><b>不改的东西</b>　版本数据结构(<code>PipelineVersion</code> 的 steps / edges / parentId / tags)、<code>usePipelineVersions</code> 的保存与恢复逻辑、<code>versionDiff</code> 的算法与方向、恢复与删除的确认文案、面板宽度与吸附位置。时间线视图保留,仍在底部切换,树形缩进沿用现有的 <code>ml-3 pl-2</code> 关系。</p>
+  </section>
+
+</div>
+
+<script>
+  const buttons = document.querySelectorAll(".seg button");
+  buttons.forEach((b) => {
+    b.addEventListener("click", () => {
+      buttons.forEach((x) => x.classList.remove("on"));
+      b.classList.add("on");
+      document.documentElement.classList.toggle("dark", b.dataset.theme === "dark");
+    });
+  });
+</script>
+</body>
+</html>

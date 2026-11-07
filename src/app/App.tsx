@@ -2000,7 +2000,6 @@ function AppContent() {
                 onRenameVersion={versionsHook.renameVersion}
                 isSavingVersion={versionsHook.isSavingVersion}
                 lineageData={lineageHook.lineageData}
-                onGetLineageForColumn={lineageHook.getLineageForColumn}
                 onSaveLineage={lineageHook.saveLineage}
                 pipelineSavedAt={pipelineSavedAt}
                 doubleClickFitView={settings.doubleClickFitView}

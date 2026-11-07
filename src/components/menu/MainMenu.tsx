@@ -1,5 +1,5 @@
 import React from "react";
-import { Command, ScrollText, Bot, Settings } from "lucide-react";
+import { Command, ScrollText, Bot, Settings, Check } from "lucide-react";
 
 import { PipelineStep } from "@/types/xan";
 import type { RunSession } from "@/types/execution";
@@ -523,6 +523,7 @@ export const MainMenu = React.memo(function MainMenu({
                 }}
                 className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
               >
+                <span className="h-3 w-3 shrink-0" aria-hidden="true" />
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.commandPalette}
                 </span>
@@ -552,6 +553,13 @@ export const MainMenu = React.memo(function MainMenu({
                         : "text-muted-foreground hover:bg-accent/60",
                   )}
                 >
+                  <Check
+                    className={cn(
+                      "h-3 w-3 shrink-0 text-primary",
+                      !showDataProfile && "opacity-0",
+                    )}
+                    aria-hidden="true"
+                  />
                   <span className="whitespace-nowrap">{t.dataProfile}</span>
                 </button>
               </div>
@@ -569,6 +577,13 @@ export const MainMenu = React.memo(function MainMenu({
                     : "text-muted-foreground hover:bg-accent/60",
                 )}
               >
+                <Check
+                  className={cn(
+                    "h-3 w-3 shrink-0 text-primary",
+                    !showVersionPanel && "opacity-0",
+                  )}
+                  aria-hidden="true"
+                />
                 <span className="whitespace-nowrap">{t.versionHistory}</span>
               </button>
               <button
@@ -585,6 +600,13 @@ export const MainMenu = React.memo(function MainMenu({
                     : "text-muted-foreground hover:bg-accent/60",
                 )}
               >
+                <Check
+                  className={cn(
+                    "h-3 w-3 shrink-0 text-primary",
+                    !showLineagePanel && "opacity-0",
+                  )}
+                  aria-hidden="true"
+                />
                 <span className="whitespace-nowrap">{t.dataLineage}</span>
               </button>
               <button
@@ -601,6 +623,13 @@ export const MainMenu = React.memo(function MainMenu({
                     : "text-muted-foreground hover:bg-accent/60",
                 )}
               >
+                <Check
+                  className={cn(
+                    "h-3 w-3 shrink-0 text-primary",
+                    !showVariablePanel && "opacity-0",
+                  )}
+                  aria-hidden="true"
+                />
                 <span className="whitespace-nowrap">{t.variables}</span>
               </button>
               <div className="border-t border-border my-1" />
@@ -612,6 +641,7 @@ export const MainMenu = React.memo(function MainMenu({
                 }}
                 className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
               >
+                <span className="h-3 w-3 shrink-0" aria-hidden="true" />
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.search}
                 </span>

@@ -13,6 +13,67 @@ export function formatShortDateTime(value: string): string {
   return match ? `${match[2]}-${match[3]} ${match[4]}:${match[5]}` : value;
 }
 
+/**
+ * A timestamp split into the parts the version log needs, so the copy can stay
+ * in i18n (`今天 {time}` / `Today {time}`) instead of being baked into a
+ * formatter. `kind` picks the template:
+ *
+ * - `today` / `yesterday` carry `clock` as `HH:mm`
+ * - `date` (same year) carries `month` / `day`
+ * - `dateYear` carries `year` / `month` / `day`
+ */
+export type RelativeStamp =
+  | { kind: "today" | "yesterday"; clock: string }
+  | { kind: "date"; month: number; day: number }
+  | { kind: "dateYear"; year: number; month: number; day: number };
+
+const STAMP_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/;
+
+/**
+ * `2026-11-07 20:12:37` → `{ kind: "today", clock: "20:12" }`.
+ *
+ * Versions are persisted with `formatDateTime`, i.e. a bare local
+ * `YYYY-MM-DD HH:mm:ss`; `new Date(value)` interprets that shape as local only
+ * on some engines (Safari reads it as UTC), so the fields are parsed by hand.
+ * Returns `null` for anything unrecognisable — the caller falls back to the
+ * stored string.
+ */
+export function relativeStamp(
+  value: string,
+  now: Date = new Date(),
+): RelativeStamp | null {
+  const match = STAMP_PATTERN.exec(value ?? "");
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const stamp = new Date(
+    year,
+    month - 1,
+    day,
+    Number(match[4]),
+    Number(match[5]),
+    match[6] ? Number(match[6]) : 0,
+  );
+  if (Number.isNaN(stamp.getTime())) return null;
+
+  const startOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((startOfDay(now) - startOfDay(stamp)) / 86_400_000);
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  const clock = `${pad(stamp.getHours())}:${pad(stamp.getMinutes())}`;
+
+  // `days < 0` means the clock is ahead of `now` (skew); read it as today
+  // rather than inventing a "tomorrow" state.
+  if (days <= 0) return { kind: "today", clock };
+  if (days === 1) return { kind: "yesterday", clock };
+  if (stamp.getFullYear() === now.getFullYear()) {
+    return { kind: "date", month, day };
+  }
+  return { kind: "dateYear", year, month, day };
+}
+
 /** `"820 ms"` / `"1.4 s"`; empty string when unknown. */
 export function formatElapsed(ms: number | undefined): string {
   if (ms === undefined || !Number.isFinite(ms) || ms < 0) return "";

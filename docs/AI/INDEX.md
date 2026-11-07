@@ -98,6 +98,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `docs/design/034_theme-system.md` | 主题系统(**设计稿,未实现**): 把「外观(light/dark/system)」与「主题色」拆成两轴;默认 `data-accent="ink"` 墨蓝,后续 teal/clay/graphite 只覆盖 `--brand` 系 token。方案: `--primary`/`--ring`/`--canvas-ink`/`--empty-ink` 映射到 `--brand`(现有 137 处 primary 自动跟随);新增 `success/warning/info/danger` 语义 token,替换约 61 处绿、93 处琥珀、67 处蓝、53 处红;图表/语法/血缘保留独立调色板;`ThemeProvider` 增加 accent + `resolvedTheme` + 系统监听,设置页新增「主题色」行(墨蓝/青碧/赭石/石墨),localStorage 新增 `easy-csv-accent`。含现状审计、token 示例、文件级迁移清单、分阶段实施、4×2 视觉矩阵、风险与待拍板 |
 | `docs/design/040_settings-redesign.md` | 设置对话框重做(**已实施 2026-11-07**;unslop): 030 的信息架构不动,修工艺 —— 十条诊断(底部两个按钮浮在列表上且同权重 / 卡片 `shadow-sm` 套在 `shadow-xl` 里、浅色下白卡与白画布同色 / 头部·目录·内容三层底色 / 字号 13·11.5·11 三档 + 18px 双重内边距 / 组名比行标题左 8px / 原生 checkbox 与自绘控件四种语法并列 / `SegmentChoice` 用 `transition-all` 动 `left` / 主题色是四个**文字**选项 / `/` 快捷键没提示 / 分隔符只有一句话)。**改法**: 1024×680、灰画布 + 无阴影白卡(面阶 + 细线代替阴影)、行高 36→44、字号收成 13/12、标题列 176→190、组名与行标题同一条 16px 线;**底部改为 56px 分隔带**(左「改动即时生效, 保存后写入本地配置」,右「恢复默认 / 保存设置」,保存用 brand 实心成为唯一主操作,列表 `pb-16`→`pb-6`);布尔换开关(`SettingsSwitch`)、数字换步进器、主题色换**四个真色块**(值只写在 `index.css` 的 `[data-swatch]`,与 `[data-accent]` 相邻)、API Key 加显隐、四个「清除」退成红色文字;分隔符行拿内置示例数据 `日期,地区,品类,金额,数量` 实时演示切分(切不开时列数标红),API 控制台外链与这条样例都改走 `SettingsRow` 的**描述第二行**(`extra`),删掉原来两条 `border-b` 子行。**签名**: 分组等宽序号 `01`–`06`,走 `data-index` + `::before` 渲染(不进 `textContent`,不破坏「目录文本不含数字」的断言),取自 `SETTINGS_GROUPS` 顺序而非渲染下标,过滤后不重排。**红线**: 不改取值域/默认值/落库时机、不加设置项、不动 `useScrollSpy` 与插件数据流、不动全局 `Button` 原语(它的 `transition-all` 单开一稿)。原型 `docs/design/prototypes/040/01-settings-redesign.html`。**测试**: 652 例全绿(改 2 处断言: 开关查 `[role=switch]`、主题色查 `aria-label`/`data-swatch`) |
 
+| `docs/design/044_version-control-panel.md` | 版本控制面板改版(**已实施 2026-11-07**;unslop): 把「一版一卡 + 顶部固定 240px 对比区」改成**提交日志** —— 56px 一行、左侧连续竖轨(当前版本实心)、diff 落进行内、行内只留一个 `⋯`(重命名/标签/恢复/删除)、恢复升为展开区按钮而删除退成红字、清除所有版本移到面板底部、相对时间 + `tabular-nums`、允许留空描述(未命名版本)、空状态给解释与入口;「查看」菜单四项补可见勾选。新增 `VersionLogRow.tsx`(单行/展开 diff/行内编辑器)与 `utils/format.ts:relativeStamp`。**两条实测坑**: 轨道 `.version-rail` 作为栅格项只撑到行内容盒(36px),需 `margin-block:-10px` 才连成一条线;`--border-strong` **不是本项目的 token**,未定义变量在 `border` 简写里回落成 `currentColor`(空心节点会变近黑)。测试 678 例全绿。原型 `docs/design/prototypes/044/01-version-control.html` |
+| `docs/design/045_data-lineage-panel.md` | 数据血缘面板改版(**已实施 2026-11-07**;unslop): 320px 里放不下节点图(一步 5 列要 525px,`fitView` 后 10px 字只剩 5.5px),所以面板只做**列清单 + 列路径**:按「结果中的列 / 中途被移除」分组、选中列原地展开路径(源 → 每步 → 结果,没动过这列的步骤压成一行)、未选列时给「本次改动」四行摘要;图搬到全屏并改成**泳道图**(列=泳道、步骤=竖线,只有发生变化的列留节点)。类型从四组 tailwind 色退成等宽小字,唯一品牌色只给被追踪列。**数据层三处补丁**才能让路径成立:`rename` 输出列留 `previousName`;`groupby`/`agg` 从 `expression` 的 `as 别名` 解析真正输出列(否则「移除」分组永远为空);`map`/`transform`/`window` 记 `expression` 与来源列。新增 `panels/lib/columnLineage.ts`(纯函数推导)、`LineageColumnPath` / `LineageColumnRow` / `LineageFullscreen`、`utils/lineageSchema.ts`;测试 47 → 712 例全绿。原型 `docs/design/prototypes/045/01-data-lineage.html` |
+
 > 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–034 已登记。
 
 ---
@@ -397,6 +400,7 @@ NODE_ENV=test       node -e "console.log(typeof require('react').act)"  # functi
 | `utils/fileFormat.ts` | 表格输入格式的唯一真相(024): `detectTabularFormat`(csv/parquet/duckdb,未知 → null)、`isCsvFile`、`duckdbTableName`(非 main schema 补限定名)、`listDuckdbTables`(invoke `list_duckdb_tables`) |
 | `utils/session.ts` | 会话快照序列化: `stripStepCommand`/`reconstructStep`/`serializeTabSnapshot`/`deserializeTabSnapshot` |
 | `utils/format.ts` | `formatDateTime` / `formatElapsed` / `formatBytes`(后两者由 020、022 从业务文件上提复用) |
+| `utils/lineageSchema.ts` | 聚合表达式的保守解析(设计 045): `parseAggregations`(`sum(col("金额")) as 金额合计` → 别名 + 函数 + 参数,**拿不到别名就返回空数组**,调用方退回旧行为)、`pickSourceColumn`(参数里第一个真实存在的输入列)、`aggregationColumns`(groupby / agg 的输出列,带来源与表达式) |
 | `utils/settingsSearch.ts` | **设置搜索的纯函数**(设计 030 §4.3): `parseQuery` / `filterSettings`(空查询原样返回、逐词 AND、跨分组过滤并丢弃零命中分组、命中分组名则整组保留)/ `countMatches` / `highlightSegments`(按字面匹配,正则元字符不当模式;重叠区间合并) |
 | `utils/params.ts` · `utils/platform.ts` · `utils/separateHistory.ts` · `utils/executionHistory.ts` · `utils/versionDiff.ts` · `utils/panelDock.ts` · `utils/csv.ts` | 其余纯函数工具(参数构造、平台判断、拆分结果/执行历史持久化、版本差异、面板停靠、CSV 工具) |
 
@@ -455,7 +459,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `usePipelineState.ts` | 管道状态: `updateTabPipeline` 单点更新管道+edges,撤销/重做状态管理 |
 | `usePipelineVersions.ts` | 管道版本控制: 保存/恢复/删除版本、标签管理、步骤序列化与重建 |
 | `usePipelineTemplates.ts` | 管道模板库(F4) |
-| `useDataLineage.ts` | 数据血缘: 列类型推断、变换分析、血缘图数据构建与持久化 |
+| `useDataLineage.ts` | 数据血缘: 列类型推断、变换分析、schema 快照(`StepLineage[]`)与持久化。**groupby / agg 按聚合表达式解析出真正的输出列**(别名 + 来源列 + 表达式,见 `utils/lineageSchema.ts`),rename 步骤给输出列留 `previousName`,这样列级血缘才能跨步骤回溯;绘制与分组在 `pipeline/panels/lib/columnLineage.ts` |
 | `useExecutionHistory.ts` | 执行历史(F6) |
 | `useUpdater.ts` | 自动更新状态机: 静默/交互检查、下载进度、安装交接(`beforeInstall` 先落盘会话)、错误态;对话框可见性留在调用方(静默检查不得自己弹窗)。设计: `docs/design/022_github-auto-update-and-admin-free-install.md` |
 | `usePluginCatalog.ts` | 插件清单状态: 加载/强制刷新、按插件名路由的安装进度、失败回读权威清单;另导出 `useRequiredPluginCheck`(启动延迟 1.2s 探测 xan,只对"确定缺失"返回 true)。设计: `docs/design/023_plugin-repository-and-in-app-install.md` |
@@ -504,9 +508,14 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `pipeline/overlays/ConnectionVisualization.tsx` | 右键连线贝塞尔实时预览 SVG |
 | `pipeline/overlays/KeyIndicatorOverlay.tsx` | 关键指标浮层 |
 | `pipeline/CoordinateGrid.tsx` | ReactFlow 画布坐标网格背景 |
-| `pipeline/panels/VersionControlPanel.tsx` | 管道版本控制面板: 版本列表、保存/恢复/删除、标签管理 |
-| `pipeline/panels/DataLineagePanel.tsx` | 数据血缘面板: 列级血缘追踪、变换类型图标、保存血缘 |
-| `pipeline/panels/LineageGraph.tsx` | 血缘关系图渲染: ReactFlow 列节点、类型配色、高亮/置灰联动 |
+| `pipeline/panels/VersionControlPanel.tsx` | 管道版本控制面板(设计 044): 提交日志式列表(56px 一行)、头部(保存版本/关闭/版本数+是否有未保存改动)、搜索、保存区(描述+标签 chips)、空状态、底部列表/时间线切换与清除入口、行菜单与三个确认框 |
+| `pipeline/panels/VersionLogRow.tsx` | 版本日志的单行: 竖轨节点、行内展开 diff(基线切换 + 恢复/删除)、行内重命名/加标签编辑器。表现层组件,动作由 `RowActions` 注入 |
+| `pipeline/panels/DataLineagePanel.tsx` | 数据血缘面板(设计 045): 320px 里只做「列清单 + 列路径」——按「结果中的列 / 中途被移除」分组、选中列原地展开路径、未选列时给「本次改动」四行摘要;头部只留全屏/⋯/关闭,保存血缘降级到 `⋯` 的导出血缘 JSON |
+| `pipeline/panels/LineageColumnPath.tsx` | 一列的血缘路径: 源 → 每步 → 结果,一条竖轨串起来;没动过这一列的步骤压成一行(只写"保留"),动过的展开成两行(类型/生成/改名/移除) |
+| `pipeline/panels/LineageColumnRow.tsx` | 面板列表的分组标题与列行: 名称 + 类型(等宽小字)+ 一行元信息(几步 / 第几步生成 / 改名几次 / 第几步移除) |
+| `pipeline/panels/LineageFullscreen.tsx` | 全屏血缘图外壳: 覆盖画布区(保留标题栏)、头部(步骤与行数、搜索、导出、关闭)+ 泳道图 |
+| `pipeline/panels/LineageGraph.tsx` | **全屏泳道图**渲染(设计 045,不再是 ReactFlow 节点图): 列是泳道、步骤是竖线,只有发生变化的列在竖线上留节点(改类型/生成/改名/移除);被追踪列 2px 品牌色,其余 1px 灰线;行数只写在竖线下方(变过的用正文色) |
+| `pipeline/panels/lib/columnLineage.ts` | 列级血缘的推导层(纯函数): `diffStep`(单步增删改类型/改名)、`buildColumnTrace`(从结果列回溯到源列并给出每步 kind)、`summarizeColumns`(结果/移除分组)、`summarizeSteps`(本次改动)、`buildLanes`(泳道图数据)。输入只有 `StepLineage[]`,按 schema 差集 + `sourceColumnName` 链推断 |
 
 ### 业务模块 — 其他域 (`modules/`)
 
@@ -679,9 +688,9 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 修改命令使用文档 | `docs/AI_usage/*.md`(生成源: `scripts/generate-ai-usage-docs.ts`) / 合并版: `docs/AI/USAGE.md` |
 | 修改命令帮助文档(英文) | `src/docs/cmd/*.md` |
 | 修改命令帮助文档(中文) | `docs/cmd_zh/*.md` |
-| 修改管道版本控制 | `src/hooks/usePipelineVersions.ts` + `src/modules/pipeline/panels/VersionControlPanel.tsx` + `src-tauri/src/storage.rs` |
-| 修改数据血缘 | `src/hooks/useDataLineage.ts` + `src/modules/pipeline/panels/DataLineagePanel.tsx` + `src/modules/pipeline/panels/LineageGraph.tsx` + `src-tauri/src/storage.rs` |
-| 修改血缘图渲染 | `src/modules/pipeline/panels/LineageGraph.tsx` |
+| 修改管道版本控制 | `src/modules/pipeline/panels/VersionControlPanel.tsx`(列表/头部/保存区/空状态/底部)+ `src/modules/pipeline/panels/VersionLogRow.tsx`(单行与展开 diff)+ `src/hooks/usePipelineVersions.ts` + `src/utils/format.ts`(`relativeStamp`)+ `src-tauri/src/storage.rs`。设计: `docs/design/044_version-control-panel.md` |
+| 修改数据血缘 | `src/hooks/useDataLineage.ts`(schema 快照)+ `src/modules/pipeline/panels/lib/columnLineage.ts`(推导)+ `src/modules/pipeline/panels/DataLineagePanel.tsx`(清单/路径)+ `src-tauri/src/storage.rs`。设计: `docs/design/045_data-lineage-panel.md` |
+| 修改血缘图渲染 | `src/modules/pipeline/panels/LineageGraph.tsx`(泳道图)+ `src/modules/pipeline/panels/LineageFullscreen.tsx`(全屏外壳) |
 | 修改帮助内容 | `src/components/help/HelpContent.ts` (英文) / `HelpContentCn.ts` (中文) |
 | 修改帮助菜单入口(查看示例 / 帮助中心 / 检查更新) | `src/components/menu/MainMenu.tsx`(Help 菜单,第一行为「查看示例」`onLoadDemo`)+ `src/app/App.tsx`(`onLoadDemo={handleLoadDemo}` → `openSampleTemplate(getBuiltinDemoTemplate(t))`)+ `src/data/templates/builtin.ts`+ `src/i18n/translations/{zh,en}/pipeline.ts`(`viewSample`)+ `src/__tests__/ExecuteMenu.test.tsx`(帮助菜单入口数量)。设计: `docs/design/027_first-run-onboarding.md` §4.1 |
 | 修改命令帮助文档 | 运行 `node scripts/generate-help-docs.js` 重新生成 |

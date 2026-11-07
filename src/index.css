@@ -807,3 +807,58 @@ html[data-custom-chrome="true"][data-window-maximized="false"] .app-window {
 html[data-window-maximized="true"] .window-resize-handle {
   display: none;
 }
+
+/* ── Version log (design 044) ───────────────────────────────────────────
+   One 56px row per version, joined by a continuous rail on the left. The rail
+   is what makes the list read as a log rather than a stack of cards, so it
+   lives here (pseudo-elements) instead of in the markup. */
+.version-rail {
+  position: relative;
+  align-self: stretch;
+  /* Cancel the row's vertical padding: the grid item would otherwise be 36px
+     tall (the content box), which breaks the rail into disconnected segments. */
+  margin-block: -10px;
+  display: flex;
+  justify-content: center;
+}
+.version-rail::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--border);
+}
+.version-rail[data-first="true"]::before {
+  top: 19px;
+}
+.version-rail[data-last="true"]::before {
+  bottom: calc(100% - 19px);
+}
+.version-rail > i {
+  position: relative;
+  z-index: 1;
+  width: 7px;
+  height: 7px;
+  /* Align the node with the row title (git-log convention), not the row box. */
+  margin-top: 15px;
+  /* `--border-strong` is not a theme token here; an undefined var() in a
+     shorthand falls back to currentColor and would paint the rings near-black. */
+  border: 1px solid color-mix(in oklab, var(--foreground) 24%, transparent);
+  border-radius: 9999px;
+  background-color: var(--card);
+}
+.version-rail[data-current="true"] > i {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+/* The expanded diff sits under its row; the rail keeps running behind it. */
+.version-exp::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 26px;
+  width: 1px;
+  background-color: color-mix(in oklab, var(--foreground) 14%, transparent);
+}

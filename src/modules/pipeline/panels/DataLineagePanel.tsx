@@ -1,418 +1,364 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
-import {
-  Search,
-  ChevronDown,
-  ChevronRight,
-  Filter,
-  Plus,
-  Minus,
-  RefreshCw,
-  BarChart3,
-  X,
-  ArrowDown,
-  Save,
-  Check,
-  LayoutGrid,
-  List,
-  Maximize2,
-  Minimize2,
-} from "lucide-react";
-
-import { ScrollArea } from "@/components/ui/ScrollArea";
-import { StepLineage } from "@/types/xan";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Maximize2, MoreHorizontal, Search, X } from "lucide-react";
 import { useLanguage } from "@/i18n";
-import { LineageGraph } from "@/modules/pipeline/panels/LineageGraph";
+import { StepLineage } from "@/types/xan";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { LineageColumnPath } from "@/modules/pipeline/panels/LineageColumnPath";
+import { LineageFullscreen } from "@/modules/pipeline/panels/LineageFullscreen";
+import {
+  ColumnRow,
+  GroupLabel,
+} from "@/modules/pipeline/panels/LineageColumnRow";
+import {
+  StepChange,
+  buildColumnTrace,
+  summarizeColumns,
+  summarizeSteps,
+} from "@/modules/pipeline/panels/lib/columnLineage";
 
 interface DataLineagePanelProps {
   lineageData: StepLineage[];
-  onGetLineageForColumn: (columnName: string) => StepLineage[];
   onSaveLineage: () => void;
   onClose: () => void;
 }
 
-const TRANSFORMATION_ICONS: Record<string, React.ReactNode> = {
-  filter: <Filter className="h-3 w-3" />,
-  add: <Plus className="h-3 w-3" />,
-  remove: <Minus className="h-3 w-3" />,
-  rename: <RefreshCw className="h-3 w-3" />,
-  cast: <RefreshCw className="h-3 w-3" />,
-  aggregate: <BarChart3 className="h-3 w-3" />,
-  sort: <RefreshCw className="h-3 w-3" />,
-  group: <BarChart3 className="h-3 w-3" />,
-  pivot: <RefreshCw className="h-3 w-3" />,
-  flatten: <RefreshCw className="h-3 w-3" />,
-  other: <RefreshCw className="h-3 w-3" />,
-};
-
-const TYPE_COLORS: Record<string, string> = {
-  string: "bg-blue-100 text-blue-800",
-  number: "bg-green-100 text-green-800",
-  date: "bg-purple-100 text-purple-800",
-  boolean: "bg-amber-100 text-amber-800",
-};
-
-type ViewMode = "graph" | "timeline";
-
+/**
+ * 数据血缘面板（设计 045）。
+ *
+ * 320px 放不下一张节点图，所以这里只做两件事：按列列出这次执行的结果，
+ * 以及某一列从源到结果的路径。整张图在全屏泳道图里看。
+ */
 export function DataLineagePanel({
   lineageData,
-  onGetLineageForColumn,
   onSaveLineage,
   onClose,
 }: DataLineagePanelProps) {
-  const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
-  const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
-  const [columnSearch, setColumnSearch] = useState("");
-  const [saved, setSaved] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("graph");
-  const [isGraphExpanded, setIsGraphExpanded] = useState(false);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { t } = useLanguage();
+  const [query, setQuery] = useState("");
+  const [openColumn, setOpenColumn] = useState<string | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const groups = useMemo(() => summarizeColumns(lineageData), [lineageData]);
+  const changes = useMemo(() => summarizeSteps(lineageData), [lineageData]);
+
+  const trace = useMemo(
+    () => (openColumn ? buildColumnTrace(lineageData, openColumn) : null),
+    [lineageData, openColumn],
+  );
+  // 重新执行后这一列可能已经不存在，此时不能让行保持展开
+  const activeColumn = trace ? openColumn : null;
+
+  const keyword = query.trim().toLowerCase();
+  const matchName = useCallback(
+    (name: string) => !keyword || name.toLowerCase().includes(keyword),
+    [keyword],
+  );
+  const resultColumns = groups.result.filter((c) => matchName(c.name));
+  const removedColumns = groups.removed.filter((c) => matchName(c.name));
+
+  const lastStep = lineageData[lineageData.length - 1];
+  const firstStep = lineageData[0];
+  const totalIn = firstStep?.inputRowCount ?? 0;
+  const totalOut = lastStep?.outputRowCount ?? 0;
+  const resultColumnCount = lastStep?.outputSchema.length ?? 0;
 
   useEffect(() => {
-    if (!isGraphExpanded) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsGraphExpanded(false);
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isGraphExpanded]);
-
-  const handleSave = useCallback(() => {
-    onSaveLineage();
-    setSaved(true);
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => setSaved(false), 3000);
-  }, [onSaveLineage]);
-
-  const allColumns = React.useMemo(() => {
-    const columns = new Set<string>();
-    lineageData.forEach((step) => {
-      step.inputSchema.forEach((col) => columns.add(col.name));
-      step.outputSchema.forEach((col) => columns.add(col.name));
-    });
-    return Array.from(columns).sort();
-  }, [lineageData]);
-
-  const filteredColumns = React.useMemo(() => {
-    if (!columnSearch) return allColumns;
-    return allColumns.filter((col) =>
-      col.toLowerCase().includes(columnSearch.toLowerCase()),
-    );
-  }, [allColumns, columnSearch]);
-
-  const handleColumnClick = useCallback((columnName: string) => {
-    setSelectedColumn((prev) => (prev === columnName ? null : columnName));
-  }, []);
-
-  const toggleStep = (stepId: string) => {
-    setExpandedSteps((prev) => {
-      const next = new Set(prev);
-      if (next.has(stepId)) {
-        next.delete(stepId);
-      } else {
-        next.add(stepId);
+    if (!menuOpen) return;
+    const onDown = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
       }
-      return next;
-    });
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (menuOpen) {
+        setMenuOpen(false);
+      } else if (fullscreen) {
+        setFullscreen(false);
+      } else if (openColumn) {
+        setOpenColumn(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [fullscreen, openColumn, menuOpen]);
+
+  const toggleColumn = (name: string) => {
+    setOpenColumn((current) => (current === name ? null : name));
   };
 
-  if (isGraphExpanded) {
+  const handleBodyKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    const rows = Array.from(
+      bodyRef.current?.querySelectorAll<HTMLElement>("[data-lineage-row]") ?? [],
+    );
+    if (rows.length === 0) return;
+    const active = document.activeElement as HTMLElement | null;
+    const index = active ? rows.indexOf(active) : -1;
+    const nextIndex =
+      event.key === "ArrowDown"
+        ? Math.min(rows.length - 1, index + 1)
+        : Math.max(0, index - 1);
+    if (nextIndex === index) return;
+    event.preventDefault();
+    rows[nextIndex]?.focus();
+  };
+
+  const changeValue = (change: StepChange) => {
+    if (change.rowCountIn !== change.rowCountOut) {
+      return `${change.rowCountIn} → ${change.rowCountOut} ${t.lineageRowsUnit}`;
+    }
+    const parts: string[] = [];
+    if (change.diff.cast.length > 0) {
+      parts.push(
+        `${t.lineageCast} ${change.diff.cast.length} ${t.lineageColumnsUnit}`,
+      );
+    }
+    if (change.diff.renamed.length > 0) {
+      parts.push(
+        `${t.lineageRenamed} ${change.diff.renamed.length} ${t.lineageColumnsUnit}`,
+      );
+    }
+    if (change.diff.added.length > 0) parts.push(`+${change.diff.added.length}`);
+    if (change.diff.removed.length > 0) {
+      parts.push(`−${change.diff.removed.length}`);
+    }
+    return parts.join(" · ");
+  };
+
+  if (fullscreen) {
     return (
-      <div
-        className="fixed inset-0 z-50 bg-background flex flex-col"
-        onContextMenu={(e) => e.preventDefault()}
-      >
-        <div className="h-12 border-b border-border/50 flex items-center justify-between px-4 bg-card shrink-0">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold">{t.dataLineage}</span>
-            <span className="text-xs text-muted-foreground">
-              {lineageData.length} {t.rows}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-              <input
-                type="text"
-                value={columnSearch}
-                onChange={(e) => setColumnSearch(e.target.value)}
-                placeholder={t.searchColumns}
-                className="h-8 w-48 pl-7 pr-2 text-xs border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
-              />
-            </div>
-            <ScrollArea className="h-8 max-w-[400px]">
-              <div className="flex items-center gap-1 px-1">
-                {filteredColumns.map((col) => (
-                  <button
-                    key={col}
-                    onClick={() => handleColumnClick(col)}
-                    className={`shrink-0 px-2 py-0.5 text-[10px] rounded transition-colors whitespace-nowrap ${
-                      selectedColumn === col
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted hover:bg-muted/80"
-                    }`}
-                  >
-                    {col}
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-            {lineageData.length > 0 && (
-              <button
-                onClick={handleSave}
-                className="h-8 px-2 flex items-center gap-1 text-xs hover:bg-muted rounded transition-colors"
-              >
-                {saved ? (
-                  <Check className="h-3.5 w-3.5 text-success" />
-                ) : (
-                  <Save className="h-3.5 w-3.5" />
-                )}
-                {saved ? "Saved" : "Save"}
-              </button>
-            )}
-            <Tooltip content={t.exitFullscreen}>
-              <button
-                onClick={() => setIsGraphExpanded(false)}
-                className="h-8 w-8 flex items-center justify-center hover:bg-muted rounded transition-colors"
-              >
-                <Minimize2 className="h-4 w-4" />
-              </button>
-            </Tooltip>
-          </div>
-        </div>
-        <div className="flex-1 min-h-0 bg-background">
-          <LineageGraph
-            lineageData={lineageData}
-            highlightedColumn={selectedColumn}
-            onColumnClick={handleColumnClick}
-          />
-        </div>
-      </div>
+      <LineageFullscreen
+        lineageData={lineageData}
+        tracedColumn={activeColumn}
+        onTrace={setOpenColumn}
+        onClose={() => setFullscreen(false)}
+        onSave={onSaveLineage}
+      />
     );
   }
 
+  const isEmpty = lineageData.length === 0;
+  const noMatch =
+    !isEmpty && resultColumns.length === 0 && removedColumns.length === 0;
+
   return (
     <div
-      className="h-full flex flex-col"
+      className="flex h-full flex-col bg-card"
       onContextMenu={(e) => e.preventDefault()}
     >
-      <div className="px-3 py-2 border-b border-border/50 shrink-0">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold flex items-center gap-2">
-            {t.dataLineage}
-          </h3>
-          <div className="flex items-center gap-1">
-            <Tooltip content={t.dagView}>
+      <div className="flex-none px-4 pt-3">
+        <div className="flex h-7 items-center gap-2">
+          <h3 className="text-[13px] font-medium">{t.dataLineage}</h3>
+          <div className="ml-auto flex items-center gap-0.5">
+            <Tooltip content={t.lineageFullscreen}>
               <button
-                onClick={() => setViewMode("graph")}
-                className={`h-6 w-6 flex items-center justify-center rounded transition-colors ${
-                  viewMode === "graph"
-                    ? "bg-primary/10 text-primary"
-                    : "hover:bg-muted"
-                }`}
+                type="button"
+                aria-label={t.lineageFullscreen}
+                disabled={isEmpty}
+                onClick={() => setFullscreen(true)}
+                className="grid h-[26px] w-[26px] place-items-center rounded-[7px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
               >
-                <LayoutGrid className="h-3.5 w-3.5" />
+                <Maximize2 className="h-[13px] w-[13px]" />
               </button>
             </Tooltip>
-            <Tooltip content={t.timelineView}>
-              <button
-                onClick={() => setViewMode("timeline")}
-                className={`h-6 w-6 flex items-center justify-center rounded transition-colors ${
-                  viewMode === "timeline"
-                    ? "bg-primary/10 text-primary"
-                    : "hover:bg-muted"
-                }`}
-              >
-                <List className="h-3.5 w-3.5" />
-              </button>
-            </Tooltip>
-            {viewMode === "graph" && (
-              <Tooltip content={t.fullscreen}>
+            <div className="relative" ref={menuRef}>
+              <Tooltip content={t.lineageMore}>
                 <button
-                  onClick={() => setIsGraphExpanded(true)}
-                  className="h-6 w-6 flex items-center justify-center hover:bg-muted rounded transition-colors"
+                  type="button"
+                  aria-label={t.lineageMore}
+                  aria-expanded={menuOpen}
+                  disabled={isEmpty}
+                  onClick={() => setMenuOpen((open) => !open)}
+                  className="grid h-[26px] w-[26px] place-items-center rounded-[7px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
                 >
-                  <Maximize2 className="h-3.5 w-3.5" />
+                  <MoreHorizontal className="h-[13px] w-[13px]" />
                 </button>
               </Tooltip>
-            )}
-            {lineageData.length > 0 && (
-              <Tooltip content={saved ? "Saved!" : "Save lineage"}>
-                <button
-                  onClick={handleSave}
-                  className="h-6 w-6 flex items-center justify-center hover:bg-muted rounded transition-colors"
-                >
-                  {saved ? (
-                    <Check className="h-3.5 w-3.5 text-success" />
-                  ) : (
-                    <Save className="h-3.5 w-3.5" />
-                  )}
-                </button>
-              </Tooltip>
-            )}
-            <button
-              onClick={onClose}
-              className="h-6 w-6 flex items-center justify-center hover:bg-muted rounded transition-colors"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-3 py-2 border-b border-border/50 shrink-0">
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-          <input
-            type="text"
-            value={columnSearch}
-            onChange={(e) => setColumnSearch(e.target.value)}
-            placeholder={t.searchColumns}
-            className="w-full h-8 pl-7 pr-2 text-xs border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
-          />
-        </div>
-        <ScrollArea className="h-[120px] mt-2">
-          {filteredColumns.map((col) => (
-            <button
-              key={col}
-              onClick={() => handleColumnClick(col)}
-              className={`w-full text-left px-2 py-1 text-xs rounded transition-colors ${
-                selectedColumn === col
-                  ? "bg-primary/10 text-primary"
-                  : "hover:bg-muted"
-              }`}
-            >
-              {col}
-            </button>
-          ))}
-        </ScrollArea>
-      </div>
-
-      <div className="flex-1 min-h-0">
-        {lineageData.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
-            {t.noLineageData}
-          </div>
-        ) : viewMode === "graph" ? (
-          <div className="h-full bg-background">
-            <LineageGraph
-              lineageData={lineageData}
-              highlightedColumn={selectedColumn}
-              onColumnClick={handleColumnClick}
-            />
-          </div>
-        ) : (
-          <ScrollArea className="h-full">
-            <div className="p-3 space-y-2">
-              {selectedColumn && (
-                <div className="text-xs font-medium text-muted-foreground mb-2">
-                  {t.lineageForColumn}{" "}
-                  <span className="text-primary">{selectedColumn}</span>
+              {menuOpen && (
+                <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border border-border bg-popover p-1 shadow-md">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onSaveLineage();
+                    }}
+                    className="flex h-[26px] w-full items-center rounded-md px-2 text-left text-[11.5px] text-popover-foreground transition-colors hover:bg-muted"
+                  >
+                    {t.lineageExportJson}
+                  </button>
                 </div>
               )}
-              {(selectedColumn
-                ? onGetLineageForColumn(selectedColumn)
-                : lineageData
-              ).map((step) => (
-                <div
-                  key={step.stepId}
-                  className="p-3 border rounded-md cursor-pointer transition-all hover:bg-accent/30"
-                  onClick={() => toggleStep(step.stepId)}
-                >
-                  <div className="flex items-center gap-2">
-                    {expandedSteps.has(step.stepId) ? (
-                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                    )}
-                    <span className="text-xs font-medium">
-                      {step.commandName}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground ml-auto">
-                      {step.inputRowCount} → {step.outputRowCount} {t.rows}
-                    </span>
-                  </div>
-
-                  {expandedSteps.has(step.stepId) && (
-                    <div className="mt-2 space-y-2">
-                      <div>
-                        <div className="text-[10px] font-medium text-muted-foreground mb-1">
-                          {t.inputColumns}
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {step.inputSchema.map((col) => (
-                            <button
-                              key={col.name}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleColumnClick(col.name);
-                              }}
-                              className={`inline-flex items-center px-1.5 py-0.5 text-[10px] rounded cursor-pointer transition-colors hover:opacity-80 ${
-                                selectedColumn === col.name
-                                  ? "ring-1 ring-primary"
-                                  : ""
-                              } ${TYPE_COLORS[col.type]}`}
-                            >
-                              {col.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-center">
-                        <ArrowDown className="h-3 w-3 text-muted-foreground" />
-                      </div>
-
-                      <div>
-                        <div className="text-[10px] font-medium text-muted-foreground mb-1">
-                          {t.outputColumns}
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {step.outputSchema.map((col) => (
-                            <button
-                              key={col.name}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleColumnClick(col.name);
-                              }}
-                              className={`inline-flex items-center px-1.5 py-0.5 text-[10px] rounded cursor-pointer transition-colors hover:opacity-80 ${
-                                selectedColumn === col.name
-                                  ? "ring-1 ring-primary"
-                                  : ""
-                              } ${TYPE_COLORS[col.type]}`}
-                            >
-                              {col.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {step.transformations.length > 0 && (
-                        <div>
-                          <div className="text-[10px] font-medium text-muted-foreground mb-1">
-                            {t.lineageTransformations}
-                          </div>
-                          <div className="space-y-1">
-                            {step.transformations.map((tr, i) => (
-                              <div
-                                key={i}
-                                className="flex items-center gap-1 text-[10px] text-muted-foreground"
-                              >
-                                {TRANSFORMATION_ICONS[tr.type]}
-                                <span>{tr.description}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
             </div>
-          </ScrollArea>
+            <Tooltip content={t.lineageClose}>
+              <button
+                type="button"
+                aria-label={t.lineageClose}
+                onClick={onClose}
+                className="grid h-[26px] w-[26px] place-items-center rounded-[7px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </Tooltip>
+          </div>
+        </div>
+
+        {!isEmpty && (
+          <div className="relative mt-2.5">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground/70" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t.searchColumns}
+              className="h-8 w-full rounded-lg border border-border bg-card pl-7 pr-7 text-[12px] outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground/70 focus:border-primary focus:shadow-[0_0_0_2px_var(--brand-soft)]"
+            />
+            {query && (
+              <button
+                type="button"
+                aria-label={t.lineageClearSearch}
+                onClick={() => setQuery("")}
+                className="absolute right-1.5 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
         )}
+      </div>
+
+      <div
+        ref={bodyRef}
+        onKeyDown={handleBodyKeyDown}
+        className="min-h-0 flex-1 overflow-y-auto"
+      >
+        {isEmpty && <LineageEmptyState />}
+
+        {noMatch && (
+          <div className="px-5 py-6">
+            <h4 className="text-[12.5px] font-medium">
+              {t.lineageNoMatchTitle.replace("{query}", query.trim())}
+            </h4>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+              {t.lineageNoMatchDesc}
+            </p>
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="mt-3 text-[10.5px] text-primary underline decoration-primary/35 underline-offset-2"
+            >
+              {t.lineageClearSearch}
+            </button>
+          </div>
+        )}
+
+        {!isEmpty && resultColumns.length > 0 && (
+          <>
+            <GroupLabel
+              label={t.lineageGroupResult}
+              count={groups.result.length}
+            />
+            {resultColumns.map((column) => (
+              <ColumnRow
+                key={column.name}
+                column={column}
+                open={activeColumn === column.name}
+                onToggle={() => toggleColumn(column.name)}
+              />
+            ))}
+          </>
+        )}
+
+        {!isEmpty && removedColumns.length > 0 && (
+          <>
+            <GroupLabel
+              label={t.lineageGroupRemoved}
+              count={groups.removed.length}
+            />
+            {removedColumns.map((column) => (
+              <ColumnRow
+                key={column.name}
+                column={column}
+                open={activeColumn === column.name}
+                onToggle={() => toggleColumn(column.name)}
+              />
+            ))}
+          </>
+        )}
+
+        {trace && activeColumn && (
+          <LineageColumnPath
+            trace={trace}
+            resultRows={totalOut}
+            resultColumns={resultColumnCount}
+            onOpenGraph={() => setFullscreen(true)}
+          />
+        )}
+
+        {!isEmpty && !activeColumn && changes.length > 0 && (
+          <>
+            <GroupLabel
+              label={t.lineageGroupChanges}
+              count={changes.length}
+            />
+            {changes.map((change) => (
+              <div
+                key={change.stepId}
+                className="grid h-[34px] grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-2 px-4 text-[11.5px]"
+              >
+                <span className="font-mono text-[9.5px] text-muted-foreground/60">
+                  {String(change.index).padStart(2, "0")}
+                </span>
+                <span className="truncate" title={change.commandName}>
+                  {change.alias || change.commandName}
+                </span>
+                <span className="whitespace-nowrap font-mono text-[9.5px] tabular-nums text-muted-foreground">
+                  {changeValue(change)}
+                </span>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+
+      {!isEmpty && (
+        <div className="flex h-9 flex-none items-center gap-1.5 border-t border-border/60 px-4 text-[10.5px] tabular-nums text-muted-foreground">
+          <span>
+            {lineageData.length} {t.lineageStepsUnit}
+          </span>
+          <span className="opacity-60">·</span>
+          <span>
+            {totalIn} → {totalOut} {t.lineageRowsUnit}
+          </span>
+          <span className="ml-auto">{t.lineageLatestRun}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LineageEmptyState() {
+  const { t } = useLanguage();
+  return (
+    <div className="flex h-full flex-col justify-center px-5 pb-12">
+      <h4 className="text-[12.5px] font-medium">{t.lineageEmptyTitle}</h4>
+      <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+        {t.lineageEmptyDesc}
+      </p>
+      <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+        {t.lineageEmptyOverwrite}
+      </p>
+      <div className="mt-4 flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground/60">
+        <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
+        {t.lineageEmptyWait}
       </div>
     </div>
   );

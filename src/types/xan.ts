@@ -277,6 +277,17 @@ export interface ColumnSchema {
   type: "string" | "number" | "date" | "boolean";
   sourceStepId?: string;
   sourceColumnName?: string;
+  /**
+   * Derived columns only (map / transform / window / aggregation alias):
+   * the expression that produced them, e.g. `sum(col("金额"))`.
+   * Used by the lineage panel to explain where a new column came from.
+   */
+  expression?: string;
+  /**
+   * Set by `rename` steps only: the name this column had in the previous
+   * step. Later steps drop it again, so it always describes one hop.
+   */
+  previousName?: string;
 }
 
 export interface Transformation {
@@ -310,6 +321,8 @@ export interface ColumnLineagePath {
 export interface StepLineage {
   stepId: string;
   commandName: string;
+  /** 用户给这一步起的名字；没起就是 undefined，界面退回 commandName */
+  alias?: string;
   inputSchema: ColumnSchema[];
   outputSchema: ColumnSchema[];
   inputRowCount: number;

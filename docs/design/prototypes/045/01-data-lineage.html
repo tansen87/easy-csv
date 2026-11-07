@@ -1,0 +1,1170 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 01 · 数据血缘面板改版</title>
+<style>
+  /* ── tokens · 与 src/index.css 对齐 ───────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.7 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --border-strong:oklch(0.855 0 0);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+
+    --success:oklch(0.52 0.09 150);
+    --warning:oklch(0.55 0.1 72);
+    --danger:oklch(0.577 0.245 27.325);
+
+    --canvas:oklch(0.976 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-win:0 24px 60px -24px oklch(0.2 0.02 80 / 26%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-pop:0 12px 28px -10px oklch(0.2 0.02 80 / 26%),0 1px 3px oklch(0.2 0.02 80 / 8%);
+
+    --ease:cubic-bezier(.2,0,0,1);
+  }
+  html.dark,.dark{
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.52 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(1 0 0 / 7%);
+    --border-strong:oklch(1 0 0 / 16%);
+
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 12%,transparent);
+
+    --success:oklch(0.72 0.09 152);
+    --warning:oklch(0.76 0.1 78);
+    --danger:oklch(0.704 0.191 22.216);
+
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.105 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-win:0 24px 60px -24px oklch(0 0 0 / 60%),0 2px 6px oklch(0 0 0 / 30%);
+    --shadow-pop:0 12px 28px -10px oklch(0 0 0 / 60%),0 1px 3px oklch(0 0 0 / 40%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;-webkit-font-smoothing:antialiased;
+  }
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+  .i{width:14px;height:14px;stroke:currentColor;stroke-width:1.5;fill:none;
+     stroke-linecap:round;stroke-linejoin:round;display:block}
+  .i.sm{width:12px;height:12px}
+
+  /* ── 设计稿舞台 ──────────────────────────────────────────────────── */
+  #sheet{width:1240px;margin:0 auto;padding:28px 0 80px}
+  .stage-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding-bottom:18px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar h1{margin:0;font-size:16px;font-weight:500}
+  .stage-bar p{margin:5px 0 0;font-size:12px;color:var(--muted-fg);max-width:730px;line-height:1.6}
+  .seg{display:flex;gap:2px;padding:2px;border-radius:8px;background:var(--bg);border:1px solid var(--border)}
+  .seg button{
+    appearance:none;border:0;background:transparent;font:inherit;font-size:11.5px;color:var(--muted-fg);
+    height:24px;padding:0 11px;border-radius:6px;cursor:pointer;
+    transition:background-color .15s var(--ease),color .15s var(--ease);
+  }
+  .seg button.on{background:var(--brand);color:var(--brand-fg)}
+
+  /* ── 方向 ────────────────────────────────────────────────────────── */
+  .direction{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:0;
+    border:1px solid var(--border);border-radius:10px;background:var(--card);
+    margin-bottom:40px;overflow:hidden;
+  }
+  .direction div{padding:12px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;letter-spacing:.02em;color:var(--muted-fg-2);margin-bottom:5px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.55;color:var(--fg)}
+
+  /* ── 帧 ──────────────────────────────────────────────────────────── */
+  .frame + .frame{margin-top:52px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span:last-child{color:var(--muted-fg-2)}
+
+  .win{
+    position:relative;width:1200px;height:760px;display:flex;flex-direction:column;overflow:hidden;
+    background:var(--bg);color:var(--fg);
+    border:1px solid var(--border-strong);border-radius:8px;box-shadow:var(--shadow-win);
+  }
+  .dark .win{border-color:var(--border)}
+
+  /* ── 标题栏 ──────────────────────────────────────────────────────── */
+  .titlebar{flex:none;height:40px;display:flex;align-items:center;background:var(--card);
+            border-bottom:1px solid var(--border-soft);user-select:none}
+  .brand{padding-left:16px;font-size:12.5px;font-weight:500;letter-spacing:.005em;white-space:nowrap}
+  .menus{display:flex;align-items:center;gap:2px;margin-left:18px}
+  .menus button{
+    appearance:none;border:0;background:transparent;font:inherit;font-size:11.5px;font-weight:500;
+    color:var(--brand);height:26px;padding:0 11px;border-radius:6px;
+    transition:background-color .12s var(--ease),color .12s var(--ease);
+  }
+  .menus button:hover{background:var(--muted);color:var(--fg)}
+  .menus button.on{background:var(--muted);color:var(--fg)}
+  .tb-right{margin-left:auto;display:flex;align-items:center;gap:2px;padding-right:8px}
+  .tb-btn{appearance:none;border:0;background:transparent;color:var(--muted-fg);width:26px;height:26px;
+          display:grid;place-items:center;border-radius:6px;
+          transition:background-color .12s var(--ease),color .12s var(--ease)}
+  .tb-btn:hover{background:var(--muted);color:var(--fg)}
+  .win-ctl{display:flex;height:40px}
+  .win-ctl i{display:grid;place-items:center;width:44px;color:var(--muted-fg);font-style:normal}
+  .win-ctl svg{width:10px;height:10px;stroke:currentColor;stroke-width:1.2;fill:none}
+
+  /* ── 画布 ────────────────────────────────────────────────────────── */
+  .canvas{
+    position:relative;flex:1 1 auto;min-height:0;overflow:hidden;
+    background-color:var(--canvas);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:20px 20px;background-position:10px 10px;
+  }
+  .tabs{position:absolute;left:8px;top:6px;display:flex;align-items:center;gap:2px;height:30px}
+  .tab{display:flex;align-items:center;gap:6px;height:24px;padding:0 9px;font-size:11.5px;
+       color:var(--muted-fg);border:1px solid transparent;border-radius:6px}
+  .tab.on{background:var(--card);border-color:var(--border);color:var(--fg)}
+  .tab .d{width:5px;height:5px;border-radius:50%;background:var(--border-strong)}
+  .tab.on .d{background:var(--brand)}
+
+  /* 数据预览（面板背后的真实内容） */
+  .pv{position:absolute;left:12px;right:340px;top:44px;bottom:12px;overflow:hidden;
+      background:var(--card);border:1px solid var(--border);border-radius:8px}
+  .pv table{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}
+  .pv th{position:sticky;top:0;text-align:left;font-weight:500;font-size:10.5px;color:var(--muted-fg);
+         padding:7px 10px;border-bottom:1px solid var(--border);background:var(--card);white-space:nowrap}
+  .pv td{padding:5px 10px;border-bottom:1px solid var(--border-soft);color:var(--fg);white-space:nowrap}
+  .pv td.n{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .pv .idx{color:var(--muted-fg-2);font-family:var(--mono);font-size:10px;width:44px}
+
+  /* ══════════════════════════════════════════════════════════════════
+     现状 · DataLineagePanel.tsx + LineageGraph.tsx
+     ══════════════════════════════════════════════════════════════════ */
+  .b-side{position:absolute;top:40px;right:0;bottom:0;width:320px;background:var(--card);
+          border-left:1px solid color-mix(in oklab,var(--border) 50%,transparent);
+          box-shadow:-8px 0 24px -12px oklch(0.2 0.02 80 / 22%);
+          display:flex;flex-direction:column;overflow:hidden}
+  .b-top{padding:12px 12px 0;border-bottom:1px solid color-mix(in oklab,var(--border) 50%,transparent)}
+  .b-h{display:flex;align-items:center;justify-content:space-between}
+  .b-h h3{margin:0;font-size:14px;font-weight:600}
+  .b-ibs{display:flex;align-items:center;gap:1px}
+  .b-ib{appearance:none;border:0;background:transparent;color:var(--fg);width:22px;height:22px;
+        display:grid;place-items:center;border-radius:6px}
+  .b-ib:hover{background:var(--brand-soft);color:var(--brand)}
+  .b-ib .i{width:12px;height:12px}
+  .b-search{position:relative;margin-top:8px}
+  .b-search svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--muted-fg);
+                width:12px;height:12px}
+  .b-search input{width:100%;height:32px;padding:0 8px 0 26px;font:inherit;font-size:12px;
+                  border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--fg)}
+  .b-cols{height:120px;overflow:hidden;padding:8px 0 10px;display:grid;gap:1px;align-content:start}
+  .b-col{display:block;height:22px;padding:0 12px;font-size:12px;color:var(--fg);line-height:22px;
+         text-align:left;background:transparent;border:0;font-family:inherit}
+  .b-col.on{background:var(--brand-soft);color:var(--brand)}
+  .b-graph{flex:1 1 auto;min-height:0;position:relative;overflow:hidden;background:var(--bg);
+           display:flex;justify-content:center;align-items:flex-start}
+  .bgs{flex:none;width:560px;transform:scale(.55);transform-origin:top center;
+       display:grid;justify-items:center;padding-top:14px}
+  .brow{display:flex;gap:5px;justify-content:center}
+  .bc{width:100px;height:44px;border-radius:5px;border:1.5px solid;padding:5px 6px;
+      font-size:10px;font-weight:500;line-height:1.3;overflow:hidden}
+  .bc em{display:block;font-style:normal;font-size:8px;opacity:.6;margin-top:2px}
+  .bstp{width:160px;height:70px;margin:30px 0;border-radius:8px;background:#f8fafc;
+        border:1.5px solid #cbd5e1;padding:8px 10px;text-align:left}
+  .bstp b{display:block;font-size:11px;font-weight:600}
+  .bstp em{display:block;font-style:normal;font-size:9px;color:#64748b;margin-top:4px}
+  .mini{position:absolute;right:10px;bottom:10px;width:160px;height:100px;background:var(--bg);
+        border:1px solid var(--border);border-radius:4px;overflow:hidden}
+  .mini i{position:absolute;width:6px;height:3px;border-radius:1px;display:block}
+  .b-zoom{position:absolute;left:10px;bottom:10px;display:flex;flex-direction:column;
+          border:1px solid var(--border);border-radius:4px;background:var(--bg)}
+  .b-zoom i{display:grid;place-items:center;width:20px;height:20px;color:var(--muted-fg)}
+  .b-zoom i + i{border-top:1px solid var(--border-soft)}
+
+  /* ══════════════════════════════════════════════════════════════════
+     改后 · 列清单 / 列路径
+     ══════════════════════════════════════════════════════════════════ */
+  .ln{position:absolute;top:40px;right:0;bottom:0;width:320px;background:var(--card);
+      border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+
+  .ln-head{flex:none;padding:12px 12px 0 16px}
+  .ln-hrow{display:flex;align-items:center;gap:8px;height:28px}
+  .ln-t{font-size:13px;font-weight:500;letter-spacing:.01em}
+  .ln-hacts{margin-left:auto;display:flex;align-items:center;gap:2px}
+  .ln-ib{appearance:none;border:0;background:transparent;color:var(--muted-fg);width:26px;height:26px;
+         display:grid;place-items:center;border-radius:7px;cursor:pointer;
+         transition:background-color .12s var(--ease),color .12s var(--ease)}
+  .ln-ib:hover{background:var(--muted);color:var(--fg)}
+  .ln-ib svg{width:13px;height:13px}
+
+  .ln-search{position:relative;margin-top:10px;padding:0 4px 10px 0}
+  .ln-search svg{position:absolute;left:9px;top:16px;color:var(--muted-fg-2);
+                 width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+  .ln-search input{width:100%;height:32px;padding:0 8px 0 28px;font:inherit;font-size:12px;color:var(--fg);
+                   border:1px solid var(--border);border-radius:8px;background:var(--card)}
+  .ln-search input::placeholder{color:var(--muted-fg-2)}
+
+  .ln-body{flex:1 1 auto;min-height:0;overflow:hidden}
+
+  .ln-grp{display:flex;align-items:center;gap:6px;height:30px;padding:0 16px;
+          font-size:10.5px;color:var(--muted-fg)}
+  .ln-grp:first-child{margin-top:2px}
+  .ln-grp .n{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);
+             font-variant-numeric:tabular-nums}
+
+  .ln-row{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
+          gap:0 8px;width:100%;padding:6px 16px;min-height:48px;text-align:left;
+          border:0;background:transparent;font-family:inherit;color:inherit;cursor:pointer;
+          transition:background-color .12s var(--ease)}
+  .ln-row:hover{background:color-mix(in oklab,var(--muted) 70%,transparent)}
+  .ln-row.sel{background:var(--muted)}
+  .ln-row.sel::after{content:"";position:absolute;left:0;top:6px;bottom:6px;width:2px;
+                     border-radius:0 2px 2px 0;background:var(--brand)}
+  .ln-nm{font-size:12.5px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ln-ty{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);white-space:nowrap;
+         letter-spacing:.01em}
+  .ln-sub{grid-column:1/-1;display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted-fg);
+          font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ln-sub .sep{color:var(--muted-fg-2);opacity:.55}
+  .ln-sub .stp{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2)}
+  .ln-row.gone .ln-nm{color:var(--muted-fg)}
+  .ln-row.gone .ln-ty{color:var(--muted-fg-2);opacity:.7}
+
+  /* 列路径（展开） */
+  .ln-path{background:var(--muted);padding:6px 16px 12px;border-top:1px solid var(--border-soft)}
+  .ln-path .p-cap{display:flex;align-items:center;gap:6px;height:24px;font-size:10.5px;color:var(--muted-fg)}
+  .ln-path .p-cap .x{margin-left:auto;color:var(--muted-fg-2);font-family:var(--mono);font-size:9.5px}
+
+  .p-item{position:relative;padding:6px 0 6px 24px}
+  .p-item::before{content:"";position:absolute;left:6px;top:0;bottom:0;width:1px;background:var(--border)}
+  .p-item:first-of-type::before{top:15px}
+  .p-item:last-of-type::before{bottom:calc(100% - 15px)}
+  .p-dot{position:absolute;left:2px;top:9px;width:9px;height:9px;border-radius:50%;z-index:1;
+         background:var(--muted);border:1px solid var(--border-strong)}
+  .p-dot.f{background:var(--brand);border-color:var(--brand)}
+  .p-dot.on{background:var(--brand);border-color:var(--brand);box-shadow:0 0 0 3px var(--muted)}
+  .p-item.slim .p-dot{width:7px;height:7px;left:3px;top:11px}
+
+  .p-c{min-width:0}
+  .p-t{display:flex;align-items:baseline;gap:6px;min-height:18px}
+  .p-n{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);flex:none}
+  .p-t b{font-size:12px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .p-t b.strong{font-weight:500}
+  .p-t em{font-style:normal;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .p-t .rc{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);
+           white-space:nowrap;font-variant-numeric:tabular-nums}
+  .p-t .keep{margin-left:auto;font-size:10px;color:var(--muted-fg-2);white-space:nowrap}
+  .p-d{display:flex;gap:8px;margin-top:2px;font-size:11px;line-height:16px}
+  .p-d .k{flex:none;width:26px;color:var(--muted-fg-2);font-size:10px}
+  .p-d .v{color:var(--fg);min-width:0}
+  .p-d .v b{font-weight:400;color:var(--brand)}
+  .p-d .v .arrow{color:var(--muted-fg-2);padding:0 4px}
+  .p-d .v code{font-family:var(--mono);font-size:10px;color:var(--fg);
+               background:color-mix(in oklab,var(--card) 70%,transparent);
+               padding:0 3px;border-radius:3px}
+  .p-d.muted .v{color:var(--muted-fg)}
+
+  .ln-path .p-foot{display:flex;align-items:center;gap:6px;margin-top:6px;padding-left:24px}
+  .ln-path .p-link{appearance:none;border:0;background:transparent;font:inherit;font-size:10.5px;
+                   color:var(--muted-fg);padding:0;cursor:pointer;display:flex;align-items:center;gap:4px}
+  .ln-path .p-link:hover{color:var(--brand)}
+  .ln-path .p-link svg{width:10px;height:10px}
+
+  /* 本次改动 */
+  .chg{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:center;
+       height:34px;padding:0 16px;font-size:11.5px}
+  .chg .n{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2)}
+  .chg .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chg .v{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);
+          font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  .ln-foot{flex:none;height:36px;display:flex;align-items:center;gap:8px;padding:0 16px;
+           border-top:1px solid var(--border-soft);font-size:10.5px;color:var(--muted-fg);
+           font-variant-numeric:tabular-nums}
+  .ln-foot .sep{color:var(--muted-fg-2);opacity:.55}
+  .ln-foot .r{margin-left:auto}
+
+  /* ══════════════════════════════════════════════════════════════════
+     改后 · 全屏泳道图
+     ══════════════════════════════════════════════════════════════════ */
+  .g-head{flex:none;height:48px;display:flex;align-items:center;gap:10px;padding:0 16px;
+          background:var(--card);border-bottom:1px solid var(--border-soft)}
+  .g-t{font-size:13px;font-weight:500}
+  .g-m{font-family:var(--mono);font-size:10px;color:var(--muted-fg);font-variant-numeric:tabular-nums;
+       padding-left:10px;border-left:1px solid var(--border);height:14px;display:flex;align-items:center}
+  .g-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .g-search{position:relative;width:184px}
+  .g-search svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:12px;height:12px;
+                color:var(--muted-fg-2)}
+  .g-search input{width:100%;height:28px;padding:0 8px 0 26px;font:inherit;font-size:11.5px;
+                  border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--fg)}
+  .g-search input::placeholder{color:var(--muted-fg-2)}
+  .g-btn{appearance:none;border:1px solid var(--border);background:var(--card);color:var(--fg);
+         height:28px;padding:0 9px;border-radius:7px;font:inherit;font-size:11.5px;
+         display:flex;align-items:center;gap:5px;cursor:pointer;
+         transition:background-color .12s var(--ease)}
+  .g-btn:hover{background:var(--muted)}
+  .g-btn svg{width:12px;height:12px;color:var(--muted-fg)}
+  .g-x{appearance:none;border:0;background:transparent;color:var(--muted-fg);width:28px;height:28px;
+       display:grid;place-items:center;border-radius:7px;cursor:pointer}
+  .g-x:hover{background:var(--muted);color:var(--fg)}
+  .g-body{flex:1 1 auto;min-height:0;background-color:var(--bg);
+          background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:20px 20px}
+  .g-svg{display:block;width:100%;height:100%}
+
+  /* SVG 文字层级 */
+  .g-svg text{font-family:var(--font)}
+  .g-name{font-size:12px;fill:var(--fg)}
+  .g-type{font-family:var(--mono);font-size:9.5px;fill:var(--muted-fg-2)}
+  .g-name.tr{fill:var(--brand)}
+  .g-h{font-size:11.5px;fill:var(--fg)}
+  .g-sub{font-family:var(--mono);font-size:9.5px;fill:var(--muted-fg)}
+  .g-num{font-family:var(--mono);font-size:10px;fill:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .g-num.on{fill:var(--fg)}
+  .g-chip{font-size:10.5px;fill:var(--fg)}
+  .g-chip.mono{font-family:var(--mono);font-size:9.5px;fill:var(--muted-fg)}
+  .g-note{font-size:9.5px;fill:var(--muted-fg-2)}
+
+  /* ── 标注 ────────────────────────────────────────────────────────── */
+  .num{position:absolute;width:16px;height:16px;border-radius:50%;background:var(--danger);color:#fff;
+       font-family:var(--mono);font-size:9.5px;font-weight:500;display:grid;place-items:center;
+       box-shadow:0 1px 2px oklch(0.2 0.02 80 / 25%);z-index:9}
+  .num.after{background:var(--brand);color:var(--brand-fg)}
+
+  /* ── 状态细节 ────────────────────────────────────────────────────── */
+  .tiles{display:grid;grid-template-columns:repeat(3,320px);gap:28px 32px}
+  .tile{display:grid;gap:8px;align-content:start}
+  .tile-cap{font-family:var(--mono);font-size:10px;letter-spacing:.02em;color:var(--muted-fg)}
+  .tile-cap b{font-family:var(--font);font-size:11px;font-weight:500;color:var(--fg);margin-right:6px}
+  .card320{position:relative;width:320px;background:var(--card);border:1px solid var(--border);
+           border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+  .card320.tall{height:404px}
+
+  .ln-empty{flex:1 1 auto;padding:26px 20px;display:grid;gap:9px;align-content:center}
+  .ln-empty h4{margin:0;font-size:12.5px;font-weight:500}
+  .ln-empty p{margin:0;font-size:11px;line-height:1.7;color:var(--muted-fg)}
+  .ln-empty .wait{margin-top:4px;display:flex;align-items:center;gap:6px;font-size:10px;
+                  color:var(--muted-fg-2);font-family:var(--mono)}
+  .ln-empty .wait i{width:5px;height:5px;border-radius:50%;background:var(--border-strong)}
+  .ln-empty .go{appearance:none;border:0;background:transparent;font:inherit;font-size:10.5px;
+                 color:var(--brand);padding:0;cursor:pointer;text-decoration:underline;
+                 text-decoration-color:color-mix(in oklab,var(--brand) 35%,transparent);text-underline-offset:2px}
+
+  /* ── 图例 / 说明 ─────────────────────────────────────────────────── */
+  .legend{width:1200px;border-top:1px solid var(--border);margin-top:8px}
+  .legend table{width:100%;border-collapse:collapse;font-size:11.5px;line-height:1.65}
+  .legend th{text-align:left;font-weight:500;font-size:10.5px;color:var(--muted-fg-2);
+             padding:10px 12px 8px 0;border-bottom:1px solid var(--border-soft);white-space:nowrap}
+  .legend td{padding:9px 12px 9px 0;border-bottom:1px solid var(--border-soft);vertical-align:top}
+  .legend td:first-child{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);width:34px}
+  .legend td:nth-child(2){width:46%;color:var(--muted-fg)}
+  .legend code{font-family:var(--mono);font-size:10.5px;color:var(--fg);background:var(--muted);
+               padding:1px 4px;border-radius:3px}
+  .notes{width:1200px;margin-top:28px;display:grid;grid-template-columns:1fr 1fr;gap:8px 36px}
+  .notes h3{grid-column:1/-1;margin:0 0 6px;font-size:12px;font-weight:500}
+  .notes p{margin:0;font-size:11.5px;line-height:1.7;color:var(--muted-fg)}
+  .notes p b{font-weight:500;color:var(--fg)}
+  .notes code{font-family:var(--mono);font-size:10.5px;color:var(--fg);background:var(--muted);
+              padding:1px 4px;border-radius:3px}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div>
+      <div class="eyebrow">045 · 数据血缘</div>
+      <h1>数据血缘面板改版</h1>
+      <p>「查看 → 数据血缘」打开的是数据预览右侧 320px 的吸附面板。这次只改这块面板和它的全屏图：把「节点图缩进 320px」换成「列清单 + 列路径」，把全屏图从节点堆叠换成泳道图。管道语义、<code>StepLineage</code> 数据结构、保存血缘的 Rust 命令、面板宽度与吸附位置都不动。</p>
+    </div>
+    <div class="seg">
+      <button class="on" data-theme="light">亮色</button>
+      <button data-theme="dark">暗色</button>
+    </div>
+  </div>
+
+  <dl class="direction">
+    <div><dt>产品</dt><dd>给处理 CSV 的人的可视化管道工具。这条侧栏回答一个问题：结果里的这一列，是哪一步造出来的、在哪一步没的。</dd></div>
+    <div><dt>性格</dt><dd>克制、可核对、像流水账。一次只讲一列,不讲整张图。</dd></div>
+    <div><dt>世界</dt><dd>实验室的样本追踪:编号、竖轨、等宽数字。中性石墨底,颜色只留给被追踪的那一列。</dd></div>
+    <div><dt>两个瞬间</dt><dd>① 列路径:一条竖轨把 4 个步骤串起来,每步一句话说清这列发生了什么 ② 全屏泳道图:被追踪列是全图唯一的实色线,其余退成细灰线。</dd></div>
+    <div><dt>签名</dt><dd><code>01–04</code> 编号:面板路径里在竖轨左侧,全屏图里在每条步骤竖线上,同一套编号、同一等宽字。</dd></div>
+  </dl>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       01 现状
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>01</span><b>现状</b><span>DataLineagePanel.tsx + LineageGraph.tsx · 320px · 默认的「图形」视图 · 编号对应下方表格</span></div>
+    <div class="win">
+      <div class="titlebar">
+        <span class="brand">EasyCSV</span>
+        <div class="menus">
+          <button>文件</button><button>编辑</button><button class="on">查看</button><button>工具</button><button>帮助</button>
+        </div>
+        <div class="tb-right">
+          <button class="tb-btn" aria-label="AI 助手"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></button>
+          <button class="tb-btn" aria-label="设置"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+        </div>
+        <div class="win-ctl">
+          <i><svg viewBox="0 0 10 10"><path d="M2 5h6"/></svg></i>
+          <i><svg viewBox="0 0 10 10"><rect x="2" y="2" width="6" height="6"/></svg></i>
+          <i><svg viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6"/></svg></i>
+        </div>
+      </div>
+
+      <div class="canvas">
+        <div class="tabs">
+          <div class="tab on"><span class="d"></span>sales_2026_q3.csv</div>
+          <div class="tab"><span class="d"></span>按品类汇总</div>
+          <div class="tab" style="color:var(--muted-fg-2)">+</div>
+        </div>
+
+        <div class="pv">
+          <table>
+            <thead>
+              <tr><th class="idx">#</th><th>日期</th><th>地区</th><th>品类</th><th>金额</th><th>数量</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="idx">1</td><td>2026-07-01</td><td>西南</td><td>服饰</td><td class="n">14 447.65</td><td class="n">5</td></tr>
+              <tr><td class="idx">2</td><td>2026-07-01</td><td>华东</td><td>数码</td><td class="n">12 950.81</td><td class="n">9</td></tr>
+              <tr><td class="idx">3</td><td>2026-07-01</td><td>西南</td><td>数码</td><td class="n">13 200.21</td><td class="n">3</td></tr>
+              <tr><td class="idx">4</td><td>2026-07-02</td><td>华北</td><td>食品</td><td class="n">940.00</td><td class="n">2</td></tr>
+              <tr><td class="idx">5</td><td>2026-07-02</td><td>华东</td><td>家电</td><td class="n">21 380.40</td><td class="n">1</td></tr>
+              <tr><td class="idx">6</td><td>2026-07-03</td><td>华南</td><td>服饰</td><td class="n">8 610.15</td><td class="n">7</td></tr>
+              <tr><td class="idx">7</td><td>2026-07-03</td><td>华东</td><td>数码</td><td class="n">16 204.00</td><td class="n">4</td></tr>
+              <tr><td class="idx">8</td><td>2026-07-04</td><td>西南</td><td>食品</td><td class="n">1 240.50</td><td class="n">6</td></tr>
+              <tr><td class="idx">9</td><td>2026-07-04</td><td>华北</td><td>家电</td><td class="n">18 730.90</td><td class="n">2</td></tr>
+              <tr><td class="idx">10</td><td>2026-07-05</td><td>华南</td><td>数码</td><td class="n">11 480.00</td><td class="n">8</td></tr>
+              <tr><td class="idx">11</td><td>2026-07-05</td><td>华东</td><td>服饰</td><td class="n">6 990.30</td><td class="n">3</td></tr>
+              <tr><td class="idx">12</td><td>2026-07-06</td><td>西南</td><td>家电</td><td class="n">24 110.00</td><td class="n">1</td></tr>
+              <tr><td class="idx">13</td><td>2026-07-06</td><td>华北</td><td>食品</td><td class="n">2 070.80</td><td class="n">5</td></tr>
+              <tr><td class="idx">14</td><td>2026-07-07</td><td>华南</td><td>数码</td><td class="n">15 660.20</td><td class="n">2</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <aside class="b-side">
+          <div class="b-top">
+            <div class="b-h">
+              <h3>数据血缘</h3>
+              <div class="b-ibs">
+                <button class="b-ib" aria-label="图形视图"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+                <button class="b-ib" aria-label="时间线视图"><svg class="i" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+                <button class="b-ib" aria-label="全屏"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+                <button class="b-ib" aria-label="保存血缘"><svg class="i" viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h7"/></svg></button>
+                <button class="b-ib" aria-label="关闭"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+            </div>
+            <div class="b-search">
+              <svg viewBox="0 0 24 24" class="i sm"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+              <input placeholder="搜索列" />
+            </div>
+            <div class="b-cols">
+              <button class="b-col">品类</button>
+              <button class="b-col">地区</button>
+              <button class="b-col">日期</button>
+              <button class="b-col">数量</button>
+              <button class="b-col">金额</button>
+            </div>
+          </div>
+
+          <div class="b-graph">
+            <div class="bgs">
+              <div class="brow">
+                <span class="bc" style="background:#f3e8ff;color:#6b21a8;border-color:#d8b4fe">日期<em>date</em></span>
+                <span class="bc" style="background:#dbeafe;color:#1e40af;border-color:#93c5fd">地区<em>string</em></span>
+                <span class="bc" style="background:#dbeafe;color:#1e40af;border-color:#93c5fd">品类<em>string</em></span>
+                <span class="bc" style="background:#dbeafe;color:#1e40af;border-color:#93c5fd">金额<em>string</em></span>
+                <span class="bc" style="background:#dcfce7;color:#166534;border-color:#86efac">数量<em>number</em></span>
+              </div>
+              <div class="bstp"><b>筛掉空金额</b><em>219 → 203 rows</em></div>
+              <div class="brow">
+                <span class="bc" style="background:#f3e8ff;color:#6b21a8;border-color:#d8b4fe">日期<em>date</em></span>
+                <span class="bc" style="background:#dbeafe;color:#1e40af;border-color:#93c5fd">地区<em>string</em></span>
+                <span class="bc" style="background:#dbeafe;color:#1e40af;border-color:#93c5fd">品类<em>string</em></span>
+                <span class="bc" style="background:#dbeafe;color:#1e40af;border-color:#93c5fd">金额<em>string</em></span>
+                <span class="bc" style="background:#dcfce7;color:#166534;border-color:#86efac">数量<em>number</em></span>
+              </div>
+              <div class="bstp"><b>金额转数字</b><em>203 → 203 rows</em></div>
+              <div class="brow">
+                <span class="bc" style="background:#f3e8ff;color:#6b21a8;border-color:#d8b4fe">日期<em>date</em></span>
+                <span class="bc" style="background:#dbeafe;color:#1e40af;border-color:#93c5fd">地区<em>string</em></span>
+                <span class="bc" style="background:#dbeafe;color:#1e40af;border-color:#93c5fd">品类<em>string</em></span>
+                <span class="bc" style="background:#dcfce7;color:#166534;border-color:#86efac">金额<em>number</em></span>
+                <span class="bc" style="background:#dcfce7;color:#166534;border-color:#86efac">数量<em>number</em></span>
+              </div>
+              <div class="bstp"><b>按品类汇总</b><em>203 → 5 rows</em></div>
+              <div class="brow">
+                <span class="bc" style="background:#dbeafe;color:#1e40af;border-color:#93c5fd">品类<em>string</em></span>
+                <span class="bc" style="background:#dcfce7;color:#166534;border-color:#86efac">金额合计<em>number</em></span>
+                <span class="bc" style="background:#dcfce7;color:#166534;border-color:#86efac">数量合计<em>number</em></span>
+              </div>
+            </div>
+            <div class="b-zoom">
+              <i><svg class="i sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></i>
+              <i><svg class="i sm" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></i>
+            </div>
+            <div class="mini">
+              <i style="left:14px;top:14px;background:#d8b4fe"></i>
+              <i style="left:26px;top:14px;background:#93c5fd"></i>
+              <i style="left:38px;top:14px;background:#93c5fd"></i>
+              <i style="left:50px;top:14px;background:#93c5fd"></i>
+              <i style="left:62px;top:14px;background:#86efac"></i>
+              <i style="left:26px;top:30px;background:#d8b4fe"></i>
+              <i style="left:38px;top:30px;background:#93c5fd"></i>
+              <i style="left:50px;top:30px;background:#93c5fd"></i>
+              <i style="left:62px;top:30px;background:#93c5fd"></i>
+              <i style="left:74px;top:30px;background:#86efac"></i>
+              <i style="left:38px;top:46px;background:#d8b4fe"></i>
+              <i style="left:50px;top:46px;background:#93c5fd"></i>
+              <i style="left:62px;top:46px;background:#93c5fd"></i>
+              <i style="left:74px;top:46px;background:#86efac"></i>
+              <i style="left:86px;top:46px;background:#86efac"></i>
+              <i style="left:62px;top:62px;background:#93c5fd"></i>
+              <i style="left:74px;top:62px;background:#86efac"></i>
+              <i style="left:86px;top:62px;background:#86efac"></i>
+            </div>
+          </div>
+        </aside>
+
+        <div class="num" style="right:330px;top:52px">2</div>
+        <div class="num" style="right:330px;top:150px">3</div>
+        <div class="num" style="right:330px;top:302px">1</div>
+        <div class="num" style="right:330px;top:430px">4</div>
+        <div class="num" style="right:330px;top:610px">5</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       02 改后 · 列清单
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>02</span><b>改后 · 列清单</b><span>没选列时:先按「结果里的列 / 中途被移除」分组,再报出这次执行改了什么</span></div>
+    <div class="win">
+      <div class="titlebar">
+        <span class="brand">EasyCSV</span>
+        <div class="menus">
+          <button>文件</button><button>编辑</button><button class="on">查看</button><button>工具</button><button>帮助</button>
+        </div>
+        <div class="tb-right">
+          <button class="tb-btn" aria-label="AI 助手"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></button>
+          <button class="tb-btn" aria-label="设置"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+        </div>
+        <div class="win-ctl">
+          <i><svg viewBox="0 0 10 10"><path d="M2 5h6"/></svg></i>
+          <i><svg viewBox="0 0 10 10"><rect x="2" y="2" width="6" height="6"/></svg></i>
+          <i><svg viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6"/></svg></i>
+        </div>
+      </div>
+
+      <div class="canvas">
+        <div class="tabs">
+          <div class="tab on"><span class="d"></span>sales_2026_q3.csv</div>
+          <div class="tab"><span class="d"></span>按品类汇总</div>
+          <div class="tab" style="color:var(--muted-fg-2)">+</div>
+        </div>
+        <div class="pv">
+          <table>
+            <thead>
+              <tr><th class="idx">#</th><th>品类</th><th>销售额</th><th>数量合计</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="idx">1</td><td>数码</td><td class="n">412 690.00</td><td class="n">61</td></tr>
+              <tr><td class="idx">2</td><td>家电</td><td class="n">327 480.90</td><td class="n">38</td></tr>
+              <tr><td class="idx">3</td><td>服饰</td><td class="n">248 115.30</td><td class="n">54</td></tr>
+              <tr><td class="idx">4</td><td>食品</td><td class="n">96 220.80</td><td class="n">42</td></tr>
+              <tr><td class="idx">5</td><td>美妆</td><td class="n">83 690.00</td><td class="n">19</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <aside class="ln">
+          <div class="ln-head">
+            <div class="ln-hrow">
+              <span class="ln-t">数据血缘</span>
+              <div class="ln-hacts">
+                <button class="ln-ib" aria-label="全屏血缘图" title="全屏血缘图"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+                <button class="ln-ib" aria-label="更多" title="更多"><svg class="i" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+                <button class="ln-ib" aria-label="关闭数据血缘" title="关闭"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+            </div>
+            <div class="ln-search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+              <input placeholder="搜索列名" />
+            </div>
+          </div>
+
+          <div class="ln-body">
+            <div class="ln-grp">结果中的列<span class="n">3</span></div>
+            <button class="ln-row">
+              <span class="ln-nm">品类</span><span class="ln-ty">string</span>
+              <span class="ln-sub"><span class="stp">4 步</span><span class="sep">·</span>第 3 步分组键</span>
+            </button>
+            <button class="ln-row">
+              <span class="ln-nm">销售额</span><span class="ln-ty">number</span>
+              <span class="ln-sub"><span class="stp">4 步</span><span class="sep">·</span>改名 1 次</span>
+            </button>
+            <button class="ln-row">
+              <span class="ln-nm">数量合计</span><span class="ln-ty">number</span>
+              <span class="ln-sub"><span class="stp">4 步</span><span class="sep">·</span>第 3 步生成</span>
+            </button>
+
+            <div class="ln-grp">中途被移除<span class="n">2</span></div>
+            <button class="ln-row gone">
+              <span class="ln-nm">日期</span><span class="ln-ty">date</span>
+              <span class="ln-sub"><span class="stp">03</span><span class="sep">·</span>按品类汇总后不再出现</span>
+            </button>
+            <button class="ln-row gone">
+              <span class="ln-nm">地区</span><span class="ln-ty">string</span>
+              <span class="ln-sub"><span class="stp">03</span><span class="sep">·</span>按品类汇总后不再出现</span>
+            </button>
+
+            <div class="ln-grp">本次改动<span class="n">4</span></div>
+            <div class="chg"><span class="n">01</span><span class="t">筛掉空金额</span><span class="v">219 → 203 行</span></div>
+            <div class="chg"><span class="n">02</span><span class="t">金额转数字</span><span class="v">类型 1 列</span></div>
+            <div class="chg"><span class="n">03</span><span class="t">按品类汇总</span><span class="v">203 → 5 行</span></div>
+            <div class="chg"><span class="n">04</span><span class="t">改列名</span><span class="v">改名 1 列</span></div>
+          </div>
+
+          <div class="ln-foot">
+            <span>14:32</span><span class="sep">·</span><span>4 步</span><span class="sep">·</span><span>219 → 5 行</span>
+            <span class="r">最近一次执行</span>
+          </div>
+        </aside>
+
+        <div class="num after" style="right:330px;top:56px">1</div>
+        <div class="num after" style="right:330px;top:150px">2</div>
+        <div class="num after" style="right:330px;top:268px">3</div>
+        <div class="num after" style="right:330px;top:404px">4</div>
+        <div class="num after" style="right:330px;top:566px">5</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       03 改后 · 列路径（选中并展开）
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>03</span><b>改后 · 列路径</b><span>选中 销售额 后原地展开:来源 → 4 步 → 结果,没动过这列的步骤压成一行</span></div>
+    <div class="win">
+      <div class="titlebar">
+        <span class="brand">EasyCSV</span>
+        <div class="menus">
+          <button>文件</button><button>编辑</button><button class="on">查看</button><button>工具</button><button>帮助</button>
+        </div>
+        <div class="tb-right">
+          <button class="tb-btn" aria-label="AI 助手"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></button>
+          <button class="tb-btn" aria-label="设置"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+        </div>
+        <div class="win-ctl">
+          <i><svg viewBox="0 0 10 10"><path d="M2 5h6"/></svg></i>
+          <i><svg viewBox="0 0 10 10"><rect x="2" y="2" width="6" height="6"/></svg></i>
+          <i><svg viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6"/></svg></i>
+        </div>
+      </div>
+
+      <div class="canvas">
+        <div class="tabs">
+          <div class="tab on"><span class="d"></span>sales_2026_q3.csv</div>
+          <div class="tab"><span class="d"></span>按品类汇总</div>
+          <div class="tab" style="color:var(--muted-fg-2)">+</div>
+        </div>
+        <div class="pv">
+          <table>
+            <thead>
+              <tr><th class="idx">#</th><th>品类</th><th>销售额</th><th>数量合计</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="idx">1</td><td>数码</td><td class="n">412 690.00</td><td class="n">61</td></tr>
+              <tr><td class="idx">2</td><td>家电</td><td class="n">327 480.90</td><td class="n">38</td></tr>
+              <tr><td class="idx">3</td><td>服饰</td><td class="n">248 115.30</td><td class="n">54</td></tr>
+              <tr><td class="idx">4</td><td>食品</td><td class="n">96 220.80</td><td class="n">42</td></tr>
+              <tr><td class="idx">5</td><td>美妆</td><td class="n">83 690.00</td><td class="n">19</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <aside class="ln">
+          <div class="ln-head">
+            <div class="ln-hrow">
+              <span class="ln-t">数据血缘</span>
+              <div class="ln-hacts">
+                <button class="ln-ib" aria-label="全屏血缘图" title="全屏血缘图"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+                <button class="ln-ib" aria-label="更多" title="更多"><svg class="i" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+                <button class="ln-ib" aria-label="关闭数据血缘" title="关闭"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+            </div>
+            <div class="ln-search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+              <input placeholder="搜索列名" />
+            </div>
+          </div>
+
+          <div class="ln-body">
+            <div class="ln-grp">结果中的列<span class="n">3</span></div>
+            <button class="ln-row sel">
+              <span class="ln-nm">销售额</span><span class="ln-ty">number</span>
+              <span class="ln-sub"><span class="stp">4 步</span><span class="sep">·</span>改名 1 次</span>
+            </button>
+
+            <div class="ln-path">
+              <div class="p-cap">列路径<span class="x">Esc 收起</span></div>
+
+              <div class="p-item">
+                <span class="p-dot f"></span>
+                <div class="p-c">
+                  <div class="p-t"><b class="strong">sales_2026_q3.csv</b></div>
+                  <div class="p-d muted"><span class="k">源列</span><span class="v">金额 · string · 219 行</span></div>
+                </div>
+              </div>
+
+              <div class="p-item slim">
+                <span class="p-dot"></span>
+                <div class="p-c">
+                  <div class="p-t"><span class="p-n">01</span><b>筛掉空金额</b><em>filter</em><span class="keep">保留</span></div>
+                </div>
+              </div>
+
+              <div class="p-item">
+                <span class="p-dot"></span>
+                <div class="p-c">
+                  <div class="p-t"><span class="p-n">02</span><b>金额转数字</b><em>cast</em><span class="rc">203 → 203 行</span></div>
+                  <div class="p-d"><span class="k">类型</span><span class="v">string<span class="arrow">→</span><b>number</b></span></div>
+                </div>
+              </div>
+
+              <div class="p-item">
+                <span class="p-dot"></span>
+                <div class="p-c">
+                  <div class="p-t"><span class="p-n">03</span><b>按品类汇总</b><em>groupby</em><span class="rc">203 → 5 行</span></div>
+                  <div class="p-d"><span class="k">生成</span><span class="v"><b>金额合计</b> <code>sum(col("金额"))</code></span></div>
+                </div>
+              </div>
+
+              <div class="p-item">
+                <span class="p-dot"></span>
+                <div class="p-c">
+                  <div class="p-t"><span class="p-n">04</span><b>改列名</b><em>rename</em><span class="rc">5 → 5 行</span></div>
+                  <div class="p-d"><span class="k">改名</span><span class="v">金额合计<span class="arrow">→</span><b>销售额</b></span></div>
+                </div>
+              </div>
+
+              <div class="p-item">
+                <span class="p-dot f"></span>
+                <div class="p-c">
+                  <div class="p-t"><b class="strong">结果</b><span class="rc">5 行 · 3 列</span></div>
+                  <div class="p-d muted"><span class="k">列</span><span class="v">销售额 · number</span></div>
+                </div>
+              </div>
+
+              <div class="p-foot">
+                <button class="p-link"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>在泳道图中查看</button>
+              </div>
+            </div>
+
+            <button class="ln-row">
+              <span class="ln-nm">品类</span><span class="ln-ty">string</span>
+              <span class="ln-sub"><span class="stp">4 步</span><span class="sep">·</span>第 3 步分组键</span>
+            </button>
+            <button class="ln-row">
+              <span class="ln-nm">数量合计</span><span class="ln-ty">number</span>
+              <span class="ln-sub"><span class="stp">4 步</span><span class="sep">·</span>第 3 步生成</span>
+            </button>
+
+            <div class="ln-grp">中途被移除<span class="n">2</span></div>
+            <button class="ln-row gone">
+              <span class="ln-nm">日期</span><span class="ln-ty">date</span>
+              <span class="ln-sub"><span class="stp">03</span><span class="sep">·</span>按品类汇总后不再出现</span>
+            </button>
+            <button class="ln-row gone">
+              <span class="ln-nm">地区</span><span class="ln-ty">string</span>
+              <span class="ln-sub"><span class="stp">03</span><span class="sep">·</span>按品类汇总后不再出现</span>
+            </button>
+          </div>
+        </aside>
+
+        <div class="num after" style="right:330px;top:196px">6</div>
+        <div class="num after" style="right:330px;top:290px">7</div>
+        <div class="num after" style="right:330px;top:400px">8</div>
+        <div class="num after" style="right:330px;top:520px">9</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       04 改后 · 全屏泳道图
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>04</span><b>改后 · 全屏泳道图</b><span>列是泳道、步骤是竖线;只有发生变化的列在竖线上留下节点 · 覆盖画布区,标题栏与菜单仍可用</span></div>
+    <div class="win">
+      <div class="titlebar">
+        <span class="brand">EasyCSV</span>
+        <div class="menus">
+          <button>文件</button><button>编辑</button><button class="on">查看</button><button>工具</button><button>帮助</button>
+        </div>
+        <div class="tb-right">
+          <button class="tb-btn" aria-label="AI 助手"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></button>
+          <button class="tb-btn" aria-label="设置"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+        </div>
+        <div class="win-ctl">
+          <i><svg viewBox="0 0 10 10"><path d="M2 5h6"/></svg></i>
+          <i><svg viewBox="0 0 10 10"><rect x="2" y="2" width="6" height="6"/></svg></i>
+          <i><svg viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6"/></svg></i>
+        </div>
+      </div>
+
+      <div class="g-head">
+        <span class="g-t">数据血缘</span>
+        <span class="g-m">4 步 · 219 → 5 行 · 14:32</span>
+        <div class="g-right">
+          <div class="g-search">
+            <svg viewBox="0 0 24 24" class="i"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+            <input placeholder="搜索列名" />
+          </div>
+          <button class="g-btn"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v10M8 10l4 4 4-4M4 18h16"/></svg>导出血缘</button>
+          <button class="g-x" aria-label="退出全屏" title="退出全屏 (Esc)"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+      </div>
+
+      <div class="g-body">
+        <svg class="g-svg" viewBox="0 0 1200 672" preserveAspectRatio="xMidYMid meet">
+          <!-- 来源 / 结果 表头 -->
+          <text class="g-name" x="24" y="66">sales_2026_q3.csv</text>
+          <text class="g-type" x="24" y="82">219 行 · 5 列</text>
+          <text class="g-name" x="1176" y="66" text-anchor="end">结果</text>
+          <text class="g-type" x="1176" y="82" text-anchor="end">5 行 · 3 列</text>
+
+          <!-- 步骤竖线 -->
+          <line x1="320" y1="156" x2="320" y2="452" stroke="var(--border)" stroke-width="1"/>
+          <line x1="512" y1="156" x2="512" y2="452" stroke="var(--border)" stroke-width="1"/>
+          <line x1="704" y1="156" x2="704" y2="452" stroke="var(--border)" stroke-width="1"/>
+          <line x1="896" y1="156" x2="896" y2="452" stroke="var(--border)" stroke-width="1"/>
+
+          <!-- 步骤头 -->
+          <text class="g-num" x="320" y="104" text-anchor="middle">01</text>
+          <text class="g-h" x="320" y="124" text-anchor="middle">筛掉空金额</text>
+          <text class="g-sub" x="320" y="140" text-anchor="middle">filter</text>
+
+          <text class="g-num" x="512" y="104" text-anchor="middle">02</text>
+          <text class="g-h" x="512" y="124" text-anchor="middle">金额转数字</text>
+          <text class="g-sub" x="512" y="140" text-anchor="middle">cast</text>
+
+          <text class="g-num" x="704" y="104" text-anchor="middle">03</text>
+          <text class="g-h" x="704" y="124" text-anchor="middle">按品类汇总</text>
+          <text class="g-sub" x="704" y="140" text-anchor="middle">groupby</text>
+
+          <text class="g-num" x="896" y="104" text-anchor="middle">04</text>
+          <text class="g-h" x="896" y="124" text-anchor="middle">改列名</text>
+          <text class="g-sub" x="896" y="140" text-anchor="middle">rename</text>
+
+          <!-- 泳道 · 日期（03 移除） -->
+          <line x1="200" y1="190" x2="704" y2="190" stroke="var(--border-strong)" stroke-width="1"/>
+          <text class="g-name" x="186" y="188" text-anchor="end">日期</text>
+          <text class="g-type" x="186" y="202" text-anchor="end">date</text>
+          <path d="M700 186l8 8M708 186l-8 8" stroke="var(--muted-fg-2)" stroke-width="1.2" fill="none"/>
+          <text class="g-note" x="716" y="194">移除</text>
+
+          <!-- 泳道 · 地区（03 移除） -->
+          <line x1="200" y1="236" x2="704" y2="236" stroke="var(--border-strong)" stroke-width="1"/>
+          <text class="g-name" x="186" y="234" text-anchor="end">地区</text>
+          <text class="g-type" x="186" y="248" text-anchor="end">string</text>
+          <path d="M700 232l8 8M708 232l-8 8" stroke="var(--muted-fg-2)" stroke-width="1.2" fill="none"/>
+          <text class="g-note" x="716" y="240">移除</text>
+
+          <!-- 泳道 · 品类 -->
+          <line x1="200" y1="282" x2="940" y2="282" stroke="var(--border-strong)" stroke-width="1"/>
+          <text class="g-name" x="186" y="280" text-anchor="end">品类</text>
+          <text class="g-type" x="186" y="294" text-anchor="end">string</text>
+          <text class="g-note" x="716" y="268">分组键</text>
+          <text class="g-name" x="954" y="280">品类</text>
+          <text class="g-type" x="954" y="294">string</text>
+
+          <!-- 泳道 · 被追踪：金额 → 金额合计 → 销售额 -->
+          <line x1="200" y1="328" x2="940" y2="328" stroke="var(--brand)" stroke-width="2"/>
+          <text class="g-name tr" x="186" y="326" text-anchor="end">金额</text>
+          <text class="g-type" x="186" y="340" text-anchor="end">string</text>
+          <text class="g-name tr" x="954" y="326">销售额</text>
+          <text class="g-type" x="954" y="340">number</text>
+
+          <!-- 泳道 · 数量 → 数量合计 -->
+          <line x1="200" y1="374" x2="940" y2="374" stroke="var(--border-strong)" stroke-width="1"/>
+          <text class="g-name" x="186" y="372" text-anchor="end">数量</text>
+          <text class="g-type" x="186" y="386" text-anchor="end">number</text>
+          <text class="g-name" x="954" y="372">数量合计</text>
+          <text class="g-type" x="954" y="386">number</text>
+
+          <!-- 变化节点 -->
+          <rect x="466" y="316" width="92" height="24" rx="5" fill="var(--bg)" stroke="var(--border-strong)" stroke-width="1"/>
+          <text class="g-chip mono" x="512" y="332" text-anchor="middle">string → number</text>
+
+          <rect x="671" y="315" width="66" height="26" rx="6" fill="var(--bg)" stroke="var(--brand)" stroke-width="1.2"/>
+          <text class="g-chip" x="704" y="332" text-anchor="middle">金额合计</text>
+
+          <rect x="671" y="361" width="66" height="26" rx="6" fill="var(--bg)" stroke="var(--border-strong)" stroke-width="1"/>
+          <text class="g-chip" x="704" y="378" text-anchor="middle">数量合计</text>
+
+          <rect x="867" y="315" width="58" height="26" rx="6" fill="var(--bg)" stroke="var(--brand)" stroke-width="1.2"/>
+          <text class="g-chip" x="896" y="332" text-anchor="middle">销售额</text>
+
+          <!-- 行数轴 -->
+          <text class="g-num on" x="320" y="482" text-anchor="middle">203 行</text>
+          <text class="g-num" x="512" y="482" text-anchor="middle">203 行</text>
+          <text class="g-num on" x="704" y="482" text-anchor="middle">5 行</text>
+          <text class="g-num" x="896" y="482" text-anchor="middle">5 行</text>
+
+          <!-- 图例 -->
+          <line x1="24" y1="560" x2="52" y2="560" stroke="var(--brand)" stroke-width="1.5"/>
+          <text class="g-note" x="60" y="564">被追踪的列</text>
+          <line x1="146" y1="560" x2="174" y2="560" stroke="var(--border-strong)" stroke-width="1"/>
+          <text class="g-note" x="182" y="564">其它列</text>
+          <path d="M252 556l8 8M260 556l-8 8" stroke="var(--muted-fg-2)" stroke-width="1.2" fill="none"/>
+          <text class="g-note" x="272" y="564">此步移除</text>
+
+          <text class="g-note" x="1176" y="564" text-anchor="end">点按任意列名或泳道切换追踪</text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       05 状态细节
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>05</span><b>状态细节</b><span>未执行 / 搜索无匹配 / 被移除列的路径</span></div>
+    <div class="tiles">
+
+      <!-- 空状态 -->
+      <div class="tile">
+        <div class="tile-cap"><b>未执行</b>面板打开但还没有血缘</div>
+        <div class="card320 tall">
+          <div class="ln-head">
+            <div class="ln-hrow">
+              <span class="ln-t">数据血缘</span>
+              <div class="ln-hacts">
+                <button class="ln-ib" aria-label="全屏血缘图" title="全屏血缘图"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+                <button class="ln-ib" aria-label="更多" title="更多"><svg class="i" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+                <button class="ln-ib" aria-label="关闭数据血缘" title="关闭"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+            </div>
+            <div class="ln-search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+              <input placeholder="搜索列名" />
+            </div>
+          </div>
+          <div class="ln-empty">
+            <h4>还没有可追踪的血缘</h4>
+            <p>跑一次管道,这里会按列列出它经过的每一步:从源文件的哪一列进来,在哪一步被改名、改类型,或被汇总成新列。</p>
+            <p>执行不会改动管道,重新执行会覆盖这次记录。</p>
+            <div class="wait"><i></i>等待最近一次执行</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 搜索无匹配 -->
+      <div class="tile">
+        <div class="tile-cap"><b>搜索无匹配</b>只说明没找到,并给出退路</div>
+        <div class="card320 tall">
+          <div class="ln-head">
+            <div class="ln-hrow">
+              <span class="ln-t">数据血缘</span>
+              <div class="ln-hacts">
+                <button class="ln-ib" aria-label="全屏血缘图" title="全屏血缘图"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+                <button class="ln-ib" aria-label="更多" title="更多"><svg class="i" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+                <button class="ln-ib" aria-label="关闭数据血缘" title="关闭"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+            </div>
+            <div class="ln-search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+              <input value="运费" />
+            </div>
+          </div>
+          <div class="ln-empty">
+            <h4>没有匹配「运费」的列</h4>
+            <p>这次执行的 5 列里都不含这个词。列表只显示本次执行涉及到的列,不在管道里的列不会出现。</p>
+            <div class="wait"><button class="go">清除搜索</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 被移除列的路径 -->
+      <div class="tile">
+        <div class="tile-cap"><b>移除路径</b>轨道在这里断掉,不写成错误</div>
+        <div class="card320 tall">
+          <div class="ln-head">
+            <div class="ln-hrow">
+              <span class="ln-t">数据血缘</span>
+              <div class="ln-hacts">
+                <button class="ln-ib" aria-label="全屏血缘图" title="全屏血缘图"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+                <button class="ln-ib" aria-label="更多" title="更多"><svg class="i" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+                <button class="ln-ib" aria-label="关闭数据血缘" title="关闭"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <div class="ln-body">
+            <button class="ln-row sel gone">
+              <span class="ln-nm">地区</span><span class="ln-ty">string</span>
+              <span class="ln-sub"><span class="stp">03</span><span class="sep">·</span>按品类汇总后不再出现</span>
+            </button>
+            <div class="ln-path">
+              <div class="p-cap">列路径<span class="x">Esc 收起</span></div>
+
+              <div class="p-item">
+                <span class="p-dot f"></span>
+                <div class="p-c">
+                  <div class="p-t"><b class="strong">sales_2026_q3.csv</b></div>
+                  <div class="p-d muted"><span class="k">源列</span><span class="v">地区 · string · 219 行</span></div>
+                </div>
+              </div>
+
+              <div class="p-item slim">
+                <span class="p-dot"></span>
+                <div class="p-c">
+                  <div class="p-t"><span class="p-n">01</span><b>筛掉空金额</b><em>filter</em><span class="keep">保留</span></div>
+                </div>
+              </div>
+
+              <div class="p-item slim">
+                <span class="p-dot"></span>
+                <div class="p-c">
+                  <div class="p-t"><span class="p-n">02</span><b>金额转数字</b><em>cast</em><span class="keep">保留</span></div>
+                </div>
+              </div>
+
+              <div class="p-item">
+                <span class="p-dot"></span>
+                <div class="p-c">
+                  <div class="p-t"><span class="p-n">03</span><b>按品类汇总</b><em>groupby</em><span class="rc">203 → 5 行</span></div>
+                  <div class="p-d"><span class="k">移除</span><span class="v">只保留分组键与聚合列,地区不在其中</span></div>
+                </div>
+              </div>
+
+              <div class="p-item">
+                <span class="p-dot f" style="background:var(--muted);border-color:var(--muted-fg-2)"></span>
+                <div class="p-c">
+                  <div class="p-t"><b class="strong" style="color:var(--muted-fg)">路径到此为止</b></div>
+                  <div class="p-d muted"><span class="k">结果</span><span class="v">5 行 · 3 列里没有地区</span></div>
+                </div>
+              </div>
+
+              <div class="p-foot">
+                <button class="p-link"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>在泳道图中查看</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       诊断与改法
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="legend">
+    <table>
+      <thead>
+        <tr><th>#</th><th>现状</th><th>改法</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>一张节点图被塞进 320px 的面板。<code>LineageGraph</code> 的列节点 100–220px 宽,一步 5 列就要 525px,<code>fitView</code> 缩到 55% 后 10px 的类型字只剩 5.5px;图只占面板上半截,下半截全空。</td>
+          <td>面板只做「清单 + 路径」,用文字和竖轨回答"这列经过什么"。图移到全屏,宽度足够时不再需要缩放。</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>头部五枚 22px 图标(图形 / 时间线 / 全屏 / 保存 / 关闭),全部只有 <code>Tooltip</code>、没有 <code>aria-label</code>,键盘与读屏都拿不到名字;保存按钮的文案硬编码英文 <code>Save lineage</code> / <code>Saved!</code>。</td>
+          <td>只留三个:全屏、<code>⋯</code>、关闭,全部带 <code>aria-label</code>。保存血缘降级到 <code>⋯</code> 里的「导出血缘 JSON」,不再与视图切换同权重。</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>搜索框固定 32px + 列列表写死 <code>h-[120px]</code>,共 210px 被占掉;列表把所有步骤出现过的列按 <code>sort()</code> 的字面顺序混排(品类 / 地区 / 日期 / 数量 / 金额),看不出哪些列还在结果里。</td>
+          <td>分两组:「结果中的列」和「中途被移除」,分别带数量。移除的列压暗,并在第二行写清在第几步消失。</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>选中列只把节点描边高亮,没有"路径"这件事。类型里已经有 <code>ColumnLineagePath</code> 与 <code>onGetLineageForColumn</code>,面板却只把它当成过滤器用。</td>
+          <td>选中即原地展开该列的完整路径:来源列 → 每个步骤 → 结果列,每步一句话(保留 / 类型 / 生成 / 改名 / 移除)。</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>类型用四组 tailwind 色(<code>blue-100</code> / <code>green-100</code> / <code>purple-100</code> / <code>amber-100</code>),高亮色又是 <code>#3b82f6</code> 蓝:选中一个文本列与"被选中"完全分不开;暗色主题下这四块浅底会亮成一片。</td>
+          <td>类型退成 9.5px 等宽小字(<code>string</code> / <code>number</code> / <code>date</code>),沿用代码里的原始值。全屏只剩一个品牌色,表示被追踪的那条泳道。</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>行数写成 <code>{in} → {out} rows</code>:英文写死、没有千分位、同一份数据在步骤卡片和节点里各出现一次。</td>
+          <td>等宽 <code>tabular-nums</code>,统一格式 <code>219 → 203 行</code>,并且只在步骤那一行出现一次。</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>「本次改动」只能从时间线视图里翻卡片读到;默认图形视图里完全看不见 <code>transformations</code>,而它才是"哪一步动了什么"的直接答案。</td>
+          <td>没选列时在列表下方给出四行改动摘要(步骤号 · 命令 · 结果),选列时让位给路径——两者是同一块面板的两个状态。</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>空状态只有一行灰字「执行后可查看数据血缘」,不解释血缘是什么、什么时候会出现,也没有说明重新执行会覆盖。</td>
+          <td>两句解释 + 一行「等待最近一次执行」的状态,写清会发生什么、以及覆盖规则。</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td>全屏模式是 <code>fixed inset-0</code>,连菜单栏一起盖住;退出只能点右上角的图标或按 Esc,没有任何提示。</td>
+          <td>全屏只覆盖画布区,标题栏和菜单还在;关闭按钮带 <code>title="退出全屏 (Esc)"</code>,Esc 仍然有效。</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="notes">
+    <h3>交互与实现要点</h3>
+    <p><b>分组</b>　「结果中的列」= 最后一步 <code>outputSchema</code>;「中途被移除」= 第一步 <code>inputSchema</code> 减去最后一步 <code>outputSchema</code>。全部由现有 <code>StepLineage[]</code> 推出,不新增数据结构。</p>
+    <p><b>路径</b>　从结果列沿 <code>sourceColumnName</code> 反向回溯到第一步。现状 <code>inferSchemaFromData()</code> 把 <code>sourceColumnName</code> 一律填成自身列名,只有补上跨步骤的链,回溯才成立——这是唯一的逻辑改动。</p>
+    <p><b>展开</b>　沿用 044 的行内展开:点击行展开 / 再点收起,<code>Esc</code> 收起,<code>↑↓</code> 移动、<code>Enter</code> 展开。收起时列表位置不跳。</p>
+    <p><b>压缩</b>　没有改动该列的步骤压成 28px 一行,只写"保留";动过这列的步骤(类型 / 生成 / 改名 / 移除)展开成两行。轨道上的实心点只出现在动过的步骤与两个端点。</p>
+    <p><b>泳道图</b>　列是泳道、步骤是竖线;只有发生变化的列在竖线上留下节点(改名、改类型、生成、移除)。1px 灰线是其它列,1.5px 品牌线是被追踪列。行数只写在步骤竖线下方,变过的用正文色。</p>
+    <p><b>颜色</b>　面板里只保留一个品牌色:<code>.ln-row.sel</code> 的左侧 2px 条、轨道上的实心点、路径里被追踪的列名。类型、步骤号、行数全部走 <code>--muted-fg</code> / <code>--muted-fg-2</code>。</p>
+    <p><b>宽度</b>　保持 320,<code>top-10 right-0 bottom-0</code> 的吸附方式、与版本面板互让的 <code>right-80</code> 逻辑、<code>CommandPalette</code> 里的入口都不动。</p>
+    <p><b>i18n</b>　新增分组与动词两类键:<code>lineageGroupResult</code> / <code>lineageGroupRemoved</code> / <code>lineageGroupChanges</code> / <code>lineageKept</code> / <code>lineageCast</code> / <code>lineageDerived</code> / <code>lineageRenamed</code> / <code>lineageRemovedAt</code>,加上空状态与搜索无匹配各三句。删除 <code>dagView</code> / <code>timelineView</code> 两个视图键。</p>
+    <p><b>不改</b>　<code>useDataLineage</code> 的类型推断与 <code>analyzeTransformations</code>、<code>save_lineage_data</code> / <code>load_lineage_data</code> 的 Rust 侧、面板宽度与吸附位置、菜单条目本身。</p>
+    <p style="grid-column:1/-1"><b>待定</b>　① 类型是否要翻译成「文本 / 数字 / 日期」——目前沿用 raw 值(<code>string</code>),因为列名本身可能就叫「日期」,翻译后「日期 · 日期」会撞车 ② 全屏图里是否保留 <code>MiniMap</code>:4 步 5 列一屏放得下,建议去掉。</p>
+  </section>
+
+</div>
+
+<script>
+  const buttons = document.querySelectorAll(".seg button");
+  buttons.forEach((b) => {
+    b.addEventListener("click", () => {
+      buttons.forEach((x) => x.classList.remove("on"));
+      b.classList.add("on");
+      document.documentElement.classList.toggle("dark", b.dataset.theme === "dark");
+    });
+  });
+</script>
+</body>
+</html>

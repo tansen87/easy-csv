@@ -9,6 +9,10 @@ import {
   ColumnLineagePath,
 } from "@/types/xan";
 import { invoke } from "@tauri-apps/api/core";
+import {
+  aggregationColumns,
+  pickSourceColumn,
+} from "@/utils/lineageSchema";
 
 function inferColumnType(
   value: string,
@@ -53,8 +57,17 @@ function makeCol(
   type: ColumnSchema["type"],
   sourceStepId?: string,
   sourceColumnName?: string,
+  expression?: string,
+  previousName?: string,
 ): ColumnSchema {
-  return { name, type, sourceStepId, sourceColumnName };
+  return {
+    name,
+    type,
+    sourceStepId,
+    sourceColumnName,
+    expression,
+    previousName,
+  };
 }
 
 function analyzeTransformations(
@@ -265,6 +278,7 @@ export function useDataLineage(
         const lineageEntry: StepLineage = {
           stepId: step.id,
           commandName: step.command.name,
+          alias: step.alias,
           inputSchema: uniqueInputCols,
           outputSchema,
           inputRowCount: totalInputRows,
@@ -354,6 +368,8 @@ export function useDataLineage(
                   col.type,
                   col.sourceStepId,
                   col.sourceColumnName,
+                  col.expression,
+                  col.name,
                 )
               : col;
           });
@@ -364,13 +380,15 @@ export function useDataLineage(
       case "map": {
         const newCol = step.parameters["new-column"];
         if (newCol) {
+          const expr = String(step.parameters.expression || "");
           return [
             ...inputSchema,
             makeCol(
               newCol,
               "string",
               sid,
-              step.parameters.expression || newCol,
+              pickSourceColumn(expr, inputSchema),
+              expr || undefined,
             ),
           ];
         }
@@ -380,25 +398,92 @@ export function useDataLineage(
       }
 
       case "transform": {
-        const expr = step.parameters.expression || "";
+        const expr = String(step.parameters.expression || "");
         const newCol = step.parameters["new-column"];
         if (newCol) {
-          return [...inputSchema, makeCol(newCol, "string", sid, expr)];
+          return [
+            ...inputSchema,
+            makeCol(
+              newCol,
+              "string",
+              sid,
+              pickSourceColumn(expr, inputSchema),
+              expr || undefined,
+            ),
+          ];
         }
         return inputSchema;
       }
 
       case "window": {
         const newCol = step.parameters["new-column"] || "window_result";
+        const expr = String(step.parameters.expression || "");
+        const fn = String(step.parameters.function || "");
         return [
           ...inputSchema,
           makeCol(
             newCol,
             "number",
             sid,
-            `${commandName}(${step.parameters.function || ""})`,
+            pickSourceColumn(expr, inputSchema),
+            expr ? `${fn}(${expr})` : fn,
           ),
         ];
+      }
+
+      case "groupby": {
+        const aggs = aggregationColumns(
+          sid,
+          String(step.parameters.expression || ""),
+          inputSchema,
+        );
+        if (aggs.length === 0) return inputSchema;
+
+        const keys = String(step.parameters.columns || "")
+          .split(/[|,]/)
+          .map((name) => name.trim())
+          .filter(Boolean);
+        const out: ColumnSchema[] = [];
+        keys.forEach((key) => {
+          const src = inputSchema.find((c) => c.name === key);
+          if (out.some((c) => c.name === key)) return;
+          out.push(
+            makeCol(
+              key,
+              src?.type || "string",
+              src?.sourceStepId,
+              src?.sourceColumnName || key,
+            ),
+          );
+        });
+        String(step.parameters.keep || "")
+          .split(/[|,]/)
+          .map((name) => name.trim())
+          .filter(Boolean)
+          .forEach((name) => {
+            if (out.some((c) => c.name === name)) return;
+            const src = inputSchema.find((c) => c.name === name);
+            if (src) {
+              out.push(
+                makeCol(
+                  src.name,
+                  src.type,
+                  src.sourceStepId,
+                  src.sourceColumnName || src.name,
+                ),
+              );
+            }
+          });
+        return [...out, ...aggs];
+      }
+
+      case "agg": {
+        const aggs = aggregationColumns(
+          sid,
+          String(step.parameters.expression || ""),
+          inputSchema,
+        );
+        return aggs.length > 0 ? aggs : inputSchema;
       }
 
       case "fill": {

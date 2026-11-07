@@ -1,4 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+} from "react";
 import { ChevronDown } from "lucide-react";
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
 import { cn } from "@/lib/utils";
@@ -29,6 +35,14 @@ interface SelectProps {
    * programmatically-associated name (a11y + `getByRole(name)` in tests).
    */
   ariaLabel?: string;
+  /**
+   * Open the list above the field when there is not enough room below. Off by
+   * default: most call sites sit in dialogs with room underneath, and flipping
+   * there would look like a glitch. Needed inside short scroll containers
+   * (design 044's version log), where a list near the bottom edge would
+   * otherwise be clipped by the container instead of the viewport.
+   */
+  flip?: boolean;
 }
 
 export function Select({
@@ -41,8 +55,10 @@ export function Select({
   height,
   listMaxHeight = "max-h-40",
   ariaLabel,
+  flip = false,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUp, setOpenUp] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -59,6 +75,20 @@ export function Select({
   useEffect(() => {
     setActiveIndex(-1);
   }, [searchValue, isOpen]);
+
+  // Decide the side once per open, before paint, so the list never flashes on
+  // the wrong side. Measured against the viewport: the scroll container that
+  // would clip it sits flush with the viewport bottom in the panel case.
+  useLayoutEffect(() => {
+    if (!isOpen || !flip) {
+      setOpenUp(false);
+      return;
+    }
+    const rect = dropdownRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const below = window.innerHeight - rect.bottom;
+    setOpenUp(below < 200 && rect.top > below);
+  }, [isOpen, flip]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -192,7 +222,10 @@ export function Select({
       {isOpen && (
         <div
           role="listbox"
-          className="absolute z-50 w-full border rounded-md bg-background shadow-lg mt-0.5"
+          className={cn(
+            "absolute z-50 w-full border rounded-md bg-background shadow-lg",
+            openUp ? "bottom-full mb-0.5" : "mt-0.5",
+          )}
         >
           <ScrollAreaPrimitive.Root className="relative overflow-hidden">
             <ScrollAreaPrimitive.Viewport className={cn("w-full overflow-y-auto px-2 rounded-[inherit]", listMaxHeight)}>

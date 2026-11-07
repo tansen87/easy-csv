@@ -1,31 +1,21 @@
-import { useState, useCallback, useMemo } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  Tag,
-  Clock,
-  Trash2,
-  RotateCcw,
-  Plus,
-  X,
-  Search,
-  Pencil,
-  GitCompare,
-  Network,
-  List,
-} from "lucide-react";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { ScrollArea } from "@/components/ui/ScrollArea";
-import { Select } from "@/components/ui/Select";
-import { Tooltip } from "@/components/ui/Tooltip";
+import { Pencil, RotateCcw, Search, Tag, Trash2, X } from "lucide-react";
 import { ConfirmDialog } from "@/modules/dialogs/common/ConfirmDialog";
+import {
+  EditorKind,
+  RowActions,
+  VersionLogRow,
+} from "@/modules/pipeline/panels/VersionLogRow";
 import { PipelineVersion } from "@/types/xan";
-import { xanCommands } from "@/data/commands";
 import { useLanguage } from "@/i18n";
+import { cn } from "@/lib/utils";
+import { relativeStamp } from "@/utils/format";
 import {
   PipelineSnapshot,
   VersionDiff,
   diffSnapshots,
+  snapshotsEqual,
   summarizeDiff,
 } from "@/utils/versionDiff";
 
@@ -47,22 +37,107 @@ interface VersionControlPanelProps {
   onClose: () => void;
 }
 
-interface VersionNode {
+type ViewMode = "list" | "timeline";
+
+interface EditorState {
+  kind: EditorKind;
+  versionId: string;
+  value: string;
+}
+
+interface MenuState {
+  versionId: string;
+  x: number;
+  y: number;
+}
+
+interface LogRow {
   version: PipelineVersion;
-  children: VersionNode[];
+  depth: number;
 }
 
-function snapshotOf(v: PipelineVersion | undefined): PipelineSnapshot {
-  return {
-    steps: v?.steps || [],
-    edges: v?.edges || [],
+const EMPTY_SNAPSHOT: PipelineSnapshot = { steps: [], edges: [] };
+const MENU_WIDTH = 152;
+const MENU_HEIGHT = 128;
+
+function snapshotOf(version?: PipelineVersion): PipelineSnapshot {
+  return { steps: version?.steps || [], edges: version?.edges || [] };
+}
+
+/**
+ * Newest first in both modes. The list is flat; the timeline nests children
+ * under their parent (`parentId`) and indents them. Search results are always
+ * flat — a filtered tree with missing ancestors reads as broken nesting.
+ */
+function buildRows(
+  versions: PipelineVersion[],
+  mode: ViewMode,
+  searching: boolean,
+): LogRow[] {
+  const newestFirst = <T,>(items: T[]): T[] => [...items].reverse();
+  if (mode === "list" || searching) {
+    return newestFirst(versions).map((version) => ({ version, depth: 0 }));
+  }
+
+  const ids = new Set(versions.map((v) => v.id));
+  const children = new Map<string, PipelineVersion[]>();
+  versions.forEach((version) => {
+    if (!version.parentId || !ids.has(version.parentId)) return;
+    const bucket = children.get(version.parentId);
+    if (bucket) bucket.push(version);
+    else children.set(version.parentId, [version]);
+  });
+
+  const rows: LogRow[] = [];
+  const walk = (version: PipelineVersion, depth: number) => {
+    if (depth > 32) return;
+    rows.push({ version, depth });
+    newestFirst(children.get(version.id) ?? []).forEach((child) =>
+      walk(child, depth + 1),
+    );
   };
+  const roots = versions.filter((v) => !v.parentId || !ids.has(v.parentId));
+  newestFirst(roots).forEach((root) => walk(root, 0));
+  return rows;
 }
 
-function commandName(commandId: string): string {
-  return xanCommands.find((c) => c.id === commandId)?.name || commandId;
+function MenuItem({
+  icon,
+  label,
+  danger,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  danger?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className={cn(
+        "flex h-[26px] w-full items-center gap-2 rounded-md px-2 text-left text-[11.5px] transition-colors",
+        danger ? "text-destructive hover:bg-destructive/10" : "hover:bg-muted",
+      )}
+    >
+      {icon}
+      {label}
+    </button>
+  );
 }
 
+/**
+ * Version history docked on the right of the canvas (design 044).
+ *
+ * A commit log rather than a stack of cards: one 56px row per version joined by
+ * a continuous rail, with the diff expanding inside the row so the list is
+ * never pushed off-screen by a fixed-height compare block.
+ */
 export function VersionControlPanel({
   versions,
   currentVersionId,
@@ -77,116 +152,62 @@ export function VersionControlPanel({
   isSaving,
   onClose,
 }: VersionControlPanelProps) {
-  const [isCreating, setIsCreating] = useState(false);
-  const [newMessage, setNewMessage] = useState("");
-  const [creatingTag, setCreatingTag] = useState("");
-  const [editingTagVersionId, setEditingTagVersionId] = useState<string | null>(
-    null,
-  );
-  const [editingTag, setEditingTag] = useState("");
-  const [deletingVersionId, setDeletingVersionId] = useState<string | null>(
-    null,
-  );
-  const [restoringVersion, setRestoringVersion] =
-    useState<PipelineVersion | null>(null);
-  const [clearingAll, setClearingAll] = useState(false);
-  const [editingMessageVersionId, setEditingMessageVersionId] = useState<
-    string | null
-  >(null);
-  const [editingMessage, setEditingMessage] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"list" | "timeline">("list");
-  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(
-    null,
-  );
-  const [compareTargetId, setCompareTargetId] = useState<string>("current");
   const { t } = useLanguage();
 
-  const handleSave = useCallback(async () => {
-    if (!newMessage.trim()) return;
-    await onSaveVersion(
-      newMessage.trim(),
-      creatingTag
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-    );
-    setNewMessage("");
-    setCreatingTag("");
-    setIsCreating(false);
-  }, [newMessage, creatingTag, onSaveVersion]);
+  const [query, setQuery] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [draftMessage, setDraftMessage] = useState("");
+  const [draftTags, setDraftTags] = useState<string[]>([]);
+  const [tagDraft, setTagDraft] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [compareTargetId, setCompareTargetId] = useState("current");
+  const [editor, setEditor] = useState<EditorState | null>(null);
+  const [menu, setMenu] = useState<MenuState | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [clearingAll, setClearingAll] = useState(false);
 
-  const handleAddTag = useCallback(
-    async (versionId: string) => {
-      if (!editingTag.trim()) return;
-      await onAddTag(versionId, editingTag.trim());
-      setEditingTag("");
-      setEditingTagVersionId(null);
-    },
-    [editingTag, onAddTag],
-  );
+  const workspace = currentSnapshot || EMPTY_SNAPSHOT;
+  const currentVersion = versions.find((v) => v.id === currentVersionId);
+  const dirty =
+    !!currentVersion && !snapshotsEqual(snapshotOf(currentVersion), workspace);
+  const searching = query.trim().length > 0;
 
-  const handleStartEditTag = useCallback(
-    (versionId: string) => {
-      if (editingTagVersionId === versionId) {
-        setEditingTagVersionId(null);
-        setEditingTag("");
-      } else {
-        setEditingTagVersionId(versionId);
-        setEditingTag("");
-      }
-    },
-    [editingTagVersionId],
-  );
-
-  const handleStartEditMessage = useCallback(
-    (version: PipelineVersion) => {
-      if (editingMessageVersionId === version.id) {
-        setEditingMessageVersionId(null);
-        setEditingMessage("");
-      } else {
-        setEditingMessageVersionId(version.id);
-        setEditingMessage(version.message || "");
-      }
-    },
-    [editingMessageVersionId],
-  );
-
-  const handleRename = useCallback(
-    async (versionId: string) => {
-      const message = editingMessage.trim();
-      if (message) {
-        await onRenameVersion(versionId, message);
-      }
-      setEditingMessageVersionId(null);
-      setEditingMessage("");
-    },
-    [editingMessage, onRenameVersion],
-  );
-
-  const handleSelectVersion = useCallback(
-    (version: PipelineVersion) => {
-      if (selectedVersionId === version.id) {
-        setSelectedVersionId(null);
-        return;
-      }
-      setSelectedVersionId(version.id);
-      const parent = versions.find((v) => v.id === version.parentId);
-      setCompareTargetId(parent ? parent.id : "current");
-    },
-    [selectedVersionId, versions],
-  );
-
-  const filteredVersions = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
     if (!q) return versions;
     return versions.filter(
       (v) =>
         (v.message || "").toLowerCase().includes(q) ||
         (v.tags || []).some((tag) => tag.toLowerCase().includes(q)),
     );
-  }, [versions, searchQuery]);
+  }, [versions, query]);
 
+  const rows = useMemo(
+    () => buildRows(filtered, viewMode, searching),
+    [filtered, viewMode, searching],
+  );
+
+  /** Diff of the expanded row against the selected baseline, oldest → newest. */
+  const expandedDiff = useMemo<VersionDiff | null>(() => {
+    const selected = versions.find((v) => v.id === expandedId);
+    if (!selected) return null;
+    const selectedSnapshot = snapshotOf(selected);
+    const targetVersion = versions.find((v) => v.id === compareTargetId);
+    const targetSnapshot = targetVersion
+      ? snapshotOf(targetVersion)
+      : workspace;
+    const selectedIndex = versions.indexOf(selected);
+    const targetIndex = targetVersion ? versions.indexOf(targetVersion) : -1;
+    const targetIsOlder = targetVersion && targetIndex < selectedIndex;
+    return diffSnapshots(
+      targetIsOlder ? targetSnapshot : selectedSnapshot,
+      targetIsOlder ? selectedSnapshot : targetSnapshot,
+    );
+  }, [versions, expandedId, compareTargetId, workspace]);
+
+  /** `+2 −1 ~1` per version, measured against its parent. */
   const summaryOf = useCallback(
     (version: PipelineVersion) => {
       const parent =
@@ -200,562 +221,497 @@ export function VersionControlPanel({
     [versions],
   );
 
-  const versionDiff = useMemo<VersionDiff | null>(() => {
-    const selected = versions.find((v) => v.id === selectedVersionId);
-    if (!selected) return null;
-    const selectedSnap = snapshotOf(selected);
-    const targetSnap =
-      compareTargetId === "current"
-        ? currentSnapshot || { steps: [], edges: [] }
-        : snapshotOf(versions.find((v) => v.id === compareTargetId));
-
-    const selectedIndex = versions.indexOf(selected);
-    const targetVersion = versions.find((v) => v.id === compareTargetId);
-    const targetIndex = targetVersion ? versions.indexOf(targetVersion) : -1;
-
-    // Always diff oldest -> newest so added/removed read naturally.
-    const base =
-      targetVersion && targetIndex < selectedIndex ? targetSnap : selectedSnap;
-    const target =
-      targetVersion && targetIndex < selectedIndex ? selectedSnap : targetSnap;
-
-    return diffSnapshots(base, target);
-  }, [versions, selectedVersionId, compareTargetId, currentSnapshot]);
-
-  const tree = useMemo<VersionNode[]>(() => {
-    const idSet = new Set(versions.map((v) => v.id));
-    const childrenMap = new Map<string, PipelineVersion[]>();
-    versions.forEach((v) => {
-      if (v.parentId && idSet.has(v.parentId)) {
-        childrenMap.set(v.parentId, [
-          ...(childrenMap.get(v.parentId) || []),
-          v,
-        ]);
+  const timeLabel = useCallback(
+    (version: PipelineVersion) => {
+      const stamp = relativeStamp(version.createdAt);
+      if (!stamp) return version.createdAt;
+      switch (stamp.kind) {
+        case "today":
+          return t.versionTimeToday.replace("{time}", stamp.clock);
+        case "yesterday":
+          return t.versionTimeYesterday.replace("{time}", stamp.clock);
+        case "date":
+          return t.versionTimeMonthDay
+            .replace("{month}", String(stamp.month))
+            .replace("{day}", String(stamp.day));
+        default:
+          return t.versionTimeFull
+            .replace("{year}", String(stamp.year))
+            .replace("{month}", String(stamp.month))
+            .replace("{day}", String(stamp.day));
       }
-    });
-    const build = (v: PipelineVersion): VersionNode => ({
-      version: v,
-      children: (childrenMap.get(v.id) || []).map(build),
-    });
-    return versions
-      .filter((v) => !v.parentId || !idSet.has(v.parentId))
-      .map(build);
-  }, [versions]);
-
-  const restorePreviewDiff = useMemo<VersionDiff | null>(() => {
-    if (!restoringVersion) return null;
-    return diffSnapshots(
-      currentSnapshot || { steps: [], edges: [] },
-      snapshotOf(restoringVersion),
-    );
-  }, [restoringVersion, currentSnapshot]);
-
-  const renderVersionCard = (version: PipelineVersion) => {
-    const summary = summaryOf(version);
-    const isCurrent = currentVersionId === version.id;
-    const isSelected = selectedVersionId === version.id;
-    return (
-      <Card
-        key={version.id}
-        className={`p-3 transition-all cursor-pointer ${
-          isCurrent
-            ? "border-primary/50 bg-primary/5"
-            : isSelected
-              ? "border-primary/70 bg-primary/10"
-              : "border-border/50"
-        }`}
-        onClick={() => handleSelectVersion(version)}
-      >
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            {editingMessageVersionId === version.id ? (
-              <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                <input
-                  type="text"
-                  value={editingMessage}
-                  onChange={(e) => setEditingMessage(e.target.value)}
-                  placeholder={t.versionMessagePlaceholder}
-                  className="flex-1 h-6 px-2 text-xs border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleRename(version.id);
-                    if (e.key === "Escape") {
-                      setEditingMessageVersionId(null);
-                      setEditingMessage("");
-                    }
-                  }}
-                />
-                <button
-                  onClick={() => handleRename(version.id)}
-                  className="h-6 px-2 text-[10px] bg-primary/10 hover:bg-primary/20 rounded transition-colors"
-                >
-                  {t.save}
-                </button>
-              </div>
-            ) : (
-              <div className="text-xs font-medium truncate flex items-center gap-1">
-                {version.message || t.untitledVersion}
-                {isCurrent && (
-                  <span className="shrink-0 px-1 py-0.5 text-[9px] bg-primary text-primary-foreground rounded">
-                    {t.versionCurrent}
-                  </span>
-                )}
-              </div>
-            )}
-            <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              {new Date(version.createdAt).toLocaleString()}
-            </div>
-            <div className="flex items-center gap-1 mt-1">
-              {summary && (
-                <span className="text-[10px] text-muted-foreground">
-                  {summary.addedSteps > 0 && (
-                    <span className="text-success">
-                      +{summary.addedSteps}
-                    </span>
-                  )}
-                  {summary.addedSteps > 0 && summary.removedSteps > 0 && "  "}
-                  {summary.removedSteps > 0 && (
-                    <span className="text-destructive">
-                      -{summary.removedSteps}
-                    </span>
-                  )}
-                  {(summary.addedSteps > 0 || summary.removedSteps > 0) &&
-                    ` ${t.versionSteps}`}
-                </span>
-              )}
-            </div>
-            {version.tags && version.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {version.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] bg-primary/10 text-primary rounded"
-                  >
-                    <Tag className="h-2.5 w-2.5" />
-                    {tag}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveTag(version.id, tag);
-                      }}
-                      className="hover:text-destructive"
-                    >
-                      x
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-1 ml-2">
-            <Tooltip content={t.versionEditMessage}>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleStartEditMessage(version);
-                }}
-                className="h-5 w-5 flex items-center justify-center hover:bg-foreground/10 rounded transition-colors"
-              >
-                <Pencil className="h-3 w-3" />
-              </button>
-            </Tooltip>
-            <Tooltip content={t.versionEditTag}>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleStartEditTag(version.id);
-                }}
-                className="h-5 w-5 flex items-center justify-center hover:bg-foreground/10 rounded transition-colors"
-              >
-                <Tag className="h-3 w-3" />
-              </button>
-            </Tooltip>
-            <Tooltip content={t.restore}>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setRestoringVersion(version);
-                }}
-                className="h-5 w-5 flex items-center justify-center hover:bg-foreground/10 rounded transition-colors"
-              >
-                <RotateCcw className="h-3 w-3" />
-              </button>
-            </Tooltip>
-            <Tooltip content={t.remove}>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeletingVersionId(version.id);
-                }}
-                className="h-5 w-5 flex items-center justify-center hover:bg-foreground/10 rounded transition-colors"
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
-            </Tooltip>
-          </div>
-        </div>
-
-        {editingTagVersionId === version.id && (
-          <div className="mt-2 flex gap-1">
-            <input
-              type="text"
-              value={editingTag}
-              onChange={(e) => setEditingTag(e.target.value)}
-              placeholder={t.addTag}
-              className="flex-1 h-6 px-2 text-[10px] border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
-              autoFocus
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleAddTag(version.id);
-                }
-              }}
-            />
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleAddTag(version.id);
-              }}
-              className="h-6 px-2 text-[10px] bg-primary/10 hover:bg-primary/20 rounded transition-colors"
-            >
-              {t.save}
-            </button>
-          </div>
-        )}
-      </Card>
-    );
-  };
-
-  const renderTree = (nodes: VersionNode[]) => (
-    <div className="space-y-1.5">
-      {nodes.map((node) => (
-        <div key={node.version.id}>
-          {renderVersionCard(node.version)}
-          {node.children.length > 0 && (
-            <div className="ml-3 mt-1.5 pl-2 border-l border-border/40 space-y-1.5">
-              {renderTree(node.children)}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
+    },
+    [t],
   );
+
+  const saveSummary = useMemo(() => {
+    if (!currentVersion) return null;
+    return summarizeDiff(diffSnapshots(snapshotOf(currentVersion), workspace));
+  }, [currentVersion, workspace]);
+
+  const resetComposer = useCallback(() => {
+    setComposerOpen(false);
+    setDraftMessage("");
+    setDraftTags([]);
+    setTagDraft("");
+  }, []);
+
+  const openComposer = useCallback(() => {
+    setEditor(null);
+    setMenu(null);
+    setExpandedId(null);
+    setComposerOpen(true);
+  }, []);
+
+  const submitComposer = useCallback(async () => {
+    if (isSaving) return;
+    try {
+      await onSaveVersion(draftMessage.trim() || undefined, draftTags);
+      resetComposer();
+    } catch {
+      // The hook already logged the failure; keep the composer open so the
+      // message and tags are not lost on a transient backend error.
+    }
+  }, [draftMessage, draftTags, isSaving, onSaveVersion, resetComposer]);
+
+  const addDraftTag = useCallback(() => {
+    const tag = tagDraft.trim().replace(/^#/, "");
+    if (!tag) return;
+    setDraftTags((prev) => (prev.includes(tag) ? prev : [...prev, tag]));
+    setTagDraft("");
+  }, [tagDraft]);
+
+  const commitEditor = useCallback(async () => {
+    if (!editor) return;
+    const value = editor.value.trim();
+    try {
+      if (editor.kind === "message" && value) {
+        await onRenameVersion(editor.versionId, value);
+      }
+      if (editor.kind === "tag" && value) {
+        await onAddTag(editor.versionId, value.replace(/^#/, ""));
+      }
+    } catch {
+      // The hook logged it; closing the editor keeps the UI usable.
+    } finally {
+      setEditor(null);
+    }
+  }, [editor, onAddTag, onRenameVersion]);
+
+  const toggleExpanded = useCallback(
+    (version: PipelineVersion) => {
+      setEditor(null);
+      setMenu(null);
+      setExpandedId((prev) => {
+        if (prev === version.id) return null;
+        const parent = versions.find((v) => v.id === version.parentId);
+        setCompareTargetId(parent ? parent.id : "current");
+        return version.id;
+      });
+    },
+    [versions],
+  );
+
+  const openMenu = useCallback(
+    (version: PipelineVersion, event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      const rect = event.currentTarget.getBoundingClientRect();
+      // Keep the popover inside the window: flip above the button when there is
+      // no room below, and never let it cross the left edge.
+      const x = Math.max(
+        8,
+        Math.min(rect.right - MENU_WIDTH, window.innerWidth - MENU_WIDTH - 8),
+      );
+      const y =
+        rect.bottom + MENU_HEIGHT + 8 > window.innerHeight
+          ? rect.top - MENU_HEIGHT - 6
+          : rect.bottom + 6;
+      setMenu({ versionId: version.id, x, y });
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenu(null);
+    };
+    window.addEventListener("resize", close);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("resize", close);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menu]);
+
+  const actions: RowActions = useMemo(
+    () => ({
+      toggle: toggleExpanded,
+      openMenu,
+      removeTag: (version, tag) => onRemoveTag(version.id, tag),
+      restore: (versionId) => setRestoringId(versionId),
+      remove: (versionId) => setDeletingId(versionId),
+      setCompareTarget: setCompareTargetId,
+      setEditorValue: (value) =>
+        setEditor((prev) => (prev ? { ...prev, value } : prev)),
+      commitEditor: () => void commitEditor(),
+      cancelEditor: () => setEditor(null),
+    }),
+    [toggleExpanded, openMenu, onRemoveTag, commitEditor],
+  );
+
+  const composerFacts = t.versionSaveFacts
+    .replace("{steps}", String(workspace.steps.length))
+    .replace("{edges}", String(workspace.edges.length));
+  const composerAgainst =
+    saveSummary &&
+    (saveSummary.addedSteps > 0 ||
+      saveSummary.removedSteps > 0 ||
+      saveSummary.modifiedSteps > 0)
+      ? t.versionSaveAgainst
+          .replace("{name}", currentVersion?.message || t.untitledVersion)
+          .replace("{added}", String(saveSummary.addedSteps))
+          .replace("{removed}", String(saveSummary.removedSteps))
+      : null;
 
   return (
     <div
-      className="h-full flex flex-col"
+      className="flex h-full flex-col bg-card"
       onContextMenu={(e) => e.preventDefault()}
     >
-      <div className="p-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold flex items-center gap-2">
-            {t.versionHistory}
-          </h3>
-          <div className="flex items-center gap-1">
-            {versions.length > 0 && onClearAllVersions && (
-              <Tooltip content={t.clearAllVersions}>
-                <Button
-                  onClick={() => setClearingAll(true)}
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 w-6 rounded-md hover:bg-primary/10 hover:text-primary"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </Tooltip>
-            )}
-            <Tooltip
-              content={viewMode === "list" ? t.timelineView : t.listView}
+      {/* Header */}
+      <div className="flex-none px-4 pt-3">
+        <div className="flex h-7 items-center gap-2">
+          <h3 className="text-[13px] font-medium">{t.versionHistory}</h3>
+          <div className="ml-auto flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={openComposer}
+              className="flex h-[26px] items-center gap-1 rounded-[7px] bg-primary/10 pl-[7px] pr-2.5 text-[11.5px] font-medium text-primary transition-colors hover:bg-primary/15"
             >
-              <Button
-                onClick={() =>
-                  setViewMode(viewMode === "list" ? "timeline" : "list")
-                }
-                size="sm"
-                variant="ghost"
-                className="h-6 w-6 rounded-md hover:bg-primary/10"
-              >
-                {viewMode === "list" ? (
-                  <Network className="h-3.5 w-3.5" />
-                ) : (
-                  <List className="h-3.5 w-3.5" />
-                )}
-              </Button>
-            </Tooltip>
-            <Tooltip content={t.save}>
-              <Button
-                onClick={() => setIsCreating(true)}
-                size="sm"
-                variant="ghost"
-                className="h-6 w-6 rounded-md hover:bg-primary/10"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
-            </Tooltip>
-            <Button
+              {t.saveVersion}
+            </button>
+            <button
+              type="button"
+              aria-label={t.close}
               onClick={onClose}
-              size="sm"
-              variant="ghost"
-              className="h-6 w-6 rounded-md hover:bg-primary/10"
+              className="grid h-[26px] w-[26px] place-items-center rounded-[7px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
-            </Button>
+            </button>
           </div>
         </div>
 
         {versions.length > 0 && (
-          <div className="relative mt-2">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t.versionSearchPlaceholder}
-              className="w-full h-7 pl-7 pr-2 text-xs border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
-            />
+          <div className="mt-0.5 flex h-5 items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums">
+            <span>
+              {t.versionPanelMeta.replace("{count}", String(versions.length))}
+            </span>
+            {dirty && (
+              <>
+                <span className="opacity-60">·</span>
+                <span className="truncate text-foreground">
+                  {t.versionDirtyHint}
+                </span>
+              </>
+            )}
           </div>
         )}
+
+        <div className="relative mt-2.5">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground/70" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t.versionSearchPlaceholder}
+            className="h-8 w-full rounded-lg border border-border bg-card pl-7 pr-7 text-[12px] outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground/70 focus:border-primary focus:shadow-[0_0_0_2px_var(--brand-soft)]"
+          />
+          {query && (
+            <button
+              type="button"
+              aria-label={t.versionClearSearch}
+              onClick={() => setQuery("")}
+              className="absolute right-1.5 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
       </div>
 
-      {isCreating && (
-        <div className="p-3 border-b border-border/50 bg-muted/30">
+      {/* Body */}
+      {composerOpen ? (
+        <div className="flex-1 space-y-2.5 overflow-y-auto px-4 pb-4 pt-3">
+          <h4 className="text-xs font-medium text-muted-foreground">
+            {t.versionSaveTitle}
+          </h4>
           <input
             type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder={t.versionMessagePlaceholder}
-            className="w-full h-8 px-2 text-xs border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50 mb-2"
             autoFocus
-            onKeyDown={(e) => e.key === "Enter" && handleSave()}
+            value={draftMessage}
+            onChange={(e) => setDraftMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                void submitComposer();
+              }
+              if (e.key === "Escape") resetComposer();
+            }}
+            placeholder={t.versionMessagePlaceholder}
+            className="h-8 w-full rounded-[7px] border border-border bg-card px-2.5 text-[12px] outline-none focus:border-primary"
           />
-          <input
-            type="text"
-            value={creatingTag}
-            onChange={(e) => setCreatingTag(e.target.value)}
-            placeholder={t.tagsPlaceholder}
-            className="w-full h-8 px-2 text-xs border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary/50 mb-2"
-            onKeyDown={(e) => e.key === "Enter" && handleSave()}
-          />
-          <div className="flex gap-2">
+          <div className="flex min-h-[30px] flex-wrap items-center gap-1 rounded-[7px] border border-border bg-card px-1.5 py-1">
+            {draftTags.map((tag) => (
+              <span
+                key={tag}
+                className="flex h-5 items-center gap-1 rounded bg-muted px-1.5 text-[10.5px]"
+              >
+                <span className="text-muted-foreground/70">#</span>
+                {tag}
+                <button
+                  type="button"
+                  aria-label={t.versionRemoveTag.replace("{tag}", tag)}
+                  onClick={() =>
+                    setDraftTags((prev) => prev.filter((x) => x !== tag))
+                  }
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+            <input
+              type="text"
+              value={tagDraft}
+              onChange={(e) => setTagDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addDraftTag();
+                }
+                if (e.key === "Backspace" && !tagDraft && draftTags.length) {
+                  setDraftTags((prev) => prev.slice(0, -1));
+                }
+                if (e.key === "Escape") resetComposer();
+              }}
+              placeholder={t.versionTagInputPlaceholder}
+              className="h-5 min-w-[60px] flex-1 bg-transparent px-1 text-[11px] outline-none placeholder:text-muted-foreground/70"
+            />
+          </div>
+          <p className="text-[10.5px] leading-relaxed text-muted-foreground tabular-nums">
+            {composerFacts}
+            {composerAgainst && <> · {composerAgainst}</>}
+          </p>
+          <div className="flex items-center gap-2">
             <button
-              onClick={handleSave}
-              disabled={!newMessage.trim() || isSaving}
-              className="h-6 px-3 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded transition-colors disabled:opacity-50"
+              type="button"
+              onClick={() => void submitComposer()}
+              disabled={isSaving}
+              className="h-7 rounded-[7px] bg-primary px-3 text-[11.5px] font-medium text-primary-foreground transition-opacity disabled:opacity-50"
             >
               {isSaving ? t.saving : t.saveVersion}
             </button>
             <button
-              onClick={() => {
-                setIsCreating(false);
-                setNewMessage("");
-                setCreatingTag("");
-              }}
-              className="h-6 px-3 text-xs bg-muted hover:bg-muted/80 rounded transition-colors"
+              type="button"
+              onClick={resetComposer}
+              className="h-7 rounded-[7px] px-2 text-[11.5px] text-muted-foreground hover:text-foreground"
             >
               {t.cancel}
             </button>
+            <span className="ml-auto flex items-center gap-1 font-mono text-[9.5px] text-muted-foreground/70">
+              <kbd className="rounded border border-border px-1 leading-[13px]">
+                Ctrl
+              </kbd>
+              <kbd className="rounded border border-border px-1 leading-[13px]">
+                ↵
+              </kbd>
+            </span>
           </div>
+        </div>
+      ) : versions.length === 0 ? (
+        <div className="flex-1 overflow-y-auto px-4 pt-6">
+          <h4 className="text-[12.5px] font-medium">{t.versionEmptyTitle}</h4>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+            {t.versionEmptyDesc.replace(
+              "{steps}",
+              String(workspace.steps.length),
+            )}
+          </p>
+          <button
+            type="button"
+            onClick={openComposer}
+            className="mt-3 flex h-7 items-center gap-1.5 rounded-[7px] border border-border bg-card px-2.5 text-[11.5px] transition-colors hover:bg-muted"
+          >
+            {t.versionEmptyAction}
+          </button>
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="flex-1 overflow-y-auto px-4 pt-6">
+          <h4 className="text-[12.5px] font-medium">
+            {t.versionNoMatchTitle.replace("{query}", query.trim())}
+          </h4>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+            {t.versionNoMatchHint}
+          </p>
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            className="mt-3 h-7 rounded-[7px] border border-border bg-card px-2.5 text-[11.5px] transition-colors hover:bg-muted"
+          >
+            {t.versionClearSearch}
+          </button>
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto pt-2">
+          {rows.map((row, index) => (
+            <VersionLogRow
+              key={row.version.id}
+              version={row.version}
+              depth={row.depth}
+              first={index === 0}
+              last={index === rows.length - 1}
+              isCurrent={currentVersionId === row.version.id}
+              isExpanded={expandedId === row.version.id}
+              menuOpen={menu?.versionId === row.version.id}
+              summary={summaryOf(row.version)}
+              timeLabel={timeLabel(row.version)}
+              diff={expandedId === row.version.id ? expandedDiff : null}
+              versions={versions}
+              compareTargetId={compareTargetId}
+              editor={
+                editor?.versionId === row.version.id
+                  ? { kind: editor.kind, value: editor.value }
+                  : null
+              }
+              actions={actions}
+            />
+          ))}
         </div>
       )}
 
-      {versionDiff && (
-        <ScrollArea className="h-60 shrink-0">
-          <div className="p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium flex items-center gap-1">
-                <GitCompare className="h-3 w-3" />
-                {t.versionDiff}
-              </span>
+      {/* Footer: view mode + the destructive action, kept away from the rows */}
+      {!composerOpen && versions.length > 0 && (
+        <div className="flex h-9 flex-none items-center gap-2 border-t border-border/60 px-4">
+          <div
+            role="group"
+            aria-label={`${t.listView} / ${t.timelineView}`}
+            className="flex gap-0.5 rounded-[7px] bg-muted p-0.5"
+          >
+            {(["list", "timeline"] as ViewMode[]).map((mode) => (
               <button
-                onClick={() => setSelectedVersionId(null)}
-                className="h-5 w-5 flex items-center justify-center hover:bg-muted rounded"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-            <Select
-              value={compareTargetId}
-              onChange={(v) => setCompareTargetId(v)}
-              options={[
-                {
-                  value: "current",
-                  label: t.versionCompareWithCurrent,
-                },
-                ...versions.map((v) => ({
-                  value: v.id,
-                  label: v.message || t.untitledVersion,
-                })),
-              ]}
-              placeholder={t.versionCompareWithCurrent}
-            />
-            <div className="text-[10px] text-muted-foreground space-y-0.5">
-              {versionDiff.addedSteps.length > 0 && (
-                <div className="text-success">
-                  + {versionDiff.addedSteps.length} {t.versionAddedSteps}:{" "}
-                  {versionDiff.addedSteps
-                    .map((s) => commandName(s.commandId))
-                    .join(", ")}
-                </div>
-              )}
-              {versionDiff.removedSteps.length > 0 && (
-                <div className="text-destructive">
-                  - {versionDiff.removedSteps.length} {t.versionRemovedSteps}:{" "}
-                  {versionDiff.removedSteps
-                    .map((s) => commandName(s.commandId))
-                    .join(", ")}
-                </div>
-              )}
-              {versionDiff.modifiedSteps.length > 0 && (
-                <div className="text-warning">
-                  ~ {versionDiff.modifiedSteps.length} {t.versionModifiedSteps}:{" "}
-                  {versionDiff.modifiedSteps
-                    .map(
-                      (m) =>
-                        `${commandName(m.before.commandId)} → ${commandName(m.after.commandId)}`,
-                    )
-                    .join(", ")}
-                </div>
-              )}
-              {versionDiff.addedEdges.length > 0 && (
-                <div>
-                  + {versionDiff.addedEdges.length} {t.versionEdges}:{" "}
-                  {versionDiff.addedEdges
-                    .map((e) => `${e.source} → ${e.target}`)
-                    .join(", ")}
-                </div>
-              )}
-              {versionDiff.removedEdges.length > 0 && (
-                <div className="text-destructive">
-                  - {versionDiff.removedEdges.length} {t.versionEdges}:{" "}
-                  {versionDiff.removedEdges
-                    .map((e) => `${e.source} → ${e.target}`)
-                    .join(", ")}
-                </div>
-              )}
-              {versionDiff.addedSteps.length === 0 &&
-                versionDiff.removedSteps.length === 0 &&
-                versionDiff.modifiedSteps.length === 0 &&
-                versionDiff.addedEdges.length === 0 &&
-                versionDiff.removedEdges.length === 0 && (
-                  <div>{t.versionNoChanges}</div>
+                key={mode}
+                type="button"
+                aria-pressed={viewMode === mode}
+                onClick={() => setViewMode(mode)}
+                className={cn(
+                  "h-5 rounded-[5px] px-2 text-[10.5px] transition-colors",
+                  viewMode === mode
+                    ? "bg-card text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
-            </div>
+              >
+                {mode === "list" ? t.listView : t.timelineView}
+              </button>
+            ))}
           </div>
-        </ScrollArea>
-      )}
-
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="p-3 space-y-2">
-          {versions.length === 0 ? (
-            <div className="text-center text-muted-foreground text-xs py-8">
-              {t.noVersionsSaved}
-            </div>
-          ) : filteredVersions.length === 0 ? (
-            <div className="text-center text-muted-foreground text-xs py-8">
-              {t.noMatchingVersions}
-            </div>
-          ) : viewMode === "list" ? (
-            [...filteredVersions].reverse().map(renderVersionCard)
-          ) : (
-            renderTree(tree)
+          {onClearAllVersions && (
+            <button
+              type="button"
+              onClick={() => setClearingAll(true)}
+              className="ml-auto text-[10.5px] text-muted-foreground transition-colors hover:text-destructive"
+            >
+              {t.clearAllVersions}
+            </button>
           )}
         </div>
-      </ScrollArea>
+      )}
 
-      {deletingVersionId &&
+      {/* Row menu — a portal so the scroll container cannot clip it */}
+      {menu &&
         createPortal(
-          <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/50">
-            <div className="bg-background border border-border rounded-lg p-4 shadow-lg w-[280px]">
-              <p className="text-sm mb-4">{t.confirmDeleteVersion}</p>
-              <div className="flex justify-end gap-2">
-                <Button
-                  onClick={() => setDeletingVersionId(null)}
-                  size="sm"
-                  variant="secondary"
-                >
-                  {t.cancel}
-                </Button>
-                <Button
-                  onClick={() => {
-                    onDeleteVersion(deletingVersionId);
-                    setDeletingVersionId(null);
-                  }}
-                  size="sm"
-                  variant="secondary"
-                >
-                  {t.confirm}
-                </Button>
-              </div>
+          <div
+            className="fixed inset-0 z-modal"
+            onMouseDown={() => setMenu(null)}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <div
+              role="menu"
+              style={{ left: menu.x, top: menu.y, width: MENU_WIDTH }}
+              className="absolute rounded-lg border border-border bg-card p-1 shadow-lg"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <MenuItem
+                icon={<Pencil className="h-3 w-3 text-muted-foreground" />}
+                label={t.versionEditMessage}
+                onClick={() => {
+                  const version = versions.find((v) => v.id === menu.versionId);
+                  setMenu(null);
+                  if (version) {
+                    setEditor({
+                      kind: "message",
+                      versionId: version.id,
+                      value: version.message || "",
+                    });
+                  }
+                }}
+              />
+              <MenuItem
+                icon={<Tag className="h-3 w-3 text-muted-foreground" />}
+                label={t.versionEditTag}
+                onClick={() => {
+                  const versionId = menu.versionId;
+                  setMenu(null);
+                  setEditor({ kind: "tag", versionId, value: "" });
+                }}
+              />
+              <MenuItem
+                icon={<RotateCcw className="h-3 w-3 text-muted-foreground" />}
+                label={t.restore}
+                onClick={() => {
+                  const versionId = menu.versionId;
+                  setMenu(null);
+                  setRestoringId(versionId);
+                }}
+              />
+              <div className="my-1 h-px bg-border/60" />
+              <MenuItem
+                icon={<Trash2 className="h-3 w-3" />}
+                label={t.versionMenuDelete}
+                danger
+                onClick={() => {
+                  const versionId = menu.versionId;
+                  setMenu(null);
+                  setDeletingId(versionId);
+                }}
+              />
             </div>
           </div>,
           document.body,
         )}
 
-      {restoringVersion &&
-        createPortal(
-          <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/50">
-            <div className="bg-background border border-border rounded-lg p-4 shadow-lg w-[320px]">
-              <p className="text-sm font-medium mb-1">
-                {t.confirmRestoreTitle}
-              </p>
-              <p className="text-xs text-muted-foreground mb-2 truncate">
-                {restoringVersion.message || t.untitledVersion}
-              </p>
-              {restorePreviewDiff && (
-                <div className="text-[11px] text-muted-foreground mb-3 space-y-0.5">
-                  {restorePreviewDiff.addedSteps.length > 0 && (
-                    <div className="text-success">
-                      + {restorePreviewDiff.addedSteps.length}{" "}
-                      {t.versionAddedSteps}
-                    </div>
-                  )}
-                  {restorePreviewDiff.removedSteps.length > 0 && (
-                    <div className="text-destructive">
-                      - {restorePreviewDiff.removedSteps.length}{" "}
-                      {t.versionRemovedSteps}
-                    </div>
-                  )}
-                  {restorePreviewDiff.modifiedSteps.length > 0 && (
-                    <div className="text-warning">
-                      ~ {restorePreviewDiff.modifiedSteps.length}{" "}
-                      {t.versionModifiedSteps}
-                    </div>
-                  )}
-                  {restorePreviewDiff.addedSteps.length === 0 &&
-                    restorePreviewDiff.removedSteps.length === 0 &&
-                    restorePreviewDiff.modifiedSteps.length === 0 && (
-                      <div>{t.versionNoChanges}</div>
-                    )}
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground mb-4">
-                {t.confirmRestoreDesc}
-              </p>
-              <div className="flex justify-end gap-2">
-                <Button
-                  onClick={() => setRestoringVersion(null)}
-                  size="sm"
-                  variant="secondary"
-                >
-                  {t.cancel}
-                </Button>
-                <Button
-                  onClick={() => {
-                    onRestoreVersion(restoringVersion.id);
-                    setRestoringVersion(null);
-                  }}
-                  size="sm"
-                  variant="secondary"
-                >
-                  {t.restore}
-                </Button>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
-
+      <ConfirmDialog
+        isOpen={!!deletingId}
+        title={t.versionMenuDelete}
+        message={t.confirmDeleteVersion}
+        onConfirm={() => {
+          if (deletingId) onDeleteVersion(deletingId);
+          setDeletingId(null);
+        }}
+        onCancel={() => setDeletingId(null)}
+      />
+      <ConfirmDialog
+        isOpen={!!restoringId}
+        title={t.confirmRestoreTitle}
+        message={t.confirmRestoreDesc}
+        confirmLabel={t.restore}
+        onConfirm={() => {
+          if (restoringId) onRestoreVersion(restoringId);
+          setRestoringId(null);
+        }}
+        onCancel={() => setRestoringId(null)}
+      />
       <ConfirmDialog
         isOpen={clearingAll}
         title={t.clearAllVersions}

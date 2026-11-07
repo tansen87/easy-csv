@@ -91,7 +91,6 @@ interface HomeViewProps {
   onClearAllVersions?: () => void;
   isSavingVersion?: boolean;
   lineageData?: StepLineage[];
-  onGetLineageForColumn?: (columnName: string) => StepLineage[];
   onSaveLineage?: () => void;
   showVersionPanel?: boolean;
   showLineagePanel?: boolean;
@@ -169,7 +168,6 @@ export const HomeView = React.memo(function HomeView({
   onClearAllVersions,
   isSavingVersion = false,
   lineageData = [],
-  onGetLineageForColumn,
   onSaveLineage,
   showVersionPanel = false,
   showLineagePanel = false,
@@ -405,7 +403,6 @@ export const HomeView = React.memo(function HomeView({
           <div className="h-full bg-card border-l border-border/50 shadow-lg">
             <DataLineagePanel
               lineageData={lineageData}
-              onGetLineageForColumn={onGetLineageForColumn || (() => [])}
               onSaveLineage={onSaveLineage || (() => {})}
               onClose={onToggleLineagePanel || (() => {})}
             />
