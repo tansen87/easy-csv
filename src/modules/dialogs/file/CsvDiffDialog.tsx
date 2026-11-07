@@ -165,9 +165,9 @@ export function CsvDiffDialog({
     { row: string; cell: string }
   > = {
     equal: { row: "", cell: "" },
-    added: { row: "bg-green-500/10", cell: "" },
-    removed: { row: "bg-red-500/10", cell: "" },
-    modified: { row: "bg-yellow-500/10", cell: "" },
+    added: { row: "bg-success-soft", cell: "" },
+    removed: { row: "bg-danger-soft", cell: "" },
+    modified: { row: "bg-warning-soft", cell: "" },
   };
 
   const renderCell = (
@@ -180,7 +180,7 @@ export function CsvDiffDialog({
       <td
         key={colIdx}
         className={`border border-border/30 px-2 py-1 text-xs whitespace-nowrap min-w-[90px] max-w-[240px] truncate ${
-          isChanged ? "bg-yellow-400/20 font-medium" : ""
+          isChanged ? "bg-warning/20 font-medium" : ""
         }`}
       >
         {value ?? ""}
@@ -266,9 +266,9 @@ export function CsvDiffDialog({
           {entry.status === "removed" || entry.status === "modified" ? (
             <span className="inline-flex items-center gap-1">
               {entry.status === "removed" ? (
-                <Minus className="h-3 w-3 text-red-500" />
+                <Minus className="h-3 w-3 text-danger" />
               ) : (
-                <Pencil className="h-3 w-3 text-yellow-500" />
+                <Pencil className="h-3 w-3 text-warning" />
               )}
               {entry.left_line}
             </span>
@@ -276,7 +276,7 @@ export function CsvDiffDialog({
         </td>
         <td className="border border-border/30 px-2 py-1 text-xs w-12 text-center select-none">
           {entry.status === "added" ? (
-            <Plus className="h-3 w-3 text-green-500 mx-auto" />
+            <Plus className="h-3 w-3 text-success mx-auto" />
           ) : null}
         </td>
         {Array.from({ length: headersLeftLen }).map((_, colIdx) =>
@@ -293,9 +293,9 @@ export function CsvDiffDialog({
           {entry.status === "added" || entry.status === "modified" ? (
             <span className="inline-flex items-center gap-1">
               {entry.status === "added" ? (
-                <Plus className="h-3 w-3 text-green-500" />
+                <Plus className="h-3 w-3 text-success" />
               ) : (
-                <Pencil className="h-3 w-3 text-yellow-500" />
+                <Pencil className="h-3 w-3 text-warning" />
               )}
               {entry.right_line}
             </span>
@@ -303,7 +303,7 @@ export function CsvDiffDialog({
         </td>
         <td className="border border-border/30 px-2 py-1 text-xs w-12 text-center select-none">
           {entry.status === "removed" ? (
-            <Minus className="h-3 w-3 text-red-500 mx-auto" />
+            <Minus className="h-3 w-3 text-danger mx-auto" />
           ) : null}
         </td>
         {Array.from({ length: headersRightLen }).map((_, colIdx) =>
@@ -449,15 +449,15 @@ export function CsvDiffDialog({
               <div className="flex flex-1 items-center justify-center gap-3 text-xs">
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1 text-muted-foreground">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-green-500/60" />
+                    <span className="w-2.5 h-2.5 rounded-sm bg-success/60" />
                     {t.added} {result.added_count}
                   </span>
                   <span className="flex items-center gap-1 text-muted-foreground">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-red-500/60" />
+                    <span className="w-2.5 h-2.5 rounded-sm bg-danger/60" />
                     {t.removed} {result.removed_count}
                   </span>
                   <span className="flex items-center gap-1 text-muted-foreground">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-yellow-500/60" />
+                    <span className="w-2.5 h-2.5 rounded-sm bg-warning/60" />
                     {t.modify} {result.modified_count}
                   </span>
                   <span className="flex items-center gap-1 text-muted-foreground">
@@ -487,7 +487,7 @@ export function CsvDiffDialog({
         </div>
 
         {error && (
-          <div className="px-4 py-2 bg-red-500/10 text-red-600 text-xs flex items-center gap-2 shrink-0">
+          <div className="px-4 py-2 bg-danger-soft text-danger text-xs flex items-center gap-2 shrink-0">
             <AlertCircle className="h-3.5 w-3.5" />
             {error}
           </div>
@@ -533,7 +533,7 @@ export function CsvDiffDialog({
                     <tr>
                       <th
                         colSpan={2}
-                        className="bg-muted/30 border border-border/30 px-2 py-1.5 text-xs font-semibold text-left text-green-600"
+                        className="bg-muted/30 border border-border/30 px-2 py-1.5 text-xs font-semibold text-left text-success"
                       >
                         {t.fileA}
                       </th>
@@ -547,7 +547,7 @@ export function CsvDiffDialog({
                       ))}
                       <th
                         colSpan={2}
-                        className="bg-muted/30 border border-border/30 px-2 py-1.5 text-xs font-semibold text-left text-green-600"
+                        className="bg-muted/30 border border-border/30 px-2 py-1.5 text-xs font-semibold text-left text-success"
                       >
                         {t.fileB}
                       </th>

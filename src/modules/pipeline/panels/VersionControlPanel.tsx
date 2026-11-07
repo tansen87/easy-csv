@@ -310,7 +310,7 @@ export function VersionControlPanel({
               {summary && (
                 <span className="text-[10px] text-muted-foreground">
                   {summary.addedSteps > 0 && (
-                    <span className="text-emerald-600">
+                    <span className="text-success">
                       +{summary.addedSteps}
                     </span>
                   )}
@@ -591,7 +591,7 @@ export function VersionControlPanel({
             />
             <div className="text-[10px] text-muted-foreground space-y-0.5">
               {versionDiff.addedSteps.length > 0 && (
-                <div className="text-emerald-600">
+                <div className="text-success">
                   + {versionDiff.addedSteps.length} {t.versionAddedSteps}:{" "}
                   {versionDiff.addedSteps
                     .map((s) => commandName(s.commandId))
@@ -607,7 +607,7 @@ export function VersionControlPanel({
                 </div>
               )}
               {versionDiff.modifiedSteps.length > 0 && (
-                <div className="text-amber-600">
+                <div className="text-warning">
                   ~ {versionDiff.modifiedSteps.length} {t.versionModifiedSteps}:{" "}
                   {versionDiff.modifiedSteps
                     .map(
@@ -705,7 +705,7 @@ export function VersionControlPanel({
               {restorePreviewDiff && (
                 <div className="text-[11px] text-muted-foreground mb-3 space-y-0.5">
                   {restorePreviewDiff.addedSteps.length > 0 && (
-                    <div className="text-emerald-600">
+                    <div className="text-success">
                       + {restorePreviewDiff.addedSteps.length}{" "}
                       {t.versionAddedSteps}
                     </div>
@@ -717,7 +717,7 @@ export function VersionControlPanel({
                     </div>
                   )}
                   {restorePreviewDiff.modifiedSteps.length > 0 && (
-                    <div className="text-amber-600">
+                    <div className="text-warning">
                       ~ {restorePreviewDiff.modifiedSteps.length}{" "}
                       {t.versionModifiedSteps}
                     </div>

@@ -38,11 +38,11 @@ function parseSummary(raw: string): ParsedSummary {
 function statusClass(status: ExecutionHistoryStatus): string {
   switch (status) {
     case "success":
-      return "bg-green-500/10 border-green-500/30 text-green-600";
+      return "bg-success-soft border-success/30 text-success";
     case "error":
-      return "bg-red-500/10 border-red-500/30 text-red-600";
+      return "bg-danger-soft border-danger/30 text-danger";
     case "cancelled":
-      return "bg-yellow-500/10 border-yellow-500/30 text-yellow-600";
+      return "bg-warning-soft border-warning/30 text-warning";
   }
 }
 

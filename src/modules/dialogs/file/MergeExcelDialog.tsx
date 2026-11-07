@@ -698,7 +698,7 @@ export function MergeExcelDialog({
                               {file.path}
                             </span>
                             {isExcluded && (
-                              <span className="text-[11px] text-amber-600 shrink-0">
+                              <span className="text-[11px] text-warning shrink-0">
                                 {t.mergeExcelExcluded}
                               </span>
                             )}
@@ -796,8 +796,8 @@ export function MergeExcelDialog({
                   scanStatus === "scanning"
                     ? "text-muted-foreground"
                     : scanStatus === "error"
-                      ? "text-red-600"
-                      : "text-green-600"
+                      ? "text-danger"
+                      : "text-success"
                 }`}
               >
                 {scanStatus === "scanning"
@@ -809,7 +809,7 @@ export function MergeExcelDialog({
               {scanResult?.warnings.map((warning) => (
                 <p
                   key={warning}
-                  className="flex items-center gap-1.5 text-[11px] text-amber-600"
+                  className="flex items-center gap-1.5 text-[11px] text-warning"
                 >
                   <AlertCircle className="h-3 w-3" />
                   {warning}
@@ -1087,7 +1087,7 @@ export function MergeExcelDialog({
             )}
 
             {error && (
-              <div className="px-4 py-2 bg-red-500/10 text-red-600 text-xs flex items-center gap-2 rounded-md">
+              <div className="px-4 py-2 bg-danger-soft text-danger text-xs flex items-center gap-2 rounded-md">
                 <AlertCircle className="h-3.5 w-3.5" />
                 {error}
               </div>
@@ -1097,7 +1097,7 @@ export function MergeExcelDialog({
             <div className="rounded-lg border border-border/50 p-3">
               {lastResult ? (
                 <div className="space-y-3">
-                  <p className="flex flex-wrap items-center gap-2 text-xs font-medium text-green-600">
+                  <p className="flex flex-wrap items-center gap-2 text-xs font-medium text-success">
                     <span className="flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4" />
                       {isStaleResult
@@ -1180,11 +1180,11 @@ export function MergeExcelDialog({
                   {(lastResult.skipped.length > 0 ||
                     lastResult.unionSummary ||
                     (lastResult.nameMappings?.length ?? 0) > 0) && (
-                    <div className="space-y-1 rounded-md bg-amber-500/10 p-2.5">
+                    <div className="space-y-1 rounded-md bg-warning-soft p-2.5">
                       {lastResult.skipped.map((entry) => (
                         <p
                           key={entry}
-                          className="flex items-center gap-2 text-xs text-amber-600"
+                          className="flex items-center gap-2 text-xs text-warning"
                         >
                           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                           {entry}
@@ -1194,7 +1194,7 @@ export function MergeExcelDialog({
                         ([original, final]) => (
                           <p
                             key={`${original}|${final}`}
-                            className="flex items-center gap-2 text-xs text-amber-600"
+                            className="flex items-center gap-2 text-xs text-warning"
                           >
                             <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                             {t.mergeExcelNameMapping
@@ -1211,7 +1211,7 @@ export function MergeExcelDialog({
                         }) => (
                           <p
                             key={coverage.column}
-                            className="flex items-center gap-2 text-xs text-amber-600"
+                            className="flex items-center gap-2 text-xs text-warning"
                           >
                             <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                             {t.mergeExcelUnionWidened}: {coverage.column}{" "}
@@ -1225,7 +1225,7 @@ export function MergeExcelDialog({
                         ([a, b]: [string, string]) => (
                           <p
                             key={`${a}|${b}`}
-                            className="flex items-center gap-2 text-xs text-amber-600"
+                            className="flex items-center gap-2 text-xs text-warning"
                           >
                             <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                             {t.mergeExcelUnionNearDuplicate
@@ -1237,7 +1237,7 @@ export function MergeExcelDialog({
                     </div>
                   )}
                   {outputMissing && (
-                    <p className="flex items-center gap-2 text-xs text-amber-600">
+                    <p className="flex items-center gap-2 text-xs text-warning">
                       <AlertCircle className="h-3.5 w-3.5" />
                       {t.lastResultNoOutput}
                     </p>

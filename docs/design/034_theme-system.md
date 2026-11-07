@@ -1,6 +1,6 @@
 # 034 · 主题系统(默认墨蓝)— 设计与迁移方案
 
-> 状态: **A + B 已实施**(token / 两轴 Provider / 设置页主题色行);C(语义色迁移)、D(图表与语法调色板)、E(视觉矩阵)、F(颜色守卫)待做
+> 状态: **A + B + C 已实施**(token / 两轴 Provider / 设置页主题色行 / 语义色迁移);D(图表与语法调色板)、E(视觉矩阵)、F(颜色守卫)待做
 > 日期: 2026-11-07
 > 关联: `src/components/setting/ThemeProvider.tsx` · `src/components/setting/SettingsTabContent.tsx` · `src/components/setting/settingsSections.ts` · `src/components/setting/SettingsDialog.tsx` · `src/index.css` · `src/components/ui/Button.tsx` · `src/components/setting/SettingsNav.tsx` · `src/modules/data-preview/charts/*` · `src/i18n/translations/{types,zh,en}`
 > 目标: 把「明暗外观」与「主题色」拆成两个维度;默认主题色为**墨蓝**;以后只加一段 token 就能增加新主题;把散落在组件里的绿色/蓝色/琥珀/红色收敛为语义 token。

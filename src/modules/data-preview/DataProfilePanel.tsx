@@ -274,7 +274,7 @@ export const DataProfilePanel = React.memo(function DataProfilePanel({
                               <span className="text-muted-foreground">
                                 {t.empty}
                               </span>
-                              <span className="font-medium text-orange-500">
+                              <span className="font-medium text-warning">
                                 {emptyCount.toLocaleString()}
                               </span>
                             </div>

@@ -454,7 +454,7 @@ export const AIPanel = React.memo(function AIPanel({
             <Button
               variant="ghost"
               size="sm"
-              className={`h-6 w-6 p-0 ${feedback === "positive" ? "text-green-500 opacity-100" : ""}`}
+              className={`h-6 w-6 p-0 ${feedback === "positive" ? "text-success opacity-100" : ""}`}
               onClick={() => handleFeedback(index, "positive")}
             >
               <ThumbsUp className="h-3.5 w-3.5" />
@@ -462,7 +462,7 @@ export const AIPanel = React.memo(function AIPanel({
             <Button
               variant="ghost"
               size="sm"
-              className={`h-6 w-6 p-0 ${feedback === "negative" ? "text-red-500 opacity-100" : ""}`}
+              className={`h-6 w-6 p-0 ${feedback === "negative" ? "text-danger opacity-100" : ""}`}
               onClick={() =>
                 feedback === "negative"
                   ? handleFeedback(index, "negative")

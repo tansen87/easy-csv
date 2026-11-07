@@ -115,9 +115,9 @@ export function PluginSetupDialog({
       <div className="bg-background rounded-lg p-5 w-[min(460px,calc(100vw-32px))]">
         <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
           {done ? (
-            <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <CheckCircle2 className="h-5 w-5 text-success" />
           ) : (
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <AlertTriangle className="h-5 w-5 text-warning" />
           )}
           {done ? t.pluginSetupInstalled : t.pluginSetupTitle}
         </h3>

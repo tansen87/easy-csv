@@ -84,14 +84,14 @@ export const FirstStepGuide = React.memo(function FirstStepGuide({
         <div className="absolute bottom-4 left-0 right-[272px] flex justify-center pl-4">
           <div
             data-testid="onboarding-reveal"
-            className="animate-slide-up pointer-events-auto flex max-w-full items-center gap-2.5 rounded-full border border-blue-200 bg-blue-50/95 py-1.5 pl-3 pr-2 shadow-md backdrop-blur-sm dark:border-blue-900 dark:bg-blue-950/90"
+            className="animate-slide-up pointer-events-auto flex max-w-full items-center gap-2.5 rounded-full border border-info/30 bg-info-soft py-1.5 pl-3 pr-2 shadow-md backdrop-blur-sm"
           >
             {reveal.progress && (
-              <span className="shrink-0 rounded-full bg-blue-600 px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums text-white">
+              <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums text-primary-foreground">
                 {reveal.progress.installed}/{reveal.progress.total}
               </span>
             )}
-            <span className="min-w-0 truncate text-xs font-medium text-blue-900 dark:text-blue-100">
+            <span className="min-w-0 truncate text-xs font-medium text-info">
               {reveal.caption}
             </span>
             {/* The reveal is click-driven: the button installs the next step
@@ -102,7 +102,7 @@ export const FirstStepGuide = React.memo(function FirstStepGuide({
               <button
                 onClick={onAdvanceReveal}
                 data-testid="onboarding-reveal-next"
-                className="shrink-0 rounded-full bg-blue-600 px-2.5 py-0.5 text-[11px] font-semibold text-white transition-colors hover:bg-blue-700"
+                className="shrink-0 rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 {reveal.isComplete
                   ? t.onboardingDemoRevealRun
@@ -113,7 +113,7 @@ export const FirstStepGuide = React.memo(function FirstStepGuide({
               <button
                 onClick={onSkipReveal}
                 data-testid="onboarding-reveal-skip"
-                className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold text-blue-700/80 transition-colors hover:bg-blue-100 hover:text-blue-900 dark:text-blue-200/80 dark:hover:bg-blue-900"
+                className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold text-info/80 transition-colors hover:bg-info-soft hover:text-info"
               >
                 {t.onboardingDemoRevealSkip}
               </button>
@@ -129,7 +129,7 @@ export const FirstStepGuide = React.memo(function FirstStepGuide({
             data-testid="onboarding-guide"
           >
             <div className="flex items-center gap-2">
-              <Lightbulb className="h-4 w-4 text-blue-600" />
+              <Lightbulb className="h-4 w-4 text-info" />
               <h3 className="text-sm font-bold">{t.onboardingStartTitle}</h3>
             </div>
             <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
@@ -140,16 +140,16 @@ export const FirstStepGuide = React.memo(function FirstStepGuide({
               <button
                 onClick={onAddStep}
                 data-testid="onboarding-add-step"
-                className="flex w-full items-center gap-2.5 rounded-xl border border-blue-200 bg-blue-50/70 px-3 py-2 text-left transition-colors hover:bg-blue-50 dark:border-blue-900 dark:bg-blue-950/40"
+                className="flex w-full items-center gap-2.5 rounded-xl border border-info/30 bg-info-soft px-3 py-2 text-left transition-colors hover:bg-info/15"
               >
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <Plus className="h-3.5 w-3.5" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-xs font-semibold text-blue-800 dark:text-blue-200">
+                  <span className="block text-xs font-semibold text-info">
                     {t.onboardingAddStep}
                   </span>
-                  <span className="mt-0.5 block text-[11px] text-blue-700/70 dark:text-blue-300/70">
+                  <span className="mt-0.5 block text-[11px] text-info/70">
                     {t.onboardingAddStepDesc.replace(
                       "{count}",
                       String(commandCount),

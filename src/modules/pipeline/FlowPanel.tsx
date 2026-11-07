@@ -930,12 +930,12 @@ export function FlowPanel({
         <span className="w-px h-3 bg-border/40" />
         {isDirty ? (
           <>
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500/70 inline-block" />
+            <span className="w-1.5 h-1.5 rounded-full bg-warning/70 inline-block" />
             <span>{t.unsaved}</span>
           </>
         ) : (
           <>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 inline-block" />
+            <span className="w-1.5 h-1.5 rounded-full bg-success/60 inline-block" />
             <span>{t.saved}</span>
           </>
         )}

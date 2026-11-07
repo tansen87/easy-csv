@@ -488,7 +488,7 @@ export const HomeView = React.memo(function HomeView({
                     }
                     if (run.state === "preparing") {
                       return (
-                        <span className="rounded-full bg-amber-500/10 px-1.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                        <span className="rounded-full bg-warning-soft px-1.5 text-[10px] font-medium text-warning">
                           {t.runStatePending}
                         </span>
                       );
@@ -498,7 +498,7 @@ export const HomeView = React.memo(function HomeView({
                         <span
                           className={`rounded-full px-1.5 text-[10px] font-medium ${
                             run.state === "done"
-                              ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                              ? "bg-success-soft text-success"
                               : "bg-destructive/10 text-destructive"
                           }`}
                         >
@@ -537,10 +537,10 @@ export const HomeView = React.memo(function HomeView({
             <div
               className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${
                 branchProgress.status === "completed"
-                  ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                  ? "bg-success-soft text-success"
                   : branchProgress.status === "executing"
-                    ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                    : "bg-red-500/10 text-red-600 dark:text-red-400"
+                    ? "bg-info-soft text-info"
+                    : "bg-danger-soft text-danger"
               }`}
             >
               {branchProgress.status === "executing" && (
@@ -583,7 +583,7 @@ export const HomeView = React.memo(function HomeView({
             {isExecuting && onCancelExecution && (
               <button
                 onClick={onCancelExecution}
-                className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors"
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-danger hover:bg-danger-soft transition-colors"
               >
                 <Square className="h-2.5 w-2.5" />
                 {t.cancelExecution}

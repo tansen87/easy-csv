@@ -69,8 +69,8 @@ export function TableNode({
   const delimiterDotClass = delimiterLocked
     ? "bg-muted-foreground"
     : delimiterSource === "fallback" || delimiterConfidence === "low"
-      ? "bg-amber-500"
-      : "bg-green-500";
+      ? "bg-warning"
+      : "bg-success";
 
   const duplicateCounts = headers.reduce<Record<string, number>>((acc, h) => {
     acc[h] = (acc[h] || 0) + 1;
@@ -372,7 +372,7 @@ export function TableNode({
         </div>
       </ScrollArea>
       {duplicateHeaders.length > 0 && (
-        <div className="px-3 py-1.5 bg-orange-50 border-orange-200 text-xs text-orange-600">
+        <div className="px-3 py-1.5 bg-warning-soft border-warning/20 text-xs text-warning">
           duplicate column:{" "}
           {duplicateHeaders
             .map(([name, count]) => `${name}(${count})`)
@@ -382,7 +382,7 @@ export function TableNode({
       <div className="table-node-footer flex h-7 cursor-grab select-none items-center gap-2 border-t border-border/40 px-3 active:cursor-grabbing">
         {showSaveButton ? (
           <div className="ml-auto flex min-w-0 items-center gap-2">
-            <span className="shrink-0 text-[11px] text-amber-600 dark:text-amber-400">
+            <span className="shrink-0 text-[11px] text-warning">
               {t.renamePending}
             </span>
             <button
@@ -390,7 +390,7 @@ export function TableNode({
                 onSave();
                 setShowSaveButton(false);
               }}
-              className="nodrag h-6 shrink-0 cursor-pointer rounded-md border border-amber-500/40 bg-amber-500/10 px-2 text-[11px] font-medium text-amber-700 transition-colors hover:bg-amber-500/15 dark:border-amber-400/30 dark:text-amber-400"
+              className="nodrag h-6 shrink-0 cursor-pointer rounded-md border border-warning/40 bg-warning-soft px-2 text-[11px] font-medium text-warning transition-colors hover:bg-warning/15"
             >
               {t.saveRenameStep}
             </button>

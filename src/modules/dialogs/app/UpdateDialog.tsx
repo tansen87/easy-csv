@@ -161,7 +161,7 @@ export function UpdateDialog({
                 {t.updateSource}:{" "}
                 <button
                   onClick={handleOpenRelease}
-                  className="text-blue-500 underline hover:text-blue-400"
+                  className="text-primary underline hover:text-primary/80"
                 >
                   GitHub Releases
                 </button>
@@ -233,7 +233,7 @@ export function UpdateDialog({
                               e.preventDefault();
                               openUrl(href || "");
                             }}
-                            className="text-blue-500 underline hover:text-blue-400"
+                            className="text-primary underline hover:text-primary/80"
                           >
                             {children}
                           </a>
@@ -260,7 +260,7 @@ export function UpdateDialog({
               {/* Install layout: a plain hint when updating is possible, a
                   blocking notice when it is not. */}
               {blockedReason ? (
-                <div className="mt-3 flex items-start gap-2 text-xs text-yellow-700 bg-yellow-500/10 border border-yellow-500/30 rounded p-2">
+                <div className="mt-3 flex items-start gap-2 text-xs text-warning bg-warning-soft border border-warning/30 rounded p-2">
                   <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                   <span>{blockedReason}</span>
                 </div>
@@ -275,7 +275,7 @@ export function UpdateDialog({
           )}
 
           {error && (
-            <div className="mt-3 text-xs text-red-600 bg-red-500/10 border border-red-500/30 rounded p-2">
+            <div className="mt-3 text-xs text-danger bg-danger-soft border border-danger/30 rounded p-2">
               <div className="font-medium mb-0.5">
                 {updateInfo?.available
                   ? t.updateInstallFailed

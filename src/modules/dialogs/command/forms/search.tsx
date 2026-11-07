@@ -17,7 +17,7 @@ export function SearchForm(props: CommandFormProps) {
   return (
     <CommandFormShell {...props} scrollHeight="28vh">
       {hasMultiPattern && hasPatternsFile && (
-        <div className="text-xs text-amber-600 dark:text-amber-400 border border-amber-300 rounded-md px-2 py-1.5">
+        <div className="text-xs text-warning border border-warning/30 bg-warning-soft rounded-md px-2 py-1.5">
           {t.searchPatternConflictWarning}
         </div>
       )}

@@ -520,7 +520,7 @@ export function SeparateCSVDialog({
               {inputFile.trim() !== "" && (
                 <p className="text-[11px] leading-4 min-w-0 break-all">
                   {probeError ? (
-                    <span className="text-red-600 break-all">
+                    <span className="text-danger break-all">
                       {t.probeFailed}: {probeError}
                     </span>
                   ) : probe ? (
@@ -578,7 +578,7 @@ export function SeparateCSVDialog({
               <p
                 className={`text-[11px] ${
                   isDelimiterLowConfidence
-                    ? "text-amber-600"
+                    ? "text-warning"
                     : "text-muted-foreground/80"
                 }`}
               >
@@ -609,7 +609,7 @@ export function SeparateCSVDialog({
                 />
                 {columnsMismatch && (
                   <span
-                    className="text-[11px] text-amber-600 shrink-0"
+                    className="text-[11px] text-warning shrink-0"
                     title={t.expectedColumnsHint}
                   >
                     {t.expectedColumns} {expectedColumns} ≠ {probe?.columns}
@@ -672,7 +672,7 @@ export function SeparateCSVDialog({
                 aria-expanded={advancedOpen}
                 className={`w-full flex items-center gap-2 rounded-lg border p-3 text-xs transition-colors ${
                   activeAdvancedOptions.length > 0
-                    ? "border-amber-500/50 text-amber-600"
+                    ? "border-warning/50 text-warning"
                     : "border-border/50 text-muted-foreground hover:bg-accent"
                 }`}
               >
@@ -767,7 +767,7 @@ export function SeparateCSVDialog({
             <div className="rounded-lg border border-border/50 p-3">
               {lastResult ? (
                 <div className="space-y-3">
-                  <p className="flex flex-wrap items-center gap-2 text-xs font-medium text-green-600">
+                  <p className="flex flex-wrap items-center gap-2 text-xs font-medium text-success">
                     <span className="flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4" />
                       {isStaleResult ? t.lastResult : t.separateCompleteNow}
@@ -806,7 +806,7 @@ export function SeparateCSVDialog({
                     </p>
                   </div>
                   {outputMissing && (
-                    <p className="flex items-center gap-2 text-xs text-amber-600">
+                    <p className="flex items-center gap-2 text-xs text-warning">
                       <AlertCircle className="h-3.5 w-3.5" />
                       {t.lastResultNoOutput}
                     </p>
@@ -840,7 +840,7 @@ export function SeparateCSVDialog({
         </ScrollArea>
 
         {error && (
-          <div className="px-4 py-2 bg-red-500/10 text-red-600 text-xs flex items-center gap-2 shrink-0">
+          <div className="px-4 py-2 bg-danger-soft text-danger text-xs flex items-center gap-2 shrink-0">
             <AlertCircle className="h-3.5 w-3.5" />
             {error}
           </div>

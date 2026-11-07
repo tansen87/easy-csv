@@ -8,8 +8,8 @@ interface HelpMarkdownProps {
   currentMatchIndex?: number;
 }
 
-export const MATCH_CLASS = "bg-orange-200 text-black px-0.5 rounded";
-export const CURRENT_MATCH_CLASS = "bg-orange-500 text-white px-0.5 rounded";
+export const MATCH_CLASS = "bg-brand-soft text-foreground px-0.5 rounded";
+export const CURRENT_MATCH_CLASS = "bg-brand text-brand-foreground px-0.5 rounded";
 
 export const escapeRegExp = (string: string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

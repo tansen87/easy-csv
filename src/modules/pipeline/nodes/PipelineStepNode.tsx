@@ -161,9 +161,9 @@ export function PipelineStepNode({
                   e.stopPropagation();
                   handleAliasSave();
                 }}
-                className="w-[5%] h-6 bg-green-500/10 hover:bg-green-500/20 rounded flex items-center justify-center transition-colors min-w-[24px]"
+                className="w-[5%] h-6 bg-success-soft hover:bg-success/20 rounded flex items-center justify-center transition-colors min-w-[24px]"
               >
-                <Check className="h-3 w-3 text-green-600" />
+                <Check className="h-3 w-3 text-success" />
               </button>
             </div>
           ) : (
@@ -264,7 +264,7 @@ export function PipelineStepNode({
       />
       {data.step.error && (
         <div
-          className="mx-2 mb-2 px-2 py-1 rounded bg-red-500/10 border border-red-500/40 text-[9px] text-red-600 dark:text-red-400 break-words nodrag"
+          className="mx-2 mb-2 px-2 py-1 rounded bg-danger-soft border border-danger/40 text-[9px] text-danger break-words nodrag"
           style={{ wordBreak: "break-word" }}
         >
           {data.step.error}
@@ -281,10 +281,10 @@ export function PipelineStepNode({
   const cardClass = `w-[220px] transition-all duration-200 hover:shadow-lg group relative animate-node-enter ${
     selected
       ? data.step.error
-        ? "bg-paper border-red-500/70 shadow-md ring-2 ring-red-500/30"
+        ? "bg-paper border-danger/70 shadow-md ring-2 ring-danger/30"
         : "bg-paper border-[var(--canvas-ink)] shadow-sm ring-2 ring-[var(--canvas-ink-soft)]"
       : "bg-card/95 hover:bg-accent/30 border-border/60 hover:border-primary/30"
-  } ${data.step.error ? "border-red-500/70 shadow-md ring-2 ring-red-500/30" : ""} ${data.isPendingDelete ? "border-orange-500" : ""} ${data.isHighlighted ? "ring-2 ring-primary ring-offset-2 animate-pulse-once" : ""}`;
+  } ${data.step.error ? "border-danger/70 shadow-md ring-2 ring-danger/30" : ""} ${data.isPendingDelete ? "border-warning" : ""} ${data.isHighlighted ? "ring-2 ring-primary ring-offset-2 animate-pulse-once" : ""}`;
 
   // If there is a cutting section, render two cutting fragments
   if (data.cutParts && data.cutParts.length > 0) {

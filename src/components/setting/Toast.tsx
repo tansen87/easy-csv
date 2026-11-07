@@ -29,17 +29,17 @@ const iconMap = {
 };
 
 const colorMap = {
-  success: "bg-green-500/10 text-green-600 border-green-500/20",
-  error: "bg-red-500/10 text-red-600 border-red-500/20",
-  warning: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
-  info: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  success: "bg-success-soft text-success border-success/20",
+  error: "bg-danger-soft text-danger border-danger/20",
+  warning: "bg-warning-soft text-warning border-warning/20",
+  info: "bg-info-soft text-info border-info/20",
 };
 
 const iconColorMap = {
-  success: "text-green-500",
-  error: "text-red-500",
-  warning: "text-yellow-500",
-  info: "text-blue-500",
+  success: "text-success",
+  error: "text-danger",
+  warning: "text-warning",
+  info: "text-info",
 };
 
 export function Toast({

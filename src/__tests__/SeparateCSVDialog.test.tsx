@@ -559,7 +559,7 @@ describe("SeparateCSVDialog ignore-quoting option", () => {
         .parentElement?.className ?? "";
 
     // 忽略引号 is on by default → the collapsed bar carries the emphasis.
-    expect(bar()).toContain("text-amber-600");
+    expect(bar()).toContain("text-warning");
 
     fireEvent.click(screen.getByLabelText("Ignore quoting"));
     expect(bar()).toContain("text-muted-foreground");
@@ -567,7 +567,7 @@ describe("SeparateCSVDialog ignore-quoting option", () => {
     // The rows themselves stay neutral either way, as does the delimiter line.
     expect(row()).toContain("text-muted-foreground");
     expect(screen.getByText(/Detected「,」/).className).not.toContain(
-      "text-amber-600",
+      "text-warning",
     );
   });
 });

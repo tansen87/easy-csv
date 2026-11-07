@@ -424,7 +424,7 @@ export function CsvEncodingDialog({
             </section>
 
             {error && (
-              <div className="px-4 py-2 bg-red-500/10 text-red-600 text-xs flex items-center gap-2 rounded-md">
+              <div className="px-4 py-2 bg-danger-soft text-danger text-xs flex items-center gap-2 rounded-md">
                 <AlertCircle className="h-3.5 w-3.5" />
                 {error}
               </div>
@@ -434,7 +434,7 @@ export function CsvEncodingDialog({
             <div className="rounded-lg border border-border/50 p-3">
               {lastResult ? (
                 <div className="space-y-3">
-                  <p className="flex flex-wrap items-center gap-2 text-xs font-medium text-green-600">
+                  <p className="flex flex-wrap items-center gap-2 text-xs font-medium text-success">
                     <span className="flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4" />
                       {isStaleResult ? t.csvEncodingLastResult : t.success}
@@ -483,7 +483,7 @@ export function CsvEncodingDialog({
                     {lastResult.outputPath}
                   </p>
                   {outputMissing && (
-                    <p className="flex items-center gap-2 text-xs text-amber-600">
+                    <p className="flex items-center gap-2 text-xs text-warning">
                       <AlertCircle className="h-3.5 w-3.5" />
                       {t.lastResultNoOutput}
                     </p>
@@ -520,7 +520,7 @@ export function CsvEncodingDialog({
         <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-t border-border/50 bg-muted/20 shrink-0">
           <span
             className={`flex items-center gap-1.5 text-[11px] ${
-              isSameEncoding ? "text-amber-600" : "text-muted-foreground"
+              isSameEncoding ? "text-warning" : "text-muted-foreground"
             }`}
           >
             {isSameEncoding && <AlertCircle className="h-3 w-3" />}

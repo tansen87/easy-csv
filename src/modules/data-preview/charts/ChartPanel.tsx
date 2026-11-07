@@ -1430,8 +1430,8 @@ export const ChartPanel = React.memo(function ChartPanel({
     }
     if (issue.kind === "no_numeric_values") {
       return (
-        <div className="m-3 rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-3 text-xs">
-          <div className="font-medium mb-1 text-amber-700 dark:text-amber-400">
+        <div className="m-3 rounded-lg border border-warning/40 bg-warning-soft px-3 py-3 text-xs">
+          <div className="font-medium mb-1 text-warning">
             {t.chartNoNumericTitle.replace("{column}", issue.column)}
           </div>
           <div className="text-muted-foreground">
@@ -1695,7 +1695,7 @@ export const ChartPanel = React.memo(function ChartPanel({
       {(chartState?.truncated || (chartState?.droppedRows ?? 0) > 0) && (
         <div className="px-3 pt-2 flex flex-col gap-1">
           {chartState?.truncated && (
-            <div className="rounded border border-amber-500/40 bg-amber-500/5 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-400">
+            <div className="rounded border border-warning/40 bg-warning-soft px-2 py-1 text-[11px] text-warning">
               {t.chartTruncated
                 .replace("{shown}", String(chartState.rows?.length ?? 0))
                 .replace("{total}", String(chartState.totalRows ?? 0))}

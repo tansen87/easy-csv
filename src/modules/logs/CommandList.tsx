@@ -316,11 +316,11 @@ export const CommandList = React.memo(function CommandList({
       {/* In-place first-step teaching. */}
       {showFirstStepHint && (
         <div
-          className="flex items-start gap-2 border-b border-blue-200/70 bg-blue-50/70 px-3 py-2 dark:border-blue-900/60 dark:bg-blue-950/30"
+          className="flex items-start gap-2 border-b border-info/30 bg-info-soft px-3 py-2"
           data-testid="command-list-first-step-hint"
         >
-          <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
-          <p className="text-[10.5px] leading-relaxed text-blue-800/90 dark:text-blue-200/90">
+          <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-info" />
+          <p className="text-[10.5px] leading-relaxed text-info">
             {t.onboardingPanelHint}
           </p>
         </div>

@@ -164,7 +164,7 @@ export function DataLineagePanel({
                 className="h-8 px-2 flex items-center gap-1 text-xs hover:bg-muted rounded transition-colors"
               >
                 {saved ? (
-                  <Check className="h-3.5 w-3.5 text-green-600" />
+                  <Check className="h-3.5 w-3.5 text-success" />
                 ) : (
                   <Save className="h-3.5 w-3.5" />
                 )}
@@ -244,7 +244,7 @@ export function DataLineagePanel({
                   className="h-6 w-6 flex items-center justify-center hover:bg-muted rounded transition-colors"
                 >
                   {saved ? (
-                    <Check className="h-3.5 w-3.5 text-green-600" />
+                    <Check className="h-3.5 w-3.5 text-success" />
                   ) : (
                     <Save className="h-3.5 w-3.5" />
                   )}

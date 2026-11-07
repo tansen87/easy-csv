@@ -41,8 +41,8 @@ describe("HelpMarkdown highlighting", () => {
 
     const active = container.querySelectorAll('[data-active-match="true"]');
     expect(active.length).toBe(1);
-    expect(marks[0].classList.contains("bg-orange-500")).toBe(true);
-    expect(marks.slice(1).every((m) => m.classList.contains("bg-orange-200"))).toBe(
+    expect(marks[0].classList.contains("bg-brand")).toBe(true);
+    expect(marks.slice(1).every((m) => m.classList.contains("bg-brand-soft"))).toBe(
       true,
     );
   });

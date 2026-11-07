@@ -248,7 +248,7 @@ export const MainMenu = React.memo(function MainMenu({
               </button>
             </>
           ) : pending ? (
-            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+            <span className="rounded-full border border-warning/30 bg-warning-soft px-2 py-0.5 text-[11px] font-medium text-warning">
               {t.runStatePending}
             </span>
           ) : finished ? (
@@ -256,7 +256,7 @@ export const MainMenu = React.memo(function MainMenu({
               className={cn(
                 "rounded-full px-2 py-0.5 text-[11px] font-medium",
                 run?.state === "done"
-                  ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                  ? "bg-success-soft text-success"
                   : "bg-destructive/10 text-destructive",
               )}
             >
@@ -764,7 +764,7 @@ export const MainMenu = React.memo(function MainMenu({
           >
             {t.help}
             {hasUpdate && !isCheckingUpdate && (
-              <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-green-500" />
+              <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-success" />
             )}
           </button>
           {activeMenu === "help" && (
@@ -868,7 +868,7 @@ export const MainMenu = React.memo(function MainMenu({
                 commandButtonClass(showCommandPanel),
                 highlightCommandEntry &&
                   !showCommandPanel &&
-                  "bg-blue-100 text-blue-700 ring-2 ring-blue-400/70 dark:bg-blue-900/60 dark:text-blue-300",
+                  "bg-info-soft text-info ring-2 ring-info/70",
               )}
             >
               <ListTree className="h-4 w-4" />
@@ -887,7 +887,7 @@ export const MainMenu = React.memo(function MainMenu({
                 <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 w-3 rounded-full bg-current" />
               )}
               {showLogErrorBadge && (
-                <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-red-500" />
+                <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-danger" />
               )}
             </button>
           </Tooltip>

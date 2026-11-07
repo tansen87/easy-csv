@@ -39,8 +39,8 @@ describe("HelpDialog current match highlighting", () => {
     );
     expect(active.length).toBe(1);
     expect(marks[0]).toBe(active[0]);
-    expect(marks[0].classList.contains("bg-orange-500")).toBe(true);
-    expect(marks[1].classList.contains("bg-orange-500")).toBe(false);
+    expect(marks[0].classList.contains("bg-brand")).toBe(true);
+    expect(marks[1].classList.contains("bg-brand")).toBe(false);
 
     fireEvent.keyDown(window, { key: "ArrowDown" });
 
@@ -48,8 +48,8 @@ describe("HelpDialog current match highlighting", () => {
     active = Array.from(container.querySelectorAll('[data-active-match="true"]'));
     expect(active.length).toBe(1);
     expect(marks[1]).toBe(active[0]);
-    expect(marks[1].classList.contains("bg-orange-500")).toBe(true);
-    expect(marks[0].classList.contains("bg-orange-500")).toBe(false);
+    expect(marks[1].classList.contains("bg-brand")).toBe(true);
+    expect(marks[0].classList.contains("bg-brand")).toBe(false);
 
     fireEvent.keyDown(window, { key: "ArrowDown" });
 

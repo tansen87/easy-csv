@@ -83,26 +83,26 @@ export const LogPanel = React.memo(function LogPanel({
   const getLogColor = (type: LogEntry["type"]) => {
     switch (type) {
       case "info":
-        return "text-blue-500";
+        return "text-info";
       case "success":
-        return "text-green-500";
+        return "text-success";
       case "warning":
-        return "text-yellow-500";
+        return "text-warning";
       case "error":
-        return "text-red-500";
+        return "text-danger";
     }
   };
 
   const getLogBgColor = (type: LogEntry["type"]) => {
     switch (type) {
       case "info":
-        return "bg-blue-500/10 border-blue-500/20";
+        return "bg-info-soft border-info/20";
       case "success":
-        return "bg-green-500/10 border-green-500/20";
+        return "bg-success-soft border-success/20";
       case "warning":
-        return "bg-yellow-500/10 border-yellow-500/20";
+        return "bg-warning-soft border-warning/20";
       case "error":
-        return "bg-red-500/10 border-red-500/20";
+        return "bg-danger-soft border-danger/20";
     }
   };
 

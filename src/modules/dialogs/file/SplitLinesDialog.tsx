@@ -479,7 +479,7 @@ export function SplitLinesDialog({
             <div className="rounded-lg border border-border/50 p-3">
               {lastResult ? (
                 <div className="space-y-3">
-                  <p className="flex flex-wrap items-center gap-2 text-xs font-medium text-green-600">
+                  <p className="flex flex-wrap items-center gap-2 text-xs font-medium text-success">
                     <span className="flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4" />
                       {isStaleResult
@@ -538,7 +538,7 @@ export function SplitLinesDialog({
                     </div>
                   </ScrollArea>
                   {outputMissing && (
-                    <p className="flex items-center gap-2 text-xs text-amber-600">
+                    <p className="flex items-center gap-2 text-xs text-warning">
                       <AlertCircle className="h-3.5 w-3.5" />
                       {t.lastResultNoOutput}
                     </p>
@@ -572,7 +572,7 @@ export function SplitLinesDialog({
         </ScrollArea>
 
         {error && (
-          <div className="px-4 py-2 bg-red-500/10 text-red-600 text-xs flex items-center gap-2 shrink-0">
+          <div className="px-4 py-2 bg-danger-soft text-danger text-xs flex items-center gap-2 shrink-0">
             <AlertCircle className="h-3.5 w-3.5" />
             {error}
           </div>

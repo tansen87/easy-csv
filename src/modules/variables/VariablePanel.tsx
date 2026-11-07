@@ -158,7 +158,7 @@ export function VariablePanel({
                     {declaredNames.has(v.name) && (
                       <button
                         onClick={() => deleteVariable(v.name)}
-                        className="p-1 rounded hover:bg-red-500/10 text-muted-foreground/60 hover:text-red-500 transition-colors"
+                        className="p-1 rounded hover:bg-danger-soft text-muted-foreground/60 hover:text-danger transition-colors"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -198,7 +198,7 @@ export function VariablePanel({
             {t.addVariable}
           </Button>
         </div>
-        {notice && <p className="mt-1 text-[11px] text-red-500">{notice}</p>}
+        {notice && <p className="mt-1 text-[11px] text-danger">{notice}</p>}
       </div>
 
       <ConfirmDialog

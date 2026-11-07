@@ -151,7 +151,7 @@ export function ResultTableNode({
       </div>
       {truncated && (
         <div
-          className="flex h-[26px] shrink-0 items-center border-b border-border/40 bg-amber-500/10 px-3 font-mono text-[11px] text-amber-600 dark:text-amber-400"
+          className="flex h-[26px] shrink-0 items-center border-b border-border/40 bg-warning-soft px-3 font-mono text-[11px] text-warning"
           title={t.resultTruncated}
         >
           <span className="truncate">{t.resultTruncated}</span>
