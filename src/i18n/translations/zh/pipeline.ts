@@ -144,7 +144,7 @@ export const zhPipeline = {
   templateSearchPlaceholder: "搜索模板",
   templateNoMatches: "无匹配模板",
   templateDescriptionPlaceholder: "可选描述",
-  noTemplates: "暂无模板, 可将当前管道另存为模板以复用",
+  noTemplates: "保存后，这条管道会出现在这里，之后可一键套用",
   templateApply: "套用",
   templateRename: "重命名",
   templateDelete: "删除",
@@ -156,4 +156,9 @@ export const zhPipeline = {
   templateNameRequired: "请先在管道中添加步骤再另存为模板",
   templateImportFailed: "所选文件不是有效的模板文件",
   paletteTemplates: "模板",
+  templateSaveAsTitle: "另存为模板",
+  templateStepCount: "当前管道 {n} 步",
+  templateStepCountShort: "{n} 步",
+  templateCountUnit: "个",
+  templateEmptyTitle: "还没有模板",
 } satisfies Partial<Translations>;

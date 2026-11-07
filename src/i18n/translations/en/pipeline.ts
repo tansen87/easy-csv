@@ -151,7 +151,7 @@ export const enPipeline = {
   templateNoMatches: "No matching templates",
   templateDescriptionPlaceholder: "Optional description",
   noTemplates:
-    "No templates yet. Save the current pipeline as a template to reuse it.",
+    "Saved pipelines appear here, ready to apply.",
   templateApply: "Apply",
   templateRename: "Rename",
   templateDelete: "Delete",
@@ -164,4 +164,9 @@ export const enPipeline = {
     "Add steps to the pipeline before saving as a template.",
   templateImportFailed: "The selected file is not a valid template file.",
   paletteTemplates: "Templates",
+  templateSaveAsTitle: "Save as template",
+  templateStepCount: "{n} steps in current pipeline",
+  templateStepCountShort: "{n} steps",
+  templateCountUnit: "total",
+  templateEmptyTitle: "No templates yet",
 } satisfies Partial<Translations>;

@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>原型 035 · 模板弹窗重新设计</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#efeeec;color:#2a2a2a;
+    font-family:"Inter","Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+  .mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+
+  /* ── 页面框架 ───────────────────────────── */
+  .stage{padding:28px 24px 72px;display:flex;flex-direction:column;align-items:center;gap:20px}
+  .plabel{width:1000px;max-width:100%;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .plabel .tag{background:#141414;color:#fff;font-size:11px;font-weight:600;letter-spacing:.06em;
+    padding:3px 8px;border-radius:5px}
+  .plabel h1{font-size:14px;margin:0;font-weight:600}
+  .plabel p{margin:0;font-size:12px;color:#6b6b6b}
+  .state{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid transparent}
+  .state.before{color:#b42318;background:#fef2f2;border-color:#fecaca}
+  .state.after{color:#15803d;background:#f0fdf4;border-color:#bbf7d0}
+
+  .summary{width:1000px;max-width:100%;background:#fff;border:1px solid #e3e1dc;border-radius:10px;
+    padding:14px 16px;display:grid;grid-template-columns:64px 1fr;gap:6px 12px;
+    font-size:12px;line-height:18px}
+  .summary .k{color:#8a8378;font-size:11px}
+  .summary .v{color:#3a3730}
+  .summary .v b{font-weight:600;color:#1b1a17}
+
+  /* ── 主题变量 ─────────────────────────────── */
+  .light{
+    --bg:#f7f6f3;--card:#ffffff;--raised:#f4f3f0;--chrome:#fbfaf8;
+    --fg:#1b1a17;--fg2:#5b554c;--fg3:#8a8378;
+    --border:rgba(27,26,23,.08);--border2:rgba(27,26,23,.16);
+    --ink:#40536a;--ink-soft:rgba(64,83,106,.10);
+    --danger:#b42318;
+    --dot:rgba(27,26,23,.10);
+    --shadow:0 14px 36px rgba(0,0,0,.14)
+  }
+  .dark{
+    --bg:#151412;--card:#1d1c19;--raised:#252320;--chrome:#1a1917;
+    --fg:#ece9e1;--fg2:#b3ada2;--fg3:#8a8478;
+    --border:rgba(236,233,225,.09);--border2:rgba(236,233,225,.18);
+    --ink:#a3bccf;--ink-soft:rgba(163,188,207,.13);
+    --danger:#e06c60;
+    --dot:rgba(236,233,225,.08);
+    --shadow:0 18px 44px rgba(0,0,0,.48)
+  }
+
+  /* ── 应用外框（仅作背景语境） ─────────────── */
+  .shell{width:1000px;max-width:100%;height:620px;flex:none;border:1px solid #d8d6d1;border-radius:12px;
+    overflow:hidden;position:relative;background:var(--bg);color:var(--fg);
+    box-shadow:0 12px 30px rgba(0,0,0,.09);display:flex;flex-direction:column}
+  .dark .shell{border-color:#2b2925}
+  .topbar{height:40px;flex:none;display:flex;align-items:center;gap:16px;padding:0 14px;
+    border-bottom:1px solid var(--border);background:var(--chrome);font-size:12px;color:var(--fg3)}
+  .topbar .brand{font-weight:600;color:var(--fg2);letter-spacing:.01em}
+  .topbar .sp{flex:1}
+  .canvas{flex:1;position:relative;
+    background-image:radial-gradient(circle,var(--dot) 1px,transparent 1px);background-size:22px 22px}
+  .ghost-node{position:absolute;left:90px;top:110px;width:210px;height:56px;border-radius:10px;
+    border:1px dashed var(--border2);background:color-mix(in oklab,var(--card) 55%,transparent)}
+  .ghost-node.two{left:90px;top:200px}
+  .overlay{position:absolute;inset:0;background:rgba(0,0,0,.24);display:grid;place-items:center}
+  .dark .overlay{background:rgba(0,0,0,.46)}
+
+  .caption{width:1000px;max-width:100%;font-size:11.5px;color:#6b6b6b;margin-top:-6px}
+  .caption b{color:#3a3730;font-weight:500}
+
+  /* ══════════════════════════════════════════════
+     改造前：现状
+     ══════════════════════════════════════════════ */
+  .b-dialog{width:672px;background:#fff;border-radius:10px;overflow:hidden;
+    box-shadow:0 22px 48px rgba(0,0,0,.22);font-size:14px;color:#171717}
+  .b-sec{padding:12px 16px;border-bottom:1px solid #e8e7e4}
+  .b-title{font-size:14px;color:#171717;margin:0 0 8px}
+  .b-fields{display:flex;gap:8px;margin-bottom:8px}
+  .b-input{height:32px;padding:0 8px;border:1px solid transparent;border-radius:6px;background:#f5f5f4;
+    font-size:14px;color:#171717;font-family:inherit;outline:none}
+  .b-input::placeholder{color:#8f8f8f}
+  .b-input.full{width:100%}
+  .b-input.name{flex:1}
+  .b-btn{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;
+    border-radius:6px;background:#f5f5f4;border:1px solid #e8e7e4;font-size:12px;color:#3f3f3f;font-family:inherit}
+  .b-search{position:relative}
+  .b-search input{width:100%;height:32px;padding:0 8px 0 32px;border:1px solid transparent;border-radius:6px;
+    background:#f5f5f4;font-size:14px;font-family:inherit;color:#171717}
+  .b-search input::placeholder{color:#8f8f8f}
+  .b-search .ic{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:#8f8f8f}
+  .b-list{height:224px;overflow:hidden;padding:12px 16px}
+  .b-group{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#a1a1a1;margin:0 2px 6px}
+  .b-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+    padding:8px;border:1px solid #e8e7e4;border-radius:6px;background:rgba(245,245,244,.5);margin-bottom:8px}
+  .b-row-main{min-width:0;flex:1}
+  .b-name{font-size:14px;font-weight:500;color:#171717;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .b-desc{font-size:12px;color:#8f8f8f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .b-actions{display:flex;align-items:center;gap:4px;flex:none}
+  .b-apply{height:28px;padding:0 10px;border-radius:6px;background:transparent;border:0;
+    font-size:12px;color:#3f3f3f;font-family:inherit}
+  .b-icon{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;border:0;background:transparent}
+  .b-icon svg{width:14px;height:14px;color:#3f3f3f}
+  .b-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(245,245,244,.5)}
+
+  /* ══════════════════════════════════════════════
+     改造后：模板台账
+     ══════════════════════════════════════════════ */
+  .a-dialog{width:672px;background:var(--card);border:1px solid var(--border2);border-radius:12px;
+    overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;color:var(--fg)}
+  .a-head{height:56px;flex:none;display:flex;align-items:center;gap:10px;padding:0 20px;
+    border-bottom:1px solid var(--border);position:relative}
+  .a-head-left{display:flex;align-items:center;gap:10px}
+  .a-head-search{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:280px}
+  .a-head-search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--fg3)}
+  .a-head-search .a-input{height:30px;padding-left:30px;background:var(--raised)}
+  .a-title{font-size:15px;font-weight:500;color:var(--fg)}
+  .a-count{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--fg3)}
+  .a-close{margin-left:auto;width:28px;height:28px;border-radius:6px;border:0;background:transparent;
+    display:grid;place-items:center;color:var(--fg2);cursor:pointer}
+  .a-close svg{width:14px;height:14px}
+  .a-close:hover{background:var(--raised);color:var(--fg)}
+
+  .a-save{padding:16px 20px;border-bottom:1px solid var(--border)}
+  .a-save-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .a-label{font-size:12.5px;font-weight:500;color:var(--fg)}
+  .a-steps{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--fg3)}
+  .a-grow{flex:1}
+  .a-import{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 8px;border-radius:6px;
+    border:0;background:transparent;font-size:11.5px;color:var(--fg2);font-family:inherit;cursor:pointer}
+  .a-import svg{width:13px;height:13px}
+  .a-import:hover{background:var(--raised);color:var(--fg)}
+  .a-fields{display:flex;gap:8px}
+  .a-field{position:relative;flex:1;min-width:0}
+  .a-field.desc{flex:1.35}
+  .a-input{width:100%;height:32px;padding:0 10px;border-radius:6px;background:var(--raised);
+    border:1px solid transparent;font-size:12.5px;color:var(--fg);font-family:inherit;outline:none}
+  .a-input::placeholder{color:var(--fg3)}
+  .a-input:focus{border-color:var(--ink);background:var(--card);box-shadow:0 0 0 3px var(--ink-soft)}
+  .a-primary{height:32px;padding:0 14px;border-radius:6px;border:1px solid transparent;
+    background:var(--ink);color:#fff;font-size:12.5px;font-weight:500;font-family:inherit;cursor:pointer}
+  .light .a-primary{color:#f7f6f3}
+  .a-primary:hover{filter:brightness(1.06)}
+  .a-primary[disabled]{background:var(--raised);color:var(--fg3);cursor:default;filter:none}
+  .a-hint{margin-top:8px;font-size:11px;color:var(--fg3)}
+
+  .a-list{flex:1;min-height:0;overflow:hidden}
+  .a-row{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);
+    background:var(--card)}
+  .a-row:last-child{border-bottom:0}
+  .a-row:hover{background:var(--raised)}
+  .a-index{width:24px;flex:none;font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:10.5px;color:var(--fg3)}
+  .a-row:hover .a-index{color:var(--ink)}
+  .a-main{flex:1;min-width:0}
+  .a-name-line{display:flex;align-items:baseline;gap:8px;min-width:0}
+  .a-name{font-size:13px;font-weight:500;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none;max-width:70%}
+  .a-desc{font-size:11.5px;color:var(--fg3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+  .a-meta{margin-top:4px;display:flex;align-items:center;gap:6px;min-width:0;
+    font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:10.5px;line-height:15px;color:var(--fg3);font-variant-numeric:tabular-nums}
+  .a-chain{color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .a-sep{color:var(--border2);flex:none}
+  .a-steps-meta{flex:none}
+  .a-date{flex:none}
+
+  .a-actions{display:flex;align-items:center;gap:2px;flex:none}
+  .a-apply{order:2;height:28px;padding:0 9px;border-radius:6px;border:1px solid transparent;background:transparent;
+    font-size:11.5px;color:var(--fg2);font-family:inherit;cursor:pointer}
+  .a-row:hover .a-apply{color:var(--ink);border-color:var(--border2);background:var(--card)}
+  .a-icon{width:28px;height:28px;border-radius:6px;border:0;background:transparent;display:grid;place-items:center;
+    color:var(--fg3);opacity:0;cursor:pointer;transition:opacity .12s ease,color .12s ease}
+  .a-icon svg{width:13px;height:13px}
+  .a-row:hover .a-icon,.a-row.show-actions .a-icon{opacity:1}
+  .a-icon:hover{background:var(--raised);color:var(--fg)}
+  .a-icon.danger:hover{color:var(--danger)}
+
+  /* 重命名状态 */
+  .a-row.renaming{padding:12px 20px;align-items:flex-start}
+  .a-rename{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+  .a-rename .a-input{height:28px}
+  .a-rename-actions{display:flex;align-items:center;gap:4px;flex:none;padding-top:16px}
+  .a-text-btn{height:26px;padding:0 8px;border-radius:6px;border:0;background:transparent;
+    font-size:11.5px;font-family:inherit;cursor:pointer;color:var(--fg2)}
+  .a-text-btn:hover{background:var(--raised)}
+  .a-text-btn.accent{color:var(--ink);font-weight:500}
+
+  /* 空状态 */
+  .a-empty{padding:32px 20px 36px;text-align:center}
+  .a-empty-title{font-size:13px;font-weight:500;color:var(--fg);margin:0 0 4px}
+  .a-empty-hint{margin:0;font-size:11.5px;color:var(--fg3)}
+
+  /* ── 变更点 ─────────────────────────────── */
+  .changes{width:1000px;max-width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;
+    font-size:12px;color:#3a3730;line-height:18px}
+  .changes div{display:flex;gap:8px}
+  .changes .n{flex:none;width:18px;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    font-size:10.5px;color:#8a8378;padding-top:3px}
+</style>
+</head>
+<body>
+<main class="stage">
+  <div class="plabel">
+    <span class="tag">原型 035</span>
+    <h1>模板弹窗（PipelineTemplateDialog）</h1>
+    <p>把“保存表单 + 模板卡片列表”改成一份可读的模板台账：一条管道一行，命令链、步骤数和更新时间在同一行上对齐</p>
+  </div>
+
+  <div class="summary">
+    <span class="k">产品</span>
+    <span class="v">EasyCsv 是本地 CSV 管道工作台：用户把命令串成步骤，模板是可重放的一条管道</span>
+    <span class="k">性格</span>
+    <span class="v"><b>沉静、精确、顺手</b>——一个每天打开、不需要解释的工具面板，不是营销页</span>
+    <span class="k">世界</span>
+    <span class="v">工作台与纸本台账：暖中性纸面、墨色文字，沿用现有墨蓝品牌色作为唯一强调</span>
+    <span class="k">时刻</span>
+    <span class="v">模板行本身：等宽字体的 <b>命令链 + 步骤数 + 更新时间</b>，像一条可读的工作记录，是弹窗里唯一“有信息密度”的地方</span>
+    <span class="k">签名</span>
+    <span class="v">行首的等宽序号（01 / 02 / 03），悬停时转为墨蓝；全弹窗只在一处使用强调色</span>
+  </div>
+
+  <!-- ══════════ 改造前 ══════════ -->
+  <div class="plabel">
+    <span class="state before">改造前</span>
+    <h1>现状</h1>
+    <p>保存区、搜索、卡片列表、底部栏四段并列；每行 4 个操作；列表固定高度 256px</p>
+  </div>
+  <div class="shell light">
+    <div class="topbar"><span class="brand">EasyCsv</span><span>文件</span><span>编辑</span><span>视图</span><span>运行</span><span class="sp"></span><span>销售明细 2026-11</span></div>
+    <div class="canvas">
+      <div class="ghost-node"></div><div class="ghost-node two"></div>
+      <div class="overlay">
+        <div class="b-dialog">
+          <div class="b-sec">
+            <p class="b-title">模板</p>
+            <div class="b-fields">
+              <input class="b-input name" value="销售明细 2026-11" />
+              <button class="b-btn">保存</button>
+            </div>
+            <input class="b-input full" placeholder="可选描述" />
+          </div>
+          <div class="b-sec">
+            <div class="b-search">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input placeholder="搜索模板" />
+            </div>
+          </div>
+          <div class="b-list">
+            <p class="b-group">我的模板</p>
+            <div class="b-row">
+              <div class="b-row-main"><div class="b-name">每日对账</div><div class="b-desc">合并销售明细与渠道表，去重后按月汇总</div></div>
+              <div class="b-actions">
+                <button class="b-apply">套用</button>
+                <button class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                <button class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+              </div>
+            </div>
+            <div class="b-row">
+              <div class="b-row-main"><div class="b-name">清洗导出</div><div class="b-desc">去空行、统一编码，再按 10 万行拆分</div></div>
+              <div class="b-actions">
+                <button class="b-apply">套用</button>
+                <button class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                <button class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+              </div>
+            </div>
+            <div class="b-row">
+              <div class="b-row-main"><div class="b-name">客户名单核对</div></div>
+              <div class="b-actions">
+                <button class="b-apply">套用</button>
+                <button class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                <button class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <div class="b-footer">
+            <button class="b-btn">导入</button>
+            <button class="b-btn">关闭</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="caption"><b>审计：</b>标题与保存表单同处一段；“我的模板”全大写宽字距标签；行内 4 个操作常驻；列表固定 256px，少模板时留白、多模板时截断；主按钮“保存”用的是次要样式；底部“关闭”与无关闭按钮的头部重复。</p>
+
+  <!-- ══════════ 改造后 ══════════ -->
+  <div class="plabel">
+    <span class="state after">改造后</span>
+    <h1>模板台账</h1>
+    <p>标题 + 数量 + 居中搜索 + 关闭；保存区带步骤数提示；导入并入保存区；列表按记录行对齐，指针悬停才出现次要操作</p>
+  </div>
+  <div class="shell light">
+    <div class="topbar"><span class="brand">EasyCsv</span><span>文件</span><span>编辑</span><span>视图</span><span>运行</span><span class="sp"></span><span>销售明细 2026-11</span></div>
+    <div class="canvas">
+      <div class="ghost-node"></div><div class="ghost-node two"></div>
+      <div class="overlay">
+        <div class="a-dialog">
+          <div class="a-head">
+            <div class="a-head-left">
+              <span class="a-title">模板</span>
+              <span class="a-count mono">4 个</span>
+            </div>
+            <div class="a-head-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input class="a-input" placeholder="搜索模板" />
+            </div>
+            <button class="a-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+          </div>
+
+          <div class="a-save">
+            <div class="a-save-head">
+              <span class="a-label">另存为模板</span>
+              <span class="a-steps mono">当前管道 5 步</span>
+              <span class="a-grow"></span>
+              <button class="a-import">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+                导入
+              </button>
+            </div>
+            <div class="a-fields">
+              <div class="a-field"><input class="a-input" value="销售明细 2026-11" /></div>
+              <div class="a-field desc"><input class="a-input" placeholder="可选描述" /></div>
+              <button class="a-primary">保存</button>
+            </div>
+          </div>
+
+          <div class="a-list">
+            <div class="a-row">
+              <span class="a-index mono">01</span>
+              <div class="a-main">
+                <div class="a-name-line"><span class="a-name">每日对账</span><span class="a-desc">合并销售明细与渠道表，去重后按月汇总</span></div>
+                <div class="a-meta"><span class="a-chain">filter → sort → dedup → aggregate</span><span class="a-sep">·</span><span class="a-steps-meta">5 步</span><span class="a-sep">·</span><span class="a-date">11-05</span></div>
+              </div>
+              <div class="a-actions">
+                <button class="a-apply">套用</button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                <button class="a-icon danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+              </div>
+            </div>
+            <div class="a-row">
+              <span class="a-index mono">02</span>
+              <div class="a-main">
+                <div class="a-name-line"><span class="a-name">清洗导出</span><span class="a-desc">去空行、统一编码，再按 10 万行拆分</span></div>
+                <div class="a-meta"><span class="a-chain">clean → encoding → split</span><span class="a-sep">·</span><span class="a-steps-meta">4 步</span><span class="a-sep">·</span><span class="a-date">10-28</span></div>
+              </div>
+              <div class="a-actions">
+                <button class="a-apply">套用</button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                <button class="a-icon danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+              </div>
+            </div>
+            <div class="a-row">
+              <span class="a-index mono">03</span>
+              <div class="a-main">
+                <div class="a-name-line"><span class="a-name">客户名单核对</span></div>
+                <div class="a-meta"><span class="a-chain">join → diff</span><span class="a-sep">·</span><span class="a-steps-meta">2 步</span><span class="a-sep">·</span><span class="a-date">10-21</span></div>
+              </div>
+              <div class="a-actions">
+                <button class="a-apply">套用</button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                <button class="a-icon danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+              </div>
+            </div>
+            <div class="a-row">
+              <span class="a-index mono">04</span>
+              <div class="a-main">
+                <div class="a-name-line"><span class="a-name">季度报表明细</span><span class="a-desc">从原始导出中筛出本季度订单</span></div>
+                <div class="a-meta"><span class="a-chain">filter → select → sort</span><span class="a-sep">·</span><span class="a-steps-meta">3 步</span><span class="a-sep">·</span><span class="a-date">09-30</span></div>
+              </div>
+              <div class="a-actions">
+                <button class="a-apply">套用</button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                <button class="a-icon danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="caption"><b>改造后：</b>搜索移入标题栏正中（宽 280，模板为 0 时隐藏），列表直接从保存区下方开始；一条模板 = 两行固定结构（名称 + 命令链/步骤数/日期），行高一致；行间只有发丝线，不再套卡片；次要操作留位、悬停显现，“套用”悬停转为墨蓝。</p>
+
+  <!-- ══════════ 交互状态 ══════════ -->
+  <div class="plabel">
+    <span class="state after">状态</span>
+    <h1>悬停 / 重命名 / 无目标</h1>
+    <p>重命名在行内展开，动作改为“保存 / 取消”；保存区不可用时给出原因，而不是把输入框变灰</p>
+  </div>
+  <div class="shell light">
+    <div class="topbar"><span class="brand">EasyCsv</span><span>文件</span><span>编辑</span><span>视图</span><span>运行</span><span class="sp"></span><span>销售明细 2026-11</span></div>
+    <div class="canvas">
+      <div class="ghost-node"></div><div class="ghost-node two"></div>
+      <div class="overlay">
+        <div class="a-dialog">
+          <div class="a-head">
+            <div class="a-head-left">
+              <span class="a-title">模板</span>
+              <span class="a-count mono">3 个</span>
+            </div>
+            <div class="a-head-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input class="a-input" placeholder="搜索模板" />
+            </div>
+            <button class="a-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+          </div>
+          <div class="a-save">
+            <div class="a-save-head">
+              <span class="a-label">另存为模板</span>
+              <span class="a-steps mono">当前管道为空</span>
+              <span class="a-grow"></span>
+              <button class="a-import"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>导入</button>
+            </div>
+            <div class="a-fields">
+              <div class="a-field"><input class="a-input" placeholder="模板名称" disabled /></div>
+              <div class="a-field desc"><input class="a-input" placeholder="可选描述" disabled /></div>
+              <button class="a-primary" disabled>保存</button>
+            </div>
+            <p class="a-hint">先在画布上添加至少一个步骤，再保存为模板</p>
+          </div>
+          <div class="a-list">
+            <div class="a-row show-actions">
+              <span class="a-index mono">01</span>
+              <div class="a-main">
+                <div class="a-name-line"><span class="a-name">每日对账</span><span class="a-desc">合并销售明细与渠道表，去重后按月汇总</span></div>
+                <div class="a-meta"><span class="a-chain">filter → sort → dedup → aggregate</span><span class="a-sep">·</span><span class="a-steps-meta">5 步</span><span class="a-sep">·</span><span class="a-date">11-05</span></div>
+              </div>
+              <div class="a-actions">
+                <button class="a-apply">套用</button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                <button class="a-icon danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+              </div>
+            </div>
+
+            <div class="a-row renaming">
+              <span class="a-index mono">02</span>
+              <div class="a-rename">
+                <input class="a-input" value="客户名单核对" />
+                <input class="a-input" value="对比昨日名单，输出差异行" />
+              </div>
+              <div class="a-rename-actions">
+                <button class="a-text-btn accent">保存</button>
+                <button class="a-text-btn">取消</button>
+              </div>
+            </div>
+
+            <div class="a-row">
+              <span class="a-index mono">03</span>
+              <div class="a-main">
+                <div class="a-name-line"><span class="a-name">季度报表明细</span><span class="a-desc">从原始导出中筛出本季度订单</span></div>
+                <div class="a-meta"><span class="a-chain">filter → select → sort</span><span class="a-sep">·</span><span class="a-steps-meta">3 步</span><span class="a-sep">·</span><span class="a-date">09-30</span></div>
+              </div>
+              <div class="a-actions">
+                <button class="a-apply">套用</button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                <button class="a-icon danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ 空状态 ══════════ -->
+  <div class="shell light" style="height:420px">
+    <div class="topbar"><span class="brand">EasyCsv</span><span>文件</span><span>编辑</span><span>视图</span><span>运行</span><span class="sp"></span></div>
+    <div class="canvas">
+      <div class="ghost-node"></div><div class="ghost-node two"></div>
+      <div class="overlay">
+        <div class="a-dialog">
+          <div class="a-head">
+            <span class="a-title">模板</span>
+            <span class="a-count mono">0 个</span>
+            <button class="a-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+          </div>
+          <div class="a-save" style="border-bottom:0">
+            <div class="a-save-head">
+              <span class="a-label">另存为模板</span>
+              <span class="a-steps mono">当前管道 5 步</span>
+              <span class="a-grow"></span>
+              <button class="a-import"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>导入</button>
+            </div>
+            <div class="a-fields">
+              <div class="a-field"><input class="a-input" value="销售明细 2026-11" /></div>
+              <div class="a-field desc"><input class="a-input" placeholder="可选描述" /></div>
+              <button class="a-primary">保存</button>
+            </div>
+          </div>
+          <div class="a-empty" style="border-top:1px solid var(--border)">
+            <p class="a-empty-title">还没有模板</p>
+            <p class="a-empty-hint">保存后，这条管道会出现在这里，之后可一键套用</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="caption"><b>空状态：</b>不放插画、不放推广卡片，只说明下一步；搜索栏在无模板时隐藏，导入留在保存区。</p>
+
+  <!-- ══════════ 暗色 ══════════ -->
+  <div class="plabel">
+    <span class="state after">主题</span>
+    <h1>暗色</h1>
+    <p>层级来自表面台阶与发丝线；主按钮改用浅色填充 + 深色文字，强调色只落在行序号与“套用”悬停态</p>
+  </div>
+  <div class="shell dark">
+    <div class="topbar"><span class="brand">EasyCsv</span><span>文件</span><span>编辑</span><span>视图</span><span>运行</span><span class="sp"></span><span>销售明细 2026-11</span></div>
+    <div class="canvas">
+      <div class="ghost-node"></div><div class="ghost-node two"></div>
+      <div class="overlay">
+        <div class="a-dialog">
+          <div class="a-head">
+            <div class="a-head-left">
+              <span class="a-title">模板</span>
+              <span class="a-count mono">4 个</span>
+            </div>
+            <div class="a-head-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input class="a-input" placeholder="搜索模板" />
+            </div>
+            <button class="a-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+          </div>
+          <div class="a-save">
+            <div class="a-save-head">
+              <span class="a-label">另存为模板</span>
+              <span class="a-steps mono">当前管道 5 步</span>
+              <span class="a-grow"></span>
+              <button class="a-import"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>导入</button>
+            </div>
+            <div class="a-fields">
+              <div class="a-field"><input class="a-input" value="销售明细 2026-11" /></div>
+              <div class="a-field desc"><input class="a-input" placeholder="可选描述" /></div>
+              <button class="a-primary">保存</button>
+            </div>
+          </div>
+          <div class="a-list">
+            <div class="a-row show-actions">
+              <span class="a-index mono">01</span>
+              <div class="a-main">
+                <div class="a-name-line"><span class="a-name">每日对账</span><span class="a-desc">合并销售明细与渠道表，去重后按月汇总</span></div>
+                <div class="a-meta"><span class="a-chain">filter → sort → dedup → aggregate</span><span class="a-sep">·</span><span class="a-steps-meta">5 步</span><span class="a-sep">·</span><span class="a-date">11-05</span></div>
+              </div>
+              <div class="a-actions">
+                <button class="a-apply">套用</button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                <button class="a-icon danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+              </div>
+            </div>
+            <div class="a-row">
+              <span class="a-index mono">02</span>
+              <div class="a-main">
+                <div class="a-name-line"><span class="a-name">清洗导出</span><span class="a-desc">去空行、统一编码，再按 10 万行拆分</span></div>
+                <div class="a-meta"><span class="a-chain">clean → encoding → split</span><span class="a-sep">·</span><span class="a-steps-meta">4 步</span><span class="a-sep">·</span><span class="a-date">10-28</span></div>
+              </div>
+              <div class="a-actions">
+                <button class="a-apply">套用</button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                <button class="a-icon danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+              </div>
+            </div>
+            <div class="a-row">
+              <span class="a-index mono">03</span>
+              <div class="a-main">
+                <div class="a-name-line"><span class="a-name">客户名单核对</span></div>
+                <div class="a-meta"><span class="a-chain">join → diff</span><span class="a-sep">·</span><span class="a-steps-meta">2 步</span><span class="a-sep">·</span><span class="a-date">10-21</span></div>
+              </div>
+              <div class="a-actions">
+                <button class="a-apply">套用</button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                <button class="a-icon danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+              </div>
+            </div>
+            <div class="a-row">
+              <span class="a-index mono">04</span>
+              <div class="a-main">
+                <div class="a-name-line"><span class="a-name">季度报表明细</span><span class="a-desc">从原始导出中筛出本季度订单</span></div>
+                <div class="a-meta"><span class="a-chain">filter → select → sort</span><span class="a-sep">·</span><span class="a-steps-meta">3 步</span><span class="a-sep">·</span><span class="a-date">09-30</span></div>
+              </div>
+              <div class="a-actions">
+                <button class="a-apply">套用</button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                <button class="a-icon danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="plabel" style="margin-top:14px"><h1>变更点</h1></div>
+  <div class="changes">
+    <div><span class="n">01</span><span>头部只留标题、数量与关闭，去掉底部重复的“关闭”</span></div>
+    <div><span class="n">02</span><span>保存区成组：标题 + 当前管道步骤数 + 名称/描述/保存一行</span></div>
+    <div><span class="n">03</span><span>“导入”移入保存区，和“另存”放在同一组里</span></div>
+    <div><span class="n">04</span><span>去掉“我的模板”全大写宽字距标签，单组不需要组头</span></div>
+    <div><span class="n">05</span><span>行改为台账记录：序号、名称、描述、命令链、步骤数、更新日期</span></div>
+    <div><span class="n">06</span><span>次要操作（重命名/导出/删除）留位、悬停显现，删除悬停转红</span></div>
+    <div><span class="n">07</span><span>“保存”恢复主按钮层级；不可用时给原因文案，不只把输入框变灰</span></div>
+    <div><span class="n">08</span><span>搜索移入标题栏正中（固定宽 280，无模板时隐藏），列表从保存区下方开始并自适应高度</span></div>
+    <div><span class="n">09</span><span>重命名在行内展开，动作为“保存 / 取消”文字按钮</span></div>
+    <div><span class="n">10</span><span>外层 12px、内层 6px 圆角；间距统一到 4px 网格</span></div>
+  </div>
+</main>
+</body>
+</html>

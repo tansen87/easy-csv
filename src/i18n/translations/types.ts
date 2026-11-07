@@ -959,6 +959,11 @@ export interface Translations {
   templateNameRequired: string;
   templateImportFailed: string;
   paletteTemplates: string;
+  templateSaveAsTitle: string;
+  templateStepCount: string;
+  templateStepCountShort: string;
+  templateCountUnit: string;
+  templateEmptyTitle: string;
 
   // First-run onboarding
   onboardingStartTitle: string;

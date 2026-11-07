@@ -2155,6 +2155,7 @@ function AppContent() {
             onClose={() => dialogs.close("templates")}
             templates={templateStore.templates}
             canSave={currentPipelineLength > 0}
+            currentStepCount={currentPipelineLength}
             defaultName={tabsHook.getCurrentTab()?.name || "Pipeline"}
             onSave={(name, description) =>
               void handleUseOrSaveTemplate(name, description)
