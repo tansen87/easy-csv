@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>CSV 对比 · UI 原型</title>
+<style>
+  :root {
+    --brand: oklch(0.42 0.055 250);
+    --brand-hover: oklch(0.375 0.055 250);
+    --brand-soft: color-mix(in oklab, var(--brand) 9%, transparent);
+    --brand-border: color-mix(in oklab, var(--brand) 38%, transparent);
+
+    --card: oklch(0.997 0.002 85);
+    --paper: oklch(0.983 0.005 84);
+    --canvas: oklch(0.958 0.007 82);
+    --sheet: oklch(0.928 0.008 82);
+
+    --ink: oklch(0.255 0.012 80);
+    --ink2: oklch(0.455 0.012 80);
+    --ink3: oklch(0.545 0.012 80);
+
+    --line: oklch(0.34 0.012 80 / 9%);
+    --line2: oklch(0.34 0.012 80 / 20%);
+
+    --ok: oklch(0.500 0.090 150);
+    --warn: oklch(0.550 0.100 72);
+    --bad: oklch(0.530 0.140 27);
+
+    --sans: Inter, "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: "JetBrains Mono", "Cascadia Mono", Consolas, "SFMono-Regular", monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--sheet);
+    -webkit-font-smoothing: antialiased;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* ---------- design sheet ---------- */
+  #sheet { padding: 40px 0 64px; width: 1440px; margin: 0 auto; }
+  .frame { width: 1440px; }
+  .frame + .frame { margin-top: 56px; }
+  .cap {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+    color: var(--ink3);
+    padding: 0 0 10px 120px;
+  }
+
+  /* ---------- stage: app behind the dialog ---------- */
+  .stage {
+    position: relative;
+    width: 1440px;
+    overflow: hidden;
+    background: var(--canvas);
+  }
+  .stage-results { height: 900px; }
+  .stage-empty { height: 700px; }
+
+  .appbar {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 0 20px;
+    background: oklch(0.988 0.004 84);
+    border-bottom: 1px solid var(--line);
+  }
+  .appname { font-size: 12px; font-weight: 500; letter-spacing: 0.01em; }
+  .appmenus { display: flex; gap: 18px; margin-left: 8px; }
+  .appmenus span { font-size: 11.5px; color: var(--ink3); }
+  .appmenus span.on { color: var(--ink); }
+  .appbody {
+    position: absolute;
+    inset: 44px 0 0 0;
+    background-image: radial-gradient(oklch(0.34 0.012 80 / 7%) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: 12px 12px;
+  }
+
+  .scrim {
+    position: absolute;
+    inset: 0;
+    background: oklch(0.22 0.012 80 / 22%);
+  }
+
+  /* ---------- dialog ---------- */
+  .modal {
+    position: absolute;
+    left: 120px;
+    top: 30px;
+    width: 1200px;
+    height: 840px;
+    display: flex;
+    flex-direction: column;
+    background: var(--card);
+    border: 1px solid var(--line2);
+    border-radius: 10px;
+    box-shadow: 0 18px 44px oklch(0.25 0.02 80 / 13%), 0 1px 2px oklch(0.25 0.02 80 / 6%);
+    overflow: hidden;
+  }
+  .modal.short { top: 40px; height: 620px; }
+
+  /* header */
+  .mhead {
+    height: 52px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .mtitle { font-size: 13px; font-weight: 500; }
+  .mmeta {
+    font-size: 11px;
+    color: var(--ink3);
+    margin-left: 10px;
+    padding-left: 10px;
+    border-left: 1px solid var(--line2);
+    line-height: 1;
+  }
+  .close {
+    margin-left: auto;
+    width: 28px; height: 28px;
+    display: grid; place-items: center;
+    border: 0; background: none; border-radius: 6px;
+    color: var(--ink3); cursor: pointer;
+  }
+  .close:hover { background: var(--paper); color: var(--ink); }
+  .close svg { width: 14px; height: 14px; }
+
+  /* config band */
+  .config {
+    flex: none;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .files { display: flex; gap: 10px; }
+  .filecard {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    background: oklch(1 0 0);
+    border: 1px solid var(--line2);
+    border-radius: 8px;
+  }
+  .side {
+    flex: none;
+    width: 18px; height: 18px;
+    display: grid; place-items: center;
+    border: 1px solid var(--line2);
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink2);
+  }
+  .finfo { min-width: 0; flex: 1 1 auto; }
+  .fname {
+    font-size: 12px; font-weight: 500; line-height: 16px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .fpath {
+    font-family: var(--mono);
+    font-size: 10px;
+    line-height: 14px;
+    color: var(--ink3);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .rechoose {
+    flex: none;
+    border: 0; background: none; padding: 4px 2px;
+    font-size: 11px; color: var(--ink3); cursor: pointer;
+  }
+  .rechoose:hover { color: var(--brand); }
+
+  .options {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .olabel { flex: none; font-size: 11px; color: var(--ink3); }
+  .select {
+    flex: none;
+    width: 104px; height: 30px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding: 0 9px 0 10px;
+    background: oklch(1 0 0);
+    border: 1px solid var(--line2);
+    border-radius: 7px;
+    font-size: 11.5px; color: var(--ink);
+    cursor: pointer;
+  }
+  .select svg { width: 12px; height: 12px; color: var(--ink3); }
+  .vrule { flex: none; width: 1px; height: 18px; background: var(--line2); margin: 0 4px; }
+
+  .chips {
+    display: flex; gap: 6px; align-items: center;
+    min-width: 0;
+  }
+  .chip {
+    flex: none;
+    height: 24px; padding: 0 8px;
+    display: inline-flex; align-items: center; gap: 5px;
+    border: 1px solid var(--line2);
+    border-radius: 6px;
+    background: transparent;
+    font-size: 11px; color: var(--ink2);
+    white-space: nowrap; cursor: pointer;
+  }
+  .chip:hover { background: var(--paper); }
+  .chip.on {
+    border-color: var(--brand-border);
+    background: var(--brand-soft);
+    color: var(--brand);
+  }
+  .chip .x { font-size: 10px; opacity: 0.75; }
+
+  .spacer { flex: 1 1 auto; }
+  .btn {
+    flex: none;
+    height: 30px; padding: 0 12px;
+    border-radius: 7px;
+    font-family: inherit; font-size: 12px; font-weight: 500;
+    cursor: pointer;
+  }
+  .btn-primary {
+    border: 1px solid var(--brand);
+    background: var(--brand); color: #fff;
+  }
+  .btn-primary:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
+
+  /* result toolbar */
+  .resultbar {
+    flex: none;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .stat { display: inline-flex; align-items: baseline; gap: 5px; font-size: 11px; color: var(--ink3); }
+  .stat .mk { font-family: var(--mono); font-size: 12px; }
+  .stat b {
+    font-family: var(--mono); font-size: 11px; font-weight: 500;
+    font-variant-numeric: tabular-nums; color: var(--ink);
+  }
+  .mk.ok { color: var(--ok); }
+  .mk.bad { color: var(--bad); }
+  .mk.warn { color: var(--warn); }
+  .mk.same { color: var(--ink3); }
+
+  .pager { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+  .pager .unchanged-hint { margin-right: 10px; }
+  .range {
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink3); margin-right: 6px;
+  }
+  .pgbtn {
+    width: 26px; height: 26px;
+    display: grid; place-items: center;
+    border: 0; border-radius: 6px; background: none;
+    color: var(--ink3); cursor: pointer;
+  }
+  .pgbtn:hover { background: var(--paper); color: var(--ink); }
+  .pgbtn:disabled { color: var(--line2); cursor: default; background: none; }
+  .pgbtn svg { width: 14px; height: 14px; }
+
+  /* table */
+  .tablewrap { flex: 1 1 auto; min-height: 0; overflow: auto; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  col.gutter { width: 64px; }
+
+  thead th {
+    position: sticky; top: 0; z-index: 2;
+    height: 34px;
+    background: var(--card);
+    border-bottom: 1px solid var(--line2);
+    font-size: 11px; font-weight: 500; color: var(--ink2);
+    text-align: left;
+    padding: 0 12px;
+  }
+  thead th.gutter {
+    background: var(--paper);
+    border-right: 1px solid var(--line2);
+    text-align: right;
+    padding-right: 8px;
+    font-family: var(--mono);
+    font-size: 9.5px; font-weight: 400;
+    color: var(--ink3);
+  }
+  thead th.num { text-align: right; padding-right: 16px; }
+
+  tbody td {
+    padding: 0 12px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink);
+    vertical-align: middle;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  tbody td.num { text-align: right; padding-right: 16px; font-variant-numeric: tabular-nums; }
+  tbody td.gutter {
+    background: var(--paper);
+    border-right: 1px solid var(--line2);
+    padding: 0 8px;
+  }
+
+  .gut { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+  .gut .mk { width: 12px; text-align: center; font-family: var(--mono); font-size: 12px; }
+  .lns { display: flex; flex-direction: column; gap: 1px; }
+  .ln {
+    font-family: var(--mono); font-size: 10px; line-height: 12px;
+    color: var(--ink3); text-align: right; font-variant-numeric: tabular-nums;
+  }
+
+  /* rows */
+  tr.ok td { height: 34px; }
+  tr.bad td { height: 34px; color: var(--ink2); }
+  tr.mod td { height: 50px; }
+  tr.eq td:not(.gutter) { height: 30px; background: oklch(0.983 0.005 84 / 55%); }
+  tr.eq td.gutter { height: 30px; }
+
+  .eqbody { display: flex; align-items: baseline; gap: 10px; }
+  .eqbody .cnt { font-size: 11px; color: var(--ink3); }
+  .eqbody .rng {
+    margin-left: auto;
+    font-family: var(--mono); font-size: 10px; color: var(--ink3);
+  }
+
+  td.changed {
+    background: oklch(0.550 0.100 72 / 4.5%);
+    box-shadow: inset 2px 0 0 0 var(--warn);
+  }
+  .oldv {
+    display: block;
+    font-size: 11px; line-height: 15px; color: var(--ink3);
+    font-variant-numeric: tabular-nums;
+  }
+  .newv {
+    display: block;
+    font-size: 12px; line-height: 16px; color: var(--ink); font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .dot { color: var(--ink3); opacity: 0.62; font-size: 11px; display: block; text-align: center; }
+  .keyv { color: var(--ink2); }
+  .unchanged-hint {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; color: var(--ink3);
+  }
+  .unchanged-hint .mk { font-family: var(--mono); font-size: 11px; }
+
+  /* empty state */
+  .empty {
+    flex: 1 1 auto;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 18px;
+    padding-bottom: 24px;
+  }
+  .glyph {
+    width: 560px;
+    padding: 12px 16px 14px;
+    background: oklch(1 0 0);
+    border: 1px solid var(--line2);
+    border-radius: 8px;
+  }
+  .ghead {
+    display: flex; align-items: center; gap: 14px;
+    padding-bottom: 8px;
+    margin-bottom: 2px;
+    border-bottom: 1px solid var(--line2);
+    font-family: var(--mono); font-size: 9.5px; color: var(--ink3);
+  }
+  .ghead .ga, .ghead .gb { flex: 1 1 0; }
+  .ghead .gb { text-align: right; }
+  .ghead .gm { flex: none; width: 16px; }
+
+  .gl {
+    display: flex; align-items: center; gap: 14px;
+    height: 30px;
+  }
+  .gl + .gl { border-top: 1px solid var(--line); }
+  .gv {
+    flex: 1 1 0; min-width: 0;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--ink3);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .gv.b { text-align: right; }
+  .gv.empty { color: transparent; }
+  .ggut {
+    flex: none; width: 16px; text-align: center;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--ink3);
+  }
+  .ggut.ok { color: var(--ok); }
+  .ggut.bad { color: var(--bad); }
+  .ggut.warn { color: var(--warn); }
+  .gv.chg {
+    color: var(--ink);
+    box-shadow: inset 0 -1px 0 oklch(0.550 0.100 72 / 55%);
+  }
+  .etext { text-align: center; max-width: 540px; }
+  .etitle { font-size: 14px; font-weight: 500; margin: 0 0 6px; }
+  .ebody { font-size: 12.5px; line-height: 20px; color: var(--ink2); margin: 0; }
+
+  /* single-frame views used for screenshots */
+  body[data-view="results"] #sheet,
+  body[data-view="empty"] #sheet { padding: 0; }
+  body[data-view="results"] .frame,
+  body[data-view="empty"] .frame { margin: 0; }
+  body[data-view="results"] .cap,
+  body[data-view="empty"] .cap { display: none; }
+  body[data-view="results"] .stage-empty { display: none; }
+  body[data-view="empty"] .stage-results { display: none; }
+</style>
+</head>
+<body>
+<main id="sheet">
+
+  <!-- ============ 01 results ============ -->
+  <section class="frame">
+    <div class="cap">01 · 对比结果</div>
+    <div class="stage stage-results">
+      <div class="appbar">
+        <span class="appname">EasyCsv</span>
+        <div class="appmenus">
+          <span>文件</span><span>编辑</span><span>视图</span><span class="on">工具</span><span>帮助</span>
+        </div>
+      </div>
+      <div class="appbody"></div>
+      <div class="scrim"></div>
+
+      <div class="modal">
+        <div class="mhead">
+          <span class="mtitle">CSV 对比</span>
+          <span class="mmeta">逐行对照 · 按关键列匹配</span>
+          <button class="close" aria-label="关闭">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <div class="config">
+          <div class="files">
+            <div class="filecard">
+              <span class="side">A</span>
+              <div class="finfo">
+                <div class="fname">orders_2026-10.csv</div>
+                <div class="fpath">/data/exports/orders_2026-10.csv · 4,286 行 · 8 列</div>
+              </div>
+              <button class="rechoose">更换</button>
+            </div>
+            <div class="filecard">
+              <span class="side">B</span>
+              <div class="finfo">
+                <div class="fname">orders_2026-10_edited.csv</div>
+                <div class="fpath">/data/exports/orders_2026-10_edited.csv · 4,312 行 · 8 列</div>
+              </div>
+              <button class="rechoose">更换</button>
+            </div>
+          </div>
+
+          <div class="options">
+            <span class="olabel">分隔符</span>
+            <div class="select">
+              <span>逗号 ( , )</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+            <div class="vrule"></div>
+            <span class="olabel">关键列</span>
+            <div class="chips">
+              <button class="chip on">order_id <span class="x">×</span></button>
+              <button class="chip on">date <span class="x">×</span></button>
+              <button class="chip">customer</button>
+              <button class="chip">region</button>
+              <button class="chip">channel</button>
+              <button class="chip">amount</button>
+              <button class="chip">status</button>
+              <button class="chip">note</button>
+            </div>
+            <div class="spacer"></div>
+            <button class="btn btn-primary">开始对比</button>
+          </div>
+        </div>
+
+        <div class="resultbar">
+          <span class="stat"><span class="mk ok">+</span>新增 <b>12</b></span>
+          <span class="stat"><span class="mk bad">−</span>删除 <b>3</b></span>
+          <span class="stat"><span class="mk warn">~</span>修改 <b>27</b></span>
+          <span class="stat"><span class="mk same">≈</span>相同 <b>4,244</b></span>
+          <div class="pager">
+            <span class="unchanged-hint"><span class="mk same">·</span>未变</span>
+            <span class="range">1–500 / 4,286</span>
+            <button class="pgbtn" disabled aria-label="上一页">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <button class="pgbtn" aria-label="下一页">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="tablewrap">
+          <table>
+            <colgroup>
+              <col class="gutter" /><col style="width:96px" /><col style="width:96px" />
+              <col style="width:156px" /><col style="width:76px" /><col style="width:76px" />
+              <col style="width:104px" /><col style="width:88px" /><col />
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="gutter">行</th>
+                <th>order_id</th>
+                <th>date</th>
+                <th>customer</th>
+                <th>region</th>
+                <th>channel</th>
+                <th class="num">amount</th>
+                <th>status</th>
+                <th>note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="eq">
+                <td class="gutter"><div class="gut"><span class="mk same">≈</span></div></td>
+                <td colspan="8">
+                  <div class="eqbody">
+                    <span class="cnt">14 行相同</span>
+                    <span class="rng">A 1–14 · B 1–14</span>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="ok">
+                <td class="gutter"><div class="gut"><span class="mk ok">+</span><div class="lns"><span class="ln">—</span><span class="ln">15</span></div></div></td>
+                <td>ORD-20915</td><td class="keyv">2026-10-02</td><td>苏州锐合电子</td>
+                <td>华东</td><td>分销</td><td class="num">3,860.00</td><td>待发货</td><td>加急</td>
+              </tr>
+
+              <tr class="eq">
+                <td class="gutter"><div class="gut"><span class="mk same">≈</span></div></td>
+                <td colspan="8">
+                  <div class="eqbody">
+                    <span class="cnt">14 行相同</span>
+                    <span class="rng">A 15–28 · B 16–29</span>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="mod">
+                <td class="gutter"><div class="gut"><span class="mk warn">~</span><div class="lns"><span class="ln">29</span><span class="ln">30</span></div></div></td>
+                <td class="keyv">ORD-20935</td>
+                <td class="keyv">2026-10-03</td>
+                <td><span class="dot">·</span></td>
+                <td><span class="dot">·</span></td>
+                <td class="changed"><span class="oldv">分销</span><span class="newv">直营</span></td>
+                <td class="num"><span class="dot">·</span></td>
+                <td class="changed"><span class="oldv">待发货</span><span class="newv">已发货</span></td>
+                <td><span class="dot">·</span></td>
+              </tr>
+
+              <tr class="eq">
+                <td class="gutter"><div class="gut"><span class="mk same">≈</span></div></td>
+                <td colspan="8">
+                  <div class="eqbody">
+                    <span class="cnt">18 行相同</span>
+                    <span class="rng">A 30–47 · B 31–48</span>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="bad">
+                <td class="gutter"><div class="gut"><span class="mk bad">−</span><div class="lns"><span class="ln">48</span><span class="ln">—</span></div></div></td>
+                <td>ORD-20952</td><td class="keyv">2026-10-04</td><td>广州老陈食品</td>
+                <td>华南</td><td>直营</td><td class="num">2,140.00</td><td>已发货</td><td>重复行</td>
+              </tr>
+
+              <tr class="mod">
+                <td class="gutter"><div class="gut"><span class="mk warn">~</span><div class="lns"><span class="ln">49</span><span class="ln">49</span></div></div></td>
+                <td class="keyv">ORD-20960</td>
+                <td class="keyv">2026-10-04</td>
+                <td><span class="dot">·</span></td>
+                <td><span class="dot">·</span></td>
+                <td><span class="dot">·</span></td>
+                <td class="num changed"><span class="oldv">6,420.00</span><span class="newv">6,180.00</span></td>
+                <td><span class="dot">·</span></td>
+                <td><span class="dot">·</span></td>
+              </tr>
+
+              <tr class="eq">
+                <td class="gutter"><div class="gut"><span class="mk same">≈</span></div></td>
+                <td colspan="8">
+                  <div class="eqbody">
+                    <span class="cnt">12 行相同</span>
+                    <span class="rng">A 50–61 · B 50–61</span>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="mod">
+                <td class="gutter"><div class="gut"><span class="mk warn">~</span><div class="lns"><span class="ln">62</span><span class="ln">63</span></div></div></td>
+                <td class="keyv">ORD-20974</td>
+                <td class="keyv">2026-10-05</td>
+                <td><span class="dot">·</span></td>
+                <td><span class="dot">·</span></td>
+                <td><span class="dot">·</span></td>
+                <td class="num"><span class="dot">·</span></td>
+                <td><span class="dot">·</span></td>
+                <td class="changed">
+                  <span class="oldv">客户要求周末送达</span>
+                  <span class="newv">客户改约周一送达</span>
+                </td>
+              </tr>
+
+              <tr class="ok">
+                <td class="gutter"><div class="gut"><span class="mk ok">+</span><div class="lns"><span class="ln">—</span><span class="ln">64</span></div></div></td>
+                <td>ORD-20998</td><td class="keyv">2026-10-05</td><td>合肥万象商贸</td>
+                <td>华东</td><td>分销</td><td class="num">5,240.00</td><td>待发货</td><td></td>
+              </tr>
+
+              <tr class="eq">
+                <td class="gutter"><div class="gut"><span class="mk same">≈</span></div></td>
+                <td colspan="8">
+                  <div class="eqbody">
+                    <span class="cnt">17 行相同</span>
+                    <span class="rng">A 63–88 · B 65–90</span>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="mod">
+                <td class="gutter"><div class="gut"><span class="mk warn">~</span><div class="lns"><span class="ln">89</span><span class="ln">92</span></div></div></td>
+                <td class="keyv">ORD-21012</td>
+                <td class="keyv">2026-10-07</td>
+                <td><span class="dot">·</span></td>
+                <td class="changed"><span class="oldv">华北</span><span class="newv">东北</span></td>
+                <td><span class="dot">·</span></td>
+                <td class="num"><span class="dot">·</span></td>
+                <td><span class="dot">·</span></td>
+                <td><span class="dot">·</span></td>
+              </tr>
+
+              <tr class="eq">
+                <td class="gutter"><div class="gut"><span class="mk same">≈</span></div></td>
+                <td colspan="8">
+                  <div class="eqbody">
+                    <span class="cnt">13 行相同</span>
+                    <span class="rng">A 90–102 · B 93–105</span>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="mod">
+                <td class="gutter"><div class="gut"><span class="mk warn">~</span><div class="lns"><span class="ln">103</span><span class="ln">106</span></div></div></td>
+                <td class="keyv">ORD-21030</td>
+                <td class="keyv">2026-10-08</td>
+                <td><span class="dot">·</span></td>
+                <td><span class="dot">·</span></td>
+                <td><span class="dot">·</span></td>
+                <td class="num"><span class="dot">·</span></td>
+                <td class="changed"><span class="oldv">已发货</span><span class="newv">已签收</span></td>
+                <td><span class="dot">·</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 02 empty ============ -->
+  <section class="frame">
+    <div class="cap">02 · 空状态</div>
+    <div class="stage stage-empty">
+      <div class="appbar">
+        <span class="appname">EasyCsv</span>
+        <div class="appmenus">
+          <span>文件</span><span>编辑</span><span>视图</span><span class="on">工具</span><span>帮助</span>
+        </div>
+      </div>
+      <div class="appbody"></div>
+      <div class="scrim"></div>
+
+      <div class="modal short">
+        <div class="mhead">
+          <span class="mtitle">CSV 对比</span>
+          <span class="mmeta">逐行对照 · 按关键列匹配</span>
+          <button class="close" aria-label="关闭">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <div class="config">
+          <div class="files">
+            <div class="filecard">
+              <span class="side">A</span>
+              <div class="finfo">
+                <div class="fname">orders_2026-10.csv</div>
+                <div class="fpath">/data/exports/orders_2026-10.csv · 4,286 行 · 8 列</div>
+              </div>
+              <button class="rechoose">更换</button>
+            </div>
+            <div class="filecard">
+              <span class="side">B</span>
+              <div class="finfo">
+                <div class="fname">orders_2026-10_edited.csv</div>
+                <div class="fpath">/data/exports/orders_2026-10_edited.csv · 4,312 行 · 8 列</div>
+              </div>
+              <button class="rechoose">更换</button>
+            </div>
+          </div>
+
+          <div class="options">
+            <span class="olabel">分隔符</span>
+            <div class="select">
+              <span>逗号 ( , )</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+            <div class="vrule"></div>
+            <span class="olabel">关键列</span>
+            <div class="chips">
+              <button class="chip on">order_id <span class="x">×</span></button>
+              <button class="chip on">date <span class="x">×</span></button>
+              <button class="chip">customer</button>
+              <button class="chip">region</button>
+              <button class="chip">channel</button>
+              <button class="chip">amount</button>
+              <button class="chip">status</button>
+              <button class="chip">note</button>
+            </div>
+            <div class="spacer"></div>
+            <button class="btn btn-primary">开始对比</button>
+          </div>
+        </div>
+
+        <div class="empty">
+          <div class="glyph">
+            <div class="ghead"><span class="ga">A</span><span class="gm"></span><span class="gb">B</span></div>
+            <div class="gl">
+              <span class="gv">ORD-20915 · 3,860.00</span>
+              <span class="ggut">≈</span>
+              <span class="gv b">ORD-20915 · 3,860.00</span>
+            </div>
+            <div class="gl">
+              <span class="gv">ORD-20935 · 分销</span>
+              <span class="ggut warn">~</span>
+              <span class="gv b chg">ORD-20935 · 直营</span>
+            </div>
+            <div class="gl">
+              <span class="gv empty">&nbsp;</span>
+              <span class="ggut ok">+</span>
+              <span class="gv b">ORD-20998 · 5,240.00</span>
+            </div>
+            <div class="gl">
+              <span class="gv">ORD-20952 · 2,140.00</span>
+              <span class="ggut bad">−</span>
+              <span class="gv b empty">&nbsp;</span>
+            </div>
+          </div>
+          <div class="etext">
+            <p class="etitle">尚未对比</p>
+            <p class="ebody">按关键列 <span class="mono">order_id</span>、<span class="mono">date</span> 匹配行，逐行列出新增、删除与修改</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+<script>
+  var view = new URLSearchParams(location.search).get("frame");
+  if (view === "results" || view === "empty") {
+    document.body.setAttribute("data-view", view);
+  }
+</script>
+</body>
+</html>

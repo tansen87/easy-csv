@@ -509,6 +509,13 @@ export interface Translations {
   comparing: string;
   csvDiffSelectBoth: string;
   csvDiffNoResult: string;
+  csvDiffEmptyTitle: string;
+  csvDiffEmptyBody: string;
+  csvDiffUnchanged: string;
+  csvDiffLegendAdded: string;
+  csvDiffLegendRemoved: string;
+  csvDiffLegendModified: string;
+  csvDiffLegendEqual: string;
   added: string;
   removed: string;
   equal: string;
