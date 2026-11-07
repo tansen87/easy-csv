@@ -95,7 +95,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | `docs/design/033_flow-panel-redesign.md` | 管道画布(FlowPanel)重新设计(**部分实现 2026-11-07**;unslop): 诊断坐标轴网格、渐变图标底、9px 参数胶囊、绿色选中环、隐藏的右键模式圆点、写死英文 `Input Data` / `5 rows x` / `3 steps`,以及布局常量与实际节点尺寸不一致导致的「首步贴边」。方案改为**账本纸面 + 索引号纸片**: 22px 点阵(React Flow `Background` 替代 `CoordinateGrid`)、输入表 520 宽(文件名 + 行号 + 横线表 + 页脚文件名/行×列)、步骤 264 宽(左侧 `01/02/03` 索引 + 11px 等宽参数行)、结果表固定 520 宽、墨蓝只用于选中索引线/结果数字/连线端点;新增 6 个画布专用 CSS 变量、11 个 i18n key、`numericColumnFlags` 数字列对齐、布局常量订正(264/288/64/24、首步 `table.x+520+64`、结果间距 452)。**已实施**: 画布搜索(360 宽 / 5×32 / ESC keycap)、多选浮条(34 高 / 搜索时隐藏)、右键模式条(左侧常驻 26px 竖条)、按键 HUD(20px keycap / `bottom-11 left-4`)、输入表页脚(去掉左上图标与右上「5 rows x」;左=文件名、右=`{rows} 行 × {cols} 列`;改名待保存时隐藏二者并在右侧显示「列名已修改 + 保存为 rename 步骤」;页脚与标题栏同为拖拽把手)、结果表(固定 520 × 400 / 截断 426;去掉左上图标;行数等宽;CSV/MD 纯文字;26px 琥珀截断条位于表头之上)、选中色改为墨蓝(输入表 + 步骤)、框选墨蓝、标签页墨蓝 + 单标签页关闭,见文末 §13。原型 `docs/design/prototypes/033/01-flow-panel.html`(改造前 / 改后亮色 / 改后暗色 / 状态细节) |
 
-> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–033 已登记。
+| `docs/design/034_theme-system.md` | 主题系统(**设计稿,未实现**): 把「外观(light/dark/system)」与「主题色」拆成两轴;默认 `data-accent="ink"` 墨蓝,后续 teal/clay/graphite 只覆盖 `--brand` 系 token。方案: `--primary`/`--ring`/`--canvas-ink`/`--empty-ink` 映射到 `--brand`(现有 137 处 primary 自动跟随);新增 `success/warning/info/danger` 语义 token,替换约 61 处绿、93 处琥珀、67 处蓝、53 处红;图表/语法/血缘保留独立调色板;`ThemeProvider` 增加 accent + `resolvedTheme` + 系统监听,设置页新增「主题色」行(墨蓝/青碧/赭石/石墨),localStorage 新增 `easy-csv-accent`。含现状审计、token 示例、文件级迁移清单、分阶段实施、4×2 视觉矩阵、风险与待拍板 |
+
+> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–034 已登记。
 
 ---
 

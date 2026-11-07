@@ -233,6 +233,54 @@ describe("settings dialog — whole-row activation (design 030 §4.2)", () => {
   });
 });
 
+describe("settings dialog — accent row (design 034)", () => {
+  it("renders the accent row with its four presets, ink selected", () => {
+    const { container } = renderDialog();
+    const row = container.querySelector(
+      '[data-settings-row="accent"]',
+    ) as HTMLElement;
+
+    const radios = Array.from(row.querySelectorAll('[role="radio"]'));
+    expect(radios.map((radio) => radio.textContent)).toEqual([
+      "Ink",
+      "Teal",
+      "Clay",
+      "Graphite",
+    ]);
+    expect(row.querySelector('[aria-checked="true"]')?.textContent).toBe("Ink");
+  });
+
+  it("writes the chosen accent and lands it on the document", () => {
+    renderDialog();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Teal" }));
+
+    expect(window.localStorage.getItem("easy-csv-accent")).toBe("teal");
+    expect(document.documentElement.dataset.accent).toBe("teal");
+  });
+
+  it("finds the accent row by its Chinese and English aliases", () => {
+    const { container } = renderDialog();
+
+    type("墨蓝");
+    expect(rowIds(container)).toEqual(["accent"]);
+
+    type("ink");
+    expect(rowIds(container)).toEqual(["accent"]);
+  });
+
+  it("resets appearance and accent to their defaults", () => {
+    renderDialog();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Teal" }));
+    fireEvent.click(screen.getByRole("button", { name: /Reset/i }));
+
+    expect(window.localStorage.getItem("easy-csv-accent")).toBe("ink");
+    expect(window.localStorage.getItem("vite-ui-theme")).toBe("system");
+    expect(document.documentElement.dataset.accent).toBe("ink");
+  });
+});
+
 describe("settings dialog — directory and footer", () => {
   it("scrolls to and focuses the group heading when a directory entry is used", () => {
     const { container } = renderDialog();

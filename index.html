@@ -5,6 +5,30 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EasyCsv</title>
+    <script>
+      // Pre-set appearance + accent before the app bundle runs, so the first
+      // paint already has the right palette (design 034). ThemeProvider takes
+      // over once React mounts.
+      (function () {
+        try {
+          var root = document.documentElement;
+          var theme = localStorage.getItem("vite-ui-theme") || "light";
+          var dark =
+            theme === "dark" ||
+            (theme === "system" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          root.classList.add(dark ? "dark" : "light");
+          root.style.colorScheme = dark ? "dark" : "light";
+          var accent = localStorage.getItem("easy-csv-accent");
+          root.dataset.accent =
+            accent === "teal" || accent === "clay" || accent === "graphite"
+              ? accent
+              : "ink";
+        } catch (error) {
+          // Storage can be unavailable; the provider will retry on mount.
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -39,6 +39,8 @@ function renderSettings(
         scrollRootRef={scrollRootRef}
         theme="light"
         onThemeChange={vi.fn()}
+        accent="ink"
+        onAccentChange={vi.fn()}
         delimiterMode={delimiterMode}
         onDelimiterModeChange={onDelimiterModeChange}
         noHeaders={false}

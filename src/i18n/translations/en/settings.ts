@@ -43,6 +43,13 @@ export const enSettings = {
   settingsCollapse: "Collapse",
   settingsLanguageDesc: "Interface language, can follow the system",
   settingsThemeDesc: "Interface colours, can follow the system",
+  settingsAccent: "Theme colour",
+  settingsAccentDesc:
+    "Accent used for selection, focus and primary actions",
+  accentInk: "Ink",
+  accentTeal: "Teal",
+  accentClay: "Clay",
+  accentGraphite: "Graphite",
   clearExecutionHistoryDesc: "Delete every execution history record",
   aiClearConversationsDesc: "Delete your conversations with the AI",
   aiClearFeedbackDesc:

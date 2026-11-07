@@ -7,6 +7,8 @@ import {
   parseQuery,
   type SearchableGroup,
 } from "@/utils/settingsSearch";
+import { buildSettingsModel } from "@/components/setting/settingsSections";
+import { zh } from "@/i18n/translations/zh";
 
 /**
  * The settings search contract (design 030 §4.3). It is a pure function, so
@@ -130,6 +132,18 @@ describe("filterSettings", () => {
 
   it("returns nothing when nothing matches", () => {
     expect(filterSettings(groups, "zzz")).toEqual([]);
+  });
+});
+
+describe("settings catalogue — accent aliases (design 034)", () => {
+  const model = buildSettingsModel(zh);
+
+  it("finds the accent row by Chinese and English aliases", () => {
+    for (const query of ["墨蓝", "青碧", "ink", "graphite"]) {
+      expect(filterSettings(model, query).flatMap((g) => g.rows.map((r) => r.id))).toEqual([
+        "accent",
+      ]);
+    }
   });
 });
 

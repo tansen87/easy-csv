@@ -458,7 +458,7 @@ export const ChartPanel = React.memo(function ChartPanel({
   chartState,
 }: ChartPanelProps) {
   const { t } = useLanguage();
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
   const [collapsed, setCollapsed] = useState<boolean>(
     dockState?.collapsed ?? false,
@@ -485,10 +485,7 @@ export const ChartPanel = React.memo(function ChartPanel({
     setSort(null);
   }, [series]);
 
-  const isDark =
-    theme === "dark" ||
-    (theme === "system" &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const isDark = resolvedTheme === "dark";
   const textColor = isDark ? "#e5e7eb" : "#374151";
   const gridColor = isDark ? "#374151" : "#e5e7eb";
 

@@ -101,7 +101,7 @@ export function SettingsDialog({
   showToast,
 }: SettingsDialogProps) {
   const { t } = useLanguage();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, accent, setAccent } = useTheme();
   const [query, setQuery] = useState("");
   const [isSaveClicked, setIsSaveClicked] = useState(false);
   const [isResetClicked, setIsResetClicked] = useState(false);
@@ -141,8 +141,10 @@ export function SettingsDialog({
   );
 
   const handleReset = useCallback(() => {
-    // Same six values the pre-030 footer reset — the set is unchanged.
-    setTheme("light");
+    // Appearance + accent back to their defaults, plus the five other values
+    // the pre-030 footer reset (design 034 §2.5).
+    setTheme("system");
+    setAccent("ink");
     onDelimiterModeChange("auto");
     onNoHeadersChange(false);
     onSystemNotificationChange(true);
@@ -153,6 +155,7 @@ export function SettingsDialog({
     resetTimerRef.current = setTimeout(() => setIsResetClicked(false), 3000);
   }, [
     setTheme,
+    setAccent,
     onDelimiterModeChange,
     onNoHeadersChange,
     onSystemNotificationChange,
@@ -266,6 +269,8 @@ export function SettingsDialog({
               scrollRootRef={scrollRootRef}
               theme={theme}
               onThemeChange={setTheme}
+              accent={accent}
+              onAccentChange={setAccent}
               delimiterMode={delimiterMode}
               onDelimiterModeChange={onDelimiterModeChange}
               noHeaders={noHeaders}

@@ -153,6 +153,12 @@ export interface Translations {
   settingsCollapse: string;
   settingsLanguageDesc: string;
   settingsThemeDesc: string;
+  settingsAccent: string;
+  settingsAccentDesc: string;
+  accentInk: string;
+  accentTeal: string;
+  accentClay: string;
+  accentGraphite: string;
   clearExecutionHistoryDesc: string;
   aiClearConversationsDesc: string;
   aiClearFeedbackDesc: string;

@@ -11,9 +11,15 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  /* Brand (design 034, default = ink). `primary` follows the accent, so the
+     existing primary usages (buttons, selection, focus, tabs) switch together. */
+  --brand: oklch(0.42 0.055 250);
+  --brand-foreground: oklch(0.985 0 0);
+  --brand-soft: color-mix(in oklab, var(--brand) 9%, transparent);
+  --brand-border: color-mix(in oklab, var(--brand) 40%, transparent);
+  --primary: var(--brand);
   --flow-line-color: oklch(76.049% 0.00454 16.209);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary-foreground: var(--brand-foreground);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -24,7 +30,7 @@
   --destructive-foreground: oklch(1 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: var(--brand);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -35,15 +41,25 @@
   --paper: oklch(0.995 0.004 85);
   --paper-rule: oklch(0.2 0.01 80 / 8%);
   --empty-warn: oklch(0.55 0.1 72);
-  --empty-ink: oklch(0.42 0.055 250);
+  --empty-ink: var(--brand);
   /* Canvas only (design 033): dot grid, hairlines, one ink accent.
      Scoped here on purpose - the rest of the app keeps the neutral ramp. */
   --canvas-dot: oklch(0.2 0.01 80 / 10%);
   --canvas-line: oklch(0.2 0.01 80 / 26%);
   --canvas-line-strong: oklch(0.2 0.01 80 / 52%);
-  --canvas-ink: var(--empty-ink);
-  --canvas-ink-soft: oklch(0.42 0.055 250 / 9%);
-  --canvas-ok: oklch(0.52 0.09 150);
+  --canvas-ink: var(--brand);
+  --canvas-ink-soft: var(--brand-soft);
+  --canvas-ok: var(--success);
+  /* Semantic colours (design 034). These do NOT follow the accent: success,
+     warning and danger keep stable hues so "teal" never reads as "success". */
+  --success: oklch(0.52 0.09 150);
+  --success-soft: color-mix(in oklab, var(--success) 10%, transparent);
+  --warning: oklch(0.55 0.1 72);
+  --warning-soft: color-mix(in oklab, var(--warning) 10%, transparent);
+  --info: var(--brand);
+  --info-soft: var(--brand-soft);
+  --danger: var(--destructive);
+  --danger-soft: color-mix(in oklab, var(--destructive) 8%, transparent);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -86,9 +102,13 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
+  --brand: oklch(0.78 0.045 245);
+  --brand-foreground: oklch(0.205 0 0);
+  --brand-soft: color-mix(in oklab, var(--brand) 12%, transparent);
+  --brand-border: color-mix(in oklab, var(--brand) 46%, transparent);
+  --primary: var(--brand);
   --flow-line-color: oklch(68.79% 0.00231 15.354);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary-foreground: var(--brand-foreground);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -99,7 +119,7 @@
   --destructive-foreground: oklch(1 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: var(--color-neutral-500);
-  --ring: var(--color-neutral-400);
+  --ring: var(--brand);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -110,14 +130,16 @@
   --paper: oklch(0.215 0.008 75);
   --paper-rule: oklch(0.96 0.005 85 / 9%);
   --empty-warn: oklch(0.78 0.11 75);
-  --empty-ink: oklch(0.78 0.045 245);
+  --empty-ink: var(--brand);
   /* Canvas only (design 033) - dark: surface steps + hairlines, no shadows. */
   --canvas-dot: oklch(0.96 0.005 85 / 8%);
   --canvas-line: oklch(0.96 0.005 85 / 26%);
   --canvas-line-strong: oklch(0.96 0.005 85 / 46%);
-  --canvas-ink: var(--empty-ink);
-  --canvas-ink-soft: oklch(0.78 0.045 245 / 12%);
-  --canvas-ok: oklch(0.74 0.1 150);
+  --canvas-ink: var(--brand);
+  --canvas-ink-soft: var(--brand-soft);
+  --canvas-ok: var(--success);
+  --success: oklch(0.74 0.1 150);
+  --warning: oklch(0.78 0.11 75);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -151,6 +173,27 @@
   --shadow-2xl: 0px 6px 15px 0px hsl(0 0% 0% / 0.75);
 }
 
+/* Accent overrides (design 034). Only the brand tokens change: the neutral
+   surfaces stay shared, so a new theme is one block here plus one label. */
+:root[data-accent="teal"] {
+  --brand: oklch(0.43 0.06 200);
+}
+:root.dark[data-accent="teal"] {
+  --brand: oklch(0.78 0.05 200);
+}
+:root[data-accent="clay"] {
+  --brand: oklch(0.47 0.075 50);
+}
+:root.dark[data-accent="clay"] {
+  --brand: oklch(0.79 0.06 55);
+}
+:root[data-accent="graphite"] {
+  --brand: oklch(0.30 0.006 80);
+}
+:root.dark[data-accent="graphite"] {
+  --brand: oklch(0.80 0.004 85);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -160,6 +203,18 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-border: var(--brand-border);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);

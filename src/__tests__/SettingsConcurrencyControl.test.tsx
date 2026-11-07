@@ -40,6 +40,8 @@ function renderSettings(maxConcurrentRuns: number) {
         scrollRootRef={scrollRootRef}
         theme="light"
         onThemeChange={vi.fn()}
+        accent="ink"
+        onAccentChange={vi.fn()}
         delimiterMode={"auto" as DelimiterMode}
         onDelimiterModeChange={vi.fn()}
         noHeaders={false}

@@ -21,6 +21,7 @@ import {
 import { loadProviderApiKey } from "@/services/ai";
 import type { DelimiterMode } from "@/types/xan";
 import { SettingsRow } from "./SettingsRow";
+import type { Accent } from "./ThemeProvider";
 import {
   sectionElementId,
   type SettingsGroupModel,
@@ -41,6 +42,8 @@ interface SettingsTabContentProps {
   scrollRootRef: React.RefObject<HTMLDivElement | null>;
   theme: "dark" | "light" | "system";
   onThemeChange: (theme: "dark" | "light" | "system") => void;
+  accent: Accent;
+  onAccentChange: (accent: Accent) => void;
   delimiterMode: DelimiterMode;
   onDelimiterModeChange: (mode: DelimiterMode) => void;
   noHeaders: boolean;
@@ -87,7 +90,7 @@ const CLEAR_COMMANDS: Record<ClearTarget, string> = {
 const CHECKBOX_CLASS =
   "h-4 w-4 rounded border-input accent-foreground cursor-pointer";
 
-/** Shared three-way picker (language / theme) — replaces two copies of the old markup. */
+/** Shared segmented picker (language / theme / accent) — replaces the old markup. */
 function SegmentChoice<T extends string>({
   value,
   options,
@@ -101,6 +104,7 @@ function SegmentChoice<T extends string>({
   ariaLabel: string;
   disabled?: boolean;
 }) {
+  const columns = options.length;
   const index = Math.max(
     0,
     options.findIndex((option) => option.value === value),
@@ -109,13 +113,17 @@ function SegmentChoice<T extends string>({
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className="relative grid h-8 w-[210px] grid-cols-3 rounded-md border border-border/60 bg-muted/50 p-0.5"
+      className={cn(
+        "relative grid h-8 rounded-md border border-border/60 bg-muted/50 p-0.5",
+        columns === 3 ? "w-[210px]" : "w-[280px]",
+      )}
+      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
     >
       <div
         className="absolute bottom-0.5 top-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out"
         style={{
-          width: "calc(33.333% - 1px)",
-          left: `calc(${(index * 100) / 3}% + 1px)`,
+          width: `calc(${100 / columns}% - 1px)`,
+          left: `calc(${(index * 100) / columns}% + 1px)`,
         }}
       />
       {options.map((option) => (
@@ -147,6 +155,8 @@ export function SettingsTabContent({
   scrollRootRef,
   theme,
   onThemeChange,
+  accent,
+  onAccentChange,
   delimiterMode,
   onDelimiterModeChange,
   noHeaders,
@@ -348,6 +358,21 @@ export function SettingsTabContent({
           />
         );
 
+      case "accent":
+        return (
+          <SegmentChoice
+            ariaLabel={row.title}
+            value={accent}
+            onChange={onAccentChange}
+            options={[
+              { label: t.accentInk, value: "ink" as const },
+              { label: t.accentTeal, value: "teal" as const },
+              { label: t.accentClay, value: "clay" as const },
+              { label: t.accentGraphite, value: "graphite" as const },
+            ]}
+          />
+        );
+
       case "action":
         return (
           <Button variant="secondary" size="sm" onClick={onResetOnboarding}>
@@ -492,11 +517,12 @@ export function SettingsTabContent({
       // is still part of the union — listing it keeps the switch exhaustive.
       case "danger":
         return undefined;
-      // A three-way picker has no single "activate" meaning, so its row stays
+      // A segmented picker has no single "activate" meaning, so its row stays
       // inert. Listing it explicitly (instead of a `default`) makes the switch
       // exhaustive: a new control kind cannot silently end up inert.
       case "language":
       case "theme":
+      case "accent":
         return undefined;
       default: {
         const unhandled: never = row.control;

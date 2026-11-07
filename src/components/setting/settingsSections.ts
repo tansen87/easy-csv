@@ -27,6 +27,7 @@ export type SettingsControl =
   | "number"
   | "language"
   | "theme"
+  | "accent"
   | "action"
   | "disclosure"
   | "provider"
@@ -102,6 +103,27 @@ export const SETTINGS_GROUPS: SettingsGroupDef[] = [
           "深色",
           "浅色",
           "配色",
+        ],
+      },
+      {
+        id: "accent",
+        titleKey: "settingsAccent",
+        descKey: "settingsAccentDesc",
+        control: "accent",
+        keywords: [
+          "accent",
+          "brand",
+          "ink",
+          "teal",
+          "clay",
+          "graphite",
+          "主题色",
+          "强调色",
+          "品牌色",
+          "墨蓝",
+          "青碧",
+          "赭石",
+          "石墨",
         ],
       },
     ],
