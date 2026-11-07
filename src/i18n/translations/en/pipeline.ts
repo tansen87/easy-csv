@@ -13,7 +13,7 @@ export const enPipeline = {
   exportWorkflow: "Export Workflow",
   undo: "Undo",
   redo: "Redo",
-  execute: "Execute",
+  execute: "Run",
   executing: "Executing",
   cancelExecution: "Cancel Execution",
   executionCancelled: "Execution cancelled",

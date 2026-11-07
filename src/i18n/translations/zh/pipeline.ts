@@ -11,7 +11,7 @@ export const zhPipeline = {
   exportWorkflow: "导出工作流",
   undo: "撤销",
   redo: "重做",
-  execute: "执行",
+  execute: "运行",
   executing: "执行中",
   cancelExecution: "取消执行",
   executionCancelled: "执行已取消",
