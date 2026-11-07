@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Search, ListTree, Table } from "lucide-react";
+import { Search, Command, Table } from "lucide-react";
 
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { PipelineStep } from "@/types/xan";
@@ -140,7 +140,7 @@ export function SearchOverlay({
           >
             {searchResults.map((result, index) => {
               const CommandIcon =
-                result.isTableNode || result.resultId ? Table : ListTree;
+                result.isTableNode || result.resultId ? Table : Command;
               const isActive = index === activeIndex;
               return (
                 <button

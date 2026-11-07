@@ -1,5 +1,5 @@
 import React from "react";
-import { ListTree, ScrollText, Bot, Settings } from "lucide-react";
+import { Command, ScrollText, Bot, Settings } from "lucide-react";
 
 import { PipelineStep } from "@/types/xan";
 import type { RunSession } from "@/types/execution";
@@ -871,7 +871,7 @@ export const MainMenu = React.memo(function MainMenu({
                   "bg-info-soft text-info ring-2 ring-info/70",
               )}
             >
-              <ListTree className="h-4 w-4" />
+              <Command className="h-4 w-4" />
               {showCommandPanel && (
                 <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 w-3 rounded-full bg-current" />
               )}

@@ -9,7 +9,7 @@ import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 import {
   FileClock,
   NotebookTabs,
-  ListTree,
+  Command,
   Zap,
   LibraryBig,
 } from "lucide-react";
@@ -1762,7 +1762,7 @@ function AppContent() {
         // Include the English name, category and description so English input
         // still matches even while the UI (descriptions) is localized to zh.
         keywords: `${cmd.name} ${cmd.category} ${cmd.description}`,
-        groupIcon: ListTree,
+        groupIcon: Command,
         group: t.paletteCommands,
         onSelect: () => handleCommandClick(cmd),
       };

@@ -404,6 +404,30 @@ export interface Translations {
   sum: string;
   minLen: string;
   maxLen: string;
+  /** Panel chrome, ruler and states. */
+  profileMissing: string;
+  profileMissingColumns: string;
+  profileRowUnit: string;
+  profileColumnUnit: string;
+  profileSortOrder: string;
+  profileSortMissing: string;
+  profileRefresh: string;
+  profileLoading: string;
+  profileErrorTitle: string;
+  profileErrorHint: string;
+  profileRetry: string;
+  profileClearSearch: string;
+  profileNoMatch: string;
+  profileNoMatchHint: string;
+  profileNonEmpty: string;
+  profileAllEmpty: string;
+  profileLength: string;
+  profileCharUnit: string;
+  profileTypeInt: string;
+  profileTypeFloat: string;
+  profileTypeText: string;
+  profileTypeMixed: string;
+  profileTypeEmpty: string;
 
   // AIPanel
   aiPlaceholder: string;

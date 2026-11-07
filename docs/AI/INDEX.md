@@ -363,7 +363,7 @@ NODE_ENV=test       node -e "console.log(typeof require('react').act)"  # functi
 | 目录 | 职责 |
 |------|------|
 | `modules/pipeline/` | 管道画布域: `FlowPanel`、`nodes/`、`overlays/`、`hooks/`、`lib/`(布局/切割几何)、`panels/`(版本控制/血缘) |
-| `modules/data-preview/` | 数据查看域: `HomeView`(主工作区)、`EmptyState`(空白页,设计 032)、`DataProfilePanel`、`charts/ChartPanel` |
+| `modules/data-preview/` | 数据查看域: `HomeView`(主工作区)、`EmptyState`(空白页,设计 032)、`DataProfilePanel` + `DataProfileRow` + `profileStats.ts`(数据概览,设计 042)、`charts/ChartPanel` |
 | `modules/dialogs/` | 对话框域,四分: `command/`(统一命令入口 + 61 个表单)、`quick/`(右键引导式浮窗 + 11 个表单,设计 031)、`file/`、`app/`、`common/` |
 | `modules/ai/` | AI 助手面板 |
 | `modules/variables/` | 变量管理面板 |
@@ -507,7 +507,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 文件 | 职责 |
 |------|------|
 | `data-preview/HomeView.tsx` | **主工作区**,管理命令对话框状态、标签页、快速操作浮窗(设计 031)、表格列重命名 |
-| `data-preview/DataProfilePanel.tsx` | 数据概况右侧栏,展示字段统计,支持固定搜索框 |
+| `data-preview/DataProfilePanel.tsx` | 数据概况右侧栏(**设计 042 改版**):标题 + `行 · 列 · 有缺失的列数`、搜索、列序/缺失排序、骨架加载与失败重试;列表按行渲染 `DataProfileRow`(完整度刻尺,缺失段为琥珀虚线),点击行展开统计。`profileStats.ts` 负责解析 `xan stats` 与派生数字(**行数 = count + count_empty**,`types` 取首个 token),新增统计项一律先进该文件 |
 | `data-preview/charts/ChartPanel.tsx` | 图表面板(recharts),折线/散点/柱状/直方图/饼图/词云/热力图,支持拖拽、最大化/还原、SVG 导出、dark mode。**029 起**:统一图例(单系列也显示)、排序三态、数值格式(轴向缩写/tooltip 完整值)、数据表视图(**表体用共享 `ScrollArea`**;`min-w-full` 以保留横向滚动)+ 复制 CSV;**图例为单行横向 `ScrollArea`**(分类多时不折行、不挤占图表区)+**分类多选筛选下拉**(`CategoryFilter`,含全选/取消全选,与图例共用 `hiddenSeries`)、截断与跳行提示、按原因区分的空/错状态;隐藏系列统一为过滤数据;导出走白底深色的「文档配色」;图表类型名走 i18n |
 | `ai/AIPanel.tsx` | **AI 助手面板**: 聊天 UI、命令生成、一键插入管道、👍/👎反馈、意图澄清对话框、对话历史加载 |
 | `variables/VariablePanel.tsx` | 变量管理面板(F3 管道参数化) |
@@ -679,7 +679,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 修改命令帮助文档 | 运行 `node scripts/generate-help-docs.js` 重新生成 |
 | 修改 Tauri 插件/权限 | `src-tauri/tauri.conf.json` + `src-tauri/capabilities/default.json` |
 | 修改系统托盘/窗口行为 | `src-tauri/src/main.rs` 中的 `setup()` 和 `on_window_event` |
-| 修改数据概况功能 | `src/modules/data-preview/DataProfilePanel.tsx` + `src-tauri/src/csv.rs` 中的 `profile_csv` + `src-tauri/src/storage.rs` 中的缓存函数 |
+| 修改数据概况功能 | `src/modules/data-preview/DataProfilePanel.tsx`(面板框架/状态)+ `src/modules/data-preview/DataProfileRow.tsx`(单列与展开详情)+ `src/modules/data-preview/profileStats.ts`(解析与派生数字)+ `src-tauri/src/csv.rs` 中的 `profile_csv` + `src-tauri/src/storage.rs` 中的缓存函数。设计: `docs/design/prototypes/042/01-data-profile.html` |
 | 修改图表功能 | `src/modules/data-preview/charts/ChartPanel.tsx`(图表渲染+拖拽+导出+图例/排序/表视图) + `src/modules/data-preview/charts/ChartPrimitives.tsx`(共享 `ChartLegend`/`ChartTooltip`) + `src/hooks/charts/processChartData.ts`(纯函数塑形 + `ChartDataIssue` 诊断 + `defaultSortFor`) + `src/hooks/execution/executeBranch.ts`(chart 分支取数,经后端 `parse_csv_text`) + `src-tauri/src/csv.rs`(`parse_csv_text`) + `src/utils/format.ts`(`formatNumber`) + `src/types/execution.ts`(`TabChartState`) + `src/modules/dialogs/command/forms/chart.tsx`(ChartForm) + `src/types/xan.ts`(ChartConfig 等类型)。设计与验收: `docs/design/029_chart-readability.md` |
 | 修改图表命令文档 | `src/docs/cmd/chart.md`(英文) / `docs/cmd_zh/chart.md`(中文) |
 | 管道步骤复制粘贴 | `src/modules/pipeline/FlowPanel.tsx` 中的 `handleCopyStep`/`handlePasteStep` |

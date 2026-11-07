@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 01 · 数据概览面板改版</title>
+<style>
+  /* ── tokens · 与 src/index.css 对齐 ───────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --field:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.68 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 7%);
+    --border-strong:oklch(0.855 0 0);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+
+    /* 缺失 = 唯一有语义的颜色,其它一律走中性 */
+    --miss:oklch(0.62 0.115 68);
+    --miss-ink:oklch(0.515 0.105 62);
+    --danger:oklch(0.545 0.16 27);
+
+    --canvas:oklch(0.972 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-win:0 18px 44px oklch(0.2 0.02 80 / 12%),0 1px 2px oklch(0.2 0.02 80 / 6%);
+    --ease:cubic-bezier(.2,0,0,1);
+  }
+  html.dark{
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --field:oklch(0.245 0 0);
+    --muted:oklch(0.262 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.56 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(1 0 0 / 7%);
+    --border-strong:oklch(1 0 0 / 16%);
+
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 12%,transparent);
+
+    --miss:oklch(0.72 0.105 72);
+    --miss-ink:oklch(0.79 0.10 74);
+    --danger:oklch(0.704 0.16 22);
+
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.105 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-win:0 18px 44px oklch(0 0 0 / 50%),0 1px 2px oklch(0 0 0 / 30%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);
+    color:var(--fg);
+    background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .tnum{font-variant-numeric:tabular-nums}
+
+  /* ── 设计稿舞台(不属于产品) ──────────────────────────────────────── */
+  #sheet{width:1440px;margin:0 auto;padding:28px 0 72px}
+  .stage-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:0 0 22px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar h1{margin:0;font-size:16px;font-weight:500;letter-spacing:0}
+  .stage-bar p{margin:5px 0 0;font-size:12px;color:var(--muted-fg)}
+  .switches{display:flex;gap:8px}
+  .seg{display:flex;gap:2px;padding:2px;border-radius:8px;background:var(--bg);border:1px solid var(--border)}
+  .seg button{
+    appearance:none;border:0;background:transparent;font:inherit;font-size:11.5px;color:var(--muted-fg);
+    height:24px;padding:0 11px;border-radius:6px;cursor:pointer;
+    transition:background-color .15s var(--ease),color .15s var(--ease);
+  }
+  .seg button.on{background:var(--brand);color:var(--brand-fg)}
+
+  .frame + .frame{margin-top:56px}
+  .cap{
+    display:flex;align-items:baseline;gap:10px;
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);
+    padding:0 0 10px;
+  }
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span{color:var(--muted-fg-2)}
+
+  /* ── 应用窗口 ────────────────────────────────────────────────────── */
+  .win{
+    position:relative;width:1440px;height:900px;overflow:hidden;
+    background:var(--bg);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-win);
+  }
+  .appbar{height:44px;display:flex;align-items:center;gap:22px;padding:0 16px;border-bottom:1px solid var(--border-soft)}
+  .appname{font-size:12px;font-weight:500;letter-spacing:.01em}
+  .appmenus{display:flex;gap:18px}
+  .appmenus span{font-size:11.5px;color:var(--muted-fg)}
+  .appmenus span.on{color:var(--fg)}
+  .bar-right{margin-left:auto;display:flex;gap:14px;color:var(--muted-fg-2)}
+  .bar-right svg{width:14px;height:14px}
+
+  .tabs{height:32px;display:flex;align-items:flex-end;gap:2px;padding:0 12px;border-bottom:1px solid var(--border-soft)}
+  .tab{
+    display:flex;align-items:center;gap:6px;height:26px;padding:0 10px;
+    font-size:11.5px;color:var(--muted-fg);border:1px solid transparent;border-bottom:0;border-radius:6px 6px 0 0;
+  }
+  .tab.on{background:var(--card);border-color:var(--border);color:var(--fg)}
+  .tab .dot{width:5px;height:5px;border-radius:50%;background:var(--border-strong)}
+  .tab.on .dot{background:var(--brand)}
+  .tab.add{width:24px;justify-content:center;color:var(--muted-fg-2);padding:0}
+
+  .canvas{
+    position:absolute;inset:76px 0 0 0;
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:20px 20px;background-position:10px 10px;
+  }
+  .nodes{position:absolute;left:96px;top:96px;width:880px;height:420px}
+  .edge{position:absolute;left:0;top:0;width:880px;height:420px;overflow:visible;pointer-events:none}
+
+  .node{
+    position:absolute;background:var(--card);border:1px solid var(--border);border-radius:8px;
+    box-shadow:0 1px 2px oklch(0.2 0.02 80 / 5%);
+  }
+  .node-head{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;border-bottom:1px solid var(--border-soft)}
+  .node-head .ic{width:14px;height:14px;border-radius:3px;background:var(--muted);display:grid;place-items:center;color:var(--muted-fg)}
+  .node-head .ic svg{width:9px;height:9px}
+  .node-head b{font-size:11.5px;font-weight:500}
+  .node-head em{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-left:auto}
+
+  .node-input{left:0;top:24px;width:326px}
+  .mini-table{padding:6px 0 8px}
+  .mini-row{display:grid;grid-template-columns:22px 1fr 1fr 1fr 1fr;gap:0;height:17px;align-items:center;padding:0 10px}
+  .mini-row span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px}
+  .mini-row.head span{color:var(--muted-fg-2);font-size:9px}
+  .mini-row:nth-child(2n){background:color-mix(in oklab,var(--muted) 55%,transparent)}
+
+  .node-cmd{left:470px;top:70px;width:190px}
+  .node-cmd2{left:700px;top:214px;width:190px}
+  .node-cmd .params{display:grid;gap:4px;padding:8px 10px 10px}
+  .node-cmd2 .params{display:grid;gap:4px;padding:8px 10px 10px}
+  .node-cmd .p,.node-cmd2 .p{display:flex;gap:6px;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg)}
+  .node-cmd .p b,.node-cmd2 .p b{font-weight:400;color:var(--muted-fg-2);min-width:44px}
+
+  .zoom-ctl{
+    position:absolute;left:16px;bottom:16px;display:flex;flex-direction:column;
+    background:var(--card);border:1px solid var(--border);border-radius:7px;overflow:hidden;
+    box-shadow:0 1px 2px oklch(0.2 0.02 80 / 5%);
+  }
+  .zoom-ctl button{
+    appearance:none;border:0;background:transparent;width:26px;height:26px;display:grid;place-items:center;
+    color:var(--muted-fg);cursor:pointer;
+  }
+  .zoom-ctl button + button{border-top:1px solid var(--border-soft)}
+  .zoom-ctl svg{width:12px;height:12px}
+
+  /* ── 面板 ────────────────────────────────────────────────────────── */
+  .panel{
+    display:flex;flex-direction:column;height:100%;min-height:0;
+    background:var(--card);color:var(--fg);
+  }
+  .panel.docked{
+    position:absolute;right:0;top:0;bottom:0;width:320px;
+    border-left:1px solid var(--border);
+    box-shadow:-12px 0 28px oklch(0.2 0.02 80 / 7%);
+  }
+
+  .p-head{flex:none;display:flex;align-items:flex-start;gap:4px;padding:13px 10px 10px 16px}
+  .p-head .t{flex:1 1 auto;min-width:0}
+  .p-head h2{margin:0;font-size:13px;font-weight:500;line-height:18px}
+  .p-head .meta{
+    margin-top:3px;display:flex;align-items:center;gap:6px;
+    font-size:11px;line-height:15px;color:var(--muted-fg);font-variant-numeric:tabular-nums;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .p-head .meta i{font-style:normal;color:var(--muted-fg-2)}
+  .icon-btn{
+    appearance:none;border:0;background:transparent;color:var(--muted-fg-2);
+    width:26px;height:26px;border-radius:6px;display:grid;place-items:center;cursor:pointer;
+    transition:background-color .15s var(--ease),color .15s var(--ease);
+  }
+  .icon-btn:hover{background:var(--border-soft);color:var(--fg)}
+  .icon-btn svg{width:14px;height:14px}
+
+  .p-search{flex:none;padding:0 16px 8px}
+  .field{
+    display:flex;align-items:center;gap:7px;height:28px;padding:0 8px;
+    background:var(--field);border:1px solid var(--border);border-radius:7px;
+    transition:border-color .15s var(--ease),box-shadow .15s var(--ease);
+  }
+  .field:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+  .field svg{flex:none;width:13px;height:13px;color:var(--muted-fg-2)}
+  .field input{
+    flex:1 1 auto;min-width:0;border:0;background:transparent;outline:none;
+    font:inherit;font-size:11.5px;color:var(--fg);
+  }
+  .field input::placeholder{color:var(--muted-fg-2)}
+
+  .p-bar{flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 12px 8px 16px}
+  .p-count{font-size:10.5px;color:var(--muted-fg);font-variant-numeric:tabular-nums}
+  .p-count b{font-weight:500;color:var(--fg)}
+  .sort{display:flex;gap:1px;padding:1px;border-radius:6px;background:var(--muted);border:1px solid var(--border-soft)}
+  .sort button{
+    appearance:none;border:1px solid transparent;background:transparent;font:inherit;
+    font-size:10.5px;color:var(--muted-fg);height:20px;padding:0 7px;border-radius:5px;cursor:pointer;
+    transition:background-color .15s var(--ease),color .15s var(--ease),border-color .15s var(--ease);
+  }
+  .sort button.on{background:var(--card);border-color:var(--border);color:var(--fg);font-weight:500}
+
+  .p-list{flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:14px}
+  .p-list::-webkit-scrollbar{width:10px}
+  .p-list::-webkit-scrollbar-thumb{background:var(--border-strong);border:3px solid var(--card);border-radius:6px}
+
+  .col{
+    position:relative;appearance:none;display:block;width:100%;text-align:left;border:0;background:transparent;
+    font:inherit;color:inherit;padding:9px 16px 11px 32px;cursor:pointer;
+    transition:background-color .12s var(--ease);
+  }
+  .col:hover{background:color-mix(in oklab,var(--muted) 60%,transparent)}
+  .col.open{background:var(--muted)}
+  .col:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+  .dis{position:absolute;left:16px;top:11px;width:12px;height:12px;color:var(--muted-fg);opacity:.7;
+       transition:transform .16s var(--ease),opacity .16s var(--ease)}
+  .dis svg{width:12px;height:12px;display:block;transform:rotate(-90deg)}
+  .col:hover .dis{opacity:.9}
+  .col.open .dis svg{transform:rotate(0)}
+
+  .r-top{display:flex;align-items:baseline;gap:10px}
+  .nm{flex:1 1 auto;min-width:0;font-size:12.5px;font-weight:500;line-height:17px;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ms{
+    flex:none;display:flex;align-items:baseline;gap:4px;white-space:nowrap;
+    font-size:10px;line-height:17px;color:var(--muted-fg-2);
+  }
+  .ms b{font-family:var(--mono);font-size:10.5px;font-weight:500;color:var(--miss-ink);
+        font-variant-numeric:tabular-nums}
+
+  .r-sub{display:flex;align-items:center;gap:9px;margin-top:7px;height:13px}
+  .ty{flex:none;width:24px;font-size:10.5px;line-height:13px;color:var(--muted-fg)}
+  .meter{position:relative;flex:1 1 auto;min-width:0;height:4px;background:oklch(0.34 0.012 80 / 6%)}
+  .meter i{position:absolute;left:0;top:0;bottom:0;background:oklch(0.34 0.012 80 / 30%)}
+  .meter u{position:absolute;top:0;bottom:0;
+    background-image:repeating-linear-gradient(90deg,var(--miss) 0 3px,transparent 3px 5px)}
+  .meter s{position:absolute;top:-2px;width:1px;height:8px;background:oklch(0.34 0.012 80 / 20%)}
+  html.dark .meter{background:oklch(1 0 0 / 7%)}
+  html.dark .meter i{background:oklch(1 0 0 / 28%)}
+  html.dark .meter s{background:oklch(1 0 0 / 20%)}
+
+  /* 展开详情 */
+  .detail{padding:2px 16px 15px 32px;background:var(--muted)}
+  .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:1px 0 0}
+  .stats .k{display:block;font-size:10px;line-height:14px;color:var(--muted-fg)}
+  .stats .v{display:block;font-family:var(--mono);font-size:11.5px;line-height:17px;font-weight:500;
+            color:var(--fg);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .range{margin-top:1px}
+  .rtop{position:relative;height:13px}
+  .rtop .ttl{font-size:10px;line-height:13px;color:var(--muted-fg-2)}
+  .rtrack{position:relative;height:8px}
+  .rtrack .ln{position:absolute;left:0;right:0;bottom:3px;height:1px;background:var(--border-strong)}
+  .rtrack .cap{position:absolute;bottom:1px;width:1px;height:6px;background:var(--border-strong)}
+  .rtrack .tk{position:absolute;bottom:2px;width:1px;height:3px;background:var(--border-strong);opacity:.35}
+  .rends{display:flex;justify-content:space-between;margin-top:3px;
+    font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);font-variant-numeric:tabular-nums}
+  .dline{margin-top:8px;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;
+    font-size:10.5px;color:var(--muted-fg)}
+  .dline b{font-family:var(--mono);font-weight:500;color:var(--fg);font-variant-numeric:tabular-nums}
+  .dline .sep{color:var(--muted-fg-2)}
+  .dnote{font-size:10.5px;line-height:16px;color:var(--muted-fg);margin:2px 0 0}
+
+  /* ── 状态 ────────────────────────────────────────────────────────── */
+  .ghost{padding:9px 16px 11px}
+  .ghost .g1{height:10px;width:74px;border-radius:3px;background:var(--muted)}
+  .ghost .g2{margin-top:9px;display:flex;align-items:center;gap:9px}
+  .ghost .g2 i{width:22px;height:8px;border-radius:3px;background:var(--muted)}
+  .ghost .g2 u{flex:1;height:3px;background:var(--muted)}
+  .ghost .ms-ghost{float:right;width:30px;height:8px;border-radius:3px;background:var(--muted);margin-top:1px}
+  .p-list.loading{opacity:.55}
+
+  .state{padding:40px 20px;text-align:center}
+  .state .glyph{width:28px;height:28px;margin:0 auto 12px;color:var(--muted-fg-2)}
+  .state .glyph svg{width:28px;height:28px}
+  .state h3{margin:0 0 6px;font-size:12.5px;font-weight:500}
+  .state p{margin:0;font-size:11.5px;line-height:17px;color:var(--muted-fg)}
+  .errbox{
+    margin:14px 0 0;padding:8px 10px;border:1px solid var(--border);border-radius:7px;
+    background:var(--muted);font-family:var(--mono);font-size:10px;line-height:16px;color:var(--muted-fg);
+    text-align:left;max-height:58px;overflow:hidden;
+  }
+  .btn{
+    appearance:none;height:28px;padding:0 12px;border-radius:7px;font:inherit;font-size:11.5px;font-weight:500;
+    border:1px solid var(--border);background:var(--card);color:var(--fg);cursor:pointer;margin-top:14px;
+    transition:background-color .15s var(--ease),border-color .15s var(--ease);
+  }
+  .btn:hover{background:var(--muted)}
+  .link{
+    appearance:none;border:0;background:none;font:inherit;font-size:11.5px;color:var(--brand);
+    cursor:pointer;padding:0;margin-top:12px;
+  }
+
+  /* ── 面板样板 ───────────────────────────────────────────────────── */
+  .zoomwrap{width:320px;height:860px;overflow:hidden;border:1px solid var(--border);border-radius:10px;
+            box-shadow:var(--shadow-win);background:var(--card)}
+  .zoomwrap .panel{height:100%}
+  .side-by-side{display:flex;gap:24px;align-items:flex-start}
+  .mini{width:320px;height:470px;border:1px solid var(--border);border-radius:10px;overflow:hidden;
+        box-shadow:0 1px 2px oklch(0.2 0.02 80 / 5%)}
+  .mini .panel{height:100%}
+  .subcap{margin-top:10px;font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .subcap b{font-family:var(--font);font-size:11px;font-weight:500;color:var(--fg);margin-right:6px}
+
+  /* 单帧截图钩子 ?frame=… */
+  body[data-frame] #sheet{padding:0;width:auto}
+  body[data-frame] .stage-bar,
+  body[data-frame] .cap,
+  body[data-frame] .frame{display:none}
+  body[data-frame="app"] .frame-app,
+  body[data-frame="zoom"] .frame-zoom,
+  body[data-frame="states"] .frame-states{display:block}
+  body[data-frame="app"] .win,
+  body[data-frame="zoom"] .zoomwrap,
+  body[data-frame="states"] .side-by-side{margin:0}
+  body[data-frame] .frame+.frame{margin:0}
+</style>
+</head>
+<body>
+<main id="sheet">
+
+  <div class="stage-bar">
+    <div>
+      <div class="eyebrow">原型 042 / 查看 › 数据概览</div>
+      <h1>数据概览面板改版</h1>
+      <p>320 × 824 右侧面板 · 一行一列 · 点击行展开统计</p>
+    </div>
+    <div class="switches">
+      <div class="seg" id="theme-seg">
+        <button data-theme="light" class="on">浅色</button>
+        <button data-theme="dark">深色</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ 01 面板在应用中的样子 ════ -->
+  <section class="frame frame-app">
+    <div class="cap"><b>01</b> 面板 · 默认列序 · 金额列已展开 <span>12,480 行 × 10 列</span></div>
+    <div class="win">
+      <div class="appbar">
+        <span class="appname">Easy Csv</span>
+        <nav class="appmenus">
+          <span>文件</span><span>编辑</span><span class="on">查看</span><span>工具</span><span>帮助</span>
+        </nav>
+        <div class="bar-right">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a1.7 1.7 0 0 0-1.6-1H1a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 3 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 7 4.6h.1A1.7 1.7 0 0 0 9 3V3a2 2 0 1 1 4 0v.1A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 19.4 9v.1A1.7 1.7 0 0 0 21 11h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1z"/></svg>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <span class="tab on"><span class="dot"></span>orders_2026-10</span>
+        <span class="tab"><span class="dot"></span>地区汇总</span>
+        <span class="tab add">+</span>
+      </div>
+
+      <div class="canvas">
+        <div class="nodes">
+          <svg class="edge" viewBox="0 0 880 420">
+            <path d="M326 96 C 400 96, 410 118, 470 118" fill="none" stroke="oklch(0.62 0.01 80)" stroke-width="1.25"/>
+            <path d="M660 152 C 690 152, 700 188, 700 214" fill="none" stroke="oklch(0.62 0.01 80)" stroke-width="1.25"/>
+          </svg>
+
+          <div class="node node-input">
+            <div class="node-head">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/></svg></span>
+              <b>Input Data</b>
+              <em>10 列 × 12,480 行</em>
+            </div>
+            <div class="mini-table">
+              <div class="mini-row head"><span>#</span><span>订单号</span><span>日期</span><span>地区</span><span>金额</span></div>
+              <div class="mini-row"><span>1</span><span>SO-2026-000001</span><span>2026-10-01</span><span>华东</span><span>1,842.50</span></div>
+              <div class="mini-row"><span>2</span><span>SO-2026-000002</span><span>2026-10-01</span><span>西南</span><span>496.00</span></div>
+              <div class="mini-row"><span>3</span><span>SO-2026-000003</span><span>2026-10-01</span><span>华南</span><span>12,090.00</span></div>
+              <div class="mini-row"><span>4</span><span>SO-2026-000004</span><span>2026-10-02</span><span>华北</span><span>78.20</span></div>
+              <div class="mini-row"><span>5</span><span>SO-2026-000005</span><span>2026-10-02</span><span>东北</span><span>2,360.00</span></div>
+            </div>
+          </div>
+
+          <div class="node node-cmd">
+            <div class="node-head">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg></span>
+              <b>filter-rows</b>
+            </div>
+            <div class="params">
+              <div class="p"><b>--where</b><span>金额 &gt; 500</span></div>
+              <div class="p"><b>--limit</b><span>2000</span></div>
+            </div>
+          </div>
+
+          <div class="node node-cmd2">
+            <div class="node-head">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5v14M4 12h6M10 5v14M10 7h4M14 5v14"/></svg></span>
+              <b>groupby</b>
+            </div>
+            <div class="params">
+              <div class="p"><b>--by</b><span>地区</span></div>
+              <div class="p"><b>--sum</b><span>金额</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="zoom-ctl">
+          <button aria-label="放大"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button aria-label="缩小"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+          <button aria-label="适应画布"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+        </div>
+
+        <aside class="panel docked" data-state="ok" data-open="金额"></aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════ 02 列表与展开 ════ -->
+  <section class="frame frame-zoom">
+    <div class="cap"><b>02</b> 列表与展开 <span>原尺寸 320 × 860 · 列表 / 数值 / 文本与空列 / 缺失排序</span></div>
+    <div class="side-by-side">
+      <div>
+        <div class="zoomwrap"><div class="panel" data-state="ok"></div></div>
+        <div class="subcap"><b>列表</b>一行一列 · 行高 56</div>
+      </div>
+      <div>
+        <div class="zoomwrap"><div class="panel" data-state="ok" data-open="金额,单价"></div></div>
+        <div class="subcap"><b>数值列</b>最小值 / 平均值 / 最大值</div>
+      </div>
+      <div>
+        <div class="zoomwrap"><div class="panel" data-state="ok" data-open="客户备注,内部标记"></div></div>
+        <div class="subcap"><b>文本列与空列</b>长度区间 · 整列为空</div>
+      </div>
+      <div>
+        <div class="zoomwrap"><div class="panel" data-state="ok" data-sort="missing"></div></div>
+        <div class="subcap"><b>按缺失排序</b>有问题的列浮到顶部</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════ 03 状态 ════ -->
+  <section class="frame frame-states">
+    <div class="cap"><b>03</b> 三种状态 <span>读取中 / 读取失败 / 搜索无结果</span></div>
+    <div class="side-by-side">
+      <div>
+        <div class="mini"><div class="panel" data-state="loading"></div></div>
+        <div class="subcap">读取中 · 骨架行,不做闪烁动画</div>
+      </div>
+      <div>
+        <div class="mini"><div class="panel" data-state="error"></div></div>
+        <div class="subcap">读取失败 · 原始错误 + 重试</div>
+      </div>
+      <div>
+        <div class="mini"><div class="panel" data-state="ok" data-query="单价x"></div></div>
+        <div class="subcap">搜索无结果 · 保留查询词</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ── 数据:一行一列,字段与 xan stats 输出一致 ─────────────────────── */
+const ROWS = 12480;
+const COLS = [
+  { n:"订单号",   t:"text",  e:0,     min:"SO-2026-000001", max:"SO-2026-012480", lmin:12, lmax:12 },
+  { n:"日期",     t:"text",  e:0,     min:"2026-10-01", max:"2026-10-31", lmin:10, lmax:10 },
+  { n:"地区",     t:"text",  e:12,    min:"东北", max:"西南", lmin:2, lmax:2 },
+  { n:"品类",     t:"text",  e:0,     min:"家居", max:"食品", lmin:2, lmax:4 },
+  { n:"金额",     t:"float", e:96,    min:0.9,  max:48690, mean:1246.38, sum:15435171.84, lmin:4, lmax:9 },
+  { n:"数量",     t:"int",   e:0,     min:1,    max:24,    mean:4.63,    sum:57782 },
+  { n:"单价",     t:"float", e:412,   min:0.5,  max:9999,  mean:268.94,  sum:3245568 },
+  { n:"折扣",     t:"float", e:5862,  min:0,    max:0.35,  mean:0.08,    sum:529.44 },
+  { n:"客户备注", t:"text",  e:9104,  lmin:0,   lmax:118 },
+  { n:"内部标记", t:"empty", e:12480 },
+];
+
+const TYPE_LABEL = { int:"整数", float:"小数", text:"文本", mixed:"混合", empty:"空" };
+
+const nf = (v, d=0) => Number(v).toLocaleString("zh-CN", { minimumFractionDigits:d, maximumFractionDigits:d });
+
+const CHEVRON = '<svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+const SEARCH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
+const REFRESH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>';
+const CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+
+/* ── 长度区间尺(仅文本列:长度是可比的) ─────────────────────────── */
+function lenRuler({ left, right }){
+  return `
+    <div class="range">
+      <div class="rtop"><span class="ttl">长度</span></div>
+      <div class="rtrack">
+        <span class="ln"></span>
+        <span class="cap" style="left:0"></span>
+        <span class="cap" style="right:0"></span>
+        <span class="tk" style="left:25%"></span>
+        <span class="tk" style="left:50%"></span>
+        <span class="tk" style="left:75%"></span>
+      </div>
+      <div class="rends"><span>${left} 字</span><span>${right} 字</span></div>
+    </div>`;
+}
+
+function detailFor(c){
+  if (c.t === "empty") {
+    return `<div class="detail"><p class="dnote">整列为空,没有可统计的值</p></div>`;
+  }
+  if (c.t === "int" || c.t === "float") {
+    const d = c.t === "float" ? 2 : 0;
+    return `<div class="detail">
+      <div class="stats">
+        <div><span class="k">最小值</span><b class="v">${nf(c.min, d)}</b></div>
+        <div><span class="k">平均值</span><b class="v">${nf(c.mean, 2)}</b></div>
+        <div><span class="k">最大值</span><b class="v">${nf(c.max, d)}</b></div>
+      </div>
+      <div class="dline"><span>求和</span><b>${nf(c.sum, d)}</b><span class="sep">·</span><span>非空</span><b>${nf(ROWS-c.e)}</b></div>
+    </div>`;
+  }
+  const line = c.e > 0
+    ? `<span>非空</span><b>${nf(ROWS-c.e)}</b><span class="sep">·</span><span>缺失</span><b>${nf(c.e)}</b>`
+    : `<span>最小值</span><b style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.min}</b>
+       <span class="sep">·</span><span>最大值</span><b style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.max}</b>`;
+  return `<div class="detail">
+    ${lenRuler({ left:c.lmin, right:c.lmax })}
+    <div class="dline">${line}</div>
+  </div>`;
+}
+
+function rowFor(c, open){
+  const filled = (ROWS - c.e) / ROWS * 100;
+  return `
+  <div class="col${open ? " open" : ""}" role="button" tabindex="0" aria-expanded="${open}" data-name="${c.n}">
+    <span class="dis">${CHEVRON}</span>
+    <div class="r-top">
+      <span class="nm">${c.n}</span>
+      ${c.e ? `<span class="ms">缺失<b>${nf(c.e)}</b></span>` : ""}
+    </div>
+    <div class="r-sub">
+      <span class="ty">${TYPE_LABEL[c.t]}</span>
+      <span class="meter">
+        <i style="width:${filled.toFixed(2)}%"></i>
+        ${c.e ? `<u style="left:${filled.toFixed(2)}%;right:0"></u>` : ""}
+        <s style="left:0"></s><s style="right:0"></s>
+      </span>
+    </div>
+  </div>
+  ${open ? detailFor(c) : ""}`;
+}
+
+const HEAD = (meta) => `
+  <div class="p-head">
+    <div class="t">
+      <h2>数据概览</h2>
+      <div class="meta">${meta}</div>
+    </div>
+    <button class="icon-btn" aria-label="重新分析">${REFRESH}</button>
+    <button class="icon-btn" aria-label="关闭">${CLOSE}</button>
+  </div>`;
+
+const SEARCHROW = (q="") => `
+  <div class="p-search">
+    <label class="field">${SEARCH}<input type="text" placeholder="搜索列" value="${q}" /></label>
+  </div>`;
+
+function render(panel){
+  const state = panel.dataset.state || "ok";
+  const open = (panel.dataset.open || "").split(",").filter(Boolean);
+  const q = panel.dataset.query || "";
+
+  if (state === "loading") {
+    panel.innerHTML = HEAD("正在读取 · 12,480 行") + SEARCHROW() +
+      `<div class="p-list loading">` +
+      Array.from({length:7}).map(() => `
+        <div class="ghost">
+          <span class="ms-ghost"></span>
+          <div class="g1"></div>
+          <div class="g2"><i></i><u></u></div>
+        </div>`).join("") + `</div>`;
+    return;
+  }
+
+  if (state === "error") {
+    panel.innerHTML = HEAD("orders_2026-10.csv") + `
+      <div class="p-list">
+        <div class="state">
+          <div class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><path d="M12 8v5" stroke-linecap="round"/><path d="M12 16.5h.01" stroke-linecap="round"/></svg></div>
+          <h3>无法分析这个文件</h3>
+          <p>检查文件是否被占用,或换一个分隔符再试</p>
+          <div class="errbox">xan stats failed: could not read<br>headers from "orders_2026-10.csv"</div>
+          <button class="btn">重试</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const all = COLS.filter(c => !q || c.n.includes(q));
+  const list = panel.dataset.sort === "missing" ? [...all].sort((a,b) => b.e - a.e) : all;
+  const missCols = COLS.filter(c => c.e > 0).length;
+  const byMissing = panel.dataset.sort === "missing";
+
+  panel.innerHTML = HEAD(`12,480 行 <i>·</i> 10 列 <i>·</i> ${missCols} 列有空值`) +
+    SEARCHROW(q) +
+    `<div class="p-bar">
+      <span class="p-count">${q ? `<b>${list.length}</b> / 10 列` : `<b>10</b> 列`}</span>
+      <div class="sort"><button class="${byMissing ? "" : "on"}">列序</button><button class="${byMissing ? "on" : ""}">缺失</button></div>
+    </div>` +
+    `<div class="p-list">` +
+    (list.length
+      ? list.map(c => rowFor(c, open.includes(c.n))).join("")
+      : `<div class="state" style="padding-top:48px">
+           <div class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5" stroke-linecap="round"/></svg></div>
+           <h3>没有匹配「${q}」的列</h3>
+           <p>共 10 列,按列名搜索</p>
+           <button class="link">清除搜索</button>
+         </div>`) +
+    `</div>`;
+}
+
+document.querySelectorAll(".panel").forEach(render);
+
+/* ── 交互:点击展开 / 排序 / 搜索 / 主题 ─────────────────────────── */
+document.addEventListener("click", (e) => {
+  const col = e.target.closest(".col");
+  if (col) {
+    const panel = col.closest(".panel");
+    const name = col.dataset.name;
+    const open = new Set((panel.dataset.open || "").split(",").filter(Boolean));
+    open.has(name) ? open.delete(name) : open.add(name);
+    panel.dataset.open = [...open].join(",");
+    render(panel);
+    const again = panel.querySelector(`.col[data-name="${name}"]`);
+    again && again.focus({ preventScroll:true });
+    clearTimeout(panel._pull);
+    panel._pull = setTimeout(() => {
+      const list = panel.querySelector(".p-list");
+      if (!list) return;
+      const r = again.getBoundingClientRect(), lr = list.getBoundingClientRect();
+      if (r.bottom > lr.bottom - 8) list.scrollTop += r.bottom - lr.bottom + 8;
+    }, 20);
+    return;
+  }
+  const sBtn = e.target.closest(".sort button");
+  if (sBtn) {
+    const panel = sBtn.closest(".panel");
+    panel.dataset.sort = sBtn.textContent.trim() === "缺失" ? "missing" : "order";
+    render(panel);
+    return;
+  }
+  if (e.target.closest(".link")) {
+    const panel = e.target.closest(".panel");
+    panel.dataset.query = "";
+    render(panel);
+    return;
+  }
+});
+
+document.querySelectorAll(".panel").forEach(panel => {
+  panel.addEventListener("input", (e) => {
+    if (!e.target.matches(".field input")) return;
+    panel.dataset.query = e.target.value.trim();
+    render(panel);
+    const input = panel.querySelector(".field input");
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  });
+});
+
+/* 主题 */
+const seg = document.getElementById("theme-seg");
+seg.addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  document.documentElement.classList.toggle("dark", btn.dataset.theme === "dark");
+  seg.querySelectorAll("button").forEach(b => b.classList.toggle("on", b === btn));
+});
+
+/* 截图钩子:?frame=app|zoom|states&theme=dark */
+const params = new URLSearchParams(location.search);
+if (params.get("frame")) document.body.dataset.frame = params.get("frame");
+if (params.get("theme") === "dark") {
+  document.documentElement.classList.add("dark");
+  seg.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.theme === "dark"));
+}
+</script>
+</body>
+</html>
