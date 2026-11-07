@@ -79,7 +79,23 @@ export function useTabs(
 
   const removeTab = useCallback(
     (tabId: string) => {
-      if (tabs.length === 1) return;
+      // Closing the only tab resets it to a fresh blank tab instead of leaving
+      // the app with zero tabs (many callers assume a selected tab exists).
+      if (tabs.length === 1) {
+        const freshId = `tab-${Date.now()}`;
+        const now = formatDateTime(new Date());
+        setTabs([
+          {
+            id: freshId,
+            name: "Tab1",
+            pipeline: [],
+            created: now,
+            updated: now,
+          },
+        ]);
+        setSelectedTabId(freshId);
+        return;
+      }
       setTabs((prev) => prev.filter((tab) => tab.id !== tabId));
     },
     [tabs.length],

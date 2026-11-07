@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Handle, Position } from "reactflow";
-import { Table, X, Check } from "lucide-react";
+import { X, Check } from "lucide-react";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { useLanguage } from "@/i18n";
 
@@ -90,7 +90,11 @@ export function ResultTableNode({
   };
 
   return (
-    <div className="result-node rounded-md border border-border/60 bg-background shadow-sm">
+    <div
+      className={`result-node flex w-[560px] flex-col overflow-hidden rounded-md border border-border/60 bg-background shadow-sm ${
+        truncated ? "h-[426px]" : "h-[400px]"
+      }`}
+    >
       <Handle
         type="target"
         position={Position.Left}
@@ -98,21 +102,21 @@ export function ResultTableNode({
         className="opacity-0"
         style={{ opacity: 0, pointerEvents: "none" }}
       />
-      <div className="result-node-header px-2 py-1 bg-muted/50 flex items-center gap-2 select-none cursor-grab active:cursor-grabbing">
-        <div className="w-6 h-6 bg-gradient-to-br from-indigo-500/25 to-indigo-500/10 rounded-md flex items-center justify-center">
-          <Table className="h-3 w-3 text-indigo-600" />
-        </div>
-        <span className="font-semibold text-sm truncate">{label}</span>
-        <span className="text-xs text-muted-foreground ml-auto whitespace-nowrap">
-          {totalRows} rows x {headers.length} cols
+      <div className="result-node-header flex h-10 shrink-0 items-center gap-2 bg-muted/50 px-3 select-none cursor-grab active:cursor-grabbing">
+        <span className="min-w-0 truncate text-sm font-semibold">{label}</span>
+        <span className="ml-auto whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground">
+          {t.inputRowsCols
+            .replace("{rows}", String(totalRows))
+            .replace("{cols}", String(headers.length))}
         </span>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-1">
           <button
             onClick={(e) => {
               e.stopPropagation();
               copy("csv");
             }}
-            className="nodrag w-6 h-6 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-md transition-colors flex items-center justify-center"
+            aria-label={`${t.copy} CSV`}
+            className="nodrag h-6 rounded px-1 font-mono text-[10.5px] font-normal text-muted-foreground transition-colors hover:text-foreground"
           >
             {copied === "csv" ? (
               <Check className="h-3.5 w-3.5 text-muted-foreground" />
@@ -125,7 +129,8 @@ export function ResultTableNode({
               e.stopPropagation();
               copy("md");
             }}
-            className="nodrag w-6 h-6 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-md transition-colors flex items-center justify-center"
+            aria-label={`${t.copy} MD`}
+            className="nodrag h-6 rounded px-1 font-mono text-[10.5px] font-normal text-muted-foreground transition-colors hover:text-foreground"
           >
             {copied === "md" ? (
               <Check className="h-3.5 w-3.5 text-muted-foreground" />
@@ -138,18 +143,21 @@ export function ResultTableNode({
               e.stopPropagation();
               onClose();
             }}
-            className="nodrag w-6 h-6 rounded-md flex items-center justify-center hover:bg-primary/10 transition-colors"
+            className="nodrag flex h-6 w-6 items-center justify-center rounded transition-colors hover:bg-primary/10"
           >
             <X className="h-3 w-3" />
           </button>
         </div>
       </div>
       {truncated && (
-        <div className="px-2 py-0.5 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 border-b border-border/40">
-          {t.resultTruncated}
+        <div
+          className="flex h-[26px] shrink-0 items-center border-b border-border/40 bg-amber-500/10 px-3 font-mono text-[11px] text-amber-600 dark:text-amber-400"
+          title={t.resultTruncated}
+        >
+          <span className="truncate">{t.resultTruncated}</span>
         </div>
       )}
-      <ScrollArea className="nodrag nowheel cursor-default h-[360px]">
+      <ScrollArea className="nodrag nowheel min-h-0 flex-1 cursor-default">
         <div
           ref={scrollRef}
           className="min-w-max"
@@ -159,11 +167,25 @@ export function ResultTableNode({
         >
           <table
             className="border-collapse"
-            style={{ width: headers.length * 100, tableLayout: "fixed" }}
+            style={{
+              width:
+                headers.length <= 5
+                  ? 520
+                  : headers.length * 100,
+              tableLayout: "fixed",
+            }}
           >
             <colgroup>
               {headers.map((_, i) => (
-                <col key={i} style={{ width: 100 }} />
+                <col
+                  key={i}
+                  style={{
+                    width:
+                      headers.length <= 5
+                        ? 520 / Math.max(headers.length, 1)
+                        : 100,
+                  }}
+                />
               ))}
             </colgroup>
             <thead>

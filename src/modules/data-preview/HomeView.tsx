@@ -222,6 +222,9 @@ export const HomeView = React.memo(function HomeView({
   );
   const pipeline = currentTab?.pipeline || [];
   const inputFile = currentTab?.inputFile || "";
+  const inputFileName = inputFile
+    ? inputFile.split(/[/\\]/).pop() || inputFile
+    : undefined;
   const edges = currentTab?.edges || [];
   const inputPosition = currentTab?.inputPosition;
 
@@ -298,6 +301,7 @@ export const HomeView = React.memo(function HomeView({
           headers={displayHeaders}
           rows={data}
           columnWidths={columnWidths}
+          inputFileName={inputFileName}
           resultPreview={resultPreview}
           onStepsChange={(newPipeline) => {
             if (onPipelineReorder && selectedTabId) {
@@ -421,7 +425,7 @@ export const HomeView = React.memo(function HomeView({
                   key={tab.id}
                   className={`group flex items-center gap-1 px-2 py-0.5 rounded-md text-xs transition-all duration-150 shrink-0 cursor-default ${
                     selectedTabId === tab.id
-                      ? "bg-primary/10 text-primary border border-primary/20"
+                      ? "border border-[color-mix(in_oklab,var(--canvas-ink)_40%,transparent)] bg-canvas-ink-soft text-canvas-ink"
                       : "text-muted-foreground hover:bg-accent/50 hover:text-foreground border border-transparent"
                   }`}
                   onContextMenu={(e) => {
@@ -506,17 +510,15 @@ export const HomeView = React.memo(function HomeView({
                     }
                     return null;
                   })()}
-                  {tabs.length > 1 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveTab(tab.id);
-                      }}
-                      className="p-0. rounded opacity-0 group-hover:opacity-100 hover:bg-muted/80 transition-all duration-150 text-muted-foreground/50 hover:text-foreground"
-                    >
-                      <X className="h-2.5 w-2.5" />
-                    </button>
-                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemoveTab(tab.id);
+                    }}
+                    className="flex h-4 w-4 items-center justify-center rounded opacity-0 transition-colors duration-150 group-hover:opacity-100 hover:bg-muted/80 text-muted-foreground/50 hover:text-foreground"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
                 </div>
               ))}
             </div>

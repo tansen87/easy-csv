@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Search, ListTree, Table } from "lucide-react";
 
 import { ScrollArea } from "@/components/ui/ScrollArea";
@@ -43,7 +43,10 @@ function highlightText(text: string, query: string): React.ReactNode {
     }
     if (idx > i) parts.push(text.slice(i, idx));
     parts.push(
-      <mark key={idx} className="bg-foreground/20 rounded-sm px-0.5">
+      <mark
+        key={idx}
+        className="rounded-sm bg-[color-mix(in_oklab,var(--canvas-ink)_22%,transparent)] px-0.5"
+      >
         {text.slice(idx, idx + q.length)}
       </mark>,
     );
@@ -64,6 +67,7 @@ export function SearchOverlay({
 }: SearchOverlayProps) {
   const { t } = useLanguage();
   const [activeIndex, setActiveIndex] = useState(0);
+  const resultRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   useEffect(() => {
     setActiveIndex(0);
@@ -72,6 +76,12 @@ export function SearchOverlay({
   useEffect(() => {
     if (isOpen) setActiveIndex(0);
   }, [isOpen]);
+
+  // Keep the keyboard-active row visible when results exceed the 5-row window.
+  useEffect(() => {
+    if (!isOpen) return;
+    resultRefs.current[activeIndex]?.scrollIntoView?.({ block: "nearest" });
+  }, [activeIndex, isOpen]);
 
   const highlightSecondary = useMemo(
     () => (text: string) => highlightText(text, searchQuery),
@@ -102,11 +112,11 @@ export function SearchOverlay({
   };
 
   return (
-    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 w-80">
-      <div className="bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+    <div className="absolute left-1/2 top-3 z-50 w-[360px] -translate-x-1/2">
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-[0_4px_12px_rgba(0,0,0,0.07)] transition-colors focus-within:border-canvas-line-strong dark:shadow-none">
         {/* Search input box */}
-        <div className="flex items-center gap-2 px-3 py-2 border-b">
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+        <div className="flex h-9 items-center gap-2 border-b border-border px-2.5">
+          <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <input
             ref={searchInputRef}
             type="text"
@@ -114,52 +124,59 @@ export function SearchOverlay({
             onChange={(e) => onSearchQueryChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t.searchFlow}
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-muted-foreground"
           />
-          <span className="text-[10px] text-muted-foreground">ESC</span>
+          <kbd className="flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded border border-border bg-muted px-[5px] font-mono text-[10.5px] font-normal text-muted-foreground">
+            ESC
+          </kbd>
         </div>
 
         {/* Search results dropdown list - only displayed when there is search content */}
         {searchQuery && searchResults.length > 0 && (
-          <ScrollArea className="h-[16vh]">
-            <div className="py-1">
-              {searchResults.map((result, index) => {
-                const CommandIcon =
-                  result.isTableNode || result.resultId ? Table : ListTree;
-                const isActive = index === activeIndex;
-                return (
-                  <button
-                    key={
-                      result.resultId ||
-                      (result.isTableNode ? "table-node" : result.step!.id)
-                    }
-                    onClick={() =>
-                      onResultClick(
-                        result.step,
-                        result.isTableNode,
-                        result.resultId,
-                      )
-                    }
-                    onMouseEnter={() => setActiveIndex(index)}
-                    className={`w-full px-3 py-2 text-left transition-colors flex items-center justify-between gap-2 ${
-                      isActive ? "bg-accent/60" : "hover:bg-accent/50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <CommandIcon className="h-3 w-3 text-muted-foreground shrink-0" />
-                      <span className="text-sm truncate">
-                        {highlightSecondary(result.displayName)}
-                      </span>
-                    </div>
-                    {result.secondaryName && (
-                      <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
-                        {highlightSecondary(result.secondaryName)}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+          <ScrollArea
+            hideHorizontalScrollbar
+            blockContent
+            viewportClassName="max-h-40 overflow-y-auto"
+          >
+            {searchResults.map((result, index) => {
+              const CommandIcon =
+                result.isTableNode || result.resultId ? Table : ListTree;
+              const isActive = index === activeIndex;
+              return (
+                <button
+                  key={
+                    result.resultId ||
+                    (result.isTableNode ? "table-node" : result.step!.id)
+                  }
+                  ref={(node) => {
+                    resultRefs.current[index] = node;
+                  }}
+                  onClick={() =>
+                    onResultClick(
+                      result.step,
+                      result.isTableNode,
+                      result.resultId,
+                    )
+                  }
+                  onMouseEnter={() => setActiveIndex(index)}
+                  className={`flex h-8 w-full items-center gap-2 px-2.5 text-left transition-colors ${
+                    isActive
+                      ? "bg-canvas-ink-soft text-foreground"
+                      : "text-muted-foreground hover:bg-canvas-ink-soft"
+                  }`}
+                >
+                  <CommandIcon className="h-[13px] w-[13px] shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate text-xs">
+                    {highlightSecondary(result.displayName)}
+                  </span>
+                  {result.secondaryName && (
+                    <span className="shrink-0 font-mono text-[10.5px] text-muted-foreground">
+                      {highlightSecondary(result.secondaryName)}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </ScrollArea>
         )}
       </div>

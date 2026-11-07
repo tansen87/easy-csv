@@ -36,6 +36,14 @@
   --paper-rule: oklch(0.2 0.01 80 / 8%);
   --empty-warn: oklch(0.55 0.1 72);
   --empty-ink: oklch(0.42 0.055 250);
+  /* Canvas only (design 033): dot grid, hairlines, one ink accent.
+     Scoped here on purpose - the rest of the app keeps the neutral ramp. */
+  --canvas-dot: oklch(0.2 0.01 80 / 10%);
+  --canvas-line: oklch(0.2 0.01 80 / 26%);
+  --canvas-line-strong: oklch(0.2 0.01 80 / 52%);
+  --canvas-ink: var(--empty-ink);
+  --canvas-ink-soft: oklch(0.42 0.055 250 / 9%);
+  --canvas-ok: oklch(0.52 0.09 150);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -103,6 +111,13 @@
   --paper-rule: oklch(0.96 0.005 85 / 9%);
   --empty-warn: oklch(0.78 0.11 75);
   --empty-ink: oklch(0.78 0.045 245);
+  /* Canvas only (design 033) - dark: surface steps + hairlines, no shadows. */
+  --canvas-dot: oklch(0.96 0.005 85 / 8%);
+  --canvas-line: oklch(0.96 0.005 85 / 26%);
+  --canvas-line-strong: oklch(0.96 0.005 85 / 46%);
+  --canvas-ink: var(--empty-ink);
+  --canvas-ink-soft: oklch(0.78 0.045 245 / 12%);
+  --canvas-ok: oklch(0.74 0.1 150);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -165,6 +180,12 @@
   --color-paper-rule: var(--paper-rule);
   --color-empty-warn: var(--empty-warn);
   --color-empty-ink: var(--empty-ink);
+  --color-canvas-dot: var(--canvas-dot);
+  --color-canvas-line: var(--canvas-line);
+  --color-canvas-line-strong: var(--canvas-line-strong);
+  --color-canvas-ink: var(--canvas-ink);
+  --color-canvas-ink-soft: var(--canvas-ink-soft);
+  --color-canvas-ok: var(--canvas-ok);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -253,8 +274,8 @@
 }
 
 .react-flow__selection {
-  background: rgba(34, 197, 94, 0.1);
-  border: 1.5px solid rgba(34, 197, 94, 0.6);
+  background: color-mix(in oklab, var(--canvas-ink) 8%, transparent);
+  border: 1.5px solid color-mix(in oklab, var(--canvas-ink) 40%, transparent);
   border-radius: 2px;
   z-index: 6;
 }

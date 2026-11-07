@@ -11,6 +11,8 @@ interface UsePipelineLayoutArgs {
   headers: string[];
   rows: string[][];
   columnWidths: Record<number, number>;
+  /** Basename of the input file, forwarded to the table node footer. */
+  inputFileName?: string;
   savedEdges?: PipelineStep extends never ? never : any[];
   savedInputPosition?: { x: number; y: number };
   resultPreview?: ResultPreview[];
@@ -52,6 +54,7 @@ export function usePipelineLayout({
   headers,
   rows,
   columnWidths,
+  inputFileName,
   savedEdges,
   savedInputPosition,
   resultPreview,
@@ -129,6 +132,7 @@ export function usePipelineLayout({
           ...withPosition,
           data: {
             ...withPosition.data,
+            fileName: inputFileName,
             delimiter,
             delimiterMode,
             delimiterSource,
@@ -163,7 +167,8 @@ export function usePipelineLayout({
           x: maxRight + 60,
           y: fallbackY,
         };
-        fallbackY += 260;
+        // 426 (header 40 + table 360 + truncated banner 26) + 24 gap.
+        fallbackY += 450;
         return {
           id: r.id,
           type: "resultTableNode" as const,
@@ -181,7 +186,8 @@ export function usePipelineLayout({
           draggable: true,
           dragHandle: ".result-node-header",
           width: 520,
-          height: 220,
+          // Fixed node height (426 with the truncated banner, 400 without).
+          height: 426,
         };
       });
 
@@ -194,6 +200,7 @@ export function usePipelineLayout({
     headers,
     rows,
     columnWidths,
+    inputFileName,
     savedEdges,
     savedInputPosition,
     resultPreview,

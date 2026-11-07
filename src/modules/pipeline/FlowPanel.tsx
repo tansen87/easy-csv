@@ -50,6 +50,7 @@ import {
   FileDown,
 } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { Button } from "@/components/ui/Button";
 import { useLanguage } from "@/i18n";
 
 function formatRelativeTime(
@@ -74,6 +75,8 @@ interface FlowPanelProps {
   headers: string[];
   rows: string[][];
   columnWidths: Record<number, number>;
+  /** Basename of the input file, shown in the table node footer. */
+  inputFileName?: string;
   resultPreview?: import("@/types/execution").ResultPreview[];
   onStepsChange: (steps: PipelineStep[]) => void;
   onStepClick: (step: PipelineStep) => void;
@@ -114,6 +117,7 @@ export function FlowPanel({
   headers,
   rows,
   columnWidths,
+  inputFileName,
   resultPreview,
   onStepsChange,
   onStepClick,
@@ -203,9 +207,6 @@ export function FlowPanel({
   // Right-click interaction mode: "cut" keeps the cut-to-delete / connect
   // gesture; "menu" opens the canvas context menu instead (paste, more later).
   const [rightClickMode, setRightClickMode] = useState<"cut" | "menu">("cut");
-  // The mode toggle renders as a small dot by default and expands into the
-  // vertical bar when the mouse nears the right edge.
-  const [modeBarHovered, setModeBarHovered] = useState(false);
   const [canvasMenu, setCanvasMenu] = useState<{
     x: number;
     y: number;
@@ -341,6 +342,7 @@ export function FlowPanel({
     headers,
     rows,
     columnWidths,
+    inputFileName,
     savedEdges,
     savedInputPosition,
     resultPreview,
@@ -427,13 +429,6 @@ export function FlowPanel({
   // Right-click move - connect or cut mode
   const handleCutMove = useCallback(
     (e: React.MouseEvent) => {
-      // Reveal the mode toggle bar when the mouse nears the right edge.
-      // Returns the previous state when unchanged so React skips re-renders.
-      setModeBarHovered((prev) => {
-        const near = e.clientX >= window.innerWidth - 56;
-        return prev === near ? prev : near;
-      });
-
       if (isConnecting) {
         moveConnect(e);
       } else if (isCutting && !isClosingCut) {
@@ -735,7 +730,6 @@ export function FlowPanel({
       onMouseDown={handleCutStart}
       onMouseMove={handleCutMove}
       onMouseUp={handleCutEnd}
-      onMouseLeave={() => setModeBarHovered(false)}
       onContextMenu={handlePanelContextMenu}
     >
       {cycleNotice && (
@@ -827,54 +821,48 @@ export function FlowPanel({
         connectTargetNode={connectTargetNode}
       />
 
-      {/* Right-click interaction mode toggle: a small dot by default,
-          expanding into the vertical bar when the mouse nears the right edge. */}
+      {/* Right-click interaction mode: a persistent two-segment rail. Keeping
+          it visible makes the second right-click mode discoverable without
+          hiding it behind a proximity-revealed dot. */}
       <div
-        className="absolute right-2 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center"
+        className="absolute left-3 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-0.5 rounded-[9px] border border-border bg-card p-[3px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-none"
         onMouseDown={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.stopPropagation()}
       >
-        {modeBarHovered ? (
-          <div className="flex flex-col items-center gap-1 bg-card border border-border/70 rounded-lg shadow-lg p-1 animate-in fade-in zoom-in-95 duration-150">
-            <Tooltip content={t.rightClickCutMode} side="left">
-              <button
-                onClick={() => {
-                  setRightClickMode("cut");
-                  setCanvasMenu(null);
-                }}
-                aria-pressed={rightClickMode === "cut"}
-                className={`relative flex items-center justify-center h-7 w-7 rounded-lg transition-colors ${
-                  rightClickMode === "cut"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-primary hover:bg-accent/60"
-                }`}
-              >
-                <Scissors className="h-4 w-4" />
-              </button>
-            </Tooltip>
-            <Tooltip content={t.rightClickMenuMode} side="left">
-              <button
-                onClick={() => {
-                  setRightClickMode("menu");
-                  setCanvasMenu(null);
-                }}
-                aria-pressed={rightClickMode === "menu"}
-                className={`relative flex items-center justify-center h-7 w-7 rounded-lg transition-colors ${
-                  rightClickMode === "menu"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-primary hover:bg-accent/60"
-                }`}
-              >
-                <MousePointerClick className="h-4 w-4" />
-              </button>
-            </Tooltip>
-          </div>
-        ) : (
+        <Tooltip content={t.rightClickCutMode} side="right">
           <button
             type="button"
-            className="h-1.5 w-8 rounded-full bg-black/60 dark:bg-white/70 shadow cursor-pointer transition-all hover:scale-x-110 hover:bg-black/80 dark:hover:bg-white/90"
-          />
-        )}
+            onClick={() => {
+              setRightClickMode("cut");
+              setCanvasMenu(null);
+            }}
+            aria-pressed={rightClickMode === "cut"}
+            className={`flex h-[26px] w-[26px] items-center justify-center rounded-[5px] transition-colors ${
+              rightClickMode === "cut"
+                ? "bg-canvas-ink-soft text-canvas-ink"
+                : "text-muted-foreground hover:bg-accent/60"
+            }`}
+          >
+            <Scissors className="h-3.5 w-3.5" />
+          </button>
+        </Tooltip>
+        <Tooltip content={t.rightClickMenuMode} side="right">
+          <button
+            type="button"
+            onClick={() => {
+              setRightClickMode("menu");
+              setCanvasMenu(null);
+            }}
+            aria-pressed={rightClickMode === "menu"}
+            className={`flex h-[26px] w-[26px] items-center justify-center rounded-[5px] transition-colors ${
+              rightClickMode === "menu"
+                ? "bg-canvas-ink-soft text-canvas-ink"
+                : "text-muted-foreground hover:bg-accent/60"
+            }`}
+          >
+            <MousePointerClick className="h-3.5 w-3.5" />
+          </button>
+        </Tooltip>
       </div>
 
       {/* Canvas context menu (right-click menu mode) */}
@@ -887,26 +875,33 @@ export function FlowPanel({
         />
       )}
 
-      {/* Multi-select floating action bar */}
-      {selectedNodeIds.size > 0 && (
-        <div className="absolute top-1 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-card border border-border/70 rounded-lg shadow-lg px-2 py-1.5">
-          <span className="px-1.5 text-xs font-medium text-muted-foreground tabular-nums">
+      {/* Multi-select floating action bar (hidden while the search overlay is
+          open so the two top-centre surfaces never stack). */}
+      {selectedNodeIds.size > 0 && !isSearchOpen && (
+        <div className="absolute left-1/2 top-3 z-20 flex h-[34px] -translate-x-1/2 items-center rounded-[9px] border border-border bg-card px-1 shadow-[0_4px_12px_rgba(0,0,0,0.07)] dark:shadow-none">
+          <span className="px-2 font-mono text-[11px] font-medium tabular-nums text-muted-foreground">
             {selectedNodeIds.size}
           </span>
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
             onClick={handleCopySelected}
-            className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-accent/50 transition-colors"
+            className="h-[26px] gap-1.5 rounded-[5px] px-1.5 text-[11px] font-normal transition-colors hover:bg-canvas-ink-soft hover:text-foreground"
           >
             <Copy className="h-3.5 w-3.5" />
             {t.copy}
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
             onClick={handleDeleteSelected}
-            className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-red-500 hover:bg-red-500/10 transition-colors"
+            className="h-[26px] gap-1.5 rounded-[5px] px-1.5 text-[11px] font-normal text-destructive transition-colors hover:bg-destructive/10 hover:text-destructive"
           >
             <Trash2 className="h-3.5 w-3.5" />
             {t.deleteSteps}
-          </button>
+          </Button>
         </div>
       )}
 

@@ -240,6 +240,9 @@ export interface Translations {
   // FlowPanel
   searchFlow: string;
   headerRename: string;
+  inputRowsCols: string;
+  renamePending: string;
+  saveRenameStep: string;
   deleteSteps: string;
   justNow: string;
   minutesAgo: string;

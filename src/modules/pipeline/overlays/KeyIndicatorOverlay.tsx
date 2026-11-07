@@ -81,7 +81,7 @@ export function KeyIndicatorOverlay({
 
   return (
     <div
-      className={`absolute bottom-8 left-3 z-50 flex items-center gap-1 select-none pointer-events-none transition-opacity duration-200 ${
+      className={`absolute bottom-11 left-4 z-50 flex items-center gap-1 select-none pointer-events-none transition-opacity duration-200 ${
         fading ? "opacity-0" : "opacity-100"
       }`}
       aria-hidden="true"
@@ -89,29 +89,29 @@ export function KeyIndicatorOverlay({
       {orderedKeys.map((k) => (
         <kbd
           key={k}
-          className="min-w-[22px] h-[22px] px-1 flex items-center justify-center rounded border border-border/60 bg-card/80 text-[11px] text-muted-foreground font-medium shadow-sm"
+          className="flex h-5 min-w-[20px] items-center justify-center rounded border border-canvas-line bg-muted/60 px-1 font-mono text-[10.5px] font-normal text-muted-foreground"
         >
           {DISPLAY[k] ?? k.toUpperCase()}
         </kbd>
       ))}
       {hasMouse && orderedKeys.length > 0 && (
-        <span className="w-px h-3 bg-border/40" />
+        <span className="h-3 w-px bg-canvas-line" />
       )}
       {buttons.map((b) => (
         <span
           key={b}
-          className="h-[22px] px-1.5 flex items-center rounded-md border border-border/60 bg-card/80 text-[11px] text-muted-foreground font-medium shadow-sm"
+          className="flex h-5 items-center rounded border border-canvas-line bg-muted/60 px-1.5 font-mono text-[10.5px] font-normal text-muted-foreground"
         >
           {mouseLabels[b]}
         </span>
       ))}
       {space && (
-        <kbd className="min-w-[22px] h-[22px] px-1 flex items-center justify-center rounded border border-border/60 bg-card/80 text-[11px] text-muted-foreground font-medium shadow-sm">
+        <kbd className="flex h-5 min-w-[20px] items-center justify-center rounded border border-canvas-line bg-muted/60 px-1 font-mono text-[10.5px] font-normal text-muted-foreground">
           Space
         </kbd>
       )}
       {shift && (
-        <kbd className="h-[22px] px-1.5 flex items-center rounded bg-primary/10 text-[10px] text-primary font-medium border border-primary/20">
+        <kbd className="flex h-5 items-center rounded border border-canvas-line bg-canvas-ink-soft px-1.5 font-mono text-[10px] font-medium text-canvas-ink">
           x2
         </kbd>
       )}

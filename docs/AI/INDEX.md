@@ -93,7 +93,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | `docs/design/032_empty-state-redesign.md` | 空白页(空状态)重新设计(**已实现 2026-11-07**;unslop): 诊断现状 `HomeView.tsx:285-494` 的 11 项 AI 味(渐变图标底、问候标题、四张等宽功能卡 + `推荐 · 30 秒`徽章、蓝/黄多色强调、`transition-all` + `hover:scale-105`、大写宽字距小标题、`h-[26vh]`、无内容预览、`CSV, Excel, JSON` 过度承诺)。方案改为**不对称双列**(左 412 文本 / 右 452 示例表): 主操作「打开文件」+ 次操作「先看看示例」,导入降为文字链接、GitHub 降为右下角文字链接;右侧新增**真实示例表格**(内置销售数据,第 8 行金额为空 → 行号琥珀)+ `search → dedup → groupby` 管道条(替代虚线三步条);新增行号签名、一次性入场动效、4 个空状态专用 CSS 变量(`--paper`/`--paper-rule`/`--empty-warn`/`--empty-ink`)。含 i18n 增删清单、`formatShortDateTime`、`EmptyState.tsx` 拆分方案与验收清单;原型 `docs/design/prototypes/032/01-empty-state.html`(改造前 / 改后亮色 / 改后暗色)。**实施**: 新增 `src/modules/data-preview/EmptyState.tsx`,HomeView 空状态分支 210 → 9 行(586 行),`index.css` 加 4 个空状态专用变量 + `empty-enter`,`utils/format.ts` 加 `formatShortDateTime`,i18n 增 7 删 8;新增 9 例测试(前端 52 文件 / 641 例全绿) |
 
-> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–032 已登记。
+| `docs/design/033_flow-panel-redesign.md` | 管道画布(FlowPanel)重新设计(**部分实现 2026-11-07**;unslop): 诊断坐标轴网格、渐变图标底、9px 参数胶囊、绿色选中环、隐藏的右键模式圆点、写死英文 `Input Data` / `5 rows x` / `3 steps`,以及布局常量与实际节点尺寸不一致导致的「首步贴边」。方案改为**账本纸面 + 索引号纸片**: 22px 点阵(React Flow `Background` 替代 `CoordinateGrid`)、输入表 520 宽(文件名 + 行号 + 横线表 + 页脚文件名/行×列)、步骤 264 宽(左侧 `01/02/03` 索引 + 11px 等宽参数行)、结果表固定 520 宽、墨蓝只用于选中索引线/结果数字/连线端点;新增 6 个画布专用 CSS 变量、11 个 i18n key、`numericColumnFlags` 数字列对齐、布局常量订正(264/288/64/24、首步 `table.x+520+64`、结果间距 452)。**已实施**: 画布搜索(360 宽 / 5×32 / ESC keycap)、多选浮条(34 高 / 搜索时隐藏)、右键模式条(左侧常驻 26px 竖条)、按键 HUD(20px keycap / `bottom-11 left-4`)、输入表页脚(去掉左上图标与右上「5 rows x」;左=文件名、右=`{rows} 行 × {cols} 列`;改名待保存时隐藏二者并在右侧显示「列名已修改 + 保存为 rename 步骤」;页脚与标题栏同为拖拽把手)、结果表(固定 520 × 400 / 截断 426;去掉左上图标;行数等宽;CSV/MD 纯文字;26px 琥珀截断条位于表头之上)、选中色改为墨蓝(输入表 + 步骤)、框选墨蓝、标签页墨蓝 + 单标签页关闭,见文末 §13。原型 `docs/design/prototypes/033/01-flow-panel.html`(改造前 / 改后亮色 / 改后暗色 / 状态细节) |
+
+> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–033 已登记。
 
 ---
 

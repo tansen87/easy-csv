@@ -1,0 +1,858 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>原型 033 · 管道画布(FlowPanel)重新设计</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#efeeec;color:#2a2a2a;
+    font-family:"Inter","Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+
+  .stage{padding:28px 24px 72px;display:flex;flex-direction:column;align-items:center;gap:18px}
+  .plabel{width:1160px;max-width:100%;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .plabel .tag{background:#141414;color:#fff;font-size:11px;font-weight:600;letter-spacing:.06em;padding:3px 8px;border-radius:5px}
+  .plabel h1{font-size:14px;margin:0;font-weight:600}
+  .plabel p{margin:0;font-size:12px;color:#6b6b6b}
+  .state{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid transparent}
+  .state.before{color:#b91c1c;background:#fef2f2;border-color:#fecaca}
+  .state.after{color:#15803d;background:#f0fdf4;border-color:#bbf7d0}
+
+  /* ── 主题变量 ─────────────────────────────── */
+  .light{
+    --bg:#ffffff;--chrome:#ffffff;--tab:#f7f6f3;
+    --fg:#1b1a17;--fg2:#5b554c;--fg3:#8a8378;
+    --border:rgba(27,26,23,.10);--border2:rgba(27,26,23,.18);
+    --card:#ffffff;--paper:#fffdf8;--rule:rgba(27,26,23,.08);
+    --dot:rgba(27,26,23,.10);--line:rgba(27,26,23,.28);--line-strong:rgba(27,26,23,.52);
+    --ink:#2f4a63;--ink-soft:rgba(47,74,99,.09);
+    --warn:#a97a15;--warn-soft:rgba(169,122,21,.10);
+    --danger:#b42318;--danger-soft:rgba(180,35,24,.07);
+    --ok:#15803d;
+    --shadow:0 1px 2px rgba(0,0,0,.05);
+    --shadow-pop:0 4px 12px rgba(0,0,0,.07)
+  }
+  .dark{
+    --bg:#171613;--chrome:#1c1b17;--tab:#1f1e1a;
+    --fg:#ece9e1;--fg2:#b3ada2;--fg3:#8a8478;
+    --border:rgba(236,233,225,.10);--border2:rgba(236,233,225,.18);
+    --card:#1c1b17;--paper:#1b1a16;--rule:rgba(236,233,225,.08);
+    --dot:rgba(236,233,225,.08);--line:rgba(236,233,225,.26);--line-strong:rgba(236,233,225,.46);
+    --ink:#9db9d2;--ink-soft:rgba(157,185,210,.12);
+    --warn:#d3a244;--warn-soft:rgba(211,162,68,.12);
+    --danger:#e06c60;--danger-soft:rgba(224,108,96,.10);
+    --ok:#5fa97a;
+    --shadow:none;
+    --shadow-pop:none
+  }
+
+  /* ── 应用外壳 ─────────────────────────────── */
+  .app{width:1160px;max-width:100%;height:760px;flex:none;border:1px solid #d5d3ce;border-radius:12px;
+       box-shadow:0 14px 34px rgba(0,0,0,.10);overflow:hidden;display:flex;flex-direction:column;
+       position:relative;background:var(--bg);color:var(--fg)}
+  .topbar{height:44px;flex:none;display:flex;align-items:center;gap:2px;padding:0 12px;
+    border-bottom:1px solid var(--border);background:var(--chrome)}
+  .tbtn{font-size:12px;padding:5px 9px;border-radius:6px;color:var(--fg2)}
+  .tbtn.dim{color:var(--fg3);opacity:.55}
+  .spacer{flex:1}
+  .iconbtn{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--fg2)}
+  .iconbtn svg{width:14px;height:14px}
+  .sep{width:1px;height:16px;background:var(--border);margin:0 8px}
+  .tabbar{height:30px;flex:none;display:flex;align-items:center;gap:2px;padding:0 8px;
+    border-bottom:1px solid var(--border);background:var(--tab)}
+  .tab{height:24px;display:inline-flex;align-items:center;gap:6px;padding:0 9px;border-radius:5px;
+    font-size:11.5px;color:var(--fg3)}
+  .tab.on{background:var(--ink-soft);color:var(--ink);border:1px solid color-mix(in oklab,var(--ink) 40%,transparent)}
+  /* BEFORE panel keeps the old black underline for an honest comparison. */
+  .app.before .tab.on{background:var(--bg);color:var(--fg);border-color:transparent;box-shadow:inset 0 -2px 0 var(--fg)}
+  .tab .dot{width:4px;height:4px;border-radius:50%;background:var(--ok)}
+
+  .canvas{flex:1;position:relative;overflow:hidden;background-color:var(--bg)}
+  .canvas.dots{background-image:radial-gradient(circle,var(--dot) 1px,transparent 1px);
+    background-size:22px 22px;background-position:0 0}
+  .canvas.axis{
+    background-image:
+      repeating-linear-gradient(0deg,transparent 0 49px,rgba(27,26,23,.055) 49px 50px),
+      repeating-linear-gradient(90deg,transparent 0 49px,rgba(27,26,23,.055) 49px 50px),
+      repeating-linear-gradient(0deg,transparent 0 199px,rgba(27,26,23,.12) 199px 200px),
+      repeating-linear-gradient(90deg,transparent 0 199px,rgba(27,26,23,.12) 199px 200px);
+  }
+  .axis-x{position:absolute;left:0;right:0;top:330px;height:1px;background:rgba(27,26,23,.42)}
+  .axis-y{position:absolute;top:0;bottom:0;left:500px;width:1px;background:rgba(27,26,23,.42)}
+  .axis-lab{position:absolute;font:400 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+    color:rgba(27,26,23,.32)}
+  .axis-tick{position:absolute;background:rgba(27,26,23,.22)}
+  .axis-tick.h{width:1px;height:8px}
+  .axis-tick.v{height:1px;width:8px}
+
+  .edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+
+  /* ══════════════════════════════════════════════
+     改造前:现状
+     ══════════════════════════════════════════════ */
+  .b-node{position:absolute;width:220px;background:#fff;border:1px solid #e5e3df;border-radius:10px;
+    box-shadow:0 2px 6px rgba(0,0,0,.05);z-index:2}
+  .b-node.selected{border-color:rgba(21,128,61,.75);box-shadow:0 0 0 2px rgba(21,128,61,.22),0 4px 10px rgba(0,0,0,.10)}
+  .b-pad{padding:10px 11px}
+  .b-head{display:flex;align-items:center;gap:6px;min-width:0}
+  .b-alias{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .b-tag{margin-left:auto;flex:none;font-size:9px;color:#8a8a8a;background:#f5f4f2;border:1px solid #e7e5e2;
+    border-radius:3px;padding:1px 4px}
+  .b-chips{display:flex;flex-wrap:wrap;gap:2px;margin-top:4px}
+  .b-chip{font-size:9px;line-height:12px;color:#8a8a8a;background:#f7f6f4;border:1px solid #eae8e5;
+    border-radius:3px;padding:1px 4px;max-width:100%;overflow:hidden}
+  .b-chip b{color:#4a4a4a;font-weight:600}
+  .b-in{position:absolute;width:500px;background:#fff;border:1px solid #e5e3df;border-radius:10px;
+    box-shadow:0 2px 6px rgba(0,0,0,.05);overflow:hidden;z-index:2}
+  .b-in-hd{height:34px;display:flex;align-items:center;gap:7px;padding:0 8px;background:#fbfaf9;
+    border-bottom:1px solid #ecebe8}
+  .b-ic{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;flex:none;
+    background:linear-gradient(135deg,rgba(34,197,94,.25),rgba(34,197,94,.10))}
+  .b-ic svg{width:12px;height:12px;color:#16a34a}
+  .b-title{font-size:14px;font-weight:600;white-space:nowrap}
+  .b-select{flex:1;min-width:0;height:22px;display:flex;align-items:center;padding:0 8px;border:1px solid #e3e1dd;
+    border-radius:5px;background:#fff;font-size:10.5px;color:#b0aca6}
+  .b-delim{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 6px;border:1px solid #e3e1dd;
+    border-radius:5px;font:400 10.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:#4a4a4a}
+  .b-dot{width:5px;height:5px;border-radius:50%;background:#22c55e}
+  .b-count{font-size:10px;color:#9a968f;white-space:nowrap}
+  .b-in table{width:100%;border-collapse:collapse;font-size:11px}
+  .b-in th,.b-in td{border:1px solid #ecebe8;padding:4px 7px;text-align:left;white-space:nowrap;color:#5a5a5a}
+  .b-in th{background:#faf9f7;color:#7a756e;font-weight:600}
+  .b-in td.r{text-align:right;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px}
+  .b-mode{position:absolute;right:18px;top:50%;transform:translateY(-50%);width:32px;height:6px;
+    border-radius:999px;background:rgba(0,0,0,.60);box-shadow:0 1px 3px rgba(0,0,0,.2);z-index:3}
+  .b-status{position:absolute;left:14px;bottom:12px;display:flex;align-items:center;gap:8px;
+    font-size:11px;color:#a39f98;z-index:3}
+  .b-status .sep2{width:1px;height:11px;background:#e7e5e1}
+
+  /* ══════════════════════════════════════════════
+     改造后:纸片节点 + 账本输入表
+     ══════════════════════════════════════════════ */
+  .step{position:absolute;width:264px;display:flex;background:var(--card);border:1px solid var(--border);
+    border-radius:12px;overflow:hidden;box-shadow:var(--shadow);z-index:2}
+  .step .gutter{width:34px;flex:none;display:flex;align-items:center;justify-content:center;
+    border-right:1px solid var(--border);font:500 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+    color:var(--fg3)}
+  .step .body{flex:1;min-width:0;padding:9px 10px 10px}
+  .step .head{display:flex;align-items:center;gap:8px;min-width:0}
+  .step .alias{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .step .cmd{margin-left:auto;flex:none;font:400 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fg3)}
+  .step .edit{width:14px;height:14px;flex:none;color:var(--fg3);opacity:0}
+  .step.show-affordance .edit{opacity:.55}
+  .step .params{margin-top:5px;display:flex;flex-direction:column;gap:2px}
+  .pline{display:flex;gap:6px;min-width:0;font:400 11px/16px ui-monospace,SFMono-Regular,Menlo,monospace}
+  .pk{flex:none;min-width:58px;color:var(--fg3)}
+  .pv{color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .step.selected{background:var(--paper);border-color:var(--line-strong);
+    box-shadow:inset 2px 0 0 var(--ink),var(--shadow)}
+  .step.selected .gutter{color:var(--ink);font-weight:600}
+  .step.error{border-color:color-mix(in oklab,var(--danger) 55%,var(--border));box-shadow:none}
+  .step.error .gutter{color:var(--danger)}
+  .step .err{margin-top:6px;font:400 11px/16px ui-monospace,SFMono-Regular,Menlo,monospace;
+    color:var(--danger);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+  .in{position:absolute;width:520px;background:var(--paper);border:1px solid var(--border);
+    border-radius:12px;overflow:hidden;box-shadow:var(--shadow);z-index:2}
+  .in-hd{height:40px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--rule)}
+  .in-hd svg.ti{width:14px;height:14px;flex:none;color:var(--fg3)}
+  .in-title{font-size:13px;font-weight:500;white-space:nowrap}
+  .in-select{flex:1;min-width:0;height:24px;display:flex;align-items:center;padding:0 8px;
+    border:1px solid var(--border);border-radius:5px;background:var(--card);font-size:11px;color:var(--fg3)}
+  .in-file{min-width:0;flex:1;font:400 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fg3);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fmt{flex:none;font:400 10.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fg2);
+    border:1px solid var(--border);border-radius:4px;padding:3px 5px}
+  .delim{flex:none;display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 7px;
+    border:1px solid var(--border);border-radius:5px;font:400 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+    color:var(--fg)}
+  .dot-ok{width:5px;height:5px;border-radius:50%;background:var(--ok)}
+  .xbtn{flex:none;width:22px;height:22px;display:grid;place-items:center;border-radius:5px;color:var(--fg3)}
+  .xbtn svg{width:13px;height:13px}
+  .in-thead,.in-row{display:grid;grid-template-columns:32px 96px 64px 64px minmax(0,1fr) 48px;
+    align-items:center;padding-right:12px}
+  .in-thead{height:30px;border-bottom:1px solid var(--rule);font-size:11px;font-weight:500;color:var(--fg3)}
+  .in-row{height:28px;border-bottom:1px solid var(--rule);font-size:12px;color:var(--fg2)}
+  .in-row:last-child{border-bottom:none}
+  .in-thead .r,.in-row .r{text-align:right}
+  .in-row .idx,.in-thead .idx{text-align:right;padding-right:10px;
+    font:400 10.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fg3)}
+  .in-row .amt{text-align:right;font:400 11.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fg)}
+  .in-ft{height:30px;display:flex;align-items:center;gap:8px;padding:0 12px;border-top:1px solid var(--rule);
+    font:400 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fg3)}
+  .in-ft .right{margin-left:auto;display:flex;align-items:center;gap:12px}
+  .textlink{font:400 11px/1 "Inter","Segoe UI","Microsoft YaHei",system-ui,sans-serif;color:var(--fg3)}
+  .savebar{margin-left:auto;display:inline-flex;align-items:center;gap:8px;color:var(--warn)}
+  .savebar .save{height:24px;padding:0 9px;display:inline-flex;align-items:center;border-radius:5px;
+    border:1px solid color-mix(in oklab,var(--warn) 45%,var(--border));
+    background:var(--warn-soft);font:500 11px/1 "Inter","Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    color:var(--warn)}
+
+  .res{position:absolute;width:520px;background:var(--paper);border:1px solid var(--border);
+    border-radius:12px;overflow:hidden;box-shadow:var(--shadow);z-index:2}
+  .res-hd{height:40px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--rule)}
+  .res-hd svg.ti{width:14px;height:14px;flex:none;color:var(--fg3)}
+  .res-title{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .res-count{font:400 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fg3);white-space:nowrap}
+  .copybtns{margin-left:auto;display:flex;align-items:center;gap:2px}
+  .copybtns span{font:400 10.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fg3);
+    padding:4px 5px;border-radius:4px}
+  .res-thead,.res-row{display:grid;grid-template-columns:minmax(0,1fr) 160px;align-items:center;
+    padding:0 12px}
+  .res-thead{height:30px;border-bottom:1px solid var(--rule);font-size:11px;font-weight:500;color:var(--fg3)}
+  .res-row{height:28px;border-bottom:1px solid var(--rule);font-size:12px;color:var(--fg2)}
+  .res-row:last-child{border-bottom:none}
+  .res-thead .r,.res-row .r{text-align:right}
+  .res-row .num{text-align:right;font:400 11.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fg)}
+  .trunc{height:26px;display:flex;align-items:center;gap:6px;padding:0 12px;
+    border-bottom:1px solid var(--rule);background:var(--warn-soft);color:var(--warn);
+    font:400 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+
+  /* 画布浮层 */
+  .search{position:absolute;width:360px;background:var(--card);border:1px solid var(--border2);border-radius:12px;
+    overflow:hidden;box-shadow:var(--shadow-pop);z-index:4}
+  .search-hd{height:36px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--border)}
+  .search-hd svg{width:14px;height:14px;color:var(--fg3);flex:none}
+  .search-q{flex:1;min-width:0;font-size:13px;color:var(--fg)}
+  .kbd{flex:none;height:18px;min-width:18px;padding:0 5px;border-radius:4px;border:1px solid var(--border2);
+    background:var(--tab);color:var(--fg3);font:400 10.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+    display:inline-flex;align-items:center;justify-content:center}
+  .srow{height:32px;display:flex;align-items:center;gap:8px;padding:0 10px;font-size:12px;color:var(--fg2)}
+  .srow.on{background:var(--ink-soft);color:var(--fg)}
+  .srow svg{width:13px;height:13px;color:var(--fg3);flex:none}
+  .srow .tag2{margin-left:auto;font:400 10.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fg3)}
+  mark{background:color-mix(in oklab,var(--ink) 22%,transparent);color:inherit;border-radius:2px;padding:0 1px}
+
+  .msbar{position:absolute;display:inline-flex;align-items:center;height:34px;padding:0 4px;background:var(--card);
+    border:1px solid var(--border2);border-radius:9px;box-shadow:var(--shadow-pop);z-index:4}
+  .msbar .count{padding:0 8px;font:500 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fg2)}
+  .msbar .mb{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 7px;border-radius:5px;
+    font-size:11px;color:var(--fg2)}
+  .msbar .mb svg{width:13px;height:13px}
+  .msbar .mb.del{color:var(--danger)}
+
+  .rail{position:absolute;display:flex;flex-direction:column;gap:2px;padding:3px;background:var(--card);
+    border:1px solid var(--border2);border-radius:9px;box-shadow:var(--shadow);z-index:4}
+  .rail span{width:26px;height:26px;display:grid;place-items:center;border-radius:5px;color:var(--fg3)}
+  .rail span svg{width:14px;height:14px}
+  .rail span.on{background:var(--ink-soft);color:var(--ink)}
+
+  .status{position:absolute;left:16px;bottom:12px;display:flex;align-items:center;gap:7px;
+    font-size:11px;color:var(--fg3);z-index:3}
+  .status .n{font:500 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fg2)}
+  .status .d{width:5px;height:5px;border-radius:50%;background:var(--ok)}
+  .status .sl{width:1px;height:11px;background:var(--border)}
+  .keycap{height:20px;min-width:20px;padding:0 5px;border-radius:4px;border:1px solid var(--border2);
+    background:var(--tab);color:var(--fg2);font:400 10.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+    display:inline-flex;align-items:center;justify-content:center}
+
+  /* ── 细节板 ───────────────────────────────── */
+  .detail{width:1160px;max-width:100%;position:relative;background:var(--bg);border:1px solid #d9d7d2;
+    border-radius:12px;overflow:hidden;box-shadow:0 8px 22px rgba(0,0,0,.06);
+    background-image:radial-gradient(circle,var(--dot) 1px,transparent 1px);background-size:22px 22px}
+  .dcap{position:absolute;font-size:11.5px;color:var(--fg3);z-index:5}
+  .dcap b{color:var(--fg2);font-weight:500}
+
+  .legend{width:1160px;max-width:100%;flex:none;display:grid;grid-template-columns:1fr 1fr;gap:10px 32px;
+    font-size:12px;color:#57534e;line-height:1.65;margin-top:2px}
+  .legend div b{color:#141414}
+  .legend .full{grid-column:1 / -1}
+  .legend .num{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:999px;
+    background:#141414;color:#fff;font-size:10.5px;font-weight:600;margin-right:6px;vertical-align:1px}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- ══════════════════════════════════════════ -->
+  <div class="plabel">
+    <span class="tag">BEFORE</span>
+    <h1>改造前 · 现状画布</h1>
+    <p>坐标轴网格 + 9px 参数胶囊 + 绿色选中环 + 隐藏的右键模式圆点；新管道的首帧排布贴边</p>
+    <span class="state before">模板感 · 拥挤</span>
+  </div>
+
+  <div class="app light before">
+    <div class="topbar">
+      <span class="tbtn">文件</span><span class="tbtn">编辑</span><span class="tbtn">查看</span>
+      <span class="tbtn">工具</span><span class="tbtn">帮助</span>
+      <span class="spacer"></span>
+      <span class="tbtn dim">执行</span>
+      <span class="sep"></span>
+      <span class="iconbtn">◐</span><span class="iconbtn">▤</span><span class="iconbtn">◎</span><span class="iconbtn">⚙</span>
+    </div>
+    <div class="tabbar">
+      <span class="tab on">示例销售</span>
+      <span class="tab">订单明细</span>
+      <span class="tab">渠道库存</span>
+    </div>
+
+    <div class="canvas axis">
+      <div class="axis-x"></div>
+      <div class="axis-y"></div>
+      <span class="axis-lab" style="left:288px;top:344px">−200</span>
+      <span class="axis-lab" style="left:488px;top:344px">0</span>
+      <span class="axis-lab" style="left:688px;top:344px">200</span>
+      <span class="axis-lab" style="left:888px;top:344px">400</span>
+      <span class="axis-lab" style="left:508px;top:122px">−200</span>
+      <span class="axis-lab" style="left:508px;top:322px">0</span>
+      <span class="axis-lab" style="left:508px;top:522px">200</span>
+
+      <svg class="edges" viewBox="0 0 1160 686" preserveAspectRatio="none">
+        <defs>
+          <marker id="b-arrow" markerWidth="7" markerHeight="6" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 z" fill="rgba(27,26,23,.42)"/>
+          </marker>
+        </defs>
+        <path d="M556,199 L556,217" stroke="rgba(27,26,23,.42)" stroke-width="1.5"
+          stroke-dasharray="6 5" marker-end="url(#b-arrow)"/>
+        <path d="M666,249 L666,260" stroke="rgba(27,26,23,.42)" stroke-width="1.5"
+          marker-end="url(#b-arrow)"/>
+        <path d="M666,324 L666,335" stroke="rgba(27,26,23,.42)" stroke-width="1.5"
+          marker-end="url(#b-arrow)"/>
+      </svg>
+
+      <!-- 输入表(现状) -->
+      <div class="b-in" style="left:56px;top:110px">
+        <div class="b-in-hd">
+          <div class="b-ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+            </svg>
+          </div>
+          <span class="b-title">Input Data</span>
+          <div class="b-select">查询表头以修改</div>
+          <div class="b-delim"><span>,</span><i class="b-dot"></i></div>
+          <span class="b-count">5 rows x 5 cols</span>
+          <span class="b-x" style="color:#b0aca6">✕</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th><th style="text-align:right">数量</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>2026-07-01</td><td>西南</td><td>服饰</td><td class="r">14447.65</td><td class="r">5</td></tr>
+            <tr><td>2026-07-01</td><td>华东</td><td>数码</td><td class="r">12950.81</td><td class="r">9</td></tr>
+            <tr><td>2026-07-01</td><td>西南</td><td>数码</td><td class="r">13200.21</td><td class="r">3</td></tr>
+            <tr><td>2026-07-02</td><td>华南</td><td>食品</td><td class="r">13774.78</td><td class="r">4</td></tr>
+            <tr><td>2026-07-02</td><td>东北</td><td>家电</td><td class="r">12199.54</td><td class="r">2</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 步骤(现状) -->
+      <div class="b-node" style="left:556px;top:185px">
+        <div class="b-pad">
+          <div class="b-head"><span class="b-alias">去掉空金额</span><span class="b-tag">search</span></div>
+          <div class="b-chips">
+            <span class="b-chip"><b>select</b>=金额</span>
+            <span class="b-chip"><b>non-empty</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="b-node selected" style="left:556px;top:260px">
+        <div class="b-pad">
+          <div class="b-head"><span class="b-alias">去重</span><span class="b-tag">dedup</span></div>
+        </div>
+      </div>
+
+      <div class="b-node" style="left:556px;top:335px">
+        <div class="b-pad">
+          <div class="b-head"><span class="b-alias">按地区汇总</span><span class="b-tag">groupby</span></div>
+          <div class="b-chips">
+            <span class="b-chip"><b>columns</b>=地区</span>
+            <span class="b-chip"><b>expression</b>=sum(col("金额")) as "金额合计"</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="b-mode"></div>
+      <div class="b-status">
+        <span class="mono">3</span><span>steps</span>
+        <span class="sep2"></span>
+        <span style="color:#22c55e">●</span><span>已保存</span>
+        <span class="sep2"></span><span>12 分钟前</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <div class="plabel" style="margin-top:22px">
+    <span class="tag">AFTER · LIGHT</span>
+    <h1>改造后 · 亮色</h1>
+    <p>点阵画布 + 账本输入表 + 带索引号的纸片步骤；墨蓝只用于选中、结果数字与连线端点</p>
+    <span class="state after">安静 · 精确 · 工作台</span>
+  </div>
+
+  <div class="app light">
+    <div class="topbar">
+      <span class="tbtn">文件</span><span class="tbtn">编辑</span><span class="tbtn">查看</span>
+      <span class="tbtn">工具</span><span class="tbtn">帮助</span>
+      <span class="spacer"></span>
+      <span class="tbtn dim">执行</span>
+      <span class="sep"></span>
+      <span class="iconbtn">◐</span><span class="iconbtn">▤</span><span class="iconbtn">◎</span><span class="iconbtn">⚙</span>
+    </div>
+    <div class="tabbar">
+      <span class="tab on">示例销售</span>
+      <span class="tab">订单明细</span>
+      <span class="tab">渠道库存</span>
+    </div>
+
+    <div class="canvas dots">
+      <svg class="edges" viewBox="0 0 1160 686" preserveAspectRatio="none">
+        <defs>
+          <marker id="a-arrow" markerWidth="7" markerHeight="6" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 z" fill="var(--line)"/>
+          </marker>
+        </defs>
+        <path d="M568,220 L640,219" stroke="var(--line)" stroke-width="1.25" marker-end="url(#a-arrow)"/>
+        <path d="M772,248 L772,272" stroke="var(--line)" stroke-width="1.25" marker-end="url(#a-arrow)"/>
+        <path d="M772,310 L772,334" stroke="var(--line)" stroke-width="1.25" marker-end="url(#a-arrow)"/>
+      </svg>
+
+      <!-- 输入表(账本) -->
+      <div class="in" style="left:48px;top:120px">
+        <div class="in-hd">
+          <span class="in-title">Input Data</span>
+          <span class="in-select">查询表头以修改</span>
+          <span class="fmt">CSV</span>
+          <span class="delim"><span>,</span><i class="dot-ok"></i></span>
+          <span class="xbtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M6 6l12 12M18 6L6 18"/>
+            </svg>
+          </span>
+        </div>
+        <div class="in-thead">
+          <span class="idx"></span><span>日期</span><span>地区</span><span>品类</span>
+          <span class="r">金额</span><span class="r">数量</span>
+        </div>
+        <div class="in-row">
+          <span class="idx">1</span><span>2026-07-01</span><span>西南</span><span>服饰</span>
+          <span class="amt">14447.65</span><span class="r">5</span>
+        </div>
+        <div class="in-row">
+          <span class="idx">2</span><span>2026-07-01</span><span>华东</span><span>数码</span>
+          <span class="amt">12950.81</span><span class="r">9</span>
+        </div>
+        <div class="in-row">
+          <span class="idx">3</span><span>2026-07-01</span><span>西南</span><span>数码</span>
+          <span class="amt">13200.21</span><span class="r">3</span>
+        </div>
+        <div class="in-row">
+          <span class="idx">4</span><span>2026-07-02</span><span>华南</span><span>食品</span>
+          <span class="amt">13774.78</span><span class="r">4</span>
+        </div>
+        <div class="in-row">
+          <span class="idx">5</span><span>2026-07-02</span><span>东北</span><span>家电</span>
+          <span class="amt">12199.54</span><span class="r">2</span>
+        </div>
+        <div class="in-ft">
+          <span class="in-file">easy-csv-sample-sales.csv</span>
+          <span class="right">5 行 × 5 列</span>
+        </div>
+      </div>
+
+      <!-- 步骤(纸片) -->
+      <div class="step" style="left:640px;top:211px">
+        <div class="gutter">01</div>
+        <div class="body">
+          <div class="head">
+            <span class="alias">去掉空金额</span>
+            <span class="cmd">search</span>
+            <svg class="edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M4 20h4l10-10-4-4-10 10v4z"/><path d="M14 6l4 4"/>
+            </svg>
+          </div>
+          <div class="params">
+            <div class="pline"><span class="pk">select</span><span class="pv">金额 · non-empty</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step" style="left:640px;top:293px">
+        <div class="gutter">02</div>
+        <div class="body">
+          <div class="head">
+            <span class="alias">去重</span>
+            <span class="cmd">dedup</span>
+            <svg class="edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M4 20h4l10-10-4-4-10 10v4z"/><path d="M14 6l4 4"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="step selected" style="left:640px;top:355px">
+        <div class="gutter">03</div>
+        <div class="body">
+          <div class="head">
+            <span class="alias">按地区汇总</span>
+            <span class="cmd">groupby</span>
+            <svg class="edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M4 20h4l10-10-4-4-10 10v4z"/><path d="M14 6l4 4"/>
+            </svg>
+          </div>
+          <div class="params">
+            <div class="pline"><span class="pk">columns</span><span class="pv">地区</span></div>
+            <div class="pline"><span class="pk">expression</span><span class="pv">sum(col("金额")) as "金额合计"</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右键模式:常驻的小竖条 -->
+      <div class="rail" style="left:16px;top:50%;transform:translateY(-50%)">
+        <span class="on" title="右键: 划线">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="17" r="2.5"/>
+            <path d="M8 8l8 8"/>
+          </svg>
+        </span>
+        <span title="右键: 菜单">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M5 3l14 8-6 1.5L10 19l-5-16z"/>
+          </svg>
+        </span>
+      </div>
+
+      <div class="status">
+        <span class="n">03</span><span>步</span>
+        <span class="sl"></span>
+        <span class="d"></span><span>已保存</span>
+        <span class="sl"></span><span>12 分钟前</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <div class="plabel" style="margin-top:22px">
+    <span class="tag">AFTER · DARK</span>
+    <h1>改造后 · 暗色</h1>
+    <p>同一套结构:层深来自表面差与细线,不用发光和彩色阴影;纸面只比页面背景暖一档</p>
+  </div>
+
+  <div class="app dark">
+    <div class="topbar">
+      <span class="tbtn">文件</span><span class="tbtn">编辑</span><span class="tbtn">查看</span>
+      <span class="tbtn">工具</span><span class="tbtn">帮助</span>
+      <span class="spacer"></span>
+      <span class="tbtn dim">执行</span>
+      <span class="sep"></span>
+      <span class="iconbtn">◐</span><span class="iconbtn">▤</span><span class="iconbtn">◎</span><span class="iconbtn">⚙</span>
+    </div>
+    <div class="tabbar">
+      <span class="tab on">示例销售</span>
+      <span class="tab">订单明细</span>
+      <span class="tab">渠道库存</span>
+    </div>
+
+    <div class="canvas dots">
+      <svg class="edges" viewBox="0 0 1160 686" preserveAspectRatio="none">
+        <defs>
+          <marker id="d-arrow" markerWidth="7" markerHeight="6" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 z" fill="var(--line)"/>
+          </marker>
+        </defs>
+        <path d="M568,220 L640,219" stroke="var(--line)" stroke-width="1.25" marker-end="url(#d-arrow)"/>
+        <path d="M772,248 L772,272" stroke="var(--line)" stroke-width="1.25" marker-end="url(#d-arrow)"/>
+        <path d="M772,310 L772,334" stroke="var(--line)" stroke-width="1.25" marker-end="url(#d-arrow)"/>
+      </svg>
+
+      <div class="in" style="left:48px;top:120px">
+        <div class="in-hd">
+          <span class="in-title">Input Data</span>
+          <span class="in-select">查询表头以修改</span>
+          <span class="fmt">CSV</span>
+          <span class="delim"><span>,</span><i class="dot-ok"></i></span>
+          <span class="xbtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M6 6l12 12M18 6L6 18"/>
+            </svg>
+          </span>
+        </div>
+        <div class="in-thead">
+          <span class="idx"></span><span>日期</span><span>地区</span><span>品类</span>
+          <span class="r">金额</span><span class="r">数量</span>
+        </div>
+        <div class="in-row">
+          <span class="idx">1</span><span>2026-07-01</span><span>西南</span><span>服饰</span>
+          <span class="amt">14447.65</span><span class="r">5</span>
+        </div>
+        <div class="in-row">
+          <span class="idx">2</span><span>2026-07-01</span><span>华东</span><span>数码</span>
+          <span class="amt">12950.81</span><span class="r">9</span>
+        </div>
+        <div class="in-row">
+          <span class="idx">3</span><span>2026-07-01</span><span>西南</span><span>数码</span>
+          <span class="amt">13200.21</span><span class="r">3</span>
+        </div>
+        <div class="in-row">
+          <span class="idx">4</span><span>2026-07-02</span><span>华南</span><span>食品</span>
+          <span class="amt">13774.78</span><span class="r">4</span>
+        </div>
+        <div class="in-row">
+          <span class="idx">5</span><span>2026-07-02</span><span>东北</span><span>家电</span>
+          <span class="amt">12199.54</span><span class="r">2</span>
+        </div>
+        <div class="in-ft">
+          <span class="in-file">easy-csv-sample-sales.csv</span>
+          <span class="right">5 行 × 5 列</span>
+        </div>
+      </div>
+
+      <div class="step" style="left:640px;top:211px">
+        <div class="gutter">01</div>
+        <div class="body">
+          <div class="head">
+            <span class="alias">去掉空金额</span>
+            <span class="cmd">search</span>
+          </div>
+          <div class="params">
+            <div class="pline"><span class="pk">select</span><span class="pv">金额 · non-empty</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step" style="left:640px;top:293px">
+        <div class="gutter">02</div>
+        <div class="body">
+          <div class="head"><span class="alias">去重</span><span class="cmd">dedup</span></div>
+        </div>
+      </div>
+
+      <div class="step selected" style="left:640px;top:355px">
+        <div class="gutter">03</div>
+        <div class="body">
+          <div class="head"><span class="alias">按地区汇总</span><span class="cmd">groupby</span></div>
+          <div class="params">
+            <div class="pline"><span class="pk">columns</span><span class="pv">地区</span></div>
+            <div class="pline"><span class="pk">expression</span><span class="pv">sum(col("金额")) as "金额合计"</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rail" style="left:16px;top:50%;transform:translateY(-50%)">
+        <span class="on" title="右键: 划线">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="17" r="2.5"/><path d="M8 8l8 8"/>
+          </svg>
+        </span>
+        <span title="右键: 菜单">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M5 3l14 8-6 1.5L10 19l-5-16z"/>
+          </svg>
+        </span>
+      </div>
+
+      <div class="status">
+        <span class="n">03</span><span>步</span>
+        <span class="sl"></span>
+        <span class="d"></span><span>已保存</span>
+        <span class="sl"></span><span>12 分钟前</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <div class="plabel" style="margin-top:22px">
+    <span class="tag">DETAILS</span>
+    <h1>状态与细节</h1>
+    <p>三种步骤状态、输入表改名待保存、结果表、搜索浮层与选择/模式控件</p>
+  </div>
+
+  <!-- A · 步骤状态 -->
+  <div class="detail light" style="height:250px">
+    <span class="dcap" style="left:24px;top:14px"><b>步骤状态</b> · 默认 / 选中 / 错误</span>
+    <div class="step show-affordance" style="left:24px;top:44px">
+      <div class="gutter">01</div>
+      <div class="body">
+        <div class="head">
+          <span class="alias">去掉空金额</span><span class="cmd">search</span>
+          <svg class="edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M4 20h4l10-10-4-4-10 10v4z"/><path d="M14 6l4 4"/>
+          </svg>
+        </div>
+        <div class="params">
+          <div class="pline"><span class="pk">select</span><span class="pv">金额 · non-empty</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="step selected" style="left:312px;top:44px">
+      <div class="gutter">03</div>
+      <div class="body">
+        <div class="head"><span class="alias">按地区汇总</span><span class="cmd">groupby</span></div>
+        <div class="params">
+          <div class="pline"><span class="pk">columns</span><span class="pv">地区</span></div>
+          <div class="pline"><span class="pk">expression</span><span class="pv">sum(col("金额")) as "金额合计"</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="step error" style="left:600px;top:44px">
+      <div class="gutter">04</div>
+      <div class="body">
+        <div class="head"><span class="alias">按品类汇总</span><span class="cmd">groupby</span></div>
+        <div class="params">
+          <div class="pline"><span class="pk">columns</span><span class="pv">品类</span></div>
+        </div>
+        <div class="err">列「品类」不存在;可用列: 日期, 地区, 金额</div>
+      </div>
+    </div>
+    <span class="dcap" style="left:24px;top:190px">悬停只出现一个 16px 铅笔;点击卡片打开参数(现状不变)</span>
+    <span class="dcap" style="left:312px;top:190px">选中 = 纸面底色 + 左侧 2px 墨蓝索引线,不用绿环</span>
+    <span class="dcap" style="left:600px;top:190px">错误 = 红色细边框 + 红色参数行,不做红色发光的整块底板</span>
+  </div>
+
+  <!-- B · 输入表与结果表 -->
+  <div class="detail light" style="height:330px">
+    <span class="dcap" style="left:24px;top:14px"><b>输入表</b> · 账本纸面、行号、右对齐金额</span>
+    <span class="dcap" style="left:592px;top:14px"><b>结果表</b> · 固定 520 × 400(截断 426),行高 28,复制入口为文字</span>
+
+    <div class="in" style="left:24px;top:44px">
+      <div class="in-hd">
+        <span class="in-title">Input Data</span>
+        <span class="in-select">查询表头以修改</span>
+        <span class="fmt">CSV</span>
+        <span class="delim"><span>,</span><i class="dot-ok"></i></span>
+        <span class="xbtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M6 6l12 12M18 6L6 18"/>
+          </svg>
+        </span>
+      </div>
+      <div class="in-thead">
+        <span class="idx"></span><span>日期</span><span>地区</span><span>品类</span>
+        <span class="r">金额</span><span class="r">数量</span>
+      </div>
+      <div class="in-row">
+        <span class="idx">1</span><span>2026-07-01</span><span>西南</span><span>服饰</span>
+        <span class="amt">14447.65</span><span class="r">5</span>
+      </div>
+      <div class="in-row">
+        <span class="idx">2</span><span>2026-07-01</span><span>华东</span><span>数码</span>
+        <span class="amt">12950.81</span><span class="r">9</span>
+      </div>
+      <div class="in-row">
+        <span class="idx">3</span><span>2026-07-01</span><span>西南</span><span>数码</span>
+        <span class="amt">13200.21</span><span class="r">3</span>
+      </div>
+      <div class="in-row">
+        <span class="idx">4</span><span>2026-07-02</span><span>华南</span><span>食品</span>
+        <span class="amt">13774.78</span><span class="r">4</span>
+      </div>
+      <div class="in-row">
+        <span class="idx">5</span><span>2026-07-02</span><span>东北</span><span>家电</span>
+        <span class="amt">12199.54</span><span class="r">2</span>
+      </div>
+      <div class="in-ft">
+        <span class="savebar">列名已修改<span class="save">保存为 rename 步骤</span></span>
+      </div>
+    </div>
+
+    <div class="res" style="left:592px;top:44px">
+      <div class="res-hd">
+        <span class="res-title">按地区汇总</span>
+        <span class="res-count">5 行 × 2 列</span>
+        <div class="copybtns"><span>CSV</span><span>MD</span></div>
+        <span class="xbtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M6 6l12 12M18 6L6 18"/>
+          </svg>
+        </span>
+      </div>
+      <div class="trunc">结果已截断为前几行,请用 output/to 步骤导出完整数据.</div>
+      <div class="res-thead"><span>地区</span><span class="r">金额合计</span></div>
+      <div class="res-row"><span>华南</span><span class="num">646016.25</span></div>
+      <div class="res-row"><span>华东</span><span class="num">567889.72</span></div>
+      <div class="res-row"><span>西南</span><span class="num">508827.25</span></div>
+      <div class="res-row"><span>华北</span><span class="num">501825.62</span></div>
+      <div class="res-row"><span>东北</span><span class="num">436002.87</span></div>
+    </div>
+
+    <span class="dcap" style="left:24px;top:290px">表头细线、无竖格;行号 1–5 与步骤索引同一支等宽灰字</span>
+    <span class="dcap" style="left:592px;top:290px">结果表固定 520 宽;行数等宽;CSV/MD 为文字;截断条 26px 位于表头之上</span>
+  </div>
+
+  <!-- C · 覆盖层 -->
+  <div class="detail light" style="height:290px">
+    <span class="dcap" style="left:24px;top:14px"><b>画布搜索</b> · 最多 5 条结果,34/32px 行高,不再用 16vh</span>
+    <span class="dcap" style="left:424px;top:14px"><b>多选浮条 / 右键模式 / 按键 HUD</b></span>
+
+    <div class="search" style="left:24px;top:44px">
+      <div class="search-hd">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+        </svg>
+        <span class="search-q">地区</span>
+        <span class="kbd">ESC</span>
+      </div>
+      <div class="srow on">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+        </svg>
+        <span>输入数据</span><span class="tag2">table</span>
+      </div>
+      <div class="srow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M4 6h16M4 12h16M4 18h10"/>
+        </svg>
+        <span><mark>地区</mark>汇总</span><span class="tag2">03</span>
+      </div>
+    </div>
+
+    <div class="msbar" style="left:424px;top:44px">
+      <span class="count">2</span>
+      <span class="mb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M5 15V5h10"/>
+        </svg>
+        复制
+      </span>
+      <span class="mb del">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M4 7h16M9 7V5h6v2M7 7l1 13h8l1-13"/>
+        </svg>
+        删除
+      </span>
+    </div>
+
+    <div class="rail" style="left:424px;top:106px;transform:none">
+      <span class="on">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="17" r="2.5"/><path d="M8 8l8 8"/>
+        </svg>
+      </span>
+      <span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M5 3l14 8-6 1.5L10 19l-5-16z"/>
+        </svg>
+      </span>
+    </div>
+
+    <div style="position:absolute;left:500px;top:112px;display:flex;align-items:center;gap:6px">
+      <span class="keycap">W</span><span class="keycap">A</span><span class="keycap">S</span><span class="keycap">D</span>
+      <span style="width:1px;height:12px;background:var(--border)"></span>
+      <span class="keycap">Space</span>
+      <span style="font-size:11px;color:var(--fg3)">平移 / 空格拖拽</span>
+    </div>
+
+    <div style="position:absolute;left:424px;top:166px;width:300px;height:1px;background:var(--border)"></div>
+
+    <span class="dcap" style="left:424px;top:184px">多选浮条:计数 + 复制 + 删除,红色只出现在删除文字上</span>
+    <span class="dcap" style="left:424px;top:208px">右键模式改成常驻 26px 竖条:选中段用墨蓝底,不再藏在右侧的小圆点里</span>
+    <span class="dcap" style="left:424px;top:232px">按键 HUD 用同一套 keycap,底部状态栏与它共用 11px 等宽数字</span>
+  </div>
+
+  <div class="legend">
+    <div><span class="num">1</span><b>画布背景</b>:去掉带坐标数字的 50/200px 轴网格,改成 22px 点阵;它和空白页(设计 032)是同一块纸面,不再是“制图软件”。</div>
+    <div><span class="num">2</span><b>输入表</b>:暖白纸面 + 行号 + 只有横线的表;去掉绿色渐变图标底和表头里的全宽查询下拉,文件名进入标题栏,行数移到页脚。</div>
+    <div><span class="num">3</span><b>步骤节点</b>:264px 纸片,左侧索引 01/02/03 与空白页的行号同源;参数从 9px 胶囊改成 11px 等宽键值行,最多两行。</div>
+    <div><span class="num">4</span><b>选中</b>:从绿色发光环改成纸面底色 + 左侧 2px 墨蓝索引线;错误、待删除只用细边框与文字色,不加 glow。</div>
+    <div><span class="num">5</span><b>连线</b>:1.25px 灰色细线 + 6px 小箭头;去掉输入边的流动虚线与连线预览的三色渐变,只有端点和目标是墨蓝。</div>
+    <div><span class="num">6</span><b>浮层</b>:搜索从“视口高度的 16vh”改成最多 5 条 × 32px;右键模式从隐藏圆点改成常驻 26px 竖条;多选浮条、状态栏统一细线卡片。</div>
+    <div class="full"><b>文案与 i18n</b>:现状里的 <span class="mono">Input Data</span>、<span class="mono">5 rows x 5 cols</span>、<span class="mono">3 steps</span> 都是写死的英文;改为「输入数据 / 预览 5 行 · 5 列 / 03 步」并进入 i18n。参数与数字全部等宽、右对齐。</div>
+  </div>
+</div>
+</body>
+</html>

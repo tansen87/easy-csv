@@ -280,7 +280,9 @@ export function PipelineStepNode({
   // edits, so this does not replay on re-layout.
   const cardClass = `w-[220px] transition-all duration-200 hover:shadow-lg group relative animate-node-enter ${
     selected
-      ? "bg-card/100 border-emerald-700/80 shadow-md ring-2 ring-emerald-700/30"
+      ? data.step.error
+        ? "bg-paper border-red-500/70 shadow-md ring-2 ring-red-500/30"
+        : "bg-paper border-[var(--canvas-ink)] shadow-sm ring-2 ring-[var(--canvas-ink-soft)]"
       : "bg-card/95 hover:bg-accent/30 border-border/60 hover:border-primary/30"
   } ${data.step.error ? "border-red-500/70 shadow-md ring-2 ring-red-500/30" : ""} ${data.isPendingDelete ? "border-orange-500" : ""} ${data.isHighlighted ? "ring-2 ring-primary ring-offset-2 animate-pulse-once" : ""}`;
 

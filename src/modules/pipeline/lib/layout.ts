@@ -308,7 +308,10 @@ export function getLayoutedElements(
       // to the top layer while selected (matches result-table behavior);
       // selection callbacks filter this id out, so panel logic is unaffected.
       selected: false,
-      dragHandle: ".table-node-header",
+      // Header and footer are both drag handles; the footer carries the file
+      // name, so the whole bottom strip can move the node too. Interactive
+      // controls inside them opt out with `nodrag`.
+      dragHandle: ".table-node-header, .table-node-footer",
       width: 520,
       height: 260,
     });

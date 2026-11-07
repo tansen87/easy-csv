@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useRef, useEffect } from "react";
 import { Handle, Position } from "reactflow";
-import { Table, Check, X, Lock } from "lucide-react";
+import { X, Lock } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
 import { DelimiterModeSelect } from "@/components/ui/DelimiterModeSelect";
@@ -13,6 +13,8 @@ export interface TableNodeData {
   headers: string[];
   rows: string[][];
   columnWidths: Record<number, number>;
+  /** Basename of the input file, shown in the footer. */
+  fileName?: string;
   onContextMenu: (col: number, x: number, y: number) => void;
   onRename: (col: number, newName: string) => void;
   onSave: () => void;
@@ -41,6 +43,7 @@ export function TableNode({
     headers,
     rows,
     columnWidths,
+    fileName,
     onContextMenu,
     onRename,
     onSave,
@@ -109,10 +112,27 @@ export function TableNode({
     e.stopPropagation();
   }, []);
 
+  /**
+   * Commit a pending inline edit before starting another one. Without this,
+   * switching columns through the header Select unmounts the previous input
+   * and the first rename is silently lost.
+   */
+  const commitEdit = (col: number | null, value: string) => {
+    if (col === null) return;
+    const next = value.trim();
+    if (next && next !== headers[col]) {
+      onRename(col, next);
+      setShowSaveButton(true);
+    }
+  };
+
   const handleStartEdit = (col: number, currentValue: string) => {
+    // Double-clicking the input of the column already being edited must not
+    // reset the typed value back to the original header.
+    if (col === editingCol) return;
+    commitEdit(editingCol, editValue);
     setEditingCol(col);
     setEditValue(currentValue);
-    setShowSaveButton(true);
     if (scrollContainerRef.current) {
       const colWidth = columnWidths[col] || 100;
       const containerWidth = scrollContainerRef.current.clientWidth;
@@ -122,9 +142,10 @@ export function TableNode({
   };
 
   const handleHeaderSelect = (colIndex: number) => {
+    if (colIndex === editingCol) return;
+    commitEdit(editingCol, editValue);
     setEditingCol(colIndex);
     setEditValue(headers[colIndex]);
-    setShowSaveButton(true);
     if (scrollContainerRef.current) {
       const colWidth = columnWidths[colIndex] || 100;
       const containerWidth = scrollContainerRef.current.clientWidth;
@@ -135,13 +156,7 @@ export function TableNode({
   };
 
   const handleFinishEdit = () => {
-    if (
-      editingCol !== null &&
-      editValue.trim() &&
-      editValue !== headers[editingCol]
-    ) {
-      onRename(editingCol, editValue.trim());
-    }
+    commitEdit(editingCol, editValue);
     setEditingCol(null);
     setEditValue("");
   };
@@ -159,7 +174,7 @@ export function TableNode({
     <Card
       className={`w-[500px] overflow-hidden transition-all duration-200 ${
         selected
-          ? "border-primary/50 shadow-lg ring-2 ring-primary/20"
+          ? "border-[var(--canvas-ink)] shadow-sm ring-2 ring-[var(--canvas-ink-soft)]"
           : "border-border/60 hover:border-primary/30"
       }`}
     >
@@ -221,9 +236,6 @@ export function TableNode({
         style={{ opacity: 0, pointerEvents: "none" }}
       />
       <div className="table-node-header px-2 py-1 bg-muted/50 flex items-center gap-2">
-        <div className="w-6 h-6 bg-gradient-to-br from-green-500/25 to-green-500/10 rounded-md flex items-center justify-center">
-          <Table className="h-3 w-3 text-green-600" />
-        </div>
         <span className="font-semibold text-sm">Input Data</span>
         <div className="flex-1 nodrag nowheel">
           <Select
@@ -281,20 +293,6 @@ export function TableNode({
               </button>
             )}
           </div>
-        )}
-        <span className="text-xs text-muted-foreground ml-auto">
-          5 rows x {headers.length} cols
-        </span>
-        {showSaveButton && (
-          <button
-            onClick={() => {
-              onSave();
-              setShowSaveButton(false);
-            }}
-            className="nodrag w-5 h-5 rounded-md flex items-center justify-center hover:bg-primary/10"
-          >
-            <Check className="h-3 w-3 text-green-500" />
-          </button>
         )}
         <button
           onClick={() => onDelete?.()}
@@ -381,6 +379,37 @@ export function TableNode({
             .join(", ")}
         </div>
       )}
+      <div className="table-node-footer flex h-7 cursor-grab select-none items-center gap-2 border-t border-border/40 px-3 active:cursor-grabbing">
+        {showSaveButton ? (
+          <div className="ml-auto flex min-w-0 items-center gap-2">
+            <span className="shrink-0 text-[11px] text-amber-600 dark:text-amber-400">
+              {t.renamePending}
+            </span>
+            <button
+              onClick={() => {
+                onSave();
+                setShowSaveButton(false);
+              }}
+              className="nodrag h-6 shrink-0 cursor-pointer rounded-md border border-amber-500/40 bg-amber-500/10 px-2 text-[11px] font-medium text-amber-700 transition-colors hover:bg-amber-500/15 dark:border-amber-400/30 dark:text-amber-400"
+            >
+              {t.saveRenameStep}
+            </button>
+          </div>
+        ) : (
+          <>
+            <span
+              className="min-w-0 truncate font-mono text-[11px] text-muted-foreground"
+            >
+              {fileName || "-"}
+            </span>
+            <span className="ml-auto shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
+              {t.inputRowsCols
+                .replace("{rows}", String(Math.min(rows.length, 5)))
+                .replace("{cols}", String(headers.length))}
+            </span>
+          </>
+        )}
+      </div>
     </Card>
   );
 }
