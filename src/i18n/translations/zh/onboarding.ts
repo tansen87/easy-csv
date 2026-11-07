@@ -12,11 +12,6 @@ export const zhOnboarding = {
   onboardingAskAiDesc: "「按地区汇总金额」",
   onboardingSeeExample: "先看看示例",
   onboardingSeeExampleDesc: "加载一份示例数据 + 一条现成管道",
-  onboardingRecommendedBadge: "推荐 · 30 秒",
-  onboardingFlowOpenData: "打开数据",
-  onboardingFlowAddStep: "添加操作",
-  onboardingFlowExecute: "执行并导出",
-  onboardingFlowNote: "整条流程都在这块画布上, 不写代码",
   onboardingBranchNote:
     "新加的节点会自成一条分支, 直接就能执行; 想串起来再连线",
   onboardingDismiss: "我知道了",

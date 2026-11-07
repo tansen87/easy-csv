@@ -3,6 +3,16 @@ export function formatDateTime(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
+/**
+ * `2026-11-06 14:32:00` → `11-06 14:32`, for the compact "recent files" rows
+ * (the empty state, design 032). Anything that does not match the stored
+ * format is returned untouched.
+ */
+export function formatShortDateTime(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})\s(\d{2}):(\d{2})/.exec(value);
+  return match ? `${match[2]}-${match[3]} ${match[4]}:${match[5]}` : value;
+}
+
 /** `"820 ms"` / `"1.4 s"`; empty string when unknown. */
 export function formatElapsed(ms: number | undefined): string {
   if (ms === undefined || !Number.isFinite(ms) || ms < 0) return "";

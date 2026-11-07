@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>原型 032 · 空白页(空状态)重新设计</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#efeeec;color:#2a2a2a;
+    font-family:"Inter","Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+
+  .stage{padding:28px 24px 64px;display:flex;flex-direction:column;align-items:center;gap:18px}
+  .plabel{width:1160px;max-width:100%;flex:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .plabel .tag{background:#141414;color:#fff;font-size:11px;font-weight:600;letter-spacing:.06em;padding:3px 8px;border-radius:5px}
+  .plabel h1{font-size:14px;margin:0;font-weight:600}
+  .plabel p{margin:0;font-size:12px;color:#6b6b6b}
+  .state{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid transparent}
+  .state.before{color:#b91c1c;background:#fef2f2;border-color:#fecaca}
+  .state.after{color:#15803d;background:#f0fdf4;border-color:#bbf7d0}
+
+  /* ── 应用外壳 ─────────────────────────────── */
+  .app{width:1160px;max-width:100%;flex:none;height:720px;border:1px solid #d5d3ce;border-radius:12px;
+       box-shadow:0 14px 34px rgba(0,0,0,.10);overflow:hidden;display:flex;flex-direction:column;position:relative}
+  .app.light{--bg:#ffffff;--fg:#1b1a17;--fg2:#56514a;--fg3:#857d72;
+    --border:rgba(27,26,23,.10);--border-2:rgba(27,26,23,.16);--card:#fffefb;--raised:#f4f1ea;
+    --paper:#fffdf8;--paper-rule:rgba(27,26,23,.09);--accent-ink:#2f4a63;
+    --warn:#a97a15;--warn-soft:rgba(169,122,21,.09);--grid:rgba(27,26,23,.10);
+    --btn-bg:#1b1a17;--btn-fg:#fbfaf7}
+  .app.dark{--bg:#171613;--fg:#ece9e1;--fg2:#b3ada2;--fg3:#8a8478;
+    --border:rgba(236,233,225,.10);--border-2:rgba(236,233,225,.16);--card:#1c1b17;--raised:#262420;
+    --paper:#1b1a16;--paper-rule:rgba(236,233,225,.09);--accent-ink:#9db9d2;
+    --warn:#d3a244;--warn-soft:rgba(211,162,68,.12);--grid:rgba(236,233,225,.08);
+    --btn-bg:#ece9e1;--btn-fg:#171613}
+  .app{background:var(--bg);color:var(--fg)}
+
+  .topbar{height:44px;flex:none;display:flex;align-items:center;gap:2px;padding:0 12px;
+    border-bottom:1px solid var(--border);color:var(--fg);background:var(--bg)}
+  .tbtn{font-size:12px;padding:5px 9px;border-radius:6px;color:var(--fg2)}
+  .tbtn.dim{color:var(--fg3);opacity:.55}
+  .spacer{flex:1}
+  .iconbtn{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--fg2)}
+  .sep{width:1px;height:16px;background:var(--border);margin:0 8px}
+
+  .canvas{flex:1;position:relative;overflow:hidden;
+    background-image:radial-gradient(circle,var(--grid) 1px,transparent 1px);
+    background-size:22px 22px;background-position:0 0}
+  .canvas-inner{position:absolute;inset:0;display:flex;overflow:auto}
+
+  /* ══════════════════════════════════════════════
+     改造前:现状(竖向居中堆叠 + 四张等宽功能卡)
+     ══════════════════════════════════════════════ */
+  .old-wrap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 40px}
+  .old-hero{display:flex;flex-direction:column;align-items:center;margin-bottom:40px}
+  .old-logo{width:80px;height:80px;border-radius:16px;margin-bottom:24px;display:grid;place-items:center;
+    background:linear-gradient(135deg,rgba(51,51,51,.15),rgba(51,51,51,.05));box-shadow:0 4px 10px rgba(0,0,0,.06)}
+  .old-logo svg{width:40px;height:40px}
+  .old-hero h2{font-size:24px;font-weight:700;letter-spacing:-.02em;margin:0}
+  .old-hero p{font-size:13px;color:#8a8a8a;margin:8px 0 0}
+  .old-cards{display:flex;align-items:stretch;gap:16px;margin-bottom:32px}
+  .old-card{width:176px;padding:24px 16px;border-radius:16px;border:1px solid #e9e9e9;background:rgba(255,255,255,.5);
+    display:flex;flex-direction:column;align-items:center;gap:16px;position:relative}
+  .old-card .ic{width:48px;height:48px;border-radius:12px;background:rgba(51,51,51,.07);display:grid;place-items:center}
+  .old-card .t{font-size:13px;font-weight:600;margin:0;text-align:center}
+  .old-card .s{font-size:11px;color:#8a8a8a;margin:6px 0 0;text-align:center;line-height:1.5}
+  .old-card.primary{border-color:#bfdbfe;background:rgba(239,246,255,.6);box-shadow:0 6px 16px rgba(37,99,235,.08)}
+  .old-card.primary .ic{background:rgba(37,99,235,.12)}
+  .old-card.primary .t{color:#1e40af}
+  .old-card.primary .s{color:rgba(29,78,216,.7)}
+  .old-card.star .ic{background:rgba(234,179,8,.12)}
+  .old-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#2563eb;color:#fff;
+    font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}
+  .old-steps{display:flex;align-items:center;gap:10px;margin-bottom:32px;padding:12px 20px;border-radius:16px;
+    border:1px dashed #dfdfdf;background:rgba(255,255,255,.4)}
+  .old-steps .st{display:flex;align-items:center;gap:8px}
+  .old-steps .n{width:20px;height:20px;border-radius:999px;background:#f0f0f0;color:#8a8a8a;
+    font-size:10.5px;font-weight:700;display:grid;place-items:center}
+  .old-steps span{font-size:12px;color:#8a8a8a}
+  .old-steps .arw{color:#c9c9c9;font-size:12px}
+  .old-recent{width:100%;max-width:640px;padding:0 24px}
+  .old-recent .hd{display:flex;align-items:center;gap:8px;margin:0 0 12px 4px}
+  .old-recent .hd p{margin:0;font-size:12px;font-weight:500;color:rgba(138,138,138,.8);letter-spacing:.1em;text-transform:uppercase}
+  .old-frow{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;overflow:hidden}
+  .old-frow > div:last-child{min-width:0;overflow:hidden}
+  .old-frow p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .old-frow .fi{width:32px;height:32px;border-radius:8px;background:rgba(51,51,51,.05);display:grid;place-items:center;flex:none}
+  .old-frow p.name{font-size:13px;font-weight:500;margin:0}
+  .old-frow p.path{font-size:11px;color:rgba(138,138,138,.8);margin:2px 0 0}
+
+  /* ══════════════════════════════════════════════
+     改造后:左文本 / 右示例表(纸面 + 管道条)
+     ══════════════════════════════════════════════ */
+  .new-wrap{display:grid;grid-template-columns:412px 452px;gap:64px;align-items:center;
+    margin:auto;padding:48px 56px}
+  .left{display:flex;flex-direction:column;position:relative}
+  .eyebrow{display:flex;align-items:center;gap:8px;margin:0 0 14px;
+    font-size:11.5px;color:var(--fg3);letter-spacing:.02em}
+  .eyebrow .dot{width:4px;height:4px;border-radius:999px;background:var(--fg3)}
+  h2.head{font-size:29px;line-height:1.22;font-weight:500;letter-spacing:-.015em;margin:0;color:var(--fg)}
+  p.dek{font-size:14px;line-height:1.7;color:var(--fg2);margin:14px 0 0;max-width:25rem}
+  .actions{display:flex;align-items:center;gap:12px;margin:28px 0 0}
+  .btn{height:40px;padding:0 20px;border-radius:9px;font-size:13.5px;font-weight:500;
+    display:inline-flex;align-items:center;gap:8px;border:1px solid transparent;cursor:default}
+  .btn.primary{background:var(--btn-bg);color:var(--btn-fg);border-color:var(--btn-bg)}
+  .btn.secondary{background:var(--card);color:var(--fg);border-color:var(--border-2)}
+  .btn svg{width:16px;height:16px}
+  .btn.secondary svg{color:var(--fg3)}
+
+  .sub-links{display:flex;align-items:center;gap:18px;margin:16px 0 0;
+    font-size:12.5px;color:var(--fg3)}
+  .textlink{display:inline-flex;align-items:center;gap:6px;color:var(--fg2)}
+  .textlink svg{width:14px;height:14px}
+  .hr{width:1px;height:12px;background:var(--border)}
+  .keys{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  kbd{height:18px;min-width:18px;padding:0 5px;border-radius:4px;border:1px solid var(--border-2);
+    background:var(--raised);color:var(--fg2);font-size:10.5px;display:inline-flex;align-items:center;
+    justify-content:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+  .recent{margin:32px 0 0;border-top:1px solid var(--border);padding-top:16px}
+  .rlabel{font-size:11.5px;color:var(--fg3);margin:0 0 8px}
+  .rrow{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:10px;
+    height:36px;padding:0 8px 0 2px;border-radius:7px;color:var(--fg)}
+  .rrow .idx{font-size:11px;color:var(--fg3);text-align:right;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .rrow .rname{font-size:13px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rrow .rpath{font-size:11px;color:var(--fg3);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rrow .rtime{font-size:11px;color:var(--fg3);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .rrow:hover{background:var(--raised)}
+
+  .right{display:flex;flex-direction:column;gap:12px;position:relative}
+  .paper{background:var(--paper);border:1px solid var(--border);border-radius:14px;
+    box-shadow:0 1px 2px rgba(0,0,0,.05);overflow:hidden}
+  .thead,.trow{display:grid;grid-template-columns:24px 84px 48px 48px minmax(0,1fr);
+    align-items:center;gap:10px;padding:0 14px 0 10px}
+  .thead{height:32px;border-bottom:1px solid var(--paper-rule);color:var(--fg3);font-size:11px}
+  .thead .num{text-align:right}
+  .trow{height:28px;font-size:12px;color:var(--fg2)}
+  .trow .amt{text-align:right;color:var(--fg);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px}
+  .trow .idx{font-size:10.5px;color:var(--fg3);text-align:right;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .trow.flag{background:var(--warn-soft)}
+  .trow.flag .idx{color:var(--warn);font-weight:600}
+  .trow.flag .amt{color:var(--fg3)}
+  .pipe{display:flex;align-items:center;gap:0;padding:12px 14px;border-top:1px solid var(--paper-rule);
+    background:color-mix(in oklab,var(--paper),var(--raised) 40%)}
+  .pn{font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fg2);
+    border:1px solid var(--border);border-radius:5px;padding:2px 7px;background:var(--card)}
+  .pn.first{color:var(--fg);border-color:var(--border-2)}
+  .parr{width:14px;height:1px;background:var(--border-2);position:relative;margin:0 4px}
+  .parr::after{content:"";position:absolute;right:0;top:-2px;width:5px;height:5px;
+    border-top:1px solid var(--border-2);border-right:1px solid var(--border-2);transform:rotate(45deg)}
+  .pout{margin-left:auto;font-size:11px;color:var(--accent-ink);display:flex;align-items:center;gap:5px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .pout .n{font-weight:600}
+  .pcap{font-size:11.5px;color:var(--fg3);margin:0}
+
+  .ghlink{position:absolute;bottom:20px;right:24px;display:inline-flex;align-items:center;gap:6px;
+    font-size:12px;color:var(--fg3)}
+  .ghlink svg{width:14px;height:14px}
+
+  /* 标注 */
+  .pin{position:absolute;width:18px;height:18px;border-radius:999px;background:#141414;color:#fff;
+    font-size:10.5px;font-weight:600;display:grid;place-items:center;z-index:5;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .pin.a{left:-30px;top:52px}
+  .pin.b{left:-30px;top:150px}
+  .pin.c{left:-30px;top:258px}
+  .pin.d{right:-30px;top:8px}
+  .pin.e{right:-30px;top:258px}
+  .pin.f{right:-30px;top:318px}
+
+  .legend{width:1160px;max-width:100%;flex:none;display:grid;grid-template-columns:1fr 1fr;gap:10px 32px;
+    font-size:12px;color:#57534e;line-height:1.65;margin-top:2px}
+  .legend div b{color:#141414}
+  .legend .full{grid-column:1 / -1}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- ══════════════════════════════════════════ -->
+  <div class="plabel">
+    <span class="tag">BEFORE</span>
+    <h1>改造前 · 现状</h1>
+    <p>竖向居中堆叠：渐变图标底 + 问候标题 + 四张等宽功能卡 + 虚线三步条 + 大写小标题的最近文件</p>
+    <span class="state before">AI 味 · 模板感</span>
+  </div>
+
+  <div class="app light">
+    <div class="topbar">
+      <span class="tbtn">文件</span><span class="tbtn">编辑</span><span class="tbtn">查看</span>
+      <span class="tbtn">工具</span><span class="tbtn">帮助</span>
+      <span class="spacer"></span>
+      <span class="tbtn dim">执行</span>
+      <span class="sep"></span>
+      <span class="iconbtn">◐</span><span class="iconbtn">▤</span><span class="iconbtn">◎</span><span class="iconbtn">⚙</span>
+    </div>
+    <div class="canvas">
+      <div class="old-wrap">
+        <div class="old-hero">
+          <div class="old-logo">
+            <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 10H2.365A0.98675 0.98675 0 0 0 1.5 9.5a1 1 0 0 0 0 2 0.98675 0.98675 0 0 0 0.865-0.5H4Z" fill="#89A4A8"/>
+              <path d="M14.5 4.5a0.98675 0.98675 0 0 0-0.865 0.5H12v1h1.635A0.99955 0.99955 0 1 0 14.5 4.5Z" fill="#89A4A8"/>
+              <path d="M12.70705 2.5 10.5 0.29295 8.29295 2.5 10 4.20705V9h1V4.20705ZM10.5 1.70705 11.29295 2.5 10.5 3.29295 9.70705 2.5Z" fill="#89A4A8"/>
+              <path d="M6 11.79295V7h-1v4.79295L3.29295 13.5 5.5 15.70705 7.70705 13.5ZM4.70705 13.5 5.5 12.70705 6.29295 13.5 5.5 14.29295Z" fill="#89A4A8"/>
+              <path d="M9 5H4.20705L2.5 3.29295 0.29295 5.5 2.5 7.70705 4.20705 6H9ZM2.5 6.29295 1.70705 5.5 2.5 4.70705 3.29295 5.5Z" fill="#89A4A8"/>
+              <path d="M6.5 1.5a1 1 0 0 0-2 0 0.98665 0.98665 0 0 0 0.5 0.865V4h1V2.365A0.98665 0.98665 0 0 0 6.5 1.5Z" fill="#89A4A8"/>
+              <path d="M11 13.63525V12h-1v1.635a1 1 0 1 0 1 0Z" fill="#89A4A8"/>
+              <path d="M15.70705 10.5 13.5 8.29295 11.79295 10H7v1h4.79295L13.5 12.70705ZM13.5 9.70705 14.29295 10.5 13.5 11.29295 12.70705 10.5Z" fill="#89A4A8"/>
+            </svg>
+          </div>
+          <h2>欢迎使用 Easy CSV</h2>
+          <p>打开文件或导入工作流开始使用</p>
+        </div>
+
+        <div class="old-cards">
+          <div class="old-card primary">
+            <span class="old-badge">推荐 · 30 秒</span>
+            <div class="ic">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="1.5"><path d="M6 4l14 8-14 8V4z"/></svg>
+            </div>
+            <div>
+              <p class="t">先看看示例</p>
+              <p class="s">加载一份示例数据 + 一条现成管道</p>
+            </div>
+          </div>
+          <div class="old-card">
+            <div class="ic">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.5"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+            </div>
+            <div>
+              <p class="t">打开文件</p>
+              <p class="s">CSV, Excel, JSON</p>
+            </div>
+          </div>
+          <div class="old-card">
+            <div class="ic">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.5"><path d="M12 16V4M8 8l4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+            </div>
+            <div>
+              <p class="t">导入工作流</p>
+              <p class="s">.xanflow 文件</p>
+            </div>
+          </div>
+          <div class="old-card star">
+            <div class="ic">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="1.5"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.6 6.4 20.2l1.1-6.2L3 9.6l6.2-.9L12 3z"/></svg>
+            </div>
+            <div><p class="t">GitHub 点赞</p></div>
+          </div>
+        </div>
+
+        <div class="old-steps">
+          <div class="st"><span class="n">1</span><span>打开数据</span></div>
+          <span class="arw">›</span>
+          <div class="st"><span class="n">2</span><span>添加操作</span></div>
+          <span class="arw">›</span>
+          <div class="st"><span class="n">3</span><span>执行并导出</span></div>
+          <span style="margin-left:4px;font-size:11px;color:rgba(138,138,138,.7)">整条流程都在这块画布上，不写代码</span>
+        </div>
+
+        <div class="old-recent">
+          <div class="hd">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a9a9a9" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <p>最近文件</p>
+          </div>
+          <div class="old-frow">
+            <div class="fi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="1.5"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/></svg></div>
+            <div style="min-width:0">
+              <p class="name">easy-csv-sample-sales.csv</p>
+              <p class="path">D:\init\Deaktop\workspace\rs\easy-csv\src-tauri\samples\easy-csv-sample-sales.csv</p>
+            </div>
+          </div>
+          <div class="old-frow">
+            <div class="fi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="1.5"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/></svg></div>
+            <div style="min-width:0">
+              <p class="name">2026-Q3-订单明细.csv</p>
+              <p class="path">D:\work\报表\2026-Q3-订单明细.csv</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <div class="plabel" style="margin-top:22px">
+    <span class="tag">AFTER</span>
+    <h1>改造后 · 亮色</h1>
+    <p>左文本 / 右示例表：一个主操作、一个次操作，其余降为文字链接；表格与管道条是唯一的“亮”处</p>
+    <span class="state after">不对称双列 · 纸面质感</span>
+  </div>
+
+  <div class="app light">
+    <div class="topbar">
+      <span class="tbtn">文件</span><span class="tbtn">编辑</span><span class="tbtn">查看</span>
+      <span class="tbtn">工具</span><span class="tbtn">帮助</span>
+      <span class="spacer"></span>
+      <span class="tbtn dim">执行</span>
+      <span class="sep"></span>
+      <span class="iconbtn">◐</span><span class="iconbtn">▤</span><span class="iconbtn">◎</span><span class="iconbtn">⚙</span>
+    </div>
+    <div class="canvas">
+      <div class="canvas-inner">
+        <div class="new-wrap">
+
+          <!-- 左列 -->
+          <div class="left">
+            <span class="pin a">1</span>
+            <p class="eyebrow">CSV<span class="dot"></span>Parquet<span class="dot"></span>DuckDB</p>
+            <h2 class="head">把表格串成一条管道</h2>
+            <p class="dek">打开数据，按列筛选、排序、分组，一键执行并导出。整个过程都在这块画布上。</p>
+
+            <div class="actions">
+              <button class="btn primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+                打开文件
+              </button>
+              <button class="btn secondary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 4l14 8-14 8V4z"/></svg>
+                看看示例
+              </button>
+            </div>
+
+            <span class="pin b">2</span>
+            <div class="sub-links">
+              <span class="textlink">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M8 8l4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+                导入 .xanflow 工作流
+              </span>
+              <span class="hr"></span>
+              <span class="keys">
+                <kbd>Alt C</kbd> 添加操作
+                <kbd>Ctrl O</kbd> 打开文件
+              </span>
+            </div>
+
+            <span class="pin c">3</span>
+            <div class="recent">
+              <p class="rlabel">最近文件</p>
+              <div class="rrow">
+                <span class="idx">1</span>
+                <div style="min-width:0">
+                  <p class="rname">easy-csv-sample-sales.csv</p>
+                  <p class="rpath">src-tauri\samples\easy-csv-sample-sales.csv</p>
+                </div>
+                <span class="rtime">11-06 14:32</span>
+              </div>
+              <div class="rrow">
+                <span class="idx">2</span>
+                <div style="min-width:0">
+                  <p class="rname">2026-Q3-订单明细.csv</p>
+                  <p class="rpath">D:\work\报表\2026-Q3-订单明细.csv</p>
+                </div>
+                <span class="rtime">11-05 09:14</span>
+              </div>
+              <div class="rrow">
+                <span class="idx">3</span>
+                <div style="min-width:0">
+                  <p class="rname">渠道库存.xlsx</p>
+                  <p class="rpath">D:\work\报表\渠道库存.xlsx</p>
+                </div>
+                <span class="rtime">11-04 18:02</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右列：唯一亮点 -->
+          <div class="right">
+            <span class="pin d">4</span>
+            <span class="pin e">5</span>
+            <div class="paper">
+              <div class="thead">
+                <span></span><span>日期</span><span>地区</span><span>品类</span><span class="num">金额</span>
+              </div>
+              <div class="trow"><span class="idx">1</span><span>2026-07-01</span><span>西南</span><span>服饰</span><span class="amt">14,447.65</span></div>
+              <div class="trow"><span class="idx">2</span><span>2026-07-01</span><span>华东</span><span>数码</span><span class="amt">12,950.81</span></div>
+              <div class="trow"><span class="idx">3</span><span>2026-07-01</span><span>西南</span><span>数码</span><span class="amt">13,200.21</span></div>
+              <div class="trow"><span class="idx">4</span><span>2026-07-02</span><span>华南</span><span>食品</span><span class="amt">13,774.78</span></div>
+              <div class="trow"><span class="idx">5</span><span>2026-07-02</span><span>东北</span><span>家电</span><span class="amt">12,199.54</span></div>
+              <div class="trow"><span class="idx">6</span><span>2026-07-02</span><span>华东</span><span>服饰</span><span class="amt">11,191.66</span></div>
+              <div class="trow"><span class="idx">7</span><span>2026-07-02</span><span>华南</span><span>服饰</span><span class="amt">14,091.62</span></div>
+              <div class="trow flag"><span class="idx">8</span><span>2026-07-03</span><span>华南</span><span>家电</span><span class="amt">—</span></div>
+              <div class="pipe">
+                <span class="pn first">search</span>
+                <span class="parr"></span>
+                <span class="pn">dedup</span>
+                <span class="parr"></span>
+                <span class="pn">groupby</span>
+                <span class="pout"><span>地区</span><span>→</span><span class="n">5</span><span>行</span></span>
+              </div>
+            </div>
+            <p class="pcap">示例销售数据 219 行 · 第 8 行金额为空，会被 search 去掉</p>
+            <span class="pin f">6</span>
+          </div>
+        </div>
+
+        <a class="ghlink">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.6 6.4 20.2l1.1-6.2L3 9.6l6.2-.9L12 3z"/></svg>
+          在 GitHub 上给个星
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <div class="plabel" style="margin-top:22px">
+    <span class="tag">AFTER · DARK</span>
+    <h1>改造后 · 暗色</h1>
+    <p>同一套结构：纸面比页面背景略暖一档，靠表面层次与细线拉开深度，不用发光和阴影</p>
+  </div>
+
+  <div class="app dark">
+    <div class="topbar">
+      <span class="tbtn">文件</span><span class="tbtn">编辑</span><span class="tbtn">查看</span>
+      <span class="tbtn">工具</span><span class="tbtn">帮助</span>
+      <span class="spacer"></span>
+      <span class="tbtn dim">执行</span>
+      <span class="sep"></span>
+      <span class="iconbtn">◐</span><span class="iconbtn">▤</span><span class="iconbtn">◎</span><span class="iconbtn">⚙</span>
+    </div>
+    <div class="canvas">
+      <div class="canvas-inner">
+        <div class="new-wrap">
+          <div class="left">
+            <p class="eyebrow">CSV<span class="dot"></span>Parquet<span class="dot"></span>DuckDB</p>
+            <h2 class="head">把表格串成一条管道</h2>
+            <p class="dek">打开数据，按列筛选、排序、分组，一键执行并导出。整个过程都在这块画布上。</p>
+            <div class="actions">
+              <button class="btn primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+                打开文件
+              </button>
+              <button class="btn secondary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 4l14 8-14 8V4z"/></svg>
+                看看示例
+              </button>
+            </div>
+            <div class="sub-links">
+              <span class="textlink">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M8 8l4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+                导入 .xanflow 工作流
+              </span>
+              <span class="hr"></span>
+              <span class="keys"><kbd>Alt C</kbd> 添加操作 <kbd>Ctrl O</kbd> 打开文件</span>
+            </div>
+            <div class="recent">
+              <p class="rlabel">最近文件</p>
+              <div class="rrow">
+                <span class="idx">1</span>
+                <div style="min-width:0"><p class="rname">easy-csv-sample-sales.csv</p><p class="rpath">src-tauri\samples\easy-csv-sample-sales.csv</p></div>
+                <span class="rtime">11-06 14:32</span>
+              </div>
+              <div class="rrow">
+                <span class="idx">2</span>
+                <div style="min-width:0"><p class="rname">2026-Q3-订单明细.csv</p><p class="rpath">D:\work\报表\2026-Q3-订单明细.csv</p></div>
+                <span class="rtime">11-05 09:14</span>
+              </div>
+              <div class="rrow">
+                <span class="idx">3</span>
+                <div style="min-width:0"><p class="rname">渠道库存.xlsx</p><p class="rpath">D:\work\报表\渠道库存.xlsx</p></div>
+                <span class="rtime">11-04 18:02</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="right">
+            <div class="paper">
+              <div class="thead"><span></span><span>日期</span><span>地区</span><span>品类</span><span class="num">金额</span></div>
+              <div class="trow"><span class="idx">1</span><span>2026-07-01</span><span>西南</span><span>服饰</span><span class="amt">14,447.65</span></div>
+              <div class="trow"><span class="idx">2</span><span>2026-07-01</span><span>华东</span><span>数码</span><span class="amt">12,950.81</span></div>
+              <div class="trow"><span class="idx">3</span><span>2026-07-01</span><span>西南</span><span>数码</span><span class="amt">13,200.21</span></div>
+              <div class="trow"><span class="idx">4</span><span>2026-07-02</span><span>华南</span><span>食品</span><span class="amt">13,774.78</span></div>
+              <div class="trow"><span class="idx">5</span><span>2026-07-02</span><span>东北</span><span>家电</span><span class="amt">12,199.54</span></div>
+              <div class="trow"><span class="idx">6</span><span>2026-07-02</span><span>华东</span><span>服饰</span><span class="amt">11,191.66</span></div>
+              <div class="trow"><span class="idx">7</span><span>2026-07-02</span><span>华南</span><span>服饰</span><span class="amt">14,091.62</span></div>
+              <div class="trow flag"><span class="idx">8</span><span>2026-07-03</span><span>华南</span><span>家电</span><span class="amt">—</span></div>
+              <div class="pipe">
+                <span class="pn first">search</span><span class="parr"></span>
+                <span class="pn">dedup</span><span class="parr"></span>
+                <span class="pn">groupby</span>
+                <span class="pout"><span>地区</span><span>→</span><span class="n">5</span><span>行</span></span>
+              </div>
+            </div>
+            <p class="pcap">示例销售数据 219 行 · 第 8 行金额为空，会被 search 去掉</p>
+          </div>
+        </div>
+        <a class="ghlink">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.6 6.4 20.2l1.1-6.2L3 9.6l6.2-.9L12 3z"/></svg>
+          在 GitHub 上给个星
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 标注图例 -->
+  <div class="legend">
+    <div><b>① 眉标 + 标题 + 说明</b>：标题不再问候“欢迎使用”，改成一句话说清产品做什么；说明压到 1 行、最大 25rem。</div>
+    <div><b>④ 唯一的亮点：纸面表格</b>：用内置示例销售数据（真实字段与数值），表头细线、金额右对齐等宽数字，第 8 行金额为空 → 行号泛琥珀。</div>
+    <div><b>② 一个主操作、一个次操作</b>：打开文件（实心）、看看示例（描边）；导入工作流降为文字链接，快捷键收成 keycap 一行。</div>
+    <div><b>⑤ 管道条</b>：search → dedup → groupby，右侧结果是“5 行”（示例 5 个地区）；它替代了原虚线三步条，把“三步”讲成真实命令而不是编号圆点。</div>
+    <div><b>③ 最近文件</b>：行号 1 / 2 / 3 作为签名（同时出现在表格行号上），去掉大写小标题与文件图标，行高统一 36px。</div>
+    <div><b>⑥ GitHub</b>：从并排卡片降为右下角一行 12px 文字链接，保留入口、不再抢主操作。</div>
+    <div class="full"><b>窄窗口</b>：容器 &lt; 960px 时两列改为单列，表格移到操作按钮下方；最近文件最多显示 5 条，整块可滚动，不再用 26vh 的固定高度。</div>
+  </div>
+</div>
+</body>
+</html>

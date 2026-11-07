@@ -171,13 +171,16 @@ export interface Translations {
   searchMultiPatternPlaceholder: string;
   searchPatternConflictWarning: string;
 
-  // HomeView
-  welcomeTitle: string;
-  welcomeSubtitle: string;
+  // HomeView / empty state
+  emptyTitle: string;
+  emptySubtitle: string;
+  emptyFormats: string;
+  emptyImportFlow: string;
+  emptyAddStepShort: string;
+  emptySampleCaption: string;
+  emptyResultRows: string;
   openFile: string;
   openFileFormats: string;
-  importFlow: string;
-  importFlowFormats: string;
   starOnGitHub: string;
   branchProgress: string;
   // Execute menu
@@ -957,11 +960,6 @@ export interface Translations {
   onboardingAskAiDesc: string;
   onboardingSeeExample: string;
   onboardingSeeExampleDesc: string;
-  onboardingRecommendedBadge: string;
-  onboardingFlowOpenData: string;
-  onboardingFlowAddStep: string;
-  onboardingFlowExecute: string;
-  onboardingFlowNote: string;
   onboardingBranchNote: string;
   onboardingDismiss: string;
   onboardingDismissHint: string;

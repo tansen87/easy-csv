@@ -22,12 +22,17 @@ export const enCommon = {
   branchOverwriteTitle: "Overwrite output file?",
   branchOverwriteMessage:
     "{count} branches will write to the same file; later writes overwrite earlier ones. Continue?",
-  welcomeTitle: "Welcome to Easy CSV",
-  welcomeSubtitle: "Open a file or import a flow to get started",
+  emptyTitle: "Chain your tables into a pipeline",
+  emptySubtitle:
+    "Open data, filter by column, sort, group, then run and export",
+  emptyFormats: "CSV · Excel · Parquet · DuckDB",
+  emptyImportFlow: "Import a .xanflow pipeline",
+  emptyAddStepShort: "Add a step",
+  emptySampleCaption:
+    "Sample data, 219 rows · row 8 has no amount; search drops it",
+  emptyResultRows: "5 rows",
   openFile: "Open File",
   openFileFormats: "CSV, Excel, JSON",
-  importFlow: "Import Flow",
-  importFlowFormats: ".xanflow files",
   starOnGitHub: "Star on GitHub",
   branchProgress: "Branch",
   // Execute menu

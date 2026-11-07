@@ -30,6 +30,12 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
+  /* Empty state only (design 032): warm paper table + one ink accent.
+     Scoped here on purpose - the rest of the app keeps the neutral ramp. */
+  --paper: oklch(0.995 0.004 85);
+  --paper-rule: oklch(0.2 0.01 80 / 8%);
+  --empty-warn: oklch(0.55 0.1 72);
+  --empty-ink: oklch(0.42 0.055 250);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -91,6 +97,12 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
+  /* Empty state only (design 032) - dark: paper sits one warm step above the
+     page background; depth comes from that step plus a hairline. */
+  --paper: oklch(0.215 0.008 75);
+  --paper-rule: oklch(0.96 0.005 85 / 9%);
+  --empty-warn: oklch(0.78 0.11 75);
+  --empty-ink: oklch(0.78 0.045 245);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -149,6 +161,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-paper: var(--paper);
+  --color-paper-rule: var(--paper-rule);
+  --color-empty-warn: var(--empty-warn);
+  --color-empty-ink: var(--empty-ink);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -403,6 +419,25 @@
 
 .animate-node-enter {
   animation: node-enter 0.28s ease-out;
+}
+
+/**
+ * One entrance for the empty state (design 032): the whole two-column block
+ * fades and rises 6px once. No per-item stagger, no looping.
+ */
+@keyframes empty-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-empty-enter {
+  animation: empty-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Splash screen animations */

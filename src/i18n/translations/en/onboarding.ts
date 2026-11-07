@@ -13,11 +13,6 @@ export const enOnboarding = {
   onboardingAskAiDesc: '"Total the amount by region"',
   onboardingSeeExample: "See an example",
   onboardingSeeExampleDesc: "Loads sample data plus a ready-made pipeline",
-  onboardingRecommendedBadge: "Recommended · 30s",
-  onboardingFlowOpenData: "Open data",
-  onboardingFlowAddStep: "Add steps",
-  onboardingFlowExecute: "Run & export",
-  onboardingFlowNote: "All of it happens on this canvas — no code",
   onboardingBranchNote:
     "A new step becomes its own branch and can run right away — connect it only if you want to chain.",
   onboardingDismiss: "Got it",

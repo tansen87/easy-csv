@@ -91,7 +91,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | `docs/design/031_quick-action-dialogs.md` | 右键快捷操作恢复引导式浮窗(**已实现 2026-10-21**): 覆盖筛选(文本/数值)、排序、替换、透视、日期、文本/数值变换、切片、补位、窗口、批量筛选共 11 类;新增 `src/modules/dialogs/quick/`(types / `buildQuickCommand` 纯函数 / `computeAnchoredPosition` / `QuickActionShell` 非模态浮窗 / 11 个表单)。右键在坐标处浮出,Apply 由 `buildQuickCommand` 生成命令+参数+别名;底部「高级参数」带当前值跳现有 `CommandDialog`。`initialParams.ts` 及其 28 例测试删除,断言迁入 `quickCommandParams.test.ts`。`CommandDialog`/`COMMAND_FORMS` 行为不变 |
 
-> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–031 已登记。
+| `docs/design/032_empty-state-redesign.md` | 空白页(空状态)重新设计(**已实现 2026-11-07**;unslop): 诊断现状 `HomeView.tsx:285-494` 的 11 项 AI 味(渐变图标底、问候标题、四张等宽功能卡 + `推荐 · 30 秒`徽章、蓝/黄多色强调、`transition-all` + `hover:scale-105`、大写宽字距小标题、`h-[26vh]`、无内容预览、`CSV, Excel, JSON` 过度承诺)。方案改为**不对称双列**(左 412 文本 / 右 452 示例表): 主操作「打开文件」+ 次操作「先看看示例」,导入降为文字链接、GitHub 降为右下角文字链接;右侧新增**真实示例表格**(内置销售数据,第 8 行金额为空 → 行号琥珀)+ `search → dedup → groupby` 管道条(替代虚线三步条);新增行号签名、一次性入场动效、4 个空状态专用 CSS 变量(`--paper`/`--paper-rule`/`--empty-warn`/`--empty-ink`)。含 i18n 增删清单、`formatShortDateTime`、`EmptyState.tsx` 拆分方案与验收清单;原型 `docs/design/prototypes/032/01-empty-state.html`(改造前 / 改后亮色 / 改后暗色)。**实施**: 新增 `src/modules/data-preview/EmptyState.tsx`,HomeView 空状态分支 210 → 9 行(586 行),`index.css` 加 4 个空状态专用变量 + `empty-enter`,`utils/format.ts` 加 `formatShortDateTime`,i18n 增 7 删 8;新增 9 例测试(前端 52 文件 / 641 例全绿) |
+
+> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–032 已登记。
 
 ---
 
@@ -356,7 +358,7 @@ NODE_ENV=test       node -e "console.log(typeof require('react').act)"  # functi
 | 目录 | 职责 |
 |------|------|
 | `modules/pipeline/` | 管道画布域: `FlowPanel`、`nodes/`、`overlays/`、`hooks/`、`lib/`(布局/切割几何)、`panels/`(版本控制/血缘) |
-| `modules/data-preview/` | 数据查看域: `HomeView`(主工作区)、`DataProfilePanel`、`charts/ChartPanel` |
+| `modules/data-preview/` | 数据查看域: `HomeView`(主工作区)、`EmptyState`(空白页,设计 032)、`DataProfilePanel`、`charts/ChartPanel` |
 | `modules/dialogs/` | 对话框域,四分: `command/`(统一命令入口 + 61 个表单)、`quick/`(右键引导式浮窗 + 11 个表单,设计 031)、`file/`、`app/`、`common/` |
 | `modules/ai/` | AI 助手面板 |
 | `modules/variables/` | 变量管理面板 |
@@ -643,6 +645,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 修改国际化文本 | `src/i18n/translations/` |
 | 修改设置项 | `src/components/setting/SettingsTabContent.tsx` |
 | 修改设置目录 / 搜索 / 行布局 | 结构: `src/components/setting/settingsSections.ts`(**唯一数据源**)+ `src/components/setting/{SettingsNav,SettingsRow,SettingsSearch,SettingsTabContent,SettingsDialog}.tsx`;搜索纯函数: `src/utils/settingsSearch.ts`;滚动联动: `src/hooks/useScrollSpy.ts`;文案: `src/i18n/translations/{zh,en}/settings.ts`。设计: `docs/design/030_settings-navigation.md` |
+| 修改空白页(空状态) | `src/modules/data-preview/EmptyState.tsx`(唯一实现;示例表与管道条常量在其中)+ `HomeView.tsx` 早返回 + 文案 `src/i18n/translations/{zh,en}/common.ts`(`emptyTitle`…)+ 纸面/墨蓝变量 `src/index.css`。设计: `docs/design/032_empty-state-redesign.md` |
 | 修改应用配置持久化 | `src-tauri/src/config.rs` 中的 `load_config`/`save_config` 函数 |
 | 修改 Batch Filter 功能 | `src/hooks/useBatchFilter.ts` + `src/modules/dialogs/command/forms/batch-filter.tsx` + `src/data/commands/index.ts` |
 | 修改 Batch Convert 功能 | `src/hooks/useBatchConvert.ts` + `src/hooks/execution/`(deps 注入 `executeBatchConvert`) |
