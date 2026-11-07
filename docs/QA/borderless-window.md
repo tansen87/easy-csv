@@ -17,12 +17,14 @@
   "decorations": false,  // 创建时就没有 caption（不是 show 之后再摘）
   "transparent": true,   // 圆角靠透明露出桌面
   "shadow": false        // 不要 DWM 阴影，否则客户区会被内缩
+                         // resizable 不写在这里：见下方 setup，Windows 单独关
 }
 ```
 
 ```rust
 // main.rs → setup()
 let _ = window.set_shadow(false);
+let _ = window.set_resizable(false);  // 仅 Windows：把外圈让给前端手柄
 let _ = window.set_decorations(false);
 let _ = window.show();
 // 之后：hide_system_frame(hwnd) + clamp_maximized_to_work_area(hwnd)
@@ -50,6 +52,9 @@ html[data-custom-chrome="true"][data-window-maximized="false"] .app-window {
    留了任意一个，DWM 就会画那 1px 边框。
 2. **`shadow` 必须是 `false`**。tao 给 undecorated 窗口留的阴影会把客户区四边内缩。
 3. **最大化必须自己收回工作区**。无边框窗口最大化后铺满整个显示器，任务栏会失去点击响应。
+4. **Windows 上必须 `set_resizable(false)`**（运行时，不是配置项），缩放改由前端手柄驱动。
+   留着 `RESIZABLE` 的话 tao 会把外圈 8px 判成非客户区，边缘事件进不了 webview，
+   那块区域既不缩放也点不动。macOS/Linux 保留原生边框与原生缩放。
 
 ---
 
@@ -63,6 +68,8 @@ html[data-custom-chrome="true"][data-window-maximized="false"] .app-window {
 | 最大化后任务栏看得见但点不动 | 窗口铺满显示器，Windows 判定为全屏应用 | 最大化钳制到 work area，见 2.4 |
 | 四个角上有浅色 L 形线 | 保留 `WS_THICKFRAME` 时 DWM 仍画边框，直边被内容盖住、只有圆角处露出来 | 全剥 frame 位，见 2.5 |
 | 四角有白色小弧，改背景色无效 | 见 2.6 —— 多半是 2.5 的误判 | 先按 2.5 处理 |
+| 拖四边/四角改不了窗口大小 | tao 把外圈判成非客户区 + 无 `WS_THICKFRAME` 时系统不 resize | 前端手柄自己设几何，见 2.7 |
+| 双击标题栏不最大化 | 只有品牌区是拖拽区；且第一次按下已被 `start_dragging` 吃掉 | 整条 header 标 `deep` + 时间戳双击，见 2.8 |
 
 ---
 
@@ -159,6 +166,45 @@ SetWindowPos(hwnd, 0, work.left, work.top, work.right - work.left,
 
 顺带一个教训：这几轮里有几次"改了没效果"，是因为**采样的根本不是这个窗口**（它被浏览器盖住了），见 3.2。
 
+### 2.7 窗口边缘拖不动（无法调整大小）
+
+**现象**：按住四边或四角拖动，窗口毫无反应。窗口最外约 8px 的窄带点上去也没有任何响应，像一条死区。
+
+**根因（三层，缺一不可）**：
+
+1. tao 的 `WM_NCHITTEST` 把窗口外圈算成**非客户区**（宽度取 `SM_CXFRAME`，实测约 8px），命中就返回 `HTLEFT/HTRIGHT/HTTOP/HTBOTTOM`。鼠标落在这一圈时 Windows 按"边框"处理，事件根本不进 webview —— 前端就算写了边缘手柄也收不到按下。
+2. 想改用 `startResizeDragging`（内部发 `WM_NCLBUTTONDOWN`）走系统缩放也不行：**没有 `WS_THICKFRAME` 时 Windows 不进入 sizing loop**，消息发出去尺寸不变（实测）。
+3. 可 `WS_THICKFRAME` 又必须剥掉（见 2.5），否则四个圆角处会露出 DWM 的 1px 边框。
+
+**处理**：把缩放整个交给前端。
+
+- Windows 上运行时调 `window.set_resizable(false)`（配置项是跨平台的，不能写死）。tao 的 hit-test 分支要求 `RESIZABLE`，去掉后它走 `DefSubclassProc` 返回 `HTCLIENT`，边缘事件就能进 webview（实测：改前点 `left+2` 收不到 `mousedown`，改后能收到）。
+- `WindowResizeHandles` 渲染 8 个手柄（四边 6px、四角 12px）。按下时记录窗口外框与指针起点，移动时用 `setSize` / `setPosition` 直接算几何。
+- 移动靠 `requestAnimationFrame` 合并，且同一时刻只允许一个在途 IPC —— 否则快速拖动会堆积几十次往返，窗口明显追不上鼠标。
+- 最小尺寸 640×420；最大化时整组手柄卸载，并在按下时再查一次 `isMaximized()` 兜底，防止刚最大化的那一帧还能拖。
+
+**实测**：左/右/上/下各拖 60px、左上角拖 42px，几何变化都符合预期；往小拖到 640 停住；最大化状态下拖边缘尺寸不变；还原后回到原位置。
+
+**试过但无效**：`DWMWA_NCRENDERING_POLICY = DWMNCRP_DISABLED`（想保留 `WS_THICKFRAME` 又不让 DWM 画边框）—— 四角白线照旧。
+
+### 2.8 双击标题栏不最大化
+
+**现象**：双击标题栏空白处没有任何反应（只有左上角品牌区那一小块能用）。
+
+**根因（两层）**：
+
+1. 只有 `TitleBarBrand` 上写了 `data-tauri-drag-region="deep"`，标题栏其余部分根本不是拖拽区，双击自然没人接。
+2. 补上 `deep` 之后拖动正常了，双击**仍然**无效：Tauri 的双击判定看 `mousedown.detail === 2`，可第一次按下就已经触发 `start_dragging`（窗口进入系统拖动循环），第二次按下回来时 `detail` 还是 1 —— 永远等不到 2。
+
+**处理**：
+
+- 整条 `<header>` 加 `data-tauri-drag-region="deep"`。Tauri 的脚本从事件目标向上走，遇到 button / `role="menuitem"` 这类可交互元素且它没有显式标注就停下，所以菜单和窗口按钮不会被误当成拖拽区。
+- 新增 `useTitleBarDoubleClick(headerRef)`：在 **capture 阶段**监听 `mousedown`，用时间戳（<450ms）判断是不是第二次按下；命中就 `stopPropagation()` 掐掉 Tauri 的 `start_dragging`，自己调 `toggleMaximize()`。跳过可交互元素，且只在 `usesCustomTitleBar`（Windows）生效。
+
+**实测**：双击 → `(0,0)-(1920,1040)`；再双击 → 还原 1100×768。
+
+**已知小瑕疵**：双击的第一次按下仍会进一次系统拖动循环，鼠标若有 1~2px 抖动窗口会轻微偏移。真实双击手是稳的，基本看不到。
+
 ---
 
 ## 3. 排查手法
@@ -227,7 +273,9 @@ print("ours on top:", root == hwnd)   # 必须为 True 才继续
 |---|---|
 | `src-tauri/tauri.conf.json` | `decorations: false`、`transparent: true`、`shadow: false`、`visible: false` |
 | `src-tauri/src/main.rs` | `hide_system_frame()`（DWM 尝试 + 剥 frame 位）、`clamp_maximized_to_work_area()`、`setup()` 里的调用时序与 150ms 补调 |
-| `src/index.css` | `html[data-custom-chrome]` 透明、`.app-window` 背景与圆角、最大化时去圆角 |
+| `src/components/titlebar/WindowResizeHandles.tsx` | 8 个缩放手柄，自己算 `setSize`/`setPosition`；最大化时卸载 |
+| `src-tauri/capabilities/default.json` | `set-size` / `set-position` / `outer-position` / `outer-size` / `scale-factor` |
+| `src/index.css` | `html[data-custom-chrome]` 透明、`.app-window` 背景与圆角、最大化时去圆角、最大化时隐藏手柄 |
 | `src/main.tsx` / `src/lib/platform.ts` | Windows 上给 `<html>` 打 `data-custom-chrome="true"` |
 
 ## 7. 验证清单（改完照这个跑一遍）
@@ -238,5 +286,7 @@ print("ours on top:", root == hwnd)   # 必须为 True 才继续
 4. 边缘内侧 0px 到窗口矩形应完全重合（客户区 = 窗口矩形），没有透明带。
 5. 最大化：`GetWindowRect` = 工作区，客户区底边 = 任务栏上沿；任务栏可点击。
 6. 最大化/还原往返一次，位置与尺寸回到原样。
-7. `WM_NCHITTEST` 四条边分别返回 `HTLEFT/HTRIGHT/HTTOP/HTBOTTOM`。
-8. 深色与浅色主题各看一遍 —— 浅色下 1px 浅色线最容易漏。
+7. 拖四条边与四个角，几何都跟着走；往小拖到 640×420 停住。
+8. 最大化状态下拖边缘不应改变尺寸；还原后回到原位置。
+9. 双击标题栏空白处能最大化、再双击能还原；双击菜单/窗口按钮不触发。
+10. 深色与浅色主题各看一遍 —— 浅色下 1px 浅色线最容易漏。

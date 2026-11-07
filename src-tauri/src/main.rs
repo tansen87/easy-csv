@@ -299,6 +299,12 @@ fn main() {
           // bottom edges that reads as an extra ring around the window.
           #[cfg(target_os = "windows")]
           let _ = window.set_shadow(false);
+          // Windows-only: while `RESIZABLE` is set, tao's hit-test claims the
+          // outer 8px as non-client area, so the edge resize grips never see
+          // a pointer. The grips drive the geometry themselves instead.
+          // macOS/Linux keep the native frame and native resizing.
+          #[cfg(target_os = "windows")]
+          let _ = window.set_resizable(false);
           #[cfg(target_os = "windows")]
           let _ = window.set_decorations(false);
 

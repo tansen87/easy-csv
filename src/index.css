@@ -801,3 +801,9 @@ html[data-custom-chrome="true"] body {
 html[data-custom-chrome="true"][data-window-maximized="false"] .app-window {
   border-radius: 8px;
 }
+
+/* Resize grips (WindowResizeHandles) do nothing on a zoomed window, and the
+   resize cursors would be lying. */
+html[data-window-maximized="true"] .window-resize-handle {
+  display: none;
+}

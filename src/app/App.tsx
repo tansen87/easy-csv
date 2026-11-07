@@ -57,8 +57,10 @@ import { MainMenu } from "@/components/menu/MainMenu";
 import {
   setWindowTitle,
   TitleBarBrand,
+  useTitleBarDoubleClick,
   WindowControls,
 } from "@/components/titlebar/TitleBar";
+import { WindowResizeHandles } from "@/components/titlebar/WindowResizeHandles";
 import { usesCustomTitleBar } from "@/lib/platform";
 import { usePipelineTabs } from "@/hooks/usePipelineTabs";
 import { useFileOpen } from "@/hooks/fileIO/useFileOpen";
@@ -284,6 +286,7 @@ function AppContent() {
   }, [session.panelStates.chartPanel?.collapsed]);
 
   const headerRef = useRef<HTMLDivElement>(null);
+  useTitleBarDoubleClick(headerRef);
   const reactFlowInstanceRef = useRef<any>(null);
 
   // Unified dialog switch stack for App-local dialogs (019 §4.4). The ui.*
@@ -1823,6 +1826,7 @@ function AppContent() {
     <>
       {
         <div className="app-window h-screen relative overflow-hidden">
+          <WindowResizeHandles />
           <header
             ref={headerRef}
             className={
@@ -1831,6 +1835,10 @@ function AppContent() {
                 : "absolute top-0 left-0 right-0 h-10 flex items-center px-4 gap-4 z-20"
             }
             onContextMenu={(e) => e.preventDefault()}
+            // The whole bar drags and double-clicks to maximise; buttons and
+            // menu items opt out automatically because Tauri stops the walk
+            // at clickable elements (see its drag.js).
+            data-tauri-drag-region={usesCustomTitleBar ? "deep" : undefined}
           >
             {usesCustomTitleBar && <TitleBarBrand />}
             <div className="flex min-w-0 flex-1 items-center">

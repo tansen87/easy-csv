@@ -1,13 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import {
   getCurrentWindow,
   type Window as TauriWindow,
 } from "@tauri-apps/api/window";
 
+import { usesCustomTitleBar } from "@/lib/platform";
 import { useLanguage } from "@/i18n";
 
 /**
- * Custom window chrome (design 043).
+ * Custom window chrome.
  *
  * The menu row doubles as the title bar, so the app name sits before 文件 and
  * the caption buttons sit after the settings icon. Dragging is handled by
@@ -66,6 +67,59 @@ function withWindow(action: (win: TauriWindow) => Promise<unknown>) {
   } catch {
     /* not running inside the Tauri webview */
   }
+}
+
+const INTERACTIVE_SELECTOR = [
+  "button",
+  "a",
+  "input",
+  "select",
+  "textarea",
+  "label",
+  "summary",
+  '[role="button"]',
+  '[role="menuitem"]',
+  '[role="tab"]',
+  '[contenteditable="true"]',
+].join(", ");
+
+/**
+ * Double-clicking the title bar toggles maximise.
+ *
+ * Tauri's own handler keys off `mousedown.detail === 2`, but the first press
+ * of a double click already sends the window into a system drag loop, so the
+ * second press arrives with `detail === 1` and nothing happens. Detect the
+ * second press by timestamp instead — and do it in the capture phase, so
+ * `stopPropagation` keeps Tauri's `start_dragging` from claiming it.
+ */
+export function useTitleBarDoubleClick(ref: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const bar = ref.current;
+    // Native chrome on macOS/Linux keeps its own title bar behaviour.
+    if (!bar || !usesCustomTitleBar) return;
+
+    let lastPress = 0;
+    const onPress = (event: globalThis.MouseEvent) => {
+      if (event.button !== 0) return;
+      const target = event.target as HTMLElement | null;
+      if (!target || !bar.contains(target)) return;
+      // Buttons and menu items own their clicks.
+      if (target.closest(INTERACTIVE_SELECTOR)) return;
+
+      const now = performance.now();
+      if (now - lastPress < 450) {
+        lastPress = 0;
+        event.stopPropagation();
+        event.preventDefault();
+        withWindow((win) => win.toggleMaximize());
+        return;
+      }
+      lastPress = now;
+    };
+
+    bar.addEventListener("mousedown", onPress, true);
+    return () => bar.removeEventListener("mousedown", onPress, true);
+  }, [ref]);
 }
 
 /**
