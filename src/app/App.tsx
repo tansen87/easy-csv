@@ -28,6 +28,7 @@ import { PipelineTemplateDialog } from "@/modules/dialogs/file/PipelineTemplateD
 import { VariableValuesDialog } from "@/modules/dialogs/common/VariableValuesDialog";
 import { ExecutionHistoryDialog } from "@/modules/dialogs/app/ExecutionHistoryDialog";
 import { VariablePanel } from "@/modules/variables/VariablePanel";
+import { collectVariablesFromPipeline } from "@/utils/params";
 import { CsvDiffDialog } from "@/modules/dialogs/file/CsvDiffDialog";
 import { CsvEncodingDialog } from "@/modules/dialogs/file/CsvEncodingDialog";
 import { SeparateCSVDialog } from "@/modules/dialogs/file/SeparateCSVDialog";
@@ -1299,6 +1300,17 @@ function AppContent() {
     [],
   );
 
+  // 「查看 → 管道变量」右侧的琥珀计数：引用了、但默认值为空的变量数（设计 046）。
+  // 这些变量会让执行停在补值弹窗上,所以要在菜单里就能看见。
+  const pendingVariableCount = (() => {
+    const tab = tabsHook.getCurrentTab();
+    if (!tab) return 0;
+    const declared = new Map((tab.variables || []).map((v) => [v.name, v]));
+    return collectVariablesFromPipeline(tab.pipeline || [], tab.variables).filter(
+      (v) => !(declared.get(v.name)?.defaultValue ?? "").trim(),
+    ).length;
+  })();
+
   // Stable HomeView callbacks so the memoized HomeView (and the React Flow
   // canvas beneath it) do not re-render on unrelated context changes (theme,
   // language). Inline arrows below would otherwise defeat React.memo.
@@ -1946,6 +1958,7 @@ function AppContent() {
                 onToggleAIPanel={() => ui.setShowAIPanel(!ui.showAIPanel)}
                 showVariablePanel={showVariablePanel}
                 onToggleVariablePanel={onToggleVariablePanel}
+                pendingVariables={pendingVariableCount}
                 highlightCommandEntry={showOnboardingGuide}
               />
             </div>

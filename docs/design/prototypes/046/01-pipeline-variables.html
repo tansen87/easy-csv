@@ -1,0 +1,1197 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 01 · 管道变量面板改版</title>
+<style>
+  /* ── tokens · 与 src/index.css 对齐 ───────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.7 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --border-strong:oklch(0.855 0 0);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+
+    --warning:oklch(0.55 0.1 72);
+    --warn-ink:oklch(0.47 0.085 66);
+    --warn-soft:color-mix(in oklab,var(--warning) 14%,transparent);
+    --danger:oklch(0.577 0.245 27.325);
+    --danger-soft:color-mix(in oklab,var(--danger) 9%,transparent);
+
+    --canvas:oklch(0.976 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-win:0 24px 60px -24px oklch(0.2 0.02 80 / 26%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-pop:0 12px 28px -10px oklch(0.2 0.02 80 / 26%),0 1px 3px oklch(0.2 0.02 80 / 8%);
+
+    --ease:cubic-bezier(.2,0,0,1);
+  }
+  html.dark,.dark{
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.52 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(1 0 0 / 7%);
+    --border-strong:oklch(1 0 0 / 16%);
+
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 12%,transparent);
+
+    --warning:oklch(0.76 0.1 78);
+    --warn-ink:oklch(0.82 0.09 82);
+    --warn-soft:color-mix(in oklab,var(--warning) 14%,transparent);
+    --danger:oklch(0.704 0.191 22.216);
+    --danger-soft:color-mix(in oklab,var(--danger) 14%,transparent);
+
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.105 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-win:0 24px 60px -24px oklch(0 0 0 / 60%),0 2px 6px oklch(0 0 0 / 30%);
+    --shadow-pop:0 12px 28px -10px oklch(0 0 0 / 60%),0 1px 3px oklch(0 0 0 / 40%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;-webkit-font-smoothing:antialiased;
+  }
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+  .i{width:14px;height:14px;stroke:currentColor;stroke-width:1.5;fill:none;
+     stroke-linecap:round;stroke-linejoin:round;display:block}
+  .i.sm{width:12px;height:12px}
+  .vp-ib svg,.vp-add svg,.pop svg,.bp-x svg,.bc-del svg{fill:none;stroke:currentColor;stroke-width:1.5;
+    stroke-linecap:round;stroke-linejoin:round}
+
+  /* ── 设计稿舞台 ──────────────────────────────────────────────────── */
+  #sheet{width:1240px;margin:0 auto;padding:28px 0 80px}
+  .stage-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding-bottom:18px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar h1{margin:0;font-size:16px;font-weight:500}
+  .stage-bar p{margin:5px 0 0;font-size:12px;color:var(--muted-fg);max-width:760px;line-height:1.6}
+  .seg{display:flex;gap:2px;padding:2px;border-radius:8px;background:var(--bg);border:1px solid var(--border)}
+  .seg button{
+    appearance:none;border:0;background:transparent;font:inherit;font-size:11.5px;color:var(--muted-fg);
+    height:24px;padding:0 11px;border-radius:6px;cursor:pointer;
+    transition:background-color .15s var(--ease),color .15s var(--ease);
+  }
+  .seg button.on{background:var(--brand);color:var(--brand-fg)}
+
+  /* ── 方向 ────────────────────────────────────────────────────────── */
+  .direction{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:0;
+    border:1px solid var(--border);border-radius:10px;background:var(--card);
+    margin-bottom:40px;overflow:hidden;
+  }
+  .direction div{padding:12px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;letter-spacing:.02em;color:var(--muted-fg-2);margin-bottom:5px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.55;color:var(--fg)}
+
+  /* ── 帧 ──────────────────────────────────────────────────────────── */
+  .frame + .frame{margin-top:52px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span:last-child{color:var(--muted-fg-2)}
+
+  .win{
+    position:relative;width:1200px;height:760px;display:flex;flex-direction:column;overflow:hidden;
+    background:var(--bg);color:var(--fg);
+    border:1px solid var(--border-strong);border-radius:8px;box-shadow:var(--shadow-win);
+  }
+  .dark .win{border-color:var(--border)}
+
+  /* ── 标题栏 ──────────────────────────────────────────────────────── */
+  .titlebar{flex:none;height:40px;display:flex;align-items:center;background:var(--card);
+            border-bottom:1px solid var(--border-soft);user-select:none}
+  .brand{padding-left:16px;font-size:12.5px;font-weight:500;letter-spacing:.005em;white-space:nowrap}
+  .menus{display:flex;align-items:center;gap:2px;margin-left:18px}
+  .menus button{
+    appearance:none;border:0;background:transparent;font:inherit;font-size:11.5px;font-weight:500;
+    color:var(--brand);height:26px;padding:0 11px;border-radius:6px;
+    transition:background-color .12s var(--ease),color .12s var(--ease);
+  }
+  .menus button:hover{background:var(--muted);color:var(--fg)}
+  .menus button.on{background:var(--muted);color:var(--fg)}
+  .tb-right{margin-left:auto;display:flex;align-items:center;gap:2px;padding-right:8px}
+  .tb-btn{appearance:none;border:0;background:transparent;color:var(--muted-fg);width:26px;height:26px;
+          display:grid;place-items:center;border-radius:6px;
+          transition:background-color .12s var(--ease),color .12s var(--ease)}
+  .tb-btn:hover{background:var(--muted);color:var(--fg)}
+  .win-ctl{display:flex;height:40px}
+  .win-ctl i{display:grid;place-items:center;width:44px;color:var(--muted-fg);font-style:normal}
+  .win-ctl svg{width:10px;height:10px;stroke:currentColor;stroke-width:1.2;fill:none}
+
+  /* ── 画布 ────────────────────────────────────────────────────────── */
+  .canvas{
+    position:relative;flex:1 1 auto;min-height:0;overflow:hidden;
+    background-color:var(--canvas);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:20px 20px;background-position:10px 10px;
+  }
+  .tabs{position:absolute;left:8px;top:6px;display:flex;align-items:center;gap:2px;height:30px}
+  .tab{display:flex;align-items:center;gap:6px;height:24px;padding:0 9px;font-size:11.5px;
+       color:var(--muted-fg);border:1px solid transparent;border-radius:6px}
+  .tab.on{background:var(--card);border-color:var(--border);color:var(--fg)}
+  .tab .d{width:5px;height:5px;border-radius:50%;background:var(--border-strong)}
+  .tab.on .d{background:var(--brand)}
+
+  /* 数据预览（面板背后的真实内容） */
+  .pv{position:absolute;left:12px;right:340px;top:44px;bottom:12px;overflow:hidden;
+      background:var(--card);border:1px solid var(--border);border-radius:8px}
+  .pv table{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}
+  .pv th{position:sticky;top:0;text-align:left;font-weight:500;font-size:10.5px;color:var(--muted-fg);
+         padding:7px 10px;border-bottom:1px solid var(--border);background:var(--card);white-space:nowrap}
+  .pv td{padding:5px 10px;border-bottom:1px solid var(--border-soft);color:var(--fg);white-space:nowrap}
+  .pv td.n{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .pv .idx{color:var(--muted-fg-2);font-family:var(--mono);font-size:10px;width:44px}
+  .pv td.r{text-align:right}
+
+  /* ── 查看菜单（含待填计数） ──────────────────────────────────────── */
+  .vmenu{position:absolute;top:40px;left:196px;width:204px;background:var(--card);
+         border:1px solid var(--border);border-radius:9px;box-shadow:var(--shadow-pop);padding:4px;z-index:7}
+  .vmenu button{appearance:none;border:0;background:transparent;font:inherit;font-size:11.5px;color:var(--muted-fg);
+                height:28px;width:100%;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:6px;
+                cursor:pointer;text-align:left}
+  .vmenu button:hover{background:var(--muted)}
+  .vmenu .lbl{flex:1;white-space:nowrap}
+  .vmenu kbd{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);border:1px solid var(--border);
+             border-radius:4px;padding:0 3px;line-height:13px}
+  .vmenu .tick{width:12px;display:grid;place-items:center;color:var(--brand);flex:none}
+  .vmenu .hr{height:1px;background:var(--border-soft);margin:4px 6px}
+  .vmenu .on{color:var(--fg)}
+  .vmenu .off{color:var(--muted-fg-2)}
+  .vmenu .cnt{font-family:var(--mono);font-size:9.5px;line-height:15px;padding:0 5px;border-radius:8px;
+              color:var(--warn-ink);background:var(--warn-soft);font-variant-numeric:tabular-nums}
+
+  /* ══════════════════════════════════════════════════════════════════
+     现状 · VariablePanel.tsx
+     ══════════════════════════════════════════════════════════════════ */
+  .drawer{position:absolute;top:0;right:0;bottom:0;width:320px;background:var(--card);
+          border-left:1px solid color-mix(in oklab,var(--border) 55%,transparent);
+          box-shadow:-8px 0 24px -12px oklch(0.2 0.02 80 / 22%);display:flex;overflow:hidden}
+  .dark .drawer{border-left-color:var(--border-strong);box-shadow:none}
+  .bp{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+  .bp-head{flex:none;display:flex;align-items:center;justify-content:space-between;
+           padding:10px 12px;border-bottom:1px solid color-mix(in oklab,var(--border) 60%,transparent)}
+  .bp-head h3{margin:0;font-size:14px;font-weight:600}
+  .bp-hacts{display:flex;align-items:center;gap:2px}
+  .bp-clear{appearance:none;border:0;background:transparent;font:inherit;font-size:11px;color:var(--muted-fg);
+            display:flex;align-items:center;gap:4px;padding:4px 6px;border-radius:6px;cursor:pointer}
+  .bp-clear:hover{background:var(--muted);color:var(--fg)}
+  .bp-clear .i{width:13px;height:13px}
+  .bp-x{appearance:none;border:0;background:transparent;color:var(--fg);width:26px;height:26px;
+        display:grid;place-items:center;border-radius:6px;cursor:pointer}
+  .bp-x:hover{background:var(--muted)}
+  .bp-hint{padding:8px 12px;font-size:11px;line-height:1.55;
+           color:color-mix(in oklab,var(--muted-fg) 82%,transparent)}
+  .bp-body{flex:1 1 auto;min-height:0;padding:2px 12px 12px;display:grid;gap:10px;align-content:start}
+  .bc{border:1px solid color-mix(in oklab,var(--border) 60%,transparent);border-radius:8px;padding:10px}
+  .bc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .bc-name{display:flex;align-items:center;gap:1px;font-size:12px;font-weight:500;color:var(--muted-fg)}
+  .bc-name i{font-style:normal;color:color-mix(in oklab,var(--muted-fg) 50%,transparent)}
+  .bc-right{display:flex;align-items:center;gap:4px}
+  .bc-sel{width:100px;height:26px;border:1px solid var(--border);border-radius:6px;background:var(--bg);
+          font-size:11px;color:var(--fg);display:flex;align-items:center;justify-content:space-between;
+          padding:0 6px}
+  .bc-sel svg{width:9px;height:9px;stroke:var(--muted-fg);stroke-width:1.6;fill:none}
+  .bc-del{width:22px;height:22px;display:grid;place-items:center;border-radius:5px;color:var(--muted-fg-2)}
+  .bc-in{width:100%;height:28px;border:1px solid var(--border);border-radius:6px;padding:0 10px;
+         font:inherit;font-size:12px;color:var(--fg);background:var(--bg)}
+  .bc-in::placeholder{color:var(--muted-fg-2)}
+  .bp-foot{flex:none;border-top:1px solid color-mix(in oklab,var(--border) 60%,transparent);
+           padding:10px 12px;display:flex;gap:8px}
+  .bp-foot input{flex:1;min-width:0;height:32px;border:1px solid var(--border);border-radius:6px;
+                 padding:0 10px;font:inherit;font-size:14px;color:var(--fg);background:var(--bg)}
+  .bp-foot input::placeholder{color:var(--muted-fg-2)}
+  .bp-add{flex:none;height:32px;padding:0 10px;border:0;border-radius:6px;background:var(--brand);
+          color:var(--brand-fg);font:inherit;font-size:12px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+  .bp-add .i{width:13px;height:13px}
+
+  /* ══════════════════════════════════════════════════════════════════
+     改后 · 变量台账
+     ══════════════════════════════════════════════════════════════════ */
+  .vp{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+  .vp-head{flex:none;padding:12px 12px 0 16px}
+  .vp-hrow{display:flex;align-items:center;gap:8px;height:28px}
+  .vp-t{font-size:13px;font-weight:500;letter-spacing:.01em}
+  .vp-hacts{margin-left:auto;display:flex;align-items:center;gap:2px}
+  .vp-ib{appearance:none;border:0;background:transparent;color:var(--muted-fg);width:26px;height:26px;
+         display:grid;place-items:center;border-radius:7px;cursor:pointer;
+         transition:background-color .12s var(--ease),color .12s var(--ease)}
+  .vp-ib:hover{background:var(--muted);color:var(--fg)}
+  .vp-ib svg{width:13px;height:13px}
+
+  .vp-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding-top:4px}
+  .vp-grp{display:flex;align-items:baseline;gap:6px;height:30px;padding:0 16px;
+          font-size:10.5px;color:var(--muted-fg)}
+  .vp-grp .n{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);
+             font-variant-numeric:tabular-nums}
+  .vp-grp.wait{color:var(--warn-ink)}
+  .vp-grp.wait .n{color:var(--warn-ink);opacity:.8}
+  .vp-gnote{padding:0 16px 4px;font-size:10.5px;line-height:1.5;color:var(--muted-fg)}
+
+  .vr{position:relative;display:grid;gap:1px;align-content:center;min-height:48px;
+      padding:6px 16px 6px 18px;cursor:default;
+      transition:background-color .12s var(--ease)}
+  .vr:hover{background:color-mix(in oklab,var(--muted) 70%,transparent)}
+  .vr.wait::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;
+                   border-radius:0 2px 2px 0;background:var(--warning)}
+  .vr.editing::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;
+                      border-radius:0 2px 2px 0;background:var(--warning)}
+  .vr.sel{background:var(--muted)}
+  .vr-top{display:flex;align-items:center;gap:8px;min-width:0}
+  .vr-nm{font-family:var(--mono);font-size:11.5px;line-height:17px;color:var(--fg);
+         white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vr-nm i{font-style:normal;color:var(--muted-fg-2)}
+  .vr-caret{flex:none;width:9px;height:9px;color:var(--muted-fg-2);
+            transition:transform .12s var(--ease),color .12s var(--ease)}
+  .vr-caret.open{transform:rotate(90deg);color:var(--brand)}
+  .vr:hover .vr-caret{color:var(--muted-fg)}
+  .vr-meta{margin-left:auto;flex:none;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);
+           font-variant-numeric:tabular-nums;white-space:nowrap}
+  .vr-bot{display:flex;align-items:baseline;gap:6px;min-width:0;font-size:11.5px;line-height:16px}
+  .vr-bot .k{flex:none;width:22px;font-size:10px;color:var(--muted-fg-2)}
+  .vr-bot .v{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--fg)}
+  .vr-bot .v.mono{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .vr-bot .v.warn{color:var(--warn-ink)}
+  .vr-bot:hover .v:not(.warn){text-decoration:underline;text-decoration-style:dotted;
+    text-decoration-color:var(--muted-fg-2);text-underline-offset:3px;cursor:text}
+  .vr-act{appearance:none;border:0;background:transparent;font:inherit;font-size:10.5px;color:var(--brand);
+          padding:0;cursor:pointer;white-space:nowrap;flex:none}
+  .vr-act:hover{text-decoration:underline;text-underline-offset:2px}
+  .vr.ghost .vr-nm{color:var(--muted-fg)}
+  .vr.ghost .vr-bot .v{color:var(--muted-fg)}
+
+  /* 引用展开 */
+  .vrefs{background:var(--muted);padding:2px 16px 10px;border-top:1px solid var(--border-soft)}
+  .vref{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;align-items:center;height:24px;
+        font-size:11px;color:var(--fg)}
+  .vref .n{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2)}
+  .vref .c{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vref .p{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);margin-left:6px}
+  .vrefs .cap2{display:flex;align-items:center;height:22px;font-size:10px;color:var(--muted-fg-2)}
+
+  /* 行内编辑 */
+  .vr.editing{background:var(--muted)}
+  .vr-edit{display:flex;align-items:center;gap:6px;margin-top:3px}
+  .vr-edit input{flex:1;min-width:0;height:26px;border:1px solid var(--brand);border-radius:6px;
+                 padding:0 8px;font:inherit;font-size:11.5px;color:var(--fg);background:var(--card);
+                 box-shadow:0 0 0 2px var(--brand-soft)}
+  .vr-edit .kb{display:flex;gap:3px;flex:none}
+  .vr-edit kbd{font-family:var(--mono);font-size:9px;color:var(--muted-fg-2);border:1px solid var(--border);
+               border-radius:3px;padding:0 3px;line-height:14px}
+
+  /* 新增 */
+  .vp-add{display:flex;align-items:center;gap:6px;height:32px;width:calc(100% - 32px);margin:6px 16px 0;
+          padding:0 8px;border:1px dashed var(--border-strong);border-radius:7px;background:transparent;
+          color:var(--muted-fg);font:inherit;font-size:11.5px;cursor:pointer;
+          transition:border-color .12s var(--ease),color .12s var(--ease)}
+  .vp-add:hover{border-color:var(--muted-fg-2);color:var(--fg)}
+  .vp-add svg{width:12px;height:12px}
+  .vp-new{margin:6px 16px 0;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg)}
+  .vp-new .row{display:flex;gap:6px}
+  .vp-new input{flex:1;min-width:0;height:28px;border:1px solid var(--border);border-radius:6px;
+                padding:0 8px;font:inherit;font-size:11.5px;color:var(--fg);background:var(--card)}
+  .vp-new input::placeholder{color:var(--muted-fg-2)}
+  .vp-new .ty{flex:none;height:28px;border:1px solid var(--border);border-radius:6px;background:var(--card);
+              color:var(--fg);font:inherit;font-size:11px;padding:0 5px}
+  .vp-new .go{flex:none;height:28px;padding:0 9px;border:0;border-radius:6px;background:var(--brand);
+              color:var(--brand-fg);font:inherit;font-size:11.5px;cursor:pointer}
+  .vp-new .hint{margin:6px 0 0;font-size:10px;line-height:1.45;color:var(--muted-fg-2)}
+  .vp-new.err input{border-color:var(--danger);box-shadow:0 0 0 2px var(--danger-soft)}
+  .vp-new .hint.err{color:var(--danger)}
+
+  /* 底部计数 */
+  .vp-foot{flex:none;height:36px;display:flex;align-items:center;gap:6px;padding:0 16px;
+           border-top:1px solid var(--border-soft);font-size:10.5px;color:var(--muted-fg);
+           font-variant-numeric:tabular-nums}
+  .vp-foot .sep{color:var(--muted-fg-2);opacity:.55}
+  .vp-foot .warn{color:var(--warn-ink)}
+  .vp-foot .r{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2)}
+
+  /* 行菜单 / 面板菜单 */
+  .pop{position:absolute;background:var(--card);border:1px solid var(--border);border-radius:9px;
+       box-shadow:var(--shadow-pop);padding:4px;width:158px;z-index:6}
+  .pop button{appearance:none;border:0;background:transparent;font:inherit;font-size:11.5px;color:var(--fg);
+              height:26px;width:100%;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:6px;
+              cursor:pointer;text-align:left}
+  .pop button:hover{background:var(--muted)}
+  .pop .lbl{flex:1;white-space:nowrap}
+  .pop .hr{height:1px;background:var(--border-soft);margin:4px 6px}
+  .pop .danger{color:var(--danger)}
+  .pop .tick{width:12px;color:var(--brand);display:grid;place-items:center}
+  .pop .mono{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2)}
+
+  /* 行内确认（清除全部） */
+  .vp-confirm{flex:none;margin:2px 16px 8px;padding:9px 10px;border:1px solid var(--border);
+              border-radius:8px;background:var(--bg)}
+  .vp-confirm h5{margin:0;font-size:11.5px;font-weight:500}
+  .vp-confirm p{margin:4px 0 8px;font-size:10.5px;line-height:1.5;color:var(--muted-fg)}
+  .vp-confirm .acts{display:flex;gap:6px;justify-content:flex-end}
+  .vp-confirm .acts button{height:26px;padding:0 10px;border-radius:6px;font:inherit;font-size:11px;cursor:pointer}
+  .vp-confirm .ghost{background:transparent;border:1px solid var(--border);color:var(--fg)}
+  .vp-confirm .go{background:var(--danger);border:1px solid var(--danger);color:#fff}
+
+  /* ── 标注 ────────────────────────────────────────────────────────── */
+  .num{position:absolute;width:16px;height:16px;border-radius:50%;background:var(--danger);color:#fff;box-shadow:0 0 0 2px var(--card),0 1px 3px oklch(0.2 0.02 80 / 22%);
+       font-family:var(--mono);font-size:9.5px;font-weight:500;display:grid;place-items:center;
+       box-shadow:0 1px 2px oklch(0.2 0.02 80 / 25%);z-index:9}
+
+  /* ── 状态细节 ────────────────────────────────────────────────────── */
+  .tiles{display:grid;grid-template-columns:repeat(3,320px);gap:28px 32px}
+  .tile{display:grid;gap:8px;align-content:start}
+  .tile-cap{font-family:var(--mono);font-size:10px;letter-spacing:.02em;color:var(--muted-fg)}
+  .tile-cap b{font-family:var(--font);font-size:11px;font-weight:500;color:var(--fg);margin-right:6px}
+  .card320{position:relative;width:320px;background:var(--card);border:1px solid var(--border);
+           border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+  .card320.tall{height:360px}
+  .card320.mid{height:300px}
+
+  .vp-empty{flex:1 1 auto;padding:8px 20px 28px;display:grid;gap:7px;align-content:center}
+  .vp-empty h4{margin:0;font-size:12.5px;font-weight:500}
+  .vp-empty p{margin:0;font-size:11px;line-height:1.7;color:var(--muted-fg)}
+  .vp-empty p code{font-size:10.5px}
+  .vp-empty .go{margin-top:6px;height:28px;padding:0 10px;border:0;border-radius:6px;background:var(--brand);
+                color:var(--brand-fg);font:inherit;font-size:11.5px;display:inline-flex;align-items:center;
+                gap:5px;width:max-content}
+
+  /* ── 诊断表 ──────────────────────────────────────────────────────── */
+  .legend{width:1200px;border-top:1px solid var(--border);margin-top:40px}
+  .legend table{width:100%;border-collapse:collapse;font-size:11.5px;line-height:1.65}
+  .legend th{text-align:left;font-weight:500;font-size:10.5px;color:var(--muted-fg-2);
+             padding:10px 12px 8px 0;border-bottom:1px solid var(--border-soft);white-space:nowrap}
+  .legend td{padding:9px 12px 9px 0;border-bottom:1px solid var(--border-soft);vertical-align:top}
+  .legend td:first-child{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);width:34px}
+  .legend td:nth-child(2){width:47%;color:var(--muted-fg)}
+  .legend code{font-family:var(--mono);font-size:10.5px;color:var(--fg);background:var(--muted);
+               padding:1px 4px;border-radius:3px}
+
+  /* ── 规格 ────────────────────────────────────────────────────────── */
+  .spec{width:1200px;margin-top:26px;display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+        border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .spec div{padding:11px 14px;border-right:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+  .spec div:nth-child(4n){border-right:0}
+  .spec div:nth-last-child(-n+4){border-bottom:0}
+  .spec dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.02em;color:var(--muted-fg-2);margin-bottom:4px}
+  .spec dd{margin:0;font-size:11.5px;line-height:1.5}
+
+  .notes{width:1200px;margin-top:28px;display:grid;grid-template-columns:1fr 1fr;gap:8px 36px}
+  .notes h3{grid-column:1/-1;margin:0 0 6px;font-size:12px;font-weight:500}
+  .notes p{margin:0 0 10px;font-size:11.5px;line-height:1.7;color:var(--muted-fg)}
+  .notes p b{font-weight:500;color:var(--fg)}
+  .notes code{font-family:var(--mono);font-size:10.5px;color:var(--fg);background:var(--muted);
+              padding:1px 4px;border-radius:3px}
+  .keys{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+  .keys span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);border:1px solid var(--border);
+             border-radius:4px;padding:2px 5px;background:var(--card)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div>
+      <div class="eyebrow">046 · 管道变量</div>
+      <h1>管道变量面板改版</h1>
+      <p>「查看 → 管道变量」打开的是画布右侧 320px 的吸附面板。这次只改这块面板和它的菜单入口:把「一变量一卡片 + 顶部提示段 + 固定添加栏」换成按状态分组的变量台账,让「哪个变量会挡住执行」「这个变量在哪用」这两件事在面板里直接看得见。执行前的弹窗补填、<code>{{名}}</code> 替换语义、<code>PipelineVariable</code> 结构、面板宽度与吸附位置都不动。</p>
+    </div>
+    <div class="seg">
+      <button class="on" data-theme="light">亮色</button>
+      <button data-theme="dark">暗色</button>
+    </div>
+  </div>
+
+  <dl class="direction">
+    <div><dt>产品</dt><dd>给处理 CSV 的人的可视化管道工具。这块侧栏回答两个问题:哪些变量还没有值、这个变量被哪几步用着。</dd></div>
+    <div><dt>性格</dt><dd>克制的台账。一行一个变量、两个数字(几个变量、几处引用),不做表单卡片。</dd></div>
+    <div><dt>世界</dt><dd>实验室的记录纸:等宽的 <code>{{名}}</code>、左对齐的键、右对齐的计数;琥珀只标记「会挡住执行」的那一项。</dd></div>
+    <div><dt>两个瞬间</dt><dd>① 打开面板第一眼是「待填写 1」,不是先读一段说明 ② 点开一行,看到它被第 01 步用了两次。</dd></div>
+    <div><dt>签名</dt><dd>双花括号本身就是图标:名称前不再放任何圆形图标,<code>{{ }}</code> 用灰、名字用墨。</dd></div>
+  </dl>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       01 现状
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>01</span><b>现状</b><span>VariablePanel.tsx · 320px · 左侧编号 1–6 对应下方诊断表</span></div>
+
+    <div class="win">
+      <div class="titlebar">
+        <div class="brand">Easy CSV</div>
+        <div class="menus">
+          <button>文件</button><button>编辑</button><button>查看</button><button>工具</button><button>帮助</button>
+        </div>
+        <div class="tb-right"><button class="tb-btn" aria-label="设置"><svg class="i sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.3 1a7 7 0 0 0-1.7-1L14.5 3h-4l-.4 2.6a7 7 0 0 0-1.7 1l-2.3-1-2 3.4L6 10.5a7 7 0 0 0 0 3l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7 7 0 0 0 1.7-1l2.3 1 2-3.4-2-1.5c.06-.33.1-.66.1-1z"/></svg></button></div>
+        <div class="win-ctl"><i><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></i><i><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"/></svg></i><i><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3L3 9"/></svg></i></div>
+      </div>
+
+      <div class="canvas">
+        <div class="tabs">
+          <div class="tab on"><span class="d"></span>销售明细.csv</div>
+          <div class="tab"><span class="d"></span>q3 汇总</div>
+        </div>
+
+        <div class="pv">
+          <table>
+            <thead><tr><th class="idx">#</th><th>订单号</th><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr></thead>
+            <tbody>
+              <tr><td class="idx">1</td><td class="n">SO-2401</td><td>2024-01-08</td><td>华东</td><td>办公用品</td><td class="r n">1,280.00</td></tr>
+              <tr><td class="idx">2</td><td class="n">SO-2402</td><td>2024-01-09</td><td>华南</td><td>家具</td><td class="r n">3,460.00</td></tr>
+              <tr><td class="idx">3</td><td class="n">SO-2403</td><td>2024-01-11</td><td>华东</td><td>数码</td><td class="r n">980.00</td></tr>
+              <tr><td class="idx">4</td><td class="n">SO-2404</td><td>2024-01-12</td><td>华北</td><td>办公用品</td><td class="r n">640.00</td></tr>
+              <tr><td class="idx">5</td><td class="n">SO-2405</td><td>2024-01-15</td><td>华东</td><td>家具</td><td class="r n">5,120.00</td></tr>
+              <tr><td class="idx">6</td><td class="n">SO-2406</td><td>2024-01-18</td><td>西南</td><td>数码</td><td class="r n">2,050.00</td></tr>
+              <tr><td class="idx">7</td><td class="n">SO-2407</td><td>2024-01-20</td><td>华南</td><td>办公用品</td><td class="r n">760.00</td></tr>
+              <tr><td class="idx">8</td><td class="n">SO-2408</td><td>2024-01-22</td><td>华东</td><td>家具</td><td class="r n">4,380.00</td></tr>
+              <tr><td class="idx">9</td><td class="n">SO-2409</td><td>2024-01-25</td><td>华北</td><td>数码</td><td class="r n">1,190.00</td></tr>
+              <tr><td class="idx">10</td><td class="n">SO-2410</td><td>2024-01-28</td><td>华南</td><td>家具</td><td class="r n">2,730.00</td></tr>
+              <tr><td class="idx">11</td><td class="n">SO-2411</td><td>2024-01-31</td><td>东北</td><td>家具</td><td class="r n">7,207.00</td></tr>
+              <tr><td class="idx">12</td><td class="n">SO-2412</td><td>2024-02-03</td><td>华东</td><td>数码</td><td class="r n">2,944.00</td></tr>
+              <tr><td class="idx">13</td><td class="n">SO-2413</td><td>2024-02-06</td><td>华南</td><td>耗材</td><td class="r n">7,681.00</td></tr>
+              <tr><td class="idx">14</td><td class="n">SO-2414</td><td>2024-02-09</td><td>华北</td><td>家电</td><td class="r n">3,318.00</td></tr>
+              <tr><td class="idx">15</td><td class="n">SO-2415</td><td>2024-02-12</td><td>西南</td><td>办公用品</td><td class="r n">8,055.00</td></tr>
+              <tr><td class="idx">16</td><td class="n">SO-2416</td><td>2024-02-15</td><td>华中</td><td>家具</td><td class="r n">3,792.00</td></tr>
+              <tr><td class="idx">17</td><td class="n">SO-2417</td><td>2024-02-18</td><td>东北</td><td>数码</td><td class="r n">8,429.00</td></tr>
+              <tr><td class="idx">18</td><td class="n">SO-2418</td><td>2024-02-21</td><td>华东</td><td>耗材</td><td class="r n">4,166.00</td></tr>
+              <tr><td class="idx">19</td><td class="n">SO-2419</td><td>2024-02-24</td><td>华南</td><td>家电</td><td class="r n">8,803.00</td></tr>
+              <tr><td class="idx">20</td><td class="n">SO-2420</td><td>2024-02-27</td><td>华北</td><td>办公用品</td><td class="r n">4,540.00</td></tr>
+              <tr><td class="idx">21</td><td class="n">SO-2421</td><td>2024-03-01</td><td>西南</td><td>家具</td><td class="r n">9,277.00</td></tr>
+              <tr><td class="idx">22</td><td class="n">SO-2422</td><td>2024-03-04</td><td>华中</td><td>数码</td><td class="r n">4,914.00</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="drawer">
+          <div class="bp">
+            <div class="bp-head">
+              <h3>管道变量</h3>
+              <div class="bp-hacts">
+                <button class="bp-clear"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>全部清除</button>
+                <button class="bp-x" aria-label="关闭"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+            </div>
+
+            <div class="bp-hint">提示: 在参数值中书写 {{变量名}} 即可引用变量, 可在&lt;管道变量&gt;面板管理默认值</div>
+
+            <div class="bp-body">
+              <div class="bc">
+                <div class="bc-top">
+                  <span class="bc-name"><i>{{</i>日期范围<i>}}</i></span>
+                  <div class="bc-right">
+                    <span class="bc-sel">string<svg viewBox="0 0 12 12"><path d="M3 4.5L6 7.5l3-3"/></svg></span>
+                    <span class="bc-del"><svg class="i sm" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+                  </div>
+                </div>
+                <input class="bc-in" value="2024-01-01..2024-03-31" readonly />
+              </div>
+
+              <div class="bc">
+                <div class="bc-top">
+                  <span class="bc-name"><i>{{</i>金额阈值<i>}}</i></span>
+                  <div class="bc-right">
+                    <span class="bc-sel">string<svg viewBox="0 0 12 12"><path d="M3 4.5L6 7.5l3-3"/></svg></span>
+                    <span class="bc-del"><svg class="i sm" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+                  </div>
+                </div>
+                <input class="bc-in" placeholder="默认值" readonly />
+              </div>
+
+              <div class="bc">
+                <div class="bc-top">
+                  <span class="bc-name"><i>{{</i>排序方向<i>}}</i></span>
+                  <div class="bc-right">
+                    <span class="bc-sel">string<svg viewBox="0 0 12 12"><path d="M3 4.5L6 7.5l3-3"/></svg></span>
+                  </div>
+                </div>
+                <input class="bc-in" placeholder="默认值" readonly />
+              </div>
+            </div>
+
+            <div class="bp-foot">
+              <input placeholder="名称" readonly />
+              <button class="bp-add"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>添加变量</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 标注：沿面板左缘自上而下 -->
+        <span class="num" style="left:860px;top:14px">1</span>
+        <span class="num" style="left:860px;top:56px">2</span>
+        <span class="num" style="left:860px;top:108px">3</span>
+        <span class="num" style="left:860px;top:196px">4</span>
+        <span class="num" style="left:860px;top:282px">5</span>
+        <span class="num" style="left:860px;top:688px">6</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       02 改后 · 变量台账
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>02</span><b>改后 · 变量台账</b><span>查看菜单打开着:入口右侧的琥珀数字就是「会挡住执行」的变量数</span></div>
+
+    <div class="win">
+      <div class="titlebar">
+        <div class="brand">Easy CSV</div>
+        <div class="menus">
+          <button>文件</button><button>编辑</button><button class="on">查看</button><button>工具</button><button>帮助</button>
+        </div>
+        <div class="tb-right"><button class="tb-btn" aria-label="设置"><svg class="i sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.3 1a7 7 0 0 0-1.7-1L14.5 3h-4l-.4 2.6a7 7 0 0 0-1.7 1l-2.3-1-2 3.4L6 10.5a7 7 0 0 0 0 3l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7 7 0 0 0 1.7-1l2.3 1 2-3.4-2-1.5c.06-.33.1-.66.1-1z"/></svg></button></div>
+        <div class="win-ctl"><i><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></i><i><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"/></svg></i><i><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3L3 9"/></svg></i></div>
+      </div>
+
+      <div class="canvas">
+        <div class="tabs">
+          <div class="tab on"><span class="d"></span>销售明细.csv</div>
+          <div class="tab"><span class="d"></span>q3 汇总</div>
+        </div>
+
+        <div class="pv">
+          <table>
+            <thead><tr><th class="idx">#</th><th>订单号</th><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr></thead>
+            <tbody>
+              <tr><td class="idx">1</td><td class="n">SO-2401</td><td>2024-01-08</td><td>华东</td><td>办公用品</td><td class="r n">1,280.00</td></tr>
+              <tr><td class="idx">2</td><td class="n">SO-2402</td><td>2024-01-09</td><td>华南</td><td>家具</td><td class="r n">3,460.00</td></tr>
+              <tr><td class="idx">3</td><td class="n">SO-2403</td><td>2024-01-11</td><td>华东</td><td>数码</td><td class="r n">980.00</td></tr>
+              <tr><td class="idx">4</td><td class="n">SO-2404</td><td>2024-01-12</td><td>华北</td><td>办公用品</td><td class="r n">640.00</td></tr>
+              <tr><td class="idx">5</td><td class="n">SO-2405</td><td>2024-01-15</td><td>华东</td><td>家具</td><td class="r n">5,120.00</td></tr>
+              <tr><td class="idx">6</td><td class="n">SO-2406</td><td>2024-01-18</td><td>西南</td><td>数码</td><td class="r n">2,050.00</td></tr>
+              <tr><td class="idx">7</td><td class="n">SO-2407</td><td>2024-01-20</td><td>华南</td><td>办公用品</td><td class="r n">760.00</td></tr>
+              <tr><td class="idx">8</td><td class="n">SO-2408</td><td>2024-01-22</td><td>华东</td><td>家具</td><td class="r n">4,380.00</td></tr>
+              <tr><td class="idx">9</td><td class="n">SO-2409</td><td>2024-01-25</td><td>华北</td><td>数码</td><td class="r n">1,190.00</td></tr>
+              <tr><td class="idx">10</td><td class="n">SO-2410</td><td>2024-01-28</td><td>华南</td><td>家具</td><td class="r n">2,730.00</td></tr>
+              <tr><td class="idx">11</td><td class="n">SO-2411</td><td>2024-01-31</td><td>东北</td><td>家具</td><td class="r n">7,207.00</td></tr>
+              <tr><td class="idx">12</td><td class="n">SO-2412</td><td>2024-02-03</td><td>华东</td><td>数码</td><td class="r n">2,944.00</td></tr>
+              <tr><td class="idx">13</td><td class="n">SO-2413</td><td>2024-02-06</td><td>华南</td><td>耗材</td><td class="r n">7,681.00</td></tr>
+              <tr><td class="idx">14</td><td class="n">SO-2414</td><td>2024-02-09</td><td>华北</td><td>家电</td><td class="r n">3,318.00</td></tr>
+              <tr><td class="idx">15</td><td class="n">SO-2415</td><td>2024-02-12</td><td>西南</td><td>办公用品</td><td class="r n">8,055.00</td></tr>
+              <tr><td class="idx">16</td><td class="n">SO-2416</td><td>2024-02-15</td><td>华中</td><td>家具</td><td class="r n">3,792.00</td></tr>
+              <tr><td class="idx">17</td><td class="n">SO-2417</td><td>2024-02-18</td><td>东北</td><td>数码</td><td class="r n">8,429.00</td></tr>
+              <tr><td class="idx">18</td><td class="n">SO-2418</td><td>2024-02-21</td><td>华东</td><td>耗材</td><td class="r n">4,166.00</td></tr>
+              <tr><td class="idx">19</td><td class="n">SO-2419</td><td>2024-02-24</td><td>华南</td><td>家电</td><td class="r n">8,803.00</td></tr>
+              <tr><td class="idx">20</td><td class="n">SO-2420</td><td>2024-02-27</td><td>华北</td><td>办公用品</td><td class="r n">4,540.00</td></tr>
+              <tr><td class="idx">21</td><td class="n">SO-2421</td><td>2024-03-01</td><td>西南</td><td>家具</td><td class="r n">9,277.00</td></tr>
+              <tr><td class="idx">22</td><td class="n">SO-2422</td><td>2024-03-04</td><td>华中</td><td>数码</td><td class="r n">4,914.00</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="drawer">
+          <div class="vp">
+            <div class="vp-head">
+              <div class="vp-hrow">
+                <span class="vp-t">管道变量</span>
+                <div class="vp-hacts">
+                  <button class="vp-ib" aria-label="变量操作"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+                  <button class="vp-ib" aria-label="关闭"><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="vp-body">
+              <div class="vp-grp wait"><span>待填写</span><span class="n">1</span></div>
+              <div class="vp-gnote">没有默认值,执行到这里会弹窗补填</div>
+              <div class="vr wait">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>金额阈值<i>}}</i></span>
+                  <span class="vr-meta">1 处</span><svg class="vr-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>
+                </div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v warn">未填写</span></div>
+              </div>
+
+              <div class="vp-grp"><span>已就绪</span><span class="n">4</span></div>
+              <div class="vr">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>日期范围<i>}}</i></span>
+                  <span class="vr-meta">2 处</span><svg class="vr-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>
+                </div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v mono">2024-01-01..2024-03-31</span></div>
+              </div>
+              <div class="vr">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>地区<i>}}</i></span>
+                  <span class="vr-meta">1 处</span><svg class="vr-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>
+                </div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v">华东</span></div>
+              </div>
+              <div class="vr">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>品类<i>}}</i></span>
+                  <span class="vr-meta">1 处</span><svg class="vr-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>
+                </div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v">家具</span></div>
+              </div>
+              <div class="vr">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>输出目录<i>}}</i></span>
+                  <span class="vr-meta">未被引用</span>
+                </div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v mono">D:\out\q3</span></div>
+              </div>
+
+              <div class="vp-grp"><span>仅管道引用</span><span class="n">1</span></div>
+              <div class="vr ghost">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>排序方向<i>}}</i></span>
+                  <button class="vr-act" style="margin-left:auto">声明</button>
+                </div>
+                <div class="vr-bot"><span class="k">用于</span><span class="v">第 03 步 · 排序</span></div>
+              </div>
+
+              <button class="vp-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>新增变量</button>
+            </div>
+
+            <div class="vp-foot">
+              <span>4 个变量</span><span class="sep">·</span><span class="warn">1 个待填写</span>
+              <span class="r">1 个仅引用</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="vmenu">
+          <button><span class="tick"></span><span class="lbl">命令面板</span><kbd>Ctrl+K</kbd></button>
+          <div class="hr"></div>
+          <button><span class="tick"></span><span class="lbl">数据概览</span></button>
+          <button><span class="tick"></span><span class="lbl">版本控制</span></button>
+          <button><span class="tick"></span><span class="lbl">数据血缘</span></button>
+          <button class="on"><span class="tick"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg></span><span class="lbl">管道变量</span><span class="cnt">1</span></button>
+          <div class="hr"></div>
+          <button><span class="tick"></span><span class="lbl">搜索</span><kbd>Ctrl+F</kbd></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       03 改后 · 编辑与引用
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>03</span><b>改后 · 改值 / 查引用 / 新增</b><span>点值即改;点开一行看到它被哪几个参数用着;新增收在列表末尾,不再常驻一条输入栏</span></div>
+
+    <div class="win">
+      <div class="titlebar">
+        <div class="brand">Easy CSV</div>
+        <div class="menus">
+          <button>文件</button><button>编辑</button><button class="on">查看</button><button>工具</button><button>帮助</button>
+        </div>
+        <div class="tb-right"><button class="tb-btn" aria-label="设置"><svg class="i sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.3 1a7 7 0 0 0-1.7-1L14.5 3h-4l-.4 2.6a7 7 0 0 0-1.7 1l-2.3-1-2 3.4L6 10.5a7 7 0 0 0 0 3l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7 7 0 0 0 1.7-1l2.3 1 2-3.4-2-1.5c.06-.33.1-.66.1-1z"/></svg></button></div>
+        <div class="win-ctl"><i><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></i><i><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"/></svg></i><i><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3L3 9"/></svg></i></div>
+      </div>
+
+      <div class="canvas">
+        <div class="tabs">
+          <div class="tab on"><span class="d"></span>销售明细.csv</div>
+          <div class="tab"><span class="d"></span>q3 汇总</div>
+        </div>
+
+        <div class="pv">
+          <table>
+            <thead><tr><th class="idx">#</th><th>订单号</th><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr></thead>
+            <tbody>
+              <tr><td class="idx">1</td><td class="n">SO-2401</td><td>2024-01-08</td><td>华东</td><td>办公用品</td><td class="r n">1,280.00</td></tr>
+              <tr><td class="idx">2</td><td class="n">SO-2402</td><td>2024-01-09</td><td>华南</td><td>家具</td><td class="r n">3,460.00</td></tr>
+              <tr><td class="idx">3</td><td class="n">SO-2403</td><td>2024-01-11</td><td>华东</td><td>数码</td><td class="r n">980.00</td></tr>
+              <tr><td class="idx">4</td><td class="n">SO-2404</td><td>2024-01-12</td><td>华北</td><td>办公用品</td><td class="r n">640.00</td></tr>
+              <tr><td class="idx">5</td><td class="n">SO-2405</td><td>2024-01-15</td><td>华东</td><td>家具</td><td class="r n">5,120.00</td></tr>
+              <tr><td class="idx">6</td><td class="n">SO-2406</td><td>2024-01-18</td><td>西南</td><td>数码</td><td class="r n">2,050.00</td></tr>
+              <tr><td class="idx">7</td><td class="n">SO-2407</td><td>2024-01-20</td><td>华南</td><td>办公用品</td><td class="r n">760.00</td></tr>
+              <tr><td class="idx">8</td><td class="n">SO-2408</td><td>2024-01-22</td><td>华东</td><td>家具</td><td class="r n">4,380.00</td></tr>
+              <tr><td class="idx">9</td><td class="n">SO-2409</td><td>2024-01-01</td><td>西南</td><td>家电</td><td class="r n">6,833.00</td></tr>
+              <tr><td class="idx">10</td><td class="n">SO-2410</td><td>2024-01-04</td><td>华中</td><td>办公用品</td><td class="r n">2,570.00</td></tr>
+              <tr><td class="idx">11</td><td class="n">SO-2411</td><td>2024-01-31</td><td>东北</td><td>家具</td><td class="r n">7,207.00</td></tr>
+              <tr><td class="idx">12</td><td class="n">SO-2412</td><td>2024-02-03</td><td>华东</td><td>数码</td><td class="r n">2,944.00</td></tr>
+              <tr><td class="idx">13</td><td class="n">SO-2413</td><td>2024-02-06</td><td>华南</td><td>耗材</td><td class="r n">7,681.00</td></tr>
+              <tr><td class="idx">14</td><td class="n">SO-2414</td><td>2024-02-09</td><td>华北</td><td>家电</td><td class="r n">3,318.00</td></tr>
+              <tr><td class="idx">15</td><td class="n">SO-2415</td><td>2024-02-12</td><td>西南</td><td>办公用品</td><td class="r n">8,055.00</td></tr>
+              <tr><td class="idx">16</td><td class="n">SO-2416</td><td>2024-02-15</td><td>华中</td><td>家具</td><td class="r n">3,792.00</td></tr>
+              <tr><td class="idx">17</td><td class="n">SO-2417</td><td>2024-02-18</td><td>东北</td><td>数码</td><td class="r n">8,429.00</td></tr>
+              <tr><td class="idx">18</td><td class="n">SO-2418</td><td>2024-02-21</td><td>华东</td><td>耗材</td><td class="r n">4,166.00</td></tr>
+              <tr><td class="idx">19</td><td class="n">SO-2419</td><td>2024-02-24</td><td>华南</td><td>家电</td><td class="r n">8,803.00</td></tr>
+              <tr><td class="idx">20</td><td class="n">SO-2420</td><td>2024-02-27</td><td>华北</td><td>办公用品</td><td class="r n">4,540.00</td></tr>
+              <tr><td class="idx">21</td><td class="n">SO-2421</td><td>2024-03-01</td><td>西南</td><td>家具</td><td class="r n">9,277.00</td></tr>
+              <tr><td class="idx">22</td><td class="n">SO-2422</td><td>2024-03-04</td><td>华中</td><td>数码</td><td class="r n">4,914.00</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="drawer">
+          <div class="vp">
+            <div class="vp-head">
+              <div class="vp-hrow">
+                <span class="vp-t">管道变量</span>
+                <div class="vp-hacts">
+                  <button class="vp-ib" aria-label="变量操作"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+                  <button class="vp-ib" aria-label="关闭"><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="vp-body">
+              <div class="vp-grp wait"><span>待填写</span><span class="n">1</span></div>
+              <div class="vr editing">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>金额阈值<i>}}</i></span>
+                  <span class="vr-meta">1 处</span><svg class="vr-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>
+                </div>
+                <div class="vr-edit">
+                  <input value="1200" readonly />
+                  <span class="kb"><kbd>↵</kbd><kbd>esc</kbd></span>
+                </div>
+              </div>
+
+              <div class="vp-grp"><span>已就绪</span><span class="n">3</span></div>
+              <div class="vr sel">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>日期范围<i>}}</i></span>
+                  <span class="vr-meta">2 处</span><svg class="vr-caret open" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>
+                </div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v mono">2024-01-01..2024-03-31</span></div>
+              </div>
+              <div class="vrefs">
+                <div class="cap2">被 2 个参数引用</div>
+                <div class="vref"><span class="n">01</span><span class="c">筛选<span class="p">起始日期</span></span></div>
+                <div class="vref"><span class="n">01</span><span class="c">筛选<span class="p">结束日期</span></span></div>
+              </div>
+
+              <div class="vr">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>地区<i>}}</i></span>
+                  <span class="vr-meta">1 处</span><svg class="vr-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>
+                </div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v">华东</span></div>
+              </div>
+              <div class="vr">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>输出目录<i>}}</i></span>
+                  <span class="vr-meta">未被引用</span>
+                </div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v mono">D:\out\q3</span></div>
+              </div>
+
+              <div class="vp-grp"><span>仅管道引用</span><span class="n">1</span></div>
+              <div class="vr ghost">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>排序方向<i>}}</i></span>
+                  <button class="vr-act" style="margin-left:auto">声明</button>
+                </div>
+                <div class="vr-bot"><span class="k">用于</span><span class="v">第 03 步 · 排序</span></div>
+              </div>
+
+              <div class="vp-new">
+                <div class="row">
+                  <input placeholder="变量名" value="" readonly />
+                  <select class="ty"><option>文本</option></select>
+                  <button class="go">添加</button>
+                </div>
+                <p class="hint">只能用字母、数字与下划线;在步骤参数里写成 <code>{{名}}</code> 引用</p>
+              </div>
+            </div>
+
+            <div class="vp-foot">
+              <span>4 个变量</span><span class="sep">·</span><span class="warn">1 个待填写</span>
+              <span class="r">1 个仅引用</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       04 改后 · 暗色
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame dark">
+    <div class="cap"><span>04</span><b>改后 · 暗色</b><span>同一状态:琥珀只用于「待填写」,行悬停是 8% 白,不用品牌色铺底</span></div>
+
+    <div class="win">
+      <div class="titlebar">
+        <div class="brand">Easy CSV</div>
+        <div class="menus">
+          <button>文件</button><button>编辑</button><button class="on">查看</button><button>工具</button><button>帮助</button>
+        </div>
+        <div class="tb-right"><button class="tb-btn" aria-label="设置"><svg class="i sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.3 1a7 7 0 0 0-1.7-1L14.5 3h-4l-.4 2.6a7 7 0 0 0-1.7 1l-2.3-1-2 3.4L6 10.5a7 7 0 0 0 0 3l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7 7 0 0 0 1.7-1l2.3 1 2-3.4-2-1.5c.06-.33.1-.66.1-1z"/></svg></button></div>
+        <div class="win-ctl"><i><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></i><i><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"/></svg></i><i><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3L3 9"/></svg></i></div>
+      </div>
+
+      <div class="canvas">
+        <div class="tabs">
+          <div class="tab on"><span class="d"></span>销售明细.csv</div>
+          <div class="tab"><span class="d"></span>q3 汇总</div>
+        </div>
+
+        <div class="pv">
+          <table>
+            <thead><tr><th class="idx">#</th><th>订单号</th><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr></thead>
+            <tbody>
+              <tr><td class="idx">1</td><td class="n">SO-2401</td><td>2024-01-08</td><td>华东</td><td>办公用品</td><td class="r n">1,280.00</td></tr>
+              <tr><td class="idx">2</td><td class="n">SO-2402</td><td>2024-01-09</td><td>华南</td><td>家具</td><td class="r n">3,460.00</td></tr>
+              <tr><td class="idx">3</td><td class="n">SO-2403</td><td>2024-01-11</td><td>华东</td><td>数码</td><td class="r n">980.00</td></tr>
+              <tr><td class="idx">4</td><td class="n">SO-2404</td><td>2024-01-12</td><td>华北</td><td>办公用品</td><td class="r n">640.00</td></tr>
+              <tr><td class="idx">5</td><td class="n">SO-2405</td><td>2024-01-15</td><td>华东</td><td>家具</td><td class="r n">5,120.00</td></tr>
+              <tr><td class="idx">6</td><td class="n">SO-2406</td><td>2024-01-18</td><td>西南</td><td>数码</td><td class="r n">2,050.00</td></tr>
+              <tr><td class="idx">7</td><td class="n">SO-2407</td><td>2024-01-22</td><td>华南</td><td>数码</td><td class="r n">6,459.00</td></tr>
+              <tr><td class="idx">8</td><td class="n">SO-2408</td><td>2024-01-25</td><td>华北</td><td>耗材</td><td class="r n">2,196.00</td></tr>
+              <tr><td class="idx">9</td><td class="n">SO-2409</td><td>2024-01-01</td><td>西南</td><td>家电</td><td class="r n">6,833.00</td></tr>
+              <tr><td class="idx">10</td><td class="n">SO-2410</td><td>2024-01-04</td><td>华中</td><td>办公用品</td><td class="r n">2,570.00</td></tr>
+              <tr><td class="idx">11</td><td class="n">SO-2411</td><td>2024-01-31</td><td>东北</td><td>家具</td><td class="r n">7,207.00</td></tr>
+              <tr><td class="idx">12</td><td class="n">SO-2412</td><td>2024-02-03</td><td>华东</td><td>数码</td><td class="r n">2,944.00</td></tr>
+              <tr><td class="idx">13</td><td class="n">SO-2413</td><td>2024-02-06</td><td>华南</td><td>耗材</td><td class="r n">7,681.00</td></tr>
+              <tr><td class="idx">14</td><td class="n">SO-2414</td><td>2024-02-09</td><td>华北</td><td>家电</td><td class="r n">3,318.00</td></tr>
+              <tr><td class="idx">15</td><td class="n">SO-2415</td><td>2024-02-12</td><td>西南</td><td>办公用品</td><td class="r n">8,055.00</td></tr>
+              <tr><td class="idx">16</td><td class="n">SO-2416</td><td>2024-02-15</td><td>华中</td><td>家具</td><td class="r n">3,792.00</td></tr>
+              <tr><td class="idx">17</td><td class="n">SO-2417</td><td>2024-02-18</td><td>东北</td><td>数码</td><td class="r n">8,429.00</td></tr>
+              <tr><td class="idx">18</td><td class="n">SO-2418</td><td>2024-02-21</td><td>华东</td><td>耗材</td><td class="r n">4,166.00</td></tr>
+              <tr><td class="idx">19</td><td class="n">SO-2419</td><td>2024-02-24</td><td>华南</td><td>家电</td><td class="r n">8,803.00</td></tr>
+              <tr><td class="idx">20</td><td class="n">SO-2420</td><td>2024-02-27</td><td>华北</td><td>办公用品</td><td class="r n">4,540.00</td></tr>
+              <tr><td class="idx">21</td><td class="n">SO-2421</td><td>2024-03-01</td><td>西南</td><td>家具</td><td class="r n">9,277.00</td></tr>
+              <tr><td class="idx">22</td><td class="n">SO-2422</td><td>2024-03-04</td><td>华中</td><td>数码</td><td class="r n">4,914.00</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="drawer">
+          <div class="vp">
+            <div class="vp-head">
+              <div class="vp-hrow">
+                <span class="vp-t">管道变量</span>
+                <div class="vp-hacts">
+                  <button class="vp-ib" aria-label="变量操作"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+                  <button class="vp-ib" aria-label="关闭"><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="vp-body">
+              <div class="vp-grp wait"><span>待填写</span><span class="n">1</span></div>
+              <div class="vp-gnote">没有默认值,执行到这里会弹窗补填</div>
+              <div class="vr wait">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>金额阈值<i>}}</i></span>
+                  <span class="vr-meta">1 处</span><svg class="vr-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>
+                </div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v warn">未填写</span></div>
+              </div>
+
+              <div class="vp-grp"><span>已就绪</span><span class="n">4</span></div>
+              <div class="vr">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>日期范围<i>}}</i></span>
+                  <span class="vr-meta">2 处</span><svg class="vr-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>
+                </div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v mono">2024-01-01..2024-03-31</span></div>
+              </div>
+              <div class="vr">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>地区<i>}}</i></span>
+                  <span class="vr-meta">1 处</span><svg class="vr-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>
+                </div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v">华东</span></div>
+              </div>
+              <div class="vr">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>品类<i>}}</i></span>
+                  <span class="vr-meta">1 处</span><svg class="vr-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>
+                </div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v">家具</span></div>
+              </div>
+              <div class="vr">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>输出目录<i>}}</i></span>
+                  <span class="vr-meta">未被引用</span>
+                </div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v mono">D:\out\q3</span></div>
+              </div>
+
+              <div class="vp-grp"><span>仅管道引用</span><span class="n">1</span></div>
+              <div class="vr ghost">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>排序方向<i>}}</i></span>
+                  <button class="vr-act" style="margin-left:auto">声明</button>
+                </div>
+                <div class="vr-bot"><span class="k">用于</span><span class="v">第 03 步 · 排序</span></div>
+              </div>
+
+              <button class="vp-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>新增变量</button>
+            </div>
+
+            <div class="vp-foot">
+              <span>4 个变量</span><span class="sep">·</span><span class="warn">1 个待填写</span>
+              <span class="r">1 个仅引用</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="vmenu">
+          <button><span class="tick"></span><span class="lbl">命令面板</span><kbd>Ctrl+K</kbd></button>
+          <div class="hr"></div>
+          <button><span class="tick"></span><span class="lbl">数据概览</span></button>
+          <button><span class="tick"></span><span class="lbl">版本控制</span></button>
+          <button><span class="tick"></span><span class="lbl">数据血缘</span></button>
+          <button class="on"><span class="tick"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg></span><span class="lbl">管道变量</span><span class="cnt">1</span></button>
+          <div class="hr"></div>
+          <button><span class="tick"></span><span class="lbl">搜索</span><kbd>Ctrl+F</kbd></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       05 状态细节
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>05</span><b>状态细节</b><span>空 / 新增校验 / 行菜单 / 清除全部</span></div>
+    <div class="tiles">
+
+      <!-- 空 -->
+      <div class="tile">
+        <div class="tile-cap"><b>空状态</b>第一次打开</div>
+        <div class="card320 mid">
+          <div class="vp">
+            <div class="vp-head">
+              <div class="vp-hrow">
+                <span class="vp-t">管道变量</span>
+                <div class="vp-hacts"><button class="vp-ib" aria-label="变量操作"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button><button class="vp-ib" aria-label="关闭"><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+              </div>
+            </div>
+            <div class="vp-empty">
+              <h4>还没有变量</h4>
+              <p>在任意步骤的参数值里写 <code>{{名字}}</code>,这里就会出现它。</p>
+              <p>把常用的日期区间、地区、输出目录做成变量,同一份管道就能反复用同一套步骤。</p>
+              <button class="go"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>新增变量</button>
+            </div>
+            <div class="vp-foot"><span>0 个变量</span><span class="r">无引用</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 新增校验 -->
+      <div class="tile">
+        <div class="tile-cap"><b>新增</b>名称按 <code>params.ts</code> 的同一套规则校验</div>
+        <div class="card320 mid">
+          <div class="vp">
+            <div class="vp-head">
+              <div class="vp-hrow">
+                <span class="vp-t">管道变量</span>
+                <div class="vp-hacts"><button class="vp-ib" aria-label="变量操作"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button><button class="vp-ib" aria-label="关闭"><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+              </div>
+            </div>
+            <div class="vp-body">
+              <div class="vp-grp"><span>已就绪</span><span class="n">1</span></div>
+              <div class="vr">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>地区<i>}}</i></span>
+                  <span class="vr-meta">1 处</span><svg class="vr-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>
+                </div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v">华东</span></div>
+              </div>
+
+              <div class="vp-new err">
+                <div class="row">
+                  <input value="开始 日期" readonly />
+                  <select class="ty"><option>文本</option></select>
+                  <button class="go" style="opacity:.5">添加</button>
+                </div>
+                <p class="hint err">只能用字母、数字与下划线;空格和中文不会生效</p>
+              </div>
+              <p class="vp-gnote" style="padding-top:8px">重名时提示「名称已存在」,不会新增。</p>
+            </div>
+            <div class="vp-foot"><span>1 个变量</span><span class="r">1 处引用</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 行菜单 -->
+      <div class="tile">
+        <div class="tile-cap"><b>行菜单</b>类型只作标注,删除是唯一的危险动作</div>
+        <div class="card320 mid">
+          <div class="vp">
+            <div class="vp-head">
+              <div class="vp-hrow">
+                <span class="vp-t">管道变量</span>
+                <div class="vp-hacts"><button class="vp-ib" aria-label="变量操作"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button><button class="vp-ib" aria-label="关闭"><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+              </div>
+            </div>
+            <div class="vp-body">
+              <div class="vp-grp"><span>已就绪</span><span class="n">2</span></div>
+              <div class="vr sel" style="padding-right:44px">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>日期范围<i>}}</i></span>
+                  <span class="vr-meta">2 处</span><svg class="vr-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>
+                </div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v mono">2024-01-01..</span></div>
+                <span style="position:absolute;right:14px;top:14px;width:22px;height:22px;display:grid;place-items:center;border-radius:6px;background:var(--muted);color:var(--muted-fg)">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>
+                </span>
+              </div>
+              <div class="vr">
+                <div class="vr-top">
+                  <span class="vr-nm"><i>{{</i>输出目录<i>}}</i></span>
+                  <span class="vr-meta">未被引用</span>
+                </div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v mono">D:\out\q3</span></div>
+              </div>
+              <button class="vp-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>新增变量</button>
+            </div>
+            <div class="vp-foot"><span>2 个变量</span><span class="r">1 个未被引用</span></div>
+            <div class="pop" style="right:8px;top:108px;width:150px">
+              <button><span class="lbl">复制 {{日期范围}}</span></button>
+              <div class="hr"></div>
+              <button><span class="tick"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg></span><span class="lbl">文本</span></button>
+              <button><span class="tick"></span><span class="lbl">数值</span></button>
+              <button><span class="tick"></span><span class="lbl">路径</span></button>
+              <div class="hr"></div>
+              <button class="danger"><span class="lbl">删除变量</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 清除全部 -->
+      <div class="tile">
+        <div class="tile-cap"><b>清除全部</b>行内确认,不用模态</div>
+        <div class="card320 tall">
+          <div class="vp">
+            <div class="vp-head">
+              <div class="vp-hrow">
+                <span class="vp-t">管道变量</span>
+                <div class="vp-hacts">
+                  <button class="vp-ib" style="background:var(--muted);color:var(--fg)" aria-label="变量操作"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+                  <button class="vp-ib" aria-label="关闭"><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+                </div>
+              </div>
+            </div>
+            <div class="vp-confirm">
+              <h5>清除全部 2 个变量?</h5>
+              <p>管道里写着的 <code>{{…}}</code> 仍然有效,只是不再有默认值 —— 执行时会弹窗补填。</p>
+              <div class="acts"><button class="ghost">取消</button><button class="go">清除</button></div>
+            </div>
+            <div class="vp-body">
+              <div class="vp-grp wait"><span>待填写</span><span class="n">1</span></div>
+              <div class="vr wait">
+                <div class="vr-top"><span class="vr-nm"><i>{{</i>金额阈值<i>}}</i></span><span class="vr-meta">1 处</span><svg class="vr-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg></div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v warn">未填写</span></div>
+              </div>
+              <div class="vp-grp"><span>已就绪</span><span class="n">1</span></div>
+              <div class="vr">
+                <div class="vr-top"><span class="vr-nm"><i>{{</i>地区<i>}}</i></span><span class="vr-meta">1 处</span><svg class="vr-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg></div>
+                <div class="vr-bot"><span class="k">默认</span><span class="v">华东</span></div>
+              </div>
+            </div>
+            <div class="vp-foot"><span>4 个变量</span><span class="r">1 个待填写</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       诊断与改法
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="legend">
+    <table>
+      <thead><tr><th>#</th><th>现状</th><th>改法</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>头部「管道变量 + 全部清除(文字+垃圾桶) + 关闭」三个东西并排,「全部清除」和「添加变量」一样显眼;紧接着是两行 11px 的提示段(<code>VariablePanel.tsx:121-125</code>)。760 高的窗口里,第一个变量要等到 y≈100 才出现。</td>
+          <td>头部只留标题 + <code>⋯</code> + 关闭;清除全部退进 <code>⋯</code> 的红色项。说明只留在空状态里,「在参数里写 <code>{{名}}</code>」由名称本身示范。第一个变量从 y≈56 开始。</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>一变量一张圆角卡片(名称行 + 类型下拉 + 默认值输入,约 74px),加上卡片间距,4 个变量就要滚动。5 个变量看起来像 5 张独立表单,而不是一份清单。</td>
+          <td>一行一个变量,48px、两行文字:第一行 <code>{{名}}</code> + 引用数,第二行「默认」+ 值。同样的高度能看 7 个。</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>「已声明」(会写进 <code>tab.variables</code>)和「只在管道里被引用」(不持久化)外观完全一样,只差一个删除 X(<code>:158</code>)——用户不知道改哪个才会被记住。</td>
+          <td>三组固定顺序:待填写 → 已就绪 → 仅管道引用。第三组名称走灰、右侧给「声明」,点一下把它提升为已声明(类型按值推断),其余交互不变。</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>默认值为空的变量和填好的看起来一模一样,但执行到它就会弹 <code>VariableValuesDialog</code>(<code>useExecution.ts:506</code>)。「哪个变量会挡住执行」只能靠点一次运行才知道。</td>
+          <td>空值单独成组置顶,名称左侧 2px 琥珀轨、值显示「未填写」;「查看 → 管道变量」在有此类变量时,右侧显示琥珀计数。</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>每行一个类型下拉(string / number / path),可它不参与执行;更糟的是 <code>setDefault</code> 每次输入都调 <code>inferVariableType()</code>(<code>:56-61</code>),手选的类型下一次击键就被覆盖。</td>
+          <td>主行不再放类型;类型退到行菜单,只作标注、不做校验,并改成「手选后不再被推断覆盖」。</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>底部固定 52px 的「名称 + 添加变量」常驻;名称只校验非空与重名(<code>:67-80</code>)。中文名或含空格的名字能加进去,但占位符正则只认 <code>[A-Za-z_]\w*</code>(<code>params.ts:12</code>)——加了也永远不生效。</td>
+          <td>添加收成列表末尾一行虚线入口,点开就地输入;名称与 <code>params.ts</code> 同规则,实时提示「只能用字母、数字与下划线」,非法时添加按钮禁用。</td>
+        </tr>
+            </tbody>
+    </table>
+  </section>
+
+  <section class="spec">
+    <div><dt>面板</dt><dd>320px,吸附位置与阴影不变</dd></div>
+    <div><dt>头部</dt><dd>44px(12 + 28 + 4),左 16 右 12</dd></div>
+    <div><dt>组标题</dt><dd>30px;组说明 10.5px / 18px 行高</dd></div>
+    <div><dt>行</dt><dd>48px 起,左 18 右 16;行悬停 8% 灰</dd></div>
+    <div><dt>字号</dt><dd>标题 13 · 名称 11.5 mono · 值 11.5 · 组名 10.5</dd></div>
+    <div><dt>计数</dt><dd>9.5 mono / tabular-nums,右对齐</dd></div>
+    <div><dt>新增</dt><dd>虚线 32px 入口;展开后 28px 输入 + 校验行</dd></div>
+    <div><dt>底部</dt><dd>36px 计数条,不承载操作</dd></div>
+  </section>
+
+  <section class="notes">
+    <h3>交互 / 数据 / 边界</h3>
+    <p><b>改值。</b>值平时是只读文本,点一下变成输入框(<code>Enter</code> 保存、<code>Esc</code> 取消、失焦保存);保存就是写 <code>tab.variables[].defaultValue</code>,和现在输入框逐字写库的行为等价,只是不再需要「先找到卡片里的输入框」。</p>
+    <p><b>查引用。</b>点名称行(或右边的引用数与箭头),在原地落出引用清单(步骤序号 + 命令 + 参数名)。引用数由 <code>collectVariablesFromPipeline</code> 现算,不新增持久化字段;本期不做「跳到该步骤」,那需要 VariablePanel → FlowPanel 的定位通道。</p>
+    <p><b>声明。</b>「仅管道引用」组的项目仍然只来自 <code>step.parameters</code> 里的 <code>{{名}}</code>;点「声明」才写进 <code>tab.variables</code>,没声明的一律不落库 —— 与现状一致,不改变「引用即变量」的模型。</p>
+    <p><b>名称规则。</b>与 <code>params.ts</code> 的 <code>[A-Za-z_]\w*</code> 同源:首字符必须是字母或下划线。非法名直接拒绝,顺手修掉「加得进去却永远不匹配」的死变量。重名仍提示「名称已存在」。</p>
+    <p><b>类型。</b>只作标注:主行不显示,行菜单里可改;手动选择后不再被值推断覆盖。执行侧和弹窗都不读它,所以这次不动 <code>PipelineVariable</code> 结构。</p>
+    <p><b>菜单。</b>「查看 → 管道变量」标签不变,右侧数字 = 引用且默认值为空的变量数(0 时不渲染);勾选状态沿用 <code>aria-checked</code>,不加新快捷键。</p>
+    <p><b>红线。</b>不动 <code>resolveStepPlaceholders</code> 与执行前弹窗;不动持久化结构与 tab 快照;不动面板宽度、吸附位置与关闭动画;其它 <code>ConfirmDialog</code> 调用方不受影响。</p>
+    <p><b>刻意不做。</b>不做搜索(变量通常 ≤ 6 个,分组已够);不加变量图标;不给类型加校验语义;不做变量分组/文件夹;预览值不参与执行。</p>
+    <h3 style="margin-top:6px">i18n 增删(zh / en)</h3>
+    <div class="keys">
+      <span>+ variableGroupPending</span><span>+ variableGroupReady</span><span>+ variableGroupReferenced</span>
+      <span>+ variablePendingHint</span><span>+ variableUndeclaredHint</span><span>+ variableDeclare</span>
+      <span>+ variableUnused</span><span>+ variableRefsCount</span><span>+ variableRefsAt</span>
+      <span>+ variableInlineEditHint</span><span>+ variableNameRule</span><span>+ variableCopyName</span>
+      <span>+ variableDelete</span><span>+ variableMenu</span><span>+ variableEmptyTitle</span>
+      <span>+ variableEmptyDesc</span><span>+ variableClearConfirm</span><span>+ variableClearHint</span>
+      <span>− variablePlaceholderHint</span><span>− noVariablesDetected</span><span>− clearAllVariables</span>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const buttons = document.querySelectorAll(".seg button");
+  buttons.forEach((b) => {
+    b.addEventListener("click", () => {
+      buttons.forEach((x) => x.classList.remove("on"));
+      b.classList.add("on");
+      document.documentElement.classList.toggle("dark", b.dataset.theme === "dark");
+    });
+  });
+</script>
+</body>
+</html>

@@ -68,6 +68,13 @@ interface MainMenuProps {
   showVariablePanel: boolean;
   onToggleVariablePanel: () => void;
   /**
+   * Referenced pipeline variables whose default value is empty (design 046).
+   * Rendered as a small amber count next to the 管道变量 entry so the "this
+   * run will stop and ask for values" state is visible before opening the
+   * panel; 0 renders nothing.
+   */
+  pendingVariables?: number;
+  /**
    * Whether the settings dialog is open. The Settings entry sits in the
    * right-hand icon group, which highlights the panel it toggles; the dialog is
    * that group's counterpart for this entry, so it drives the same
@@ -136,6 +143,7 @@ export const MainMenu = React.memo(function MainMenu({
   onToggleAIPanel,
   showVariablePanel,
   onToggleVariablePanel,
+  pendingVariables = 0,
   showSettingsDialog,
   highlightCommandEntry = false,
 }: MainMenuProps) {
@@ -631,6 +639,14 @@ export const MainMenu = React.memo(function MainMenu({
                   aria-hidden="true"
                 />
                 <span className="whitespace-nowrap">{t.variables}</span>
+                {pendingVariables > 0 && (
+                  <span
+                    data-testid="pending-variable-count"
+                    className="ml-auto rounded-full bg-warning-soft px-1.5 font-mono text-[9.5px] leading-[15px] tabular-nums text-warning"
+                  >
+                    {pendingVariables}
+                  </span>
+                )}
               </button>
               <div className="border-t border-border my-1" />
               <button

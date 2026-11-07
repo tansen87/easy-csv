@@ -100,8 +100,9 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 
 | `docs/design/044_version-control-panel.md` | 版本控制面板改版(**已实施 2026-11-07**;unslop): 把「一版一卡 + 顶部固定 240px 对比区」改成**提交日志** —— 56px 一行、左侧连续竖轨(当前版本实心)、diff 落进行内、行内只留一个 `⋯`(重命名/标签/恢复/删除)、恢复升为展开区按钮而删除退成红字、清除所有版本移到面板底部、相对时间 + `tabular-nums`、允许留空描述(未命名版本)、空状态给解释与入口;「查看」菜单四项补可见勾选。新增 `VersionLogRow.tsx`(单行/展开 diff/行内编辑器)与 `utils/format.ts:relativeStamp`。**两条实测坑**: 轨道 `.version-rail` 作为栅格项只撑到行内容盒(36px),需 `margin-block:-10px` 才连成一条线;`--border-strong` **不是本项目的 token**,未定义变量在 `border` 简写里回落成 `currentColor`(空心节点会变近黑)。测试 678 例全绿。原型 `docs/design/prototypes/044/01-version-control.html` |
 | `docs/design/045_data-lineage-panel.md` | 数据血缘面板改版(**已实施 2026-11-07**;unslop): 320px 里放不下节点图(一步 5 列要 525px,`fitView` 后 10px 字只剩 5.5px),所以面板只做**列清单 + 列路径**:按「结果中的列 / 中途被移除」分组、选中列原地展开路径(源 → 每步 → 结果,没动过这列的步骤压成一行)、未选列时给「本次改动」四行摘要;图搬到全屏并改成**泳道图**(列=泳道、步骤=竖线,只有发生变化的列留节点)。类型从四组 tailwind 色退成等宽小字,唯一品牌色只给被追踪列。**数据层三处补丁**才能让路径成立:`rename` 输出列留 `previousName`;`groupby`/`agg` 从 `expression` 的 `as 别名` 解析真正输出列(否则「移除」分组永远为空);`map`/`transform`/`window` 记 `expression` 与来源列。新增 `panels/lib/columnLineage.ts`(纯函数推导)、`LineageColumnPath` / `LineageColumnRow` / `LineageFullscreen`、`utils/lineageSchema.ts`;测试 47 → 712 例全绿。原型 `docs/design/prototypes/045/01-data-lineage.html` |
+| `docs/design/046_pipeline-variables-panel.md` | 管道变量面板改版(**已实施 2026-11-07**;unslop):「查看 → 管道变量」的 320px 抽屉从卡片表单改成**变量台账** —— 按「待填写 → 已就绪 → 仅管道引用」分组,48px 两行行(`{{名}}` + 引用数/箭头 + 「默认」+ 值);空默认值置顶带琥珀标记(它会让执行停在补值弹窗),点值行就地改默认(⏎/esc/失焦),点名称行展开引用清单(步骤序号 + 命令 + 参数名,来自新增的 `collectVariableRefs`);类型/复制 `{{名}}`/删除收进行内 `⋯`,「全部清除」改行内确认,新增就地展开并按 `params.ts` 同一套 `[A-Za-z_][A-Za-z0-9_]*` 实时校验名称。**两个行为修复**:`setDefault` 不再用 `inferVariableType` 覆盖手选类型;中文名不再能加进面板(原来是「加得进去但 `{{}}` 永不匹配」的死变量)。菜单入口右侧加琥珀计数(引用且值为空的变量数,`MainMenu` 新可选 prop `pendingVariables`)。文件:`modules/variables/{VariablePanel,VariableRow}.tsx`;`variablePlaceholderHint` 保留(CommandFormShell/VariableHint 在用);045 遗留的 `lineageFullscreen`/`lineageClose` 值与测试期望不一致,按拍板保留「全屏」/「关闭」并同步测试期望。测试 60 文件 / 729 例全绿。原型 `docs/design/prototypes/046/01-pipeline-variables.html` |
 
-> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–034 已登记。
+> 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–046 已登记。
 
 ---
 
@@ -525,7 +526,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `data-preview/DataProfilePanel.tsx` | 数据概况右侧栏(**设计 042 改版**):标题 + `行 · 列 · 有缺失的列数`、搜索、列序/缺失排序、骨架加载与失败重试;列表按行渲染 `DataProfileRow`(完整度刻尺,缺失段为琥珀虚线),点击行展开统计。`profileStats.ts` 负责解析 `xan stats` 与派生数字(**行数 = count + count_empty**,`types` 取首个 token),新增统计项一律先进该文件 |
 | `data-preview/charts/ChartPanel.tsx` | 图表面板(recharts),折线/散点/柱状/直方图/饼图/词云/热力图,支持拖拽、最大化/还原、SVG 导出、dark mode。**029 起**:统一图例(单系列也显示)、排序三态、数值格式(轴向缩写/tooltip 完整值)、数据表视图(**表体用共享 `ScrollArea`**;`min-w-full` 以保留横向滚动)+ 复制 CSV;**图例为单行横向 `ScrollArea`**(分类多时不折行、不挤占图表区)+**分类多选筛选下拉**(`CategoryFilter`,含全选/取消全选,与图例共用 `hiddenSeries`)、截断与跳行提示、按原因区分的空/错状态;隐藏系列统一为过滤数据;导出走白底深色的「文档配色」;图表类型名走 i18n |
 | `ai/AIPanel.tsx` | **AI 助手面板**: 聊天 UI、命令生成、一键插入管道、👍/👎反馈、意图澄清对话框、对话历史加载 |
-| `variables/VariablePanel.tsx` | 变量管理面板(F3 管道参数化) |
+| `variables/VariablePanel.tsx` | 变量管理面板(**设计 046 改版**):卡片表单 → 变量台账 —— 按「待填写 → 已就绪 → 仅管道引用」分组(48px 两行行:`{{名}}` + 引用数/箭头 + 第二行「默认」+ 值);空默认值置顶并带 2px 琥珀标记;点值行就地改默认值(⏎ 保存/esc 取消),点名称行原地展开引用清单;**只写 defaultValue、不再被 `inferVariableType` 覆盖手选类型**(原 `setDefault` 每次输入都重推断);类型(共享 `ui/Select`)/复制 `{{名}}`/删除收进行内 `⋯` 菜单(点击外部关闭);「全部清除」改为头部 `⋯` + 行内确认;新增变量就地展开表单,**名称按 `params.ts` 的 `[A-Za-z_][A-Za-z0-9_]*` 实时校验**(修掉「中文名加得进去但 `{{}}` 永不匹配」的死变量);空状态承载 `{{名}}` 语法说明;底部 36px 计数条 |
+| `variables/VariableRow.tsx` | 台账行组件(设计 046):行内编辑(Enter/Escape/失焦提交,`cancelledRef` 防 Esc 后 blur 误提交)、引用清单展开、行菜单(复制/类型三选/删除);`TYPE_OPTIONS` 与 `typeLabel` 由它导出 |
 | `logs/LogPanel.tsx` | 浮动日志面板,显示执行结果,支持拖拽和复制;**按标签页过滤**(design 028 §5.4):「仅当前标签页 / 全部」切换 + 每行标签页徽标(与按级别的 chips 叠加) |
 | `logs/CommandList.tsx` | **命令面板**,可拖拽浮动面板,按分类展示命令,支持搜索和历史记录 |
 | `logs/CommandPalette.tsx` | **全局命令面板**(Ctrl/Cmd+K): 可搜索、键盘导航的动作/标签/最近文件/xan 命令列表 |

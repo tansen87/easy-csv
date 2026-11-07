@@ -51,6 +51,57 @@ export function inferVariableType(defaultValue?: string): PipelineVariableType {
   return Number.isFinite(Number(v)) ? "number" : "string";
 }
 
+/** Variable names follow the placeholder grammar: `[A-Za-z_]\w*`. */
+export const VARIABLE_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/** True when `name` can actually be referenced as `{{name}}` in a parameter. */
+export function isValidVariableName(name: string): boolean {
+  return VARIABLE_NAME_RE.test(name);
+}
+
+/** One `{{name}}` occurrence inside a step parameter (deduped per parameter). */
+export interface VariableRef {
+  name: string;
+  /** 1-based position of the step in the pipeline. */
+  stepIndex: number;
+  stepId: string;
+  /** Same label the canvas node uses: alias when set, else the command name. */
+  commandLabel: string;
+  /** Parameter key holding the placeholder, e.g. `value`. */
+  paramKey: string;
+}
+
+/**
+ * Locate every `{{name}}` reference in the pipeline, in pipeline order.
+ * Unlike `collectVariablesFromPipeline` this keeps *where* each reference
+ * lives, so the variables panel can show what a default value affects.
+ */
+export function collectVariableRefs(steps: PipelineStep[]): VariableRef[] {
+  const refs: VariableRef[] = [];
+  steps.forEach((step, index) => {
+    const parameters = step.parameters ?? {};
+    for (const [paramKey, raw] of Object.entries(parameters)) {
+      const items = Array.isArray(raw) ? raw : [raw];
+      const seen = new Set<string>();
+      for (const item of items) {
+        if (typeof item !== "string") continue;
+        for (const name of extractVariableNames(item)) {
+          if (seen.has(name)) continue;
+          seen.add(name);
+          refs.push({
+            name,
+            stepIndex: index + 1,
+            stepId: step.id,
+            commandLabel: step.alias || step.command?.name || "",
+            paramKey,
+          });
+        }
+      }
+    }
+  });
+  return refs;
+}
+
 /**
  * Collect the ordered set of variables referenced by a pipeline, merged with
  * metadata (defaultValue/type) taken from `existing` declarations.

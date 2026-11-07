@@ -160,13 +160,9 @@ describe("DataLineagePanel · list", () => {
   it("gives every header icon an accessible name", () => {
     renderPanel();
 
-    expect(
-      screen.getByRole("button", { name: "全屏血缘图" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "全屏" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "更多" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "关闭数据血缘" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "关闭" })).toBeInTheDocument();
   });
 });
 
@@ -262,7 +258,7 @@ describe("DataLineagePanel · states", () => {
 
   it("closes from the header button", () => {
     const { props } = renderPanel();
-    fireEvent.click(screen.getByRole("button", { name: "关闭数据血缘" }));
+    fireEvent.click(screen.getByRole("button", { name: "关闭" }));
 
     expect(props.onClose).toHaveBeenCalledTimes(1);
   });
