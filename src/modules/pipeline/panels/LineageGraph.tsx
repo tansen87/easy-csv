@@ -65,14 +65,14 @@ function StepNode({ data }: { data: any }) {
         minWidth: 140,
       }}
     >
-      <div className="font-semibold text-slate-800 truncate">
+      <div className="font-semibold text-foreground truncate">
         {data.commandName}
       </div>
-      <div className="text-[10px] text-slate-500 mt-1.5">
+      <div className="text-[10px] text-muted-foreground mt-1.5">
         {data.inputRowCount} → {data.outputRowCount} rows
       </div>
       {data.transformations.length > 0 && (
-        <div className="text-[10px] text-slate-400 mt-1 truncate">
+        <div className="text-[10px] text-muted-foreground/70 mt-1 truncate">
           {data.transformations[0].description}
         </div>
       )}

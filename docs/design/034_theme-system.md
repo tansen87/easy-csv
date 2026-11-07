@@ -1,6 +1,6 @@
 # 034 · 主题系统(默认墨蓝)— 设计与迁移方案
 
-> 状态: **A + B + C 已实施,D 已实施图表 / 热力图 / 语法调色板**(token / 两轴 Provider / 设置页主题色行 / 语义色迁移 / 独立调色板);剩余:类型色(Text/Number/Date…)的 `--type-*`、E(视觉矩阵)、F(颜色守卫)
+> 状态: **A + B + C + D(图表/热力/语法)+ E 视觉矩阵 + F 颜色守卫均已完成**(token / 两轴 Provider / 设置页主题色行 / 语义色迁移 / 独立调色板 / 8 组合矩阵 / `pnpm check:theme-colors`);剩余:类型色(Text/Number/Date…)的 `--type-*` 调色板
 > 日期: 2026-11-07
 > 关联: `src/components/setting/ThemeProvider.tsx` · `src/components/setting/SettingsTabContent.tsx` · `src/components/setting/settingsSections.ts` · `src/components/setting/SettingsDialog.tsx` · `src/index.css` · `src/components/ui/Button.tsx` · `src/components/setting/SettingsNav.tsx` · `src/modules/data-preview/charts/*` · `src/i18n/translations/{types,zh,en}`
 > 目标: 把「明暗外观」与「主题色」拆成两个维度;默认主题色为**墨蓝**;以后只加一段 token 就能增加新主题;把散落在组件里的绿色/蓝色/琥珀/红色收敛为语义 token。
@@ -363,10 +363,10 @@
 
 ### 5.3 静态检查(建议)
 
-新增 `scripts/check-theme-colors.ts`(类似 `check:index`):
-- 扫描 `src/modules/{pipeline,data-preview,logs,ai,dialogs}`;
-- 禁止 `text-green-*` / `bg-green-*` / `text-blue-*` / `bg-amber-*` / `text-red-*` 等 raw 类;
-- 允许:`expression/` 的 `--syntax`、`charts/` 的 `--chart`、以及少量历史白名单;
+新增 `scripts/check-theme-colors.ts`(`pnpm check:theme-colors`,类似 `check:index`):
+- 扫描 `src/` 下全部 `.ts` / `.tsx`(335 个文件);
+- 禁止 `text-green-*` / `bg-green-*` / `text-blue-*` / `bg-amber-*` / `text-red-*` / `text-slate-*` 等 raw 类;
+- 允许:图表 / 热力 / 语法 token(已集中到 `index.css`),以及 `DataProfilePanel` / `DataLineagePanel` 两处尚未迁移的**数据类型调色板**(按声明行窄范围豁免,注释标明待 `--type-*`);
 - 输出违规文件+行号,CI 失败。
 
 ---

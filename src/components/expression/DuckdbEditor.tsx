@@ -264,7 +264,7 @@ export function DuckdbEditor({
         <div
           ref={highlightRef}
           aria-hidden="true"
-          className="absolute inset-0 pointer-events-none z-0 overflow-hidden rounded-md border bg-background dark:border-neutral-500"
+          className="absolute inset-0 pointer-events-none z-0 overflow-hidden rounded-md border border-input bg-background"
         >
           <div
             ref={highlightInnerRef}

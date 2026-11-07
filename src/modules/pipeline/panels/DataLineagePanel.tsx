@@ -181,7 +181,7 @@ export function DataLineagePanel({
             </Tooltip>
           </div>
         </div>
-        <div className="flex-1 min-h-0 bg-white dark:bg-slate-50">
+        <div className="flex-1 min-h-0 bg-background">
           <LineageGraph
             lineageData={lineageData}
             highlightedColumn={selectedColumn}
@@ -295,7 +295,7 @@ export function DataLineagePanel({
             {t.noLineageData}
           </div>
         ) : viewMode === "graph" ? (
-          <div className="h-full bg-white dark:bg-slate-50">
+          <div className="h-full bg-background">
             <LineageGraph
               lineageData={lineageData}
               highlightedColumn={selectedColumn}

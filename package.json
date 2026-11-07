@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
-    "check:index": "tsx scripts/check-index.ts"
+    "check:index": "tsx scripts/check-index.ts",
+    "check:theme-colors": "tsx scripts/check-theme-colors.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
