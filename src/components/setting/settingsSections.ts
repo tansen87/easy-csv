@@ -1,21 +1,23 @@
 import type { Translations } from "@/i18n/translations/types";
 
 /**
- * The settings directory (design 030): groups and rows defined **once**, then
+ * The settings directory: groups and rows defined **once**, then
  * rendered by both the sidebar (`SettingsNav`) and the content list
- * (`SettingsTabContent`). Two contracts hang off this file (§0.4):
+ * (`SettingsTabContent`). Two contracts hang off this file:
  *
  * 1. every row id appears exactly once here and is used verbatim as the row's
- *    `data-settings-row` / anchor id — no second list to drift;
+ *    `data-settings-row` / anchor id - no second list to drift;
  * 2. the group list is the single source for both the nav entries and the
  *    content headings.
  *
  * Both are asserted by a contract test in `settingsSections.test.ts`.
  *
- * Group order (§11.18): `界面` first, then the merged `数据与帮助`, then the
- * rest in their historical order. The catalogue list that used to be the
- * plugins pane is gone (§11.12) — the plugin group is a status line on its
- * heading plus one row per catalogue entry (§11.11).
+ * Group order: `界面`, the merged `数据与帮助`, then
+ * `窗口行为` and `更新`, then **plugins before AI** - the plugin group is what
+ * most users touch first (xan has to be installed before anything runs), while
+ * AI is optional. The catalogue list that used to be the plugins pane is gone
+ * - the plugin group is a status line on its heading plus one row per
+ * catalogue entry.
  */
 
 export type SettingsTextKey = keyof Translations;
@@ -47,7 +49,7 @@ export interface SettingsRowDef {
   keywords?: string[];
   control: SettingsControl;
   /**
-   * Destructive rows never delegate a whole-row click (design 030 §4.2) —
+   * Destructive rows never delegate a whole-row click (design 030 §4.2) -
    * clicking a description must not delete data.
    */
   dangerous?: true;
@@ -248,12 +250,22 @@ export const SETTINGS_GROUPS: SettingsGroupDef[] = [
     rows: [
       {
         id: "auto-check-update",
-        titleKey: "updateSection",
+        // A switch, so it says what happens on its own rather than naming the
+        // menu command (`updateSection` reads as a button).
+        titleKey: "settingsAutoCheckUpdate",
         descKey: "settingsAutoCheckUpdateDesc",
         control: "checkbox",
         keywords: ["update", "upgrade", "version", "release", "更新", "升级", "版本"],
       },
     ],
+  },
+  {
+    id: "plugins",
+    nameKey: "plugins",
+    groupKeywords: ["plugin", "plugins", "xan", "extension", "插件", "扩展"],
+    // No rows: the heading itself is the plugin line.
+    rows: [],
+    summary: "plugins",
   },
   {
     id: "ai",
@@ -332,14 +344,6 @@ export const SETTINGS_GROUPS: SettingsGroupDef[] = [
       },
     ],
   },
-  {
-    id: "plugins",
-    nameKey: "plugins",
-    groupKeywords: ["plugin", "plugins", "xan", "extension", "插件", "扩展"],
-    // No rows: the heading itself is the plugin line.
-    rows: [],
-    summary: "plugins",
-  },
 ];
 
 /** Anchor id of a group's heading, in both the nav and the content list. */
@@ -350,7 +354,7 @@ export const sectionElementId = (groupId: string) =>
 
 export const rowElementId = (rowId: string) => `settings-row-${rowId}`;
 
-/** Group ids in render order — what the scroll spy watches. */
+/** Group ids in render order - what the scroll spy watches. */
 export const SETTINGS_GROUP_IDS = SETTINGS_GROUPS.map((group) => group.id);
 
 export interface SettingsRowModel extends SettingsRowDef {
@@ -361,6 +365,12 @@ export interface SettingsRowModel extends SettingsRowDef {
 export interface SettingsGroupModel {
   id: string;
   name: string;
+  /**
+   * 1-based position in `SETTINGS_GROUPS`, rendered as the `01`…`06` beside the
+   * group name. Kept on the model rather than derived from the rendered list so
+   * a filtered list still shows the original number (design 040 §3).
+   */
+  index: number;
   groupKeywords?: string[];
   rows: SettingsRowModel[];
   summary?: "plugins";
@@ -368,9 +378,10 @@ export interface SettingsGroupModel {
 
 /** Resolve i18n keys once, so search / render work on plain strings. */
 export function buildSettingsModel(t: Translations): SettingsGroupModel[] {
-  return SETTINGS_GROUPS.map((group) => ({
+  return SETTINGS_GROUPS.map((group, position) => ({
     id: group.id,
     name: t[group.nameKey],
+    index: position + 1,
     groupKeywords: group.groupKeywords,
     summary: group.summary,
     rows: group.rows.map((row) => ({

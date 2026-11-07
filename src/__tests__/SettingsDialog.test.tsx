@@ -135,6 +135,23 @@ describe("settings dialog — structure contracts (design 030 §0.4)", () => {
     expect(rowIds(container)).not.toContain("plugins");
   });
 
+  // The `01`…`06` beside each group name is decoration rendered from
+  // `data-index` (see `.settings-index` in `index.css`), but the *order* it
+  // encodes is a product decision: plugins sit at 05 and AI at 06.
+  it("numbers the groups in definition order — plugins before AI", () => {
+    const { container } = renderDialog();
+
+    const indexOf = (id: string) =>
+      container
+        .querySelector(`#${sectionElementId(id)}`)
+        ?.getAttribute("data-index");
+
+    expect(indexOf("appearance")).toBe("01");
+    expect(indexOf("update")).toBe("04");
+    expect(indexOf("plugins")).toBe("05");
+    expect(indexOf("ai")).toBe("06");
+  });
+
   it("lists exactly the same groups in the directory as in the content", () => {
     const { container } = renderDialog();
 
@@ -221,21 +238,29 @@ describe("settings dialog — whole-row activation (design 030 §4.2)", () => {
     expect(row.className).toContain("cursor-pointer");
   });
 
-  it("toggles a switch when its row is clicked", () => {
+  it("toggles the switch when its row is clicked", () => {
     const { container, props } = renderDialog({ noHeaders: false });
     const row = container.querySelector(
       '[data-settings-row="no-headers"]',
     ) as HTMLElement;
-    const checkbox = row.querySelector(
-      'input[type="checkbox"]',
-    ) as HTMLInputElement;
+    const control = row.querySelector('[role="switch"]') as HTMLElement;
 
-    // The control must follow the accent, not stay on a neutral colour.
-    expect(checkbox.className).toContain("accent-primary");
+    expect(control.getAttribute("aria-checked")).toBe("false");
 
     fireEvent.click(row);
 
     expect(props.onNoHeadersChange).toHaveBeenCalledWith(true);
+  });
+
+  it("paints the switch with the accent when it is on", () => {
+    const { container } = renderDialog({ noHeaders: true });
+    const control = container.querySelector(
+      '[data-settings-row="no-headers"] [role="switch"]',
+    ) as HTMLElement;
+
+    expect(control.getAttribute("aria-checked")).toBe("true");
+    // The control must follow the accent, not stay on a neutral colour.
+    expect(control.className).toContain("bg-primary");
   });
 });
 
@@ -247,13 +272,26 @@ describe("settings dialog — accent row (design 034)", () => {
     ) as HTMLElement;
 
     const radios = Array.from(row.querySelectorAll('[role="radio"]'));
-    expect(radios.map((radio) => radio.textContent)).toEqual([
+    // 040: the presets are colour chips, so the name lives in `aria-label` and
+    // the colour itself in `data-swatch` — the value belongs to `index.css`,
+    // next to the `[data-accent]` tokens it mirrors.
+    expect(radios.map((radio) => radio.getAttribute("aria-label"))).toEqual([
       "Ink",
       "Teal",
       "Clay",
       "Graphite",
     ]);
-    expect(row.querySelector('[aria-checked="true"]')?.textContent).toBe("Ink");
+    expect(radios.map((radio) => radio.getAttribute("data-swatch"))).toEqual([
+      "ink",
+      "teal",
+      "clay",
+      "graphite",
+    ]);
+    expect(
+      row.querySelector('[role="radio"][aria-checked="true"]')?.getAttribute(
+        "aria-label",
+      ),
+    ).toBe("Ink");
   });
 
   it("writes the chosen accent and lands it on the document", () => {

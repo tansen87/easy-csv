@@ -5,7 +5,7 @@ export const enOnboarding = {
   // Canvas empty-state guide card
   onboardingStartTitle: "Start here",
   onboardingStartDesc:
-    "Your data is ready. Add one operation to get going — chain them up later if you want.",
+    "Your data is ready. Add one operation to get going - chain them up later if you want.",
   onboardingAddStep: "Add an operation",
   onboardingAddStepDesc:
     "Open the command panel and browse all {count} operations",
@@ -14,14 +14,14 @@ export const enOnboarding = {
   onboardingSeeExample: "See an example",
   onboardingSeeExampleDesc: "Loads sample data plus a ready-made pipeline",
   onboardingBranchNote:
-    "A new step becomes its own branch and can run right away — connect it only if you want to chain.",
+    "A new step becomes its own branch and can run right away - connect it only if you want to chain.",
   onboardingDismiss: "Got it",
   onboardingDismissHint:
     "Won't appear again; you can bring it back in Settings",
 
   // Hint inside the command panel
   onboardingPanelHint:
-    "Your first operation applies straight to the input data (its own branch) — no need to connect anything first.",
+    "Your first operation applies straight to the input data (its own branch) - no need to connect anything first.",
 
   // Gesture card
   onboardingGestureTitle: "Canvas gestures",
@@ -42,15 +42,15 @@ export const enOnboarding = {
     "Open the command (Alt+C), click search → drop empty amounts",
   onboardingDemoRevealAction2: "Click dedup → drop exactly duplicated rows",
   onboardingDemoRevealAction3: "Click groupby → total the amount by region",
-  onboardingDemoRevealRunning: "Three steps built — running it…",
+  onboardingDemoRevealRunning: "Three steps built - running it…",
   onboardingDemoRevealReady:
-    "All three are on the canvas — click Run to see the result",
+    "All three are on the canvas - click Run to see the result",
   onboardingDemoRevealNext: "Next",
   onboardingDemoRevealRun: "Run it",
   onboardingDemoRevealSkip: "Skip",
 
   // Settings
-  onboardingReset: "Show the intro again",
+  onboardingReset: "Onboarding",
   onboardingResetDesc:
     "Clears the “intro seen” flag so the guide reappears the next time you open a file.",
 

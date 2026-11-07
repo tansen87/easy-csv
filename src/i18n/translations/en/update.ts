@@ -13,22 +13,22 @@ export const enUpdate = {
     "If automatic updates are unavailable, download the installer manually",
 
   updateFormUserScoped:
-    "Installed for the current user — updating needs no administrator rights",
+    "Installed for the current user - updating needs no administrator rights",
   updateFormMachineScoped:
-    "Installed in a system directory — updating may ask for administrator rights",
+    "Installed in a system directory - updating may ask for administrator rights",
   updateFormAppBundleUser:
-    "The app lives in your home directory — updating needs no administrator rights",
+    "The app lives in your home directory - updating needs no administrator rights",
   updateFormAppBundleSystem:
-    "The app lives in a system directory — automatic updates are unavailable, download manually",
+    "The app lives in a system directory - automatic updates are unavailable, download manually",
   updateFormAppImage:
-    "Running as an AppImage — updating needs no administrator rights",
+    "Running as an AppImage - updating needs no administrator rights",
   updateFormDebOrUnpacked:
-    "Installed as a system package or run unpacked — automatic updates are unavailable, download manually",
+    "Installed as a system package or run unpacked - automatic updates are unavailable, download manually",
   updateFormUnknown:
-    "The installation type could not be detected — download the update manually",
+    "The installation type could not be detected - download the update manually",
 
   updateSection: "Check for updates",
-  settingsAutoCheckUpdate: "Check for updates on startup",
+  settingsAutoCheckUpdate: "Auto-check for updates",
   settingsAutoCheckUpdateDesc:
     "When enabled, checks silently in the background and only flags new versions in the toolbar; it never installs anything by itself",
 };

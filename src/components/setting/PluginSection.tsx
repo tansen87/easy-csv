@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { AlertCircle, FolderOpen, Loader2 } from "lucide-react";
+import { AlertCircle, FolderOpen, Loader2, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -20,6 +20,8 @@ interface PluginSectionProps {
   sectionId: string;
   /** The group's display name. */
   name: string;
+  /** Position in `SETTINGS_GROUPS`; the heading's `01`…`06`. */
+  index: number;
   showToast: (
     message: string,
     type?: "info" | "success" | "warning" | "error",
@@ -30,19 +32,20 @@ interface PluginSectionProps {
  * The plugin group.
  *
  * The group renders its own content instead of going through
- * `SettingsTabContent`'s generic row list, because its rows are **dynamic** —
+ * `SettingsTabContent`'s generic row list, because its rows are **dynamic** -
  * one per catalogue entry. Everything on screen comes from the signed catalogue
  * plus a local probe, and the group owns the catalogue once so the heading
  * summary and the rows can never disagree.
  *
  * The heading carries the summary (`2/3 · [open folder] · [fetch latest]`), and
  * below it each plugin is an ordinary settings row: name · status · actions.
- * That was the point of the redesign — the pane used to embed a bespoke list
+ * That was the point of the redesign - the pane used to embed a bespoke list
  * that matched nothing else in settings.
  */
 export function PluginSection({
   sectionId,
   name,
+  index,
   showToast,
 }: PluginSectionProps) {
   const { t } = useLanguage();
@@ -107,14 +110,16 @@ export function PluginSection({
 
   return (
     <>
-      <SettingsSectionHeading id={sectionId} name={name}>
-        {/* Spans the rest of the heading: the count sits right after the group
-            name, the two actions stay at the far right. */}
-        <span className="flex flex-1 items-center justify-between gap-3">
-          <span className="text-[11.5px] text-muted-foreground">
+      <SettingsSectionHeading id={sectionId} name={name} index={index}>
+        {/* Sits at the end of the heading line, after the hairline: the count as
+            plain mono digits, then two icon actions. The refresh button used to
+            carry its full label ("Fetch the latest version"), which made a
+            group heading the loudest thing in the column. */}
+        <span className="flex flex-none items-center gap-2">
+          <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
             {entries.length > 0 ? `${installedCount}/${entries.length}` : null}
           </span>
-          <span className="flex flex-shrink-0 items-center gap-1.5">
+          <span className="flex flex-shrink-0 items-center gap-1">
             <Tooltip content={t.pluginOpenFolder}>
               <Button
                 variant="ghost"
@@ -130,15 +135,21 @@ export function PluginSection({
                 )}
               </Button>
             </Tooltip>
-            <Button
-              variant="secondary"
-              size="sm"
-              aria-label={t.pluginRefreshHint}
-              disabled={isRefreshing || isBusy}
-              onClick={refresh}
-            >
-              {t.pluginRefresh}
-            </Button>
+            <Tooltip content={t.pluginRefresh}>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label={t.pluginRefreshHint}
+                disabled={isRefreshing || isBusy}
+                onClick={refresh}
+              >
+                {isRefreshing ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </Tooltip>
           </span>
         </span>
       </SettingsSectionHeading>
@@ -169,11 +180,11 @@ export function PluginSection({
 
       <SettingsGroupCard>
       {isLoading && entries.length === 0 ? (
-        <p className="py-3 text-[11.5px] text-muted-foreground">
+        <p className="px-4 py-3 text-xs text-muted-foreground">
           {t.pluginLoadingCatalog}
         </p>
       ) : entries.length === 0 ? (
-        <p className="py-3 text-[11.5px] text-muted-foreground">
+        <p className="px-4 py-3 text-xs text-muted-foreground">
           {t.pluginNone}
         </p>
       ) : (

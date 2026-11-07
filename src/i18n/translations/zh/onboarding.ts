@@ -46,7 +46,7 @@ export const zhOnboarding = {
   onboardingDemoRevealSkip: "跳过",
 
   // 设置页
-  onboardingReset: "重新显示新手引导",
+  onboardingReset: "新手引导",
   onboardingResetDesc: "清除「已看过引导」标记, 下次打开文件时重新显示",
 
   // 模板库

@@ -27,8 +27,7 @@ export const enSettings = {
   language: "Language",
 
   // Directory navigation
-  settingsSearchPlaceholder:
-    "Search settings (aliases such as dark / tray / delimiter)",
+  settingsSearchPlaceholder: "Search settings",
   settingsSearchEmpty: "No settings match \u201c{query}\u201d",
   settingsSearchEmptyHint:
     "Try \u201ctray\u201d, \u201cdark\u201d or \u201cconcurrency\u201d",
@@ -41,15 +40,21 @@ export const enSettings = {
   settingsClear: "Clear",
   settingsExpand: "Expand",
   settingsCollapse: "Collapse",
-  settingsLanguageDesc: "Interface language, can follow the system",
-  settingsThemeDesc: "Interface colours, can follow the system",
+  settingsLanguageDesc: "Interface language",
+  settingsThemeDesc: "Interface colours",
   settingsAccent: "Theme colour",
-  settingsAccentDesc:
-    "Accent used for selection, focus and primary actions",
+  settingsAccentDesc: "Theme colour",
   accentInk: "Ink",
   accentTeal: "Teal",
   accentClay: "Clay",
   accentGraphite: "Graphite",
+  settingsLiveNote: "Changes apply now; saving writes them to disk",
+  settingsSampleColumns: "{count} columns",
+  settingsDecrease: "Decrease",
+  settingsIncrease: "Increase",
+  settingsShowKey: "Show key",
+  settingsHideKey: "Hide key",
+  settingsShowAgain: "Show again",
   clearExecutionHistoryDesc: "Delete every execution history record",
   aiClearConversationsDesc: "Delete your conversations with the AI",
   aiClearFeedbackDesc:

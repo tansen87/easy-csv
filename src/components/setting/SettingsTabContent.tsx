@@ -1,5 +1,13 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { ChevronDown, ExternalLink, Plus, Trash2, X } from "lucide-react";
+import {
+  ChevronDown,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Minus,
+  Plus,
+  X,
+} from "lucide-react";
 import { open } from "@tauri-apps/plugin-shell";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -10,6 +18,7 @@ import { DelimiterModeSelect } from "@/components/ui/DelimiterModeSelect";
 import { PluginSection } from "./PluginSection";
 import { SettingsGroupCard } from "./SettingsGroupCard";
 import { SettingsSectionHeading } from "./SettingsSectionHeading";
+import { SettingsSwitch } from "./SettingsSwitch";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n";
 import {
@@ -21,7 +30,7 @@ import {
 import { loadProviderApiKey } from "@/services/ai";
 import type { DelimiterMode } from "@/types/xan";
 import { SettingsRow } from "./SettingsRow";
-import type { Accent } from "./ThemeProvider";
+import { ACCENTS, type Accent } from "./ThemeProvider";
 import {
   sectionElementId,
   type SettingsGroupModel,
@@ -87,22 +96,37 @@ const CLEAR_COMMANDS: Record<ClearTarget, string> = {
   history: "clear_execution_history",
 };
 
-const CHECKBOX_CLASS =
-  "h-4 w-4 rounded border-input accent-primary cursor-pointer";
+/**
+ * The header of the sample file the app ships with
+ * (`src-tauri/samples/easy-csv-sample-sales.csv`), shown under the delimiter
+ * setting so the choice explains itself: switch to `;` and the line collapses
+ * to one column. Kept in sync by hand - the dialog has no file open, so there
+ * is nothing to read it from.
+ */
+const SAMPLE_HEADER = "日期,地区,品类,金额,数量";
 
-/** Shared segmented picker (language / theme / accent) — replaces the old markup. */
+/**
+ * Shared segmented picker (language / theme).
+ *
+ * 040 §3: the thumb is positioned by `transform` and sized by `width`, both
+ * fixed, so the only animated property is `transform`. The old version animated
+ * `left` (a layout property) through `transition-all`, which stuttered and made
+ * every neighbouring style change a candidate for animation.
+ */
 function SegmentChoice<T extends string>({
   value,
   options,
   onChange,
   ariaLabel,
   disabled,
+  width = 280,
 }: {
   value: T;
   options: { label: string; value: T }[];
   onChange: (value: T) => void;
   ariaLabel: string;
   disabled?: boolean;
+  width?: number;
 }) {
   const columns = options.length;
   const index = Math.max(
@@ -113,17 +137,17 @@ function SegmentChoice<T extends string>({
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className={cn(
-        "relative grid h-8 rounded-md border border-border/60 bg-muted/50 p-0.5",
-        columns === 3 ? "w-[210px]" : "w-[280px]",
-      )}
-      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+      className="relative grid h-8 rounded-lg border border-border/60 bg-muted p-0.5"
+      style={{
+        width,
+        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+      }}
     >
       <div
-        className="absolute bottom-0.5 top-0.5 rounded-md bg-primary shadow-sm transition-all duration-300 ease-out"
+        className="absolute top-0.5 left-0.5 h-7 rounded-md bg-primary transition-transform duration-200 ease-out"
         style={{
-          width: `calc(${100 / columns}% - 1px)`,
-          left: `calc(${(index * 100) / columns}% + 1px)`,
+          width: `calc((100% - 4px) / ${columns})`,
+          transform: `translateX(${index * 100}%)`,
         }}
       />
       {options.map((option) => (
@@ -135,7 +159,7 @@ function SegmentChoice<T extends string>({
           disabled={disabled}
           onClick={() => onChange(option.value)}
           className={cn(
-            "relative z-10 rounded-md text-[11px] font-medium transition-colors",
+            "relative z-10 rounded-md text-[11.5px] font-medium transition-colors",
             option.value === value
               ? "text-primary-foreground"
               : "text-muted-foreground hover:text-foreground",
@@ -145,6 +169,51 @@ function SegmentChoice<T extends string>({
           {option.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+/**
+ * The four accent presets as real colour chips (040 §3, the screen's one
+ * colourful moment). The colour itself comes from `index.css`
+ * (`[data-swatch="…"]`), which owns every accent value - the component only
+ * picks which preset to show.
+ */
+function AccentChips({
+  value,
+  onChange,
+  labels,
+  ariaLabel,
+}: {
+  value: Accent;
+  onChange: (value: Accent) => void;
+  labels: Record<Accent, string>;
+  ariaLabel: string;
+}) {
+  return (
+    <div role="radiogroup" aria-label={ariaLabel} className="flex items-center">
+      <span className="mr-2 font-mono text-[11px] tabular-nums text-muted-foreground">
+        {labels[value]}
+      </span>
+      <div className="flex items-center gap-2.5">
+        {ACCENTS.map((preset) => (
+          <button
+            key={preset}
+            type="button"
+            role="radio"
+            aria-checked={preset === value}
+            aria-label={labels[preset]}
+            data-swatch={preset}
+            onClick={() => onChange(preset)}
+            className={cn(
+              "h-5 w-5 rounded-[5px] outline outline-1 outline-offset-2",
+              "transition-[outline-color]",
+              "focus-visible:outline-2 focus-visible:outline-ring",
+              preset === value ? "outline-foreground" : "outline-transparent",
+            )}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -181,10 +250,11 @@ export function SettingsTabContent({
   const [clearing, setClearing] = useState(false);
   const [customExpanded, setCustomExpanded] = useState(false);
   const [themeTransitioning, setThemeTransitioning] = useState(false);
+  const [keyVisible, setKeyVisible] = useState(false);
   const themeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const numberRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const passwordRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const checkboxRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const switchRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const selectRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const handleClearData = useCallback(async () => {
@@ -296,37 +366,59 @@ export function SettingsTabContent({
                   ? onDoubleClickFitViewChange
                   : onAutoCheckUpdateChange;
         return (
-          <input
+          <SettingsSwitch
             ref={(node) => {
-              checkboxRefs.current[row.id] = node;
+              switchRefs.current[row.id] = node;
             }}
-            type="checkbox"
             checked={checked}
-            aria-label={row.title}
-            onChange={(event) => change(event.target.checked)}
-            className={CHECKBOX_CLASS}
+            onChange={change}
+            label={row.title}
           />
         );
       }
 
       case "number":
         return (
-          <input
-            ref={(node) => {
-              numberRefs.current[row.id] = node;
-            }}
-            type="number"
-            min={1}
-            max={16}
-            aria-label={row.title}
-            value={maxConcurrentRuns}
-            onChange={(event) => {
-              const next = Number.parseInt(event.target.value, 10);
-              if (Number.isNaN(next)) return;
-              onMaxConcurrentRunsChange(Math.min(16, Math.max(1, next)));
-            }}
-            className="h-8 w-16 rounded-md border border-input bg-background px-2 text-xs"
-          />
+          <div className="flex h-8 items-center overflow-hidden rounded-lg border border-border bg-card">
+            <button
+              type="button"
+              aria-label={t.settingsDecrease}
+              disabled={maxConcurrentRuns <= 1}
+              onClick={() =>
+                onMaxConcurrentRunsChange(Math.max(1, maxConcurrentRuns - 1))
+              }
+              className="flex h-full w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+            >
+              <Minus className="h-3 w-3" />
+            </button>
+            <input
+              ref={(node) => {
+                numberRefs.current[row.id] = node;
+              }}
+              type="number"
+              min={1}
+              max={16}
+              aria-label={row.title}
+              value={maxConcurrentRuns}
+              onChange={(event) => {
+                const next = Number.parseInt(event.target.value, 10);
+                if (Number.isNaN(next)) return;
+                onMaxConcurrentRunsChange(Math.min(16, Math.max(1, next)));
+              }}
+              className="h-full w-9 border-x border-border/60 bg-transparent text-center font-mono text-xs tabular-nums outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            />
+            <button
+              type="button"
+              aria-label={t.settingsIncrease}
+              disabled={maxConcurrentRuns >= 16}
+              onClick={() =>
+                onMaxConcurrentRunsChange(Math.min(16, maxConcurrentRuns + 1))
+              }
+              className="flex h-full w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+          </div>
         );
 
       case "language":
@@ -360,23 +452,23 @@ export function SettingsTabContent({
 
       case "accent":
         return (
-          <SegmentChoice
+          <AccentChips
             ariaLabel={row.title}
             value={accent}
             onChange={onAccentChange}
-            options={[
-              { label: t.accentInk, value: "ink" as const },
-              { label: t.accentTeal, value: "teal" as const },
-              { label: t.accentClay, value: "clay" as const },
-              { label: t.accentGraphite, value: "graphite" as const },
-            ]}
+            labels={{
+              ink: t.accentInk,
+              teal: t.accentTeal,
+              clay: t.accentClay,
+              graphite: t.accentGraphite,
+            }}
           />
         );
 
       case "action":
         return (
           <Button variant="secondary" size="sm" onClick={onResetOnboarding}>
-            {t.onboardingReset}
+            {t.settingsShowAgain}
           </Button>
         );
 
@@ -458,31 +550,45 @@ export function SettingsTabContent({
 
       case "apiKey":
         return (
-          <input
-            ref={(node) => {
-              passwordRefs.current[row.id] = node;
-            }}
-            type="password"
-            aria-label={row.title}
-            value={aiConfig.apiKey}
-            onChange={(event) =>
-              onAIConfigChange({ ...aiConfig, apiKey: event.target.value })
-            }
-            placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
-            className="h-8 w-[240px] rounded-md border border-input bg-background px-2 text-xs"
-          />
+          <div className="flex h-8 w-[280px] items-center rounded-lg border border-border bg-card pl-2.5 focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/20">
+            <input
+              ref={(node) => {
+                passwordRefs.current[row.id] = node;
+              }}
+              type={keyVisible ? "text" : "password"}
+              aria-label={row.title}
+              value={aiConfig.apiKey}
+              onChange={(event) =>
+                onAIConfigChange({ ...aiConfig, apiKey: event.target.value })
+              }
+              placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
+              className="min-w-0 flex-1 bg-transparent font-mono text-xs outline-none placeholder:text-muted-foreground"
+            />
+            {/* A masked key you cannot read back is a key you retype. */}
+            <button
+              type="button"
+              aria-label={keyVisible ? t.settingsHideKey : t.settingsShowKey}
+              onClick={() => setKeyVisible((visible) => !visible)}
+              className="mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              {keyVisible ? (
+                <EyeOff className="h-3.5 w-3.5" />
+              ) : (
+                <Eye className="h-3.5 w-3.5" />
+              )}
+            </button>
+          </div>
         );
 
       case "danger": {
         const target = CLEAR_TARGETS[row.id];
         return (
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
-            className="text-destructive hover:text-destructive"
+            className="gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={() => target && setClearTarget(target)}
           >
-            <Trash2 className="h-3.5 w-3.5" />
             {t.settingsClear}
           </Button>
         );
@@ -490,20 +596,95 @@ export function SettingsTabContent({
     }
   };
 
+  /**
+   * The description column's second line (design 040 §3).
+   *
+   * Both cases used to be **extra rows** in the card - a bordered sub-row under
+   * the delimiter and another under the API key - which made two settings 60px
+   * tall for reasons unrelated to their controls. As a second line they cost 16px
+   * and stay attached to what they explain.
+   */
+  const renderExtra = (row: SettingsRowModel) => {
+    if (row.id === "delimiter") {
+      const separator = delimiterMode === "auto" ? "," : delimiterMode;
+      const cells = SAMPLE_HEADER.split(separator);
+      const splits = cells.length > 1;
+      return (
+        <span className="mt-1 flex items-center gap-2 font-mono text-[10.5px] leading-none text-muted-foreground">
+          <span className="flex min-w-0 items-center overflow-hidden rounded border border-border">
+            {cells.map((cell, index) => (
+              <span
+                key={index}
+                className="max-w-[180px] truncate border-r border-border px-1.5 py-0.5 last:border-r-0"
+              >
+                {cell.replace(/\t/g, "⇥")}
+              </span>
+            ))}
+          </span>
+          <span className={cn("shrink-0 tabular-nums", !splits && "text-destructive")}>
+            {t.settingsSampleColumns.replace("{count}", String(cells.length))}
+          </span>
+        </span>
+      );
+    }
+
+    // Where to get a token / check the balance - only the built-in providers
+    // have a console to point at.
+    if (row.id === "ai-api-key" && isBuiltinProvider(aiConfig.provider)) {
+      const links = [
+        {
+          label: t.aiGetToken,
+          url:
+            aiConfig.provider === "deepseek"
+              ? "https://platform.deepseek.com/api_keys"
+              : aiConfig.provider === "qwen"
+                ? "https://bailian.console.aliyun.com/?apiKey=1"
+                : "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
+        },
+        {
+          label: t.aiCheckBalance,
+          url:
+            aiConfig.provider === "deepseek"
+              ? "https://platform.deepseek.com/account_topup"
+              : aiConfig.provider === "qwen"
+                ? "https://bailian.console.aliyun.com/"
+                : "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
+        },
+      ];
+      return (
+        <span className="mt-1 flex items-center gap-4 text-[11.5px]">
+          {links.map((link) => (
+            <button
+              key={link.label}
+              type="button"
+              onClick={() => open(link.url)}
+              className="inline-flex cursor-pointer items-center gap-1 text-primary hover:underline"
+            >
+              {link.label}
+              <ExternalLink className="h-3 w-3" />
+            </button>
+          ))}
+        </span>
+      );
+    }
+
+    return undefined;
+  };
+
   const activate = (row: SettingsRowModel) => {
     if (row.dangerous) return undefined;
     switch (row.control) {
       case "checkbox":
-        // Delegation toggles the switch — that is what clicking the row means
-        // on macOS, and clicking the checkbox itself is not double-counted
+        // Delegation toggles the switch - that is what clicking the row means
+        // on macOS, and clicking the switch itself is not double-counted
         // (SettingsRow ignores clicks that land on a control).
-        return () => checkboxRefs.current[row.id]?.click();
+        return () => switchRefs.current[row.id]?.click();
       case "number":
         return () => numberRefs.current[row.id]?.focus();
       case "apiKey":
         return () => passwordRefs.current[row.id]?.focus();
       // Every dropdown focuses its combobox, which opens it (`Select` opens on
-      // focus) — the delimiter one has to be in this list too, or clicking its
+      // focus) - the delimiter one has to be in this list too, or clicking its
       // row did nothing while the AI dropdowns worked.
       case "delimiter":
       case "provider":
@@ -514,7 +695,7 @@ export function SettingsTabContent({
       case "disclosure":
         return () => setCustomExpanded((open) => !open);
       // Danger rows already returned above (`if (row.dangerous)`), but the kind
-      // is still part of the union — listing it keeps the switch exhaustive.
+      // is still part of the union - listing it keeps the switch exhaustive.
       case "danger":
         return undefined;
       // A segmented picker has no single "activate" meaning, so its row stays
@@ -535,24 +716,25 @@ export function SettingsTabContent({
     // `flex-1 min-h-0`, not `h-full`: this pane sits *below* the dialog's search
     // bar in a flex column, so `height: 100%` would measure the parent's full
     // height and push the bottom ~53px of the list outside the dialog's clip.
-    <div className="flex min-h-0 flex-1 flex-col bg-background">
+    <div className="flex min-h-0 flex-1 flex-col">
       <ScrollArea
         ref={scrollRootRef}
         className="min-h-0 flex-1"
         hideHorizontalScrollbar
         blockContent
       >
-        {/* `pb-16` leaves room for the dialog's floating footer buttons, which
-            sit over this pane's bottom-centre (design 030 §4.1). */}
+        {/* `pb-6`, not the old `pb-16`: the actions moved out of an overlay and
+            into a real footer band (design 040 §2), so the list no longer has
+            to reserve room for buttons floating on top of it. */}
         <div
-          className="px-4 pb-16"
+          className="px-6 pb-6"
           onContextMenu={(event) => event.preventDefault()}
         >
           {groups.map((group) => (
             <section key={group.id}>
               {/* Deliberately **no** z-index: `position: sticky` already paints
                   the heading above the (static) rows, and the scroll bar is a
-                  sibling that comes later in the DOM — so it stays on top. With
+                  sibling that comes later in the DOM - so it stays on top. With
                   a z-index here the heading (which spans to the right edge, the
                   bar's track) painted over the bar and made it disappear. */}
               {/* The plugin group renders itself: its rows are dynamic (one per
@@ -563,6 +745,7 @@ export function SettingsTabContent({
                   <PluginSection
                     sectionId={sectionElementId(group.id)}
                     name={group.name}
+                    index={group.index}
                     showToast={showToast}
                   />
                 </section>
@@ -571,6 +754,7 @@ export function SettingsTabContent({
                   <SettingsSectionHeading
                     id={sectionElementId(group.id)}
                     name={group.name}
+                    index={group.index}
                   />
                   <SettingsGroupCard>
                     {group.rows.map((row) => (
@@ -580,15 +764,16 @@ export function SettingsTabContent({
                           title={row.title}
                           description={row.description}
                           highlight={query}
+                          extra={renderExtra(row)}
                           onActivate={activate(row)}
                         >
                           {renderControl(row)}
                         </SettingsRow>
 
                         {row.id === "ai-custom-provider" && customExpanded && (
-                          <div className="space-y-3 border-b border-border/60 bg-muted/20 px-3 py-3">
+                          <div className="space-y-3 border-b border-border/60 bg-muted/30 px-4 py-3">
                             <div>
-                              <label className="block text-[11.5px] font-medium">
+                              <label className="block text-xs font-medium">
                                 {t.aiProviderName}
                               </label>
                               <input
@@ -601,11 +786,11 @@ export function SettingsTabContent({
                                   })
                                 }
                                 placeholder="Provider"
-                                className="mt-1 h-8 w-[280px] rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                                className="mt-1 h-8 w-[280px] rounded-lg border border-border bg-card px-2 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-ring/20"
                               />
                             </div>
                             <div>
-                              <label className="block text-[11.5px] font-medium">
+                              <label className="block text-xs font-medium">
                                 {t.aiBaseUrl}
                               </label>
                               <input
@@ -618,11 +803,11 @@ export function SettingsTabContent({
                                   })
                                 }
                                 placeholder="https://api.example.com/v1"
-                                className="mt-1 h-8 w-full max-w-[420px] rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                                className="mt-1 h-8 w-full max-w-[420px] rounded-lg border border-border bg-card px-2 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-ring/20"
                               />
                             </div>
                             <div>
-                              <span className="block text-[11.5px] font-medium">
+                              <span className="block text-xs font-medium">
                                 {t.aiModels}
                               </span>
                               <div className="mt-1 space-y-2">
@@ -648,7 +833,7 @@ export function SettingsTabContent({
                                         updateCustomModels(models);
                                       }}
                                       placeholder="Kimi-K2.6"
-                                      className="h-8 w-[240px] rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                                      className="h-8 w-[240px] rounded-lg border border-border bg-card px-2 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-ring/20"
                                     />
                                     <Button
                                       variant="ghost"
@@ -685,45 +870,6 @@ export function SettingsTabContent({
                           </div>
                         )}
 
-                        {/* Where to get a token / check the balance — only the
-                        built-in providers have a console to point at. */}
-                        {row.id === "ai-api-key" &&
-                          isBuiltinProvider(aiConfig.provider) && (
-                            <div className="flex flex-wrap items-center gap-4 border-b border-border/60 px-3 py-2 text-[11px]">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  open(
-                                    aiConfig.provider === "deepseek"
-                                      ? "https://platform.deepseek.com/api_keys"
-                                      : aiConfig.provider === "qwen"
-                                        ? "https://bailian.console.aliyun.com/?apiKey=1"
-                                        : "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
-                                  )
-                                }
-                                className="inline-flex cursor-pointer items-center gap-1 text-primary hover:underline"
-                              >
-                                {t.aiGetToken}
-                                <ExternalLink className="h-3 w-3" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  open(
-                                    aiConfig.provider === "deepseek"
-                                      ? "https://platform.deepseek.com/account_topup"
-                                      : aiConfig.provider === "qwen"
-                                        ? "https://bailian.console.aliyun.com/"
-                                        : "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
-                                  )
-                                }
-                                className="inline-flex cursor-pointer items-center gap-1 text-primary hover:underline"
-                              >
-                                {t.aiCheckBalance}
-                                <ExternalLink className="h-3 w-3" />
-                              </button>
-                            </div>
-                          )}
                       </React.Fragment>
                     ))}
                   </SettingsGroupCard>
@@ -746,12 +892,12 @@ export function SettingsTabContent({
       </ScrollArea>
 
       {clearTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-[min(400px,calc(100vw-32px))] rounded-lg bg-background p-4">
-            <h3 className="mb-2 text-lg font-medium">
+        <div className="z-modal fixed inset-0 flex items-center justify-center bg-black/50">
+          <div className="w-[min(400px,calc(100vw-32px))] rounded-xl border border-border bg-card p-5 shadow-lg">
+            <h3 className="mb-2 text-sm font-medium">
               {t.aiClearConfirmTitle}
             </h3>
-            <p className="mb-3 text-sm text-muted-foreground">
+            <p className="mb-4 text-xs text-muted-foreground">
               {t.aiClearConfirmDesc}
             </p>
             <div className="mt-3 flex justify-end gap-2">

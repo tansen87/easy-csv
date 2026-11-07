@@ -95,7 +95,7 @@ export function DownloadPrefixSetting({
         onKeyDown={(event) => {
           if (event.key === "Enter" && isDirty) void persist(prefix);
         }}
-        className="h-7 w-[180px] rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+        className="h-8 w-[200px] rounded-lg border border-border bg-card px-2 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-ring/20"
       />
       <Button
         variant="secondary"

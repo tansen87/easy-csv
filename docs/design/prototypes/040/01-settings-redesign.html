@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 01 · 设置对话框改版</title>
+<style>
+  /* ── tokens, mirrors src/index.css ───────────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --field:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 7%);
+    --border-strong:oklch(0.855 0 0);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --danger:oklch(0.577 0.245 27.325);
+
+    --canvas:oklch(0.972 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-dialog:0 24px 56px -20px oklch(0.2 0.02 80 / 28%),0 2px 8px oklch(0.2 0.02 80 / 6%);
+    --ease:cubic-bezier(.2,0,0,1);
+  }
+  html.dark{
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --field:oklch(0.245 0 0);
+    --muted:oklch(0.275 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.58 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(1 0 0 / 7%);
+    --border-strong:oklch(1 0 0 / 16%);
+
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 12%,transparent);
+    --danger:oklch(0.704 0.191 22.216);
+
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.105 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-dialog:0 24px 56px -20px oklch(0 0 0 / 60%),0 2px 8px oklch(0 0 0 / 30%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);
+    color:var(--fg);
+    background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ── stage chrome (not part of the product) ─────────────────────────── */
+  .stage{min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:20px;padding:28px 24px 56px}
+  .stage-bar{width:1024px;max-width:100%;display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:6px}
+  .stage-bar h1{margin:0;font-size:15px;font-weight:500}
+  .stage-bar p{margin:4px 0 0;font-size:12px;color:var(--muted-fg)}
+  .theme-switch{display:flex;gap:2px;padding:2px;border-radius:8px;background:var(--bg);border:1px solid var(--border)}
+  .theme-switch button{
+    appearance:none;border:0;background:transparent;font:inherit;font-size:11.5px;color:var(--muted-fg);
+    height:26px;padding:0 12px;border-radius:6px;cursor:pointer;transition:background-color .15s var(--ease),color .15s var(--ease);
+  }
+  .theme-switch button.on{background:var(--brand);color:var(--brand-fg)}
+
+  /* ── dialog ─────────────────────────────────────────────────────────── */
+  .dlg{
+    width:1024px;max-width:100%;height:680px;
+    display:flex;flex-direction:column;
+    background:var(--canvas);
+    border:1px solid var(--border);
+    border-radius:12px;
+    box-shadow:var(--shadow-dialog);
+    overflow:hidden;
+  }
+  .dlg-head{
+    flex:none;height:52px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 12px 0 20px;
+  }
+  .dlg-head h2{margin:0;font-size:13px;font-weight:500;letter-spacing:0}
+  .icon-btn{
+    appearance:none;border:0;background:transparent;color:var(--muted-fg);
+    display:grid;place-items:center;width:28px;height:28px;border-radius:6px;cursor:pointer;
+    transition:background-color .15s var(--ease),color .15s var(--ease);
+  }
+  .icon-btn:hover{background:var(--border-soft);color:var(--fg)}
+  .dlg-body{flex:1;min-height:0;display:flex}
+
+  /* nav */
+  .nav{
+    width:208px;flex:none;display:flex;flex-direction:column;gap:2px;
+    padding:0 12px 12px;overflow-y:auto;
+  }
+  .nav button{
+    appearance:none;text-align:left;display:flex;align-items:center;gap:10px;
+    height:32px;padding:0 8px;border:1px solid transparent;border-radius:8px;
+    background:transparent;font:inherit;font-size:12.5px;color:var(--muted-fg);cursor:pointer;
+    transition:background-color .15s var(--ease),color .15s var(--ease),border-color .15s var(--ease);
+  }
+  .nav .idx{
+    font-family:var(--mono);font-size:10.5px;font-variant-numeric:tabular-nums;
+    color:var(--muted-fg-2);flex:none;width:16px;
+    transition:color .15s var(--ease);
+  }
+  .nav button:hover{background:var(--border-soft);color:var(--fg)}
+  .nav button[aria-current="true"]{
+    background:var(--card);border-color:var(--border);color:var(--fg);font-weight:500;
+  }
+  .nav button[aria-current="true"] .idx{color:var(--brand)}
+  .nav button.dim{color:var(--muted-fg-2);opacity:.55}
+
+  /* main */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .search-row{flex:none;display:flex;align-items:center;padding:0 24px 12px}
+  .search{
+    flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;
+    border:1px solid var(--border);border-radius:8px;background:var(--field);
+    transition:border-color .15s var(--ease),box-shadow .15s var(--ease);
+  }
+  .search:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+  .search svg{flex:none;color:var(--muted-fg-2)}
+  .search input{
+    flex:1;min-width:0;border:0;background:transparent;outline:none;
+    font:inherit;font-size:12.5px;color:var(--fg);
+  }
+  .search input::placeholder{color:var(--muted-fg-2)}
+  .keycap{
+    flex:none;display:grid;place-items:center;min-width:18px;height:18px;padding:0 4px;
+    border:1px solid var(--border);border-radius:4px;background:var(--muted);
+    font-family:var(--mono);font-size:10px;color:var(--muted-fg);
+  }
+  .search-clear{
+    appearance:none;border:0;background:transparent;display:none;place-items:center;
+    width:18px;height:18px;border-radius:4px;color:var(--muted-fg);cursor:pointer;
+  }
+  .search-clear:hover{background:var(--border-soft);color:var(--fg)}
+  body.searching .search-clear{display:grid}
+  body.searching .keycap{display:none}
+
+  .scroll{flex:1;min-height:0;overflow-y:auto;padding:0 24px 24px}
+
+  .group{margin-bottom:24px}
+  .group-head{
+    display:flex;align-items:center;gap:8px;
+    padding:0 0 8px 16px;
+  }
+  .group-head .idx{
+    font-family:var(--mono);font-size:10.5px;font-variant-numeric:tabular-nums;
+    color:var(--muted-fg-2);
+  }
+  .group-head h3{margin:0;font-size:12.5px;font-weight:500;color:var(--fg);white-space:nowrap}
+  .group-head .rule{flex:1;height:1px;background:var(--border-soft);min-width:16px}
+  .group-head .trail{display:flex;align-items:center;gap:4px;color:var(--muted-fg);white-space:nowrap;font-size:11.5px}
+  .group-head .trail .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px}
+  .group-head .trail button{width:24px;height:24px}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    overflow:hidden;
+  }
+
+  /* rows */
+  .row{
+    display:grid;grid-template-columns:190px minmax(0,1fr) auto;align-items:center;
+    gap:16px;min-height:44px;padding:8px 16px;
+    border-bottom:1px solid var(--border-soft);
+  }
+  .row:last-child{border-bottom:0}
+  .row.act{cursor:pointer;transition:background-color .15s var(--ease)}
+  .row.act:hover{background:color-mix(in oklab,var(--muted) 55%,transparent)}
+  .row .title{font-size:13px;font-weight:500;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .desc{font-size:12px;line-height:1.35;color:var(--muted-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .desc .line2{display:flex;align-items:center;gap:10px;margin-top:3px}
+  .row .ctl{justify-self:end;display:flex;align-items:center;gap:8px}
+
+  mark{background:var(--brand-soft);color:var(--fg);border-radius:2px;padding:0 1px}
+
+  /* sample strip (the delimiter row's material) */
+  .sample{
+    display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;
+    color:var(--muted-fg);line-height:1;
+  }
+  .sample .cells{display:flex;align-items:center;border:1px solid var(--border);border-radius:4px;overflow:hidden}
+  .sample .cell{padding:3px 6px;border-right:1px solid var(--border);white-space:nowrap;background:var(--card)}
+  .sample .cell:last-child{border-right:0}
+  .sample .count{font-variant-numeric:tabular-nums;color:var(--muted-fg-2)}
+  .sample .bad{color:var(--danger)}
+
+  /* switch */
+  .switch{
+    appearance:none;border:0;padding:0;position:relative;flex:none;
+    width:36px;height:20px;border-radius:10px;cursor:pointer;
+    background:var(--border-strong);
+    transition:background-color .18s var(--ease);
+  }
+  .switch::after{
+    content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:8px;
+    background:oklch(1 0 0);box-shadow:0 1px 2px oklch(0.2 0.02 80 / 26%);
+    transition:transform .18s var(--ease);
+  }
+  .switch[aria-checked="true"]{background:var(--brand)}
+  .switch[aria-checked="true"]::after{transform:translateX(16px)}
+  .switch:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+  /* segmented */
+  .seg{
+    position:relative;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));
+    height:28px;padding:2px;border-radius:8px;
+    background:var(--muted);border:1px solid var(--border-soft);
+  }
+  .seg .thumb{
+    position:absolute;top:2px;left:2px;height:calc(100% - 4px);
+    width:calc((100% - 4px) / var(--n));border-radius:6px;background:var(--brand);
+    transform:translateX(calc(var(--i) * 100%));
+    transition:transform .18s var(--ease);
+  }
+  .seg button{
+    appearance:none;border:0;background:transparent;font:inherit;font-size:11.5px;
+    position:relative;z-index:1;color:var(--muted-fg);cursor:pointer;border-radius:6px;
+    transition:color .15s var(--ease);padding:0 4px;white-space:nowrap;
+  }
+  .seg button[aria-checked="true"]{color:var(--brand-fg)}
+
+  /* accent chips */
+  .chips{display:flex;align-items:center;gap:10px}
+  .chip-name{flex:none;margin-right:10px;font-family:var(--mono);font-size:11px;color:var(--muted-fg);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .chip{
+    appearance:none;border:0;padding:0;flex:none;width:20px;height:20px;border-radius:5px;cursor:pointer;
+    box-shadow:inset 0 0 0 1px oklch(0 0 0 / 10%);
+    outline:1.5px solid transparent;outline-offset:2px;
+    transition:outline-color .15s var(--ease);
+  }
+  .chip[aria-checked="true"]{outline-color:var(--fg)}
+  .chip:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+
+  /* stepper */
+  .stepper{display:flex;align-items:center;height:28px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--field)}
+  .stepper button{
+    appearance:none;border:0;background:transparent;width:26px;height:100%;display:grid;place-items:center;
+    color:var(--muted-fg);cursor:pointer;transition:background-color .15s var(--ease),color .15s var(--ease);
+  }
+  .stepper button:hover{background:var(--border-soft);color:var(--fg)}
+  .stepper .val{
+    width:34px;text-align:center;font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums;
+    border-left:1px solid var(--border-soft);border-right:1px solid var(--border-soft);line-height:26px;
+  }
+
+  /* field / select */
+  .select{
+    appearance:none;font:inherit;font-size:12px;color:var(--fg);
+    height:28px;padding:0 26px 0 10px;border:1px solid var(--border);border-radius:8px;
+    background-color:var(--field);cursor:pointer;min-width:132px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b8b8b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center;
+  }
+  .select:focus-visible{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+
+  .keyfield{
+    display:flex;align-items:center;height:32px;width:280px;padding:0 6px 0 10px;
+    border:1px solid var(--border);border-radius:8px;background:var(--field);
+    transition:border-color .15s var(--ease),box-shadow .15s var(--ease);
+  }
+  .keyfield:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+  .keyfield input{
+    flex:1;min-width:0;border:0;background:transparent;outline:none;font-family:var(--mono);
+    font-size:11.5px;color:var(--fg);letter-spacing:0;
+  }
+  .keyfield input::placeholder{color:var(--muted-fg-2)}
+  .keyfield button{
+    appearance:none;border:0;background:transparent;width:22px;height:22px;display:grid;place-items:center;
+    border-radius:4px;color:var(--muted-fg-2);cursor:pointer;
+  }
+  .keyfield button:hover{background:var(--border-soft);color:var(--fg)}
+
+  /* buttons */
+  .btn{
+    appearance:none;font:inherit;font-size:12px;display:inline-flex;align-items:center;gap:6px;
+    height:28px;padding:0 10px;border-radius:7px;cursor:pointer;white-space:nowrap;
+    border:1px solid var(--border);background:var(--field);color:var(--fg);
+    transition:background-color .15s var(--ease),border-color .15s var(--ease),color .15s var(--ease);
+  }
+  .btn:hover{background:var(--muted)}
+  .btn.quiet{border-color:transparent;background:transparent;color:var(--muted-fg)}
+  .btn.quiet:hover{background:var(--border-soft);color:var(--fg)}
+  .btn.danger{color:var(--danger);border-color:transparent;background:transparent}
+  .btn.danger:hover{background:color-mix(in oklab,var(--danger) 8%,transparent);color:var(--danger)}
+  .btn.primary{
+    height:30px;padding:0 14px;border-color:transparent;background:var(--brand);color:var(--brand-fg);font-weight:500;
+  }
+  .btn.primary:hover{background:color-mix(in oklab,var(--brand) 88%,black)}
+  html.dark .btn.primary:hover{background:color-mix(in oklab,var(--brand) 88%,white)}
+
+  .link{
+    appearance:none;border:0;background:transparent;padding:0;font:inherit;font-size:11.5px;
+    color:var(--brand);cursor:pointer;display:inline-flex;align-items:center;gap:4px;border-radius:3px;
+  }
+  .link:hover{text-decoration:underline;text-underline-offset:2px}
+
+  /* footer band */
+  .dlg-foot{
+    flex:none;height:56px;display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:0 20px 0 24px;border-top:1px solid var(--border);
+  }
+  .dlg-foot .note{font-size:11.5px;color:var(--muted-fg);display:flex;align-items:center;gap:6px}
+  .dlg-foot .note svg{color:var(--muted-fg-2)}
+  .dlg-foot .acts{display:flex;align-items:center;gap:8px}
+
+  /* empty search state */
+  .empty{display:none;padding:64px 0;text-align:center}
+  .empty.show{display:block}
+  .empty .big{font-size:12.5px;color:var(--fg);margin:0 0 6px}
+  .empty .small{font-size:11.5px;color:var(--muted-fg);margin:0}
+
+  .notes{width:1024px;max-width:100%;font-size:11.5px;line-height:1.7;color:var(--muted-fg);margin:0;padding-left:2px}
+  .notes b{color:var(--fg);font-weight:500}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:6px;border:3px solid transparent;background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:var(--border-strong);background-clip:content-box;border:3px solid transparent}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="stage-bar">
+    <div>
+      <div class="eyebrow">原型 01 · 040</div>
+      <h1>设置对话框</h1>
+      <p>可交互:点击导航、开关、色块、分隔符、搜索框都可以试</p>
+    </div>
+    <div class="theme-switch" role="group" aria-label="预览外观">
+      <button data-theme="light" class="on">浅色</button>
+      <button data-theme="dark">深色</button>
+    </div>
+  </div>
+
+  <div class="dlg" role="dialog" aria-label="设置">
+    <div class="dlg-head">
+      <h2>设置</h2>
+      <button class="icon-btn" aria-label="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="dlg-body">
+      <nav class="nav" aria-label="设置分组">
+        <button data-target="appearance" aria-current="true"><span class="idx">01</span>界面</button>
+        <button data-target="data-help"><span class="idx">02</span>数据与帮助</button>
+        <button data-target="window"><span class="idx">03</span>窗口行为</button>
+        <button data-target="update"><span class="idx">04</span>更新</button>
+        <button data-target="plugins"><span class="idx">05</span>插件</button>
+        <button data-target="ai"><span class="idx">06</span>AI</button>
+      </nav>
+
+      <div class="main">
+        <div class="search-row">
+          <div class="search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+            <input id="q" type="text" placeholder="搜索设置" aria-label="搜索设置" />
+            <button class="search-clear" aria-label="清空搜索">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+            <span class="keycap">/</span>
+          </div>
+        </div>
+
+        <div class="scroll" id="scroll">
+
+          <!-- 01 界面 -->
+          <section class="group" id="g-appearance">
+            <div class="group-head"><span class="idx">01</span><h3>界面</h3><span class="rule"></span></div>
+            <div class="card">
+              <div class="row act" data-title="语言 界面语言 跟随系统 中文 English">
+                <div class="title">语言</div>
+                <div class="desc">界面语言, 可跟随系统</div>
+                <div class="ctl">
+                  <div class="seg" style="--n:3;--i:1;width:280px" role="radiogroup" aria-label="语言">
+                    <span class="thumb"></span>
+                    <button role="radio" aria-checked="false">跟随系统</button>
+                    <button role="radio" aria-checked="true">中文</button>
+                    <button role="radio" aria-checked="false">English</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row act" data-title="主题 界面配色 dark light 跟随系统">
+                <div class="title">主题</div>
+                <div class="desc">界面配色, 可跟随系统</div>
+                <div class="ctl">
+                  <div class="seg" style="--n:3;--i:0;width:280px" role="radiogroup" aria-label="主题">
+                    <span class="thumb"></span>
+                    <button role="radio" aria-checked="true">跟随系统</button>
+                    <button role="radio" aria-checked="false">浅色</button>
+                    <button role="radio" aria-checked="false">深色</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row" data-title="主题色 强调色 ink teal clay graphite 墨蓝 青碧 赭石 石墨">
+                <div class="title">主题色</div>
+                <div class="desc">强调色, 用于选中、焦点与主操作</div>
+                <div class="ctl">
+                  <div class="chips" role="radiogroup" aria-label="主题色">
+                    <span class="chip-name" id="accentName">墨蓝</span>
+                    <button class="chip" role="radio" aria-checked="true"
+                      data-name="墨蓝" data-light="oklch(0.42 0.055 250)" data-dark="oklch(0.78 0.045 245)"
+                      style="background:oklch(0.42 0.055 250)"></button>
+                    <button class="chip" role="radio" aria-checked="false"
+                      data-name="青碧" data-light="oklch(0.43 0.06 200)" data-dark="oklch(0.78 0.05 200)"
+                      style="background:oklch(0.43 0.06 200)"></button>
+                    <button class="chip" role="radio" aria-checked="false"
+                      data-name="赭石" data-light="oklch(0.47 0.075 50)" data-dark="oklch(0.79 0.06 55)"
+                      style="background:oklch(0.47 0.075 50)"></button>
+                    <button class="chip" role="radio" aria-checked="false"
+                      data-name="石墨" data-light="oklch(0.30 0.006 80)" data-dark="oklch(0.80 0.004 85)"
+                      style="background:oklch(0.30 0.006 80)"></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 02 数据与帮助 -->
+          <section class="group" id="g-data-help">
+            <div class="group-head"><span class="idx">02</span><h3>数据与帮助</h3><span class="rule"></span></div>
+            <div class="card">
+              <div class="row act" data-title="分隔符 delimiter 逗号 分号 制表符 自动识别">
+                <div class="title">分隔符</div>
+                <div class="desc">
+                  用于读取 CSV 数据的字段分隔符
+                  <span class="line2 sample" id="sample">
+                    <span class="cells"></span>
+                    <span class="count"></span>
+                  </span>
+                </div>
+                <div class="ctl">
+                  <select class="select" id="delim" aria-label="分隔符">
+                    <option value="auto">自动识别</option>
+                    <option value=",">逗号 ,</option>
+                    <option value=";">分号 ;</option>
+                    <option value="\t">制表符 Tab</option>
+                    <option value="|">竖线 |</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="row act" data-title="无表头 header 首行 列名">
+                <div class="title">无表头</div>
+                <div class="desc">启用后, 第一行将不被视为表头</div>
+                <div class="ctl"><button class="switch" role="switch" aria-checked="false" aria-label="无表头"></button></div>
+              </div>
+
+              <div class="row act" data-title="同时执行的标签页数上限 并发 并行 排队">
+                <div class="title">标签页并发上限</div>
+                <div class="desc">超出上限的执行会排队等待, 有空位时自动开始</div>
+                <div class="ctl">
+                  <div class="stepper">
+                    <button aria-label="减少" data-step="-1">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg>
+                    </button>
+                    <span class="val" id="conc">4</span>
+                    <button aria-label="增加" data-step="1">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row act" data-title="新手引导 onboarding 教程 引导">
+                <div class="title">新手引导</div>
+                <div class="desc">清除「已看过引导」标记, 下次打开文件时重新显示</div>
+                <div class="ctl"><button class="btn">重新显示</button></div>
+              </div>
+
+              <div class="row" data-title="清除执行历史 history 删除">
+                <div class="title">清除执行历史</div>
+                <div class="desc">删除所有执行历史记录</div>
+                <div class="ctl">
+                  <button class="btn danger">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                    清除
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 03 窗口行为 -->
+          <section class="group" id="g-window">
+            <div class="group-head"><span class="idx">03</span><h3>窗口行为</h3><span class="rule"></span></div>
+            <div class="card">
+              <div class="row act" data-title="系统通知 notification 提醒">
+                <div class="title">系统通知</div>
+                <div class="desc">启用后, 管道执行完成后显示系统通知</div>
+                <div class="ctl"><button class="switch" role="switch" aria-checked="true" aria-label="系统通知"></button></div>
+              </div>
+              <div class="row act" data-title="系统托盘 tray minimize 最小化 后台">
+                <div class="title">系统托盘</div>
+                <div class="desc">启用后, 关闭窗口将最小化到系统托盘而非退出应用</div>
+                <div class="ctl"><button class="switch" role="switch" aria-checked="true" aria-label="系统托盘"></button></div>
+              </div>
+              <div class="row act" data-title="适配视图 fit zoom 画布 双击">
+                <div class="title">适配视图</div>
+                <div class="desc">启用后, 双击画布空白区域将自动缩放视图</div>
+                <div class="ctl"><button class="switch" role="switch" aria-checked="true" aria-label="适配视图"></button></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 04 更新 -->
+          <section class="group" id="g-update">
+            <div class="group-head"><span class="idx">04</span><h3>更新</h3><span class="rule"></span></div>
+            <div class="card">
+              <div class="row act" data-title="自动检查更新 update 升级 版本">
+                <div class="title">自动检查更新</div>
+                <div class="desc">启用后, 静默检查更新, 仅在发现新版本时在工具栏提示</div>
+                <div class="ctl"><button class="switch" role="switch" aria-checked="true" aria-label="自动检查更新"></button></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 05 插件 -->
+          <section class="group" id="g-plugins">
+            <div class="group-head">
+              <span class="idx">05</span><h3>插件</h3><span class="rule"></span>
+              <span class="trail">
+                <span><span class="n">2</span> / <span class="n">3</span> 已安装</span>
+                <button class="icon-btn" aria-label="打开插件目录">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/></svg>
+                </button>
+                <button class="icon-btn" aria-label="获取最新目录">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5"/></svg>
+                </button>
+              </span>
+            </div>
+            <div class="card">
+              <div class="row">
+                <div class="title" style="font-family:var(--mono);font-size:12px">xan</div>
+                <div class="desc">CSV 处理核心 · 已安装 0.58.0</div>
+                <div class="ctl"><button class="btn quiet">卸载</button></div>
+              </div>
+              <div class="row">
+                <div class="title" style="font-family:var(--mono);font-size:12px">duckdb</div>
+                <div class="desc">SQL 查询与 Parquet · 已安装 1.1.3</div>
+                <div class="ctl"><button class="btn quiet">卸载</button></div>
+              </div>
+              <div class="row">
+                <div class="title" style="font-family:var(--mono);font-size:12px">qsv</div>
+                <div class="desc">未安装</div>
+                <div class="ctl"><button class="btn">安装</button></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 06 AI -->
+          <section class="group" id="g-ai">
+            <div class="group-head"><span class="idx">06</span><h3>AI</h3><span class="rule"></span></div>
+            <div class="card">
+              <div class="row act" data-title="服务提供商 provider deepseek qwen glm 自定义">
+                <div class="title">服务提供商</div>
+                <div class="desc">选择 AI 服务提供商</div>
+                <div class="ctl">
+                  <select class="select" aria-label="服务提供商">
+                    <option>DeepSeek</option>
+                    <option>通义千问</option>
+                    <option>智谱 GLM</option>
+                    <option>自定义</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="row act" data-title="模型 model llm">
+                <div class="title">模型</div>
+                <div class="desc">选择用于生成命令的 AI 模型</div>
+                <div class="ctl">
+                  <select class="select" aria-label="模型">
+                    <option>deepseek-chat</option>
+                    <option>deepseek-reasoner</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="row act" data-title="自定义提供商设置 base url endpoint 接口 地址">
+                <div class="title">自定义提供商设置</div>
+                <div class="desc">名称、Base URL 与模型列表</div>
+                <div class="ctl"><button class="btn quiet" disabled style="opacity:.5;cursor:not-allowed">展开</button></div>
+              </div>
+
+              <div class="row act" data-title="API Key token 密钥 凭据">
+                <div class="title">API Key</div>
+                <div class="desc">
+                  用于访问 AI 模型的 API 令牌
+                  <span class="line2">
+                    <button class="link">获取 API 令牌
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+                    </button>
+                    <button class="link">查询余额
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+                    </button>
+                  </span>
+                </div>
+                <div class="ctl">
+                  <div class="keyfield">
+                    <input type="password" value="sk-9f2c4a71b8e34d0c5a6e" aria-label="API Key" />
+                    <button aria-label="显示密钥">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row" data-title="清除对话历史 conversation chat 删除">
+                <div class="title">清除对话历史</div>
+                <div class="desc">删除与 AI 的对话记录</div>
+                <div class="ctl">
+                  <button class="btn danger">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                    清除
+                  </button>
+                </div>
+              </div>
+              <div class="row" data-title="清除反馈记录 feedback 评价 删除">
+                <div class="title">清除反馈记录</div>
+                <div class="desc">删除「有帮助 / 没帮助」的反馈</div>
+                <div class="ctl">
+                  <button class="btn danger">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                    清除
+                  </button>
+                </div>
+              </div>
+              <div class="row" data-title="清除纠正规则 correction 规则 删除">
+                <div class="title">清除纠正规则</div>
+                <div class="desc">删除 AI 纠正规则</div>
+                <div class="ctl">
+                  <button class="btn danger">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                    清除
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div class="empty" id="empty">
+            <p class="big">没有匹配「<span id="emptyQ"></span>」的设置</p>
+            <p class="small">试试「托盘」「暗色」「并发」</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dlg-foot">
+      <span class="note">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+        改动即时生效, 保存后写入本地配置
+      </span>
+      <span class="acts">
+        <button class="btn">恢复默认</button>
+        <button class="btn primary">保存</button>
+      </span>
+    </div>
+  </div>
+
+  <p class="notes">
+    <b>与现在相比的六处改动</b><br>
+    ① 底部两个悬浮按钮改成一条真实的分隔带, 「保存」成为唯一的主操作。 ② 卡片去掉阴影, 对话框底板改为浅灰, 白卡靠一条细线浮起来(浅色下不再两张白叠在一起)。 ③ 行高 36 → 44, 字号收成 13 / 12 两档, 标题与分组标题左对齐到 16。 ④ 布尔项由原生复选框换成开关, 数字项换成步进器。 ⑤ 主题色从四个文字选项换成真实色块。 ⑥ 分隔符行直接用内置示例数据切给你看, 不再只写一句话。
+  </p>
+</div>
+
+<script>
+/* ── theme ───────────────────────────────────────────────────────────── */
+const root = document.documentElement;
+function applyAccent(){
+  const dark = root.classList.contains('dark');
+  document.querySelectorAll('.chip').forEach(c => {
+    c.style.background = dark ? c.dataset.dark : c.dataset.light;
+  });
+  const chip = document.querySelector('.chip[aria-checked="true"]');
+  if(!chip) return;
+  root.style.setProperty('--brand', dark ? chip.dataset.dark : chip.dataset.light);
+  root.style.setProperty('--brand-fg', dark ? 'oklch(0.205 0 0)' : 'oklch(0.985 0 0)');
+  document.getElementById('accentName').textContent = chip.dataset.name;
+}
+
+/* offsetTop is measured against the page here, so scroll by rect instead */
+function scrollToSection(sec, smooth = true){
+  const top = sec.getBoundingClientRect().top - scrollEl.getBoundingClientRect().top + scrollEl.scrollTop;
+  scrollEl.scrollTo({ top: top - 8, behavior: smooth ? 'smooth' : 'instant' });
+}
+document.querySelectorAll('.theme-switch button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.theme-switch button').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    root.classList.toggle('dark', btn.dataset.theme === 'dark');
+    applyAccent();
+  });
+});
+
+/* ── accent chips ────────────────────────────────────────────────────── */
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-checked','false'));
+    chip.setAttribute('aria-checked','true');
+    applyAccent();
+  });
+});
+
+/* ── nav + scroll ────────────────────────────────────────────────────── */
+const navButtons = [...document.querySelectorAll('.nav button')];
+const scrollEl = document.getElementById('scroll');
+navButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = document.getElementById('g-' + btn.dataset.target);
+    if(!target) return;
+    scrollToSection(target);
+    setActive(btn.dataset.target);
+  });
+});
+function setActive(id){
+  navButtons.forEach(b => b.setAttribute('aria-current', String(b.dataset.target === id)));
+}
+function syncActive(){
+  let current = navButtons[0]?.dataset.target;
+  for(const btn of navButtons){
+    const sec = document.getElementById('g-' + btn.dataset.target);
+    if(!sec) continue;
+    const top = sec.getBoundingClientRect().top - scrollEl.getBoundingClientRect().top;
+    if(top <= 40) current = btn.dataset.target;
+  }
+  setActive(current);
+}
+scrollEl.addEventListener('scroll', () => {
+  if(document.body.classList.contains('searching')) return;
+  syncActive();
+}, { passive: true });
+
+/* ── search ──────────────────────────────────────────────────────────── */
+const q = document.getElementById('q');
+const emptyEl = document.getElementById('empty');
+const escapeHtml = (t) => t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function markTitles(){
+  const query = q.value.trim();
+  document.querySelectorAll('.row .title').forEach(el => {
+    const raw = el.dataset.raw || (el.dataset.raw = el.textContent);
+    const at = query ? raw.toLowerCase().indexOf(query.toLowerCase()) : -1;
+    el.innerHTML = at < 0
+      ? escapeHtml(raw)
+      : escapeHtml(raw.slice(0, at)) + '<mark>' + escapeHtml(raw.slice(at, at + query.length)) + '</mark>' + escapeHtml(raw.slice(at + query.length));
+  });
+}
+function runSearch(){
+  const query = q.value.trim().toLowerCase();
+  document.body.classList.toggle('searching', query.length > 0);
+  document.getElementById('emptyQ').textContent = q.value.trim();
+  markTitles();
+  const groups = [...document.querySelectorAll('.group')];
+  let total = 0;
+  groups.forEach(group => {
+    let hits = 0;
+    group.querySelectorAll('.row').forEach(row => {
+      const hay = ((row.dataset.title || '') + ' ' + row.textContent).toLowerCase();
+      const hit = !query || hay.includes(query);
+      row.style.display = hit ? '' : 'none';
+      if(hit) hits++;
+    });
+    group.style.display = hits ? '' : 'none';
+    total += hits;
+    const navBtn = document.querySelector(`.nav button[data-target="${group.id.slice(2)}"]`);
+    if(navBtn) navBtn.classList.toggle('dim', Boolean(query) && hits === 0);
+  });
+  emptyEl.classList.toggle('show', total === 0);
+  // "the group I am in" has no meaning in a filtered list
+  if(query) navButtons.forEach(b => b.setAttribute('aria-current', 'false'));
+  else syncActive();
+}
+q.addEventListener('input', runSearch);
+document.querySelector('.search-clear').addEventListener('click', () => { q.value = ''; runSearch(); q.focus(); });
+
+/* ── switches ────────────────────────────────────────────────────────── */
+document.querySelectorAll('.switch').forEach(sw => {
+  sw.addEventListener('click', () => {
+    sw.setAttribute('aria-checked', sw.getAttribute('aria-checked') === 'true' ? 'false' : 'true');
+  });
+});
+/* whole-row delegation, same as the app: clicking the row toggles the switch */
+document.querySelectorAll('.row.act').forEach(row => {
+  row.addEventListener('click', (event) => {
+    if(event.target.closest('button, input, select, .seg, .stepper, .chips, .keyfield')) return;
+    const sw = row.querySelector('.switch');
+    if(sw) sw.click();
+  });
+});
+
+/* ── segments ────────────────────────────────────────────────────────── */
+document.querySelectorAll('.seg').forEach(seg => {
+  const buttons = [...seg.querySelectorAll('button')];
+  buttons.forEach((btn, i) => {
+    btn.addEventListener('click', () => {
+      buttons.forEach(b => b.setAttribute('aria-checked','false'));
+      btn.setAttribute('aria-checked','true');
+      seg.style.setProperty('--i', i);
+      if(seg.getAttribute('aria-label') === '主题'){
+        const want = i === 0 ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : (i === 1 ? 'light' : 'dark');
+        document.querySelector(`.theme-switch button[data-theme="${want}"]`)?.click();
+      }
+    });
+  });
+});
+
+/* ── stepper ─────────────────────────────────────────────────────────── */
+document.querySelectorAll('.stepper button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const out = document.getElementById('conc');
+    const next = Math.min(16, Math.max(1, Number(out.textContent) + Number(btn.dataset.step)));
+    out.textContent = next;
+  });
+});
+
+/* ── delimiter sample: the app's own sample file, re-split live ──────── */
+const HEADER = '日期,地区,品类,金额,数量';
+const sampleEl = document.getElementById('sample');
+function renderSample(){
+  const mode = document.getElementById('delim').value;
+  const sep = mode === 'auto' ? ',' : (mode === '\\t' ? '\t' : mode);
+  const cells = HEADER.split(sep);
+  const box = sampleEl.querySelector('.cells');
+  const count = sampleEl.querySelector('.count');
+  box.innerHTML = cells.map(cell => {
+    const isTab = mode === '\\t';
+    const label = isTab ? cell : cell.replace(/\t/g, '⇥');
+    return `<span class="cell">${label}</span>`;
+  }).join('');
+  const bad = cells.length < 2;
+  count.textContent = `${cells.length} 列`;
+  count.classList.toggle('bad', bad);
+  sampleEl.title = bad ? '这个分隔符切不开这一行' : '示例文件首行切分结果';
+}
+document.getElementById('delim').addEventListener('change', renderSample);
+
+applyAccent();
+renderSample();
+
+/* ── preview hooks: ?theme=dark&q=托盘&scroll=ai ───────────────────────── */
+const params = new URLSearchParams(location.search);
+if(params.get('theme') === 'dark'){
+  document.querySelector('.theme-switch button[data-theme="dark"]')?.click();
+}
+if(params.get('accent')){
+  document.querySelector(`.chip[data-name="${params.get('accent')}"]`)?.click();
+}
+if(params.get('q')){
+  q.value = params.get('q');
+  runSearch();
+}
+if(params.get('delim')){
+  document.getElementById('delim').value = params.get('delim');
+  renderSample();
+}
+if(params.get('scroll')){
+  const sec = document.getElementById('g-' + params.get('scroll'));
+  if(sec) scrollToSection(sec, false);
+  setActive(params.get('scroll'));
+  if(document.fonts && document.fonts.ready){
+    document.fonts.ready.then(() => {
+      if(sec) scrollToSection(sec, false);
+      setActive(params.get('scroll'));
+    });
+  }
+}
+</script>
+</body>
+</html>

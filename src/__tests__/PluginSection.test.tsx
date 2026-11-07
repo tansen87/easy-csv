@@ -61,6 +61,7 @@ function renderSection(overrides: Record<string, unknown> = {}) {
       <PluginSection
         sectionId={sectionElementId("plugins")}
         name="Plugins"
+        index={5}
         showToast={showToast}
         {...overrides}
       />

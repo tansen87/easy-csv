@@ -159,6 +159,18 @@ export interface Translations {
   accentTeal: string;
   accentClay: string;
   accentGraphite: string;
+  /** When a settings change takes effect - the footer's left-hand note. */
+  settingsLiveNote: string;
+  /** `{count}` placeholder: how many columns the delimiter sample splits into. */
+  settingsSampleColumns: string;
+  /** Accessible names for the concurrency stepper's two buttons. */
+  settingsDecrease: string;
+  settingsIncrease: string;
+  /** Reveal / mask the stored API key. */
+  settingsShowKey: string;
+  settingsHideKey: string;
+  /** The onboarding row's action ("show the intro again"). */
+  settingsShowAgain: string;
   clearExecutionHistoryDesc: string;
   aiClearConversationsDesc: string;
   aiClearFeedbackDesc: string;
@@ -213,7 +225,7 @@ export interface Translations {
   cancel: string;
   update: string;
 
-  // UpdateDialog — install / progress / install-form gating.
+  // UpdateDialog - install / progress / install-form gating.
   // Values live in `{zh,en}/update.ts`.
   updateDownloadAndInstall: string;
   updateDownloading: string;

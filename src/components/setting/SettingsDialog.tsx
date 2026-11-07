@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, RotateCcw, Save, X } from "lucide-react";
+import { Check, Info, X } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { useLanguage } from "@/i18n";
@@ -117,7 +117,9 @@ export function SettingsDialog({
   const resultCount = useMemo(() => countMatches(filtered), [filtered]);
   const dimmedIds = useMemo(() => {
     const kept = new Set(filtered.map((group) => group.id));
-    return new Set(model.filter((group) => !kept.has(group.id)).map((g) => g.id));
+    return new Set(
+      model.filter((group) => !kept.has(group.id)).map((g) => g.id),
+    );
   }, [model, filtered]);
 
   // Scroll-linked highlight. Off while searching: "the group I am in" has no
@@ -235,15 +237,18 @@ export function SettingsDialog({
         aria-modal="true"
         aria-label={t.settings}
         tabIndex={-1}
-        className="relative flex h-[72vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-card shadow-xl outline-none"
+        className="relative flex h-[min(680px,86vh)] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-muted shadow-xl outline-none dark:bg-background"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex flex-none items-center justify-between border-b border-border bg-muted/20 px-4 py-3">
-          <h2 className="text-sm font-medium">{t.settings}</h2>
+        {/* No divider and no tinted strip: the window's own grey is the header's
+            background, so the title, the directory and the content read as one
+            surface (design 040 §2). */}
+        <div className="flex h-13 flex-none items-center justify-between pl-5 pr-3">
+          <h2 className="text-[13px] font-medium">{t.settings}</h2>
           <button
             onClick={onClose}
             aria-label={t.close}
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>
@@ -251,7 +256,11 @@ export function SettingsDialog({
 
         <div className="flex min-h-0 flex-1">
           <SettingsNav
-            groups={model.map((group) => ({ id: group.id, name: group.name }))}
+            groups={model.map((group) => ({
+              id: group.id,
+              name: group.name,
+              index: group.index,
+            }))}
             activeId={searching ? null : activeId}
             dimmedIds={dimmedIds}
             onNavigate={handleNavigate}
@@ -290,31 +299,27 @@ export function SettingsDialog({
               onAIConfigChange={onAIConfigChange}
               showToast={showToast}
             />
+          </div>
+        </div>
 
-            {/* Floating actions, bottom-centre of the content pane (not the
-                whole dialog: the directory column is not part of the centre).
-                Deliberately not a footer band — no divider, no reserved strip;
-                the list keeps the full height and scrolls under these two, and
-                `SettingsTabContent` carries extra bottom padding so the last row
-                can still be scrolled clear of them. */}
-            <div className="absolute bottom-3 left-1/2 z-panel flex -translate-x-1/2 items-center gap-2">
-              <Button variant="secondary" onClick={handleReset}>
-                {isResetClicked ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <RotateCcw className="h-4 w-4" />
-                )}
-                {t.resetToDefaults}
-              </Button>
-              <Button variant="secondary" onClick={handleSave}>
-                {isSaveClicked ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                {t.saveSettings}
-              </Button>
-            </div>
+        {/* A real footer band, not buttons floating over the list (design 040
+            §2): rows used to scroll underneath the old overlay, which read as a
+            rendering bug. The left side states when a change takes effect -
+            appearance applies live, everything else is written on save. */}
+        <div className="flex h-14 flex-none items-center justify-between gap-4 border-t border-border px-5">
+          <span className="flex min-w-0 items-center gap-1.5 truncate text-[11.5px] text-muted-foreground">
+            <Info className="h-3.5 w-3.5 flex-none" />
+            {t.settingsLiveNote}
+          </span>
+          <div className="flex flex-none items-center gap-2">
+            <Button variant="secondary" onClick={handleReset}>
+              {isResetClicked && <Check className="h-4 w-4" />}
+              {t.resetToDefaults}
+            </Button>
+            <Button onClick={handleSave}>
+              {isSaveClicked && <Check className="h-4 w-4" />}
+              {t.saveSettings}
+            </Button>
           </div>
         </div>
       </div>

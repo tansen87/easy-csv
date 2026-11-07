@@ -2,7 +2,6 @@ import { memo } from "react";
 import {
   ExternalLink,
   FolderOpen,
-  RefreshCw,
   Trash2,
   X,
 } from "lucide-react";
@@ -158,7 +157,6 @@ export const PluginEntryRow = memo(function PluginEntryRow({
           disabled={busy}
           onClick={() => onInstall(entry.name)}
         >
-          <RefreshCw className="h-3.5 w-3.5" />
           {t.pluginUpdate}
         </Button>
       )}

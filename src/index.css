@@ -674,3 +674,55 @@ input[type="checkbox"],
 input[type="radio"] {
   accent-color: var(--brand);
 }
+
+/* ── Settings (design 040) ─────────────────────────────────────────────── */
+
+/* Group indexes: the "01"…"06" in the directory and above each group card.
+   Rendered from a data attribute on purpose — the number is decoration, so it
+   must never enter `textContent` (the directory's text is the group name, and
+   `SettingsNav.test.tsx` pins that). Filtering keeps the original number,
+   because the caller passes it from `SETTINGS_GROUPS` order, not from the
+   filtered list. */
+.settings-index::before {
+  content: attr(data-index);
+  flex: none;
+  width: 16px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+.settings-index[aria-current="true"]::before {
+  color: var(--brand);
+}
+
+/* Accent presets as real colour chips. Values mirror the `[data-accent]` blocks
+   at the top of this file — a preset change is two edits, kept adjacent. */
+[data-swatch="ink"] {
+  --swatch: oklch(0.42 0.055 250);
+}
+[data-swatch="teal"] {
+  --swatch: oklch(0.43 0.06 200);
+}
+[data-swatch="clay"] {
+  --swatch: oklch(0.47 0.075 50);
+}
+[data-swatch="graphite"] {
+  --swatch: oklch(0.3 0.006 80);
+}
+.dark [data-swatch="ink"] {
+  --swatch: oklch(0.78 0.045 245);
+}
+.dark [data-swatch="teal"] {
+  --swatch: oklch(0.78 0.05 200);
+}
+.dark [data-swatch="clay"] {
+  --swatch: oklch(0.79 0.06 55);
+}
+.dark [data-swatch="graphite"] {
+  --swatch: oklch(0.8 0.004 85);
+}
+[data-swatch] {
+  background-color: var(--swatch);
+}
