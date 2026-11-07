@@ -315,13 +315,13 @@ export function DuckdbEditor({
                       className={cn(
                         "px-1.5 py-0.5 text-[10px] uppercase rounded shrink-0",
                         s.badge === "function" &&
-                          "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+                          "bg-syntax-function/10 text-syntax-function",
                         s.badge === "table" &&
-                          "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300",
+                          "bg-syntax-operator/10 text-syntax-operator",
                         s.badge === "keyword" &&
-                          "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+                          "bg-syntax-keyword/10 text-syntax-keyword",
                         s.badge === "column" &&
-                          "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+                          "bg-syntax-column/10 text-syntax-column",
                       )}
                     >
                       {s.badge}

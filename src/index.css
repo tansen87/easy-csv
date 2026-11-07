@@ -31,11 +31,32 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: var(--brand);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* Chart series: chart-1 follows the accent; 2-8 are fixed
+     hues chosen to stay distinguishable from every accent preset. */
+  --chart-1: var(--brand);
+  --chart-2: oklch(0.58 0.1 145);
+  --chart-3: oklch(0.6 0.12 30);
+  --chart-4: oklch(0.55 0.12 300);
+  --chart-5: oklch(0.57 0.11 350);
+  --chart-6: oklch(0.55 0.09 170);
+  --chart-7: oklch(0.52 0.1 275);
+  --chart-8: oklch(0.6 0.09 120);
+  /* Heatmap ramp - deliberately separate from chart series so
+     "heat" and "category" never share a meaning. Same in both appearances. */
+  --heat-1: oklch(0.8 0.06 230);
+  --heat-2: oklch(0.68 0.1 240);
+  --heat-3: oklch(0.62 0.11 300);
+  --heat-4: oklch(0.74 0.12 75);
+  --heat-5: oklch(0.56 0.16 27);
+  /* Expression syntax palette: stable across accents, light/dark
+     variants only. Code must not change meaning when the theme does. */
+  --syntax-keyword: oklch(0.48 0.14 310);
+  --syntax-function: oklch(0.5 0.11 245);
+  --syntax-string: oklch(0.5 0.1 145);
+  --syntax-number: oklch(0.55 0.12 60);
+  --syntax-operator: oklch(0.5 0.08 200);
+  --syntax-column: oklch(0.52 0.1 78);
+  --syntax-comment: oklch(0.55 0.01 250);
   /* Empty state only (design 032): warm paper table + one ink accent.
      Scoped here on purpose - the rest of the app keeps the neutral ramp. */
   --paper: oklch(0.995 0.004 85);
@@ -120,18 +141,29 @@
   --border: oklch(1 0 0 / 10%);
   --input: var(--color-neutral-500);
   --ring: var(--brand);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  /* Empty state only (design 032) - dark: paper sits one warm step above the
+  /* Chart series (light steps replaced by lighter ones for dark); chart-1
+     stays the accent. Heat ramp is shared. */
+  --chart-2: oklch(0.72 0.1 145);
+  --chart-3: oklch(0.76 0.12 35);
+  --chart-4: oklch(0.72 0.12 300);
+  --chart-5: oklch(0.74 0.11 350);
+  --chart-6: oklch(0.72 0.09 170);
+  --chart-7: oklch(0.7 0.1 275);
+  --chart-8: oklch(0.76 0.1 120);
+  --syntax-keyword: oklch(0.78 0.12 310);
+  --syntax-function: oklch(0.78 0.09 245);
+  --syntax-string: oklch(0.78 0.11 145);
+  --syntax-number: oklch(0.78 0.12 60);
+  --syntax-operator: oklch(0.76 0.08 200);
+  --syntax-column: oklch(0.8 0.1 80);
+  --syntax-comment: oklch(0.62 0.01 250);
+  /* Empty state only - dark: paper sits one warm step above the
      page background; depth comes from that step plus a hairline. */
   --paper: oklch(0.215 0.008 75);
   --paper-rule: oklch(0.96 0.005 85 / 9%);
   --empty-warn: oklch(0.78 0.11 75);
   --empty-ink: var(--brand);
-  /* Canvas only (design 033) - dark: surface steps + hairlines, no shadows. */
+  /* Canvas only - dark: surface steps + hairlines, no shadows. */
   --canvas-dot: oklch(0.96 0.005 85 / 8%);
   --canvas-line: oklch(0.96 0.005 85 / 26%);
   --canvas-line-strong: oklch(0.96 0.005 85 / 46%);
@@ -231,6 +263,16 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+  --color-syntax-keyword: var(--syntax-keyword);
+  --color-syntax-function: var(--syntax-function);
+  --color-syntax-string: var(--syntax-string);
+  --color-syntax-number: var(--syntax-number);
+  --color-syntax-operator: var(--syntax-operator);
+  --color-syntax-column: var(--syntax-column);
+  --color-syntax-comment: var(--syntax-comment);
   --color-paper: var(--paper);
   --color-paper-rule: var(--paper-rule);
   --color-empty-warn: var(--empty-warn);
@@ -581,51 +623,30 @@
   animation: fade-in 0.6s ease-out 1s both;
 }
 
-/* Expression Editor Syntax Highlighting */
+/* Expression Editor Syntax Highlighting.
+   Fixed palette: only the appearance changes, never the accent. */
 .expr-keyword {
-  color: #c678dd;
+  color: var(--syntax-keyword);
   font-weight: 500;
 }
 .expr-function {
-  color: #61afef;
+  color: var(--syntax-function);
 }
 .expr-string {
-  color: #98c379;
+  color: var(--syntax-string);
 }
 .expr-number {
-  color: #d19a66;
+  color: var(--syntax-number);
 }
 .expr-operator {
-  color: #56b6c2;
+  color: var(--syntax-operator);
 }
 .expr-column {
-  color: #e5c07b;
+  color: var(--syntax-column);
 }
 .expr-comment {
-  color: #5c6370;
+  color: var(--syntax-comment);
   font-style: italic;
-}
-
-.dark .expr-keyword {
-  color: #c678dd;
-}
-.dark .expr-function {
-  color: #61afef;
-}
-.dark .expr-string {
-  color: #98c379;
-}
-.dark .expr-number {
-  color: #d19a66;
-}
-.dark .expr-operator {
-  color: #56b6c2;
-}
-.dark .expr-column {
-  color: #e5c07b;
-}
-.dark .expr-comment {
-  color: #5c6370;
 }
 
 /* Expression Editor textarea scrollbar (matches ScrollArea style).

@@ -29,7 +29,6 @@ import {
 import type { TabChartState } from "@/types/execution";
 import { useLanguage } from "@/i18n";
 import type { Translations } from "@/i18n/translations/types";
-import { useTheme } from "@/components/setting/ThemeProvider";
 import { clampPanelPosition } from "@/utils/panelDock";
 import { formatNumber } from "@/utils/format";
 import {
@@ -60,39 +59,39 @@ import {
   Cell,
 } from "recharts";
 
-/** Category colours resolved by index so hiding a series keeps others stable. */
+/** Category colours resolved by index so hiding a series keeps others stable.
+ *  They are CSS tokens (design 034 D): `chart-1` follows the accent, the rest
+ *  are a fixed, mutually distinguishable palette. */
 const CATEGORY_COLORS = [
-  "#4f46e5",
-  "#0d9488",
-  "#d97706",
-  "#dc2626",
-  "#2563eb",
-  "#7c3aed",
-  "#15803d",
-  "#be185d",
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--chart-6)",
+  "var(--chart-7)",
+  "var(--chart-8)",
 ];
 
 /** Heatmap ramp (low → high) used by both the cells and the scale legend. */
-const HEAT_RAMP = ["#93c5fd", "#3b82f6", "#a78bfa", "#fbbf24", "#dc2626"];
+const HEAT_RAMP = [
+  "var(--heat-1)",
+  "var(--heat-2)",
+  "var(--heat-3)",
+  "var(--heat-4)",
+  "var(--heat-5)",
+];
 
 const heatColor = (ratio: number): string => {
   const clamped = Math.max(0, Math.min(1, ratio));
   const scaled = clamped * (HEAT_RAMP.length - 1);
   const index = Math.min(Math.floor(scaled), HEAT_RAMP.length - 2);
   const local = scaled - index;
-  const from = HEAT_RAMP[index];
-  const to = HEAT_RAMP[index + 1];
-  const mix = (hex: string, other: string, t: number) => {
-    const a = parseInt(hex.slice(1), 16);
-    const b = parseInt(other.slice(1), 16);
-    const ch = (shift: number) =>
-      Math.round(
-        ((a >> shift) & 255) +
-          (((b >> shift) & 255) - ((a >> shift) & 255)) * t,
-      );
-    return `rgb(${ch(16)}, ${ch(8)}, ${ch(0)})`;
-  };
-  return mix(from, to, local);
+  // Interpolate in the browser, so theme changes recolour the cells without
+  // re-running an oklch parser here.
+  return `color-mix(in oklab, ${HEAT_RAMP[index]} ${Math.round(
+    (1 - local) * 100,
+  )}%, ${HEAT_RAMP[index + 1]})`;
 };
 
 /** Shared empty array so `heatData` keeps a stable reference between renders. */
@@ -209,9 +208,7 @@ const HeatmapCells = React.memo(function HeatmapCells({
                 style={{
                   width: cellWidth,
                   height: cellHeight,
-                  backgroundColor: isHidden
-                    ? "transparent"
-                    : heatColor(ratio),
+                  backgroundColor: isHidden ? "transparent" : heatColor(ratio),
                   border: "1px solid var(--border)",
                   display: "flex",
                   alignItems: "center",
@@ -458,7 +455,6 @@ export const ChartPanel = React.memo(function ChartPanel({
   chartState,
 }: ChartPanelProps) {
   const { t } = useLanguage();
-  const { resolvedTheme } = useTheme();
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
   const [collapsed, setCollapsed] = useState<boolean>(
     dockState?.collapsed ?? false,
@@ -485,9 +481,8 @@ export const ChartPanel = React.memo(function ChartPanel({
     setSort(null);
   }, [series]);
 
-  const isDark = resolvedTheme === "dark";
-  const textColor = isDark ? "#e5e7eb" : "#374151";
-  const gridColor = isDark ? "#374151" : "#e5e7eb";
+  const textColor = "var(--foreground)";
+  const gridColor = "var(--border)";
 
   const handleLegendClick = useCallback((name: string) => {
     setHiddenSeries((prev) => {
@@ -809,9 +804,7 @@ export const ChartPanel = React.memo(function ChartPanel({
       (max: number, v) => Math.max(max, estimateTextWidth(v, 11)),
       0,
     );
-    const tickRoom = angled
-      ? Math.ceil(longestPx * Math.SQRT1_2) + 11 + 8
-      : 22;
+    const tickRoom = angled ? Math.ceil(longestPx * Math.SQRT1_2) + 11 + 8 : 22;
     return Math.min(140, Math.max(angled ? 60 : 30, Math.ceil(tickRoom + 18)));
   };
 

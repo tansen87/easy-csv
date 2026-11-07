@@ -52,7 +52,9 @@ export const ChartLegend = React.memo(function ChartLegend({
   if (entries.length === 0 && !hint && !scale) return null;
 
   return (
-    <ScrollArea className={cn("px-1 pb-2 mb-2 border-b border-border/60", className)}>
+    <ScrollArea
+      className={cn("px-1 pb-2 mb-2 border-b border-border/60", className)}
+    >
       <div className="flex flex-nowrap items-center gap-x-3 w-max min-w-full">
         {entries.map((entry) => (
           <button
@@ -67,9 +69,17 @@ export const ChartLegend = React.memo(function ChartLegend({
           >
             <span
               className="inline-block w-3 h-3 rounded-sm flex-none"
-              style={{ backgroundColor: entry.hidden ? "#9ca3af" : entry.color }}
+              style={{
+                backgroundColor: entry.hidden
+                  ? "var(--muted-foreground)"
+                  : entry.color,
+              }}
             />
-            <span className={entry.hidden ? "text-muted-foreground/60" : "text-foreground"}>
+            <span
+              className={
+                entry.hidden ? "text-muted-foreground/60" : "text-foreground"
+              }
+            >
               {entry.name}
             </span>
             {entry.role && (
@@ -81,7 +91,9 @@ export const ChartLegend = React.memo(function ChartLegend({
         ))}
 
         {hint && (
-          <span className="text-xs text-muted-foreground whitespace-nowrap">{hint}</span>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            {hint}
+          </span>
         )}
 
         {scale && (
@@ -270,7 +282,9 @@ export const CategoryFilter = React.memo(function CategoryFilter({
                     <span
                       className={cn(
                         "truncate",
-                        visible ? "text-foreground" : "text-muted-foreground/60",
+                        visible
+                          ? "text-foreground"
+                          : "text-muted-foreground/60",
                       )}
                       title={option.name}
                     >
