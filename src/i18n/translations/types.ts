@@ -275,6 +275,12 @@ export interface Translations {
   paste: string;
   scrollToBottom: string;
   noMatchingLogs: string;
+  logLevelInfo: string;
+  logLevelSuccess: string;
+  logLevelWarning: string;
+  logLevelError: string;
+  logCountUnit: string;
+  logJumpToLatest: string;
 
   // Floating panel docking
   collapsePanel: string;

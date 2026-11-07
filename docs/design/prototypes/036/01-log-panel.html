@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>原型 036 · 日志面板（LogPanel）重新设计</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#efeeec;color:#2a2a2a;
+    font-family:"Inter","Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+  .mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+
+  .stage{padding:28px 24px 72px;display:flex;flex-direction:column;align-items:center;gap:20px}
+  .plabel{width:900px;max-width:100%;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .plabel .tag{background:#141414;color:#fff;font-size:11px;font-weight:600;letter-spacing:.06em;
+    padding:3px 8px;border-radius:5px}
+  .plabel h1{font-size:14px;margin:0;font-weight:600}
+  .plabel p{margin:0;font-size:12px;color:#6b6b6b}
+  .state{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid transparent}
+  .state.before{color:#b42318;background:#fef2f2;border-color:#fecaca}
+  .state.after{color:#15803d;background:#f0fdf4;border-color:#bbf7d0}
+
+  .summary{width:900px;max-width:100%;background:#fff;border:1px solid #e3e1dc;border-radius:10px;
+    padding:14px 16px;display:grid;grid-template-columns:64px 1fr;gap:6px 12px;
+    font-size:12px;line-height:18px}
+  .summary .k{color:#8a8378;font-size:11px}
+  .summary .v{color:#3a3730}
+  .summary .v b{font-weight:600;color:#1b1a17}
+
+  .light{
+    --bg:#f7f6f3;--card:#ffffff;--raised:#f4f3f0;--fg:#1b1a17;--fg2:#5b554c;--fg3:#8a8378;
+    --border:rgba(27,26,23,.08);--border2:rgba(27,26,23,.16);
+    --ink:#40536a;--ink-soft:rgba(64,83,106,.10);
+    --info:#40536a;--success:#3f8a5a;--warning:#a97a15;--danger:#b42318;
+    --dot:rgba(27,26,23,.10);
+    --shadow:0 14px 36px rgba(0,0,0,.14)
+  }
+  .dark{
+    --bg:#151412;--card:#1d1c19;--raised:#252320;--fg:#ece9e1;--fg2:#b3ada2;--fg3:#8a8478;
+    --border:rgba(236,233,225,.09);--border2:rgba(236,233,225,.18);
+    --ink:#a3bccf;--ink-soft:rgba(163,188,207,.13);
+    --info:#a3bccf;--success:#6fae86;--warning:#d3a244;--danger:#e06c60;
+    --dot:rgba(236,233,225,.08);
+    --shadow:0 18px 44px rgba(0,0,0,.48)
+  }
+
+  .shell{width:900px;max-width:100%;height:360px;flex:none;border:1px solid #d8d6d1;border-radius:12px;
+    overflow:hidden;position:relative;background:var(--bg);color:var(--fg);display:grid;place-items:center;
+    box-shadow:0 12px 30px rgba(0,0,0,.09)}
+  .dark .shell{border-color:#2b2925}
+  .canvas{position:absolute;inset:0;
+    background-image:radial-gradient(circle,var(--dot) 1px,transparent 1px);background-size:22px 22px}
+  .hint-ghost{position:absolute;left:44px;top:52px;width:220px;height:52px;border-radius:10px;
+    border:1px dashed var(--border2);background:color-mix(in oklab,var(--card) 45%,transparent)}
+
+  .caption{width:900px;max-width:100%;font-size:11.5px;color:#6b6b6b;margin-top:-6px}
+  .caption b{color:#3a3730;font-weight:500}
+
+  /* ══════════ 改造前 ══════════ */
+  .b-panel{position:relative;width:600px;height:300px;background:#fff;border:1px solid rgba(27,26,23,.09);
+    border-radius:10px;box-shadow:0 18px 40px rgba(0,0,0,.16);display:flex;flex-direction:column;overflow:hidden}
+  .b-head{flex:none;display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid #eae8e4;background:#fbfaf8}
+  .b-drag{display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border-radius:6px;
+    background:#40536a;color:#fff;font-size:12px;font-weight:500}
+  .b-drag svg{width:14px;height:14px}
+  .b-select{width:130px;height:24px;display:flex;align-items:center;justify-content:space-between;gap:6px;
+    padding:0 8px;border:1px solid #dedbd5;border-radius:6px;background:#fff;font-size:11px;color:#3f3b34}
+  .b-scope{display:flex;height:24px;border:1px solid #dedbd5;border-radius:6px;overflow:hidden}
+  .b-scope button{height:22px;padding:0 8px;border:0;background:transparent;font-size:11px;color:#8a8378}
+  .b-scope button.on{background:rgba(64,83,106,.15);color:#40536a;font-weight:500}
+  .b-acts{margin-left:auto;display:flex;align-items:center;gap:4px}
+  .b-icon{width:24px;height:24px;border:0;background:transparent;border-radius:6px;display:grid;place-items:center;color:#5b554c}
+  .b-icon svg{width:16px;height:16px}
+  .b-body{flex:1;padding:12px;overflow:hidden;display:flex;flex-direction:column;gap:8px}
+  .b-card{padding:12px;border-radius:10px;border:1px solid;flex:none}
+  .b-card.info{background:rgba(64,83,106,.06);border-color:rgba(64,83,106,.2)}
+  .b-card.success{background:rgba(63,138,90,.06);border-color:rgba(63,138,90,.2)}
+  .b-card.warning{background:rgba(169,122,21,.07);border-color:rgba(169,122,21,.22)}
+  .b-card.error{background:rgba(180,35,24,.05);border-color:rgba(180,35,24,.2)}
+  .b-meta{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .b-level{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+  .b-level.info{color:#40536a}.b-level.success{color:#3f8a5a}
+  .b-level.warning{color:#a97a15}.b-level.error{color:#b42318}
+  .b-time{font-size:12px;color:#8a8378}
+  .b-tab{font-size:10px;font-weight:500;color:#8a8378;background:#f1efeb;border-radius:999px;padding:1px 6px}
+  .b-copy{width:24px;height:24px;margin-left:auto;border:0;background:transparent;display:grid;place-items:center;color:#8a8378}
+  .b-copy svg{width:14px;height:14px}
+  .b-msg{margin:0;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:14px;line-height:20px;
+    color:#2c2924;white-space:pre-wrap;word-break:break-word}
+
+  /* ══════════ 改造后 ══════════ */
+  .a-panel{position:relative;width:600px;height:300px;background:var(--card);border:1px solid var(--border2);
+    border-radius:10px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;color:var(--fg)}
+  .a-head{flex:none;height:44px;display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:1px solid var(--border)}
+  .a-grip{width:16px;height:16px;flex:none;display:grid;place-items:center;color:var(--fg3);cursor:grab}
+  .a-grip svg{width:14px;height:14px}
+  .a-title{font-size:13px;font-weight:500;color:var(--fg)}
+  .a-count{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--fg3)}
+  .a-filter{display:flex;align-items:center;justify-content:space-between;gap:6px;width:104px;height:26px;
+    padding:0 8px;border:1px solid transparent;border-radius:6px;background:var(--raised);
+    font-size:11px;color:var(--fg2);cursor:pointer}
+  .a-filter svg{width:10px;height:10px;color:var(--fg3)}
+  .a-scope{display:flex;align-items:center;gap:2px}
+  .a-scope button{height:26px;padding:0 8px;border:0;background:transparent;border-radius:6px;
+    font-size:11px;color:var(--fg3);cursor:pointer}
+  .a-scope button.on{color:var(--ink);font-weight:500}
+  .a-scope .div{width:1px;height:12px;background:var(--border2)}
+  .a-acts{margin-left:auto;display:flex;align-items:center;gap:2px}
+  .a-icon{width:26px;height:26px;border:0;background:transparent;border-radius:6px;display:grid;place-items:center;
+    color:var(--fg3);cursor:pointer}
+  .a-icon svg{width:14px;height:14px}
+  .a-icon:hover{background:var(--raised);color:var(--fg)}
+  .a-icon:disabled{opacity:.4;cursor:default}
+
+  .a-body{flex:1;min-height:0;overflow:hidden}
+  .a-row{display:block;padding:8px 16px;border-bottom:1px solid var(--border);position:relative}
+  .a-row:last-child{border-bottom:0}
+  .a-row:hover{background:var(--raised)}
+  .a-meta{display:flex;align-items:center;gap:8px;min-width:0;font-size:11px;color:var(--fg3)}
+  .a-time{width:56px;flex:none;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    font-size:10.5px;color:var(--fg3)}
+  .a-dot{width:6px;height:6px;border-radius:50%;flex:none}
+  .a-dot.info{background:var(--info)}
+  .a-dot.success{background:var(--success)}
+  .a-dot.warning{background:var(--warning)}
+  .a-dot.error{background:var(--danger)}
+  .a-level{width:28px;flex:none;font-size:11px;color:var(--fg2)}
+  .a-tab{min-width:0;max-width:140px;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    font-size:10.5px;color:var(--fg3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .a-row-acts{margin-left:auto;display:flex;align-items:center;gap:2px;opacity:0}
+  .a-row:hover .a-row-acts,.a-row.show{opacity:1}
+  .a-mini{width:22px;height:22px;border:0;background:transparent;border-radius:6px;display:grid;place-items:center;
+    color:var(--fg3);cursor:pointer}
+  .a-mini svg{width:13px;height:13px}
+  .a-mini:hover{background:var(--card);color:var(--fg)}
+  .a-msg{margin:2px 0 0 78px;font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:12px;line-height:18px;color:var(--fg);white-space:pre-wrap;word-break:break-word}
+  .a-row .a-msg b{font-weight:500;color:var(--ink)}
+
+  .a-empty{padding:24px 16px}
+  .a-empty-title{margin:0;font-size:12.5px;font-weight:500;color:var(--fg)}
+  .a-empty-hint{margin:2px 0 0;font-size:11.5px;color:var(--fg3)}
+
+  .a-jump{position:absolute;right:12px;bottom:12px;height:28px;display:inline-flex;align-items:center;gap:6px;
+    padding:0 9px;border-radius:6px;border:1px solid var(--border2);background:var(--card);
+    font-size:11px;color:var(--fg2);box-shadow:0 1px 2px rgba(0,0,0,.06);cursor:pointer}
+  .a-jump svg{width:13px;height:13px}
+
+  .changes{width:900px;max-width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;
+    font-size:12px;color:#3a3730;line-height:18px}
+  .changes div{display:flex;gap:8px}
+  .changes .n{flex:none;width:18px;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    font-size:10.5px;color:#8a8378;padding-top:3px}
+</style>
+</head>
+<body>
+<main class="stage">
+  <div class="plabel">
+    <span class="tag">原型 036</span>
+    <h1>日志面板（LogPanel）</h1>
+    <p>把“彩色卡片堆 + 主色拖拽药丸”改成一份可逐行追查的运行台账：时间、级别、标签页、消息各占一列</p>
+  </div>
+
+  <div class="summary">
+    <span class="k">产品</span>
+    <span class="v">EasyCsv 的执行日志：记录每一步读了什么、改了多少行、在哪里失败，可按标签页和级别回看</span>
+    <span class="k">性格</span>
+    <span class="v"><b>沉静、精确、可追溯</b>——一块贴在画布右下角、随时展开的运行记录</span>
+    <span class="k">世界</span>
+    <span class="v">工作台账与命令行输出：等宽时间戳、细线分隔、墨蓝只用在当前选择上</span>
+    <span class="k">时刻</span>
+    <span class="v">单条日志本身：时间、级别点、标签页、消息沿同一条左轴排开，像一份能逐行对上的运行记录</span>
+    <span class="k">签名</span>
+    <span class="v">左侧 56px 等宽时间列 + 6px 级别点；颜色只出现在这里，其余全是中性色</span>
+  </div>
+
+  <!-- ══════════ 改造前 ══════════ -->
+  <div class="plabel">
+    <span class="state before">改造前</span>
+    <h1>现状</h1>
+    <p>主色拖拽药丸、居中筛选、第二个主色底的分段控件；每条日志是一张彩色卡片，级别用大写粗体</p>
+  </div>
+  <div class="shell light">
+    <div class="canvas"></div>
+    <div class="hint-ghost"></div>
+    <div class="b-panel">
+      <div class="b-head">
+        <div class="b-drag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+          日志
+        </div>
+        <div style="flex:1;display:flex;justify-content:center">
+          <div class="b-select"><span>All (4)</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" style="width:10px;height:10px;color:#8a8378"><path d="M3 5l3 3 3-3"/></svg></div>
+        </div>
+        <div class="b-scope"><button>当前标签页</button><button class="on">全部</button></div>
+        <div class="b-acts">
+          <button class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></button>
+          <button class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+          <button class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg></button>
+          <button class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+        </div>
+      </div>
+      <div class="b-body">
+        <div class="b-card info">
+          <div class="b-meta">
+            <span class="b-level info">INFO</span>
+            <span class="b-time">14:32:08</span>
+            <span class="b-tab">销售明细 2026-11</span>
+            <button class="b-copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+          </div>
+          <p class="b-msg">读取 sales_2026_11.csv，分隔符识别为 , ，共 12,408 行</p>
+        </div>
+        <div class="b-card success">
+          <div class="b-meta">
+            <span class="b-level success">SUCCESS</span>
+            <span class="b-time">14:32:11</span>
+            <span class="b-tab">销售明细 2026-11</span>
+            <button class="b-copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+          </div>
+          <p class="b-msg">filter 完成，保留 amount &gt; 0 的 11,902 行</p>
+        </div>
+        <div class="b-card warning">
+          <div class="b-meta">
+            <span class="b-level warning">WARNING</span>
+            <span class="b-time">14:32:14</span>
+            <span class="b-tab">销售明细 2026-11</span>
+            <button class="b-copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+          </div>
+          <p class="b-msg">第 3 列 region 有 506 个空值，按空字符串写入</p>
+        </div>
+        <div class="b-card error">
+          <div class="b-meta">
+            <span class="b-level error">ERROR</span>
+            <span class="b-time">14:32:19</span>
+            <span class="b-tab">销售明细 2026-11</span>
+            <button class="b-copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+          </div>
+          <p class="b-msg">aggregate 失败：列 region 不存在</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="caption"><b>审计：</b>标题做成实心主色按钮；“全部/当前标签页”再来一块主色底；级别是 12px 粗体大写宽字距；每条日志整卡染色，颜色铺满列表；时间用本地化字符串、非等宽数字；标签页是圆角胶囊；空状态用 64px/48px 两个尺寸不同的图标底板。</p>
+
+  <!-- ══════════ 改造后 ══════════ -->
+  <div class="plabel">
+    <span class="state after">改造后</span>
+    <h1>运行台账</h1>
+    <p>标题回归中性、抓取图标可拖动；筛选与标签页范围靠左；日志改为发丝线分隔的记录行</p>
+  </div>
+  <div class="shell light">
+    <div class="canvas"></div>
+    <div class="hint-ghost"></div>
+    <div class="a-panel">
+      <div class="a-head">
+        <span class="a-grip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="5" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="19" r="1"/></svg></span>
+        <span class="a-title">日志</span>
+        <span class="a-count mono">4 条</span>
+        <button class="a-filter"><span>全部 4</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5l3 3 3-3"/></svg></button>
+        <div class="a-scope">
+          <button>当前标签页</button>
+          <span class="div"></span>
+          <button class="on">全部</button>
+        </div>
+        <div class="a-acts">
+          <button class="a-icon" title="历史"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></button>
+          <button class="a-icon" title="清空"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+          <button class="a-icon" title="最大化"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg></button>
+          <button class="a-icon" title="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+        </div>
+      </div>
+      <div class="a-body">
+        <div class="a-row">
+          <div class="a-meta">
+            <span class="a-time mono">14:32:08</span>
+            <span class="a-dot info"></span>
+            <span class="a-level">信息</span>
+            <span class="a-tab mono">销售明细 2026-11</span>
+            <div class="a-row-acts">
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+          </div>
+          <p class="a-msg">读取 <b>sales_2026_11.csv</b>，分隔符识别为 <b>,</b> ，共 12,408 行</p>
+        </div>
+        <div class="a-row">
+          <div class="a-meta">
+            <span class="a-time mono">14:32:11</span>
+            <span class="a-dot success"></span>
+            <span class="a-level">成功</span>
+            <span class="a-tab mono">销售明细 2026-11</span>
+            <div class="a-row-acts">
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+          </div>
+          <p class="a-msg">filter 完成，保留 <b>amount &gt; 0</b> 的 11,902 行 → output/sales_2026_11_filtered.csv</p>
+        </div>
+        <div class="a-row">
+          <div class="a-meta">
+            <span class="a-time mono">14:32:14</span>
+            <span class="a-dot warning"></span>
+            <span class="a-level">警告</span>
+            <span class="a-tab mono">销售明细 2026-11</span>
+            <div class="a-row-acts">
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+          </div>
+          <p class="a-msg">第 3 列 region 有 506 个空值，按空字符串写入</p>
+        </div>
+        <div class="a-row">
+          <div class="a-meta">
+            <span class="a-time mono">14:32:19</span>
+            <span class="a-dot error"></span>
+            <span class="a-level">错误</span>
+            <span class="a-tab mono">销售明细 2026-11</span>
+            <div class="a-row-acts">
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+          </div>
+          <p class="a-msg">aggregate 失败：列 <b>region</b> 不存在，可用列 order_id / amount / region_code</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="caption"><b>改造后：</b>每条日志保留原文，去掉整卡染色；时间、级别点、标签页沿左侧对齐，消息缩进到同一列；头部只留一个中性抓取图标，主色只用于当前选中的范围。</p>
+
+  <!-- ══════════ 状态 ══════════ -->
+  <div class="plabel">
+    <span class="state after">状态</span>
+    <h1>悬停 / 空 / 筛选无结果</h1>
+    <p>复制与删除留位、悬停显现；空状态只留两句话；无匹配时沿用同一版式</p>
+  </div>
+  <div class="shell light" style="height:300px">
+    <div class="canvas"></div>
+    <div class="a-panel">
+      <div class="a-head">
+        <span class="a-grip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="5" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="19" r="1"/></svg></span>
+        <span class="a-title">日志</span>
+        <span class="a-count mono">2 条</span>
+        <button class="a-filter"><span>警告 1</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5l3 3 3-3"/></svg></button>
+        <div class="a-scope">
+          <button>当前标签页</button>
+          <span class="div"></span>
+          <button class="on">全部</button>
+        </div>
+        <div class="a-acts">
+          <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></button>
+          <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+          <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg></button>
+          <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+        </div>
+      </div>
+      <div class="a-body">
+        <div class="a-row show">
+          <div class="a-meta">
+            <span class="a-time mono">14:32:14</span>
+            <span class="a-dot warning"></span>
+            <span class="a-level">警告</span>
+            <span class="a-tab mono">销售明细 2026-11</span>
+            <div class="a-row-acts">
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+            </div>
+          </div>
+          <p class="a-msg">第 3 列 region 有 506 个空值，按空字符串写入</p>
+        </div>
+        <div class="a-row">
+          <div class="a-meta">
+            <span class="a-time mono">14:30:02</span>
+            <span class="a-dot warning"></span>
+            <span class="a-level">警告</span>
+            <span class="a-tab mono">客户名单核对</span>
+            <div class="a-row-acts">
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+          </div>
+          <p class="a-msg">join 后 27 行的 phone 为空，diff 时按缺失值比较</p>
+        </div>
+      </div>
+      <button class="a-jump"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 4v16"/><path d="M6 14l6 6 6-6"/></svg>跳到最新</button>
+    </div>
+  </div>
+  <div class="shell light" style="height:300px">
+    <div class="canvas"></div>
+    <div class="a-panel">
+      <div class="a-head">
+        <span class="a-grip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="5" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="19" r="1"/></svg></span>
+        <span class="a-title">日志</span>
+        <span class="a-count mono">0 条</span>
+        <div class="a-acts">
+          <button class="a-icon" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+          <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg></button>
+          <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+        </div>
+      </div>
+      <div class="a-body">
+        <div class="a-empty">
+          <p class="a-empty-title">暂无日志</p>
+          <p class="a-empty-hint">运行管道后，每一步的输出会记录在这里</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ 暗色 ══════════ -->
+  <div class="plabel">
+    <span class="state after">主题</span>
+    <h1>暗色</h1>
+    <p>层级来自表面台阶与发丝线；级别点保持语义色，文本保持三级灰阶</p>
+  </div>
+  <div class="shell dark">
+    <div class="canvas"></div>
+    <div class="hint-ghost"></div>
+    <div class="a-panel">
+      <div class="a-head">
+        <span class="a-grip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="5" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="19" r="1"/></svg></span>
+        <span class="a-title">日志</span>
+        <span class="a-count mono">4 条</span>
+        <button class="a-filter"><span>全部 4</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5l3 3 3-3"/></svg></button>
+        <div class="a-scope">
+          <button>当前标签页</button>
+          <span class="div"></span>
+          <button class="on">全部</button>
+        </div>
+        <div class="a-acts">
+          <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></button>
+          <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+          <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg></button>
+          <button class="a-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+        </div>
+      </div>
+      <div class="a-body">
+        <div class="a-row">
+          <div class="a-meta">
+            <span class="a-time mono">14:32:08</span>
+            <span class="a-dot info"></span>
+            <span class="a-level">信息</span>
+            <span class="a-tab mono">销售明细 2026-11</span>
+            <div class="a-row-acts">
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+          </div>
+          <p class="a-msg">读取 sales_2026_11.csv，分隔符识别为 , ，共 12,408 行</p>
+        </div>
+        <div class="a-row">
+          <div class="a-meta">
+            <span class="a-time mono">14:32:11</span>
+            <span class="a-dot success"></span>
+            <span class="a-level">成功</span>
+            <span class="a-tab mono">销售明细 2026-11</span>
+            <div class="a-row-acts">
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+          </div>
+          <p class="a-msg">filter 完成，保留 amount &gt; 0 的 11,902 行</p>
+        </div>
+        <div class="a-row">
+          <div class="a-meta">
+            <span class="a-time mono">14:32:14</span>
+            <span class="a-dot warning"></span>
+            <span class="a-level">警告</span>
+            <span class="a-tab mono">销售明细 2026-11</span>
+            <div class="a-row-acts">
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+          </div>
+          <p class="a-msg">第 3 列 region 有 506 个空值，按空字符串写入</p>
+        </div>
+        <div class="a-row">
+          <div class="a-meta">
+            <span class="a-time mono">14:32:19</span>
+            <span class="a-dot error"></span>
+            <span class="a-level">错误</span>
+            <span class="a-tab mono">销售明细 2026-11</span>
+            <div class="a-row-acts">
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+              <button class="a-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+          </div>
+          <p class="a-msg">aggregate 失败：列 region 不存在，可用列 order_id / amount / region_code</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="plabel" style="margin-top:14px"><h1>变更点</h1></div>
+  <div class="changes">
+    <div><span class="n">01</span><span>拖拽手柄由实心主色药丸改为 16px 抓取图标 + 中性标题</span></div>
+    <div><span class="n">02</span><span>头部高度 44px；筛选靠左，选项本地化并带计数（信息/成功/警告/错误）</span></div>
+    <div><span class="n">03</span><span>标签页范围改为文字式切换，当前项只用墨蓝文字，不再铺底色</span></div>
+    <div><span class="n">04</span><span>日志由彩色卡片改为发丝线分隔的记录行，整卡染色移除</span></div>
+    <div><span class="n">05</span><span>级别 12px 粗体大写 → 11px 中文小字 + 6px 语义点</span></div>
+    <div><span class="n">06</span><span>时间固定 56px 等宽列，跨天时带日期，数字统一 tabular-nums</span></div>
+    <div><span class="n">07</span><span>标签页由圆角胶囊改为等宽小字，超长省略</span></div>
+    <div><span class="n">08</span><span>复制/删除留位、悬停显现；消息缩进到级别列对齐</span></div>
+    <div><span class="n">09</span><span>空状态去掉 64px/48px 图标底板，只留标题与一句提示</span></div>
+    <div><span class="n">10</span><span>跳到最新改为带文字的小按钮，去掉圆形浮标与重阴影</span></div>
+    <div><span class="n">11</span><span>移除 transition-all 与 hover 阴影，只保留颜色过渡</span></div>
+    <div><span class="n">12</span><span>统一的 4px 网格：头部 44、行内 8/16、控件 26</span></div>
+  </div>
+</main>
+</body>
+</html>

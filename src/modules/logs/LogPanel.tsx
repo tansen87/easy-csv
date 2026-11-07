@@ -1,14 +1,13 @@
 import {
   Trash2,
-  ScrollText,
   Copy,
   Check,
   X,
   Maximize2,
   Minimize2,
   ArrowDown,
-  Filter,
   History,
+  GripVertical,
 } from "lucide-react";
 import React, {
   useState,
@@ -18,7 +17,6 @@ import React, {
   useMemo,
   useCallback,
 } from "react";
-import { Card } from "@/components/ui/Card";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
@@ -43,6 +41,29 @@ interface LogPanelProps {
   selectedTabId?: string;
   /** Tab id → name, used for the per-line badge. */
   tabs?: { id: string; name: string }[];
+}
+
+/** Severity dot, the only place colour appears in the list. */
+const LOG_DOT_CLASS: Record<LogEntry["type"], string> = {
+  info: "bg-info",
+  success: "bg-success",
+  warning: "bg-warning",
+  error: "bg-danger",
+};
+
+const pad2 = (value: number) => String(value).padStart(2, "0");
+
+/** `HH:mm:ss` for today, `MM-DD` for older lines; the full value goes in a tooltip. */
+function formatLogTime(ts: Date): { short: string; full: string } {
+  const now = new Date();
+  const sameDay =
+    ts.getFullYear() === now.getFullYear() &&
+    ts.getMonth() === now.getMonth() &&
+    ts.getDate() === now.getDate();
+  const short = sameDay
+    ? `${pad2(ts.getHours())}:${pad2(ts.getMinutes())}:${pad2(ts.getSeconds())}`
+    : `${pad2(ts.getMonth() + 1)}-${pad2(ts.getDate())}`;
+  return { short, full: ts.toLocaleString() };
 }
 
 export const LogPanel = React.memo(function LogPanel({
@@ -80,32 +101,6 @@ export const LogPanel = React.memo(function LogPanel({
   const rafRef = useRef<number | null>(null);
   const copyTimerRef = useRef<number | null>(null);
 
-  const getLogColor = (type: LogEntry["type"]) => {
-    switch (type) {
-      case "info":
-        return "text-info";
-      case "success":
-        return "text-success";
-      case "warning":
-        return "text-warning";
-      case "error":
-        return "text-danger";
-    }
-  };
-
-  const getLogBgColor = (type: LogEntry["type"]) => {
-    switch (type) {
-      case "info":
-        return "bg-info-soft border-info/20";
-      case "success":
-        return "bg-success-soft border-success/20";
-      case "warning":
-        return "bg-warning-soft border-warning/20";
-      case "error":
-        return "bg-danger-soft border-danger/20";
-    }
-  };
-
   const tabNameById = useMemo(
     () => new Map((tabs ?? []).map((tab) => [tab.id, tab.name])),
     [tabs],
@@ -133,15 +128,6 @@ export const LogPanel = React.memo(function LogPanel({
     });
     return counts;
   }, [logs]);
-
-  const formatTimestamp = (ts: Date) => {
-    const now = new Date();
-    const sameDay =
-      ts.getFullYear() === now.getFullYear() &&
-      ts.getMonth() === now.getMonth() &&
-      ts.getDate() === now.getDate();
-    return sameDay ? ts.toLocaleTimeString() : ts.toLocaleString();
-  };
 
   const getViewport = () =>
     scrollAreaRef.current?.querySelector<HTMLElement>(
@@ -205,6 +191,7 @@ export const LogPanel = React.memo(function LogPanel({
   }, []);
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (isMaximized) return;
     e.preventDefault();
     setIsDragging(true);
 
@@ -304,6 +291,13 @@ export const LogPanel = React.memo(function LogPanel({
 
   if (!isVisible) return null;
 
+  const levelLabel: Record<LogEntry["type"], string> = {
+    info: t.logLevelInfo,
+    success: t.logLevelSuccess,
+    warning: t.logLevelWarning,
+    error: t.logLevelError,
+  };
+
   return (
     <div
       ref={panelRef}
@@ -321,23 +315,28 @@ export const LogPanel = React.memo(function LogPanel({
               height: 300,
             }
       }
-      className={`fixed flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-floating ${isMaximized ? "w-screen h-screen" : "w-[min(600px,calc(100vw-32px))]"} ${isDragging ? "shadow-2xl" : ""}`}
+      className={`fixed z-floating flex flex-col overflow-hidden rounded-lg border border-border/60 bg-card shadow-lg ${isMaximized ? "h-screen w-screen" : "w-[min(600px,calc(100vw-32px))]"} ${isDragging ? "shadow-xl" : ""}`}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <div className="p-2 border-b bg-card/80 flex items-center gap-2">
+      {/* Title bar: drag region on the left, filters next to it, actions on the right */}
+      <div className="flex h-11 shrink-0 items-center gap-2.5 border-b border-border px-3">
         <div
-          className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-primary text-primary-foreground shadow-sm cursor-grab active:cursor-grabbing select-none"
+          className="flex cursor-grab select-none items-center gap-2.5 active:cursor-grabbing"
           onMouseDown={handleMouseDown}
         >
-          <ScrollText className="h-3.5 w-3.5" />
-          {t.logs}
+          <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-[13px] font-medium text-foreground">
+            {t.logs}
+          </span>
+          <span className="font-mono text-[10.5px] text-muted-foreground tabular-nums">
+            {logs.length}
+            {t.logCountUnit ? ` ${t.logCountUnit}` : ""}
+          </span>
         </div>
+
         {logs.length > 0 && (
-          <div
-            className="flex-1 min-w-0 flex items-center justify-center"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="w-full max-w-[140px]">
+          <>
+            <div onMouseDown={(e) => e.stopPropagation()} style={{ width: 112 }}>
               <Select
                 value={activeFilter}
                 onChange={(value) =>
@@ -347,58 +346,59 @@ export const LogPanel = React.memo(function LogPanel({
                   { label: `${t.allLogs} (${logs.length})`, value: "all" },
                   ...(["info", "success", "warning", "error"] as const).map(
                     (type) => ({
-                      label: `${type} (${typeCounts[type]})`,
+                      label: `${levelLabel[type]} (${typeCounts[type]})`,
                       value: type,
                     }),
                   ),
                 ]}
-                height="h-6"
+                height="h-7"
                 ariaLabel={t.logLevelFilter}
               />
             </div>
-          </div>
-        )}
-        <div className="flex items-center gap-1 ml-auto">
-          {logs.length > 0 && (
             <div
-              className="flex items-center overflow-hidden rounded-md border border-border/60 mr-1"
+              className="flex items-center gap-1"
               onMouseDown={(e) => e.stopPropagation()}
             >
               <button
                 type="button"
                 data-scope="current"
                 onClick={() => setTabScope("current")}
-                className={`px-2 h-6 text-[11px] font-medium transition-colors ${
+                className={`h-7 rounded-md px-2 text-[11px] transition-colors ${
                   tabScope === "current"
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:bg-accent/60"
+                    ? "font-medium text-primary"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {t.logFilterCurrent}
               </button>
+              <span className="h-3 w-px bg-border" />
               <button
                 type="button"
                 data-scope="all"
                 onClick={() => setTabScope("all")}
-                className={`px-2 h-6 text-[11px] font-medium transition-colors ${
+                className={`h-7 rounded-md px-2 text-[11px] transition-colors ${
                   tabScope === "all"
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:bg-accent/60"
+                    ? "font-medium text-primary"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {t.logFilterAll}
               </button>
             </div>
-          )}
+          </>
+        )}
+
+        <div className="ml-auto flex items-center gap-0.5">
           {onShowHistory && (
             <Tooltip content={t.historyButton}>
               <Button
                 variant="ghost"
                 size="xs"
+                aria-label={t.historyButton}
                 onClick={onShowHistory}
-                className="px-2 font-medium"
+                className="h-7 w-7 p-0"
               >
-                <History className="h-4 w-4" />
+                <History className="h-3.5 w-3.5" />
               </Button>
             </Tooltip>
           )}
@@ -406,24 +406,26 @@ export const LogPanel = React.memo(function LogPanel({
             <Button
               variant="ghost"
               size="xs"
+              aria-label={t.aiClear}
               onClick={onClear}
               disabled={logs.length === 0}
-              className="px-2 font-medium"
+              className="h-7 w-7 p-0"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </Tooltip>
           <Tooltip content={isMaximized ? t.restore : t.maximize}>
             <Button
               variant="ghost"
               size="xs"
+              aria-label={isMaximized ? t.restore : t.maximize}
               onClick={() => setIsMaximized(!isMaximized)}
-              className="px-2 font-medium"
+              className="h-7 w-7 p-0"
             >
               {isMaximized ? (
-                <Minimize2 className="h-4 w-4" />
+                <Minimize2 className="h-3.5 w-3.5" />
               ) : (
-                <Maximize2 className="h-4 w-4" />
+                <Maximize2 className="h-3.5 w-3.5" />
               )}
             </Button>
           </Tooltip>
@@ -431,113 +433,110 @@ export const LogPanel = React.memo(function LogPanel({
             <Button
               variant="ghost"
               size="xs"
+              aria-label={t.close}
               onClick={onClose}
-              className="px-2 font-medium"
+              className="h-7 w-7 p-0"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </Button>
           </Tooltip>
         </div>
       </div>
+
       <ScrollArea ref={scrollAreaRef} className="flex-1">
-        <div className="p-3">
-          {filteredLogs.length === 0 ? (
-            logs.length === 0 ? (
-              <div className="text-center py-12 px-4">
-                <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
-                  <ScrollText className="h-8 w-8 text-muted-foreground/50" />
-                </div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  {t.noLogsYet}
-                </p>
-                <p className="text-xs text-muted-foreground/70">
-                  {t.executePipelineHint}
-                </p>
-              </div>
-            ) : (
-              <div className="text-center py-12 px-4">
-                <div className="w-12 h-12 mx-auto mb-3 bg-muted/50 rounded-xl flex items-center justify-center">
-                  <Filter className="h-6 w-6 text-muted-foreground/50" />
-                </div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  {t.noMatchingLogs}
-                </p>
-              </div>
-            )
-          ) : (
-            <div className="space-y-2">
-              {filteredLogs.map((log) => (
-                <Card
+        {filteredLogs.length === 0 ? (
+          <div className="px-4 pt-6">
+            <p className="text-[12.5px] font-medium text-muted-foreground">
+              {logs.length === 0 ? t.noLogsYet : t.noMatchingLogs}
+            </p>
+            {logs.length === 0 && (
+              <p className="mt-0.5 text-[11.5px] text-muted-foreground/70">
+                {t.executePipelineHint}
+              </p>
+            )}
+          </div>
+        ) : (
+          <ul>
+            {filteredLogs.map((log) => {
+              const time = formatLogTime(log.timestamp);
+              return (
+                <li
                   key={log.id}
-                  className={`p-3 border group ${getLogBgColor(log.type)} hover:shadow-sm transition-all duration-200`}
+                  className="group border-b border-border px-4 py-2 transition-colors last:border-b-0 hover:bg-muted/30"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span
-                          className={`text-xs font-bold uppercase tracking-wider ${getLogColor(log.type)}`}
+                  <div className="flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
+                    <span
+                      className="w-14 shrink-0 font-mono text-[10.5px] tabular-nums"
+                      title={time.full}
+                    >
+                      {time.short}
+                    </span>
+                    <span
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${LOG_DOT_CLASS[log.type]}`}
+                    />
+                    <span className="w-8 shrink-0 text-[11px] text-muted-foreground">
+                      {levelLabel[log.type]}
+                    </span>
+                    {log.tabId && (
+                      <span className="min-w-0 max-w-[140px] truncate font-mono text-[10.5px]">
+                        {tabNameById.get(log.tabId) ?? log.tabId}
+                      </span>
+                    )}
+                    <div className="ml-auto flex shrink-0 items-center gap-2">
+                      <Tooltip
+                        content={copiedLogId === log.id ? t.copied : t.copy}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={t.copy}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyLogMessage(log);
+                          }}
+                          className="h-[16px] w-[16px] opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
                         >
-                          {log.type}
-                        </span>
-                        <span className="text-xs text-muted-foreground/70">
-                          {formatTimestamp(log.timestamp)}
-                        </span>
-                        {log.tabId && (
-                          <span className="rounded-full bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
-                            {tabNameById.get(log.tabId) ?? log.tabId}
-                          </span>
-                        )}
-                        <Tooltip
-                          content={copiedLogId === log.id ? t.copied : t.copy}
+                          {copiedLogId === log.id ? (
+                            <Check className="h-3.5 w-3.5 text-muted-foreground" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </Tooltip>
+                      <Tooltip content={t.remove}>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={t.remove}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemoveLog(log.id);
+                          }}
+                          className="h-[16px] w-[16px] text-muted-foreground opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 hover:text-destructive focus-visible:pointer-events-auto focus-visible:opacity-100"
                         >
-                          <Button
-                            variant="ghost"
-                            size="xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              copyLogMessage(log);
-                            }}
-                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-primary/10"
-                          >
-                            {copiedLogId === log.id ? (
-                              <Check className="h-3.5 w-3.5 text-muted-foreground" />
-                            ) : (
-                              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                            )}
-                          </Button>
-                        </Tooltip>
-                        <Tooltip content={t.remove}>
-                          <Button
-                            variant="ghost"
-                            size="xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onRemoveLog(log.id);
-                            }}
-                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-primary/10"
-                          >
-                            <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                          </Button>
-                        </Tooltip>
-                      </div>
-                      <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-foreground/90 font-mono">
-                        {log.message}
-                      </p>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </Tooltip>
                     </div>
                   </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+                  <p className="ml-[78px] mt-0.5 whitespace-pre-wrap break-words font-mono text-xs leading-[18px] text-foreground">
+                    {log.message}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </ScrollArea>
+
       {!atBottom && filteredLogs.length > 0 && (
         <button
           type="button"
           onClick={jumpToBottom}
-          className="absolute bottom-4 right-4 z-10 h-8 w-8 rounded-full border border-border/50 shadow-lg flex items-center justify-center hover:bg-accent transition-all"
+          className="absolute bottom-3 right-3 z-10 flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2 text-[11px] text-muted-foreground shadow-xs transition-colors hover:bg-muted hover:text-foreground"
         >
-          <ArrowDown className="h-4 w-4" />
+          <ArrowDown className="h-3.5 w-3.5" />
+          {t.logJumpToLatest}
         </button>
       )}
     </div>
