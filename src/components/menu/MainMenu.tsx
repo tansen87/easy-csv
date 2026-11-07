@@ -6,6 +6,7 @@ import type { RunSession } from "@/types/execution";
 import { useLanguage } from "@/i18n";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/utils";
+import { usesCustomTitleBar } from "@/lib/platform";
 
 interface MainMenuProps {
   activeMenu: "file" | "edit" | "view" | "tools" | "help" | null;
@@ -855,8 +856,11 @@ export const MainMenu = React.memo(function MainMenu({
           )}
         </div>
 
-        {/* Spacer */}
-        <div className="flex-1" />
+        {/* Spacer — doubles as the window drag area under the custom title bar */}
+        <div
+          className="flex-1"
+          {...(usesCustomTitleBar ? { "data-tauri-drag-region": "deep" } : {})}
+        />
 
         {/* Right side buttons */}
         <div className="flex items-center rounded-md gap-0.5">

@@ -726,3 +726,78 @@ input[type="radio"] {
 [data-swatch] {
   background-color: var(--swatch);
 }
+
+/* ── Custom title bar (design 043) ──────────────────────────────────────
+   Windows only: the 48px menu row doubles as the window title bar. The row
+   lifts one surface step on hover so the drag area reads as chrome, and the
+   tint drops as soon as a button is hovered so the button's own hover is the
+   only highlight (two stacked greys read as a bug). */
+.app-titlebar {
+  transition: background-color 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+.app-titlebar:hover:not(:has(button:hover)) {
+  background-color: var(--muted);
+}
+
+.titlebar-brand {
+  cursor: default;
+  user-select: none;
+}
+/* Capture buttons: 46 x row height, 10px glyphs, Windows 11 metrics. */
+.titlebar-btn {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 46px;
+  height: 100%;
+  border: 0;
+  background-color: transparent;
+  color: var(--muted-foreground);
+  transition:
+    background-color 0.12s cubic-bezier(0.2, 0, 0, 1),
+    color 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+.titlebar-btn:hover {
+  background-color: color-mix(in oklab, var(--foreground) 7%, transparent);
+  color: var(--foreground);
+}
+.titlebar-btn:active {
+  background-color: color-mix(in oklab, var(--foreground) 13%, transparent);
+}
+.titlebar-btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -3px;
+}
+.titlebar-btn--close:hover {
+  background-color: #c42b1c;
+  color: #fff;
+}
+.titlebar-btn--close:active {
+  background-color: #b0261a;
+  color: #fff;
+}
+
+/* An unfocused window dims its whole title bar, menus included. */
+body[data-window-active="false"] .app-titlebar {
+  opacity: 0.72;
+}
+
+/* ── Rounded window (design 043) ────────────────────────────────────────
+   The Windows window is created with `transparent: true`, so the rounded
+   corners are painted here instead of by DWM. `.app-window` carries the
+   background the body used to paint; every other platform leaves the
+   attribute off and keeps the opaque native frame. */
+html[data-custom-chrome="true"],
+html[data-custom-chrome="true"] body {
+  background-color: transparent;
+}
+.app-window {
+  background-color: var(--background);
+  /* Contain `position: fixed` dialogs (overlay + panel) so the rounded
+     corners keep clipping them; without a containing block they escape
+     `overflow: hidden` and paint the corners square again. */
+  transform: translateZ(0);
+}
+html[data-custom-chrome="true"][data-window-maximized="false"] .app-window {
+  border-radius: 8px;
+}

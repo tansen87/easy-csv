@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 01 · 标题栏与菜单栏合一</title>
+<style>
+  /* ── tokens · 与 src/index.css 对齐 ───────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.7 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --border-strong:oklch(0.855 0 0);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+
+    --canvas:oklch(0.976 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-win:0 24px 60px -24px oklch(0.2 0.02 80 / 26%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+
+    --cap-hover:color-mix(in oklab,var(--fg) 7%,transparent);
+    --cap-press:color-mix(in oklab,var(--fg) 13%,transparent);
+    --cap-close:#c42b1c;
+    --cap-close-press:#b0261a;
+
+    --ease:cubic-bezier(.2,0,0,1);
+  }
+  html.dark,.dark{
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.52 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(1 0 0 / 7%);
+    --border-strong:oklch(1 0 0 / 16%);
+
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 12%,transparent);
+
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.105 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-win:0 24px 60px -24px oklch(0 0 0 / 60%),0 2px 6px oklch(0 0 0 / 30%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;-webkit-font-smoothing:antialiased;
+  }
+
+  /* ── 设计稿舞台 ──────────────────────────────────────────────────── */
+  #sheet{width:1440px;margin:0 auto;padding:28px 0 72px}
+  .stage-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:0 0 22px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar h1{margin:0;font-size:16px;font-weight:500}
+  .stage-bar p{margin:5px 0 0;font-size:12px;color:var(--muted-fg)}
+  .seg{display:flex;gap:2px;padding:2px;border-radius:8px;background:var(--bg);border:1px solid var(--border)}
+  .seg button{
+    appearance:none;border:0;background:transparent;font:inherit;font-size:11.5px;color:var(--muted-fg);
+    height:24px;padding:0 11px;border-radius:6px;cursor:pointer;
+    transition:background-color .15s var(--ease),color .15s var(--ease);
+  }
+  .seg button.on{background:var(--brand);color:var(--brand-fg)}
+
+  .frame + .frame{margin-top:52px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding:0 0 10px;
+       font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span{color:var(--muted-fg-2)}
+
+  /* ── 舞台与窗口 ──────────────────────────────────────────────────── */
+  .stage{width:1440px;height:880px;display:flex;align-items:center;justify-content:center}
+  .win{
+    width:1200px;height:800px;display:flex;flex-direction:column;overflow:hidden;
+    background:var(--bg);color:var(--fg);
+    border:1px solid var(--border-strong);border-radius:8px;box-shadow:var(--shadow-win);
+  }
+  .win.is-max{width:1440px;height:880px;border-radius:0;border-color:transparent}
+  .dark .win{border-color:var(--border)}
+
+  /* ── 标题栏 = 菜单栏 ─────────────────────────────────────────────── */
+  .titlebar{
+    flex:none;height:48px;display:flex;align-items:stretch;
+    background:var(--card);user-select:none;
+    transition:background-color .12s var(--ease);
+  }
+  /* 悬停只在“没有压在按钮上”时点亮整条;压在按钮上就交给按钮自己 */
+  .titlebar:hover:not(:has(button:hover)),
+  .titlebar.is-hover{background:var(--muted)}
+
+  .tb-drag{display:flex;align-items:center;cursor:default}
+  .tb-left{padding-left:16px;gap:9px}
+  .brand{font-size:12.5px;line-height:16px;font-weight:500;letter-spacing:.005em;color:var(--fg);white-space:nowrap}
+  .grip{display:grid;grid-template-columns:repeat(3,2px);gap:3px;opacity:0;
+        transition:opacity .12s var(--ease)}
+  .grip i{width:2px;height:2px;border-radius:50%;background:var(--muted-fg)}
+  .titlebar:hover .grip,.titlebar.is-hover .grip{opacity:.55}
+  .titlebar:has(button:hover) .grip{opacity:0}
+
+  .menus{display:flex;align-items:center;gap:2px;margin-left:22px}
+  .menus button{
+    appearance:none;border:0;background:transparent;font:inherit;
+    font-size:11.5px;font-weight:500;color:var(--brand);
+    height:28px;padding:0 12px;border-radius:6px;
+    transition:background-color .12s var(--ease),color .12s var(--ease);
+  }
+  .menus button:hover,.menus button.is-hover{background:var(--muted);color:var(--fg)}
+  .titlebar.is-hover .menus button.is-hover{background:var(--card)}
+
+  .tb-spacer{flex:1 1 auto;align-self:stretch}
+
+  .icons{display:flex;align-items:center;gap:2px;padding-right:12px}
+  .icon-btn{
+    appearance:none;border:0;background:transparent;color:var(--muted-fg);
+    width:28px;height:28px;display:grid;place-items:center;border-radius:6px;
+    transition:background-color .12s var(--ease),color .12s var(--ease);
+  }
+  .icon-btn svg{width:15px;height:15px}
+  .icon-btn:hover{background:var(--cap-hover);color:var(--fg)}
+  .icon-btn.on{background:var(--brand-soft);color:var(--brand)}
+
+  .win-ctl{display:flex;flex:none;height:100%}
+  .cap-btn{
+    appearance:none;border:0;background:transparent;width:46px;height:100%;
+    display:grid;place-items:center;color:var(--muted-fg);cursor:default;
+    transition:background-color .12s var(--ease),color .12s var(--ease);
+  }
+  .cap-btn svg{width:10px;height:10px;display:block;overflow:visible}
+  .cap-btn:hover,.cap-btn.is-hover{background:var(--cap-hover);color:var(--fg)}
+  .cap-btn:active{background:var(--cap-press)}
+  .cap-btn.close:hover,.cap-btn.close.is-hover{background:var(--cap-close);color:#fff}
+  .cap-btn.close:active{background:var(--cap-close-press);color:#fff}
+
+  .titlebar.is-inactive .brand{color:var(--muted-fg)}
+  .titlebar.is-inactive .menus button{color:var(--muted-fg)}
+  .titlebar.is-inactive .icon-btn,
+  .titlebar.is-inactive .cap-btn{color:var(--muted-fg-2)}
+
+  /* ── 标签 / 画布 ─────────────────────────────────────────────────── */
+  .tabs{flex:none;height:32px;display:flex;align-items:flex-end;gap:2px;padding:0 12px;
+        border-bottom:1px solid var(--border-soft)}
+  .tab{display:flex;align-items:center;gap:6px;height:26px;padding:0 10px;font-size:11.5px;color:var(--muted-fg);
+       border:1px solid transparent;border-bottom:0;border-radius:6px 6px 0 0}
+  .tab.on{background:var(--card);border-color:var(--border);color:var(--fg)}
+  .tab .dot{width:5px;height:5px;border-radius:50%;background:var(--border-strong)}
+  .tab.on .dot{background:var(--brand)}
+  .tab.add{width:24px;justify-content:center;color:var(--muted-fg-2);padding:0}
+
+  .canvas{
+    position:relative;flex:1 1 auto;min-height:0;
+    background-color:var(--canvas);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:20px 20px;background-position:10px 10px;
+  }
+  .node{position:absolute;background:var(--card);border:1px solid var(--border);border-radius:8px;
+        box-shadow:0 1px 2px oklch(0.2 0.02 80 / 5%)}
+  .node-head{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;border-bottom:1px solid var(--border-soft)}
+  .node-head .ic{width:14px;height:14px;border-radius:3px;background:var(--muted);display:grid;place-items:center;color:var(--muted-fg)}
+  .node-head .ic svg{width:9px;height:9px}
+  .node-head b{font-size:11.5px;font-weight:500}
+  .node-head em{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-left:auto}
+  .node-input{left:80px;top:56px;width:330px}
+  .mini-table{padding:6px 0 8px}
+  .mini-row{display:grid;grid-template-columns:22px 1fr 1fr 1fr 1fr;height:17px;align-items:center;padding:0 10px}
+  .mini-row span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px}
+  .mini-row.head span{color:var(--muted-fg-2);font-size:9px}
+  .mini-row:nth-child(2n){background:color-mix(in oklab,var(--muted) 55%,transparent)}
+  .node-cmd{left:500px;top:110px;width:186px}
+  .node-cmd2{left:726px;top:250px;width:186px}
+  .params{display:grid;gap:4px;padding:8px 10px 10px}
+  .p{display:flex;gap:6px;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg)}
+  .p b{font-weight:400;color:var(--muted-fg-2);min-width:42px}
+  .edge{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+  .zoom-ctl{position:absolute;left:16px;bottom:16px;display:flex;flex-direction:column;
+    background:var(--card);border:1px solid var(--border);border-radius:7px;overflow:hidden}
+  .zoom-ctl i{display:grid;place-items:center;width:26px;height:26px;color:var(--muted-fg)}
+  .zoom-ctl i + i{border-top:1px solid var(--border-soft)}
+  .zoom-ctl svg{width:12px;height:12px}
+
+  /* ── 状态条 ──────────────────────────────────────────────────────── */
+  .states{display:grid;gap:14px}
+  .state-row{display:grid;grid-template-columns:132px 1200px;align-items:center;gap:16px}
+  .state-label{font-family:var(--mono);font-size:10.5px;line-height:15px;color:var(--muted-fg);
+               text-align:right;padding-right:2px}
+  .state-frame{width:1200px;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .state-frame .titlebar{border-bottom:0}
+  .state-note{grid-column:2;font-size:10.5px;line-height:15px;color:var(--muted-fg-2);margin-top:-6px}
+
+  .dark-spec{background:var(--stage);padding:0 0 24px}
+
+  /* macOS 交通灯(仅示意) */
+  .mac-lights{display:flex;gap:8px;padding-left:16px;align-items:center;height:100%}
+  .mac-lights i{width:12px;height:12px;border-radius:50%;display:block}
+  .mac-lights .red{background:#ff5f57}
+  .mac-lights .yellow{background:#febc2e}
+  .mac-lights .green{background:#28c840}
+  .titlebar.mac .brand{padding-left:14px}
+
+  /* 单帧钩子 */
+  body[data-frame] #sheet{padding:0;width:auto}
+  body[data-frame] .stage-bar,body[data-frame] .cap,body[data-frame] .frame{display:none}
+  body[data-frame="win"] .frame-win,body[data-frame="states"] .frame-states,
+  body[data-frame="dark"] .frame-dark,body[data-frame="platform"] .frame-platform{display:block}
+  body[data-frame] .stage{height:auto}
+</style>
+</head>
+<body>
+<main id="sheet">
+
+  <div class="stage-bar">
+    <div>
+      <div class="eyebrow">原型 043 / 窗口 › 标题栏</div>
+      <h1>标题栏与菜单栏合一</h1>
+      <p>48px 单行 · Easy Csv 在文件左侧 · 窗口按钮在设置右侧 · 双击空白处最大化</p>
+    </div>
+    <div class="seg" id="theme-seg">
+      <button data-theme="light" class="on">浅色</button>
+      <button data-theme="dark">深色</button>
+    </div>
+  </div>
+
+  <!-- ════ 01 窗口 ════ -->
+  <section class="frame frame-win">
+    <div class="cap"><b>01</b> 应用窗口 <span>1200 × 800 · 不新增行,仍是 48px · 任务栏标题同步为 “Easy Csv — orders_2026-10.csv”</span></div>
+    <div class="stage" id="stage-light"></div>
+  </section>
+
+  <!-- ════ 02 状态 ════ -->
+  <section class="frame frame-states">
+    <div class="cap"><b>02</b> 状态 <span>1:1 · 悬停空白处:整条抬升一阶 + 名称右侧出现 3×2 点阵;压在按钮上则不点亮</span></div>
+    <div class="states" id="states"></div>
+  </section>
+
+  <!-- ════ 03 深色 ════ -->
+  <section class="frame frame-dark">
+    <div class="cap"><b>03</b> 深色主题 <span>同一套规则:抬升靠表面阶差,不靠阴影</span></div>
+    <div class="dark dark-spec">
+      <div class="stage" id="stage-dark"></div>
+      <div class="states" id="states-dark"></div>
+    </div>
+  </section>
+
+  <!-- ════ 04 平台 ════ -->
+  <section class="frame frame-platform">
+    <div class="cap"><b>04</b> 平台差异 <span>Windows / Linux 自绘 46 × 48;macOS 保留红绿灯,右侧不画按钮</span></div>
+    <div class="states">
+      <div class="state-row">
+        <div class="state-label">Windows · Linux</div>
+        <div class="state-frame" id="plat-win"></div>
+      </div>
+      <div class="state-row">
+        <div class="state-label">macOS · overlay</div>
+        <div class="state-frame" id="plat-mac"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ── 图标 ─────────────────────────────────────────────────────────── */
+const ICON_MIN = '<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1" shape-rendering="crispEdges"><path d="M0 5.5h10"/></svg>';
+const ICON_MAX = '<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1" shape-rendering="crispEdges"><rect x="0.5" y="0.5" width="9" height="9"/></svg>';
+const ICON_RESTORE = '<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1" shape-rendering="crispEdges"><path d="M2.5 2.5V0.5h7v7h-2"/><rect x="0.5" y="2.5" width="7" height="7"/></svg>';
+const ICON_CLOSE = '<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1" shape-rendering="crispEdges"><path d="M0.5 0.5l9 9M9.5 0.5l-9 9"/></svg>';
+
+const GRIP = '<span class="grip" aria-hidden="true">' + '<i></i>'.repeat(6) + '</span>';
+
+const TOOLBAR_ICONS = `
+  <button class="icon-btn on" aria-label="命令面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 7h16M4 12h10M4 17h7"/></svg></button>
+  <button class="icon-btn" aria-label="日志"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 5h16v14H4zM7 9h10M7 13h6"/></svg></button>
+  <button class="icon-btn" aria-label="AI"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 11v4M10 13h4"/></svg></button>
+  <button class="icon-btn" aria-label="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.2 7.5l1.7 1M18.1 15.5l1.7 1M4.2 16.5l1.7-1M18.1 8.5l1.7-1"/></svg></button>`;
+
+function titlebar({ maxed = false, hover = false, btnHover = "", menuHot = false, inactive = false } = {}) {
+  return `
+  <div class="titlebar${inactive ? " is-inactive" : ""}${hover ? " is-hover" : ""}">
+    <div class="tb-drag tb-left" data-drag>
+      <span class="brand">Easy Csv</span>
+      ${GRIP}
+    </div>
+    <nav class="menus">
+      <button>文件</button>
+      <button>编辑</button>
+      <button class="${menuHot ? "is-hover" : ""}">查看</button>
+      <button>工具</button>
+      <button>帮助</button>
+    </nav>
+    <div class="tb-drag tb-spacer" data-drag></div>
+    <div class="icons">${TOOLBAR_ICONS}</div>
+    <div class="win-ctl">
+      <button class="cap-btn${btnHover === "min" ? " is-hover" : ""}" data-min aria-label="最小化">${ICON_MIN}</button>
+      <button class="cap-btn${btnHover === "max" ? " is-hover" : ""}" data-max aria-label="${maxed ? "还原" : "最大化"}">${maxed ? ICON_RESTORE : ICON_MAX}</button>
+      <button class="cap-btn close${btnHover === "close" ? " is-hover" : ""}" data-close aria-label="关闭">${ICON_CLOSE}</button>
+    </div>
+  </div>`;
+}
+
+function tabs() {
+  return `
+  <div class="tabs">
+    <span class="tab on"><span class="dot"></span>orders_2026-10</span>
+    <span class="tab"><span class="dot"></span>地区汇总</span>
+    <span class="tab add">+</span>
+  </div>`;
+}
+
+function canvas() {
+  return `
+  <div class="canvas">
+    <svg class="edge" viewBox="0 0 1440 700" preserveAspectRatio="none">
+      <path d="M410 108 C 450 108, 460 140, 500 140" fill="none" stroke="oklch(0.68 0.01 80)" stroke-width="1.25"/>
+      <path d="M686 178 C 730 200, 730 240, 726 262" fill="none" stroke="oklch(0.68 0.01 80)" stroke-width="1.25"/>
+    </svg>
+    <div class="node node-input">
+      <div class="node-head">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/></svg></span>
+        <b>Input Data</b><em>10 列 × 12,480 行</em>
+      </div>
+      <div class="mini-table">
+        <div class="mini-row head"><span>#</span><span>订单号</span><span>日期</span><span>地区</span><span>金额</span></div>
+        <div class="mini-row"><span>1</span><span>SO-2026-000001</span><span>2026-10-01</span><span>华东</span><span>1,842.50</span></div>
+        <div class="mini-row"><span>2</span><span>SO-2026-000002</span><span>2026-10-01</span><span>西南</span><span>496.00</span></div>
+        <div class="mini-row"><span>3</span><span>SO-2026-000003</span><span>2026-10-01</span><span>华南</span><span>12,090.00</span></div>
+        <div class="mini-row"><span>4</span><span>SO-2026-000004</span><span>2026-10-02</span><span>华北</span><span>78.20</span></div>
+        <div class="mini-row"><span>5</span><span>SO-2026-000005</span><span>2026-10-02</span><span>东北</span><span>2,360.00</span></div>
+      </div>
+    </div>
+    <div class="node node-cmd">
+      <div class="node-head">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg></span>
+        <b>filter-rows</b>
+      </div>
+      <div class="params">
+        <div class="p"><b>--where</b><span>金额 &gt; 500</span></div>
+        <div class="p"><b>--limit</b><span>2000</span></div>
+      </div>
+    </div>
+    <div class="node node-cmd2">
+      <div class="node-head">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5v14M4 12h6M10 5v14M10 7h4M14 5v14"/></svg></span>
+        <b>groupby</b>
+      </div>
+      <div class="params">
+        <div class="p"><b>--by</b><span>地区</span></div>
+        <div class="p"><b>--sum</b><span>金额</span></div>
+      </div>
+    </div>
+    <div class="zoom-ctl">
+      <i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></i>
+      <i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 12h14"/></svg></i>
+      <i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></i>
+    </div>
+  </div>`;
+}
+
+function winMarkup() {
+  return `<div class="win" data-win>${titlebar()}${tabs()}${canvas()}</div>`;
+}
+
+document.getElementById("stage-light").innerHTML = winMarkup();
+document.getElementById("stage-dark").innerHTML = winMarkup();
+
+/* ── 状态条 ───────────────────────────────────────────────────────── */
+const STATES = [
+  ["默认", titlebar(), ""],
+  ["悬停 · 可拖拽", titlebar({ hover: true }), "整条抬升到 muted,名称右侧浮出 3×2 点阵;这是唯一的拖拽提示"],
+  ["悬停菜单", titlebar({ menuHot: true }), "压在按钮上时整条不点亮,避免和按钮自己的 hover 打架"],
+  ["最小化 · 悬停", titlebar({ btnHover: "min" }), ""],
+  ["最大化 · 悬停", titlebar({ btnHover: "max" }), ""],
+  ["关闭 · 悬停", titlebar({ btnHover: "close" }), "唯一使用彩色的一处"],
+  ["最大化后", titlebar({ maxed: true }), "图标切到还原"],
+  ["非激活窗口", titlebar({ inactive: true }), "名称、菜单、图标各降一档,不显示点阵"],
+];
+
+document.getElementById("states").innerHTML = STATES.map(([label, bar, note]) => `
+  <div class="state-row">
+    <div class="state-label">${label}</div>
+    <div class="state-frame">${bar}</div>
+    ${note ? `<div class="state-note">${note}</div>` : ""}
+  </div>`).join("");
+
+const DARK_STATES = [
+  ["默认", titlebar()],
+  ["悬停 · 可拖拽", titlebar({ hover: true })],
+  ["关闭 · 悬停", titlebar({ btnHover: "close" })],
+];
+document.getElementById("states-dark").innerHTML = DARK_STATES.map(([label, bar]) => `
+  <div class="state-row">
+    <div class="state-label">${label}</div>
+    <div class="state-frame">${bar}</div>
+  </div>`).join("");
+
+/* ── 平台 ─────────────────────────────────────────────────────────── */
+document.getElementById("plat-win").innerHTML = titlebar();
+document.getElementById("plat-mac").innerHTML = `
+  <div class="titlebar mac">
+    <div class="mac-lights"><i class="red"></i><i class="yellow"></i><i class="green"></i></div>
+    <div class="tb-drag tb-left" data-drag style="padding-left:0">
+      <span class="brand">Easy Csv</span>
+    </div>
+    <nav class="menus">
+      <button>文件</button><button>编辑</button><button>查看</button><button>工具</button><button>帮助</button>
+    </nav>
+    <div class="tb-drag tb-spacer" data-drag></div>
+    <div class="icons" style="padding-right:16px">${TOOLBAR_ICONS}</div>
+  </div>`;
+
+/* ── 双击 / 最大化按钮 ───────────────────────────────────────────── */
+document.querySelectorAll("[data-win]").forEach((win) => {
+  const maxBtn = win.querySelector("[data-max]");
+  const toggle = () => {
+    win.classList.toggle("is-max");
+    const maxed = win.classList.contains("is-max");
+    maxBtn.setAttribute("aria-label", maxed ? "还原" : "最大化");
+    maxBtn.innerHTML = maxed ? ICON_RESTORE : ICON_MAX;
+  };
+  win.querySelectorAll("[data-drag]").forEach((el) => el.addEventListener("dblclick", toggle));
+  maxBtn.addEventListener("click", toggle);
+});
+
+/* ── 主题 ─────────────────────────────────────────────────────────── */
+const seg = document.getElementById("theme-seg");
+seg.addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  document.documentElement.classList.toggle("dark", btn.dataset.theme === "dark");
+  seg.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b === btn));
+});
+
+const params = new URLSearchParams(location.search);
+if (params.get("frame")) document.body.dataset.frame = params.get("frame");
+/* 截图钩子:?dx=-560 把画布左移,便于在窄视口里放大右侧按钮组 */
+if (params.get("dx")) document.getElementById("sheet").style.transform = `translateX(${params.get("dx")}px)`;
+if (params.get("theme") === "dark") {
+  document.documentElement.classList.add("dark");
+  seg.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.theme === "dark"));
+}
+</script>
+</body>
+</html>

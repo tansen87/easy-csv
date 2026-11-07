@@ -14,6 +14,11 @@ export interface Translations {
   recentFiles: string;
   modify: string;
   close: string;
+  /** Caption buttons of the custom title bar (design 043). */
+  titlebarMinimize: string;
+  titlebarMaximize: string;
+  titlebarRestore: string;
+  titlebarClose: string;
   searchColumns: string;
   remove: string;
 

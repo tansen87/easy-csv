@@ -371,7 +371,7 @@ export const HomeView = React.memo(function HomeView({
 
       {/* Version Control Panel */}
       <div
-        className={`absolute top-0 right-0 h-full z-20 transition-all duration-300 ${
+        className={`absolute top-10 right-0 bottom-0 z-20 transition-all duration-300 ${
           showVersionPanel ? "w-80" : "w-0"
         }`}
       >
@@ -397,7 +397,7 @@ export const HomeView = React.memo(function HomeView({
 
       {/* Data Lineage Panel */}
       <div
-        className={`absolute top-0 right-0 h-full z-20 transition-all duration-300 ${
+        className={`absolute top-10 right-0 bottom-0 z-20 transition-all duration-300 ${
           showLineagePanel ? "w-80" : "w-0"
         } ${showVersionPanel ? "right-80" : ""}`}
       >
@@ -414,7 +414,7 @@ export const HomeView = React.memo(function HomeView({
       </div>
 
       <div
-        className="absolute top-11 ml-2 z-10"
+        className="absolute top-10 ml-2 z-10"
         onContextMenu={(e) => e.preventDefault()}
       >
         <div className="h-9 px-3 flex items-center">

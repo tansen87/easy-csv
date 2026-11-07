@@ -124,6 +124,12 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `session.rs` | 会话快照持久化(SQLite): 标签页快照 + 选中标签的保存/恢复 |
 | `build.rs` | Tauri 构建脚本,生成平台特定代码 |
 
+### 排错手册 (`docs/QA/`)
+
+| 文件 | 内容 |
+|------|------|
+| `docs/QA/borderless-window.md` | 无边框窗口(Windows)排错手册: 蓝线边框 / 阴影预留的透明带 / 启动闪原生标题栏 / 最大化压住任务栏 / 四角浅色线,五类症状的根因、修法与取舍,附像素探针验证手法 |
+
 ### 各模块职责详解
 
 #### config.rs — 配置管理
@@ -591,6 +597,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `expression/ExpressionEditor.tsx` | 主组件: textarea + 同步高亮层 + 自动补全下拉 |
 | `expression/highlight.ts` · `autocomplete.ts` | 语法高亮分词器 / 补全引擎 |
 | `menu/MainMenu.tsx` | 顶部工具栏: **文件菜单**、撤销/重做、**工具菜单**、执行、命令面板、帮助、**设置**。菜单栏顺序为 文件 / 编辑 / 查看 / 工具 / 帮助。**「工具」菜单承载一次性文件工具**(CSV 对比、CSV 编码转换、拆分好/坏行、按行拆分、合并 Excel 文件),它们只开对话框 + 调一个后端命令、不进画布也不参与管道生命周期,故与「文件」菜单的打开/新建标签/模板/保存/导入/导出分开。**帮助菜单第一行为「查看示例」**(调用 `onLoadDemo` → `App.tsx` 的 `handleLoadDemo`,与空状态「看看示例」同一个 action,design 027 §4.1),其后依次是「帮助中心」「检查更新」。运行中的「执行」按钮挂 `data-busy` + `.exec-busy`(设计 028 §5.6.1);**检查更新期间「帮助」按钮挂 `data-checking` + `.update-busy`**(设计 022 §5.4,复用同一条底部横条;标记刻意不复用 `data-busy`,见 `ExecuteMenu.test.tsx` 的定位方式)。**「帮助」按钮任何状态都可点击**(横条是纯叠加,不置灰、不 `disabled`、不 `cursor-not-allowed`),慢检查不得把「帮助中心」锁在门外。**「设置」入口在右侧按钮组末尾(AI 右侧)、只出图标 + tooltip**(`aria-label` 承载可访问名);**对话框打开期间用 `commandButtonClass(true)` 高亮 + 同款 12px 底部小横线**(与命令面板/日志/AI 三个面板开关的激活态完全一致:同底色、同横线类名,另配 `aria-expanded`) |
+| `titlebar/TitleBar.tsx` | 自定义窗口标题栏(设计 043,**仅 Windows**):`TitleBarBrand`(应用名 + 悬停点阵,`data-tauri-drag-region="deep"`)与 `WindowControls`(46×48 的最小化/最大化·还原/关闭,10px 线性图标,关闭悬停 #c42b1c)。最大化图标靠 `onResized` + `isMaximized` 同步,窗口失焦时给 `body[data-window-active=false]` 让整条降透明度。双击最大化交给 Tauri 的 drag region 脚本,**不要另加 onDoubleClick**(会双触发)。落地版与原型 043 的差异:行高 **40px**(原型 48),已删掉品牌右侧的 3×2 悬停点阵,"Easy Csv"与"文件"间距收紧到 4px+菜单自身 12px 内边距 |
 | `menu/ContextMenu.tsx` | 表格列右键菜单: 快速筛选、替换、透视、变换、排序;**只上报** `QuickActionRequest`(列 + 子类型 + 右键坐标),由快速浮窗负责参数(设计 031) |
 | `menu/CanvasContextMenu.tsx` | 画布空白处右键菜单 |
 | `setting/ThemeProvider.tsx` | 主题上下文(dark/light/system)— 019 §2.1 计划迁往 `app/providers/` |
@@ -644,6 +651,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 修改管道可视化布局 | `src/modules/pipeline/FlowPanel.tsx`(主逻辑) + `pipeline/lib/layout.ts`(布局) + `pipeline/nodes/`(节点样式) |
 | 修改连线方向/锚点(上下/左右连接点) | `src/modules/pipeline/lib/layout.ts`(`resolveHandles`/`handleAnchor`) + `pipeline/nodes/`(Handle 定义) |
 | 修改右键连线交互/预览 | `src/modules/pipeline/FlowPanel.tsx`(`handleCutStart`/`handleCutMove`/`handleCutEnd`) + `pipeline/overlays/ConnectionVisualization.tsx`(贝塞尔渲染) + `layout.ts`(`pickStartHandle`/`buildConnectPreviewPath`/`transformBezierPath`) |
+| 修改窗口标题栏 / 窗口外观 | `src-tauri/src/main.rs` 的 `setup`(**Windows** 调 `set_decorations(false)`,再用 `DwmSetWindowAttribute(DWMWA_BORDER_COLOR, NONE)` 去掉 Win11 的 1px 强调色边框,然后 `show()`;窗口在 `tauri.conf.json` 里 `visible:false` + `transparent:true`,避免原生边框闪一下、并让 CSS 圆角露出桌面) + `src/components/titlebar/TitleBar.tsx`(品牌块 / 窗口按钮) + `src/lib/platform.ts`(`usesCustomTitleBar`,UA 判定,只有 Windows 走自绘) + `src/app/App.tsx`(header 拼装) + `src/components/menu/MainMenu.tsx`(中部 spacer 的 `data-tauri-drag-region`) + `src/index.css`(`.app-titlebar` / `.titlebar-btn`,含 `:has(button:hover)` 取消整条高亮;`.app-window` 负责窗口底色 + **8px 圆角**——Windows 窗口 `transparent:true`,圆角靠 CSS 画,最大化时由 `html[data-window-maximized]` 取消;`transform:translateZ(0)` 让 `fixed` 弹层也被圆角裁切) + `src/main.tsx`(设 `data-custom-chrome`)。原型: `docs/design/prototypes/043/01-titlebar.html` |
 | 修改菜单/快捷键 | `src/components/menu/MainMenu.tsx` + `src/hooks/useKeyboardShortcuts.ts` |
 | 修改右键菜单 | `src/components/menu/ContextMenu.tsx`(菜单项 → `onSelect(QuickActionRequest)`)+ `src/modules/dialogs/quick/QuickActionDialog.tsx`(浮窗分发) |
 | 修改主题/样式 | `src/index.css` + `src/components/setting/ThemeProvider.tsx` |

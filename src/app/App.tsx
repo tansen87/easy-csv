@@ -54,6 +54,12 @@ import {
 import { xanCommands } from "@/data/commands";
 import { helpDocs, helpDocsZh } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
+import {
+  setWindowTitle,
+  TitleBarBrand,
+  WindowControls,
+} from "@/components/titlebar/TitleBar";
+import { usesCustomTitleBar } from "@/lib/platform";
 import { usePipelineTabs } from "@/hooks/usePipelineTabs";
 import { useFileOpen } from "@/hooks/fileIO/useFileOpen";
 import { useFileSave } from "@/hooks/fileIO/useFileSave";
@@ -263,14 +269,14 @@ function AppContent() {
   }, [ui.showAIPanel, aiPanelExpanded]);
 
   // D2: collapsed capsules stack in a fixed order at the top-right corner,
-  // below the app header (48px), one slot per collapsed panel.
+  // below the app header (40px), one slot per collapsed panel.
   const collapsedStack = useMemo(() => {
     const order = ["chartPanel"] as const;
     const result: Partial<Record<(typeof order)[number], number>> = {};
     let slot = 0;
     for (const key of order) {
       if (session.panelStates[key]?.collapsed) {
-        result[key] = 56 + slot * 44;
+        result[key] = 48 + slot * 44;
         slot++;
       }
     }
@@ -1310,6 +1316,13 @@ function AppContent() {
 
   const currentTab = tabsHook.getCurrentTab();
 
+  // The title bar no longer shows the file name, so the OS window title
+  // (taskbar / alt-tab) carries it instead.
+  const activeTabName = currentTab?.name ?? "";
+  useEffect(() => {
+    setWindowTitle(activeTabName ? `${activeTabName} — Easy Csv` : "Easy Csv");
+  }, [activeTabName]);
+
   const currentSnapshot = useMemo(
     () =>
       currentTab
@@ -1809,118 +1822,126 @@ function AppContent() {
   return (
     <>
       {
-        <div className="h-screen relative overflow-hidden">
+        <div className="app-window h-screen relative overflow-hidden">
           <header
             ref={headerRef}
-            className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-4 gap-4 z-20"
+            className={
+              usesCustomTitleBar
+                ? "app-titlebar absolute top-0 left-0 right-0 h-10 flex items-center bg-card pl-4 z-20"
+                : "absolute top-0 left-0 right-0 h-10 flex items-center px-4 gap-4 z-20"
+            }
             onContextMenu={(e) => e.preventDefault()}
           >
-            <MainMenu
-              activeMenu={ui.activeMenu}
-              setActiveMenu={ui.setActiveMenu}
-              isMenuActivated={ui.isMenuActivated}
-              setIsMenuActivated={ui.setIsMenuActivated}
-              undoStack={pipeline.undoStack}
-              redoStack={pipeline.redoStack}
-              onUndo={() => {
-                pipeline.undo();
-                setSelectedStep(null);
-              }}
-              onRedo={() => {
-                pipeline.redo();
-                setSelectedStep(null);
-              }}
-              tabs={tabsHook.tabs}
-              runs={execution.runs}
-              currentTabId={tabsHook.selectedTabId}
-              onSelectTab={tabsHook.setSelectedTabId}
-              onRunTab={handleRunTab}
-              onCancelTab={handleCancelTab}
-              onOpenFile={handleOpenFile}
-              onOpenNewTabWithFile={handleOpenNewTabWithFile}
-              onSavePipeline={handleSavePipelineAndMarkSaved}
-              onImportPipeline={handleImportPipeline}
-              onExportPipeline={handleExportPipelineAndMarkSaved}
-              onUseOrSaveTemplate={openTemplates}
-              onLoadDemo={handleLoadDemo}
-              onHelp={onHelp}
-              onCheckUpdate={() => void checkForUpdates()}
-              onShowSettings={onShowSettings}
-              onOpenPalette={() => ui.setShowCommandPalette(true)}
-              onOpenSearch={() =>
-                window.dispatchEvent(new CustomEvent(CANVAS_SEARCH_EVENT))
-              }
-              onOpenCsvDiff={() => {
-                ui.setCsvDiffInitialFileA(
-                  tabsHook.getCurrentTab()?.inputFile || undefined,
-                );
-                ui.setShowCsvDiff(true);
-              }}
-              onOpenCsvEncoding={() => {
-                ui.setCsvEncodingInitialInput(
-                  tabsHook.getCurrentTab()?.inputFile || undefined,
-                );
-                ui.setShowCsvEncoding(true);
-              }}
-              onOpenSeparateCsv={() => {
-                ui.setSeparateCsvInitialInput(
-                  tabsHook.getCurrentTab()?.inputFile || undefined,
-                );
-                ui.setShowSeparateCsv(true);
-              }}
-              onOpenSplitLines={() => {
-                ui.setSplitLinesInitialInput(
-                  tabsHook.getCurrentTab()?.inputFile || undefined,
-                );
-                ui.setShowSplitLines(true);
-              }}
-              onOpenEnumerateByGroup={() => {
-                ui.setEnumerateByGroupInitialInput(
-                  tabsHook.getCurrentTab()?.inputFile || undefined,
-                );
-                ui.setShowEnumerateByGroup(true);
-              }}
-              onOpenCsvToExcel={() => {
-                ui.setCsvToExcelInitialInput(
-                  tabsHook.getCurrentTab()?.inputFile || undefined,
-                );
-                ui.setShowCsvToExcel(true);
-              }}
-              onOpenMergeExcel={() => {
-                ui.setMergeExcelInitialInput(
-                  tabsHook.getCurrentTab()?.inputFile || undefined,
-                );
-                ui.setShowMergeExcel(true);
-              }}
-              isExecuting={isExecuting}
-              isCheckingUpdate={updater.isChecking}
-              hasUpdate={!!updater.updateInfo?.available}
-              showSettingsDialog={ui.showSettingsDialog}
-              showLogErrorBadge={
-                !ui.showLogPanel && logs.some((l) => l.type === "error")
-              }
-              currentPipelineLength={tabsHook.getCurrentPipeline().length}
-              showCommandPanel={ui.showCommandPanel}
-              onToggleCommandPanel={onToggleCommandPanel}
-              showLogPanel={ui.showLogPanel}
-              onToggleLogPanel={onToggleLogPanel}
-              showDataProfile={ui.showDataProfile}
-              onToggleDataProfile={onToggleDataProfile}
-              hasInputFile={!!tabsHook.getCurrentTab()?.inputFile}
-              showVersionPanel={ui.showVersionPanel}
-              onToggleVersionPanel={() =>
-                ui.setShowVersionPanel(!ui.showVersionPanel)
-              }
-              showLineagePanel={ui.showLineagePanel}
-              onToggleLineagePanel={() =>
-                ui.setShowLineagePanel(!ui.showLineagePanel)
-              }
-              showAIPanel={ui.showAIPanel}
-              onToggleAIPanel={() => ui.setShowAIPanel(!ui.showAIPanel)}
-              showVariablePanel={showVariablePanel}
-              onToggleVariablePanel={onToggleVariablePanel}
-              highlightCommandEntry={showOnboardingGuide}
-            />
+            {usesCustomTitleBar && <TitleBarBrand />}
+            <div className="flex min-w-0 flex-1 items-center">
+              <MainMenu
+                activeMenu={ui.activeMenu}
+                setActiveMenu={ui.setActiveMenu}
+                isMenuActivated={ui.isMenuActivated}
+                setIsMenuActivated={ui.setIsMenuActivated}
+                undoStack={pipeline.undoStack}
+                redoStack={pipeline.redoStack}
+                onUndo={() => {
+                  pipeline.undo();
+                  setSelectedStep(null);
+                }}
+                onRedo={() => {
+                  pipeline.redo();
+                  setSelectedStep(null);
+                }}
+                tabs={tabsHook.tabs}
+                runs={execution.runs}
+                currentTabId={tabsHook.selectedTabId}
+                onSelectTab={tabsHook.setSelectedTabId}
+                onRunTab={handleRunTab}
+                onCancelTab={handleCancelTab}
+                onOpenFile={handleOpenFile}
+                onOpenNewTabWithFile={handleOpenNewTabWithFile}
+                onSavePipeline={handleSavePipelineAndMarkSaved}
+                onImportPipeline={handleImportPipeline}
+                onExportPipeline={handleExportPipelineAndMarkSaved}
+                onUseOrSaveTemplate={openTemplates}
+                onLoadDemo={handleLoadDemo}
+                onHelp={onHelp}
+                onCheckUpdate={() => void checkForUpdates()}
+                onShowSettings={onShowSettings}
+                onOpenPalette={() => ui.setShowCommandPalette(true)}
+                onOpenSearch={() =>
+                  window.dispatchEvent(new CustomEvent(CANVAS_SEARCH_EVENT))
+                }
+                onOpenCsvDiff={() => {
+                  ui.setCsvDiffInitialFileA(
+                    tabsHook.getCurrentTab()?.inputFile || undefined,
+                  );
+                  ui.setShowCsvDiff(true);
+                }}
+                onOpenCsvEncoding={() => {
+                  ui.setCsvEncodingInitialInput(
+                    tabsHook.getCurrentTab()?.inputFile || undefined,
+                  );
+                  ui.setShowCsvEncoding(true);
+                }}
+                onOpenSeparateCsv={() => {
+                  ui.setSeparateCsvInitialInput(
+                    tabsHook.getCurrentTab()?.inputFile || undefined,
+                  );
+                  ui.setShowSeparateCsv(true);
+                }}
+                onOpenSplitLines={() => {
+                  ui.setSplitLinesInitialInput(
+                    tabsHook.getCurrentTab()?.inputFile || undefined,
+                  );
+                  ui.setShowSplitLines(true);
+                }}
+                onOpenEnumerateByGroup={() => {
+                  ui.setEnumerateByGroupInitialInput(
+                    tabsHook.getCurrentTab()?.inputFile || undefined,
+                  );
+                  ui.setShowEnumerateByGroup(true);
+                }}
+                onOpenCsvToExcel={() => {
+                  ui.setCsvToExcelInitialInput(
+                    tabsHook.getCurrentTab()?.inputFile || undefined,
+                  );
+                  ui.setShowCsvToExcel(true);
+                }}
+                onOpenMergeExcel={() => {
+                  ui.setMergeExcelInitialInput(
+                    tabsHook.getCurrentTab()?.inputFile || undefined,
+                  );
+                  ui.setShowMergeExcel(true);
+                }}
+                isExecuting={isExecuting}
+                isCheckingUpdate={updater.isChecking}
+                hasUpdate={!!updater.updateInfo?.available}
+                showSettingsDialog={ui.showSettingsDialog}
+                showLogErrorBadge={
+                  !ui.showLogPanel && logs.some((l) => l.type === "error")
+                }
+                currentPipelineLength={tabsHook.getCurrentPipeline().length}
+                showCommandPanel={ui.showCommandPanel}
+                onToggleCommandPanel={onToggleCommandPanel}
+                showLogPanel={ui.showLogPanel}
+                onToggleLogPanel={onToggleLogPanel}
+                showDataProfile={ui.showDataProfile}
+                onToggleDataProfile={onToggleDataProfile}
+                hasInputFile={!!tabsHook.getCurrentTab()?.inputFile}
+                showVersionPanel={ui.showVersionPanel}
+                onToggleVersionPanel={() =>
+                  ui.setShowVersionPanel(!ui.showVersionPanel)
+                }
+                showLineagePanel={ui.showLineagePanel}
+                onToggleLineagePanel={() =>
+                  ui.setShowLineagePanel(!ui.showLineagePanel)
+                }
+                showAIPanel={ui.showAIPanel}
+                onToggleAIPanel={() => ui.setShowAIPanel(!ui.showAIPanel)}
+                showVariablePanel={showVariablePanel}
+                onToggleVariablePanel={onToggleVariablePanel}
+                highlightCommandEntry={showOnboardingGuide}
+              />
+            </div>
+            {usesCustomTitleBar && <WindowControls />}
           </header>
 
           <main className="absolute inset-0 flex flex-col overflow-hidden">
@@ -2250,7 +2271,7 @@ function AppContent() {
 
           {/* Data Profile Panel */}
           <div
-            className={`absolute top-0 right-0 h-full z-20 transition-all duration-300 ${
+            className={`absolute top-10 right-0 bottom-0 z-20 transition-all duration-300 ${
               ui.showDataProfile ? "w-80" : "w-0"
             }`}
           >
@@ -2292,7 +2313,7 @@ function AppContent() {
 
           {/* Pipeline variables panel (right drawer) */}
           <div
-            className={`absolute top-0 right-0 h-full z-30 transition-all duration-300 ${
+            className={`absolute top-10 right-0 bottom-0 z-30 transition-all duration-300 ${
               showVariablePanel ? "w-80" : "w-0"
             }`}
           >
