@@ -15,7 +15,7 @@ export function SearchForm(props: CommandFormProps) {
   const hasPatternsFile = !!commandDialog.params["patterns"];
 
   return (
-    <CommandFormShell {...props} scrollHeight="28vh">
+    <CommandFormShell {...props}>
       {hasMultiPattern && hasPatternsFile && (
         <div className="text-xs text-warning border border-warning/30 bg-warning-soft rounded-md px-2 py-1.5">
           {t.searchPatternConflictWarning}

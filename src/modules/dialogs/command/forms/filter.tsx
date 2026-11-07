@@ -30,7 +30,7 @@ export function FilterForm(props: CommandFormProps) {
           className="w-full h-8 px-3 text-sm border rounded-md bg-background"
         />
       </div>
-      <div className="flex gap-3">
+      <div className="flex gap-4">
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
             type="checkbox"
@@ -59,47 +59,56 @@ export function FilterForm(props: CommandFormProps) {
                 e.target.checked,
               )
             }
+            className="h-3.5 w-3.5 accent-primary"
           />
           parallel
         </label>
-        <input
-          type="number"
-          min={0}
-          value={commandDialog.params.threads || ""}
-          onChange={(e) =>
-            updateParam(
-              commandDialog,
-              setCommandDialog,
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-medium">threads</label>
+          <input
+            type="number"
+            min={0}
+            value={commandDialog.params.threads || ""}
+            onChange={(e) =>
+              updateParam(
+                commandDialog,
+                setCommandDialog,
+                "threads",
+                e.target.value,
+              )
+            }
+            placeholder={getParameterDescription(
+              "filter",
               "threads",
-              e.target.value,
-            )
-          }
-          placeholder={getParameterDescription(
-            "filter",
-            "threads",
-            effectiveLanguage,
-          )}
-          className="h-8 px-1 text-sm border rounded-md bg-background"
-        />
-        <input
-          type="number"
-          min={1}
-          value={commandDialog.params.limit || ""}
-          onChange={(e) =>
-            updateParam(
-              commandDialog,
-              setCommandDialog,
+              effectiveLanguage,
+            )}
+            className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">limit</label>
+          <input
+            type="number"
+            min={1}
+            value={commandDialog.params.limit || ""}
+            onChange={(e) =>
+              updateParam(
+                commandDialog,
+                setCommandDialog,
+                "limit",
+                e.target.value,
+              )
+            }
+            placeholder={getParameterDescription(
+              "filter",
               "limit",
-              e.target.value,
-            )
-          }
-          placeholder={getParameterDescription(
-            "filter",
-            "limit",
-            effectiveLanguage,
-          )}
-          className="h-8 px-1 text-sm border rounded-md bg-background"
-        />
+              effectiveLanguage,
+            )}
+            className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+          />
+        </div>
       </div>
     </CommandFormShell>
   );

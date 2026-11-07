@@ -13,7 +13,6 @@ interface CommandFormShellProps {
   setCommandDialog: (dialog: CommandDialogState | null) => void;
   disabled?: boolean;
   children?: ReactNode;
-  scrollHeight?: string;
 }
 
 export function CommandFormShell({
@@ -23,7 +22,6 @@ export function CommandFormShell({
   setCommandDialog,
   disabled,
   children,
-  scrollHeight,
 }: CommandFormShellProps) {
   const { t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -86,62 +84,55 @@ export function CommandFormShell({
     };
   }, [computePos]);
 
-  const content = (
-    <div ref={containerRef} className="relative space-y-3 pr-2.5">
-      {children}
-      {hint && (
-        <div
-          className="absolute z-50 bg-card border border-border/60 rounded-md shadow-sm px-2 py-1 text-[11px] text-muted-foreground/80 pointer-events-none leading-snug"
-          style={{ top: hint.top, left: hint.left, maxWidth: hint.width }}
-        >
-          {t.variablePlaceholderHint}
-        </div>
-      )}
-    </div>
-  );
-
-  const buttons = (
-    <div className="flex justify-end gap-2 mt-2">
-      <Button
-        type="button"
-        variant="secondary"
-        size="sm"
-        onClick={() => setCommandDialog(null)}
-      >
-        Cancel
-      </Button>
-      <Button
-        type="button"
-        variant="secondary"
-        size="sm"
-        onClick={() =>
-          handleCommandSubmit({
-            commandDialog,
-            onAddCommand,
-            onStepUpdate,
-            setCommandDialog,
-          })
-        }
-        disabled={disabled}
-      >
-        {commandDialog.isUpdate ? "Update" : "Add"}
-      </Button>
-    </div>
-  );
-
-  if (scrollHeight) {
-    return (
-      <>
-        <ScrollArea style={{ height: scrollHeight }}>{content}</ScrollArea>
-        {buttons}
-      </>
-    );
-  }
-
   return (
-    <>
-      {content}
-      {buttons}
-    </>
+    <div className="flex min-h-0 flex-col">
+      <ScrollArea
+        className="min-h-0"
+        hideHorizontalScrollbar
+        blockContent
+        viewportStyle={{ maxHeight: "calc(80vh - 108px)" }}
+      >
+        <div
+          ref={containerRef}
+          className="relative space-y-4 px-5 py-4 [&_label]:font-mono [&_label]:text-[11px] [&_label]:font-normal [&_label]:text-muted-foreground"
+        >
+          {children}
+          {hint && (
+            <div
+              className="absolute z-50 rounded-md border border-border/60 bg-card px-2 py-1 text-[11px] leading-snug text-muted-foreground/80 shadow-sm pointer-events-none"
+              style={{ top: hint.top, left: hint.left, maxWidth: hint.width }}
+            >
+              {t.variablePlaceholderHint}
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      <div className="flex h-14 shrink-0 items-center justify-end gap-2 border-t border-border px-5">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setCommandDialog(null)}
+        >
+          {t.cancel}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          onClick={() =>
+            handleCommandSubmit({
+              commandDialog,
+              onAddCommand,
+              onStepUpdate,
+              setCommandDialog,
+            })
+          }
+          disabled={disabled}
+        >
+          {commandDialog.isUpdate ? t.update : t.commandAdd}
+        </Button>
+      </div>
+    </div>
   );
 }

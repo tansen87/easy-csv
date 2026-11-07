@@ -65,6 +65,7 @@ export const enPipeline = {
   confirmClearAllVariables:
     "Remove all declared variables? Referenced placeholders will keep working.",
   save: "Save",
+  commandAdd: "Add",
   saving: "Saving...",
   saveVersion: "Save Version",
   untitledVersion: "Untitled version",

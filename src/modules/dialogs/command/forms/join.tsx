@@ -9,7 +9,7 @@ export function JoinForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
   const { effectiveLanguage } = useLanguage();
   return (
-    <CommandFormShell {...props} scrollHeight="30vh">
+    <CommandFormShell {...props}>
       <div className="grid grid-cols-4 gap-4">
         <div className="col-span-1">
           <label className="text-sm font-medium">columns</label>

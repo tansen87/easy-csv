@@ -962,6 +962,7 @@ export interface Translations {
   confirmDeleteTemplate: string;
   templateSaved: string;
   templateApplied: string;
+  commandAdd: string;
   templateNameRequired: string;
   templateImportFailed: string;
   paletteTemplates: string;

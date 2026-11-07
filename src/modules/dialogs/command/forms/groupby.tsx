@@ -8,7 +8,7 @@ export function GroupbyForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
   const { effectiveLanguage } = useLanguage();
   return (
-    <CommandFormShell {...props} scrollHeight="24vh">
+    <CommandFormShell {...props}>
       <div>
         <label className="text-sm font-medium">columns</label>
         <input

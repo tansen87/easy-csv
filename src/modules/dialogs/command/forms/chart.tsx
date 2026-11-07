@@ -26,7 +26,7 @@ export function ChartForm(props: CommandFormProps) {
     getParameterDescription("chart", name, effectiveLanguage);
 
   return (
-    <CommandFormShell {...props} scrollHeight="26vh">
+    <CommandFormShell {...props}>
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="text-sm font-medium">{t.chartType}</label>

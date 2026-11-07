@@ -8,7 +8,7 @@ export function MergeForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
   const { effectiveLanguage } = useLanguage();
   return (
-    <CommandFormShell {...props} scrollHeight="30vh">
+    <CommandFormShell {...props}>
       <div>
         <label className="text-sm font-medium">inputs</label>
         <input

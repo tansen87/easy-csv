@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>原型 037 · 命令参数弹窗（CommandDialog）重新设计</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#efeeec;color:#2a2a2a;
+    font-family:"Inter","Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+  .mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+
+  .stage{padding:28px 24px 72px;display:flex;flex-direction:column;align-items:center;gap:20px}
+  .plabel{width:900px;max-width:100%;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .plabel .tag{background:#141414;color:#fff;font-size:11px;font-weight:600;letter-spacing:.06em;
+    padding:3px 8px;border-radius:5px}
+  .plabel h1{font-size:14px;margin:0;font-weight:600}
+  .plabel p{margin:0;font-size:12px;color:#6b6b6b}
+  .state{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid transparent}
+  .state.before{color:#b42318;background:#fef2f2;border-color:#fecaca}
+  .state.after{color:#15803d;background:#f0fdf4;border-color:#bbf7d0}
+
+  .summary{width:900px;max-width:100%;background:#fff;border:1px solid #e3e1dc;border-radius:10px;
+    padding:14px 16px;display:grid;grid-template-columns:64px 1fr;gap:6px 12px;
+    font-size:12px;line-height:18px}
+  .summary .k{color:#8a8378;font-size:11px}
+  .summary .v{color:#3a3730}
+  .summary .v b{font-weight:600;color:#1b1a17}
+
+  .light{
+    --bg:#f7f6f3;--card:#ffffff;--raised:#f4f3f0;--fg:#1b1a17;--fg2:#5b554c;--fg3:#8a8378;
+    --border:rgba(27,26,23,.08);--border2:rgba(27,26,23,.16);
+    --ink:#40536a;--ink-soft:rgba(64,83,106,.10);
+    --dot:rgba(27,26,23,.10);
+    --shadow:0 14px 36px rgba(0,0,0,.14)
+  }
+  .dark{
+    --bg:#151412;--card:#1d1c19;--raised:#252320;--fg:#ece9e1;--fg2:#b3ada2;--fg3:#8a8478;
+    --border:rgba(236,233,225,.09);--border2:rgba(236,233,225,.18);
+    --ink:#a3bccf;--ink-soft:rgba(163,188,207,.13);
+    --dot:rgba(236,233,225,.08);
+    --shadow:0 18px 44px rgba(0,0,0,.48)
+  }
+
+  .shell{width:900px;max-width:100%;height:420px;flex:none;border:1px solid #d8d6d1;border-radius:12px;
+    overflow:hidden;position:relative;background:var(--bg);color:var(--fg);display:grid;place-items:center;
+    box-shadow:0 12px 30px rgba(0,0,0,.09)}
+  .dark .shell{border-color:#2b2925}
+  .canvas{position:absolute;inset:0;
+    background-image:radial-gradient(circle,var(--dot) 1px,transparent 1px);background-size:22px 22px}
+  .ghost{position:absolute;left:60px;top:70px;width:220px;height:52px;border-radius:10px;
+    border:1px dashed var(--border2);background:color-mix(in oklab,var(--card) 45%,transparent)}
+  .ghost.two{left:60px;top:160px}
+
+  .caption{width:900px;max-width:100%;font-size:11.5px;color:#6b6b6b;margin-top:-6px}
+  .caption b{color:#3a3730;font-weight:500}
+
+  /* ══════════ 改造前 ══════════ */
+  .b-dialog{position:relative;width:672px;background:#fff;border:1px solid #e5e3df;border-radius:10px;
+    padding:16px;box-shadow:0 18px 40px rgba(0,0,0,.16)}
+  .b-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;cursor:move}
+  .b-title{font-size:18px;font-weight:600;margin:0;color:#1b1a17}
+  .b-close{width:36px;height:36px;border:0;background:transparent;border-radius:6px;display:grid;place-items:center;color:#5b554c}
+  .b-close svg{width:16px;height:16px}
+  .b-body{display:flex;flex-direction:column;gap:12px}
+  .b-label{font-size:14px;font-weight:500;color:#1b1a17;display:block;margin-bottom:4px}
+  .b-input{width:100%;height:32px;padding:0 12px;border:1px solid #dedbd5;border-radius:6px;
+    background:#fff;font-size:14px;color:#1b1a17;font-family:inherit;outline:none}
+  .b-input::placeholder{color:#9a948a}
+  .b-row{display:flex;align-items:center;gap:12px}
+  .b-check{display:flex;align-items:center;gap:8px;font-size:14px;color:#1b1a17}
+  .b-check input{width:14px;height:14px;accent-color:#40536a}
+  .b-num{width:64px;height:32px;padding:0 6px;border:1px solid #dedbd5;border-radius:6px;background:#fff;
+    font-size:14px;font-family:inherit;color:#1b1a17}
+  .b-num::placeholder{color:#b0aca6;font-size:12px}
+  .b-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+  .b-btn{height:32px;padding:0 12px;border:1px solid #e3e1dc;border-radius:6px;background:#f5f5f4;
+    font-size:12px;color:#3f3b34;font-family:inherit}
+
+  /* ══════════ 改造后 ══════════ */
+  .a-dialog{position:relative;width:672px;display:flex;flex-direction:column;overflow:hidden;
+    background:var(--card);border:1px solid var(--border2);border-radius:10px;box-shadow:var(--shadow);color:var(--fg)}
+  .a-head{height:52px;flex:none;display:flex;align-items:center;gap:10px;padding:0 20px;border-bottom:1px solid var(--border)}
+  .a-drag{display:flex;align-items:center;gap:10px;cursor:grab;user-select:none}
+  .a-title{font-size:15px;font-weight:500;color:var(--fg)}
+  .a-id{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:11px;color:var(--fg3)}
+  .a-close{margin-left:auto;width:32px;height:32px;border:0;background:transparent;border-radius:6px;
+    display:grid;place-items:center;color:var(--fg2);cursor:pointer}
+  .a-close svg{width:14px;height:14px}
+  .a-close:hover{background:var(--raised);color:var(--fg)}
+
+  .a-body{padding:16px 20px;display:flex;flex-direction:column;gap:16px}
+  .a-field label{display:block;margin-bottom:4px;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    font-size:11px;font-weight:400;color:var(--fg3)}
+  .a-input{width:100%;height:32px;padding:0 10px;border:1px solid var(--border2);border-radius:6px;
+    background:var(--card);font-size:13px;color:var(--fg);font-family:inherit;outline:none}
+  .a-input::placeholder{color:var(--fg3)}
+  .a-input:focus{border-color:var(--ink);box-shadow:0 0 0 3px var(--ink-soft)}
+  .a-flags{display:flex;align-items:center;gap:20px}
+  .a-flag{display:flex;align-items:center;gap:8px;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    font-size:11px;color:var(--fg2);cursor:pointer}
+  .a-flag input{width:14px;height:14px}
+  .a-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .a-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+  .a-grid3-flags{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 16px}
+
+  .a-foot{flex:none;height:56px;display:flex;align-items:center;justify-content:flex-end;gap:8px;
+    padding:0 20px;border-top:1px solid var(--border)}
+  .a-btn-cancel{height:32px;padding:0 10px;border:1px solid transparent;border-radius:6px;background:transparent;
+    font-size:12px;color:var(--fg2);font-family:inherit;cursor:pointer}
+  .a-btn-cancel:hover{background:var(--raised)}
+  .a-btn-submit{height:32px;padding:0 14px;border:1px solid transparent;border-radius:6px;
+    background:var(--ink);color:#fff;font-size:12px;font-weight:500;font-family:inherit;cursor:pointer}
+  .light .a-btn-submit{color:#f7f6f3}
+
+  .a-scroll{max-height:300px;overflow:hidden;position:relative}
+
+  .changes{width:900px;max-width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;
+    font-size:12px;color:#3a3730;line-height:18px}
+  .changes div{display:flex;gap:8px}
+  .changes .n{flex:none;width:18px;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    font-size:10.5px;color:#8a8378;padding-top:3px}
+</style>
+</head>
+<body>
+<main class="stage">
+  <div class="plabel">
+    <span class="tag">原型 037</span>
+    <h1>命令参数弹窗（CommandDialog）</h1>
+    <p>把“标题 + 表单 + 两个灰色英文按钮”改成一张命令参数页：等宽参数名、固定操作栏、命令名与 CLI id 并列</p>
+  </div>
+
+  <div class="summary">
+    <span class="k">产品</span>
+    <span class="v">EasyCsv 的命令参数弹窗：为每个 xan 子命令填写参数，再加入管道步骤</span>
+    <span class="k">性格</span>
+    <span class="v"><b>冷静、精确、工具化</b>——像一页随命令打开的参数表，不需要解释</span>
+    <span class="k">世界</span>
+    <span class="v">命令手册与终端参数页：等宽参数名、单一强调色、发丝线分组</span>
+    <span class="k">时刻</span>
+    <span class="v">参数名以 11px 等宽小字压在输入框上方，整张表单读起来像一份可填写的 man page</span>
+    <span class="k">签名</span>
+    <span class="v">标题旁始终跟着等宽命令 id（filter / sort），全弹窗只此一处强调技术身份</span>
+  </div>
+
+  <!-- ══════════ 改造前 ══════════ -->
+  <div class="plabel">
+    <span class="state before">改造前</span>
+    <h1>现状 · Filter</h1>
+    <p>18px 标题、整行可拖、表单和按钮只有 8px 间隔；数字输入无标签；两个按钮都是灰色英文</p>
+  </div>
+  <div class="shell light">
+    <div class="canvas"></div>
+    <div class="ghost"></div><div class="ghost two"></div>
+    <div class="b-dialog">
+      <div class="b-head">
+        <h3 class="b-title">Filter</h3>
+        <button class="b-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="b-body">
+        <div>
+          <label class="b-label">expression</label>
+          <input class="b-input" placeholder="amount &gt; 0" />
+        </div>
+        <div class="b-row">
+          <label class="b-check"><input type="checkbox" checked /> invert-match</label>
+          <label class="b-check"><input type="checkbox" /> parallel</label>
+          <input class="b-num" placeholder="线程数" />
+          <input class="b-num" placeholder="条数上限" />
+        </div>
+      </div>
+      <div class="b-actions">
+        <button class="b-btn">Cancel</button>
+        <button class="b-btn">Add</button>
+      </div>
+    </div>
+  </div>
+  <p class="caption"><b>审计：</b>标题 18px 600 且无上下文；整个标题行（含关闭）都是拖动区；参数标签 14px 中等字重；两个数字输入没有标签，只靠 placeholder；勾选项与数字挤在同一行；按钮 Cancel / Add 同为次要样式且未本地化；表单与按钮距标题各只有 8px，层级弱。</p>
+
+  <!-- ══════════ 改造后 ══════════ -->
+  <div class="plabel">
+    <span class="state after">改造后</span>
+    <h1>命令参数页 · Filter</h1>
+    <p>标题 + 等宽命令 id；参数名统一等宽小字；勾选项与数字字段分行；操作栏固定并本地化</p>
+  </div>
+  <div class="shell light">
+    <div class="canvas"></div>
+    <div class="ghost"></div><div class="ghost two"></div>
+    <div class="a-dialog">
+      <div class="a-head">
+        <div class="a-drag">
+          <span class="a-title">Filter</span>
+          <span class="a-id mono">filter</span>
+        </div>
+        <button class="a-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="a-body">
+        <div class="a-field">
+          <label>expression</label>
+          <input class="a-input" placeholder="amount &gt; 0" />
+        </div>
+        <div class="a-flags">
+          <label class="a-flag"><input type="checkbox" checked /> invert-match</label>
+          <label class="a-flag"><input type="checkbox" /> parallel</label>
+        </div>
+        <div class="a-grid2">
+          <div class="a-field">
+            <label>threads</label>
+            <input class="a-input" placeholder="线程数" />
+          </div>
+          <div class="a-field">
+            <label>limit</label>
+            <input class="a-input" placeholder="条数上限" />
+          </div>
+        </div>
+      </div>
+      <div class="a-foot">
+        <button class="a-btn-cancel">取消</button>
+        <button class="a-btn-submit">添加</button>
+      </div>
+    </div>
+  </div>
+  <p class="caption"><b>改造后：</b>标题 15px 500，旁边是 11px 等宽命令 id；只有标题区可拖；参数名 11px 等宽、muted；输入框 32px；勾选与数字各自成行；底部 56px 操作栏用发丝线分隔，取消为文字按钮、添加为主按钮。</p>
+
+  <!-- ══════════ 长表单 / 更新 ══════════ -->
+  <div class="plabel">
+    <span class="state after">长表单</span>
+    <h1>Sort · 编辑已有步骤</h1>
+    <p>参数多时正文滚动、操作栏固定；编辑模式主按钮为“更新”</p>
+  </div>
+  <div class="shell light" style="height:460px">
+    <div class="canvas"></div>
+    <div class="ghost"></div><div class="ghost two"></div>
+    <div class="a-dialog">
+      <div class="a-head">
+        <div class="a-drag">
+          <span class="a-title">Sort</span>
+          <span class="a-id mono">sort</span>
+        </div>
+        <button class="a-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="a-scroll">
+        <div class="a-body">
+          <div class="a-grid3">
+            <div class="a-field"><label>select</label><input class="a-input" placeholder="amount" /></div>
+            <div class="a-field"><label>count</label><input class="a-input" placeholder="可选" /></div>
+            <div class="a-field"><label>memory-limit</label><input class="a-input" placeholder="20" /></div>
+          </div>
+          <div class="a-grid3-flags">
+            <label class="a-flag"><input type="checkbox" checked /> reverse</label>
+            <label class="a-flag"><input type="checkbox" /> numeric</label>
+            <label class="a-flag"><input type="checkbox" /> check</label>
+            <label class="a-flag"><input type="checkbox" /> uniq</label>
+            <label class="a-flag"><input type="checkbox" /> parallel</label>
+            <label class="a-flag"><input type="checkbox" /> external</label>
+            <label class="a-flag"><input type="checkbox" /> compress</label>
+            <label class="a-flag"><input type="checkbox" /> columns</label>
+            <label class="a-flag"><input type="checkbox" /> cells</label>
+          </div>
+          <div class="a-field"><label>tmp-dir</label><input class="a-input" placeholder="/tmp" /></div>
+        </div>
+      </div>
+      <div class="a-foot">
+        <button class="a-btn-cancel">取消</button>
+        <button class="a-btn-submit">更新</button>
+      </div>
+    </div>
+  </div>
+  <p class="caption"><b>长表单：</b>正文最高 <span class="mono">80vh − 108px</span>，滚动条出现在弹窗内部；操作栏不随内容滚动。原先 8 个表单各自内嵌 24–30vh 的固定滚动，现统一交给弹窗，避免双滚动条。</p>
+
+  <!-- ══════════ 暗色 ══════════ -->
+  <div class="plabel">
+    <span class="state after">主题</span>
+    <h1>暗色</h1>
+    <p>边框与输入框从表面台阶取值；主按钮用浅色填充 + 深色文字</p>
+  </div>
+  <div class="shell dark">
+    <div class="canvas"></div>
+    <div class="ghost"></div><div class="ghost two"></div>
+    <div class="a-dialog">
+      <div class="a-head">
+        <div class="a-drag">
+          <span class="a-title">Filter</span>
+          <span class="a-id mono">filter</span>
+        </div>
+        <button class="a-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="a-body">
+        <div class="a-field">
+          <label>expression</label>
+          <input class="a-input" placeholder="amount &gt; 0" />
+        </div>
+        <div class="a-flags">
+          <label class="a-flag"><input type="checkbox" checked /> invert-match</label>
+          <label class="a-flag"><input type="checkbox" /> parallel</label>
+        </div>
+        <div class="a-grid2">
+          <div class="a-field"><label>threads</label><input class="a-input" placeholder="线程数" /></div>
+          <div class="a-field"><label>limit</label><input class="a-input" placeholder="条数上限" /></div>
+        </div>
+      </div>
+      <div class="a-foot">
+        <button class="a-btn-cancel">取消</button>
+        <button class="a-btn-submit">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="plabel" style="margin-top:14px"><h1>变更点</h1></div>
+  <div class="changes">
+    <div><span class="n">01</span><span>标题栏 52px：15px 命令名 + 11px 等宽命令 id；只有标题区可拖</span></div>
+    <div><span class="n">02</span><span>关闭按钮改为 32px ghost，修正图标上无意义的 accent-foreground</span></div>
+    <div><span class="n">03</span><span>标题与表单之间用发丝线分隔，正文内边距 20 × 16</span></div>
+    <div><span class="n">04</span><span>所有参数标签统一 11px 等宽、muted、400（去掉逐表单的 14px 500）</span></div>
+    <div><span class="n">05</span><span>勾选项与数字输入分行；threads / limit 补上可见标签</span></div>
+    <div><span class="n">06</span><span>底部 56px 固定操作栏：取消 ghost + 添加/更新 primary</span></div>
+    <div><span class="n">07</span><span>按钮文案走 i18n（取消 / 添加 / 更新），不再硬编码英文</span></div>
+    <div><span class="n">08</span><span>弹窗最高 80vh，正文滚动；移除 8 个表单里各自 24–30vh 的内嵌滚动</span></div>
+    <div><span class="n">09</span><span>打开时聚焦第一个输入框，Esc 关闭、Tab 循环保持</span></div>
+    <div><span class="n">10</span><span>字段节奏从 space-y-3 改为 16px；外层圆角 10、控件 6</span></div>
+  </div>
+</main>
+</body>
+</html>

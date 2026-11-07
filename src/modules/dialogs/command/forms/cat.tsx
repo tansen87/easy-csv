@@ -10,7 +10,7 @@ export function CatForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
   const { effectiveLanguage } = useLanguage();
   return (
-    <CommandFormShell {...props} scrollHeight="28vh">
+    <CommandFormShell {...props}>
       <div>
         <label className="text-sm font-medium">Mode</label>
         <Select

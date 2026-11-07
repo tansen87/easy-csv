@@ -7,7 +7,7 @@ import {
   Minimize2,
   ArrowDown,
   History,
-  GripVertical,
+  Hand,
 } from "lucide-react";
 import React, {
   useState,
@@ -324,7 +324,7 @@ export const LogPanel = React.memo(function LogPanel({
           className="flex cursor-grab select-none items-center gap-2.5 active:cursor-grabbing"
           onMouseDown={handleMouseDown}
         >
-          <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
+          <Hand className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="text-[13px] font-medium text-foreground">
             {t.logs}
           </span>

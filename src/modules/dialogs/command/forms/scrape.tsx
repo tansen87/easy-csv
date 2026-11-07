@@ -5,7 +5,7 @@ import { CommandFormShell } from "@/modules/dialogs/command/CommandFormShell";
 export function ScrapeForm(props: CommandFormProps) {
   const { commandDialog, setCommandDialog } = props;
   return (
-    <CommandFormShell {...props} scrollHeight="30vh">
+    <CommandFormShell {...props}>
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="text-sm font-medium">evaluate</label>

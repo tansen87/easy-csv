@@ -61,6 +61,7 @@ export const zhPipeline = {
   confirmClearAllVariables:
     "确定移除所有已声明的变量? 被引用的占位符仍会继续生效",
   save: "保存",
+  commandAdd: "添加",
   saving: "保存中...",
   saveVersion: "保存版本",
   untitledVersion: "未命名版本",

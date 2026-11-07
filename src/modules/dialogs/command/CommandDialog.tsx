@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { COMMAND_FORMS } from "@/modules/dialogs/command";
 import { COMMAND_LABELS, type CommandDialogState } from "@/types/dialog";
+import { useLanguage } from "@/i18n";
 
 // Kept as a re-export so imports written against the old location keep working
 // while call sites migrate to `@/types/dialog` (design 019 §8).
@@ -47,6 +48,7 @@ function CommandDialogShell({
   headers = [],
   sourceTable,
 }: CommandDialogProps & { commandDialog: CommandDialogState }) {
+  const { t } = useLanguage();
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
@@ -73,10 +75,14 @@ function CommandDialogShell({
       isDragging.current = false;
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     };
 
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "grabbing";
+    document.body.style.userSelect = "none";
   };
 
   const FormComponent = COMMAND_FORMS[commandDialog.type];
@@ -106,7 +112,10 @@ function CommandDialogShell({
   );
 
   useEffect(() => {
-    dialogRef.current?.focus();
+    const firstInput = dialogRef.current?.querySelector<HTMLElement>(
+      "input:not([type='hidden']), textarea, select",
+    );
+    (firstInput ?? dialogRef.current)?.focus();
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
@@ -123,7 +132,7 @@ function CommandDialogShell({
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
-        className="absolute bg-card border rounded-xl shadow-xl w-full max-w-2xl p-4 outline-none"
+        className="absolute flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border bg-card shadow-xl outline-none"
         style={{
           left: `calc(50% + ${offset.x}px)`,
           top: `calc(50% + ${offset.y}px)`,
@@ -133,31 +142,41 @@ function CommandDialogShell({
         onClick={(e) => e.stopPropagation()}
       >
         <div
-          className="flex items-center justify-between mb-2 cursor-move select-none"
+          className="flex h-[52px] shrink-0 cursor-grab items-center gap-2.5 border-b border-border px-5 select-none active:cursor-grabbing"
           onMouseDown={handleMouseDown}
         >
-          <h3 className="text-lg font-semibold">
-            {COMMAND_LABELS[commandDialog.type]}
-          </h3>
+          <div className="flex items-center gap-2.5">
+            <h3 className="text-[15px] font-medium text-foreground">
+              {COMMAND_LABELS[commandDialog.type]}
+            </h3>
+            <span className="font-mono text-[11px] text-muted-foreground">
+              {commandDialog.type}
+            </span>
+          </div>
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
+            className="ml-auto cursor-pointer"
+            aria-label={t.close}
             onClick={() => setCommandDialog(null)}
+            onMouseDown={(e) => e.stopPropagation()}
           >
-            <X className="h-4 w-4 accent-foreground" />
+            <X className="h-4 w-4" />
           </Button>
         </div>
 
-        {FormComponent && (
-          <FormComponent
-            commandDialog={commandDialog}
-            onAddCommand={onAddCommand}
-            onStepUpdate={onStepUpdate}
-            setCommandDialog={setCommandDialog}
-            headers={headers}
-            sourceTable={sourceTable}
-          />
-        )}
+        <div className="flex min-h-0 flex-col">
+          {FormComponent && (
+            <FormComponent
+              commandDialog={commandDialog}
+              onAddCommand={onAddCommand}
+              onStepUpdate={onStepUpdate}
+              setCommandDialog={setCommandDialog}
+              headers={headers}
+              sourceTable={sourceTable}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
