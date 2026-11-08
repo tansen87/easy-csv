@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 048 · 帮助菜单里的更新提示</title>
+<style>
+  /* ── tokens · 与 src/index.css 对齐 ───────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.7 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --border-strong:oklch(0.855 0 0);
+    --accent:oklch(0.97 0 0);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 12%,var(--bg));
+    --chrome-line:color-mix(in oklab,var(--brand) 30%,transparent);
+
+    --success:oklch(0.52 0.09 150);
+    --warning:oklch(0.55 0.1 72);
+    --warning-soft:color-mix(in oklab,var(--warning) 10%,transparent);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-menu:0 4px 12px oklch(0.2 0.02 80 / 7%);
+    --ease:cubic-bezier(.2,0,0,1);
+  }
+  .dark{
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.52 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(1 0 0 / 7%);
+    --border-strong:oklch(1 0 0 / 16%);
+    --accent:oklch(0.269 0 0);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 12%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 16%,var(--bg));
+    --chrome-line:color-mix(in oklab,var(--brand) 34%,transparent);
+    --success:oklch(0.74 0.1 150);
+    --warning:oklch(0.78 0.11 75);
+    --warning-soft:color-mix(in oklab,var(--warning) 12%,transparent);
+    --canvas:oklch(0.145 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-menu:none;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;-webkit-font-smoothing:antialiased;
+  }
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:20px}
+  .stage-bar h1{margin:0;font-size:16px;font-weight:500}
+  .stage-bar p{margin:6px 0 0;font-size:12px;color:var(--muted-fg);max-width:920px;line-height:1.65}
+
+  .direction{
+    display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:34px;
+    border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden;
+  }
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.55}
+
+  /* ── 菜单栏副本 ──────────────────────────────────────────────────── */
+  .mock{
+    position:relative;width:560px;height:180px;flex:none;overflow:hidden;
+    border:1px solid var(--border-strong);border-radius:8px;background:var(--bg);
+  }
+  .dark .mock{border-color:var(--border)}
+  .chrome{height:36px;display:flex;align-items:center;padding-left:16px;gap:18px;
+          background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-line)}
+  .brand{font-size:12.5px;font-weight:500}
+  .menus{display:flex;align-items:center;gap:2px}
+  .mb{height:26px;display:flex;align-items:center;padding:0 10px;border-radius:6px;
+      font-size:11.5px;font-weight:500;color:var(--brand);position:relative}
+  .mb.on{background:var(--accent);color:var(--fg)}
+  .mb .dot{position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;background:var(--success)}
+
+  .canvas{position:absolute;left:0;right:0;top:36px;bottom:0;background-color:var(--canvas);
+          background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+          background-size:22px 22px;background-position:11px 11px}
+
+  /* 下拉菜单:现状 w=180,行 h=32 */
+  .menu{
+    position:absolute;left:233px;top:41px;width:180px;padding:4px;
+    background:var(--card);border:1px solid var(--border);border-radius:8px;
+    box-shadow:var(--shadow-menu);z-index:5;
+  }
+  .menu.wide{width:220px}
+  .mi{
+    height:32px;display:flex;align-items:center;gap:8px;padding:0 12px;border-radius:6px;
+    font-size:11.5px;font-weight:500;color:var(--muted-fg);white-space:nowrap;
+  }
+  .mi.hover{background:var(--accent)}
+  .mi .lbl{flex:1;min-width:0;text-align:left}
+  .mi.dim{color:color-mix(in oklab,var(--muted-fg) 40%,transparent)}
+
+  /* A:圆点 + 版本号 */
+  .hint{display:inline-flex;align-items:center;gap:6px;flex:none}
+  .hint .d{width:6px;height:6px;border-radius:50%;background:var(--success)}
+  .hint .ver{font-family:var(--mono);font-size:10.5px;line-height:1;color:var(--muted-fg);
+             font-variant-numeric:tabular-nums}
+
+  /* B:版本号胶囊 */
+  .chip{font-family:var(--mono);font-size:10px;line-height:15px;padding:0 5px;border-radius:4px;
+        color:var(--brand);background:var(--brand-soft);flex:none}
+
+  /* C:行内后缀 */
+  .suffix{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);flex:none}
+
+  /* D:只有圆点(无文字) */
+  .dotonly{width:6px;height:6px;border-radius:50%;background:var(--success);flex:none}
+
+  /* E:圆点 + 有新版本 */
+  .hint.txt{gap:6px}
+  .hint .new{font-size:10px;color:var(--muted-fg);flex:none}
+
+  /* ── 方案行 ──────────────────────────────────────────────────────── */
+  .opt{display:grid;grid-template-columns:560px 1fr;gap:32px;align-items:center;
+       padding:16px 0;border-bottom:1px solid var(--border-soft)}
+  .opt:first-child{padding-top:0}
+  .opt-head{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+  .oid{font-family:var(--mono);font-size:10px;color:var(--muted-fg);border:1px solid var(--border);
+       border-radius:4px;padding:1px 5px;background:var(--card)}
+  .opt-head b{font-size:12.5px;font-weight:500}
+  .rec{font-size:10px;font-weight:500;color:var(--brand);background:var(--brand-soft);
+       border-radius:4px;padding:1px 6px}
+  .alt{font-size:10px;font-weight:500;color:var(--muted-fg);border:1px solid var(--border);
+       border-radius:4px;padding:1px 6px}
+  .od{margin:0 0 7px;font-size:11.5px;line-height:1.65;color:var(--muted-fg)}
+  .od b{font-weight:500;color:var(--fg)}
+  .chips{display:flex;flex-wrap:wrap;gap:5px}
+  .chips span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);
+              border:1px solid var(--border);border-radius:4px;padding:1px 5px;background:var(--card)}
+  .vert{display:block;margin-top:7px;font-size:11px;line-height:1.6;color:var(--muted-fg-2)}
+  .vert b{font-weight:500;color:var(--muted-fg)}
+
+  .subhead{display:flex;align-items:baseline;gap:10px;margin:34px 0 12px;
+           font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .subhead b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+
+  .states{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .state{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px}
+  .state .cap2{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:10px}
+  .state .mock{width:100%;height:172px;border-color:var(--border)}
+  .state .menu{position:relative;left:auto;top:auto;width:100%;box-shadow:none;margin:0}
+
+  .spec{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--border);
+        border-radius:10px;background:var(--card);overflow:hidden;margin-top:6px}
+  .spec div{padding:11px 14px;border-right:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+  .spec div:nth-child(4n){border-right:0}
+  .spec dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:4px}
+  .spec dd{margin:0;font-size:11.5px;line-height:1.5}
+
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:8px 36px;margin-top:24px}
+  .notes h3{grid-column:1/-1;margin:0 0 6px;font-size:12px;font-weight:500}
+  .notes p{margin:0 0 10px;font-size:11.5px;line-height:1.7;color:var(--muted-fg)}
+  .notes p b{font-weight:500;color:var(--fg)}
+  .keys{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+  .keys span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);border:1px solid var(--border);
+             border-radius:4px;padding:2px 5px;background:var(--card)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">048 · 帮助菜单 · 更新提示</div>
+    <h1>「检查更新」旁边的版本提示</h1>
+    <p>现状:发现新版本时,只有菜单栏「帮助」按钮右上角一个 6px 绿点(<code>MainMenu.tsx:813-815</code>);点开菜单后,「检查更新」这一行和平时完全一样,绿点指向的"哪一项有新版本"在菜单里断掉了。这次只给这一行加提示:有新版 = 绿点 + 新版本号;没有新版 = 同一位置显示当前版本号(不带绿点)。菜单顺序、点击行为、检查中禁用、帮助按钮绿点都不变。</p>
+  </div>
+
+  <dl class="direction">
+    <div><dt>产品</dt><dd>桌面 CSV 工具;更新是低频事件,提示要可见但不喧哗。</dd></div>
+    <div><dt>性格</dt><dd>账本式的克制:一个点、一个版本号,不加感叹语气。</dd></div>
+    <div><dt>世界</dt><dd>版本号是等宽的(keycap 旁的数字),颜色只借语义色的绿。</dd></div>
+    <div><dt>两个瞬间</dt><dd>① 打开帮助菜单就能看到"v0.8.0" ② 不展开版本号也知道该点哪一行。</dd></div>
+    <div><dt>签名</dt><dd>6px 绿点与帮助按钮右上角那颗点同一颗,位置从按钮延续到行内。</dd></div>
+  </dl>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       00 现状
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="opts">
+    <div class="opt">
+      <div class="mock">
+        <div class="chrome">
+          <span class="brand">Easy Csv</span>
+          <div class="menus">
+            <span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span>
+            <span class="mb on">帮助<span class="dot"></span></span>
+          </div>
+        </div>
+        <div class="canvas"></div>
+        <div class="menu">
+          <div class="mi"><span class="lbl">查看示例</span></div>
+          <div class="mi"><span class="lbl">帮助中心</span></div>
+          <div class="mi"><span class="lbl">检查更新</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="opt-head"><span class="oid">00</span><b>现状</b></div>
+        <p class="od">帮助按钮右上角有绿点,但菜单里的 <b>检查更新</b> 行没有任何标记 —— 用户知道"有帮助相关的新东西",却不知道是新版本,也看不出点哪一行。<code>hasUpdate</code> 只用来渲染按钮上的点。</p>
+        <div class="chips"><span>菜单: 180 宽</span><span>行: 32 高</span><span>按钮点: 6px success</span></div>
+        <span class="vert"><b>缺失</b>版本信息(具体是哪个版本)与行级指示。</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       方案 A-E
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead" style="margin-top:32px"><b>五种提示</b><span>都在「检查更新」行内、右对齐;菜单与行尺寸尽量不动</span></div>
+
+  <div class="opts">
+    <!-- A -->
+    <div class="opt">
+      <div class="mock">
+        <div class="chrome">
+          <span class="brand">Easy Csv</span>
+          <div class="menus">
+            <span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span>
+            <span class="mb on">帮助<span class="dot"></span></span>
+          </div>
+        </div>
+        <div class="canvas"></div>
+        <div class="menu">
+          <div class="mi"><span class="lbl">查看示例</span></div>
+          <div class="mi"><span class="lbl">帮助中心</span></div>
+          <div class="mi hover"><span class="lbl">检查更新</span><span class="hint"><span class="d"></span><span class="ver">v0.8.0</span></span></div>
+        </div>
+      </div>
+      <div>
+        <div class="opt-head"><span class="oid">A</span><b>圆点 + 版本号</b><span class="rec">推荐</span></div>
+        <p class="od">右侧一枚 <b>6px 绿点</b> + 等宽 <b>10.5px 版本号</b>(<code>v0.8.0</code>)。绿点与帮助按钮右上角那颗同源;版本号给出"具体是哪个版本",且各语言等宽、180px 菜单不用改宽。</p>
+        <div class="chips"><span>点: 6px success</span><span>版本: 10.5 mono</span><span>对齐: 右</span><span>菜单: 180</span></div>
+        <span class="vert"><b>代价</b>不读版本号的人只会看到一个点;用 <code>title</code> 挂「有新版本可用」补足。</span>
+      </div>
+    </div>
+
+    <!-- B -->
+    <div class="opt">
+      <div class="mock">
+        <div class="chrome">
+          <span class="brand">Easy Csv</span>
+          <div class="menus">
+            <span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span>
+            <span class="mb on">帮助<span class="dot"></span></span>
+          </div>
+        </div>
+        <div class="canvas"></div>
+        <div class="menu">
+          <div class="mi"><span class="lbl">查看示例</span></div>
+          <div class="mi"><span class="lbl">帮助中心</span></div>
+          <div class="mi hover"><span class="lbl">检查更新</span><span class="chip">v0.8.0</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="opt-head"><span class="oid">B</span><b>版本号小胶囊</b><span class="alt">备选</span></div>
+        <p class="od">只有一枚 <b>主题色淡底胶囊</b>包着版本号,没有绿点。版本号本身就是提示;胶囊让它在一排灰字里浮出来。</p>
+        <div class="chips"><span>底: brand 9%</span><span>字: brand 10 mono</span><span>圆角: 4</span><span>菜单: 180</span></div>
+        <span class="vert"><b>代价</b>比 A 多一层底色;品牌色被用在"信息"上,与「当前页页签」的用法略有重叠。</span>
+      </div>
+    </div>
+
+    <!-- C -->
+    <div class="opt">
+      <div class="mock">
+        <div class="chrome">
+          <span class="brand">Easy Csv</span>
+          <div class="menus">
+            <span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span>
+            <span class="mb on">帮助<span class="dot"></span></span>
+          </div>
+        </div>
+        <div class="canvas"></div>
+        <div class="menu">
+          <div class="mi"><span class="lbl">查看示例</span></div>
+          <div class="mi"><span class="lbl">帮助中心</span></div>
+          <div class="mi hover"><span class="lbl">检查更新 <span class="suffix">· v0.8.0</span></span></div>
+        </div>
+      </div>
+      <div>
+        <div class="opt-head"><span class="oid">C</span><b>行内后缀</b><span class="alt">备选</span></div>
+        <p class="od">不做右对齐元素,直接在标签后补 <b>「· v0.8.0」</b>(等宽 10px、更弱的灰)。最安静,不引入任何新形状。</p>
+        <div class="chips"><span>分隔: ·</span><span>版本: 10 mono muted-2</span><span>菜单: 180</span></div>
+        <span class="vert"><b>代价</b>提示与标签融为一体,扫视时最容易被漏掉;没有状态色。</span>
+      </div>
+    </div>
+
+    <!-- D -->
+    <div class="opt">
+      <div class="mock">
+        <div class="chrome">
+          <span class="brand">Easy Csv</span>
+          <div class="menus">
+            <span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span>
+            <span class="mb on">帮助<span class="dot"></span></span>
+          </div>
+        </div>
+        <div class="canvas"></div>
+        <div class="menu">
+          <div class="mi"><span class="lbl">查看示例</span></div>
+          <div class="mi"><span class="lbl">帮助中心</span></div>
+          <div class="mi hover"><span class="lbl">检查更新</span><span class="dotonly"></span></div>
+        </div>
+      </div>
+      <div>
+        <div class="opt-head"><span class="oid">D</span><b>只有圆点</b><span class="alt">备选</span></div>
+        <p class="od">右侧只补一颗 <b>6px 绿点</b>,与帮助按钮右上角完全重复;版本号不显示,信息只能在 <code>title</code> 里,或点开对话框后看到。</p>
+        <div class="chips"><span>点: 6px success</span><span>无文字</span><span>菜单: 180</span></div>
+        <span class="vert"><b>代价</b>只是把按钮上的点搬进菜单,没有新增信息;但最轻。</span>
+      </div>
+    </div>
+
+    <!-- E -->
+    <div class="opt">
+      <div class="mock">
+        <div class="chrome">
+          <span class="brand">Easy Csv</span>
+          <div class="menus">
+            <span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span>
+            <span class="mb on">帮助<span class="dot"></span></span>
+          </div>
+        </div>
+        <div class="canvas"></div>
+        <div class="menu wide">
+          <div class="mi"><span class="lbl">查看示例</span></div>
+          <div class="mi"><span class="lbl">帮助中心</span></div>
+          <div class="mi hover"><span class="lbl">检查更新</span><span class="hint txt"><span class="d"></span><span class="new">有新版本</span></span></div>
+        </div>
+      </div>
+      <div>
+        <div class="opt-head"><span class="oid">E</span><b>圆点 + 「有新版本」</b><span class="alt">备选</span></div>
+        <p class="od">把提示写成文字,不写版本号。中文 4 字可读,但英文 <code>New version available</code> 会把菜单撑到 <b>220px</b>(三行都会变宽);中文界面之外收益下降。</p>
+        <div class="chips"><span>点: 6px success</span><span>字: 10px 文案</span><span>菜单: 180→220</span></div>
+        <span class="vert"><b>代价</b>菜单宽度改动波及所有帮助项;英文长度不可控。</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       三种状态(A)
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead"><b>A 的三种状态</b><span>有新版 = 绿点 + 新版本;无新版 = 当前版本(无点);检查中留空</span></div>
+  <div class="states">
+    <div class="state">
+      <div class="cap2">发现新版本</div>
+      <div class="mock" style="border:0;height:auto">
+        <div class="menu">
+          <div class="mi"><span class="lbl">查看示例</span></div>
+          <div class="mi"><span class="lbl">帮助中心</span></div>
+          <div class="mi"><span class="lbl">检查更新</span><span class="hint"><span class="d"></span><span class="ver">v0.8.0</span></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="state">
+      <div class="cap2">检查中(行禁用)</div>
+      <div class="mock" style="border:0;height:auto">
+        <div class="menu">
+          <div class="mi"><span class="lbl">查看示例</span></div>
+          <div class="mi"><span class="lbl">帮助中心</span></div>
+          <div class="mi dim"><span class="lbl">检查更新</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="state">
+      <div class="cap2">已是最新版本 → 显示当前版本</div>
+      <div class="mock" style="border:0;height:auto">
+        <div class="menu">
+          <div class="mi"><span class="lbl">查看示例</span></div>
+          <div class="mi"><span class="lbl">帮助中心</span></div>
+          <div class="mi"><span class="lbl">检查更新</span><span class="hint"><span class="ver">v0.7.4</span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       暗色(A)
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead"><b>A · 暗色</b><span>绿点换成暗色 success,版本号仍是 708 灰阶</span></div>
+  <div class="dark" style="display:flex;gap:16px">
+    <div class="mock">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span>
+        <div class="menus">
+          <span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span>
+          <span class="mb on">帮助<span class="dot"></span></span>
+        </div>
+      </div>
+      <div class="canvas"></div>
+      <div class="menu">
+        <div class="mi"><span class="lbl">查看示例</span></div>
+        <div class="mi"><span class="lbl">帮助中心</span></div>
+        <div class="mi hover"><span class="lbl">检查更新</span><span class="hint"><span class="d"></span><span class="ver">v0.8.0</span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       规格 / 说明
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead" style="margin-top:40px"><b>规格</b><span>方案 A;其余方案只在提示形态上不同</span></div>
+  <section class="spec">
+    <div><dt>位置</dt><dd>「检查更新」行内,右对齐(标签 flex-1)</dd></div>
+    <div><dt>圆点</dt><dd>6px,<code>--success</code>;与帮助按钮的点同源</dd></div>
+    <div><dt>版本</dt><dd>10.5px 等宽,<code>--muted-fg</code>,tabular-nums</dd></div>
+    <div><dt>间距</dt><dd>点↔版本 6;标签↔提示 ≥ 8(<code>gap-2</code>)</dd></div>
+    <div><dt>行</dt><dd>32px,<code>px-3</code>,悬停 60% accent(不变)</dd></div>
+    <div><dt>菜单</dt><dd>180px(不变)</dd></div>
+    <div><dt>有新版</dt><dd>绿点 + <code>updateVersion</code>,<code>hasUpdate &amp;&amp; !isCheckingUpdate</code></dd></div>
+    <div><dt>无新版</dt><dd>当前版本 <code>v0.7.4</code>,无圆点;检查前也显示</dd></div>
+    <div><dt>不出现</dt><dd>检查中(行禁用)、取不到版本时留空</dd></div>
+    <div><dt>tooltip</dt><dd>有新版 <code>t.newVersionAvailable</code>;无新版 <code>t.currentVersion</code></dd></div>
+    <div><dt>按钮点</dt><dd>保留,不删(展开前的第一层提示)</dd></div>
+    <div><dt>颜色</dt><dd>绿点语义固定,不随主题色漂移</dd></div>
+    <div><dt>i18n</dt><dd>不需要新文案;版本号是数据</dd></div>
+  </section>
+
+  <section class="notes">
+    <h3>交互 / 数据 / 实现落点</h3>
+    <p><b>数据。</b><code>App.tsx</code> 传 <code>updateVersion={updater.updateInfo?.version}</code> 与 <code>currentVersion={updater.appVersion ?? updater.updateInfo?.currentVersion}</code>。<code>appVersion</code> 由 <code>useUpdater</code> 在启动时调一次 <code>getCurrentVersion()</code>(<code>@tauri-apps/api/app</code> 的 <code>getVersion</code>)—— 所以没做过检查也能显示版本;取不到时退回检查结果里的 <code>currentVersion</code>,两者都没有就不渲染。检查中 <code>updateInfo</code> 可能是旧的,所以渲染条件要带 <code>!isCheckingUpdate</code>。</p>
+    <p><b>行为不变。</b>整行仍调用 <code>onCheckUpdate()</code> 并关闭菜单;检查中仍 <code>disabled</code> + 40% 灰;帮助按钮右上角的绿点保留 —— 它是"菜单里有更新"的第一层提示,行内提示是第二层。</p>
+    <p><b>不做。</b>不改菜单宽度(除方案 E 的 220);不加图标(下载/箭头);不改「查看示例 / 帮助中心」两行;不做"忽略此版本";不在菜单里直接下载更新。</p>
+    <p><b>执行菜单的参照。</b>主菜单里的「执行」已经有"运行中的行只显示状态"的先例;这里同样只在那一行加状态,不把整条帮助按钮改色(按钮只在已打开时高亮,现状保持不变)。</p>
+    <h3 style="margin-top:6px">i18n · 0 新增</h3>
+    <div class="keys">
+      <span>title 复用 t.newVersionAvailable</span><span>版本号来自 updateInfo.version</span><span>其余文案不变</span>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

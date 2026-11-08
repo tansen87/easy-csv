@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import {
   checkForUpdate,
+  getCurrentVersion,
   getInstallForm,
   installUpdate,
   relaunchApp,
@@ -43,6 +44,22 @@ export function useUpdater({ showToast, beforeInstall }: UseUpdaterOptions) {
   const [progress, setProgress] = useState<UpdateProgressState | null>(null);
   const [installForm, setInstallForm] = useState<InstallFormInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Running build's version, so the Help menu can show it before any check. */
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCurrentVersion()
+      .then((version) => {
+        if (!cancelled) setAppVersion(version);
+      })
+      .catch(() => {
+        // Display-only: a failed lookup just leaves the version out of the menu.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Installing replaces files on disk; knowing the layout lets the dialog grey
   // out the button for builds the updater cannot write to (deb, /Applications).
@@ -142,6 +159,7 @@ export function useUpdater({ showToast, beforeInstall }: UseUpdaterOptions) {
 
   return {
     updateInfo,
+    appVersion,
     isChecking,
     isInstalling,
     progress,

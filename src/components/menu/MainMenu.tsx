@@ -8,6 +8,10 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/utils";
 import { usesCustomTitleBar } from "@/lib/platform";
 
+/** "0.8.0" → "v0.8.0"; an already-prefixed value is left as is. */
+const withVersionPrefix = (version: string) =>
+  version.startsWith("v") ? version : `v${version}`;
+
 interface MainMenuProps {
   activeMenu: "file" | "edit" | "view" | "tools" | "help" | null;
   setActiveMenu: (menu: "file" | "edit" | "view" | "tools" | "help" | null) => void;
@@ -50,6 +54,17 @@ interface MainMenuProps {
   isExecuting: boolean;
   isCheckingUpdate: boolean;
   hasUpdate: boolean;
+  /**
+   * Remote version when `hasUpdate` is true (e.g. "0.8.0"). Shown next to the
+   * "检查更新" item so the Help menu says which version is waiting; the dot
+   * alone still renders if the version is not known yet.
+   */
+  updateVersion?: string;
+  /**
+   * Version of the running build, shown next to "检查更新" when no update is
+   * waiting (and before any check has run). No dot in that state.
+   */
+  currentVersion?: string;
   showLogErrorBadge: boolean;
   currentPipelineLength: number;
   showCommandPanel: boolean;
@@ -126,6 +141,8 @@ export const MainMenu = React.memo(function MainMenu({
   isExecuting,
   isCheckingUpdate,
   hasUpdate,
+  updateVersion,
+  currentVersion,
   showLogErrorBadge,
   currentPipelineLength,
   showCommandPanel,
@@ -148,6 +165,8 @@ export const MainMenu = React.memo(function MainMenu({
   highlightCommandEntry = false,
 }: MainMenuProps) {
   const { t } = useLanguage();
+  /** The version the Help menu advertises: the offered one, else the installed one. */
+  const updateHintVersion = hasUpdate ? updateVersion : currentVersion;
 
   // Execute menu
   // The toolbar "Execute" opens a per-tab menu instead of running immediately:
@@ -860,6 +879,23 @@ export const MainMenu = React.memo(function MainMenu({
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.checkUpdate}
                 </span>
+                {!isCheckingUpdate && (hasUpdate || currentVersion) && (
+                  <span
+                    title={
+                      hasUpdate ? t.newVersionAvailable : t.currentVersion
+                    }
+                    className="flex flex-none items-center gap-1.5"
+                  >
+                    {hasUpdate && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                    )}
+                    {updateHintVersion && (
+                      <span className="font-mono text-[10.5px] leading-none text-muted-foreground tabular-nums">
+                        {withVersionPrefix(updateHintVersion)}
+                      </span>
+                    )}
+                  </span>
+                )}
               </button>
             </div>
           )}

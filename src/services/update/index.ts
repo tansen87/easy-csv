@@ -17,6 +17,11 @@ import { relaunch } from "@tauri-apps/plugin-process";
 export const RELEASES_PAGE_URL =
   "https://github.com/tansen87/easy-csv/releases/latest";
 
+/** Version of the running bundle. Display-only; checks compare against it. */
+export async function getCurrentVersion(): Promise<string> {
+  return getVersion();
+}
+
 /** Where the running build is installed. Mirrors Rust `InstallForm`. */
 export type InstallForm =
   | "userScoped"
