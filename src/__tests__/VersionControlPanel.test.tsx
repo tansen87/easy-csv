@@ -161,9 +161,13 @@ describe("VersionControlPanel row menu", () => {
     );
 
     const dialog = await screen.findByRole("dialog");
+    // Design 050: the button names the action, and the dialog names the
+    // version it is about instead of pasting it into the question.
+    expect(dialog).toHaveAccessibleName("删除版本");
+    expect(dialog.textContent).toContain("加上去重");
     fireEvent.click(
       Array.from(dialog.querySelectorAll("button")).find(
-        (b) => b.textContent === "确认",
+        (b) => b.textContent === "删除",
       )!,
     );
 

@@ -1,5 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
-import { X } from "lucide-react";
+import { useEffect, useId, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/Button";
 import { useLanguage } from "@/i18n";
 
@@ -11,6 +10,14 @@ interface ConfirmDialogProps {
   onCancel: () => void;
   confirmLabel?: string;
   cancelLabel?: string;
+  /**
+   * What the action is about — a template name, an output path, a version
+   * label. Printed in mono under a hairline (design 050) so the question and
+   * the consequence each stay one short line.
+   */
+  detail?: string;
+  /** `danger` for actions that erase records. Everything else keeps the ink button. */
+  tone?: "default" | "danger";
 }
 
 export function ConfirmDialog({
@@ -21,9 +28,13 @@ export function ConfirmDialog({
   onCancel,
   confirmLabel,
   cancelLabel,
+  detail,
+  tone = "default",
 }: ConfirmDialogProps) {
   const { t } = useLanguage();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const messageId = useId();
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -32,6 +43,9 @@ export function ConfirmDialog({
         return;
       }
       if (e.key === "Enter") {
+        // A focused button already reacts to Enter itself; without this guard
+        // the window listener would fire a second, possibly different action.
+        if (document.activeElement instanceof HTMLButtonElement) return;
         onConfirm();
         return;
       }
@@ -65,9 +79,9 @@ export function ConfirmDialog({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div
-        className="absolute inset-0 bg-black/20 backdrop-blur-none"
+        className="absolute inset-0 bg-black/20"
         onClick={onCancel}
         onContextMenu={(e) => e.preventDefault()}
       />
@@ -75,28 +89,41 @@ export function ConfirmDialog({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={messageId}
         tabIndex={-1}
-        className="relative bg-card rounded-lg shadow-xl w-full max-w-sm overflow-hidden outline-none"
+        className="animate-dialog-enter relative w-full max-w-[400px] overflow-hidden rounded-lg border border-border bg-card shadow-xl outline-none"
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
       >
-        <div className="flex items-center justify-between px-4 py-3 bg-muted/20">
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-          <button
-            onClick={onCancel}
-            className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+        <div className="px-5 pt-[18px] pb-4">
+          <h3
+            id={titleId}
+            className="text-sm leading-5 font-medium text-foreground"
           >
-            <X className="h-4 w-4" />
-          </button>
+            {title}
+          </h3>
+          <p
+            id={messageId}
+            className="mt-2 text-[13px] leading-[1.62] text-muted-foreground [overflow-wrap:anywhere]"
+          >
+            {message}
+          </p>
+          {detail && (
+            <div className="mt-3.5 border-t border-border/60 pt-2.5 font-mono text-[11.5px] leading-snug tabular-nums text-foreground [overflow-wrap:anywhere]">
+              {detail}
+            </div>
+          )}
         </div>
-        <div className="px-4 py-4">
-          <p className="text-sm text-muted-foreground">{message}</p>
-        </div>
-        <div className="flex items-center justify-end gap-2 px-4 py-3 bg-muted/20">
-          <Button variant="secondary" size="sm" onClick={onCancel}>
+        <div className="flex h-14 items-center justify-end gap-2 border-t border-border px-5">
+          <Button variant="ghost" size="sm" onClick={onCancel}>
             {cancelLabel || t.cancel}
           </Button>
-          <Button variant="secondary" size="sm" onClick={onConfirm}>
+          <Button
+            variant={tone === "danger" ? "destructive" : "default"}
+            size="sm"
+            onClick={onConfirm}
+          >
             {confirmLabel || t.confirm}
           </Button>
         </div>

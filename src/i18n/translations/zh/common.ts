@@ -22,6 +22,8 @@ export const zhCommon = {
   branchOverwriteTitle: "覆盖输出文件?",
   branchOverwriteMessage:
     "{count} 条分支将写入同一文件, 后写入会覆盖先写入. 是否继续?",
+  overwrite: "覆盖",
+  clear: "清除",
   emptyTitle: "把表格串成一条管道",
   emptySubtitle: "打开数据, 按列筛选、排序、分组, 一键执行并导出",
   emptyFormats: "CSV · Excel · Parquet · DuckDB",

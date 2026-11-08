@@ -26,6 +26,8 @@ export const enCommon = {
   branchOverwriteTitle: "Overwrite output file?",
   branchOverwriteMessage:
     "{count} branches will write to the same file; later writes overwrite earlier ones. Continue?",
+  overwrite: "Overwrite",
+  clear: "Clear",
   emptyTitle: "Chain your tables into a pipeline",
   emptySubtitle:
     "Open data, filter by column, sort, group, then run and export",

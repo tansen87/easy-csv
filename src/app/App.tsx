@@ -2168,6 +2168,7 @@ function AppContent() {
             isOpen={ui.showRefreshDialog}
             title={t.refreshTitle}
             message={t.refreshMessage}
+            confirmLabel={t.historyRefresh}
             onConfirm={() => {
               ui.setShowRefreshDialog(false);
               window.location.reload();
@@ -2195,6 +2196,12 @@ function AppContent() {
                     )
                 : ""
             }
+            detail={
+              overwriteConfirm?.reason === "crossTab"
+                ? undefined
+                : overwriteConfirm?.outputPath
+            }
+            confirmLabel={t.overwrite}
             onConfirm={() => void confirmOverwriteExecution()}
             onCancel={cancelOverwriteExecution}
           />
@@ -2224,11 +2231,10 @@ function AppContent() {
           <ConfirmDialog
             isOpen={templateToDelete !== null}
             title={t.confirmDeleteTemplate}
-            message={
-              templateToDelete
-                ? `${t.confirmDeleteTemplate} (${templateToDelete.name})`
-                : ""
-            }
+            message={t.confirmDeleteTemplateBody}
+            detail={templateToDelete?.name}
+            tone="danger"
+            confirmLabel={t.templateDelete}
             onConfirm={confirmDeleteTemplate}
             onCancel={() => setTemplateToDelete(null)}
           />

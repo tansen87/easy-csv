@@ -584,6 +584,26 @@
   animation: empty-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/**
+ * Entrance for the confirmation dialog (design 050): fade plus a 4px rise,
+ * 160ms. Short on purpose - the dialog interrupts an action the user has just
+ * taken, so it should land rather than perform.
+ */
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-dialog-enter {
+  animation: dialog-enter 0.16s cubic-bezier(0.2, 0, 0, 1);
+}
+
 /* Splash screen animations */
 @keyframes fade-in {
   0% {

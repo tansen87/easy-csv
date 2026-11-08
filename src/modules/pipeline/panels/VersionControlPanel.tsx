@@ -695,6 +695,12 @@ export function VersionControlPanel({
         isOpen={!!deletingId}
         title={t.versionMenuDelete}
         message={t.confirmDeleteVersion}
+        detail={
+          versions.find((v) => v.id === deletingId)?.message ||
+          t.untitledVersion
+        }
+        tone="danger"
+        confirmLabel={t.deleteSteps}
         onConfirm={() => {
           if (deletingId) onDeleteVersion(deletingId);
           setDeletingId(null);
@@ -716,6 +722,8 @@ export function VersionControlPanel({
         isOpen={clearingAll}
         title={t.clearAllVersions}
         message={t.confirmClearAllVersions}
+        tone="danger"
+        confirmLabel={t.clear}
         onConfirm={() => {
           onClearAllVersions?.();
           setClearingAll(false);

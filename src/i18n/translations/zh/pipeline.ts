@@ -253,6 +253,7 @@ export const zhPipeline = {
   templateExport: "导出",
   templateImport: "导入",
   confirmDeleteTemplate: "确定删除该模板吗?",
+  confirmDeleteTemplateBody: "删除后不能恢复",
   templateSaved: "管道已保存为模板",
   templateApplied: "已从模板创建新管道",
   templateNameRequired: "请先在管道中添加步骤再另存为模板",

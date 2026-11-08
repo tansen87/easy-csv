@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 050 · 确认对话框</title>
+<style>
+  /* ── tokens · 与 src/index.css 对齐 ───────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.7 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 9%);
+    --border-strong:oklch(0.855 0 0);
+    --accent:oklch(0.97 0 0);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 12%,var(--bg));
+    --chrome-line:color-mix(in oklab,var(--brand) 30%,transparent);
+
+    --danger:oklch(0.577 0.245 27.325);
+    --danger-soft:color-mix(in oklab,var(--danger) 10%,transparent);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --veil:oklch(0.2 0.02 80 / 20%);
+    --shadow-win:0 24px 60px -24px oklch(0.2 0.02 80 / 26%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    /* 现状：tailwind shadow-xl（0 4 10 / 0 8 10），面板没有边框 */
+    --shadow-old:0 4px 10px 0 hsl(0 0% 0% / .1),0 8px 10px -1px hsl(0 0% 0% / .1);
+    --shadow-new:0 18px 40px -20px oklch(0.2 0.02 80 / 28%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+  }
+  .dark{
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.52 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(1 0 0 / 8%);
+    --border-strong:oklch(1 0 0 / 16%);
+    --accent:oklch(0.269 0 0);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 12%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 16%,var(--bg));
+    --chrome-line:color-mix(in oklab,var(--brand) 34%,transparent);
+    --danger:oklch(0.704 0.191 22.216);
+    --danger-soft:color-mix(in oklab,var(--danger) 16%,transparent);
+    --canvas:oklch(0.145 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --veil:oklch(0 0 0 / 38%);
+    --shadow-new:inset 0 0 0 1px oklch(1 0 0 / 6%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;-webkit-font-smoothing:antialiased;
+  }
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:20px}
+  .stage-bar h1{margin:0;font-size:16px;font-weight:500}
+  .stage-bar p{margin:6px 0 0;font-size:12px;color:var(--muted-fg);max-width:960px;line-height:1.7}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+
+  .direction{
+    display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:34px;
+    border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden;
+  }
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.55}
+
+  .frame + .frame{margin-top:50px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span:last-child{color:var(--muted-fg-2)}
+
+  /* ── 应用窗口(语境) ────────────────────────────────────────────── */
+  .win{position:relative;width:1200px;height:560px;overflow:hidden;
+       border:1px solid var(--border-strong);border-radius:8px;background:var(--bg);
+       box-shadow:var(--shadow-win)}
+  .dark .win{border-color:var(--border)}
+  .chrome{height:36px;display:flex;align-items:center;padding-left:16px;gap:18px;
+          background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-line)}
+  .brand{font-size:12.5px;font-weight:500}
+  .menus{display:flex;gap:2px}
+  .mb{height:26px;display:flex;align-items:center;padding:0 10px;border-radius:6px;
+      font-size:11.5px;font-weight:500;color:var(--brand)}
+  .canvas{position:absolute;left:0;right:0;top:36px;bottom:0;background-color:var(--canvas);
+          background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+          background-size:22px 22px;background-position:11px 11px}
+  .veil{position:absolute;inset:0;background:var(--veil)}
+  .ghost{position:absolute;background:var(--card);border:1px solid var(--border);border-radius:6px;opacity:.5}
+  .ghost.g1{left:60px;top:110px;width:300px;height:150px}
+  .ghost.g2{left:430px;top:140px;width:190px;height:80px}
+  .ghost.g3{left:700px;top:100px;width:330px;height:170px}
+
+  /* ══════════════════════════════════════════════════════════════════
+     现状 · ConfirmDialog.tsx
+     ══════════════════════════════════════════════════════════════════ */
+  .od{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:384px;background:var(--card);border-radius:10px;overflow:hidden;
+    box-shadow:var(--shadow-old);
+  }
+  .od-head{display:flex;align-items:center;justify-content:space-between;gap:8px;
+           padding:12px 16px;background:color-mix(in oklab,var(--muted) 20%,transparent)}
+  .od-title{font-size:14px;font-weight:600;line-height:20px}
+  .od-x{width:24px;height:24px;display:grid;place-items:center;border-radius:4px;
+        color:var(--muted-fg);flex:none}
+  .od-x svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round}
+  .od-body{padding:16px;font-size:14px;line-height:1.43;color:var(--muted-fg)}
+  .od-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;
+           padding:12px 16px;background:color-mix(in oklab,var(--muted) 20%,transparent)}
+  .od-btn{height:32px;padding:0 10px;border-radius:8px;display:inline-flex;align-items:center;
+          background:var(--muted);color:oklch(0.205 0 0);font-size:14px;font-weight:500}
+  .dark .od-btn{color:var(--fg)}
+
+  /* ══════════════════════════════════════════════════════════════════
+     改后 · 一句问话 + 一行对象 + 两个按钮
+     ══════════════════════════════════════════════════════════════════ */
+  .nd{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:400px;background:var(--card);color:var(--fg);border:1px solid var(--border);border-radius:12px;
+    overflow:hidden;box-shadow:var(--shadow-new);
+  }
+  .nd-body{padding:18px 20px 16px}
+  .nd-title{font-size:14px;font-weight:500;line-height:20px}
+  .nd-msg{margin:8px 0 0;font-size:13px;line-height:1.62;color:var(--muted-fg);
+          overflow-wrap:anywhere}
+  .nd-detail{margin-top:14px;padding-top:10px;border-top:1px solid var(--border-soft);
+             font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--fg);
+             font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+  .nd-foot{height:56px;display:flex;align-items:center;justify-content:flex-end;gap:16px;
+           padding:0 20px;border-top:1px solid var(--border-soft)}
+  .acts{display:flex;align-items:center;gap:8px;flex:none}
+  .btn{height:32px;padding:0 10px;border-radius:8px;border:1px solid transparent;
+       display:inline-flex;align-items:center;font-family:var(--font);font-size:14px;font-weight:500}
+  .btn-ghost{background:transparent;color:var(--fg)}
+  .btn-ink{background:var(--brand);color:var(--brand-fg)}
+  .btn-danger{background:var(--danger-soft);color:var(--danger)}
+
+  /* 编号标记 */
+  .mk{position:absolute;width:15px;height:15px;border-radius:50%;display:grid;place-items:center;
+      font-family:var(--mono);font-size:9.5px;font-weight:600;color:#fff;z-index:9}
+  .mk.b{background:#b42318}
+  .mk.a{background:var(--brand)}
+  .mk::before{content:"";position:absolute;left:7px;top:-9px;width:1px;height:9px;background:currentColor;opacity:.55}
+
+  /* ── 状态截图 ──────────────────────────────────────────────────── */
+  .subhead{display:flex;align-items:baseline;gap:10px;margin:40px 0 12px;
+           font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .subhead b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .tile{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px}
+  .tile.wide{grid-column:1/-1}
+  .tile-cap{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:10px;
+            display:flex;justify-content:space-between;gap:12px}
+  .tile-cap em{font-style:normal;color:var(--muted-fg)}
+  .shot{position:relative;height:200px;border:1px solid var(--border-soft);border-radius:8px;
+        overflow:hidden;background-color:var(--canvas);
+        background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:18px 18px}
+  .shot .nd{box-shadow:var(--shadow-new)}
+  .shot.tall{height:220px}
+  .tile-note{margin:8px 0 0;font-size:10.5px;line-height:1.6;color:var(--muted-fg-2)}
+  .dark-row{display:grid;grid-template-columns:640px 1fr;gap:26px;align-items:stretch}
+  .dark-row .shot{height:240px}
+  .dark-note{border-top:1px solid var(--border);align-self:start}
+  .dark-note div{display:grid;grid-template-columns:120px 1fr;gap:12px;padding:9px 0;
+                 border-bottom:1px solid var(--border-soft);font-size:11px;line-height:1.6}
+  .dark-note dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2)}
+  .dark-note dd{margin:0;color:var(--muted-fg)}
+  .dark-note dd code{font-size:10px}
+
+  /* ── 解剖 ──────────────────────────────────────────────────────── */
+  .anat{display:grid;grid-template-columns:472px 1fr;gap:40px;align-items:center}
+  .anat-stage{position:relative;height:260px;display:grid;place-items:center start;padding-left:56px;
+              border:1px solid var(--border-soft);border-radius:10px;
+              background-color:var(--canvas);
+              background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:18px 18px}
+  .anat-stage .nd{position:relative;left:auto;top:auto;transform:none;overflow:visible}
+  .anat-stage .mk{left:-25px}
+  .anat-list{border-top:1px solid var(--border)}
+  .anat-row{display:grid;grid-template-columns:24px 84px 1fr;gap:14px;align-items:baseline;
+            padding:11px 0;border-bottom:1px solid var(--border-soft);font-size:11.5px;line-height:1.6}
+  .anat-row .no{font-family:var(--mono);font-size:9.5px;color:#fff;background:var(--brand);
+                width:15px;height:15px;border-radius:50%;display:grid;place-items:center;
+                align-self:start;margin-top:1px}
+  .anat-row .k{font-size:11.5px;font-weight:500}
+  .anat-row .v{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);line-height:1.7}
+  .anat-row .v b{font-weight:500;color:var(--fg);font-family:var(--mono)}
+
+  /* ── 诊断 / 规格 / 说明 ─────────────────────────────────────────── */
+  .legend{width:1200px;margin-top:34px}
+  .legend table{width:100%;border-collapse:collapse;font-size:11.5px}
+  .legend th{text-align:left;font-family:var(--mono);font-size:10px;font-weight:400;
+             color:var(--muted-fg-2);padding:0 12px 8px 0;border-bottom:1px solid var(--border)}
+  .legend td{vertical-align:top;padding:12px 16px 12px 0;border-bottom:1px solid var(--border-soft);
+             line-height:1.65;color:var(--muted-fg)}
+  .legend td:first-child{width:26px;font-family:var(--mono);font-size:10.5px;color:#b42318}
+  .legend td:nth-child(2){width:520px}
+  .legend td b{font-weight:500;color:var(--fg)}
+
+  .spec{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--border);
+        border-radius:10px;background:var(--card);overflow:hidden;margin-top:6px}
+  .spec div{padding:11px 14px;border-right:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+  .spec div:nth-child(4n){border-right:0}
+  .spec dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:4px}
+  .spec dd{margin:0;font-size:11.5px;line-height:1.5}
+
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:8px 36px;margin-top:28px}
+  .notes h3{grid-column:1/-1;margin:0 0 6px;font-size:12px;font-weight:500}
+  .notes p{margin:0 0 10px;font-size:11.5px;line-height:1.7;color:var(--muted-fg)}
+  .notes p b{font-weight:500;color:var(--fg)}
+  .keysbox{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+  .keysbox span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);border:1px solid var(--border);
+                border-radius:4px;padding:2px 5px;background:var(--card)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">050 · 确认对话框</div>
+    <h1>确认对话框 —— 从「缩小版窗口」到一句问话</h1>
+    <p>全应用有 6 处不可逆动作共用 <code>ConfirmDialog</code>:刷新页面、覆盖输出文件(分支 / 跨标签页)、删除模板、删除版本、清除所有版本、恢复版本。现状是一块 384px 的对话框:头部与底部各垫一条几乎看不见的 <code>bg-muted/20</code>,<b>两个按钮同款 <code>secondary</code></b>,「会怎样」与「对谁」挤在一句 14px 灰字里。这次只改这一层:一句问话、一句后果、一行对象、两个按钮;props 语义、快捷键、遮罩、6 处调用时机都不动。</p>
+  </div>
+
+  <dl class="direction">
+    <div><dt>产品</dt><dd>把 CSV 的清洗、拼接、导出编成一条管道,一键跑完;这个框是「写入之前」的最后一道闸。</dd></div>
+    <div><dt>性格</dt><dd>果断、简短、就事论事 —— 先说要发生什么,再说对谁,不寒暄。</dd></div>
+    <div><dt>世界</dt><dd>数据工作台的账本与标本标签:发丝线分栏,等宽只写对象名(文件、模板、版本),不出现装饰色。</dd></div>
+    <div><dt>两个瞬间</dt><dd>① 受影响对象那一行等宽字,像贴在标本上的标签 ② 删除类动作的确认键,是全框唯一带色的地方。</dd></div>
+    <div><dt>签名</dt><dd>一条横贯内容区的发丝线,线下一行等宽对象名 —— 与设置页索引、版本日志同一条语言。</dd></div>
+  </dl>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       01 现状
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>01</span><b>现状</b><span>ConfirmDialog.tsx · 编号 1-6 对应下方诊断表</span></div>
+
+    <div class="win">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span>
+        <div class="menus"><span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span><span class="mb">帮助</span></div>
+      </div>
+      <div class="canvas">
+        <div class="ghost g1"></div><div class="ghost g2"></div><div class="ghost g3"></div>
+      </div>
+      <div class="veil"></div>
+
+      <div class="od">
+        <div class="od-head">
+          <div class="od-title">确定删除该模板吗?</div>
+          <span class="od-x"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="od-body">确定删除该模板吗? (按月汇总)</div>
+        <div class="od-foot">
+          <span class="od-btn">取消</span>
+          <span class="od-btn">确认</span>
+        </div>
+      </div>
+
+      <!-- 1 两个按钮同款 · 2 两条色带与 ✕ · 3 只有一个字号 · 4 对象在括号里
+           5 长路径贴边 · 6 焦点与可访问名 -->
+      <span class="mk b" style="left:730px;top:369px">1</span>
+      <span class="mk b" style="left:798px;top:218px">2</span>
+      <span class="mk b" style="left:392px;top:218px">3</span>
+      <span class="mk b" style="left:392px;top:266px">4</span>
+      <span class="mk b" style="left:392px;top:321px">5</span>
+      <span class="mk b" style="left:798px;top:369px">6</span>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       02 改后
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>02</span><b>改后</b><span>同一个动作(删除模板)· 一整块纸 + 发丝线分栏,对象自己一行</span></div>
+
+    <div class="win">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span>
+        <div class="menus"><span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span><span class="mb">帮助</span></div>
+      </div>
+      <div class="canvas">
+        <div class="ghost g1"></div><div class="ghost g2"></div><div class="ghost g3"></div>
+      </div>
+      <div class="veil"></div>
+
+      <div class="nd">
+        <div class="nd-body">
+          <div class="nd-title">确定删除该模板吗?</div>
+          <p class="nd-msg">删除后不能恢复.</p>
+          <div class="nd-detail">按月汇总</div>
+        </div>
+        <div class="nd-foot">
+          <div class="acts">
+            <span class="btn btn-ghost">取消</span>
+            <span class="btn btn-danger">删除</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       03 四种状态
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead"><b>四种状态</b><span>普通后果 / 记录消失 / 带对象 / 长文案</span></div>
+  <div class="tiles">
+
+    <div class="tile">
+      <div class="tile-cap"><span>03-A · 普通后果</span><em>确认键 = 实心墨</em></div>
+      <div class="shot">
+        <div class="nd">
+          <div class="nd-body">
+            <div class="nd-title">刷新页面</div>
+            <p class="nd-msg">确定要刷新页面吗? 未保存的更改将会丢失.</p>
+          </div>
+          <div class="nd-foot">
+            <div class="acts">
+              <span class="btn btn-ghost">取消</span>
+              <span class="btn btn-ink">刷新</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="tile-note">没有对象行时面板收短到 141;底栏固定 56,不随内容浮动。</p>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap"><span>03-B · 记录消失</span><em>确认键 = 10% 红底</em></div>
+      <div class="shot">
+        <div class="nd">
+          <div class="nd-body">
+            <div class="nd-title">清除所有版本</div>
+            <p class="nd-msg">确定要清除所有版本历史吗? 此操作不可撤销.</p>
+          </div>
+          <div class="nd-foot">
+            <div class="acts">
+              <span class="btn btn-ghost">取消</span>
+              <span class="btn btn-danger">清除</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="tile-note">红只给「记录消失」的三处;其余五处用实心墨,红不贬值。</p>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap"><span>03-C · 带对象</span><em>路径走等宽行</em></div>
+      <div class="shot tall">
+        <div class="nd">
+          <div class="nd-body">
+            <div class="nd-title">覆盖输出文件?</div>
+            <p class="nd-msg">3 条分支将写入同一文件, 后写入会覆盖先写入. 是否继续?</p>
+            <div class="nd-detail">D:\easy-csv\out\monthly-2026-10.csv</div>
+          </div>
+          <div class="nd-foot">
+            <div class="acts">
+              <span class="btn btn-ghost">取消</span>
+              <span class="btn btn-ink">覆盖</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="tile-note">对象行取 <code>overwriteConfirm.outputPath</code>,原本只在跨标签页文案里出现。</p>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap"><span>03-D · 长文案</span><em>按字符折行</em></div>
+      <div class="shot tall">
+        <div class="nd">
+          <div class="nd-body">
+            <div class="nd-title">另一个标签页正在写这个文件?</div>
+            <p class="nd-msg">标签页「monthly.xlsx」正在写入同一个输出文件:C:\Users\me\Documents\easy-csv\out\monthly-2026-10.csv。继续执行会覆盖它的结果。</p>
+          </div>
+          <div class="nd-foot">
+            <div class="acts">
+              <span class="btn btn-ghost">取消</span>
+              <span class="btn btn-ink">继续</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="tile-note">正文 <code>overflow-wrap:anywhere</code>,长路径不撑破 400 宽;三行是上限,再长就让它自己长高。</p>
+    </div>
+
+    <div class="tile wide">
+      <div class="tile-cap"><span>03-E · 暗色</span><em>表面阶差 + 10% 白描边,不用阴影</em></div>
+      <div class="dark-row">
+        <div class="shot dark">
+          <div class="nd">
+            <div class="nd-body">
+              <div class="nd-title">确定删除该模板吗?</div>
+              <p class="nd-msg">删除后不能恢复.</p>
+              <div class="nd-detail">按月汇总</div>
+            </div>
+            <div class="nd-foot">
+              <div class="acts">
+                <span class="btn btn-ghost">取消</span>
+                <span class="btn btn-danger">删除</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <dl class="dark-note">
+          <div><dt>面板</dt><dd>卡片色抬一阶,1px 10% 白边,阴影归零</dd></div>
+          <div><dt>遮罩</dt><dd>38% 黑,比亮色更沉,面板才浮得起来</dd></div>
+          <div><dt>分栏线</dt><dd><code>--border-soft</code> 在暗色是 8% 白,发丝线不消失</dd></div>
+          <div><dt>危险键</dt><dd>16% 红底 + 亮红字;实心红在暗色上对比不足</dd></div>
+          <div><dt>对象行</dt><dd>等宽 11.5 仍取前景色,不降级成灰</dd></div>
+        </dl>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       04 解剖
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead"><b>解剖</b><span>400 × 182(带对象行)· 全部落 4px 栅格</span></div>
+  <section class="anat">
+    <div class="anat-stage">
+      <div class="nd">
+        <div class="nd-body">
+          <div class="nd-title">确定删除该模板吗?</div>
+          <p class="nd-msg">删除后不能恢复.</p>
+          <div class="nd-detail">按月汇总</div>
+        </div>
+        <div class="nd-foot">
+          <div class="acts">
+            <span class="btn btn-ghost">取消</span>
+            <span class="btn btn-danger">删除</span>
+          </div>
+        </div>
+        <span class="mk a" style="top:1px">1</span>
+        <span class="mk a" style="top:20px">2</span>
+        <span class="mk a" style="top:55px">3</span>
+        <span class="mk a" style="top:98px">4</span>
+        <span class="mk a" style="top:147px">5</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="anat-list">
+        <div class="anat-row"><span class="no">1</span><span class="k">内边距</span><span class="v"><b>18 / 20 / 16</b> · 面板 400 宽 · 圆角 <b>10</b> · 1px 发丝线</span></div>
+        <div class="anat-row"><span class="no">2</span><span class="k">问句</span><span class="v"><b>14 / 500</b> · 行高 20 · 不换色(标题就是结论)</span></div>
+        <div class="anat-row"><span class="no">3</span><span class="k">后果</span><span class="v">离标题 <b>8</b> · <b>13 / 1.62</b> · muted-fg · 一句,不加第二句辅助说明</span></div>
+        <div class="anat-row"><span class="no">4</span><span class="k">对象</span><span class="v">上 <b>14</b> 下 <b>10</b> · 1px 发丝线 · <b>11.5 mono</b> · tabular-nums · 按字符折行</span></div>
+        <div class="anat-row"><span class="no">5</span><span class="k">底栏</span><span class="v">高 <b>56</b> · 发丝线 · 按钮右对齐 <b>h-8</b> / 圆角 8 / <b>14 / 500</b> · 间距 8</span></div>
+      </div>
+      <p style="margin:14px 0 0;font-size:11px;line-height:1.7;color:var(--muted-fg)">
+        宽度上限 <code>min(400px, 100vw - 32px)</code>;两档圆角只用到 10(面板)与 8(按钮),对象行没有底色、不用胶囊 —— 它是账本上的备注行,不是一个标签控件。
+      </p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       诊断
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="legend">
+    <table>
+      <thead><tr><th>#</th><th>现状</th><th>改法</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><b>两个按钮同款。</b><code>ConfirmDialog.tsx:96-101</code> 两个都是 <code>variant="secondary" size="sm"</code>,同高同色;而 6 处调用全是不可逆动作,确认键的文案还统一是 <code>t.confirm</code>(「确认」),读不出「按下去会发生什么」。</td>
+          <td><b>一个实心、一个幽灵。</b>取消 <code>ghost</code>,确认按语义用 <code>default</code>(实心墨)或 <code>destructive</code>(10% 红底红字);标签改成动词 —— 刷新 / 删除 / 清除 / 覆盖 / 恢复,全部取现有 i18n 键,不新增默认文案。</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><b>两条几乎看不见的色带。</b><code>:83</code> 与 <code>:95</code> 都是 <code>bg-muted/20</code> —— 20% 的 <code>#f7f7f7</code> 铺在白卡上几乎不成立,只剩头部那 12px 内边距;头部为了撑满这一条,还塞了一个 24×24 的 ✕(<code>:85-90</code>)。于是一个只有两个按钮的框,有了四种关闭方式(✕ / 取消 / Esc / 点遮罩)。</td>
+          <td><b>一整块纸。</b>去掉两条色带与 ✕,只留底栏上方一条发丝线;关闭回到三条路:取消、<code>Esc</code>、点遮罩。底栏右对齐,和 <code>CommandFormShell</code> 的 <code>h-14 justify-end gap-2 px-5</code> 同一套,全局对话框底栏从此一个样。</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><b>只有一个字号。</b>标题 14/600、正文 14/灰(<code>:84</code>、<code>:93</code>),层级全靠字重和灰度;「后果有多重」和「动的是哪一个」都压在这两行里,读不出结构。</td>
+          <td><b>三级:问什么 / 会怎样 / 对谁。</b>14/500 问句、13/1.62 后果、11.5 等宽对象;标题不再用 600 —— 层级交给尺寸与颜色,不用字重堆。</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><b>对象藏在括号里。</b><code>App.tsx:2229</code> 把模板名拼进 message:「确定删除该模板吗? (按月汇总)」—— 标题重复一遍,真正的对象排在最后,还跟着一个句号。</td>
+          <td><b>对象自己一行。</b>新增可选 <code>detail</code>:等宽 11.5,压在发丝线下,模板名 / 输出路径 / 版本标签都放这里;message 只讲后果。不传 <code>detail</code> 时与今天完全一致。</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><b>长路径没有位置。</b><code>crossTabOverwriteMessage</code> 带完整 Windows 路径,在 14px 正文里硬折行;底部 12px 内边距让 32 高的按钮贴边,面板上下也没有 20 的呼吸。</td>
+          <td><b>正文 13 + <code>overflow-wrap:anywhere</code>,面板 20 内边距,底栏 56。</b>路径只出现在等宽行里,按字符断行;正文最多三行,再长就让它自己长高。</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><b>读屏里这个框没有名字。</b><code>:76-79</code> 只有 <code>role="dialog"</code> 与 <code>aria-modal</code>,没有 <code>aria-labelledby</code> / <code>aria-describedby</code>;标题只是一段 <code>&lt;h3&gt;</code>,读屏念出来就是一句「dialog」。<code>:58-60</code> 把焦点放在容器上,而容器的 <code>outline-none</code> 让键盘用户看不到落点,<code>Tab</code> 第一次跳到 ✕ 而不是「取消」。</td>
+          <td><b>接上 id 关系。</b><code>useId()</code> 生成两个 id,<code>aria-labelledby</code> 指向问句、<code>aria-describedby</code> 指向后果;焦点仍落面板(读屏会念出问句与后果),<code>Tab</code> 第一次进到「取消」。<code>Enter</code> 语义不变,只补一条:焦点已在按钮上时,不再由 window 处理器重复触发。</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       规格
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead" style="margin-top:40px"><b>规格</b><span>亮暗共用一套尺寸</span></div>
+  <section class="spec">
+    <div><dt>面板</dt><dd>400 宽 · 圆角 10 · 发丝线 · shadow-xl</dd></div>
+    <div><dt>遮罩</dt><dd>20% 黑,不模糊(同其它对话框)</dd></div>
+    <div><dt>内边距</dt><dd>18 / 20 / 16</dd></div>
+    <div><dt>问句</dt><dd>14 / 500 · 行高 20</dd></div>
+    <div><dt>后果</dt><dd>13 / 1.62 · muted-fg</dd></div>
+    <div><dt>对象行</dt><dd>11.5 mono · 上 14 下 10</dd></div>
+    <div><dt>分栏线</dt><dd>1px <code>--border-soft</code></dd></div>
+    <div><dt>底栏</dt><dd>56 高 · 右对齐 · 间距 8</dd></div>
+    <div><dt>按钮</dt><dd>h-8 · 圆角 8 · 14 / 500</dd></div>
+    <div><dt>确认键</dt><dd>实心墨 / 10% 红底(危险)</dd></div>
+    <div><dt>入场</dt><dd>160ms · 淡入 + 上移 4</dd></div>
+    <div><dt>宽度</dt><dd><code>min(400, 100vw - 32)</code></dd></div>
+  </section>
+
+  <section class="notes">
+    <h3>交互 / 数据 / 边界</h3>
+    <p><b>快捷键不改映射。</b><code>Esc</code> 取消、<code>Enter</code> 确认、<code>Tab</code> 圈闭、点遮罩取消,全部保留。新增一条防重:<code>Enter</code> 若已落在某个按钮上(焦点在按钮),交给按钮自己的原生点击,不再由 window 处理器重复确认一次。</p>
+    <p><b>初始焦点仍落面板。</b>读屏从这里念出问句与后果,<code>Tab</code> 第一次进到「取消」—— ✕ 去掉后焦点圈只剩两个按钮。不做「危险态强制聚焦取消」:<code>Enter</code> 的语义在全应用保持一致,不因一个对话框变形。</p>
+    <p><b>动效。</b>遮罩 120ms 淡入,面板 160ms 淡入 + 4px 上移,曲线 <code>cubic-bezier(.2,0,0,1)</code>;无循环、无缩放回弹,不动宽高。</p>
+    <p><b>文案默认值。</b><code>cancelLabel</code> / <code>confirmLabel</code> 的兜底保持 <code>t.cancel</code> / <code>t.confirm</code>,但 6 处调用建议都传动词,现有键够用:<code>historyRefresh</code>、<code>templateDelete</code>、<code>restore</code>;「清除」暂复用 <code>settingsClear</code>,嫌跨域再加一个 <code>clear</code>。</p>
+    <p><b>危险态只给三类。</b>删除模板、删除版本、清除所有版本 —— 记录会消失。覆盖输出、刷新页面、恢复版本用实心墨:后果可预期,且对象没有被删掉。这条是判断,不是规则,可以推翻。</p>
+    <p><b>红线。</b>不改 6 处调用的时机与条件;不改遮罩点击;不动现有 i18n 值;不给对话框加图标、插图或第二段说明文字;不加「不再询问」勾选。</p>
+    <p><b>落地时的两处对齐。</b>圆角与阴影没有照图上的 12 / 自定义投影,改用 <code>rounded-lg</code> + <code>shadow-xl</code> —— 与同为 400 宽的 <code>AboutDialog</code>、<code>DuckdbTableDialog</code> 一致,不让一个确认框比它的兄弟更"新"。入场动效落在 <code>index.css</code> 的 <code>.animate-dialog-enter</code>(160ms,<code>cubic-bezier(.2,0,0,1)</code>),不用 tw-animate-css。</p>
+    <p><b>实现落点。</b><code>ConfirmDialog.tsx</code> 一处渲染 + 两个可选 prop(<code>detail?: string</code>、<code>tone?: "default" | "danger"</code>)+ 两个 aria 绑定。后续可选:<code>App.tsx:2167 / 2179 / 2224</code> 与 <code>VersionControlPanel.tsx:694 / 704 / 715</code> 补 <code>detail</code> / <code>tone</code> / 动词标签。</p>
+    <h3 style="margin-top:6px">i18n 增删</h3>
+    <div class="keysbox">
+      <span>+ confirmDeleteTemplateBody(删除后不能恢复. / This cannot be undone.)</span>
+      <span>其余 5 处沿用现有 message</span>
+      <span>− 不再把对象拼进 message(App.tsx:2229)</span>
+      <span>按钮动词复用现有键</span>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

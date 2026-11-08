@@ -261,6 +261,7 @@ export const enPipeline = {
   templateExport: "Export",
   templateImport: "Import",
   confirmDeleteTemplate: "Delete this template?",
+  confirmDeleteTemplateBody: "This cannot be undone",
   templateSaved: "Pipeline saved as template",
   templateApplied: "Pipeline created from template",
   templateNameRequired:

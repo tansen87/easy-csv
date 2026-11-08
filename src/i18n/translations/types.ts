@@ -205,6 +205,8 @@ export interface Translations {
   cycleDetected: string;
   branchOverwriteTitle: string;
   branchOverwriteMessage: string;
+  overwrite: string;
+  clear: string;
 
   // Settings
   general: string;
@@ -1104,6 +1106,7 @@ export interface Translations {
   templateExport: string;
   templateImport: string;
   confirmDeleteTemplate: string;
+  confirmDeleteTemplateBody: string;
   templateSaved: string;
   templateApplied: string;
   commandAdd: string;
