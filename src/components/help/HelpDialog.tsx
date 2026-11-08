@@ -12,6 +12,10 @@ import { HelpMarkdown, getSearchMatches } from "@/components/help/HelpMarkdown";
 import { X, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { useLanguage } from "@/i18n";
 
+/** Keycap used for the search shortcut and the footer hint row. */
+const KEYCAP_CLASS =
+  "rounded-[3px] border border-border bg-background px-1 font-mono text-[9.5px] leading-[14px] text-muted-foreground";
+
 interface HelpDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -149,11 +153,11 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-foreground/20 backdrop-blur-xs flex items-center justify-center z-50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20"
       onContextMenu={(e) => e.preventDefault()}
     >
       <div
-        className="bg-card border rounded-lg shadow-xl p-4 w-full max-w-5xl h-[75vh] flex flex-col"
+        className="flex h-[min(700px,88vh)] w-[min(960px,calc(100vw-32px))] flex-col overflow-hidden rounded-[10px] border border-border bg-card shadow-xl"
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
@@ -161,34 +165,50 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
         onClick={(e) => e.stopPropagation()}
         style={{ outline: "none" }}
       >
-        <div className="flex items-center flex-shrink-0">
-          <div className="flex-1 flex justify-start">
-            <h3 className="text-lg font-semibold">{commandName}</h3>
-          </div>
+        <div className="flex h-14 flex-none items-center gap-4 border-b border-border/60 px-5">
+          <h3 className="min-w-0 truncate text-sm font-medium">{commandName}</h3>
 
-          <div className="flex-1 flex justify-center items-center gap-2">
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="ml-auto flex items-center gap-2">
+            <div className="relative w-[260px]">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 ref={searchInputRef}
                 type="text"
                 placeholder={t.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-8"
+                className="h-[30px] pl-8 pr-16 text-xs"
               />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  aria-label={t.helpClearSearch}
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-1.5 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              ) : (
+                <span
+                  className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 rounded border border-border bg-card px-1 font-mono text-[9.5px] leading-[14px] text-muted-foreground"
+                >
+                  Ctrl F
+                </span>
+              )}
             </div>
+
             {searchQuery && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground min-w-[60px]">
+              <div className="flex items-center gap-1">
+                <span className="min-w-[42px] text-right font-mono text-[11px] tabular-nums text-muted-foreground">
                   {matchCount > 0
                     ? `${currentMatchIndex + 1}/${matchCount}`
-                    : "0/0"}
+                    : t.helpNoMatches}
                 </span>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
+                  size="xs"
+                  aria-label={t.helpPrevMatch}
+                  className="h-[26px] w-[26px] p-0"
                   onClick={handlePreviousMatch}
                   disabled={matchCount === 0}
                 >
@@ -196,8 +216,9 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
                 </Button>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
+                  size="xs"
+                  aria-label={t.helpNextMatch}
+                  className="h-[26px] w-[26px] p-0"
                   onClick={handleNextMatch}
                   disabled={matchCount === 0}
                 >
@@ -205,21 +226,21 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
                 </Button>
               </div>
             )}
-          </div>
 
-          <div className="flex-1 flex justify-end">
             <Button
               variant="ghost"
               size="icon"
+              aria-label={t.close}
+              className="h-7 w-7 text-muted-foreground"
               onClick={onClose}
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
 
-        <ScrollArea ref={scrollAreaRef} className="flex-1 h-0">
-          <div className="text-sm font-mono pr-2">
+        <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
+          <div className="mx-auto max-w-[660px] px-4 py-6">
             <HelpMarkdown
               content={content}
               searchQuery={searchQuery}
@@ -228,11 +249,20 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
           </div>
         </ScrollArea>
 
-        <div className="flex-shrink-0 pt-2 text-xs text-muted-foreground">
-          <span className="mr-4">{t.searchShortcut}</span>
-          <span className="mr-4">{t.previousMatch}</span>
-          <span className="mr-4">{t.nextMatch}</span>
-          <span>{t.helpClose}</span>
+        <div className="flex h-11 flex-none items-center gap-5 border-t border-border/60 px-5 text-[10.5px] text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span className={KEYCAP_CLASS}>Ctrl F</span>
+            {t.helpSearchLabel}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className={KEYCAP_CLASS}>↑</span>
+            <span className={KEYCAP_CLASS}>↓</span>
+            {t.helpPrevMatch} / {t.helpNextMatch}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className={KEYCAP_CLASS}>Esc</span>
+            {t.close}
+          </span>
         </div>
       </div>
     </div>

@@ -337,10 +337,11 @@ export interface Translations {
 
   // HelpDialog
   searchPlaceholder: string;
-  searchShortcut: string;
-  previousMatch: string;
-  nextMatch: string;
-  helpClose: string;
+  helpSearchLabel: string;
+  helpPrevMatch: string;
+  helpNextMatch: string;
+  helpNoMatches: string;
+  helpClearSearch: string;
 
   // FlowPanel
   searchFlow: string;

@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 049 · 帮助中心改版</title>
+<style>
+  /* ── tokens · 与 src/index.css 对齐 ───────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.7 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --border-strong:oklch(0.855 0 0);
+    --accent:oklch(0.97 0 0);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 12%,var(--bg));
+    --chrome-line:color-mix(in oklab,var(--brand) 30%,transparent);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-win:0 24px 60px -24px oklch(0.2 0.02 80 / 26%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-dlg:0 20px 50px -20px oklch(0.2 0.02 80 / 30%),0 2px 8px oklch(0.2 0.02 80 / 8%);
+    --ease:cubic-bezier(.2,0,0,1);
+  }
+  .dark{
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.52 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(1 0 0 / 7%);
+    --border-strong:oklch(1 0 0 / 16%);
+    --accent:oklch(0.269 0 0);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 12%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 16%,var(--bg));
+    --chrome-line:color-mix(in oklab,var(--brand) 34%,transparent);
+    --canvas:oklch(0.145 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-dlg:none;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;-webkit-font-smoothing:antialiased;
+  }
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:20px}
+  .stage-bar h1{margin:0;font-size:16px;font-weight:500}
+  .stage-bar p{margin:6px 0 0;font-size:12px;color:var(--muted-fg);max-width:920px;line-height:1.65}
+
+  .direction{
+    display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:34px;
+    border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden;
+  }
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.55}
+
+  .frame + .frame{margin-top:50px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span:last-child{color:var(--muted-fg-2)}
+  .mk-legend{display:flex;flex-wrap:wrap;gap:6px 22px;padding-top:10px}
+  .mk-legend span{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted-fg)}
+  .mk-legend i{font-style:normal;width:15px;height:15px;border-radius:50%;display:grid;place-items:center;
+               font-family:var(--mono);font-size:9.5px;font-weight:600;flex:none;color:#fff}
+  .mk-legend.before i{background:#b42318}
+  .mk-legend.after i{background:var(--brand)}
+
+  /* ── 应用窗口(语境) ────────────────────────────────────────────── */
+  .win{position:relative;width:1200px;height:760px;overflow:hidden;
+       border:1px solid var(--border-strong);border-radius:8px;background:var(--bg);
+       box-shadow:var(--shadow-win)}
+  .dark .win{border-color:var(--border)}
+  .chrome{height:36px;display:flex;align-items:center;padding-left:16px;gap:18px;
+          background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-line)}
+  .brand{font-size:12.5px;font-weight:500}
+  .menus{display:flex;gap:2px}
+  .mb{height:26px;display:flex;align-items:center;padding:0 10px;border-radius:6px;
+      font-size:11.5px;font-weight:500;color:var(--brand)}
+  .mb.on{background:var(--accent);color:var(--fg)}
+  .canvas{position:absolute;left:0;right:0;top:36px;bottom:0;background-color:var(--canvas);
+          background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+          background-size:22px 22px;background-position:11px 11px}
+  .veil{position:absolute;inset:0;background:oklch(0.2 0.02 80 / 20%)}
+
+  /* 语境里的几个画布节点(不做细节,只交代"在应用里") */
+  .ghost{position:absolute;background:var(--card);border:1px solid var(--border);border-radius:6px;opacity:.55}
+  .ghost.g1{left:60px;top:90px;width:300px;height:120px}
+  .ghost.g2{left:420px;top:120px;width:180px;height:64px}
+  .ghost.g3{left:660px;top:90px;width:300px;height:120px}
+
+  /* ══════════════════════════════════════════════════════════════════
+     现状 · HelpDialog.tsx
+     ══════════════════════════════════════════════════════════════════ */
+  .old{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:1024px;height:570px;display:flex;flex-direction:column;
+    background:var(--card);border:1px solid var(--border);border-radius:8px;
+    box-shadow:var(--shadow-dlg);padding:16px;overflow:hidden;
+  }
+  .old-head{display:flex;align-items:center;flex:none}
+  .old-head>div{flex:1;min-width:0}
+  .old-title{font-size:18px;font-weight:600;line-height:1.4}
+  .old-search{width:256px;height:32px;border:1px solid var(--border);border-radius:6px;
+              background:var(--bg);display:flex;align-items:center;gap:8px;padding:0 10px;
+              font-size:13px;color:var(--muted-fg)}
+  .old-search svg{width:16px;height:16px;stroke:currentColor;stroke-width:1.5;fill:none}
+  .old-body{flex:1;min-height:0;overflow:hidden;padding-right:8px;margin-top:14px;
+            font-family:var(--mono);font-size:13px;line-height:1.8;color:var(--fg)}
+  .old-body h4{font-family:var(--font);font-size:16px;font-weight:600;margin:18px 0 8px}
+  .old-body p{margin:0 0 8px}
+  .old-body .old-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  .old-body .old-table th,.old-body .old-table td{border:1px solid var(--border);padding:6px 10px;text-align:left}
+  .old-body .old-table th{background:color-mix(in oklab,var(--muted) 50%,transparent);font-weight:600}
+  .old-foot{flex:none;padding-top:10px;font-size:12px;color:var(--muted-fg)}
+  .old-foot span{margin-right:16px}
+  .old-x{width:32px;height:32px;display:grid;place-items:center;color:var(--fg)}
+  .old-x svg{width:16px;height:16px;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round}
+
+  /* ══════════════════════════════════════════════════════════════════
+     改后 · 说明书
+     ══════════════════════════════════════════════════════════════════ */
+  .dlg{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:960px;height:700px;display:flex;flex-direction:column;overflow:hidden;
+    background:var(--card);border:1px solid var(--border);border-radius:10px;
+    box-shadow:var(--shadow-dlg);
+  }
+  .dlg-head{
+    flex:none;height:56px;display:flex;align-items:center;gap:16px;padding:0 20px;
+    border-bottom:1px solid var(--border-soft);
+  }
+  .dlg-title{font-size:14px;font-weight:500;min-width:0;white-space:nowrap}
+  .dlg-title .cmd{font-family:var(--mono);font-size:13px;font-weight:500}
+  .dlg-title .tag{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-left:8px}
+  .dlg-spacer{flex:1}
+  .search{
+    width:260px;height:30px;display:flex;align-items:center;gap:8px;padding:0 8px 0 10px;
+    border:1px solid var(--border);border-radius:6px;background:var(--bg);
+  }
+  .search svg{width:13px;height:13px;stroke:var(--muted-fg);stroke-width:1.5;fill:none;flex:none}
+  .search .ph{flex:1;font-size:11.5px;color:var(--muted-fg-2)}
+  .search .kbd{font-family:var(--mono);font-size:9.5px;line-height:14px;color:var(--muted-fg-2);
+               border:1px solid var(--border);border-radius:3px;padding:0 4px;background:var(--card)}
+  .count{font-family:var(--mono);font-size:11px;color:var(--muted-fg);font-variant-numeric:tabular-nums}
+  .navbtn{width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:var(--muted-fg)}
+  .navbtn svg{width:12px;height:12px;stroke:currentColor;stroke-width:1.5;fill:none}
+  .xbtn{width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:var(--muted-fg);flex:none}
+  .xbtn svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round}
+
+  .body{position:relative;flex:1;min-height:0;overflow:hidden}
+  .doc{max-width:660px;margin:0 auto;padding:24px 0 28px}
+  .sec{position:relative;margin-top:28px;padding-top:18px}
+  .sec:first-child{margin-top:0;padding-top:0}
+  .sec:not(:first-child)::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:var(--border-soft)}
+  .sec h3{margin:0 0 10px;display:flex;align-items:baseline;gap:10px;font-size:13.5px;font-weight:500}
+  .sec h3 .no{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .doc p,.doc li{font-size:13px;line-height:1.75;color:var(--fg)}
+  .doc p{margin:0 0 8px}
+  .doc ol,.doc ul{margin:0;padding-left:18px;display:grid;gap:6px}
+  .doc li::marker{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-2)}
+  .doc b{font-weight:500}
+  .doc code{font-family:var(--mono);font-size:11.5px;color:var(--fg);
+            background:color-mix(in oklab,var(--muted) 60%,transparent);padding:1px 5px;border-radius:3px}
+  .doc table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+  .doc th{text-align:left;font-size:10.5px;font-weight:500;color:var(--muted-fg);
+          padding:6px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+  .doc td{padding:7px 10px;border-bottom:1px solid var(--border-soft);color:var(--fg)}
+  .doc td:first-child{white-space:nowrap}
+  .key{font-family:var(--mono);font-size:10px;line-height:15px;color:var(--fg);
+       border:1px solid var(--border);border-radius:3px;padding:0 4px;background:var(--bg);white-space:nowrap}
+  .plus{font-size:10px;color:var(--muted-fg-2);margin:0 3px}
+
+  .sbar{position:absolute;right:2px;top:24px;bottom:18px;width:3px;border-radius:2px;
+        background:color-mix(in oklab,var(--muted-fg) 14%,transparent)}
+  .sbar i{display:block;width:3px;height:150px;border-radius:2px;
+          background:color-mix(in oklab,var(--muted-fg) 42%,transparent)}
+
+  .dlg-foot{
+    flex:none;height:44px;display:flex;align-items:center;gap:18px;padding:0 20px;
+    border-top:1px solid var(--border-soft);font-size:10.5px;color:var(--muted-fg);
+  }
+  .dlg-foot .k{display:inline-flex;align-items:center;gap:5px}
+  .dlg-foot .kbd{font-family:var(--mono);font-size:9.5px;line-height:14px;color:var(--muted-fg);
+                 border:1px solid var(--border);border-radius:3px;padding:0 4px;background:var(--bg)}
+
+  /* 变体 B · 双栏索引 */
+  .dlg-b{width:960px;height:700px}
+  .db{flex:1;min-height:0;display:grid;grid-template-columns:200px 1fr;overflow:hidden}
+  .db-side{border-right:1px solid var(--border-soft);padding:16px 8px 16px 12px}
+  .db-cap{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);padding:0 8px;margin-bottom:8px}
+  .db-item{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border-radius:5px;
+           font-size:11.5px;color:var(--muted-fg);position:relative}
+  .db-item .no{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2)}
+  .db-item.on{background:var(--accent);color:var(--fg)}
+  .db-item.on::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;background:var(--brand)}
+  .db-doc{overflow:hidden}
+  .db-doc .doc{max-width:620px;padding:20px 24px 24px}
+
+  /* 编号红/品牌点 */
+  .mk{position:absolute;width:15px;height:15px;border-radius:50%;display:grid;place-items:center;
+       font-family:var(--mono);font-size:9.5px;font-weight:600;color:#fff;z-index:9}
+  .mk.b{background:#b42318}
+  .mk.a{background:var(--brand)}
+  .mk::before{content:"";position:absolute;left:7px;top:-9px;width:1px;height:9px;background:currentColor;opacity:.55}
+
+  /* ── 状态 ──────────────────────────────────────────────────────── */
+  .subhead{display:flex;align-items:baseline;gap:10px;margin:34px 0 12px;
+           font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .subhead b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .tile{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px}
+  .tile-cap{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:10px}
+  .crop{border:1px solid var(--border-soft);border-radius:8px;overflow:hidden;background:var(--card);height:214px}
+  .crop-head{height:44px;display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:1px solid var(--border-soft)}
+  .crop-title{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .crop-title .cmd{font-family:var(--mono);font-size:11.5px}
+  .crop-search{flex:1;height:26px;display:flex;align-items:center;gap:6px;padding:0 7px;
+               border:1px solid var(--border);border-radius:5px;background:var(--bg);min-width:0}
+  .crop-search svg{width:11px;height:11px;stroke:var(--muted-fg);stroke-width:1.5;fill:none;flex:none}
+  .crop-search .ph{flex:1;font-size:10.5px;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .crop-search .clear{width:14px;height:14px;display:grid;place-items:center;border-radius:3px;color:var(--muted-fg)}
+  .crop-search .clear svg{width:9px;height:9px}
+  .crop .count{font-size:10px}
+  .crop-body{padding:12px;font-size:11.5px;line-height:1.7;color:var(--fg)}
+  .crop-body .mark{background:var(--brand-soft);border-radius:2px;padding:0 1px}
+  .crop-body .mark.cur{background:var(--brand);color:var(--brand-fg)}
+  .crop-body .nocap{font-size:10.5px;color:var(--muted-fg);margin-bottom:8px}
+  .crop-sec{display:flex;align-items:baseline;gap:7px;font-size:11px;font-weight:500;margin:10px 0 6px;padding-top:8px;
+            border-top:1px solid var(--border-soft)}
+  .crop-sec:first-child{margin-top:0;padding-top:0;border-top:0}
+  .crop-sec .no{font-family:var(--mono);font-size:9px;color:var(--muted-fg-2)}
+  .crop-pre{font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--fg);
+            background:color-mix(in oklab,var(--muted) 55%,transparent);border:1px solid var(--border-soft);
+            border-radius:4px;padding:6px 8px;margin:6px 0 8px;white-space:pre;overflow:hidden}
+  .crop-table{width:100%;border-collapse:collapse;font-size:10.5px}
+  .crop-table th{text-align:left;font-size:9.5px;font-weight:500;color:var(--muted-fg);
+                 padding:3px 4px;border-bottom:1px solid var(--border)}
+  .crop-table td{padding:4px;border-bottom:1px solid var(--border-soft);color:var(--fg)}
+  .crop-table td:first-child{font-family:var(--mono);white-space:nowrap}
+
+  /* ── 诊断 / 规格 / 说明 ─────────────────────────────────────────── */
+  .legend{width:1200px;margin-top:34px}
+  .legend table{width:100%;border-collapse:collapse;font-size:11.5px}
+  .legend th{text-align:left;font-family:var(--mono);font-size:10px;font-weight:400;
+             color:var(--muted-fg-2);padding:0 12px 8px 0;border-bottom:1px solid var(--border)}
+  .legend td{vertical-align:top;padding:12px 16px 12px 0;border-bottom:1px solid var(--border-soft);
+             line-height:1.65;color:var(--muted-fg)}
+  .legend td:first-child{width:26px;font-family:var(--mono);font-size:10.5px;color:#b42318}
+  .legend td:nth-child(2){width:520px}
+  .legend td b{font-weight:500;color:var(--fg)}
+
+  .spec{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--border);
+        border-radius:10px;background:var(--card);overflow:hidden;margin-top:6px}
+  .spec div{padding:11px 14px;border-right:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+  .spec div:nth-child(4n){border-right:0}
+  .spec dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:4px}
+  .spec dd{margin:0;font-size:11.5px;line-height:1.5}
+
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:8px 36px;margin-top:24px}
+  .notes h3{grid-column:1/-1;margin:0 0 6px;font-size:12px;font-weight:500}
+  .notes p{margin:0 0 10px;font-size:11.5px;line-height:1.7;color:var(--muted-fg)}
+  .notes p b{font-weight:500;color:var(--fg)}
+  .keys{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+  .keys span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);border:1px solid var(--border);
+             border-radius:4px;padding:2px 5px;background:var(--card)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">049 · 帮助中心</div>
+    <h1>帮助中心 —— 从「等宽长文」到一页说明书</h1>
+    <p>「帮助 → 帮助中心」打开的 <code>HelpDialog</code> 同时承担两种文档:应用使用手册(五分钟上手 / 鼠标 / 快捷键)与单个命令的 xan 文档。现状把<b>整页正文塞进等宽字体</b>,标题、搜索、关闭挤在一行三等分里,底部再用一行字符串重复快捷键;章节只是加粗大字,代码与表格像一张张卡片。这次只改这层阅读界面:内容、搜索语义、快捷键与数据都不动。</p>
+  </div>
+
+  <dl class="direction">
+    <div><dt>产品</dt><dd>给把 CSV 反复清洗、拼接的人的手册;打开即查操作与快捷键。</dd></div>
+    <div><dt>性格</dt><dd>精确、安静,像一本摊在桌上的说明书,不做任何营销。</dd></div>
+    <div><dt>世界</dt><dd>账本与手册的纸面:发丝线、章节序号;等宽只留给命令、按键和数字。</dd></div>
+    <div><dt>两个瞬间</dt><dd>① 三个带 01/02/03 的小节与快捷键表格 ② 命令文档里唯一的代码块,是这页的技术焦点。</dd></div>
+    <div><dt>签名</dt><dd>等宽小节序号压在小节上方的发丝线上 —— 与设置页、版本日志同一套索引。</dd></div>
+  </dl>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       01 现状
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>01</span><b>现状</b><span>HelpDialog.tsx + HelpMarkdown.tsx · 编号 1-5 对应下方诊断表</span></div>
+
+    <div class="win">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span>
+        <div class="menus"><span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span><span class="mb on">帮助</span></div>
+      </div>
+      <div class="canvas">
+        <div class="ghost g1"></div><div class="ghost g2"></div><div class="ghost g3"></div>
+      </div>
+      <div class="veil"></div>
+
+      <div class="old">
+        <div class="old-head">
+          <div><div class="old-title">帮助</div></div>
+          <div style="display:flex;justify-content:center">
+            <div class="old-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/></svg>搜索 (Ctrl+F)</div>
+          </div>
+          <div style="display:flex;justify-content:flex-end">
+            <span class="old-x"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+          </div>
+        </div>
+        <div class="old-body">
+          <h4>五分钟上手</h4>
+          <p>1. 打开数据 —— 把文件拖进窗口,或按 Ctrl + O。手上没有文件时,点空状态里的「看看示例」……</p>
+          <p>2. 添加第一个操作 —— 按 Alt + C 打开命令面板,点任意命令即可加入画布……</p>
+          <p>3. 管道与分支 —— 新加的节点默认自成一条分支,直接对原始数据生效,不连线也能执行……</p>
+          <h4>快捷键</h4>
+          <table class="old-table">
+            <thead><tr><th>快捷键</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr><td>Ctrl + K</td><td>命令面板</td></tr>
+              <tr><td>Ctrl + O</td><td>打开文件</td></tr>
+              <tr><td>Ctrl + R</td><td>执行</td></tr>
+              <tr><td>Alt + C</td><td>命令</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="old-foot">
+          <span>Ctrl+F: 搜索</span><span>↑: 上一个匹配</span><span>↓: 下一个匹配</span><span>ESC: 关闭</span>
+        </div>
+      </div>
+
+      <div class="mk b" style="left:150px;top:96px">1</div>
+      <div class="mk b" style="left:350px;top:96px">2</div>
+      <div class="mk b" style="left:370px;top:664px">3</div>
+      <div class="mk b" style="left:560px;top:410px">4</div>
+      <div class="mk b" style="left:1050px;top:110px">5</div>
+    </div>
+
+    <div class="mk-legend before">
+      <span><i>1</i>整页正文都是 <code>font-mono</code>,读一段中文像读代码</span>
+      <span><i>2</i>标题 / 固定 256px 搜索 / 关闭 三等分,搜索悬在正中</span>
+      <span><i>3</i>底部一行字符串重复 4 条快捷键,不是键帽</span>
+      <span><i>4</i>章节只是加粗大字;代码块与表格都是实心卡片/网格</span>
+      <span><i>5</i>遮罩带 <code>backdrop-blur</code>,与其它对话框不一致</span>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       02 改后 · 亮色
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>02</span><b>改后 · 说明书(亮色)</b><span>960×700 · 头部 56 / 正文 660 度量 / 底部 44</span></div>
+
+    <div class="win">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span>
+        <div class="menus"><span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span><span class="mb on">帮助</span></div>
+      </div>
+      <div class="canvas">
+        <div class="ghost g1"></div><div class="ghost g2"></div><div class="ghost g3"></div>
+      </div>
+      <div class="veil" style="background:oklch(0.2 0.02 80 / 20%)"></div>
+
+      <div class="dlg">
+        <div class="dlg-head">
+          <div class="dlg-title">帮助中心<span class="tag">使用手册</span></div>
+          <div class="dlg-spacer"></div>
+          <div class="search">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/></svg>
+            <span class="ph">搜索本文</span>
+            <span class="kbd">Ctrl F</span>
+          </div>
+          <div class="xbtn"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+        </div>
+
+        <div class="body">
+          <div class="doc">
+            <section class="sec">
+              <h3><span class="no">01</span>五分钟上手</h3>
+              <ol>
+                <li><b>打开数据</b> —— 把文件拖进窗口,或按 <code>Ctrl</code> + <code>O</code>。手上没有文件时,点空状态里的「看看示例」,会直接给你一份示例数据加一条已经跑通的管道。</li>
+                <li><b>添加第一个操作</b> —— 按 <code>Alt</code> + <code>C</code> 打开命令面板,点任意命令即可加入画布;也可以按 <code>Alt</code> + <code>A</code> 用一句话描述需求,让 AI 生成。</li>
+                <li><b>管道与分支</b> —— 新加的节点默认自成一条分支,直接对原始数据生效,不连线也能执行。想把两步串起来,就右键按住一个操作节点拖到目标节点上(连线起点必须是操作节点)。</li>
+                <li><b>执行与看结果</b> —— 按 <code>Ctrl</code> + <code>R</code> 执行。日志面板会在执行开始时自动打开,每个步骤的结果都在里面。</li>
+                <li><b>保存与导出</b> —— <code>Ctrl</code> + <code>S</code> 存为脚本,<code>Ctrl</code> + <code>E</code> 导出工作流;要落盘就用 <code>to</code> 或 <code>output</code> 步骤。</li>
+              </ol>
+            </section>
+
+            <section class="sec">
+              <h3><span class="no">02</span>鼠标操作</h3>
+              <ul>
+                <li><b>框选</b> —— 左键按下并拖拽框选节点</li>
+                <li><b>移动视野</b> —— 左键 + 空格,或按住鼠标中键并拖拽</li>
+                <li><b>连线</b> —— 右键按下节点并拖拽至另一个节点</li>
+                <li><b>删除</b> —— 右键按下空白区域并拖拽划过连线或节点</li>
+                <li><b>缩放</b> —— 滚动鼠标滚轮放大和缩小画布</li>
+              </ul>
+            </section>
+
+            <section class="sec">
+              <h3><span class="no">03</span>快捷键</h3>
+              <table>
+                <thead><tr><th>快捷键</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr><td><span class="key">Ctrl</span><span class="plus">+</span><span class="key">K</span></td><td>命令面板</td></tr>
+                  <tr><td><span class="key">Ctrl</span><span class="plus">+</span><span class="key">O</span></td><td>打开文件</td></tr>
+                  <tr><td><span class="key">Ctrl</span><span class="plus">+</span><span class="key">N</span></td><td>新标签页打开</td></tr>
+                  <tr><td><span class="key">Ctrl</span><span class="plus">+</span><span class="key">S</span></td><td>保存为脚本</td></tr>
+                  <tr><td><span class="key">Ctrl</span><span class="plus">+</span><span class="key">R</span></td><td>执行</td></tr>
+                  <tr><td><span class="key">Ctrl</span><span class="plus">+</span><span class="key">T</span></td><td>模板</td></tr>
+                  <tr><td><span class="key">Alt</span><span class="plus">+</span><span class="key">C</span></td><td>命令</td></tr>
+                  <tr><td><span class="key">Alt</span><span class="plus">+</span><span class="key">Q</span></td><td>日志</td></tr>
+                </tbody>
+              </table>
+            </section>
+          </div>
+          <div class="sbar"><i></i></div>
+        </div>
+
+        <div class="dlg-foot">
+          <span class="k"><span class="kbd">Ctrl F</span>搜索</span>
+          <span class="k"><span class="kbd">↑</span><span class="kbd">↓</span>上一处 / 下一处</span>
+          <span class="k"><span class="kbd">Esc</span>关闭</span>
+        </div>
+      </div>
+
+      <div class="mk a" style="left:120px;top:46px">1</div>
+      <div class="mk a" style="left:346px;top:46px">2</div>
+      <div class="mk a" style="left:196px;top:716px">3</div>
+      <div class="mk a" style="left:420px;top:300px">4</div>
+      <div class="mk a" style="left:1030px;top:60px">5</div>
+    </div>
+
+    <div class="mk-legend after">
+      <span><i>1</i>标题 14/500,右对齐搜索 260 与关闭;不再三等分</span>
+      <span><i>2</i>搜索框内是 <code>Ctrl F</code> 键帽,占位只写「搜索本文」</span>
+      <span><i>3</i>底部四组键帽,替代一长串提示</span>
+      <span><i>4</i>正文 13px 无衬线、660 度量;章节序号 + 发丝线</span>
+      <span><i>5</i>遮罩平铺(20% 墨),不模糊;对话框 960×700</span>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       03 改后 · 暗色
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame dark">
+    <div class="cap"><span>03</span><b>改后 · 说明书(暗色)</b><span>面阶 + 发丝线分层;代码块用 7% 白底,按键仍用 10% 白边</span></div>
+
+    <div class="win">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span>
+        <div class="menus"><span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span><span class="mb on">帮助</span></div>
+      </div>
+      <div class="canvas">
+        <div class="ghost g1"></div><div class="ghost g2"></div><div class="ghost g3"></div>
+      </div>
+      <div class="veil" style="background:oklch(0 0 0 / 38%)"></div>
+
+      <div class="dlg">
+        <div class="dlg-head">
+          <div class="dlg-title">帮助中心<span class="tag">使用手册</span></div>
+          <div class="dlg-spacer"></div>
+          <div class="search">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/></svg>
+            <span class="ph">搜索本文</span>
+            <span class="kbd">Ctrl F</span>
+          </div>
+          <div class="xbtn"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+        </div>
+
+        <div class="body">
+          <div class="doc">
+            <section class="sec">
+              <h3><span class="no">01</span>五分钟上手</h3>
+              <ol>
+                <li><b>打开数据</b> —— 把文件拖进窗口,或按 <code>Ctrl</code> + <code>O</code>。手上没有文件时,点空状态里的「看看示例」,会直接给你一份示例数据加一条已经跑通的管道。</li>
+                <li><b>添加第一个操作</b> —— 按 <code>Alt</code> + <code>C</code> 打开命令面板,点任意命令即可加入画布;也可以按 <code>Alt</code> + <code>A</code> 用一句话描述需求,让 AI 生成。</li>
+                <li><b>管道与分支</b> —— 新加的节点默认自成一条分支,直接对原始数据生效,不连线也能执行。想把两步串起来,就右键按住一个操作节点拖到目标节点上(连线起点必须是操作节点)。</li>
+                <li><b>执行与看结果</b> —— 按 <code>Ctrl</code> + <code>R</code> 执行。日志面板会在执行开始时自动打开,每个步骤的结果都在里面。</li>
+                <li><b>保存与导出</b> —— <code>Ctrl</code> + <code>S</code> 存为脚本,<code>Ctrl</code> + <code>E</code> 导出工作流;要落盘就用 <code>to</code> 或 <code>output</code> 步骤。</li>
+              </ol>
+            </section>
+
+            <section class="sec">
+              <h3><span class="no">02</span>鼠标操作</h3>
+              <ul>
+                <li><b>框选</b> —— 左键按下并拖拽框选节点</li>
+                <li><b>移动视野</b> —— 左键 + 空格,或按住鼠标中键并拖拽</li>
+                <li><b>连线</b> —— 右键按下节点并拖拽至另一个节点</li>
+                <li><b>删除</b> —— 右键按下空白区域并拖拽划过连线或节点</li>
+                <li><b>缩放</b> —— 滚动鼠标滚轮放大和缩小画布</li>
+              </ul>
+            </section>
+
+            <section class="sec">
+              <h3><span class="no">03</span>快捷键</h3>
+              <table>
+                <thead><tr><th>快捷键</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr><td><span class="key">Ctrl</span><span class="plus">+</span><span class="key">K</span></td><td>命令面板</td></tr>
+                  <tr><td><span class="key">Ctrl</span><span class="plus">+</span><span class="key">O</span></td><td>打开文件</td></tr>
+                  <tr><td><span class="key">Ctrl</span><span class="plus">+</span><span class="key">N</span></td><td>新标签页打开</td></tr>
+                  <tr><td><span class="key">Ctrl</span><span class="plus">+</span><span class="key">S</span></td><td>保存为脚本</td></tr>
+                  <tr><td><span class="key">Ctrl</span><span class="plus">+</span><span class="key">R</span></td><td>执行</td></tr>
+                </tbody>
+              </table>
+            </section>
+          </div>
+          <div class="sbar"><i></i></div>
+        </div>
+
+        <div class="dlg-foot">
+          <span class="k"><span class="kbd">Ctrl F</span>搜索</span>
+          <span class="k"><span class="kbd">↑</span><span class="kbd">↓</span>上一处 / 下一处</span>
+          <span class="k"><span class="kbd">Esc</span>关闭</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       04 变体 B · 双栏索引
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>04</span><b>变体 B · 双栏索引</b><span>左侧 200px 章节索引;适合命令文档这种 5-8 节的长文,手册只有 3 节时偏重</span></div>
+
+    <div class="win">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span>
+        <div class="menus"><span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span><span class="mb on">帮助</span></div>
+      </div>
+      <div class="canvas"><div class="ghost g1"></div><div class="ghost g2"></div><div class="ghost g3"></div></div>
+      <div class="veil" style="background:oklch(0.2 0.02 80 / 20%)"></div>
+
+      <div class="dlg dlg-b">
+        <div class="dlg-head">
+          <div class="dlg-title"><span class="cmd">filter</span><span class="tag">命令文档</span></div>
+          <div class="dlg-spacer"></div>
+          <div class="search">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/></svg>
+            <span class="ph">搜索本文</span>
+            <span class="kbd">Ctrl F</span>
+          </div>
+          <div class="xbtn"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+        </div>
+
+        <div class="db">
+          <aside class="db-side">
+            <div class="db-cap">本页 · 5 节</div>
+            <div class="db-item on"><span class="no">01</span>用法</div>
+            <div class="db-item"><span class="no">02</span>参数</div>
+            <div class="db-item"><span class="no">03</span>示例</div>
+            <div class="db-item"><span class="no">04</span>比较</div>
+            <div class="db-item"><span class="no">05</span>另见</div>
+          </aside>
+          <div class="db-doc">
+            <div class="doc">
+              <section class="sec">
+                <h3><span class="no">01</span>用法</h3>
+                <p>按一个或多个条件保留行。<code>filter</code> 接收一个表达式,表达式为真时保留该行。</p>
+                <div class="crop-pre" style="max-width:100%">xan filter 'amount > 100' orders.csv</div>
+              </section>
+              <section class="sec">
+                <h3><span class="no">02</span>参数</h3>
+                <table>
+                  <thead><tr><th>参数</th><th>说明</th></tr></thead>
+                  <tbody>
+                    <tr><td><span class="key">-s</span></td><td>把表达式从位置参数改为选项</td></tr>
+                    <tr><td><span class="key">-n</span></td><td>反转:保留表达式为假的行</td></tr>
+                    <tr><td><span class="key">--limit</span></td><td>只保留前 N 行匹配结果</td></tr>
+                  </tbody>
+                </table>
+              </section>
+            </div>
+          </div>
+        </div>
+
+        <div class="dlg-foot">
+          <span class="k"><span class="kbd">Ctrl F</span>搜索</span>
+          <span class="k"><span class="kbd">↑</span><span class="kbd">↓</span>上一处 / 下一处</span>
+          <span class="k"><span class="kbd">Esc</span>关闭</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       05 三种状态
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead"><b>三种状态</b><span>命中 / 无匹配 / 命令文档</span></div>
+  <div class="tiles">
+    <div class="tile">
+      <div class="tile-cap">搜索命中 · 3 / 12</div>
+      <div class="crop">
+        <div class="crop-head">
+          <div class="crop-title">帮助中心</div>
+          <div class="crop-search">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/></svg>
+            <span class="ph">Ctrl</span>
+          </div>
+          <span class="count">3/12</span>
+          <span class="navbtn"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></span>
+          <span class="navbtn"><svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></span>
+        </div>
+        <div class="crop-body">
+          <div class="crop-sec"><span class="no">01</span>五分钟上手</div>
+          <p style="margin:0 0 6px">1. <b>打开数据</b> —— 把文件拖进窗口,或按 <span class="mark">Ctrl</span> + <code style="font-size:10px">O</code>…</p>
+          <p style="margin:0 0 6px">2. <b>添加第一个操作</b> —— 按 <span class="mark cur">Ctrl</span> + <code style="font-size:10px">K</code>。</p>
+          <p style="margin:0 0 6px">3. <b>管道与分支</b> —— 新节点默认自成一条分支…</p>
+          <div class="nocap">当前命中用品牌实心;其余命中是 9% 淡底。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap">无匹配 · 不显示 0/0</div>
+      <div class="crop">
+        <div class="crop-head">
+          <div class="crop-title">帮助中心</div>
+          <div class="crop-search">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/></svg>
+            <span class="ph">xyz</span>
+            <span class="clear"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span>
+          </div>
+          <span class="count" style="color:var(--muted-fg)">无匹配</span>
+        </div>
+        <div class="crop-body">
+          <div class="crop-sec"><span class="no">01</span>五分钟上手</div>
+          <p style="margin:0 0 6px;color:var(--muted-fg)">1. <b style="color:var(--fg)">打开数据</b> —— 把文件拖进窗口,或按 Ctrl + O…</p>
+          <p style="margin:0 0 6px;color:var(--muted-fg)">2. <b style="color:var(--fg)">添加第一个操作</b> —— 按 Alt + C 打开命令面板…</p>
+          <p style="margin:12px 0 0;font-size:10.5px;color:var(--muted-fg-2)">输入框内的 ✕ 清空;<code style="font-size:10px">Esc</code> 先清空再关闭。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap">命令文档 · 代码是技术焦点</div>
+      <div class="crop">
+        <div class="crop-head">
+          <div class="crop-title"><span class="cmd">filter</span></div>
+          <div class="crop-search" style="flex:none;width:150px">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/></svg>
+            <span class="ph" style="color:var(--muted-fg-2)">搜索本文</span>
+          </div>
+        </div>
+        <div class="crop-body">
+          <div class="crop-sec"><span class="no">01</span>用法</div>
+          <p style="margin:0 0 4px">按条件保留行,表达式为真时保留。</p>
+          <div class="crop-pre">xan filter 'amount > 100' orders.csv</div>
+          <div class="crop-sec"><span class="no">02</span>参数</div>
+          <table class="crop-table">
+            <thead><tr><th>参数</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td>-s</td><td>把表达式改为选项</td></tr>
+              <tr><td>-n</td><td>反转匹配</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       诊断
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="legend">
+    <table>
+      <thead><tr><th>#</th><th>现状</th><th>改法</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><b>整页正文用等宽字体。</b><code>HelpDialog.tsx:222</code> 把 <code>font-mono</code> 套在整个 ScrollArea 上,13px 中文段落读起来像代码;字号只有 <code>text-sm</code> 一档,标题与正文没有层级。</td>
+          <td><b>正文换回无衬线 13px / 1.75。</b>等宽只给行内命令、代码块、按键和阿拉伯数字;行宽 660px,大纲与列表间距 6px。</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><b>头部三等分。</b>标题 <code>text-lg font-semibold</code>、固定 256px 的搜索框居中、关闭各占一个 <code>flex-1</code>(<code>:164-219</code>);窗口变窄时标题与搜索互相挤压,搜索框是这一行里最重的控件。</td>
+          <td><b>标题左、控件右。</b>标题 14/500(命令文档用等宽 13 写命令 id),搜索 260×30 靠右,关闭 28×28;搜索框内置 <code>Ctrl F</code> 键帽。</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><b>底部是一行字符串。</b><code>:231-236</code> 把「Ctrl+F: 搜索 / ↑ / ↓ / ESC: 关闭」拼成 12px 灰字,与实际控件重复,也不是键帽。</td>
+          <td><b>四组键帽。</b><code>Ctrl F</code> 搜索、<code>↑</code><code>↓</code> 上一处 / 下一处、<code>Esc</code> 关闭;底部 44px,顶部一条发丝线。</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><b>章节没有结构。</b>h1 被隐藏,只剩 h2 18/600 与 h3 16/600 加粗大字(<code>HelpMarkdown.tsx:244-258</code>);帮助中心的三段读成一整块,找不到落点。</td>
+          <td><b>等宽序号 + 发丝线。</b>小节标题 13.5/500,上方 1px 发丝线,左侧 <code>01 / 02 / 03</code> 等宽序号(用 CSS 计数器生成,不改 markdown);内容与顺序不动。</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><b>代码与表格像卡片。</b>代码块 <code>bg-muted/50 p-3 rounded-lg</code>,表格每个单元格都有边框(<code>:209-243</code>),整页像由一个个盒子堆起来。</td>
+          <td><b>纸片与横线。</b>行内代码是 3px 圆角小纸片;代码块用 1px 发丝线 + 12/14 内边距;表格只留横向发丝线,表头 10.5 灰、单元格 12。</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><b>遮罩与 0/0。</b>遮罩带 <code>backdrop-blur-xs</code>(<code>:152</code>),与其它对话框不一致;无匹配时只显示 <code>0/0</code>,不说"无匹配";内容左右没有页边距,只靠 <code>pr-2</code> 贴边。</td>
+          <td><b>平铺遮罩与明确空态。</b>遮罩用 20% 墨、不模糊;无匹配时显示「无匹配」,输入框内出现 ✕ 清空;正文上下 24/28,左右由 660 度量居中。</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       规格
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead" style="margin-top:40px"><b>规格</b><span>方案 A(单栏说明书),亮暗共用</span></div>
+  <section class="spec">
+    <div><dt>对话框</dt><dd>960 × <code>min(700, 88vh)</code>;圆角 10</dd></div>
+    <div><dt>遮罩</dt><dd>20% 墨,无模糊(暗色 38% 黑)</dd></div>
+    <div><dt>头部</dt><dd>56px,左右 20;底 1px 发丝线</dd></div>
+    <div><dt>标题</dt><dd>14 / 500;命令文档 13 mono</dd></div>
+    <div><dt>搜索</dt><dd>260×30 · 内置 Ctrl F 键帽 · 计数 11 mono</dd></div>
+    <div><dt>正文</dt><dd>660 度量 · 13 / 1.75 · 上下 24 / 28</dd></div>
+    <div><dt>小节</dt><dd>13.5 / 500;序号 10.5 mono;上发丝线</dd></div>
+    <div><dt>行内代码</dt><dd>11.5 mono · 3px 圆角 · 60% 灰底</dd></div>
+    <div><dt>代码块</dt><dd>1px 发丝线 · 12/14 内边距 · 圆角 6</dd></div>
+    <div><dt>表格</dt><dd>只留横线;表头 10.5 / 单元格 12</dd></div>
+    <div><dt>底部</dt><dd>44 高 · 键帽 9.5 / 文案 10.5</dd></div>
+    <div><dt>滚动条</dt><dd>3px 细线,仅溢出时出现</dd></div>
+  </section>
+
+  <section class="notes">
+    <h3>交互 / 数据 / 边界</h3>
+    <p><b>内容不动。</b><code>getHelpContent()</code> 与 <code>generated/help-docs</code> 的命令文档一个字不改;只换渲染样式。帮助中心与命令文档共用同一个对话框,两边的标题来源不变(前者来自菜单入口,后者是命令 id)。</p>
+    <p><b>搜索行为不动。</b><code>Ctrl+F</code> 聚焦、<code>↑</code>/<code>↓</code> 只在搜索框内切换、<code>Esc</code> 先清空再关闭、Tab 焦点圈闭、命中滚入视口,全部保留;只把 <code>0/0</code> 改成「无匹配」并在输入框内加 ✕。</p>
+    <p><b>实现落点。</b>主要是 <code>HelpDialog.tsx</code>(头部 / 底部 / 正文容器)与 <code>HelpMarkdown.tsx</code>(h2/h3、code、table、li 的类名);章节序号用 <code>index.css</code> 里 <code>.help-content</code> 的 CSS 计数器,不改 markdown 结构、不动 <code>h1: () => null</code>。</p>
+    <p><b>可选变体 B。</b>左侧 200px 章节索引 + 右侧 620 度量,适合命令文档的 5-8 节;帮助中心只有 3 节,索引收益小于 200px 的代价,默认不用。若选 B,索引项由 h2/h3 现算,不新增持久化。</p>
+    <p><b>红线。</b>不改帮助文案与命令文档生成;不改菜单入口;不加目录搜索/全文检索;不加图片或插图;不动对话框外任何布局。帮助标题从「帮助」改为「帮助中心」,与菜单项一致(单处字面量)。</p>
+    <h3 style="margin-top:6px">i18n 增删(zh / en)</h3>
+    <div class="keys">
+      <span>+ helpSearchLabel(搜索 / Search)</span><span>+ helpPrevMatch(上一处 / Previous)</span>
+      <span>+ helpNextMatch(下一处 / Next)</span><span>+ helpNoMatches(无匹配 / No matches)</span>
+      <span>改 searchPlaceholder → 「搜索本文 / Search this page」</span>
+      <span>− searchShortcut</span><span>− previousMatch</span><span>− nextMatch</span><span>− helpClose(改用 t.close)</span>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

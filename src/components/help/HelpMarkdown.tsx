@@ -61,25 +61,6 @@ export const getSearchMatches = (
   return positions;
 };
 
-const getTextContent = (children: React.ReactNode): string => {
-  if (typeof children === "string") {
-    return children;
-  }
-  if (typeof children === "number") {
-    return String(children);
-  }
-  if (Array.isArray(children)) {
-    return children.map(getTextContent).join("");
-  }
-  if (React.isValidElement(children)) {
-    const element = children as React.ReactElement<{
-      children?: React.ReactNode;
-    }>;
-    return getTextContent(element.props.children);
-  }
-  return "";
-};
-
 const highlightText = (
   text: string,
   searchQuery?: string,
@@ -195,7 +176,7 @@ export const HelpMarkdown: React.FC<HelpMarkdownProps> = ({
             if (isInline) {
               return (
                 <code
-                  className="bg-muted/50 px-1.5 py-0.5 rounded text-sm font-mono"
+                  className="rounded-[3px] bg-muted/60 px-1.5 py-0.5 font-mono text-[11.5px]"
                   {...props}
                 >
                   {searchQuery && searchQuery.trim()
@@ -206,7 +187,7 @@ export const HelpMarkdown: React.FC<HelpMarkdownProps> = ({
             }
 
             return (
-              <pre className="bg-muted/50 p-3 rounded-lg overflow-x-auto">
+              <pre className="mb-3 overflow-x-auto rounded-md border border-border/70 bg-muted/40 px-3.5 py-3 font-mono text-[11.5px] leading-relaxed">
                 <code className={className} {...props}>
                   {searchQuery && searchQuery.trim()
                     ? parts.map((part, index) => renderMatch(part, index))
@@ -217,72 +198,48 @@ export const HelpMarkdown: React.FC<HelpMarkdownProps> = ({
           },
           table({ children }) {
             return (
-              <div className="overflow-x-auto">
-                <table className="min-w-full border border-border text-sm">
+              <div className="mb-3 overflow-x-auto">
+                <table className="min-w-full border-collapse text-xs">
                   {children}
                 </table>
               </div>
             );
           },
           thead({ children }) {
-            return <thead className="bg-muted/50">{children}</thead>;
+            return <thead>{children}</thead>;
           },
           th({ children }) {
             return (
-              <th className="border border-border px-3 py-2 text-left font-semibold">
+              <th className="whitespace-nowrap border-b border-border px-2.5 py-1.5 text-left text-[10.5px] font-medium text-muted-foreground">
                 {wrapWithHighlight(children, searchQuery)}
               </th>
             );
           },
           td({ children }) {
             return (
-              <td className="border border-border px-3 py-2">
+              <td className="border-b border-border/50 px-2.5 py-2">
                 {wrapWithHighlight(children, searchQuery)}
               </td>
             );
           },
           h1: () => null,
           h2({ children }) {
-            return (
-              <h2 className="text-lg font-semibold mt-4 mb-2 text-foreground">
-                {wrapWithHighlight(children, searchQuery)}
-              </h2>
-            );
+            return <h2>{wrapWithHighlight(children, searchQuery)}</h2>;
           },
           h3({ children }) {
-            return (
-              <h3 className="text-base font-semibold mt-3 mb-1.5 text-foreground">
-                {wrapWithHighlight(children, searchQuery)}
-              </h3>
-            );
+            return <h3>{wrapWithHighlight(children, searchQuery)}</h3>;
           },
           p({ children }) {
-            return (
-              <p className="mb-2 leading-relaxed">
-                {wrapWithHighlight(children, searchQuery)}
-              </p>
-            );
+            return <p>{wrapWithHighlight(children, searchQuery)}</p>;
           },
           ul({ children }) {
-            return (
-              <ul className="list-disc list-inside mb-2 space-y-1">
-                {children}
-              </ul>
-            );
+            return <ul>{children}</ul>;
           },
           ol({ children }) {
-            return (
-              <ol className="list-decimal list-inside mb-2 space-y-1">
-                {children}
-              </ol>
-            );
+            return <ol>{children}</ol>;
           },
           li({ children }) {
-            return (
-              <li className="mb-1">
-                {wrapWithHighlight(children, searchQuery)}
-              </li>
-            );
+            return <li>{wrapWithHighlight(children, searchQuery)}</li>;
           },
           a({ href, children }) {
             return (
@@ -298,7 +255,7 @@ export const HelpMarkdown: React.FC<HelpMarkdownProps> = ({
           },
           blockquote({ children }) {
             return (
-              <blockquote className="border-l-4 border-muted-foreground pl-4 italic text-muted-foreground">
+              <blockquote className="border-l-2 border-border pl-4 text-muted-foreground">
                 {wrapWithHighlight(children, searchQuery)}
               </blockquote>
             );

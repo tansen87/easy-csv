@@ -2,9 +2,10 @@ import type { Translations } from "@/i18n/translations/types";
 
 /** HelpDialog */
 export const enHelp = {
-  searchPlaceholder: "Search (Ctrl+F)",
-  searchShortcut: "Ctrl+F: Search",
-  previousMatch: "↑: Previous match",
-  nextMatch: "↓: Next match",
-  helpClose: "ESC: Close",
+  searchPlaceholder: "Search this page",
+  helpSearchLabel: "Search",
+  helpPrevMatch: "Previous",
+  helpNextMatch: "Next",
+  helpNoMatches: "No matches",
+  helpClearSearch: "Clear search",
 } satisfies Partial<Translations>;

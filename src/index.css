@@ -64,13 +64,13 @@
   --syntax-operator: oklch(0.5 0.08 200);
   --syntax-column: oklch(0.52 0.1 78);
   --syntax-comment: oklch(0.55 0.01 250);
-  /* Empty state only (design 032): warm paper table + one ink accent.
+  /* Empty state only: warm paper table + one ink accent.
      Scoped here on purpose - the rest of the app keeps the neutral ramp. */
   --paper: oklch(0.995 0.004 85);
   --paper-rule: oklch(0.2 0.01 80 / 8%);
   --empty-warn: oklch(0.55 0.1 72);
   --empty-ink: var(--brand);
-  /* Canvas only (design 033): dot grid, hairlines, one ink accent.
+  /* Canvas only: dot grid, hairlines, one ink accent.
      Scoped here on purpose - the rest of the app keeps the neutral ramp. */
   --canvas-dot: oklch(0.2 0.01 80 / 10%);
   --canvas-line: oklch(0.2 0.01 80 / 26%);
@@ -78,7 +78,7 @@
   --canvas-ink: var(--brand);
   --canvas-ink-soft: var(--brand-soft);
   --canvas-ok: var(--success);
-  /* Semantic colours (design 034). These do NOT follow the accent: success,
+  /* Semantic colours. These do NOT follow the accent: success,
      warning and danger keep stable hues so "teal" never reads as "success". */
   --success: oklch(0.52 0.09 150);
   --success-soft: color-mix(in oklab, var(--success) 10%, transparent);
@@ -701,7 +701,7 @@ input[type="radio"] {
   accent-color: var(--brand);
 }
 
-/* ── Settings (design 040) ─────────────────────────────────────────────── */
+/* --- Settings --- */
 
 /* Group indexes: the "01"…"06" in the directory and above each group card.
    Rendered from a data attribute on purpose — the number is decoration, so it
@@ -765,7 +765,7 @@ input[type="radio"] {
   background-color: var(--swatch);
 }
 
-/* ── Custom title bar (design 043) ──────────────────────────────────────
+/* -- Custom title bar ---
    Windows only: the 48px menu row doubles as the window title bar. The row
    lifts one surface step on hover so the drag area reads as chrome, and the
    tint drops as soon as a button is hovered so the button's own hover is the
@@ -828,7 +828,7 @@ body[data-window-active="false"] .app-titlebar {
   opacity: 0.72;
 }
 
-/* ── Rounded window (design 043) ────────────────────────────────────────
+/* --- Rounded window ---
    The Windows window is created with `transparent: true`, so the rounded
    corners are painted here instead of by DWM. `.app-window` carries the
    background the body used to paint; every other platform leaves the
@@ -854,7 +854,7 @@ html[data-window-maximized="true"] .window-resize-handle {
   display: none;
 }
 
-/* ── File tabs (design 047) ─────────────────────────────────────────────
+/* --- File tabs ---
    The selected tab is a raised accent paper: an accent-tinted card with no
    border, lifted by a 1px shadow in light mode. Dark drops the shadow (it
    cannot read on near-black) and uses a 1px accent hairline instead, so the
@@ -873,7 +873,68 @@ html[data-window-maximized="true"] .window-resize-handle {
   background-color: var(--bg);
 }
 
-/* ── Version log (design 044) ───────────────────────────────────────────
+/* --- Help document ---
+   Prose uses the UI sans face; monospace is reserved for commands, keys and
+   numbers. Section headings carry their own mono index, so the document reads
+   as a manual — the counters live here instead of being edited into the
+   markdown, and the heading rule replaces the content's `---` separators. */
+.help-content {
+  counter-reset: help-section;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--foreground);
+}
+.help-content h2,
+.help-content h3 {
+  counter-increment: help-section;
+  margin: 0 0 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.help-content h2:not(:first-child),
+.help-content h3:not(:first-child) {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-soft);
+}
+/* Inline (not flex) so a search `<mark>` inside a heading doesn't split it
+   into spaced flex items. */
+.help-content h2::before,
+.help-content h3::before {
+  content: counter(help-section, decimal-leading-zero);
+  margin-right: 10px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+.help-content p,
+.help-content li {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.75;
+}
+.help-content li:last-child {
+  margin-bottom: 0;
+}
+.help-content ul,
+.help-content ol {
+  margin: 0 0 8px;
+  padding-left: 18px;
+}
+.help-content li::marker {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted-foreground);
+}
+.help-content hr {
+  display: none;
+}
+.help-content strong {
+  font-weight: 500;
+}
+
+/* --- Version log ---
    One 56px row per version, joined by a continuous rail on the left. The rail
    is what makes the list read as a log rather than a stack of cards, so it
    lives here (pseudo-elements) instead of in the markup. */

@@ -1362,10 +1362,10 @@ function AppContent() {
   );
 
   const onHelp = useCallback(() => {
-    ui.setHelpCommandName(effectiveLanguage === "zh" ? "帮助" : "Help");
+    ui.setHelpCommandName(t.helpCenter);
     ui.setHelpContent(getHelpContent(effectiveLanguage));
     ui.setShowHelp(true);
-  }, [effectiveLanguage, ui]);
+  }, [effectiveLanguage, t.helpCenter, ui]);
 
   const onToggleCommandPanel = useCallback(
     () => ui.setShowCommandPanel(!ui.showCommandPanel),
