@@ -27,7 +27,7 @@ export function LineageFullscreen({
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 top-10 z-50 flex flex-col bg-background"
+      className="fixed inset-x-0 bottom-0 top-9 z-50 flex flex-col bg-background"
       onContextMenu={(e) => e.preventDefault()}
     >
       <div className="flex h-12 flex-none items-center gap-2.5 border-b border-border/60 bg-card px-4">

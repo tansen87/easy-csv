@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 047-03 · 页签内的文字与关闭</title>
+<style>
+  /* ── tokens · 与 src/index.css 对齐 ───────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.7 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --border-strong:oklch(0.855 0 0);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 12%,var(--bg));
+    --chrome-line:color-mix(in oklab,var(--brand) 30%,transparent);
+
+    --success:oklch(0.52 0.09 150);
+    --success-soft:color-mix(in oklab,var(--success) 10%,transparent);
+    --warning:oklch(0.55 0.1 72);
+    --warning-soft:color-mix(in oklab,var(--warning) 10%,transparent);
+    --danger:oklch(0.577 0.245 27.325);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-win:0 24px 60px -24px oklch(0.2 0.02 80 / 26%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --ease:cubic-bezier(.2,0,0,1);
+  }
+  .dark{
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.52 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(1 0 0 / 7%);
+    --border-strong:oklch(1 0 0 / 16%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 12%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 16%,var(--bg));
+    --chrome-line:color-mix(in oklab,var(--brand) 34%,transparent);
+    --success:oklch(0.74 0.1 150);
+    --success-soft:color-mix(in oklab,var(--success) 12%,transparent);
+    --warning:oklch(0.78 0.11 75);
+    --warning-soft:color-mix(in oklab,var(--warning) 12%,transparent);
+    --danger:oklch(0.704 0.191 22.216);
+    --canvas:oklch(0.145 0 0);
+    --dot:oklch(1 0 0 / 7%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;-webkit-font-smoothing:antialiased;
+  }
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+
+  .stage-bar{padding-bottom:18px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar h1{margin:0;font-size:16px;font-weight:500}
+  .stage-bar p{margin:5px 0 0;font-size:12px;color:var(--muted-fg);max-width:900px;line-height:1.65}
+
+  /* ── 方向 ────────────────────────────────────────────────────────── */
+  .direction{
+    display:grid;grid-template-columns:repeat(5,1fr);
+    border:1px solid var(--border);border-radius:10px;background:var(--card);
+    margin:18px 0 34px;overflow:hidden;
+  }
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.55}
+
+  /* ── 帧 ──────────────────────────────────────────────────────────── */
+  .frame + .frame{margin-top:50px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span:last-child{color:var(--muted-fg-2)}
+
+  .win{
+    position:relative;width:1200px;height:420px;overflow:hidden;
+    border:1px solid var(--border-strong);border-radius:8px;background:var(--bg);
+    box-shadow:var(--shadow-win);
+  }
+  .dark .win{border-color:var(--border)}
+
+  .chrome{height:36px;display:flex;align-items:center;gap:14px;padding-left:16px;
+          background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-line)}
+  .brand{font-size:12.5px;font-weight:500}
+  .menu{font-size:11.5px;font-weight:500;color:var(--brand)}
+  .chrome .right{margin-left:auto;display:flex;gap:2px;padding-right:10px;color:var(--brand)}
+  .chrome .right svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.5;fill:none;
+                     stroke-linecap:round;stroke-linejoin:round}
+  .chrome .right i{width:28px;height:28px;display:grid;place-items:center;font-style:normal}
+
+  .canvas{
+    position:relative;height:384px;background-color:var(--canvas);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:22px 22px;background-position:11px 11px;
+  }
+  /* 页签与标题栏底边留 4px(实现:items-start + pt-1) */
+  .strip{position:absolute;left:8px;top:0;height:36px;display:flex;align-items:flex-start;gap:2px;
+         padding-left:12px;padding-top:4px}
+
+  /* ── 页签外壳(已按 B 主题色落地) ──────────────────────────────── */
+  .tab{
+    display:inline-flex;align-items:center;gap:6px;height:24px;
+    padding:0 4px 0 9px;border:1px solid transparent;border-radius:4px;
+    font-size:12px;line-height:18px;color:var(--muted-fg);white-space:nowrap;
+    max-width:220px;transition:color .12s var(--ease),background-color .12s var(--ease);
+  }
+  .tab.on{
+    background:color-mix(in oklab,var(--brand) 12%,var(--card));
+    border-color:transparent;color:var(--brand);font-weight:500;
+    box-shadow:0 1px 2px oklch(0.2 0.02 80 / 8%);
+  }
+  .dark .tab.on{
+    background:color-mix(in oklab,var(--brand) 14%,var(--card));
+    box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--brand) 30%,transparent);
+  }
+  .tab.on .badge{background:var(--bg)}
+
+  /* 名称 · 推荐:单行、可缩、省略号 */
+  .nm{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* T2 备选:扩展名弱化,不参与截断 */
+  .ext{flex:none;font-size:10.5px;line-height:18px;color:var(--muted-fg-2);margin-left:-3px}
+
+  /* 重命名输入 */
+  .rin{width:120px;height:22px;flex:none;border:1px solid color-mix(in oklab,var(--brand) 40%,transparent);
+       border-radius:4px;background:var(--bg);color:var(--fg);font:inherit;font-size:12px;
+       padding:0 6px;outline:none}
+
+  /* 徽标沿用现状,不改 */
+  .badge{display:inline-flex;align-items:center;gap:3px;height:16px;padding:0 6px;flex:none;
+         border-radius:8px;font-size:10px;font-weight:500}
+  .badge.run{background:var(--brand-soft);color:var(--brand)}
+  .badge.done{background:var(--success-soft);color:var(--success)}
+  .badge.warn{background:var(--warning-soft);color:var(--warning)}
+  .spin{width:6px;height:6px;border-radius:50%;border:1px solid currentColor;border-top-color:transparent}
+
+  /* 关闭 · X1 扁平 ×(推荐) */
+  .x{width:16px;height:16px;display:grid;place-items:center;flex:none;border-radius:4px;
+     color:color-mix(in oklab,var(--muted-fg) 62%,transparent);
+     transition:color .12s var(--ease),background-color .12s var(--ease)}
+  .x.hover{background:var(--muted);color:var(--fg)}
+  .x svg{width:10px;height:10px;stroke:currentColor;stroke-width:1.4;fill:none;stroke-linecap:round}
+
+  /* 关闭 · X2 圆形 × */
+  .x-rnd{width:18px;height:18px;border-radius:50%;border:1px solid var(--border);
+         color:color-mix(in oklab,var(--muted-fg) 66%,transparent)}
+  .x-rnd.hover{background:var(--muted);color:var(--fg)}
+  .x-rnd svg{width:9px;height:9px}
+
+  /* 关闭 · X3 极简 ×(已选后再放大一档:20 命中 / 14 图标,不铺悬停底色) */
+  .x-min{width:20px;height:20px;border-radius:4px;background:transparent!important;
+         color:color-mix(in oklab,var(--muted-fg) 50%,transparent)}
+  .x-min.hover{color:var(--fg)}
+  .x-min svg{width:14px;height:14px}
+
+  /* 现状:关闭的占位(实际 opacity-0,hover 才出现) */
+  .x-slot{width:16px;height:16px;flex:none;border:1px dashed color-mix(in oklab,var(--danger) 45%,transparent);border-radius:4px}
+
+  /* 现状:名称 120 上限 + 18px 高的按钮 */
+  .nm-old{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}
+  .tab.old{gap:4px;padding:0 8px}
+
+  /* 编号 */
+  .mk{position:absolute;width:15px;height:15px;border-radius:50%;display:grid;place-items:center;
+       font-family:var(--mono);font-size:9.5px;font-weight:600;color:#fff;z-index:9}
+  .mk.b{background:var(--danger)}
+  .mk.a{background:var(--brand)}
+  .mk::before{content:"";position:absolute;left:7px;top:-9px;width:1px;height:9px;
+              background:currentColor;opacity:.55}
+  .mk-legend{display:flex;flex-wrap:wrap;gap:6px 22px;padding-top:10px}
+  .mk-legend span{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted-fg)}
+  .mk-legend i{font-style:normal;width:15px;height:15px;border-radius:50%;display:grid;place-items:center;
+               font-family:var(--mono);font-size:9.5px;font-weight:600;flex:none;color:#fff}
+  .mk-legend.before i{background:var(--danger)}
+  .mk-legend.after i{background:var(--brand)}
+
+  /* ── 方案块 ──────────────────────────────────────────────────────── */
+  .subhead{display:flex;align-items:baseline;gap:10px;margin:34px 0 12px;
+           font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .subhead b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .tile{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+  .tile-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .tid{font-family:var(--mono);font-size:10px;color:var(--muted-fg);border:1px solid var(--border);
+       border-radius:4px;padding:1px 5px}
+  .tile-head b{font-size:12px;font-weight:500}
+  .rec{font-size:10px;font-weight:500;color:var(--brand);background:var(--brand-soft);
+       border-radius:4px;padding:1px 6px}
+  .alt{font-size:10px;font-weight:500;color:var(--muted-fg);border:1px solid var(--border);
+       border-radius:4px;padding:1px 6px}
+
+  .mtile{position:relative;height:64px;display:flex;align-items:center;gap:8px;padding:0 10px;
+         border:1px solid var(--border-soft);border-radius:8px;background-color:var(--canvas);
+         background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+         background-size:18px 18px;background-position:9px 9px;overflow:hidden}
+  .tdesc{margin:10px 0 0;font-size:11px;line-height:1.6;color:var(--muted-fg)}
+  .tdesc b{font-weight:500;color:var(--fg)}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  .chips span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);
+              border:1px solid var(--border);border-radius:4px;padding:1px 5px;background:var(--card)}
+
+  /* ── 规格 / 说明 ─────────────────────────────────────────────────── */
+  .spec{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--border);
+        border-radius:10px;background:var(--card);overflow:hidden}
+  .spec div{padding:11px 14px;border-right:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+  .spec div:nth-child(4n){border-right:0}
+  .spec dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:4px}
+  .spec dd{margin:0;font-size:11.5px;line-height:1.5}
+
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:8px 36px;margin-top:24px}
+  .notes h3{grid-column:1/-1;margin:0 0 6px;font-size:12px;font-weight:500}
+  .notes p{margin:0 0 10px;font-size:11.5px;line-height:1.7;color:var(--muted-fg)}
+  .notes p b{font-weight:500;color:var(--fg)}
+  .keys{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+  .keys span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);border:1px solid var(--border);
+             border-radius:4px;padding:2px 5px;background:var(--card)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">047 · 标签栏 · 第三轮</div>
+    <h1>页签内的文字与关闭</h1>
+    <p>外框已按「B 主题色上浮纸片」落地。这一轮只处理框里的内容:名称怎么排、状态徽标放哪、关闭怎么出现。三条现状问题 —— 名称上限只有 120px 且不分当前页、关闭悬停才出现、名称与关闭挤在 4px 间距里 —— 都在下面给出改法。关闭<b>必须常显</b>(项目既有约定:所有标签,含单标签页,始终显示关闭),所以不做"悬停才露出"的方案。</p>
+  </div>
+
+  <dl class="direction">
+    <div><dt>产品</dt><dd>同时开着几个 CSV 页签的桌面工作台;名称是页签的主语。</dd></div>
+    <div><dt>性格</dt><dd>克制的页签名。当前页靠字重与主题色,不靠更多的框。</dd></div>
+    <div><dt>世界</dt><dd>账本页签:名称单行、左对齐;状态与关闭是页边上的两个小标点。</dd></div>
+    <div><dt>两个瞬间</dt><dd>① 长文件名截断后,关闭仍然露在最右 ② 六个页签时,眼睛先落到当前页的名字。</dd></div>
+    <div><dt>签名</dt><dd>× 是句号:固定在右侧、16×16、常显;它不抢名字,但永远在场。</dd></div>
+  </dl>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       01 现状
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>01</span><b>现状 · 框内</b><span>HomeView.tsx:421-518 · 外框已是 B,红点只标文字与关闭</span></div>
+
+    <div class="win">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span><span class="menu">文件</span><span class="menu">编辑</span><span class="menu">查看</span>
+        <div class="right"><i><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></i><i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 8v4l3 2"/></svg></i></div>
+      </div>
+      <div class="canvas">
+        <div class="strip">
+          <span class="tab on old">
+            <span class="nm-old">订单明细</span>
+            <span class="badge run"><span class="spin"></span>执行中</span>
+            <span class="x-slot"></span>
+          </span>
+          <span class="tab old">
+            <span class="nm-old">示例销售</span>
+            <span class="badge done">完成</span>
+            <span class="x-slot"></span>
+          </span>
+          <span class="tab old">
+            <span class="nm-old">2024年第三季度渠道库存明细汇总</span>
+            <span class="badge warn">待确认</span>
+            <span class="x-slot"></span>
+          </span>
+        </div>
+      </div>
+      <div class="mk b" style="left:150px;top:74px">1</div>
+      <div class="mk b" style="left:246px;top:74px">2</div>
+      <div class="mk b" style="left:392px;top:74px">3</div>
+    </div>
+
+    <div class="mk-legend before">
+      <span><i>1</i>名称上限 120px,长短名都被压;当前页只靠外壳区分,字重不分</span>
+      <span><i>2</i>关闭 hover 才出现(虚线为原位置),图标 10px、无 aria-label</span>
+      <span><i>3</i>名称 / 徽标 / 关闭之间只有 4px,右内边距 8px,长名截断后与徽标紧贴</span>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       02 推荐 · 亮色
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>02</span><b>推荐组合 · 亮色</b><span>名称 150px / 当前页 500 / 关闭常显 16×16 / 左右 9-6</span></div>
+
+    <div class="win">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span><span class="menu">文件</span><span class="menu">编辑</span><span class="menu">查看</span>
+        <div class="right"><i><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></i><i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 8v4l3 2"/></svg></i></div>
+      </div>
+      <div class="canvas">
+        <div class="strip">
+          <span class="tab on">
+            <span class="nm">订单明细</span>
+            <span class="badge run"><span class="spin"></span>执行中</span>
+            <span class="x"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span>
+          </span>
+          <span class="tab">
+            <span class="nm">示例销售</span>
+            <span class="badge done">完成</span>
+            <span class="x"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span>
+          </span>
+          <span class="tab">
+            <span class="nm">渠道库存</span>
+            <span class="badge warn">待确认</span>
+            <span class="x"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span>
+          </span>
+          <span class="tab">
+            <span class="nm">2024年第三季度渠道库存明细汇总</span>
+            <span class="x hover"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span>
+          </span>
+        </div>
+      </div>
+      <div class="mk a" style="left:62px;top:74px">1</div>
+      <div class="mk a" style="left:270px;top:74px">2</div>
+      <div class="mk a" style="left:560px;top:74px">3</div>
+    </div>
+
+    <div class="mk-legend after">
+      <span><i>1</i>名称 12px/18,当前页 500、其余 400;上限 150px,超出省略号</span>
+      <span><i>2</i>关闭常显:20×20 命中、14px 图标、无悬停底(图中为悬停态,只换文字色)</span>
+      <span><i>3</i>徽标与关闭固定在右侧、不参与截断;名称悬停显示全名(tooltip)</span>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       03 推荐 · 暗色
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame dark">
+    <div class="cap"><span>03</span><b>推荐组合 · 暗色</b><span>字号与间距不变;关闭的 62% 灰在暗色下换成 708 灰阶</span></div>
+
+    <div class="win">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span><span class="menu">文件</span><span class="menu">编辑</span><span class="menu">查看</span>
+        <div class="right"><i><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></i><i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 8v4l3 2"/></svg></i></div>
+      </div>
+      <div class="canvas">
+        <div class="strip">
+          <span class="tab on">
+            <span class="nm">订单明细</span>
+            <span class="badge run"><span class="spin"></span>执行中</span>
+            <span class="x"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span>
+          </span>
+          <span class="tab">
+            <span class="nm">示例销售</span>
+            <span class="badge done">完成</span>
+            <span class="x"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span>
+          </span>
+          <span class="tab">
+            <span class="nm">渠道库存</span>
+            <span class="badge warn">待确认</span>
+            <span class="x"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span>
+          </span>
+          <span class="tab">
+            <span class="nm">2024年第三季度渠道库存明细汇总</span>
+            <span class="x hover"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       04 文字两个选项
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead" style="margin-top:40px"><b>文字 · 两个选项</b><span>都保持 24px 行高,只改名称的排法</span></div>
+  <div class="grid2">
+    <div class="tile">
+      <div class="tile-head"><span class="tid">T1</span><b>单行 · 名称主导</b><span class="rec">推荐</span></div>
+      <div class="mtile">
+        <span class="tab on"><span class="nm">订单明细</span><span class="badge run"><span class="spin"></span>执行中</span><span class="x"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+        <span class="tab"><span class="nm">2024年第三季度渠道库存明细汇总</span><span class="x"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+      </div>
+      <p class="tdesc"><b>12px / 18px 行高</b>,当前页 500、其余 400;名称上限 <b>150px</b>,超出省略号,并给名称加 <code>title</code> 显示全名。页签整体上限 <b>220px</b>(名称 + 徽标 + 关闭),短名保持自身宽度。</p>
+      <div class="chips"><span>字: 12 / 18</span><span>重: 500 / 400</span><span>名上限: 150</span><span>页签上限: 220</span></div>
+    </div>
+
+    <div class="tile">
+      <div class="tile-head"><span class="tid">T2</span><b>文件名分层</b><span class="alt">备选</span></div>
+      <div class="mtile">
+        <span class="tab on"><span class="nm" style="max-width:130px">订单明细</span><span class="ext">.csv</span><span class="badge run"><span class="spin"></span>执行中</span><span class="x"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+        <span class="tab"><span class="nm" style="max-width:130px">2024年第三季度渠道库存明细汇总</span><span class="ext">.xlsx</span><span class="x"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+      </div>
+      <p class="tdesc">把名称按最后一个点切成<b>主体 + 扩展名</b>:主体 12px 可截断(上限 130px),扩展名 <b>10.5px 弱化</b>且不参与截断。只在名称本身带扩展名时出现,展示层变化,不改 <code>tab.name</code>。</p>
+      <div class="chips"><span>主体: 12 / 500</span><span>扩展名: 10.5 / muted</span><span>主体上限: 130</span><span>仅展示</span></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       05 关闭三个选项
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead" style="margin-top:34px"><b>关闭 · 三个选项</b><span>三者都常显;每格左边是常态、右边是悬停态</span></div>
+  <div class="grid3">
+    <div class="tile">
+      <div class="tile-head"><span class="tid">X1</span><b>扁平 ×</b><span class="rec">推荐</span></div>
+      <div class="mtile">
+        <span class="tab"><span class="nm">示例销售</span><span class="x"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+        <span class="tab"><span class="nm">示例销售</span><span class="x hover"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+      </div>
+      <p class="tdesc"><b>16×16 命中区 · 10px 图标 · 4px 圆角</b>;底色透明,图标 62% 灰 → 悬停 8% 灰底 + 正文色。与现有外壳同层级,不增加第二个框。</p>
+      <div class="chips"><span>命中: 16×16</span><span>图标: 10</span><span>圆角: 4</span><span>常量显</span></div>
+    </div>
+
+    <div class="tile">
+      <div class="tile-head"><span class="tid">X2</span><b>圆形 ×</b><span class="alt">备选</span></div>
+      <div class="mtile">
+        <span class="tab"><span class="nm">示例销售</span><span class="x x-rnd"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+        <span class="tab"><span class="nm">示例销售</span><span class="x x-rnd hover"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+      </div>
+      <p class="tdesc"><b>18×18 圆形 · 1px 发丝圈 · 9px 图标</b>;悬停只换 8% 灰底与正文色。更"按钮",但在主题色纸片上会多一圈线,和外壳的"无边框"略冲突。</p>
+      <div class="chips"><span>命中: 18×18</span><span>图标: 9</span><span>1px 圈</span><span>常量显</span></div>
+    </div>
+
+    <div class="tile">
+      <div class="tile-head"><span class="tid">X3</span><b>极简 ×</b><span class="alt">备选</span></div>
+      <div class="mtile">
+        <span class="tab"><span class="nm">示例销售</span><span class="x x-min"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+        <span class="tab"><span class="nm">示例销售</span><span class="x x-min hover"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+      </div>
+      <p class="tdesc"><b>20×20 命中 · 14px 图标</b>;悬停不铺底,只把 50% 灰变成正文色。比 X1 大一档、也没有那层悬停底色 —— 更安静,也更容易点中。</p>
+      <div class="chips"><span>命中: 20×20</span><span>图标: 14</span><span>无悬停底</span><span>常量显</span></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       06 重命名与长名
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead" style="margin-top:34px"><b>两个边角状态</b><span>就地重命名 / 名称极长</span></div>
+  <div class="grid2">
+    <div class="tile">
+      <div class="tile-head"><b>重命名(右键进入,交互不变)</b></div>
+      <div class="mtile">
+        <span class="tab on">
+          <span class="nm" style="display:none"></span>
+          <input class="rin" value="订单明细" aria-label="重命名标签页" />
+          <span class="badge run"><span class="spin"></span>执行中</span>
+          <span class="x"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span>
+        </span>
+      </div>
+      <p class="tdesc">编辑框 <b>120×22</b>、字号 12、<b>1px 主题色描边</b>、页面底色;徽标与关闭仍在右侧不动。<code>Enter</code>/失焦保存、<code>Esc</code> 取消,与现状一致。</p>
+    </div>
+    <div class="tile">
+      <div class="tile-head"><b>名称极长(150px 上限)</b></div>
+      <div class="mtile">
+        <span class="tab on"><span class="nm">2024年第三季度渠道库存明细汇总</span><span class="x"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+        <span class="tab"><span class="nm">2024年第三季度渠道库存明细汇总</span><span class="badge warn">待确认</span><span class="x"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></span>
+      </div>
+      <p class="tdesc">名称先截断、<b>徽标与关闭永远完整</b>;截断后名称加 <code>title</code>,悬停可见全名。当前页即使没有徽标,关闭也固定在右端。</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       07 规格
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead" style="margin-top:40px"><b>规格</b><span>除注明外,亮暗共用</span></div>
+  <section class="spec">
+    <div><dt>页签</dt><dd>高 24 · 圆角 4 · 上限 220 宽</dd></div>
+    <div><dt>内边距</dt><dd>左 9 / 右 4;元素间距 6</dd></div>
+    <div><dt>名称</dt><dd>12px / 18;500 当前页,400 其余</dd></div>
+    <div><dt>名称上限</dt><dd>150px,省略号;可缩(<code>min-width:0</code>)</dd></div>
+    <div><dt>徽标</dt><dd>不动:10px 文字 · 16 高 · 胶囊</dd></div>
+    <div><dt>关闭</dt><dd>20×20 · 图标 14 · 圆角 4 · 常显</dd></div>
+    <div><dt>关闭颜色</dt><dd>muted 50% → 悬停正文色(不铺底色)</dd></div>
+    <div><dt>图标线宽</dt><dd>1.5(× 的两笔)</dd></div>
+    <div><dt>重命名</dt><dd>120×22 · 12px · 1px 主题色描边</dd></div>
+    <div><dt>长名</dt><dd>先截断名称,徽标与关闭不参与截断</dd></div>
+    <div><dt>悬停</dt><dd>仅颜色/背景 120ms,不动尺寸</dd></div>
+    <div><dt>可访问</dt><dd>关闭 <code>aria-label=t.close</code>;名称 <code>title=tab.name</code></dd></div>
+  </section>
+
+  <section class="notes">
+    <h3>交互 / 数据 / 边界</h3>
+    <p><b>关闭常显。</b>去掉 <code>opacity-0 group-hover:opacity-100</code>,所有页签(含单标签页)始终显示关闭;这是项目既有约定,也让"能关"看得见。仍调用 <code>onRemoveTab(tab.id)</code>,关闭运行中的页签照旧先取消该 run。</p>
+    <p><b>名称。</b>仍是切页按钮;只把上限从 120 抬到 150,并让名称可缩(<code>min-w-0 truncate</code>),不再挤压徽标与关闭。加 <code>title</code> 后长名可用悬停看全名,不新增弹层。</p>
+    <p><b>字重。</b>当前页 500、其余 400:当前页除了主题色纸底,再加一档字重,在壁纸背景/长名并排时也能一眼锁定。</p>
+    <p><b>徽标不动。</b>五种运行状态的文字、颜色、出现与消失逻辑全部保持;本轮不把徽标改成圆点。选中页签里的徽标底色仍是已有 <code>--bg</code> 覆盖。</p>
+    <p><b>不动。</b>页签外壳(B 主题色)、位置、36px 行、间距 2、横向滚动、右键重命名、执行/取消/并发/日志过滤。也不改画布与右侧面板位置。</p>
+    <p><b>不做。</b>不做关闭 hover 显形、不做双击重命名、不做页签拖拽排序、不换状态徽标形态。<b>T2 文件名分层</b>仅作为备选,若选它需额外处理无扩展名与中文全角点。</p>
+    <h3 style="margin-top:6px">i18n · 0 新增</h3>
+    <div class="keys">
+      <span>关闭 aria-label 复用 t.close</span><span>名称 title 用 tab.name</span><span>状态文案沿用现有 runState / executing</span>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

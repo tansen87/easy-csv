@@ -252,7 +252,7 @@ function AppContent() {
   // Execution history
   const executionHistory = useExecutionHistory();
 
-  // Auto-update (design 022). `beforeInstall` flushes the session because the
+  // Auto-update. `beforeInstall` flushes the session because the
   // Windows installer quits the app before replacing it.
   const updater = useUpdater({
     showToast,
@@ -271,15 +271,15 @@ function AppContent() {
     return "calc(36vh + 96px)";
   }, [ui.showAIPanel, aiPanelExpanded]);
 
-  // D2: collapsed capsules stack in a fixed order at the top-right corner,
-  // below the app header (40px), one slot per collapsed panel.
+  // Collapsed capsules stack in a fixed order at the top-right corner,
+  // below the app header (36px), one slot per collapsed panel.
   const collapsedStack = useMemo(() => {
     const order = ["chartPanel"] as const;
     const result: Partial<Record<(typeof order)[number], number>> = {};
     let slot = 0;
     for (const key of order) {
       if (session.panelStates[key]?.collapsed) {
-        result[key] = 48 + slot * 44;
+        result[key] = 44 + slot * 44;
         slot++;
       }
     }
@@ -290,14 +290,14 @@ function AppContent() {
   useTitleBarDoubleClick(headerRef);
   const reactFlowInstanceRef = useRef<any>(null);
 
-  // Unified dialog switch stack for App-local dialogs (019 §4.4). The ui.*
+  // Unified dialog switch stack for App-local dialogs. The ui.*
   // switches migrate over in batches; these are the first adopters.
   const dialogs = useDialogStack<"history" | "templates">();
 
   // Selected step
   const [selectedStep, setSelectedStep] = useState<PipelineStep | null>(null);
 
-  // Variables panel (F3)
+  // Variables panel
   const [showVariablePanel, setShowVariablePanel] = useState(false);
 
   // Pipeline save status tracking
@@ -335,7 +335,7 @@ function AppContent() {
     [updater, ui],
   );
 
-  // Silent update check shortly after launch (design 022 §5.4). Delayed so it
+  // Silent update check shortly after launch. Delayed so it
   // never competes with session restore or the first paint, and it only ever
   // flags availability — installing stays a user action.
   const checkForUpdatesRef = useRef(checkForUpdates);
@@ -1300,15 +1300,16 @@ function AppContent() {
     [],
   );
 
-  // 「查看 → 管道变量」右侧的琥珀计数：引用了、但默认值为空的变量数（设计 046）。
-  // 这些变量会让执行停在补值弹窗上,所以要在菜单里就能看见。
+  // 「查看 → 管道变量」右侧的琥珀计数: 引用了、但默认值为空的变量数
+  // 这些变量会让执行停在补值弹窗上,所以要在菜单里就能看见
   const pendingVariableCount = (() => {
     const tab = tabsHook.getCurrentTab();
     if (!tab) return 0;
     const declared = new Map((tab.variables || []).map((v) => [v.name, v]));
-    return collectVariablesFromPipeline(tab.pipeline || [], tab.variables).filter(
-      (v) => !(declared.get(v.name)?.defaultValue ?? "").trim(),
-    ).length;
+    return collectVariablesFromPipeline(
+      tab.pipeline || [],
+      tab.variables,
+    ).filter((v) => !(declared.get(v.name)?.defaultValue ?? "").trim()).length;
   })();
 
   // Stable HomeView callbacks so the memoized HomeView (and the React Flow
@@ -1843,8 +1844,8 @@ function AppContent() {
             ref={headerRef}
             className={
               usesCustomTitleBar
-                ? "app-titlebar absolute top-0 left-0 right-0 h-10 flex items-center bg-card pl-4 z-20"
-                : "absolute top-0 left-0 right-0 h-10 flex items-center px-4 gap-4 z-20"
+                ? "app-header app-titlebar absolute top-0 left-0 right-0 h-9 flex items-center pl-4 z-20"
+                : "app-header absolute top-0 left-0 right-0 h-9 flex items-center px-4 gap-4 z-20"
             }
             onContextMenu={(e) => e.preventDefault()}
             // The whole bar drags and double-clicks to maximise; buttons and
@@ -2291,7 +2292,7 @@ function AppContent() {
 
           {/* Data Profile Panel */}
           <div
-            className={`absolute top-10 right-0 bottom-0 z-20 transition-all duration-300 ${
+            className={`absolute top-9 right-0 bottom-0 z-20 transition-all duration-300 ${
               ui.showDataProfile ? "w-80" : "w-0"
             }`}
           >
@@ -2333,7 +2334,7 @@ function AppContent() {
 
           {/* Pipeline variables panel (right drawer) */}
           <div
-            className={`absolute top-10 right-0 bottom-0 z-30 transition-all duration-300 ${
+            className={`absolute top-9 right-0 bottom-0 z-30 transition-all duration-300 ${
               showVariablePanel ? "w-80" : "w-0"
             }`}
           >

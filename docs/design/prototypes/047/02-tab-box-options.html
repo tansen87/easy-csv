@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 047-02 · 标签页方框方案</title>
+<style>
+  /* ── tokens · 与 src/index.css 对齐 ───────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.7 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --border-strong:oklch(0.855 0 0);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 12%,var(--bg));
+    --chrome-line:color-mix(in oklab,var(--brand) 30%,transparent);
+
+    --success:oklch(0.52 0.09 150);
+    --success-soft:color-mix(in oklab,var(--success) 10%,transparent);
+    --warning:oklch(0.55 0.1 72);
+    --warning-soft:color-mix(in oklab,var(--warning) 10%,transparent);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-win:0 24px 60px -24px oklch(0.2 0.02 80 / 26%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --ease:cubic-bezier(.2,0,0,1);
+  }
+  .dark{
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.52 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(1 0 0 / 7%);
+    --border-strong:oklch(1 0 0 / 16%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 12%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 16%,var(--bg));
+    --chrome-line:color-mix(in oklab,var(--brand) 34%,transparent);
+    --success:oklch(0.74 0.1 150);
+    --success-soft:color-mix(in oklab,var(--success) 12%,transparent);
+    --warning:oklch(0.78 0.11 75);
+    --warning-soft:color-mix(in oklab,var(--warning) 12%,transparent);
+    --canvas:oklch(0.145 0 0);
+    --dot:oklch(1 0 0 / 7%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;-webkit-font-smoothing:antialiased;
+  }
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+
+  .stage-bar{padding-bottom:18px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar h1{margin:0;font-size:16px;font-weight:500}
+  .stage-bar p{margin:6px 0 0;font-size:12px;color:var(--muted-fg);max-width:920px;line-height:1.65}
+
+  /* ── 共用:预览窗口 ──────────────────────────────────────────────── */
+  .preview{
+    position:relative;width:440px;height:104px;overflow:hidden;flex:none;
+    border:1px solid var(--border-strong);border-radius:8px;background:var(--bg);
+  }
+  .mini-chrome{
+    height:36px;display:flex;align-items:center;gap:14px;padding-left:12px;
+    background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-line);
+  }
+  .mini-brand{font-size:11.5px;font-weight:500;white-space:nowrap}
+  .mini-menu{font-size:10.5px;color:var(--brand);white-space:nowrap}
+  .mini-canvas{
+    position:absolute;left:0;right:0;top:36px;bottom:0;background-color:var(--canvas);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:18px 18px;background-position:9px 9px;
+  }
+  .mini-tabs{position:absolute;left:6px;top:5px;height:26px;display:flex;align-items:center;gap:4px}
+
+  .pcard{display:flex;flex-direction:column;gap:8px}
+  .pcard > span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg)}
+  .dnote p{margin:0 0 10px;font-size:11.5px;line-height:1.7;color:var(--muted-fg)}
+  .dnote b{font-weight:500;color:var(--fg)}
+
+  /* ── 共用:页签与内容(与 HomeView.tsx 现状一致) ────────────────── */
+  .pt{
+    display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 8px;
+    border:1px solid transparent;border-radius:6px;font-size:12px;color:var(--muted-fg);
+    white-space:nowrap;transition:color .12s var(--ease),background-color .12s var(--ease),border-color .12s var(--ease);
+  }
+  .pt.hover{background:color-mix(in oklab,var(--muted) 45%,transparent);color:var(--fg)}
+  .badge{display:inline-flex;align-items:center;gap:3px;height:16px;padding:0 6px;
+         border-radius:8px;font-size:10px;font-weight:500}
+  .badge.run{background:var(--brand-soft);color:var(--brand)}
+  .badge.done{background:var(--success-soft);color:var(--success)}
+  .badge.warn{background:var(--warning-soft);color:var(--warning)}
+  .spin{width:6px;height:6px;border-radius:50%;border:1px solid currentColor;border-top-color:transparent}
+
+  /* 00 现状 */
+  .o0 .pt.on{
+    border-color:color-mix(in oklab,var(--brand) 40%,transparent);
+    background:var(--brand-soft);color:var(--brand);
+  }
+
+  /* A 细线纸片 */
+  .oA .pt.on{
+    background:var(--card);border-color:var(--border);color:var(--fg);font-weight:500;
+  }
+
+  /* B 上浮纸片 · 主题色底(已选) */
+  .oB .pt.on{
+    background:color-mix(in oklab,var(--brand) 12%,var(--card));
+    border-color:transparent;color:var(--brand);font-weight:500;
+    box-shadow:0 1px 2px oklch(0.2 0.02 80 / 8%);
+  }
+  /* 主题色底上的状态徽标改回页面底色芯片,否则 brand-on-brand 会糊在一起。 */
+  .oB .pt.on .badge{background:var(--bg)}
+  .dark .oB .pt.on{
+    background:color-mix(in oklab,var(--brand) 14%,var(--card));
+    box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--brand) 30%,transparent);
+  }
+
+  /* B 浓一档(20%):文字改正文色,避免 4.5:1 不足 */
+  .oB2 .pt.on{
+    background:color-mix(in oklab,var(--brand) 20%,var(--card));
+    border-color:transparent;color:var(--fg);font-weight:500;
+    box-shadow:0 1px 2px oklch(0.2 0.02 80 / 8%);
+  }
+  .oB2 .pt.on .badge{background:var(--bg)}
+  .dark .oB2 .pt.on{
+    background:color-mix(in oklab,var(--brand) 22%,var(--card));
+    box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--brand) 34%,transparent);
+  }
+
+  /* C 竖条索引 */
+  .oC .pt.on{
+    background:var(--card);border-color:transparent;color:var(--fg);font-weight:500;
+    box-shadow:inset 3px 0 0 0 var(--brand);
+  }
+
+  /* D 中性浅底 */
+  .oD .pt.on{
+    background:var(--muted);border-color:transparent;color:var(--fg);font-weight:500;
+  }
+
+  /* E 内线描边 */
+  .oE .pt.on{
+    background:transparent;border-color:transparent;color:var(--fg);font-weight:500;
+    box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--brand) 45%,transparent);
+  }
+
+  /* F 纯文字 */
+  .oF .pt.on{background:transparent;border-color:transparent;color:var(--fg);font-weight:500}
+
+  /* ── 方案行 ──────────────────────────────────────────────────────── */
+  .opts{display:grid;gap:0;width:1200px;margin-top:8px}
+  .opt{display:grid;grid-template-columns:440px 1fr;gap:32px;align-items:center;
+       padding:16px 0;border-bottom:1px solid var(--border-soft)}
+  .opt:first-child{padding-top:0}
+
+  .opt-head{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+  .oid{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--muted-fg);
+       border:1px solid var(--border);border-radius:4px;padding:1px 5px;background:var(--card)}
+  .opt-head b{font-size:12.5px;font-weight:500}
+  .rec{font-size:10px;font-weight:500;color:var(--brand);
+       background:var(--brand-soft);border-radius:4px;padding:1px 6px}
+  .alt{font-size:10px;font-weight:500;color:var(--muted-fg);border:1px solid var(--border);
+       background:var(--card);border-radius:4px;padding:1px 6px}
+  .od{margin:0 0 7px;font-size:11.5px;line-height:1.65;color:var(--muted-fg)}
+  .od b{font-weight:500;color:var(--fg)}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+  .chips span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);
+              border:1px solid var(--border);border-radius:4px;padding:1px 5px;background:var(--card)}
+  .otrade{margin:0;font-size:11px;line-height:1.6;color:var(--muted-fg-2)}
+  .otrade b{font-weight:500;color:var(--muted-fg)}
+
+  .subhead{display:flex;align-items:baseline;gap:10px;margin:34px 0 12px;
+           font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .subhead b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+
+  /* ── 表格 ────────────────────────────────────────────────────────── */
+  .cmp{width:1200px}
+  .cmp table{width:100%;border-collapse:collapse;font-size:11.5px}
+  .cmp th{text-align:left;font-family:var(--mono);font-size:10px;font-weight:400;
+          color:var(--muted-fg-2);padding:0 14px 8px 0;border-bottom:1px solid var(--border)}
+  .cmp td{vertical-align:top;padding:10px 14px 10px 0;border-bottom:1px solid var(--border-soft);
+          line-height:1.6;color:var(--muted-fg)}
+  .cmp td:first-child{width:120px;color:var(--fg)}
+  .cmp td:first-child b{font-weight:500}
+  .cmp .ok{color:var(--success)}
+  .cmp .mid{color:var(--warning)}
+
+  /* ── 结论 ────────────────────────────────────────────────────────── */
+  .advice{width:1200px;margin-top:30px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .advice div{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .advice h4{margin:0 0 5px;font-size:12px;font-weight:500}
+  .advice p{margin:0;font-size:11.5px;line-height:1.65;color:var(--muted-fg)}
+  .advice .k{font-family:var(--mono);font-size:10px;color:var(--brand)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">047 · 标签栏 · 第二轮</div>
+    <h1>只换页签的方框:六种方案,已选 B 主题色版</h1>
+    <p>上一版的「36px 行轨 + 2px 下划线 + 画布下移」整体作废 —— 布局、位置、状态徽标、关闭按钮、执行逻辑全部保持现状,<b>只改页签外框这一层</b>。你提到下划线不好看,所以下面六种都不带下划线,「当前页」改用<strong>底 / 框 / 竖条 / 字重</strong>来区分。预览里三个页签的内容完全相同(名称 + 运行状态徽标),方便只比较外壳。</p>
+    <p style="margin-top:6px"><b>已选 B,并按你的要求把纸片底换成了主题色</b>(不回到描边):下方 B 行是主方案,再往后是它的亮/暗与两档浓度细化。</p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       00 现状
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="opts">
+    <div class="opt o0">
+      <div class="preview">
+        <div class="mini-chrome"><span class="mini-brand">Easy Csv</span><span class="mini-menu">文件</span><span class="mini-menu">编辑</span><span class="mini-menu">查看</span></div>
+        <div class="mini-canvas">
+          <div class="mini-tabs">
+            <span class="pt on">订单明细<span class="badge run"><span class="spin"></span>执行中</span></span>
+            <span class="pt">示例销售<span class="badge done">完成</span></span>
+            <span class="pt hover">渠道库存</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="opt-head"><span class="oid">00</span><b>现状(HomeView.tsx:423-427)</b></div>
+        <p class="od">当前页 = 1px 品牌色描边 + 9% 品牌淡底 + <b>品牌色文字</b>。三层品牌色叠在同一个页签上,和里面的「执行中」品牌色徽标抢注意力,整条看起来更像徽标排,而不是页签。</p>
+        <div class="chips"><span>框: 1px brand@40%</span><span>底: brand@9%</span><span>字: brand</span></div>
+        <p class="otrade"><b>问题</b>品牌色用了三次;描边只比未选定的透明框深一点,单独看反而更弱。</p>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         A 细线纸片
+         ════════════════════════════════════════════════════════════ -->
+    <div class="opt oA">
+      <div class="preview">
+        <div class="mini-chrome"><span class="mini-brand">Easy Csv</span><span class="mini-menu">文件</span><span class="mini-menu">编辑</span><span class="mini-menu">查看</span></div>
+        <div class="mini-canvas">
+          <div class="mini-tabs">
+            <span class="pt on">订单明细<span class="badge run"><span class="spin"></span>执行中</span></span>
+            <span class="pt">示例销售<span class="badge done">完成</span></span>
+            <span class="pt hover">渠道库存</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="opt-head"><span class="oid">A</span><b>细线纸片</b><span class="alt">备选</span></div>
+        <p class="od">当前页换成<b>纸面底 + 1px 中性发丝线</b>,文字回到正文色。品牌色一个都不留在框上,只留给里面的状态徽标 —— 页签是一张压在画布上的纸片,而不是一个彩色胶囊。</p>
+        <div class="chips"><span>底: --card</span><span>框: 1px --border</span><span>字: --fg / 500</span><span>暗色同款</span></div>
+        <p class="otrade"><b>代价</b>亮色下卡片与页签同为白,区分主要靠那条 1px 细线;比现状安静,但仍是一个完整的方框。</p>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         B 上浮纸片
+         ════════════════════════════════════════════════════════════ -->
+    <div class="opt oB">
+      <div class="preview">
+        <div class="mini-chrome"><span class="mini-brand">Easy Csv</span><span class="mini-menu">文件</span><span class="mini-menu">编辑</span><span class="mini-menu">查看</span></div>
+        <div class="mini-canvas">
+          <div class="mini-tabs">
+            <span class="pt on">订单明细<span class="badge run"><span class="spin"></span>执行中</span></span>
+            <span class="pt">示例销售<span class="badge done">完成</span></span>
+            <span class="pt hover">渠道库存</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="opt-head"><span class="oid">B</span><b>上浮纸片 · 主题色</b><span class="rec">已选</span></div>
+        <p class="od">纸片底从纯白换成<b>12% 主题色淡底</b>,文字用主题色,仍然是<b>无边框 + 1px 极浅投影</b> —— 轮廓来自光影,不引入任何线条。内部的状态徽标改成页面底色芯片,避免主题色标签里再套一个主题色标签。</p>
+        <div class="chips"><span>底: brand 12% + card</span><span>框: 无</span><span>字: --brand / 500</span><span>徽标底: --bg</span><span>影: 0 1px 2px 8%</span><span>暗色: 14% + 1px 内发丝线</span></div>
+        <p class="otrade"><b>代价</b>主题色重新回到框上(这次只两层:底 + 字);投影很浅,亮色下在白画布上要靠那一点色温分辨;暗色必须换成 1px 主题色内发丝线。</p>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         C 竖条索引
+         ════════════════════════════════════════════════════════════ -->
+    <div class="opt oC">
+      <div class="preview">
+        <div class="mini-chrome"><span class="mini-brand">Easy Csv</span><span class="mini-menu">文件</span><span class="mini-menu">编辑</span><span class="mini-menu">查看</span></div>
+        <div class="mini-canvas">
+          <div class="mini-tabs">
+            <span class="pt on">订单明细<span class="badge run"><span class="spin"></span>执行中</span></span>
+            <span class="pt">示例销售<span class="badge done">完成</span></span>
+            <span class="pt hover">渠道库存</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="opt-head"><span class="oid">C</span><b>竖条索引</b></div>
+        <p class="od">当前页保留纸面底,但把品牌色收成<b>左侧 3px 竖条</b>,没有描边、没有横线。这是项目里已有的台账语法(VariableRow 的 2px 左轨、血缘面板的品牌色竖线),和画布节点的 01/02/03 索引是同一套。</p>
+        <div class="chips"><span>底: --card</span><span>框: 无</span><span>标记: inset 3px --brand</span><span>字: --fg / 500</span></div>
+        <p class="otrade"><b>代价</b>竖条会占掉左侧 3px 视觉留白;页签很多时每个都有一条竖线,节奏偏"列表行"。</p>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         D 中性浅底
+         ════════════════════════════════════════════════════════════ -->
+    <div class="opt oD">
+      <div class="preview">
+        <div class="mini-chrome"><span class="mini-brand">Easy Csv</span><span class="mini-menu">文件</span><span class="mini-menu">编辑</span><span class="mini-menu">查看</span></div>
+        <div class="mini-canvas">
+          <div class="mini-tabs">
+            <span class="pt on">订单明细<span class="badge run"><span class="spin"></span>执行中</span></span>
+            <span class="pt">示例销售<span class="badge done">完成</span></span>
+            <span class="pt hover">渠道库存</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="opt-head"><span class="oid">D</span><b>中性浅底</b></div>
+        <p class="od">当前页只用一层<b>中性浅底</b>(和面板里的选中行同一个灰阶),无边框、无品牌色。品牌色彻底让给状态徽标与执行按钮,页签区最安静。</p>
+        <div class="chips"><span>底: --muted</span><span>框: 无</span><span>字: --fg / 500</span><span>暗色同款</span></div>
+        <p class="otrade"><b>代价</b>浅底和画布点阵的对比度偏低,暗色下更像一条"悬停态";页签多时当前页不够一眼锁定。</p>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         E 内线描边
+         ════════════════════════════════════════════════════════════ -->
+    <div class="opt oE">
+      <div class="preview">
+        <div class="mini-chrome"><span class="mini-brand">Easy Csv</span><span class="mini-menu">文件</span><span class="mini-menu">编辑</span><span class="mini-menu">查看</span></div>
+        <div class="mini-canvas">
+          <div class="mini-tabs">
+            <span class="pt on">订单明细<span class="badge run"><span class="spin"></span>执行中</span></span>
+            <span class="pt">示例销售<span class="badge done">完成</span></span>
+            <span class="pt hover">渠道库存</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="opt-head"><span class="oid">E</span><b>内线描边</b></div>
+        <p class="od">当前页不填底,只留一圈<b>1px 品牌色内描边</b>(inset,不改变尺寸),文字正文色。比现状少了两层品牌色,方框还在,但它是细线而不是胶囊。</p>
+        <div class="chips"><span>底: 透明</span><span>框: inset 1px brand@45%</span><span>字: --fg / 500</span></div>
+        <p class="otrade"><b>代价</b>暗色下品牌色是浅蓝,1px 内线会比亮色更亮眼;细线压在点阵上,边缘可能被点阵"咬"出毛边。</p>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         F 纯文字
+         ════════════════════════════════════════════════════════════ -->
+    <div class="opt oF">
+      <div class="preview">
+        <div class="mini-chrome"><span class="mini-brand">Easy Csv</span><span class="mini-menu">文件</span><span class="mini-menu">编辑</span><span class="mini-menu">查看</span></div>
+        <div class="mini-canvas">
+          <div class="mini-tabs">
+            <span class="pt on">订单明细<span class="badge run"><span class="spin"></span>执行中</span></span>
+            <span class="pt">示例销售<span class="badge done">完成</span></span>
+            <span class="pt hover">渠道库存</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="opt-head"><span class="oid">F</span><b>纯文字(无框无底)</b></div>
+        <p class="od">连方框都不要:当前页只靠<b>正文色 + 字重 500</b>,其余页签是 muted 400;悬停才给 45% 灰底。页签区彻底没有"盒子",画布上只剩一排文件名。</p>
+        <div class="chips"><span>底: 无</span><span>框: 无</span><span>字: --fg 500 / muted 400</span></div>
+        <p class="otrade"><b>代价</b>定位最弱:页签多、名字长时容易看丢当前页;点阵背景下纯文字的可读性也最差。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       已选方向的细化 · 亮/暗 · 两档浓度
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead" style="margin-top:36px"><b>已选方向 · 上浮主题色纸片</b><span>亮色 12% + 1px 投影 / 暗色 14% + 1px 主题色内发丝线</span></div>
+  <div style="display:flex;gap:24px;align-items:flex-start">
+    <div class="pcard">
+      <div class="preview oB">
+        <div class="mini-chrome"><span class="mini-brand">Easy Csv</span><span class="mini-menu">文件</span><span class="mini-menu">编辑</span><span class="mini-menu">查看</span></div>
+        <div class="mini-canvas">
+          <div class="mini-tabs">
+            <span class="pt on">订单明细<span class="badge run"><span class="spin"></span>执行中</span></span>
+            <span class="pt">示例销售<span class="badge done">完成</span></span>
+            <span class="pt hover">渠道库存</span>
+          </div>
+        </div>
+      </div>
+      <span>亮色 · brand 12% + card · 字 brand · 徽标底 --bg</span>
+    </div>
+    <div class="pcard">
+      <div class="preview oB dark">
+        <div class="mini-chrome"><span class="mini-brand">Easy Csv</span><span class="mini-menu">文件</span><span class="mini-menu">编辑</span><span class="mini-menu">查看</span></div>
+        <div class="mini-canvas">
+          <div class="mini-tabs">
+            <span class="pt on">订单明细<span class="badge run"><span class="spin"></span>执行中</span></span>
+            <span class="pt">示例销售<span class="badge done">完成</span></span>
+            <span class="pt hover">渠道库存</span>
+          </div>
+        </div>
+      </div>
+      <span>暗色 · brand 14% + card · 1px 主题色内发丝线(不用投影)</span>
+    </div>
+  </div>
+
+  <div class="subhead" style="margin-top:26px"><b>浓度两档</b><span>12% 用主题色文字;再浓就换正文色,保证 4.5:1</span></div>
+  <div style="display:flex;gap:24px;align-items:flex-start">
+    <div class="pcard">
+      <div class="preview oB">
+        <div class="mini-chrome"><span class="mini-brand">Easy Csv</span><span class="mini-menu">文件</span><span class="mini-menu">编辑</span><span class="mini-menu">查看</span></div>
+        <div class="mini-canvas">
+          <div class="mini-tabs">
+            <span class="pt on">订单明细<span class="badge run"><span class="spin"></span>执行中</span></span>
+            <span class="pt">示例销售<span class="badge done">完成</span></span>
+            <span class="pt hover">渠道库存</span>
+          </div>
+        </div>
+      </div>
+      <span>浅 12% · 文字用主题色(推荐,当前页仍然"一眼可辨"且不重)</span>
+    </div>
+    <div class="pcard">
+      <div class="preview oB2">
+        <div class="mini-chrome"><span class="mini-brand">Easy Csv</span><span class="mini-menu">文件</span><span class="mini-menu">编辑</span><span class="mini-menu">查看</span></div>
+        <div class="mini-canvas">
+          <div class="mini-tabs">
+            <span class="pt on">订单明细<span class="badge warn">待确认</span></span>
+            <span class="pt">示例销售<span class="badge done">完成</span></span>
+            <span class="pt hover">渠道库存</span>
+          </div>
+        </div>
+      </div>
+      <span>浓 20% · 文字改正文色;右上角的「待确认」琥珀芯片在主题色底上依然清楚</span>
+    </div>
+  </div>
+
+  <div class="dnote" style="width:1040px">
+    <p>两档的差别只在"主题色浓度":<b>浅档</b>是一张有色纸,当前页靠色温 + 投影存在;<b>浓档</b>更像一枚实心标签,更远的距离也能认出,但会把画布上的注意力拉过来。徽标在所有语义色下统一改成 <code>--bg</code> 底,主题色 / 绿 / 琥珀 / 红都只需换文字色,不新增样式分支。阴影只出现在亮色(dark 下投影无效,改用 1px 主题色内发丝线),因此暗色仍然"无边框"——那根线是光影的替代,不是描边。</p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       对比
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead" style="margin-top:36px"><b>怎么选</b><span>六个方案只在「当前页」的识别方式上不同</span></div>
+  <section class="cmp">
+    <table>
+      <thead><tr><th>方案</th><th>当前页的识别手段</th><th>与状态徽标同处时</th><th>暗色</th><th>改动量</th></tr></thead>
+      <tbody>
+        <tr><td><b>00 现状</b></td><td>品牌描边 + 品牌淡底 + 品牌文字</td><td class="mid">三层品牌色与品牌徽标互相抢</td><td>品牌色变浅,淡底更显眼</td><td>—</td></tr>
+        <tr><td><b>A 细线纸片</b></td><td>纸面底 + 1px 中性发丝线</td><td class="ok">徽标是唯一彩色元素,层级最清楚</td><td class="ok">同款(10% 白细线)</td><td>改 3 个类名</td></tr>
+        <tr><td><b>B 上浮主题色纸片(已选)</b></td><td>12% 主题色纸底 + 1px 投影;徽标改 <code>--bg</code> 底</td><td class="ok">主题色只落在「底 + 字」两层,徽标靠页面底色芯片分开</td><td class="mid">投影失效 → 14% + 1px 主题色内发丝线</td><td>改 3 个类名 + 暗色分支</td></tr>
+        <tr><td><b>C 竖条索引</b></td><td>纸面底 + 3px 品牌竖条</td><td class="ok">与徽标不抢(竖条窄且靠边)</td><td class="ok">同款</td><td>改类名(inset 阴影)</td></tr>
+        <tr><td><b>D 中性浅底</b></td><td>中性浅灰底</td><td class="ok">最不抢</td><td class="mid">对比偏低,容易被当成悬停</td><td>改 1 个类名</td></tr>
+        <tr><td><b>E 内线描边</b></td><td>1px 品牌内描边</td><td class="mid">仍是品牌色描边,淡底去掉了</td><td class="mid">浅品牌色下偏亮</td><td>改类名(inset 阴影)</td></tr>
+        <tr><td><b>F 纯文字</b></td><td>正文色 + 字重 500</td><td class="ok">最安静</td><td class="ok">同款</td><td>改 2 个类名</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="advice">
+    <div>
+      <h4><span class="k">已选</span> · B 上浮主题色纸片</h4>
+      <p>当前页 = 12% 主题色纸面 + 1px 极浅投影,文字用主题色;状态徽标统一改成页面底色芯片。主题色只保留"底 + 字"两层,暗色换 14% 底 + 1px 主题色内发丝线。</p>
+    </div>
+    <div>
+      <h4><span class="k">备选</span> · A 细线纸片</h4>
+      <p>如果你后面觉得主题色底太重,回到 A:白纸 + 1px 中性细线,品牌色完全让给状态徽标,亮暗两版同一套值。</p>
+    </div>
+    <div>
+      <h4><span class="k">备选</span> · C 竖条索引</h4>
+      <p>想保留主题色但不要任何底:左侧 3px 主题色竖条 —— 与台账、节点索引号同一套语言;代价是页签多时更像列表行。</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       改动范围
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="cmp" style="margin-top:30px">
+    <table>
+      <thead><tr><th>改动范围</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>只动这些</b></td>
+          <td><code>HomeView.tsx:423-427</code> 的选中类名换成 B:亮色 <code>background: color-mix(in oklab, var(--brand) 12%, var(--card))</code>、<code>color: var(--brand)</code>、<code>border-color: transparent</code>、<code>font-weight: 500</code>、<code>box-shadow: 0 1px 2px oklch(0.2 0.02 80 / 8%)</code>;暗色 14% 底 + <code>inset 0 0 0 1px</code> 主题色发丝线;选中页签内的状态徽标加一条 <code>background: var(--bg)</code>。同时 <code>transition-all</code> → <code>transition-colors</code>(只让颜色过渡,不再动宽高)。</td>
+        </tr>
+        <tr>
+          <td><b>完全不动</b></td>
+          <td>页签的位置(<code>top-9 ml-2</code>)、高度 36px 行与 26px 页签、间距 4、状态徽标(五种状态与颜色)、关闭按钮、重命名右键、横向滚动、多标签并发 / 取消 / 日志过滤。也不动画布与右侧面板的 72px —— 上一版行轨方案作废。</td>
+        </tr>
+        <tr>
+          <td><b>替代方案</b></td>
+          <td>无论选哪个,都不使用下划线、不使用渐变或阴影特效(除 B 的 1px 投影);选中态不再把品牌色同时用在框、底、字三处。</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+</body>
+</html>

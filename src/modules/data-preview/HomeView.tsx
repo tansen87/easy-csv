@@ -201,7 +201,9 @@ export const HomeView = React.memo(function HomeView({
 }: HomeViewProps) {
   const { t } = useLanguage();
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
-  const [quickAction, setQuickAction] = useState<QuickActionRequest | null>(null);
+  const [quickAction, setQuickAction] = useState<QuickActionRequest | null>(
+    null,
+  );
 
   const [commandDialog, setCommandDialog] = useState<CommandDialogState | null>(
     null,
@@ -369,7 +371,7 @@ export const HomeView = React.memo(function HomeView({
 
       {/* Version Control Panel */}
       <div
-        className={`absolute top-10 right-0 bottom-0 z-20 transition-all duration-300 ${
+        className={`absolute top-9 right-0 bottom-0 z-20 transition-all duration-300 ${
           showVersionPanel ? "w-80" : "w-0"
         }`}
       >
@@ -395,7 +397,7 @@ export const HomeView = React.memo(function HomeView({
 
       {/* Data Lineage Panel */}
       <div
-        className={`absolute top-10 right-0 bottom-0 z-20 transition-all duration-300 ${
+        className={`absolute top-9 right-0 bottom-0 z-20 transition-all duration-300 ${
           showLineagePanel ? "w-80" : "w-0"
         } ${showVersionPanel ? "right-80" : ""}`}
       >
@@ -411,18 +413,18 @@ export const HomeView = React.memo(function HomeView({
       </div>
 
       <div
-        className="absolute top-10 ml-2 z-10"
+        className="absolute top-9 ml-2 z-10"
         onContextMenu={(e) => e.preventDefault()}
       >
-        <div className="h-9 px-3 flex items-center">
+        <div className="flex h-9 items-start px-3 pt-1">
           <ScrollArea className="h-full flex-1">
             <div className="flex items-center gap-1 pr-4">
               {tabs.map((tab) => (
                 <div
                   key={tab.id}
-                  className={`group flex items-center gap-1 px-2 py-0.5 rounded-md text-xs transition-all duration-150 shrink-0 cursor-default ${
+                  className={`flex h-6 max-w-[220px] shrink-0 cursor-default items-center gap-1.5 rounded pl-[9px] pr-1 text-xs transition-colors duration-150 ${
                     selectedTabId === tab.id
-                      ? "border border-[color-mix(in_oklab,var(--canvas-ink)_40%,transparent)] bg-canvas-ink-soft text-canvas-ink"
+                      ? "tab-selected border border-transparent text-brand font-medium"
                       : "text-muted-foreground hover:bg-accent/50 hover:text-foreground border border-transparent"
                   }`}
                   onContextMenu={(e) => {
@@ -453,13 +455,13 @@ export const HomeView = React.memo(function HomeView({
                           setEditingTabId(null);
                         }
                       }}
-                      className="w-20 min-w-[3rem] max-w-[120px] px-1 border rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 h-[18px] leading-[18px] bg-background"
+                      className="h-[22px] w-[120px] shrink-0 rounded border border-brand-border bg-background px-1.5 text-xs leading-[20px] focus:outline-none focus:ring-1 focus:ring-primary/50"
                       autoFocus
                     />
                   ) : (
                     <button
                       onClick={() => onTabChange(tab.id)}
-                      className="text-left truncate max-w-[120px] text-xs leading-[18px] h-[18px]"
+                      className="min-w-0 max-w-[150px] truncate text-left text-xs leading-[18px]"
                     >
                       {tab.name}
                     </button>
@@ -470,14 +472,14 @@ export const HomeView = React.memo(function HomeView({
                     if (!run) return null;
                     if (run.state === "queued") {
                       return (
-                        <span className="rounded-full bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
+                        <span className="tab-badge rounded-full bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
                           {t.runStateQueued}
                         </span>
                       );
                     }
                     if (run.state === "running") {
                       return (
-                        <span className="flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 text-[10px] font-medium text-primary">
+                        <span className="tab-badge flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 text-[10px] font-medium text-primary">
                           <span className="h-1.5 w-1.5 animate-spin rounded-full border border-current border-t-transparent" />
                           {t.executing}
                         </span>
@@ -485,7 +487,7 @@ export const HomeView = React.memo(function HomeView({
                     }
                     if (run.state === "preparing") {
                       return (
-                        <span className="rounded-full bg-warning-soft px-1.5 text-[10px] font-medium text-warning">
+                        <span className="tab-badge rounded-full bg-warning-soft px-1.5 text-[10px] font-medium text-warning">
                           {t.runStatePending}
                         </span>
                       );
@@ -493,7 +495,7 @@ export const HomeView = React.memo(function HomeView({
                     if (run.state === "done" || run.state === "error") {
                       return (
                         <span
-                          className={`rounded-full px-1.5 text-[10px] font-medium ${
+                          className={`tab-badge rounded-full px-1.5 text-[10px] font-medium ${
                             run.state === "done"
                               ? "bg-success-soft text-success"
                               : "bg-destructive/10 text-destructive"
@@ -512,9 +514,10 @@ export const HomeView = React.memo(function HomeView({
                       e.stopPropagation();
                       onRemoveTab(tab.id);
                     }}
-                    className="flex h-4 w-4 items-center justify-center rounded opacity-0 transition-colors duration-150 group-hover:opacity-100 hover:bg-muted/80 text-muted-foreground/50 hover:text-foreground"
+                    aria-label={t.close}
+                    className="flex h-5 w-5 flex-none items-center justify-center rounded text-muted-foreground/50 transition-colors duration-150 hover:text-foreground"
                   >
-                    <X className="h-2.5 w-2.5" />
+                    <X className="h-3.5 w-3.5" strokeWidth={1.5} />
                   </button>
                 </div>
               ))}
@@ -527,66 +530,67 @@ export const HomeView = React.memo(function HomeView({
       {((showProgressBar && branchProgress) || otherRunningCount > 0) && (
         <div className="absolute left-1/2 top-15 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 flex items-center gap-2">
           {showProgressBar && branchProgress && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-transparent rounded-lg shadow-md pointer-events-auto">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t.branchProgress} {branchProgress.current}/{branchProgress.total}
-            </span>
-            <div
-              className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                branchProgress.status === "completed"
-                  ? "bg-success-soft text-success"
-                  : branchProgress.status === "executing"
-                    ? "bg-info-soft text-info"
-                    : "bg-danger-soft text-danger"
-              }`}
-            >
-              {branchProgress.status === "executing" && (
-                <div className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              )}
-              {branchProgress.status === "completed" && (
-                <svg
-                  className="h-2.5 w-2.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={3}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              )}
-              {branchProgress.status === "error" && (
-                <svg
-                  className="h-2.5 w-2.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={3}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              )}
-              <span className="max-w-[240px] truncate">
-                {branchProgress.name}
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-transparent rounded-lg shadow-md pointer-events-auto">
+              <span className="text-xs font-medium text-muted-foreground">
+                {t.branchProgress} {branchProgress.current}/
+                {branchProgress.total}
               </span>
-            </div>
-            {isExecuting && onCancelExecution && (
-              <button
-                onClick={onCancelExecution}
-                className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-danger hover:bg-danger-soft transition-colors"
+              <div
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+                  branchProgress.status === "completed"
+                    ? "bg-success-soft text-success"
+                    : branchProgress.status === "executing"
+                      ? "bg-info-soft text-info"
+                      : "bg-danger-soft text-danger"
+                }`}
               >
-                <Square className="h-2.5 w-2.5" />
-                {t.cancelExecution}
-              </button>
-            )}
-          </div>
+                {branchProgress.status === "executing" && (
+                  <div className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                )}
+                {branchProgress.status === "completed" && (
+                  <svg
+                    className="h-2.5 w-2.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={3}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                )}
+                {branchProgress.status === "error" && (
+                  <svg
+                    className="h-2.5 w-2.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={3}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                )}
+                <span className="max-w-[240px] truncate">
+                  {branchProgress.name}
+                </span>
+              </div>
+              {isExecuting && onCancelExecution && (
+                <button
+                  onClick={onCancelExecution}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-danger hover:bg-danger-soft transition-colors"
+                >
+                  <Square className="h-2.5 w-2.5" />
+                  {t.cancelExecution}
+                </button>
+              )}
+            </div>
           )}
           {otherRunningCount > 0 && (
             <span className="text-[11px] text-muted-foreground/70 whitespace-nowrap">
