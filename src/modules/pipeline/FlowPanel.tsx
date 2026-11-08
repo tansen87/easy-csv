@@ -878,7 +878,7 @@ export function FlowPanel({
       {/* Multi-select floating action bar (hidden while the search overlay is
           open so the two top-centre surfaces never stack). */}
       {selectedNodeIds.size > 0 && !isSearchOpen && (
-        <div className="absolute left-1/2 top-3 z-20 flex h-[34px] -translate-x-1/2 items-center rounded-[9px] border border-border bg-card px-1 shadow-[0_4px_12px_rgba(0,0,0,0.07)] dark:shadow-none">
+        <div className="absolute left-1/2 top-10 z-20 flex h-[34px] -translate-x-1/2 items-center rounded-[9px] border border-border bg-card px-1 shadow-[0_4px_12px_rgba(0,0,0,0.07)] dark:shadow-none">
           <span className="px-2 font-mono text-[11px] font-medium tabular-nums text-muted-foreground">
             {selectedNodeIds.size}
           </span>

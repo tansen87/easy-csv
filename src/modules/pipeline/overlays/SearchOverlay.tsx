@@ -112,7 +112,7 @@ export function SearchOverlay({
   };
 
   return (
-    <div className="absolute left-1/2 top-3 z-50 w-[360px] -translate-x-1/2">
+    <div className="absolute left-1/2 top-10 z-50 w-[360px] -translate-x-1/2">
       <div className="overflow-hidden rounded-xl border border-border bg-card shadow-[0_4px_12px_rgba(0,0,0,0.07)] transition-colors focus-within:border-canvas-line-strong dark:shadow-none">
         {/* Search input box */}
         <div className="flex h-9 items-center gap-2 border-b border-border px-2.5">

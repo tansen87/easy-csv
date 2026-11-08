@@ -528,7 +528,7 @@ export const HomeView = React.memo(function HomeView({
       </div>
 
       {((showProgressBar && branchProgress) || otherRunningCount > 0) && (
-        <div className="absolute left-1/2 top-15 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 flex items-center gap-2">
+        <div className="absolute left-1/2 top-24 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 flex items-center gap-2">
           {showProgressBar && branchProgress && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-transparent rounded-lg shadow-md pointer-events-auto">
               <span className="text-xs font-medium text-muted-foreground">
