@@ -40,6 +40,8 @@ interface MainMenuProps {
   /** Opens the built-in sample. Sits first in the Help menu. */
   onLoadDemo: () => void;
   onHelp: () => void;
+  /** Opens the GitHub issues page for bug reports. */
+  onReportIssue: () => void;
   onCheckUpdate: () => void;
   onShowSettings: () => void;
   onOpenPalette: () => void;
@@ -127,6 +129,7 @@ export const MainMenu = React.memo(function MainMenu({
   onUseOrSaveTemplate,
   onLoadDemo,
   onHelp,
+  onReportIssue,
   onCheckUpdate,
   onShowSettings,
   onOpenPalette,
@@ -860,6 +863,18 @@ export const MainMenu = React.memo(function MainMenu({
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.helpCenter}
+                </span>
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  onReportIssue();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+              >
+                <span className="flex-1 text-left whitespace-nowrap">
+                  {t.reportIssue}
                 </span>
               </button>
               <button

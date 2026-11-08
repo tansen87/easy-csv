@@ -45,6 +45,7 @@ export interface Translations {
   view: string;
   search: string;
   helpCenter: string;
+  reportIssue: string;
   /** First row of the Help menu: opens the built-in sample. */
   viewSample: string;
   dataProfileRequiresInput: string;

@@ -23,6 +23,7 @@ export const zhPipeline = {
   view: "查看",
   search: "搜索",
   helpCenter: "帮助中心",
+  reportIssue: "报告问题",
   viewSample: "查看示例",
   dataProfileRequiresInput: "需要载入输入文件",
   dataProfile: "数据概览",

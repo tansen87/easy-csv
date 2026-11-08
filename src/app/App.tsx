@@ -1874,6 +1874,11 @@ function AppContent() {
                 onUseOrSaveTemplate={openTemplates}
                 onLoadDemo={handleLoadDemo}
                 onHelp={onHelp}
+                onReportIssue={() =>
+                  void handleOpenUrl(
+                    "https://github.com/tansen87/easy-csv/issues/",
+                  )
+                }
                 onCheckUpdate={() => void checkForUpdates()}
                 onShowSettings={onShowSettings}
                 onOpenPalette={() => ui.setShowCommandPalette(true)}
