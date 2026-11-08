@@ -18,7 +18,6 @@
         { "path": "**" }
       ]
     },
-    "core:window:allow-set-title",
     "core:window:allow-set-decorations",
     "core:window:allow-is-maximized",
     "core:window:allow-maximize",

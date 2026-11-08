@@ -122,15 +122,6 @@ export function useTitleBarDoubleClick(ref: RefObject<HTMLElement | null>) {
   }, [ref]);
 }
 
-/**
- * Keeps the OS window title in sync with the active file. With the custom
- * chrome there is no native title bar left to show it, so the taskbar and
- * alt-tab are the only places it survives.
- */
-export function setWindowTitle(title: string) {
-  withWindow((win) => win.setTitle(title));
-}
-
 export function TitleBarBrand() {
   return (
     <div

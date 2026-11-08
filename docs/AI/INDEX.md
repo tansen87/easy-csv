@@ -37,7 +37,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 │  storage.rs · ai.rs · ai_memory.rs · session.rs     │
 │  AI 对话持久化 (ai_memory.db) · AI 配置 (config.db)     │
 │  会话快照持久化 (session.db) · API Key 加密存储          │
-│  (AES-256-GCM) · 63 个 Tauri 命令                    │
+│  (AES-256-GCM) · 62 个 Tauri 命令                    │
 │  CSV 读取 (csv crate) · CSV 对比 · 编码转换            │
 │  管道执行 (进程管理 + 取消) · AI 代理 (DeepSeek/       │
 │  Qwen/GLM) · AI 记忆持久化 · 数据概况缓存              │
@@ -113,7 +113,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | 文件 | 职责 |
 |------|------|
 | `main.rs` | 二进制入口,注册插件(opener/dialog/fs/shell/window_state/notification/http/prevent_default),系统托盘,窗口事件处理 |
-| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 63 个命令) |
+| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 62 个命令) |
 | `config.rs` | `AppConfig` 类型、SQLite 持久化(app_config/ai_config 表)、AES-256-GCM 加密存储 API Key、per-provider API Key 管理、自定义 AI provider 配置(provider=custom 时存 name/base_url/models)、配置相关命令 |
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
 | `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令(`input_table` 参数 + 入口分派:全链 duckdb → `run_duckdb_chain` 单进程串联;首步 duckdb + 非 CSV → 原生 `SourceRef` 直读 `pipeline_seq`;否则非 CSV 先 `materialize_input_to_csv` + `TempFiles` RAII 清理)、`pipeline_seq`(`current_input` 为 `SourceRef`;**相邻 duckdb 步骤用 `COPY → tmp.parquet` 交接**,duckdb→xan 边界照旧 CSV)、`build_duckdb_args`(按 `next_is_duckdb` 分派)、`cancel_pipeline(run_id)` 取消**单次运行**(`RUN_FLAGS` 注册表 + `RunGuard`,design 028;每个 run 一个 `Arc<AtomicBool>`,替代已删除的全局 `set_pipeline_cancelled`) |
@@ -197,7 +197,6 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_execution_history` / `load_execution_history` / `clear_execution_history` | 执行历史持久化(SQLite `execution_history` 表,只存统计摘要,LRU 保留最近100条) |
 | `file_exists` | 文件存在性检查 |
 | `reveal_paths` | 在系统文件管理器中定位一个或多个路径(过滤已不存在的路径后交给 `tauri_plugin_opener::reveal_items_in_dir`;**需 capability `opener:default`**,缺失会静默失败并把路径当错误文案弹出) |
-| `set_window_title` | 设置窗口标题 |
 | `toggle_devtools` | 切换开发者工具 |
 
 #### session.rs — 会话持久化 (SQLite)
@@ -229,7 +228,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_correction` | 保存纠正规则 |
 | `clear_conversations` / `clear_feedback` / `clear_corrections` | 清除对应表全部数据 |
 
-### Tauri 命令清单(前端可调用,共 63 个)
+### Tauri 命令清单(前端可调用,共 62 个)
 
 | 命令 | 模块 | 功能 |
 |------|------|------|
@@ -267,7 +266,6 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `clear_conversations` | ai_memory | 清除全部对话历史 |
 | `clear_feedback` | ai_memory | 清除全部反馈记录 |
 | `clear_corrections` | ai_memory | 清除全部纠正规则 |
-| `set_window_title` | storage | 设置窗口标题 |
 | `save_recent_files` / `load_recent_files` | storage | 最近文件列表持久化 |
 | `save_pipeline_versions` / `load_pipeline_versions` | storage | 管道版本持久化 |
 | `save_lineage_data` / `load_lineage_data` | storage | 数据血缘持久化 |

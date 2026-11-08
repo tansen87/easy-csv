@@ -281,13 +281,6 @@ pub async fn save_profile_cache(
 }
 
 #[tauri::command]
-pub async fn set_window_title(window: tauri::Window, title: String) -> Result<(), String> {
-  window
-    .set_title(&title)
-    .map_err(|e| format!("Failed to set window title: {}", e))
-}
-
-#[tauri::command]
 pub async fn file_exists(file_path: String) -> Result<bool, String> {
   Ok(std::path::Path::new(&file_path).exists())
 }
@@ -301,7 +294,7 @@ pub async fn file_exists(file_path: String) -> Result<bool, String> {
 /// when none of them exist this returns an error naming the paths, so callers
 /// can show something more useful than a bare "does not exist". This command
 /// requires the `opener:default` (or `opener:allow-reveal-item-in-dir`)
-/// capability — without it the ACL rejects the call and the frontend would
+/// capability - without it the ACL rejects the call and the frontend would
 /// surface the raw path as an error toast.
 #[tauri::command]
 pub async fn reveal_paths(paths: Vec<String>) -> Result<(), String> {

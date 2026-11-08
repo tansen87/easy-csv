@@ -20,16 +20,11 @@ interface UseAppBootstrapArgs {
   ) => Promise<void>;
   importPipelineFromPath: (filePath: string) => void | Promise<void>;
   showRefreshDialog: () => void;
-  tabs: { id: string; inputFile?: string }[];
-  showToastRef: React.RefObject<
-    (message: string, type?: "info" | "success" | "warning" | "error") => void
-  >;
 }
 
 /**
  * App-level bootstrap and global listeners (useAppBootstrap):
- * startup init + session restore, F12/F5 handling, drag-and-drop file open,
- * system notification on pipeline completion and the window title sync.
+ * startup init + session restore, F12/F5 handling and drag-and-drop file open.
  */
 export function useAppBootstrap({
   initialize,
@@ -40,8 +35,6 @@ export function useAppBootstrap({
   loadCsvData,
   importPipelineFromPath,
   showRefreshDialog,
-  tabs,
-  showToastRef,
 }: UseAppBootstrapArgs) {
   // Startup: init + session restore + version warm-up
   useEffect(() => {
@@ -121,21 +114,6 @@ export function useAppBootstrap({
       unlisten?.();
     };
   }, [selectedTabId, loadCsvData, importPipelineFromPath]);
-
-  // Window title
-  useEffect(() => {
-    const updateTitle = async () => {
-      const currentTab = tabs.find((tab) => tab.id === selectedTabId);
-      const inputFile = currentTab?.inputFile || "";
-      try {
-        const title = inputFile ? `${inputFile} - Easy Csv` : "Easy Csv";
-        await invoke("set_window_title", { title });
-      } catch (error) {
-        showToastRef.current(`Failed to set window title: ${error}`, "error");
-      }
-    };
-    updateTitle();
-  }, [selectedTabId, tabs, showToastRef]);
 }
 
 /**

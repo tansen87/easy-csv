@@ -56,7 +56,6 @@ import { xanCommands } from "@/data/commands";
 import { helpDocs, helpDocsZh } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
 import {
-  setWindowTitle,
   TitleBarBrand,
   useTitleBarDoubleClick,
   WindowControls,
@@ -672,8 +671,6 @@ function AppContent() {
     loadCsvData: tabsHook.loadCsvData,
     importPipelineFromPath: handleImportPipelineFromPath,
     showRefreshDialog: () => ui.setShowRefreshDialog(true),
-    tabs: tabsHook.tabs,
-    showToastRef,
   });
 
   // Click outside menu
@@ -1331,13 +1328,6 @@ function AppContent() {
   );
 
   const currentTab = tabsHook.getCurrentTab();
-
-  // The title bar no longer shows the file name, so the OS window title
-  // (taskbar / alt-tab) carries it instead.
-  const activeTabName = currentTab?.name ?? "";
-  useEffect(() => {
-    setWindowTitle(activeTabName ? `${activeTabName} — Easy Csv` : "Easy Csv");
-  }, [activeTabName]);
 
   const currentSnapshot = useMemo(
     () =>

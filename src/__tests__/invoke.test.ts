@@ -251,18 +251,6 @@ describe("App.tsx invoke call patterns", () => {
     });
   });
 
-  describe("set_window_title", () => {
-    it("should set window title", async () => {
-      mockInvoke.mockResolvedValue(undefined);
-
-      await invoke("set_window_title", { title: "Easy CSV - My Pipeline" });
-
-      expect(mockInvoke).toHaveBeenCalledWith("set_window_title", {
-        title: "Easy CSV - My Pipeline",
-      });
-    });
-  });
-
   describe("error handling patterns", () => {
     it("should handle invoke failure for load operations", async () => {
       mockInvoke.mockRejectedValue(new Error("File not found"));

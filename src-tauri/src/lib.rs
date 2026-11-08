@@ -79,7 +79,6 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     storage::load_recent_files,
     storage::load_profile_cache,
     storage::save_profile_cache,
-    storage::set_window_title,
     storage::toggle_devtools,
     storage::file_exists,
     storage::reveal_paths,
