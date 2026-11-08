@@ -94,6 +94,82 @@ jobs:
               linuxdeploy-x86_64.AppImage "$base"
           cp -f "$base" "$cache/linuxdeploy-07333c6-x86_64.AppImage"
 
+      # Same 504 workaround for the Windows NSIS toolset (`nsis-3.11.zip`). The
+      # bundler skips its download when `%LOCALAPPDATA%\tauri\NSIS` already
+      # holds the required files, so seed that cache from the API endpoint.
+      - name: Seed NSIS toolset (windows only)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $cache = Join-Path $env:LOCALAPPDATA 'tauri\NSIS'
+
+          # fetch_asset <repo> <tag> <asset name> <destination>
+          function Fetch-Asset {
+            param([string]$Repo, [string]$Tag, [string]$Name, [string]$Dest)
+            $rel = gh api "repos/$Repo/releases/tags/$Tag" | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw "gh api failed for $Repo@$Tag" }
+            $asset = $rel.assets | Where-Object { $_.name -eq $Name } |
+              Select-Object -First 1
+            if (-not $asset) { throw "asset $Name not found in $Repo@$Tag" }
+            curl.exe -fsSL --retry 5 --retry-delay 3 `
+              -H 'Accept: application/octet-stream' `
+              -H "Authorization: Bearer $env:GH_TOKEN" `
+              "https://api.github.com/repos/$Repo/releases/assets/$($asset.id)" -o $Dest
+            if ($LASTEXITCODE -ne 0) { throw "download failed: $Name" }
+          }
+
+          # Mirrors tauri-bundler's NSIS_REQUIRED_FILES. If any is missing the
+          # bundler deletes the cache and downloads again (and hits the 504),
+          # so rebuild the whole toolset instead of patching it.
+          $required = @(
+            'makensis.exe'
+            'Bin/makensis.exe'
+            'Stubs/lzma-x86-unicode'
+            'Stubs/lzma_solid-x86-unicode'
+            'Plugins/x86-unicode/additional/nsis_tauri_utils.dll'
+            'Include/MUI2.nsh'
+            'Include/FileFunc.nsh'
+            'Include/x64.nsh'
+            'Include/nsDialogs.nsh'
+            'Include/WinMessages.nsh'
+            'Include/Win/COM.nsh'
+            'Include/Win/Propkey.nsh'
+            'Include/Win/RestartManager.nsh'
+          )
+          $missing = @($required | Where-Object { -not (Test-Path (Join-Path $cache $_)) })
+          if ($missing.Count -gt 0) {
+            Write-Host "missing: $($missing -join ', ')"
+            if (Test-Path $cache) { Remove-Item $cache -Recurse -Force }
+            $zip = Join-Path $env:RUNNER_TEMP 'nsis-3.11.zip'
+            Fetch-Asset 'tauri-apps/binary-releases' 'nsis-3.11' 'nsis-3.11.zip' $zip
+            $sha1 = (Get-FileHash $zip -Algorithm SHA1).Hash
+            if ($sha1 -ne 'EF7FF767E5CBD9EDD22ADD3A32C9B8F4500BB10D') {
+              throw "nsis-3.11.zip SHA1 mismatch: $sha1"
+            }
+            $extract = Join-Path $env:RUNNER_TEMP 'nsis-extract'
+            if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
+            Expand-Archive -Path $zip -DestinationPath $extract -Force
+            New-Item -ItemType Directory -Force -Path (Split-Path $cache) | Out-Null
+            Move-Item (Join-Path $extract 'nsis-3.11') $cache
+          }
+
+          # Downloaded separately by the bundler and SHA1-verified by it.
+          $dll = Join-Path $cache 'Plugins\x86-unicode\additional\nsis_tauri_utils.dll'
+          if (-not (Test-Path $dll)) {
+            New-Item -ItemType Directory -Force -Path (Split-Path $dll) | Out-Null
+            Fetch-Asset 'tauri-apps/nsis-tauri-utils' 'nsis_tauri_utils-v0.5.3' `
+              'nsis_tauri_utils.dll' $dll
+            $sha1 = (Get-FileHash $dll -Algorithm SHA1).Hash
+            if ($sha1 -ne '75197FEE3C6A814FE035788D1C34EAD39349B860') {
+              throw "nsis_tauri_utils.dll SHA1 mismatch: $sha1"
+            }
+          }
+
+          Write-Host "NSIS toolset ready at $cache"
+
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
