@@ -129,13 +129,14 @@ jobs:
             fetch_asset tauri-apps/binary-releases apprun-old \
               AppRun-x86_64 "$cache/AppRun-x86_64"
 
-          base="$cache/linuxdeploy-07333c6-x86_64.AppImage"
+          # The CLI in use asks for the `linuxdeploy` (not `-07333c6`) build; the
+          # newer 07333c6 binary is not what its bundler runs on ubuntu-22.04.
+          base="$cache/linuxdeploy-x86_64.AppImage"
           [ -f "$base" ] ||
-            fetch_asset tauri-apps/binary-releases linuxdeploy-07333c6 \
+            fetch_asset tauri-apps/binary-releases linuxdeploy \
               linuxdeploy-x86_64.AppImage "$base"
-          # Bundler versions disagree on the cached name (the 2.10.x CLI still
-          # looks for `linuxdeploy-x86_64.AppImage`); seed both.
-          cp -f "$base" "$cache/linuxdeploy-x86_64.AppImage"
+          # Bundler versions disagree on the cached name; seed both.
+          cp -f "$base" "$cache/linuxdeploy-07333c6-x86_64.AppImage"
 
       # Validate the secret *before* the ~20 minute build. Without this the only
       # symptom is a cryptic bundler error at the very end:
