@@ -244,6 +244,8 @@ export interface Translations {
   accentTeal: string;
   accentClay: string;
   accentGraphite: string;
+  accentPink: string;
+  accentPurple: string;
   /** When a settings change takes effect - the footer's left-hand note. */
   settingsLiveNote: string;
   /** `{count}` placeholder: how many columns the delimiter sample splits into. */

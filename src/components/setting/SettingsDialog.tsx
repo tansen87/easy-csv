@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Info, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { useLanguage } from "@/i18n";
@@ -302,13 +302,12 @@ export function SettingsDialog({
           </div>
         </div>
 
-        {/* A real footer band, not buttons floating over the list (design 040
-            §2): rows used to scroll underneath the old overlay, which read as a
+        {/* A real footer band, not buttons floating over the list: rows used
+            to scroll underneath the old overlay, which read as a
             rendering bug. The left side states when a change takes effect -
             appearance applies live, everything else is written on save. */}
         <div className="flex h-14 flex-none items-center justify-between gap-4 border-t border-border px-5">
           <span className="flex min-w-0 items-center gap-1.5 truncate text-[11.5px] text-muted-foreground">
-            <Info className="h-3.5 w-3.5 flex-none" />
             {t.settingsLiveNote}
           </span>
           <div className="flex flex-none items-center gap-2">

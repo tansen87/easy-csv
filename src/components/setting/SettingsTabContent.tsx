@@ -461,6 +461,8 @@ export function SettingsTabContent({
               teal: t.accentTeal,
               clay: t.accentClay,
               graphite: t.accentGraphite,
+              pink: t.accentPink,
+              purple: t.accentPurple,
             }}
           />
         );

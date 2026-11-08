@@ -1,11 +1,24 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 
 export type Theme = "dark" | "light" | "system";
-export type Accent = "ink" | "teal" | "clay" | "graphite";
+export type Accent =
+  | "ink"
+  | "teal"
+  | "clay"
+  | "graphite"
+  | "pink"
+  | "purple";
 export type ResolvedTheme = "dark" | "light";
 
 /** Presets understood by the token sheet in `index.css` (design 034). */
-export const ACCENTS: readonly Accent[] = ["ink", "teal", "clay", "graphite"];
+export const ACCENTS: readonly Accent[] = [
+  "ink",
+  "teal",
+  "clay",
+  "graphite",
+  "pink",
+  "purple",
+];
 
 interface ThemeProviderProps {
   children: React.ReactNode;

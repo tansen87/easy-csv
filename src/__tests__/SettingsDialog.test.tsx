@@ -66,7 +66,9 @@ function renderDialog(overrides: Record<string, unknown> = {}) {
   const utils = render(
     <ThemeProvider>
       <LanguageProvider>
-        <SettingsDialog {...(props as React.ComponentProps<typeof SettingsDialog>)} />
+        <SettingsDialog
+          {...(props as React.ComponentProps<typeof SettingsDialog>)}
+        />
       </LanguageProvider>
     </ThemeProvider>,
   );
@@ -115,7 +117,9 @@ describe("settings dialog — structure contracts (design 030 §0.4)", () => {
     const { container } = renderDialog();
 
     for (const group of SETTINGS_GROUPS) {
-      expect(container.querySelector(`#${sectionElementId(group.id)}`)).toBeTruthy();
+      expect(
+        container.querySelector(`#${sectionElementId(group.id)}`),
+      ).toBeTruthy();
     }
   });
 
@@ -280,17 +284,21 @@ describe("settings dialog — accent row (design 034)", () => {
       "Teal",
       "Clay",
       "Graphite",
+      "Rose",
+      "Violet",
     ]);
     expect(radios.map((radio) => radio.getAttribute("data-swatch"))).toEqual([
       "ink",
       "teal",
       "clay",
       "graphite",
+      "pink",
+      "purple",
     ]);
     expect(
-      row.querySelector('[role="radio"][aria-checked="true"]')?.getAttribute(
-        "aria-label",
-      ),
+      row
+        .querySelector('[role="radio"][aria-checked="true"]')
+        ?.getAttribute("aria-label"),
     ).toBe("Ink");
   });
 

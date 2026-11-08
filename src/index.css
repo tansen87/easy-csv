@@ -237,6 +237,20 @@
 :root.dark[data-accent="graphite"] {
   --brand: oklch(0.80 0.004 85);
 }
+/* Pink and purple sit at the same lightness/saturation as the first four:
+   dark enough for 4.5:1 on white, light enough in dark mode. */
+:root[data-accent="pink"] {
+  --brand: oklch(0.47 0.09 355);
+}
+:root.dark[data-accent="pink"] {
+  --brand: oklch(0.79 0.06 352);
+}
+:root[data-accent="purple"] {
+  --brand: oklch(0.46 0.085 305);
+}
+:root.dark[data-accent="purple"] {
+  --brand: oklch(0.78 0.055 305);
+}
 
 @theme inline {
   --color-background: var(--background);
@@ -723,6 +737,12 @@ input[type="radio"] {
 [data-swatch="graphite"] {
   --swatch: oklch(0.3 0.006 80);
 }
+[data-swatch="pink"] {
+  --swatch: oklch(0.47 0.09 355);
+}
+[data-swatch="purple"] {
+  --swatch: oklch(0.46 0.085 305);
+}
 .dark [data-swatch="ink"] {
   --swatch: oklch(0.78 0.045 245);
 }
@@ -734,6 +754,12 @@ input[type="radio"] {
 }
 .dark [data-swatch="graphite"] {
   --swatch: oklch(0.8 0.004 85);
+}
+.dark [data-swatch="pink"] {
+  --swatch: oklch(0.79 0.06 352);
+}
+.dark [data-swatch="purple"] {
+  --swatch: oklch(0.78 0.055 305);
 }
 [data-swatch] {
   background-color: var(--swatch);
