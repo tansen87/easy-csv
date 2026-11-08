@@ -53,6 +53,23 @@ const LOG_DOT_CLASS: Record<LogEntry["type"], string> = {
 
 const pad2 = (value: number) => String(value).padStart(2, "0");
 
+/**
+ * Keep a docked left inside the viewport. The saved x can come from a wider
+ * window (e.g. the app was maximized when the panel was dragged); restoring the
+ * window shrank the viewport, and an unclamped x used to place the panel
+ * entirely past the right edge — still "open" but invisible.
+ */
+const clampDockX = (x: number, panelWidth: number) =>
+  Math.max(0, Math.min(x, Math.max(0, window.innerWidth - panelWidth)));
+
+/** The panel is 300px tall; also clamp a dragged top after a window restore. */
+const clampDraggedTop = (el: HTMLElement) => {
+  const top = Number.parseFloat(el.style.top);
+  if (Number.isNaN(top)) return;
+  const maxTop = Math.max(56, window.innerHeight - 300);
+  el.style.top = `${Math.max(56, Math.min(top, maxTop))}px`;
+};
+
 /** `HH:mm:ss` for today, `MM-DD` for older lines; the full value goes in a tooltip. */
 function formatLogTime(ts: Date): { short: string; full: string } {
   const now = new Date();
@@ -253,35 +270,28 @@ export const LogPanel = React.memo(function LogPanel({
     document.body.style.userSelect = "none";
   };
 
-  useEffect(() => {
-    if (isVisible) {
-      const panelWidth = panelRef.current?.offsetWidth || 600;
-      // Persisted x wins; otherwise dock to the right edge.
-      const newX =
-        dockState?.x !== undefined
-          ? dockState.x
-          : window.innerWidth - panelWidth;
-      setPanelLeft(newX);
-    }
-  }, [isVisible, dockState?.x]);
-
   useLayoutEffect(() => {
-    if (isMaximized || !panelRef.current) return;
+    // Re-dock to the bottom-right on every open. Besides the persisted x this
+    // clears a leftover dragged `top`, so a window restore can never leave the
+    // panel parked below the viewport.
+    if (!isVisible || isMaximized || !panelRef.current) return;
     panelRef.current.style.top = "";
     panelRef.current.style.bottom =
       typeof bottomOffset === "number" ? `${bottomOffset}px` : bottomOffset;
     const panelWidth = panelRef.current.offsetWidth || 600;
     const newX =
-      dockState?.x !== undefined ? dockState.x : window.innerWidth - panelWidth;
+      dockState?.x !== undefined
+        ? clampDockX(dockState.x, panelWidth)
+        : Math.max(0, window.innerWidth - panelWidth);
     setPanelLeft(newX);
-  }, [isMaximized, bottomOffset, dockState?.x]);
+  }, [isVisible, isMaximized, bottomOffset, dockState?.x]);
 
   useEffect(() => {
     const handleResize = () => {
       if (panelRef.current && !isMaximized) {
         const panelWidth = panelRef.current.offsetWidth || 600;
-        const newX = window.innerWidth - panelWidth;
-        setPanelLeft(newX);
+        setPanelLeft(Math.max(0, window.innerWidth - panelWidth));
+        clampDraggedTop(panelRef.current);
       }
     };
 
@@ -336,7 +346,10 @@ export const LogPanel = React.memo(function LogPanel({
 
         {logs.length > 0 && (
           <>
-            <div onMouseDown={(e) => e.stopPropagation()} style={{ width: 112 }}>
+            <div
+              onMouseDown={(e) => e.stopPropagation()}
+              style={{ width: 112 }}
+            >
               <Select
                 value={activeFilter}
                 onChange={(value) =>
