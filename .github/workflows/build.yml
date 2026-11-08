@@ -58,6 +58,39 @@ jobs:
             libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev \
             librsvg2-dev patchelf
 
+      # Same workaround as release.yml: the bundler downloads AppRun and
+      # linuxdeploy from GitHub's `releases/download` endpoint, which returned
+      # 504 on 2026-11-08. The API asset endpoint still serves them; seeding
+      # `~/.cache/tauri` makes the bundler reuse those files.
+      - name: Seed AppImage bundler tools (ubuntu only)
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cache="$HOME/.cache/tauri"
+          mkdir -p "$cache"
+
+          fetch_asset() {
+            local repo="$1" tag="$2" name="$3" dest="$4" id
+            id=$(gh api "repos/$repo/releases/tags/$tag" \
+              --jq ".assets[] | select(.name == \"$name\") | .id")
+            [ -n "$id" ] || { echo "::error::Asset $name not found in $repo@$tag"; exit 1; }
+            curl -fsSL --retry 5 --retry-delay 3 \
+              -H "Accept: application/octet-stream" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/$repo/releases/assets/$id" -o "$dest"
+            chmod +x "$dest"
+          }
+
+          [ -f "$cache/AppRun-x86_64" ] ||
+            fetch_asset tauri-apps/binary-releases apprun-old \
+              AppRun-x86_64 "$cache/AppRun-x86_64"
+          [ -f "$cache/linuxdeploy-07333c6-x86_64.AppImage" ] ||
+            fetch_asset tauri-apps/binary-releases linuxdeploy-07333c6 \
+              linuxdeploy-x86_64.AppImage "$cache/linuxdeploy-07333c6-x86_64.AppImage"
+
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
