@@ -22,6 +22,7 @@ import { CANVAS_SEARCH_EVENT } from "@/modules/pipeline/hooks/useCanvasSearch";
 import { HelpDialog } from "@/components/help/HelpDialog";
 import { getHelpContent } from "@/components/help/HelpContent";
 import { UpdateDialog } from "@/modules/dialogs/app/UpdateDialog";
+import { AboutDialog } from "@/modules/dialogs/app/AboutDialog";
 import { PluginSetupDialog } from "@/modules/plugins";
 import { ConfirmDialog } from "@/modules/dialogs/common/ConfirmDialog";
 import { PipelineTemplateDialog } from "@/modules/dialogs/file/PipelineTemplateDialog";
@@ -298,6 +299,7 @@ function AppContent() {
 
   // Variables panel
   const [showVariablePanel, setShowVariablePanel] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
 
   // Pipeline save status tracking
   const [pipelineSavedAt, setPipelineSavedAt] = useState<number>(Date.now());
@@ -1880,6 +1882,7 @@ function AppContent() {
                   )
                 }
                 onCheckUpdate={() => void checkForUpdates()}
+                onShowAbout={() => setShowAbout(true)}
                 onShowSettings={onShowSettings}
                 onOpenPalette={() => ui.setShowCommandPalette(true)}
                 onOpenSearch={() =>
@@ -2108,6 +2111,11 @@ function AppContent() {
             onClose={() => ui.setShowHelp(false)}
             commandName={ui.helpCommandName}
             content={ui.helpContent}
+          />
+
+          <AboutDialog
+            isOpen={showAbout}
+            onClose={() => setShowAbout(false)}
           />
 
           <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />

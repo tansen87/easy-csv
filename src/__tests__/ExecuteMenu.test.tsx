@@ -65,6 +65,7 @@ function baseProps(overrides: Record<string, unknown> = {}) {
     onHelp: vi.fn(),
     onReportIssue: vi.fn(),
     onCheckUpdate: vi.fn(),
+    onShowAbout: vi.fn(),
     onShowSettings: vi.fn(),
     onOpenPalette: vi.fn(),
     onOpenSearch: vi.fn(),
@@ -300,7 +301,7 @@ describe("update check feedback on the Help button (design 022 §5.4)", () => {
     const menu = container.querySelector('[role="menu"]');
     expect(menu).toBeTruthy();
     expect(Array.from(menu!.querySelectorAll('[role="menuitem"]')).length).toBe(
-      4,
+      5,
     );
   });
 

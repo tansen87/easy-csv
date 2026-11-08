@@ -43,6 +43,7 @@ interface MainMenuProps {
   /** Opens the GitHub issues page for bug reports. */
   onReportIssue: () => void;
   onCheckUpdate: () => void;
+  onShowAbout: () => void;
   onShowSettings: () => void;
   onOpenPalette: () => void;
   onOpenSearch: () => void;
@@ -131,6 +132,7 @@ export const MainMenu = React.memo(function MainMenu({
   onHelp,
   onReportIssue,
   onCheckUpdate,
+  onShowAbout,
   onShowSettings,
   onOpenPalette,
   onOpenSearch,
@@ -911,6 +913,18 @@ export const MainMenu = React.memo(function MainMenu({
                     )}
                   </span>
                 )}
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  onShowAbout();
+                  setActiveMenu(null);
+                }}
+                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+              >
+                <span className="flex-1 text-left whitespace-nowrap">
+                  {t.about}
+                </span>
               </button>
             </div>
           )}

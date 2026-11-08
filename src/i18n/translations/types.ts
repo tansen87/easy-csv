@@ -46,6 +46,11 @@ export interface Translations {
   search: string;
   helpCenter: string;
   reportIssue: string;
+  about: string;
+  aboutVersion: string;
+  aboutDistribution: string;
+  aboutLicense: string;
+  aboutRepository: string;
   /** First row of the Help menu: opens the built-in sample. */
   viewSample: string;
   dataProfileRequiresInput: string;

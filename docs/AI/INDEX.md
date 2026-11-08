@@ -37,7 +37,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 │  storage.rs · ai.rs · ai_memory.rs · session.rs     │
 │  AI 对话持久化 (ai_memory.db) · AI 配置 (config.db)     │
 │  会话快照持久化 (session.db) · API Key 加密存储          │
-│  (AES-256-GCM) · 62 个 Tauri 命令                    │
+│  (AES-256-GCM) · 63 个 Tauri 命令                    │
 │  CSV 读取 (csv crate) · CSV 对比 · 编码转换            │
 │  管道执行 (进程管理 + 取消) · AI 代理 (DeepSeek/       │
 │  Qwen/GLM) · AI 记忆持久化 · 数据概况缓存              │
@@ -113,7 +113,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | 文件 | 职责 |
 |------|------|
 | `main.rs` | 二进制入口,注册插件(opener/dialog/fs/shell/window_state/notification/http/prevent_default),系统托盘,窗口事件处理 |
-| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 62 个命令) |
+| `lib.rs` | 模块声明 + `invoke_handler()` 函数(注册全部 63 个命令) |
 | `config.rs` | `AppConfig` 类型、SQLite 持久化(app_config/ai_config 表)、AES-256-GCM 加密存储 API Key、per-provider API Key 管理、自定义 AI provider 配置(provider=custom 时存 name/base_url/models)、配置相关命令 |
 | `xan.rs` | xan.exe 解压与查找、`check_xan_installed` 命令 |
 | `pipeline.rs` | `PipelineCommand`/`ExecutionResult` 类型、`execute_xan_pipeline` 核心命令(`input_table` 参数 + 入口分派:全链 duckdb → `run_duckdb_chain` 单进程串联;首步 duckdb + 非 CSV → 原生 `SourceRef` 直读 `pipeline_seq`;否则非 CSV 先 `materialize_input_to_csv` + `TempFiles` RAII 清理)、`pipeline_seq`(`current_input` 为 `SourceRef`;**相邻 duckdb 步骤用 `COPY → tmp.parquet` 交接**,duckdb→xan 边界照旧 CSV)、`build_duckdb_args`(按 `next_is_duckdb` 分派)、`cancel_pipeline(run_id)` 取消**单次运行**(`RUN_FLAGS` 注册表 + `RunGuard`,design 028;每个 run 一个 `Arc<AtomicBool>`,替代已删除的全局 `set_pipeline_cancelled`) |
@@ -198,6 +198,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `file_exists` | 文件存在性检查 |
 | `reveal_paths` | 在系统文件管理器中定位一个或多个路径(过滤已不存在的路径后交给 `tauri_plugin_opener::reveal_items_in_dir`;**需 capability `opener:default`**,缺失会静默失败并把路径当错误文案弹出) |
 | `toggle_devtools` | 切换开发者工具 |
+| `get_app_info` | 应用构建信息(版本 / Tauri 版本 / 平台 / 架构) |
 
 #### session.rs — 会话持久化 (SQLite)
 
@@ -228,7 +229,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `save_correction` | 保存纠正规则 |
 | `clear_conversations` / `clear_feedback` / `clear_corrections` | 清除对应表全部数据 |
 
-### Tauri 命令清单(前端可调用,共 62 个)
+### Tauri 命令清单(前端可调用,共 63 个)
 
 | 命令 | 模块 | 功能 |
 |------|------|------|
@@ -273,6 +274,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `file_exists` | storage | 检查文件是否存在 |
 | `reveal_paths` | storage | 在系统文件管理器中定位路径(拆分结果「打开路径」按钮用) |
 | `toggle_devtools` | storage | 切换开发者工具面板 |
+| `get_app_info` | storage | 应用构建信息(版本 / Tauri 版本 / 平台 / 架构) |
 | `plugins::list_plugins` | plugins | 列出已注册的 CLI 插件 |
 | `plugins::check_plugins` | plugins | 检查插件可执行文件是否可用(PATH + 读取 `--version`);版本参数现取自缓存清单(新增插件无需改代码) |
 | `plugin_catalog::get_plugin_catalog` | plugin_catalog | 取插件清单:验签 → 12h 缓存 → 离线回退旧缓存 → 拒绝回滚;返回各插件在本平台的可用性/大小/已装版本/可更新状态。设计:`docs/design/023_plugin-repository-and-in-app-install.md` |

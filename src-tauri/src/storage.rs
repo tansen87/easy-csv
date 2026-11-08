@@ -339,6 +339,27 @@ pub async fn toggle_devtools(window: tauri::Window) -> Result<(), String> {
   Ok(())
 }
 
+/// Build metadata for the About dialog. Values come from the binary itself, so
+/// they stay correct offline and in dev builds.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppInfo {
+  version: String,
+  tauri_version: String,
+  platform: String,
+  arch: String,
+}
+
+#[tauri::command]
+pub fn get_app_info() -> AppInfo {
+  AppInfo {
+    version: env!("CARGO_PKG_VERSION").to_string(),
+    tauri_version: tauri::VERSION.to_string(),
+    platform: std::env::consts::OS.to_string(),
+    arch: std::env::consts::ARCH.to_string(),
+  }
+}
+
 // Execution history
 // SQLite-backed execution records. Only summary stats are stored (no full
 // stdout), keeping each row small; the newest `EXECUTION_HISTORY_MAX` rows
