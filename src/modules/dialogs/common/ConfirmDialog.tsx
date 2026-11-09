@@ -110,7 +110,7 @@ export function ConfirmDialog({
             {message}
           </p>
           {detail && (
-            <div className="mt-3.5 border-t border-border/60 pt-2.5 font-mono text-[11.5px] leading-snug tabular-nums text-foreground [overflow-wrap:anywhere]">
+            <div className="mt-3.5 border-t border-border-soft pt-2.5 font-mono text-[11.5px] leading-snug tabular-nums text-foreground [overflow-wrap:anywhere]">
               {detail}
             </div>
           )}

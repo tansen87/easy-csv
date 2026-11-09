@@ -36,6 +36,11 @@
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(1 0 0);
   --border: oklch(0.922 0 0);
+  /* Hairline *inside* a surface (help sections, list rules): softer than
+     `--border`, so a card never reads as a set of boxes. Was referenced by
+     `.help-content` before it existed, which dropped the rule to
+     `currentColor` - define it here rather than inline. */
+  --border-soft: oklch(0.2 0.01 80 / 8%);
   --input: oklch(0.922 0 0);
   --ring: var(--brand);
   /* Chart series: chart-1 follows the accent; 2-8 are fixed
@@ -151,6 +156,7 @@
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(1 0 0);
   --border: oklch(1 0 0 / 10%);
+  --border-soft: oklch(0.96 0.005 85 / 9%);
   --input: var(--color-neutral-500);
   --ring: var(--brand);
   /* Chart series (light steps replaced by lighter ones for dark); chart-1
@@ -282,6 +288,7 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
+  --color-border-soft: var(--border-soft);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-chart-1: var(--chart-1);
@@ -890,7 +897,7 @@ html[data-window-maximized="true"] .window-resize-handle {
   box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--brand) 30%, transparent);
 }
 .tab-selected .tab-badge {
-  background-color: var(--bg);
+  background-color: var(--background);
 }
 
 /* --- Help document ---
