@@ -403,7 +403,7 @@ NODE_ENV=test       node -e "console.log(typeof require('react').act)"  # functi
 | `utils/format.ts` | `formatDateTime` / `formatElapsed` / `formatBytes`(后两者由 020、022 从业务文件上提复用) |
 | `utils/lineageSchema.ts` | 聚合表达式的保守解析(设计 045): `parseAggregations`(`sum(col("金额")) as 金额合计` → 别名 + 函数 + 参数,**拿不到别名就返回空数组**,调用方退回旧行为)、`pickSourceColumn`(参数里第一个真实存在的输入列)、`aggregationColumns`(groupby / agg 的输出列,带来源与表达式) |
 | `utils/settingsSearch.ts` | **设置搜索的纯函数**(设计 030 §4.3): `parseQuery` / `filterSettings`(空查询原样返回、逐词 AND、跨分组过滤并丢弃零命中分组、命中分组名则整组保留)/ `countMatches` / `highlightSegments`(按字面匹配,正则元字符不当模式;重叠区间合并) |
-| `utils/params.ts` · `utils/platform.ts` · `utils/separateHistory.ts` · `utils/executionHistory.ts` · `utils/versionDiff.ts` · `utils/panelDock.ts` · `utils/csv.ts` | 其余纯函数工具(参数构造、平台判断、拆分结果/执行历史持久化、版本差异、面板停靠、CSV 工具) |
+| `utils/params.ts` · `utils/platform.ts` · `utils/separateHistory.ts` · `utils/executionHistory.ts` · `utils/versionDiff.ts` · `utils/panelDock.ts` · `utils/csv.ts` · `utils/batchFilterValues.ts` | 其余纯函数工具(参数构造、平台判断、拆分结果/执行历史持久化、版本差异、面板停靠、CSV 工具;`batchFilterValues.ts` = 解析 `xan frequency` 的 `field,value,count` 表:按表头嗅探输出分隔符 + 引号感知拆行,供 Batch Filter「从列取值」用) |
 
 ### 服务层 (`services/`)
 
@@ -470,7 +470,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `useToast.ts` | Toast 通知;`showToast(msg, type, { action, duration })` 支持可选的**动作按钮**(027 §4.3 完成提示的「查看结果」) |
 | `useLogs.ts` | 执行日志(design 028): `addLog(type, message, tabId?)` —— 每行标记来源标签页,供日志面板按标签页过滤 |
 | `useUIState.ts` | UI 状态: 对话框/面板开关(含命令面板、CSV 对比、编码转换) |
-| `useBatchFilter.ts` | Batch Filter 执行逻辑(原 `BatchFilterHooks.ts`,019 §5.1 改名): 文件名清理、正则构建、批量筛选执行 |
+| `useBatchFilter.ts` | Batch Filter 执行逻辑(原 `BatchFilterHooks.ts`,019 §5.1 改名): 文件名清理、正则构建、批量筛选执行。**「从列取值」必须走 `xan frequency --all --no-extra`** —— 默认 `--limit 10` 只会拿到最常见的 10 个值;输出是 `field,value,count` 三列且**沿用输入分隔符**,解析交给 `utils/batchFilterValues.ts` |
 | `useBatchConvert.ts` | 批量格式转换(原 `BatchConvertHooks.ts`): globToRegex、getBaseName、CSV↔XLSX↔JSON 转换 invoke 调用 |
 | `useKeyboardShortcuts.ts` | 全局快捷键(原 `KeyboardShortcuts.ts`): Ctrl+K、Ctrl+D、Ctrl+O/N/S/I/E/Z/Y/R、Alt+C/Q/D/A、Shift+H/C/S |
 | `useDraggable.ts` | 通用拖拽 hook — **019 §3.1 后已无引用,待删除** |

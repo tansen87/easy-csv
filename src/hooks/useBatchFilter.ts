@@ -3,6 +3,7 @@ import { writeFile, remove } from "@tauri-apps/plugin-fs";
 import { xanCommands } from "@/data/commands";
 import { BatchFilterConfig } from "@/types/xan";
 import type { RunContext } from "@/types/execution";
+import { parseFrequencyValues } from "@/utils/batchFilterValues";
 
 /**
  * Batch filter execution. Every entry point takes a `RunContext`, so the loop
@@ -36,6 +37,75 @@ export function useBatchFilter() {
     }
   };
 
+  /** Temp input files are best effort: a leftover must not fail the run. */
+  const removeTempInput = async (path: string) => {
+    try {
+      await remove(path);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  /**
+   * Column whose distinct values feed the batch ("value source: from column").
+   * The form prefills it from the filter column, but it can be cleared - then
+   * filtering a column by its own values is the only sensible reading.
+   */
+  const resolveExtractColumn = (config: BatchFilterConfig): string =>
+    (config.extractColumn || "").trim() || (config.column || "").trim();
+
+  /**
+   * Distinct values of `column`, read from `xan frequency`.
+   *
+   * `--all` is not optional: without it xan returns only the 10 most frequent
+   * values. `--no-extra` drops the `<empty>` / `<rest>` rows, which are not
+   * values that can be searched for. Parsing is delimiter-aware because the
+   * table is written with the input's delimiter (see `utils/batchFilterValues`).
+   */
+  const extractColumnValues = async (
+    ctx: RunContext,
+    inputFilePath: string,
+    column: string,
+  ): Promise<string[]> => {
+    if (!column) {
+      ctx.log("error", "No column given to extract values from");
+      return [];
+    }
+
+    ctx.log("info", `Extracting unique values from column "${column}"...`);
+
+    const result = await invoke<any>("execute_xan_pipeline", {
+      commands: [
+        {
+          name: "frequency",
+          parameters: [
+            { name: "select", value: column, isPositional: false },
+            { name: "all", value: "true", isPositional: false },
+            { name: "no-extra", value: "true", isPositional: false },
+          ],
+        },
+      ],
+      inputFile: inputFilePath,
+      runId: ctx.runId,
+      defaultDelimiter: ctx.delimiter,
+    });
+
+    if (!result?.success) {
+      ctx.log(
+        "error",
+        `Failed to extract values: ${result?.error ?? "unknown error"}`,
+      );
+      return [];
+    }
+
+    const values = parseFrequencyValues(result.output || "", ctx.delimiter);
+    ctx.log(
+      "info",
+      `Found ${values.length} distinct value(s) in column "${column}"`,
+    );
+    return values;
+  };
+
   const executeBatchFilterDirect = async (
     ctx: RunContext,
     config: BatchFilterConfig,
@@ -66,37 +136,11 @@ export function useBatchFilter() {
         .map((v) => v.trim())
         .filter((v) => v.length > 0);
     } else {
-      ctx.log(
-        "info",
-        `Extracting unique values from column "${config.extractColumn}"...`,
+      values = await extractColumnValues(
+        ctx,
+        inputFilePath,
+        resolveExtractColumn(config),
       );
-      const extractResult = await invoke<any>("execute_xan_pipeline", {
-        commands: [
-          {
-            name: "frequency",
-            parameters: [
-              {
-                name: "select",
-                value: config.extractColumn || "",
-                isPositional: false,
-              },
-            ],
-          },
-        ],
-        inputFile: inputFilePath,
-        runId: ctx.runId,
-        defaultDelimiter: ctx.delimiter,
-      });
-
-      if (!extractResult.success) {
-        ctx.log("error", `Failed to extract values: ${extractResult.error}`);
-        return;
-      }
-
-      const lines = (extractResult.output || "").trim().split("\n");
-      values = lines
-        .map((line: string) => line.split("\t")[0])
-        .filter((v: string) => v.length > 0 && v !== "value");
     }
 
     if (values.length === 0) {
@@ -342,6 +386,12 @@ export function useBatchFilter() {
         .split(/[\\/]/)
         .pop() || "output";
 
+    // xan only reads files, so the pre-batch data is spilled once; both value
+    // extraction and every per-value filter run against this copy. The name is
+    // per-run so two tabs batch filtering at once cannot clobber each other.
+    const tempInputPath = `${outputDir}/.batch_tmp_${ctx.runId}.csv`;
+    await writeFile(tempInputPath, new TextEncoder().encode(inputData));
+
     // Step 1: Resolve values list
     let values: string[] = [];
     if (config.valueMode === "manual") {
@@ -350,33 +400,16 @@ export function useBatchFilter() {
         .map((v) => v.trim())
         .filter((v) => v.length > 0);
     } else {
-      ctx.log(
-        "info",
-        `Extracting unique values from column "${config.extractColumn}"...`,
+      values = await extractColumnValues(
+        ctx,
+        tempInputPath,
+        resolveExtractColumn(config),
       );
-      // For column mode with pre-batch data, we need to parse the CSV data
-      // The input data is CSV text, parse it to extract unique values
-      const lines = inputData.trim().split("\n");
-      if (lines.length > 0) {
-        const headers = lines[0].split(",");
-        const colIndex = headers.findIndex(
-          (h) => h.trim() === config.extractColumn,
-        );
-        if (colIndex >= 0) {
-          const uniqueValues = new Set<string>();
-          for (let i = 1; i < lines.length; i++) {
-            const cols = lines[i].split(",");
-            if (cols[colIndex]) {
-              uniqueValues.add(cols[colIndex].trim());
-            }
-          }
-          values = Array.from(uniqueValues);
-        }
-      }
     }
 
     if (values.length === 0) {
       ctx.log("warning", "No values to process");
+      await removeTempInput(tempInputPath);
       return;
     }
 
@@ -403,10 +436,7 @@ export function useBatchFilter() {
           name: config.textOperator,
           status: "executing",
         });
-        // Write input data to temp file for xan processing
-        const tempInputPath = `${outputDir}/.batch_tmp_input.csv`;
-        const encoder = new TextEncoder();
-        await writeFile(tempInputPath, encoder.encode(inputData));
+        // The temp copy already holds the pre-batch data.
         const result = await invoke<any>("execute_xan_pipeline", {
           commands,
           inputFile: tempInputPath,
@@ -424,20 +454,10 @@ export function useBatchFilter() {
           name: config.textOperator,
           status: result.success ? "completed" : "error",
         });
-        // Clean up temp file
-        try {
-          await remove(tempInputPath);
-        } catch {
-          /* ignore */
-        }
       }
+      await removeTempInput(tempInputPath);
       return;
     }
-
-    // Write input data to temp file for xan processing
-    const tempInputPath = `${outputDir}/.batch_tmp_input.csv`;
-    const encoder = new TextEncoder();
-    await writeFile(tempInputPath, encoder.encode(inputData));
 
     // Execute for each value
     for (let i = 0; i < values.length; i++) {
@@ -603,11 +623,7 @@ export function useBatchFilter() {
     }
 
     // Clean up temp file
-    try {
-      await remove(tempInputPath);
-    } catch {
-      // Ignore cleanup errors
-    }
+    await removeTempInput(tempInputPath);
 
     const successCount = values.length;
     ctx.log(

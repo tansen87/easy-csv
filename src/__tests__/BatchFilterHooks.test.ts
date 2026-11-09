@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderHook } from "@testing-library/react";
 import { invoke } from "@tauri-apps/api/core";
+import { useBatchFilter } from "@/hooks/useBatchFilter";
+import type { RunContext } from "@/types/execution";
 
 // useBatchFilter internal logic tests.
 // sanitizeFileName and buildRegexPattern are internal, so we test their behavior
@@ -421,54 +424,120 @@ describe("useBatchFilter command building", () => {
     });
   });
 
-  describe("frequency invoke for extract mode", () => {
-    it("should call frequency command to extract unique values", async () => {
-      mockInvoke.mockResolvedValue({
-        success: true,
-        output: "value\tcount\nAlice\t5\nBob\t3",
-      });
+  // Real hook coverage for "value source: from column". The previous suite
+  // re-implemented `split("\t")[0]` inline, so it could not fail when the real
+  // code mis-read a comma-delimited frequency table.
+  describe("executeBatchFilterDirect — value source: from column", () => {
+    function makeCtx(overrides: Partial<RunContext> = {}): RunContext {
+      return {
+        runId: "run-1",
+        tabId: "tab-1",
+        inputFile: "/data/sales.csv",
+        delimiter: ",",
+        isCancelled: () => false,
+        onProgress: vi.fn(),
+        log: vi.fn(),
+        ...overrides,
+      };
+    }
 
-      const commands = [
+    /** Answers the frequency probe with `frequencyOutput`; all else succeeds. */
+    function mockBackend(frequencyOutput: string) {
+      mockInvoke.mockImplementation(async (cmd: string, args?: any) => {
+        if (cmd !== "execute_xan_pipeline") return null;
+        return args?.commands?.[0]?.name === "frequency"
+          ? { success: true, output: frequencyOutput }
+          : { success: true, output: "" };
+      });
+    }
+
+    function callsTo(commandName: string): any[] {
+      return mockInvoke.mock.calls
+        .map((call) => call[1] as any)
+        .filter((args) => args?.commands?.[0]?.name === commandName);
+    }
+
+    function paramValue(args: any, name: string) {
+      return args.commands[0].parameters.find(
+        (param: any) => param.name === name,
+      )?.value;
+    }
+
+    it("asks frequency for every distinct value, not xan's default top 10", async () => {
+      mockBackend("field,value,count\nname,Alice,5\nname,Bob,3\n");
+
+      const { result } = renderHook(() => useBatchFilter());
+      await result.current.executeBatchFilterDirect(
+        makeCtx(),
         {
-          name: "frequency",
-          parameters: [{ name: "select", value: "name", isPositional: false }],
+          column: "name",
+          filterType: "text",
+          textOperator: "equals",
+          valueMode: "column",
         },
-      ];
+        "/data/sales.csv",
+      );
 
-      await invoke("execute_xan_pipeline", {
-        commands,
-        inputFile: "/test.csv",
-        defaultDelimiter: ",",
+      const [probe] = callsTo("frequency");
+      expect(probe).toBeDefined();
+      expect(probe.commands[0].parameters).toContainEqual({
+        name: "all",
+        value: "true",
+        isPositional: false,
       });
-
-      expect(mockInvoke).toHaveBeenCalledWith("execute_xan_pipeline", {
-        commands: expect.arrayContaining([
-          expect.objectContaining({ name: "frequency" }),
-        ]),
-        inputFile: "/test.csv",
-        defaultDelimiter: ",",
+      expect(probe.commands[0].parameters).toContainEqual({
+        name: "no-extra",
+        value: "true",
+        isPositional: false,
       });
     });
 
-    it("should parse frequency output to extract unique values", () => {
-      const output = "value\tcount\nAlice\t5\nBob\t3\nCharlie\t1";
-      const lines = output.trim().split("\n");
-      const values = lines
-        .map((line) => line.split("\t")[0])
-        .filter((v) => v.length > 0 && v !== "value");
+    it("filters by the extracted values, not by whole frequency rows", async () => {
+      mockBackend("field,value,count\n品类,服饰,7\n品类,数码,5\n");
 
-      expect(values).toEqual(["Alice", "Bob", "Charlie"]);
+      const { result } = renderHook(() => useBatchFilter());
+      await result.current.executeBatchFilterDirect(
+        makeCtx(),
+        {
+          column: "品类",
+          filterType: "text",
+          textOperator: "equals",
+          valueMode: "column",
+          extractColumn: "品类",
+        },
+        "/data/sales.csv",
+      );
+
+      const searches = callsTo("search");
+      expect(searches).toHaveLength(2);
+      expect(searches.map((args) => paramValue(args, "pattern"))).toEqual([
+        "服饰",
+        "数码",
+      ]);
+      expect(searches.map((args) => paramValue(args, "output"))).toEqual([
+        "/data/sales_服饰.csv",
+        "/data/sales_数码.csv",
+      ]);
     });
 
-    it("should skip header line in frequency output", () => {
-      const output = "value\tcount\nAlice\t5";
-      const lines = output.trim().split("\n");
-      const values = lines
-        .map((line) => line.split("\t")[0])
-        .filter((v) => v.length > 0 && v !== "value");
+    it("falls back to the filter column when extract-column is blank", async () => {
+      mockBackend("field,value,count\n地区,华东,2\n");
 
-      expect(values).not.toContain("value");
-      expect(values).toContain("Alice");
+      const { result } = renderHook(() => useBatchFilter());
+      await result.current.executeBatchFilterDirect(
+        makeCtx(),
+        {
+          column: "地区",
+          filterType: "text",
+          textOperator: "equals",
+          valueMode: "column",
+          extractColumn: "   ",
+        },
+        "/data/sales.csv",
+      );
+
+      expect(paramValue(callsTo("frequency")[0], "select")).toBe("地区");
+      expect(callsTo("search")).toHaveLength(1);
     });
   });
 
