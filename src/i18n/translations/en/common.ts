@@ -47,6 +47,11 @@ export const enCommon = {
   runStateDone: "Done",
   runStateFailed: "Failed",
   cancelShort: "Cancel",
+  runStop: "Stop",
+  runGroupRunning: "Running",
+  runGroupIdle: "Idle",
+  runLimitHint: "Up to {count} at once",
+  runHandle: "Review",
   otherTabsRunning: "{count} other tab(s) running",
   crossTabOverwriteTitle: "Another tab is writing this file?",
   crossTabOverwriteMessage:

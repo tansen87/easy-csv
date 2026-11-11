@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { Command, ScrollText, Bot, Settings, Check } from "lucide-react";
 
 import { PipelineStep } from "@/types/xan";
@@ -11,6 +12,12 @@ import { usesCustomTitleBar } from "@/lib/platform";
 /** "0.8.0" → "v0.8.0"; an already-prefixed value is left as is. */
 const withVersionPrefix = (version: string) =>
   version.startsWith("v") ? version : `v${version}`;
+
+/**
+ * Width of the run panel. One constant so it can be tuned here; 240 still
+ * leaves the name column ~100px after the lamp, readout and action.
+ */
+const RUN_PANEL_WIDTH = 240;
 
 interface MainMenuProps {
   activeMenu: "file" | "edit" | "view" | "tools" | "help" | null;
@@ -55,6 +62,8 @@ interface MainMenuProps {
   onOpenCsvToExcel: () => void;
   onOpenMergeExcel: () => void;
   isExecuting: boolean;
+  /** Concurrency limit, shown in the run panel footer so queueing is explained. */
+  maxConcurrentRuns: number;
   isCheckingUpdate: boolean;
   hasUpdate: boolean;
   /**
@@ -144,6 +153,7 @@ export const MainMenu = React.memo(function MainMenu({
   onOpenCsvToExcel,
   onOpenMergeExcel,
   isExecuting,
+  maxConcurrentRuns,
   isCheckingUpdate,
   hasUpdate,
   updateVersion,
@@ -178,11 +188,48 @@ export const MainMenu = React.memo(function MainMenu({
   // the current tab is pinned on top, a thin divider separates the rest.
   const [execMenuOpen, setExecMenuOpen] = React.useState(false);
   const execMenuRef = React.useRef<HTMLDivElement>(null);
+  const execButtonRef = React.useRef<HTMLButtonElement>(null);
+  const execPanelRef = React.useRef<HTMLDivElement>(null);
+  const [execPanelPos, setExecPanelPos] = React.useState<{
+    left: number;
+    top: number;
+  } | null>(null);
+
+  /**
+   * The panel is portalled out of the title bar. Inside it, the empty rows and
+   * footer were part of the header's `data-tauri-drag-region="deep"`, so
+   * dragging or double-clicking them moved / maximised the window instead of
+   * acting on the panel.
+   */
+  const placeExecPanel = React.useCallback(() => {
+    const rect = execButtonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const width = RUN_PANEL_WIDTH;
+    setExecPanelPos({
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
+      top: rect.bottom + 6,
+    });
+  }, []);
+
+  React.useLayoutEffect(() => {
+    if (!execMenuOpen) {
+      setExecPanelPos(null);
+      return;
+    }
+    placeExecPanel();
+    const onResize = () => placeExecPanel();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [execMenuOpen, placeExecPanel]);
 
   React.useEffect(() => {
     if (!execMenuOpen) return;
     const onDocMouseDown = (e: MouseEvent) => {
-      if (!execMenuRef.current?.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        !execMenuRef.current?.contains(target) &&
+        !execPanelRef.current?.contains(target)
+      ) {
         setExecMenuOpen(false);
       }
     };
@@ -197,13 +244,39 @@ export const MainMenu = React.memo(function MainMenu({
     };
   }, [execMenuOpen]);
 
-  const currentTab = tabs.find((tab) => tab.id === currentTabId);
-  const otherTabs = tabs.filter((tab) => tab.id !== currentTabId);
+  /** Current tab first inside every group, so its action is always one glance away. */
+  const withCurrentFirst = (list: typeof tabs) =>
+    [...list].sort((a, b) =>
+      a.id === currentTabId ? -1 : b.id === currentTabId ? 1 : 0,
+    );
+
+  const runningTabs = withCurrentFirst(
+    tabs.filter((tab) => runs[tab.id]?.state === "running"),
+  );
+  const queuedTabs = withCurrentFirst(
+    tabs.filter((tab) => runs[tab.id]?.state === "queued"),
+  );
+  const pendingTabs = withCurrentFirst(
+    tabs.filter((tab) => runs[tab.id]?.state === "preparing"),
+  );
+  const idleTabs = withCurrentFirst(
+    tabs.filter((tab) => {
+      const state = runs[tab.id]?.state;
+      return !state || state === "done" || state === "error" || state === "cancelled";
+    }),
+  );
+
+  /** Drives the 6px dot after the label: another tab is running / queued / waiting. */
+  const hasOtherActive = tabs.some((tab) => {
+    if (tab.id === currentTabId) return false;
+    const state = runs[tab.id]?.state;
+    return state === "running" || state === "queued" || state === "preparing";
+  });
 
   /**
-   * One row of the execute menu. Rows carry no "run" button: clicking the row
-   * runs that tab (switching to it first). A running row keeps only "取消" and
-   * shows its branch progress; clicking it just switches over to watch.
+   * One row of the run panel. The row itself only switches tabs; every action
+   * lives in the trailing button, so a click never means two different things.
+   * Left lamp + mono readout carry the state, never a coloured pill.
    */
   const renderExecRow = (
     tab: { id: string; name: string } | undefined,
@@ -211,23 +284,37 @@ export const MainMenu = React.memo(function MainMenu({
   ) => {
     if (!tab) return null;
     const run = runs[tab.id];
-    const busy = run?.state === "running";
-    const queued = run?.state === "queued";
-    const pending = run?.state === "preparing";
-    const finished = run?.state === "done" || run?.state === "error";
-    const activate = () => {
+    const state = run?.state ?? "idle";
+    const running = state === "running";
+    const queued = state === "queued";
+    const pending = state === "preparing";
+    const failed = state === "error";
+
+    const switchTo = () => {
       setExecMenuOpen(false);
-      // Running/queued rows only switch over; everyone else starts their run.
-      if (busy || queued) onSelectTab(tab.id);
-      else onRunTab(tab.id);
+      onSelectTab(tab.id);
     };
+    const runNow = () => {
+      setExecMenuOpen(false);
+      onRunTab(tab.id);
+    };
+    const stopNow = () => {
+      setExecMenuOpen(false);
+      onCancelTab(tab.id);
+    };
+    /** Idle rows run on click; a run that is already in flight only switches. */
+    const activate = () => {
+      if (running || queued || pending) switchTo();
+      else runNow();
+    };
+
     return (
       <div
         key={tab.id}
         role="menuitem"
         tabIndex={0}
         data-tab-id={tab.id}
-        data-state={run?.state ?? "idle"}
+        data-state={state}
         onClick={activate}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -235,72 +322,91 @@ export const MainMenu = React.memo(function MainMenu({
             activate();
           }
         }}
-        className={cn(
-          "group flex h-8 cursor-pointer items-center gap-2 rounded-lg px-2.5 transition-colors hover:bg-accent/60",
-          isCurrent && "bg-muted/60",
-        )}
+        className="group relative grid h-8 cursor-pointer grid-cols-[10px_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-md px-2 transition-colors hover:bg-accent/50"
       >
+        {isCurrent && (
+          <span
+            aria-hidden="true"
+            className="absolute top-1 bottom-1 left-0 w-0.5 rounded-full bg-primary"
+          />
+        )}
         <span
-          className="max-w-[96px] truncate text-xs font-medium text-foreground"
-          title={tab.name}
+          aria-hidden="true"
+          className={cn(
+            "h-[7px] w-[7px] justify-self-center rounded-full",
+            running && "bg-primary ring-[3px] ring-primary/10",
+            queued && "border-[1.5px] border-muted-foreground/60",
+            pending && "bg-warning",
+            failed && "bg-destructive",
+          )}
+        />
+        <span
+          className="truncate text-[12.5px] font-medium text-foreground"
         >
           {tab.name}
         </span>
-        <span className="ml-auto flex items-center gap-2">
-          {busy ? (
-            <>
-              <span className="font-mono text-[11px] text-muted-foreground">
-                {t.branchProgress}{" "}
-                {run.branch ? `${run.branch.current}/${run.branch.total}` : "-"}
-              </span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCancelTab(tab.id);
-                }}
-                className="rounded-md border border-destructive/30 bg-destructive/5 px-2 py-0.5 text-[11px] font-medium text-destructive hover:bg-destructive/10"
-              >
-                {t.cancelShort}
-              </button>
-            </>
-          ) : queued ? (
-            <>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                {t.runStateQueued}
-              </span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCancelTab(tab.id);
-                }}
-                className="rounded-md border border-destructive/30 bg-destructive/5 px-2 py-0.5 text-[11px] font-medium text-destructive hover:bg-destructive/10"
-              >
-                {t.cancelShort}
-              </button>
-            </>
-          ) : pending ? (
-            <span className="rounded-full border border-warning/30 bg-warning-soft px-2 py-0.5 text-[11px] font-medium text-warning">
-              {t.runStatePending}
-            </span>
-          ) : finished ? (
-            <span
-              className={cn(
-                "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                run?.state === "done"
-                  ? "bg-success-soft text-success"
-                  : "bg-destructive/10 text-destructive",
-              )}
-            >
-              {run?.state === "done" ? t.runStateDone : t.runStateFailed}
-            </span>
-          ) : (
-            <span className="text-[11px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
-              {t.execute}
-            </span>
-          )}
+        <span className="whitespace-nowrap font-mono text-[10.5px] text-muted-foreground">
+          {running
+            ? `${t.branchProgress} ${
+                run?.branch
+                  ? `${run.branch.current}/${run.branch.total}`
+                  : "-"
+              }`
+            : failed
+              ? t.runStateFailed
+              : ""}
         </span>
+        {running || queued ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              stopNow();
+            }}
+            className="h-[22px] rounded-[5px] border border-destructive/25 px-2 text-[11px] font-medium text-destructive transition-colors hover:bg-destructive/5"
+          >
+            {t.runStop}
+          </button>
+        ) : pending ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              switchTo();
+            }}
+            className="h-[22px] rounded-[5px] bg-warning-soft px-2 text-[11px] font-medium text-warning transition-colors hover:bg-warning/15"
+          >
+            {t.runHandle}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              runNow();
+            }}
+            className="h-[22px] rounded-[5px] bg-primary/10 px-2 text-[11px] font-medium text-primary transition-colors hover:bg-primary/15"
+          >
+            {t.execute}
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  const renderGroup = (
+    key: "running" | "queued" | "preparing" | "idle",
+    label: string,
+    list: typeof tabs,
+  ) => {
+    if (list.length === 0) return null;
+    return (
+      <div data-group={key}>
+        <div className="flex items-center gap-1.5 px-2 pt-2 pb-0.5 font-mono text-[10px] text-muted-foreground/70">
+          {label}
+          <span className="text-muted-foreground">{list.length}</span>
+        </div>
+        {list.map((tab) => renderExecRow(tab, tab.id === currentTabId))}
       </div>
     );
   };
@@ -332,17 +438,18 @@ export const MainMenu = React.memo(function MainMenu({
   const toggleExecuteMenu = () => {
     setActiveMenu(null);
     setIsMenuActivated(true);
-    if (!isMenuActivated) {
-      setExecMenuOpen(true);
-      return;
-    }
     setExecMenuOpen((open) => !open);
   };
 
-  /** Hover on "执行" while a menu is open: switch to the tab menu. */
+  /**
+   * Hover on "执行" follows the menu bar: it switches to this menu only while
+   * another menu is already open. The guard must be `activeMenu`, not the
+   * sticky `isMenuActivated` (it is never reset), otherwise a bare hover
+   * expanded this menu after the first click of the session.
+   */
   const hoverExecuteMenu = () => {
     if (execMenuOpen) return;
-    if (!activeMenu && !isMenuActivated) return;
+    if (!activeMenu) return;
     setActiveMenu(null);
     setIsMenuActivated(true);
     setExecMenuOpen(true);
@@ -934,9 +1041,16 @@ export const MainMenu = React.memo(function MainMenu({
             its label and size in every state — while a run is in flight only a
             2px indeterminate line appears along its bottom edge (`.exec-busy`),
             no icon is added. The menu lists the current tab first, a thin divider,
-            then the other tabs. */}
+            then the other tabs.
+
+            It stays a peer of the other menu items: click opens it, and while
+            another menu-bar menu is open a hover switches to it. Hovering with
+            nothing open must do nothing — the old guard used the sticky
+            `isMenuActivated` flag, so after the first menu click of the session
+            a bare hover expanded it ("sometimes you must click, sometimes not"). */}
         <div className="relative" ref={execMenuRef}>
           <button
+            ref={execButtonRef}
             onClick={toggleExecuteMenu}
             onMouseEnter={hoverExecuteMenu}
             disabled={currentPipelineLength === 0}
@@ -947,24 +1061,59 @@ export const MainMenu = React.memo(function MainMenu({
               "relative overflow-hidden flex items-center px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
               currentPipelineLength === 0
                 ? "text-muted-foreground/40 cursor-not-allowed"
-                : isExecuting
-                  ? "exec-busy text-muted-foreground cursor-pointer"
-                  : "text-primary hover:bg-primary/10 cursor-pointer",
+                : execMenuOpen
+                  ? "bg-accent text-foreground"
+                  : isExecuting
+                    ? "exec-busy text-muted-foreground hover:text-primary hover:bg-primary/10 cursor-pointer"
+                    : "text-primary hover:text-primary hover:bg-primary/10 cursor-pointer",
             )}
           >
             {t.execute}
+            {hasOtherActive && (
+              <span
+                aria-hidden="true"
+                className="ml-1.5 h-1.5 w-1.5 rounded-full bg-primary"
+              />
+            )}
           </button>
 
-          {execMenuOpen && currentPipelineLength > 0 && (
-            <div
-              role="menu"
-              className="absolute left-0 top-full mt-1 z-50 w-[180px] rounded-lg border border-border bg-popover p-1 shadow-lg"
-            >
-              {renderExecRow(currentTab, true)}
-              <div className="my-1 h-px bg-border" />
-              {otherTabs.map((tab) => renderExecRow(tab, false))}
-            </div>
-          )}
+          {execMenuOpen &&
+            currentPipelineLength > 0 &&
+            execPanelPos &&
+            createPortal(
+              <div
+                ref={execPanelRef}
+                role="menu"
+                style={{
+                  position: "fixed",
+                  left: execPanelPos.left,
+                  top: execPanelPos.top,
+                  width: RUN_PANEL_WIDTH,
+                }}
+                className="z-50 overflow-hidden rounded-[10px] border border-border bg-popover shadow-lg"
+              >
+                <div className="max-h-[320px] overflow-y-auto p-1">
+                  {renderGroup("running", t.runGroupRunning, runningTabs)}
+                  {renderGroup("queued", t.runStateQueued, queuedTabs)}
+                  {renderGroup("preparing", t.runStatePending, pendingTabs)}
+                  {renderGroup("idle", t.runGroupIdle, idleTabs)}
+                </div>
+                <div className="flex h-8 items-center justify-between border-t border-border-soft px-2.5 text-[11px] text-muted-foreground">
+                  <span>
+                    {t.runLimitHint.replace(
+                      "{count}",
+                      String(maxConcurrentRuns),
+                    )}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <kbd className="rounded border border-border bg-card px-1 py-px font-mono text-[10px] leading-4 text-muted-foreground">
+                      Ctrl+R
+                    </kbd>
+                  </span>
+                </div>
+              </div>,
+              document.body,
+            )}
         </div>
 
         {/* Spacer — doubles as the window drag area under the custom title bar */}

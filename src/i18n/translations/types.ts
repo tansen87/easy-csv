@@ -303,6 +303,11 @@ export interface Translations {
   runStateFailed: string;
   /** Short "取消" used inside the execute menu rows. */
   cancelShort: string;
+  runStop: string;
+  runGroupRunning: string;
+  runGroupIdle: string;
+  runLimitHint: string;
+  runHandle: string;
   otherTabsRunning: string;
   crossTabOverwriteTitle: string;
   crossTabOverwriteMessage: string;

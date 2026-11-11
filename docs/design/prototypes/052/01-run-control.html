@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 052 · 工具栏「运行」</title>
+<style>
+  /* ── tokens · 与 src/index.css 对齐 ───────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --popover:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.7 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 12%,var(--bg));
+    --chrome-line:color-mix(in oklab,var(--brand) 30%,transparent);
+
+    --danger:oklch(0.577 0.245 27.325);
+    --danger-soft:color-mix(in oklab,var(--danger) 9%,transparent);
+    --warning:oklch(0.62 0.13 75);
+    --warning-soft:color-mix(in oklab,var(--warning) 12%,transparent);
+    --success:oklch(0.55 0.12 150);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-win:0 24px 60px -24px oklch(0.2 0.02 80 / 26%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-pop:0 16px 36px -18px oklch(0.2 0.02 80 / 28%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+  }
+  .dark{
+    color:var(--fg);
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --popover:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.52 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 12%,transparent);
+    --danger:oklch(0.704 0.191 22.216);
+    --danger-soft:color-mix(in oklab,var(--danger) 16%,transparent);
+    --warning:oklch(0.78 0.1 78);
+    --warning-soft:color-mix(in oklab,var(--warning) 16%,transparent);
+    --canvas:oklch(0.145 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-pop:inset 0 0 0 1px oklch(1 0 0 / 6%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;-webkit-font-smoothing:antialiased;
+  }
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:20px}
+  .stage-bar h1{margin:0;font-size:16px;font-weight:500}
+  .stage-bar p{margin:6px 0 0;font-size:12px;color:var(--muted-fg);max-width:980px;line-height:1.7}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+
+  .direction{
+    display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:34px;
+    border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden;
+  }
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.55}
+
+  .frame + .frame{margin-top:50px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span:last-child{color:var(--muted-fg-2)}
+
+  /* ── 应用窗口 ──────────────────────────────────────────────────── */
+  .win{position:relative;width:1200px;height:640px;overflow:hidden;
+       border:1px solid var(--border);border-radius:8px;background:var(--bg);
+       box-shadow:var(--shadow-win)}
+  .chrome{height:36px;display:flex;align-items:center;padding-left:16px;gap:16px;
+          background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-line);
+          position:relative;z-index:8}
+  .brand{font-size:12.5px;font-weight:500}
+  .menus{display:flex;gap:2px}
+  .mb{height:26px;display:flex;align-items:center;padding:0 10px;border-radius:6px;
+      font-size:11.5px;font-weight:500;color:var(--brand)}
+  .spacer{flex:1;height:36px}
+  .tools{display:flex;align-items:center;gap:2px;padding-right:12px}
+  .tbtn{width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:var(--brand)}
+  .tbtn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ── 标签栏 ────────────────────────────────────────────────────── */
+  .tabstrip{position:absolute;left:0;right:0;top:36px;height:36px;display:flex;align-items:flex-start;
+            padding:4px 12px 0 20px;gap:4px;z-index:5}
+  .tab{height:24px;display:flex;align-items:center;gap:6px;padding:0 8px;border-radius:4px;
+       font-size:12px;color:var(--muted-fg)}
+  .tab.sel{background:color-mix(in oklab,var(--brand) 12%,transparent);color:var(--brand);font-weight:500}
+  .tab .bdg{font-family:var(--mono);font-size:9.5px;padding:1px 5px;border-radius:999px;
+            background:var(--brand-soft);color:var(--brand)}
+  .tab .bdg.pend{background:var(--warning-soft);color:var(--warning)}
+  .tab .x{color:var(--muted-fg-2);font-size:13px;line-height:1}
+
+  /* ── 画布 ──────────────────────────────────────────────────────── */
+  .canvas{position:absolute;left:0;right:0;top:72px;bottom:0;background-color:var(--canvas);
+          background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+          background-size:22px 22px;background-position:11px 11px}
+  .node{position:absolute;background:var(--card);border:1px solid var(--border);border-radius:8px;
+        box-shadow:0 1px 2px oklch(0.2 0.02 80 / 4%)}
+  .node .nh{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--border-soft);
+            font-size:11px;font-weight:500;color:var(--muted-fg)}
+  .node .nb{padding:8px 10px;font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-2);line-height:1.7}
+  .n-input{left:44px;top:212px;width:230px;height:132px}
+  .n-step{left:350px;top:234px;width:168px;height:88px}
+  .n-step2{left:566px;top:234px;width:168px;height:88px}
+  .n-res{left:790px;top:222px;width:230px;height:112px}
+  .wire{position:absolute;height:1px;background:var(--border);top:278px}
+  .pill{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;
+        padding:5px 10px;background:var(--card);border:1px solid var(--border);border-radius:999px;
+        font-size:11.5px;color:var(--muted-fg);box-shadow:0 2px 8px oklch(0.2 0.02 80 / 6%)}
+  .pill.right{left:auto;right:28px;transform:none}
+  .pill .bd{font-family:var(--mono);font-size:10.5px;color:var(--brand)}
+  .pill .nm{color:var(--fg);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* ══════════════════════════════════════════════════════════════════
+     现状 · MainMenu.tsx:938-968 + renderExecRow:208-306
+     ══════════════════════════════════════════════════════════════════ */
+  .exec-old{position:relative;overflow:hidden;display:flex;align-items:center;padding:5px 12px;
+            border-radius:6px;font-size:12px;font-weight:500;color:var(--muted-fg);
+            border:1px solid var(--border)}
+  .exec-old::after{content:"";position:absolute;left:0;bottom:0;height:2px;width:38%;
+                   border-radius:999px;background:var(--brand)}
+  .menu-old{position:absolute;left:0;top:calc(100% + 4px);width:180px;background:var(--popover);
+            border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:var(--shadow-pop);z-index:30}
+  .mrow{display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border-radius:8px}
+  .mrow.cur{background:var(--muted)}
+  .mrow .nm{font-size:12px;font-weight:500;color:var(--fg);max-width:70px;overflow:hidden;
+            text-overflow:ellipsis;white-space:nowrap}
+  .mrow .meta{margin-left:auto;display:flex;align-items:center;gap:6px}
+  .mrow .prog{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .mrow .cancel{font-size:10.5px;font-weight:500;color:var(--danger);background:var(--danger-soft);
+                border:1px solid color-mix(in oklab,var(--danger) 30%,transparent);
+                padding:2px 7px;border-radius:6px}
+  .mrow .pend{font-size:10.5px;color:var(--warning);background:var(--warning-soft);
+              padding:2px 7px;border-radius:999px}
+  .mrow .hint{font-size:11px;color:var(--muted-fg);opacity:0}
+  .mrow .hint.show{opacity:1}
+  .mdiv{height:1px;background:var(--border);margin:4px 8px}
+
+  /* ══════════════════════════════════════════════════════════════════
+     改后 · 运行仍是菜单项,只重做它展开的状态盘
+     ══════════════════════════════════════════════════════════════════ */
+  .run-item{position:relative;height:26px;display:inline-flex;align-items:center;gap:6px;
+            padding:0 10px;border-radius:6px;font-size:11.5px;font-weight:500;
+            color:var(--brand);white-space:nowrap}
+  .run-item .dot{width:6px;height:6px;border-radius:50%;background:var(--brand)}
+  .run-item.busy{color:var(--muted-fg)}
+  .run-item.busy::after{content:"";position:absolute;left:4px;bottom:1px;width:40%;height:2px;
+                        border-radius:999px;background:var(--brand)}
+  .run-item.off{color:var(--muted-fg-2)}
+  .run-item.off::after{display:none}
+
+  .panel{position:absolute;left:0;top:calc(100% + 6px);width:240px;background:var(--popover);
+         border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-pop);z-index:30;
+         overflow:hidden}
+  .panel .body{padding:4px}
+  .grp{display:flex;align-items:center;gap:6px;padding:8px 8px 2px;
+       font-family:var(--mono);font-size:10px;color:var(--muted-fg-2)}
+  .grp .n{color:var(--muted-fg)}
+  .prow{position:relative;display:grid;grid-template-columns:10px minmax(0,1fr) auto auto;
+        align-items:center;column-gap:8px;height:32px;padding:0 8px;border-radius:6px}
+  .prow:hover{background:var(--muted)}
+  .prow.cur{box-shadow:inset 2px 0 0 var(--brand)}
+  .lamp{width:7px;height:7px;border-radius:50%;justify-self:center;background:transparent}
+  .lamp.run{background:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+  .lamp.queue{border:1.5px solid var(--muted-fg-2);background:transparent}
+  .lamp.pend{background:var(--warning)}
+  .lamp.fail{background:var(--danger)}
+  .rname{font-size:12.5px;font-weight:500;color:var(--fg);white-space:nowrap;overflow:hidden;
+         text-overflow:ellipsis}
+  .rmeta{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);white-space:nowrap}
+  .ract{font-size:11px;font-weight:500;height:22px;display:inline-flex;align-items:center;
+        padding:0 8px;border-radius:5px;border:1px solid transparent;white-space:nowrap}
+  .ract.run{color:var(--brand);background:var(--brand-soft)}
+  .ract.stop{color:var(--danger);border-color:color-mix(in oklab,var(--danger) 26%,transparent)}
+  .ract.handle{color:var(--warning);background:var(--warning-soft)}
+  .pfoot{height:32px;display:flex;align-items:center;justify-content:space-between;
+         padding:0 10px;border-top:1px solid var(--border-soft);
+         font-size:11px;color:var(--muted-fg)}
+  .keys{display:flex;gap:3px}
+  .kc{font-family:var(--mono);font-size:10px;line-height:16px;padding:0 4px;border-radius:4px;
+      border:1px solid var(--border);color:var(--muted-fg);background:var(--card)}
+
+  /* 编号标记 */
+  .mk{position:absolute;width:15px;height:15px;border-radius:50%;display:grid;place-items:center;
+      font-family:var(--mono);font-size:9.5px;font-weight:600;color:#fff;z-index:9;background:#b42318}
+  .mk.a{background:var(--brand)}
+
+  /* ── 状态卡 ────────────────────────────────────────────────────── */
+  .subhead{display:flex;align-items:baseline;gap:10px;margin:40px 0 12px;
+           font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .subhead b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .tile{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px}
+  .tile.wide{grid-column:1/-1}
+  .tile-cap{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:10px;
+            display:flex;justify-content:space-between;gap:12px}
+  .tile-cap em{font-style:normal;color:var(--muted-fg)}
+  .shot{position:relative;height:240px;border:1px solid var(--border-soft);border-radius:8px;
+        overflow:hidden;padding:10px;background:var(--chrome)}
+  .shot .run-item{position:absolute;left:14px;top:12px}
+  .shot .panel{position:absolute;left:14px;top:44px;width:240px}
+  .tile-note{margin:8px 0 0;font-size:10.5px;line-height:1.6;color:var(--muted-fg-2)}
+  .dark-row{display:grid;grid-template-columns:600px 1fr;gap:26px;align-items:stretch}
+  .dark-row .shot{height:290px;background:oklch(0.145 0 0)}
+  .dark-note{border-top:1px solid var(--border);align-self:start}
+  .dark-note div{display:grid;grid-template-columns:112px 1fr;gap:12px;padding:9px 0;
+                 border-bottom:1px solid var(--border-soft);font-size:11px;line-height:1.6}
+  .dark-note dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2)}
+  .dark-note dd{margin:0;color:var(--muted-fg)}
+
+  /* ── 解剖 ──────────────────────────────────────────────────────── */
+  .anat{display:grid;grid-template-columns:560px 1fr;gap:36px;align-items:center}
+  .anat-stage{position:relative;height:320px;padding:30px 0 0 56px;
+              border:1px solid var(--border-soft);border-radius:10px;
+              background-color:var(--chrome)}
+  .anat-stage .run-item{position:relative;left:0;top:0}
+  .anat-stage .panel{position:relative;left:0;top:14px;width:240px}
+  .anat-stage .mk{left:20px}
+  .anat-list{border-top:1px solid var(--border)}
+  .anat-row{display:grid;grid-template-columns:24px 84px 1fr;gap:14px;align-items:baseline;
+            padding:11px 0;border-bottom:1px solid var(--border-soft);font-size:11.5px;line-height:1.6}
+  .anat-row .no{font-family:var(--mono);font-size:9.5px;color:#fff;background:var(--brand);
+                width:15px;height:15px;border-radius:50%;display:grid;place-items:center;
+                align-self:start;margin-top:1px}
+  .anat-row .k{font-size:11.5px;font-weight:500}
+  .anat-row .v{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);line-height:1.7}
+  .anat-row .v b{font-weight:500;color:var(--fg);font-family:var(--mono)}
+
+  /* ── 诊断 / 规格 / 说明 ─────────────────────────────────────────── */
+  .legend{width:1200px;margin-top:34px}
+  .legend table{width:100%;border-collapse:collapse;font-size:11.5px}
+  .legend th{text-align:left;font-family:var(--mono);font-size:10px;font-weight:400;
+             color:var(--muted-fg-2);padding:0 12px 8px 0;border-bottom:1px solid var(--border)}
+  .legend td{vertical-align:top;padding:12px 16px 12px 0;border-bottom:1px solid var(--border-soft);
+             line-height:1.65;color:var(--muted-fg)}
+  .legend td:first-child{width:26px;font-family:var(--mono);font-size:10.5px;color:#b42318}
+  .legend td:nth-child(2){width:510px}
+  .legend td b{font-weight:500;color:var(--fg)}
+
+  .spec{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--border);
+        border-radius:10px;background:var(--card);overflow:hidden;margin-top:6px}
+  .spec div{padding:11px 14px;border-right:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+  .spec div:nth-child(4n){border-right:0}
+  .spec dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:4px}
+  .spec dd{margin:0;font-size:11.5px;line-height:1.5}
+
+  .rules{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--border);
+         border-radius:10px;background:var(--card);overflow:hidden;margin-top:6px}
+  .rules div{padding:12px 14px;border-right:1px solid var(--border-soft)}
+  .rules div:last-child{border-right:0}
+  .rules dt{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-2);margin-bottom:5px}
+  .rules dd{margin:0;font-size:12px;line-height:1.55}
+  .rules dd b{font-weight:500}
+  .rule-note{margin:10px 0 0;font-size:11px;line-height:1.7;color:var(--muted-fg)}
+  .rule-note code{font-size:10.5px}
+
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:8px 36px;margin-top:28px}
+  .notes h3{grid-column:1/-1;margin:0 0 6px;font-size:12px;font-weight:500}
+  .notes p{margin:0 0 10px;font-size:11.5px;line-height:1.7;color:var(--muted-fg)}
+  .notes p b{font-weight:500;color:var(--fg)}
+  .keysbox{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+  .keysbox span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);border:1px solid var(--border);
+                border-radius:4px;padding:2px 5px;background:var(--card)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">052 · 工具栏「运行」</div>
+    <h1>运行 —— 一个菜单项，一块状态盘</h1>
+    <p><b>运行本来就和 文件 / 编辑 / 查看 / 工具 / 帮助 并排</b>,这次不改它的位置、尺寸和间距,只改它展开的面板。真正让人搞混的是<b>打开规则不统一</b>:有时点一下「运行」才展开,有时鼠标划过就自己展开 —— 因为悬停守卫用的是 <code>isMenuActivated</code>,而它一旦被点过一次就永远是 <code>true</code>。修法是让它回到菜单栏自己的规则:<b>没有菜单展开时悬停只高亮,已有菜单展开时悬停切过来,点击才展开/收起</b>;再把展开的内容按状态分组,让多标签页并发仍然可见,但不再和「运行」这一个入口混在一起。</p>
+  </div>
+
+  <dl class="direction">
+    <div><dt>产品</dt><dd>把 CSV / DuckDB 的清洗与导出编成管道;菜单栏的「运行」是进入执行状态的唯一入口,面板说明每一页现在处于什么状态。</dd></div>
+    <div><dt>性格</dt><dd>平实、直白、像仪表盘上的一排读数 —— 入口不抢戏,状态说清楚。</dd></div>
+    <div><dt>世界</dt><dd>工程台与仪表:同排的菜单项用同一套字与间距,状态灯小而准,读数一律等宽。</dd></div>
+    <div><dt>两个瞬间</dt><dd>① 运行中菜单项下方一条 2px 墨蓝底轨 ② 面板每行左侧一颗状态灯 + 一行等宽分支读数。</dd></div>
+    <div><dt>签名</dt><dd>2px 状态轨 —— 菜单项底边、当前行左缘、标签页选中线,同一条语言。</dd></div>
+  </dl>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       01 现状
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>01</span><b>现状</b><span>MainMenu.tsx:938-968 · renderExecRow:208-306 · 对应下方诊断表</span></div>
+
+    <div class="win">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span>
+        <div class="menus">
+          <span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span>
+          <span class="mb">工具</span><span class="mb">帮助</span>
+        </div>
+        <div style="position:relative">
+          <span class="exec-old">运行</span>
+          <div class="menu-old">
+            <div class="mrow cur">
+              <span class="nm">销售收入</span>
+              <span class="meta"><span class="prog">分支 2/3</span><span class="cancel">取消</span></span>
+            </div>
+            <div class="mdiv"></div>
+            <div class="mrow">
+              <span class="nm">库存快照</span>
+              <span class="meta"><span class="pend">待确认</span></span>
+            </div>
+            <div class="mrow">
+              <span class="nm">客户名单</span>
+              <span class="meta"><span class="hint show">运行</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="spacer"></div>
+        <div class="tools">
+          <span class="tbtn"><svg viewBox="0 0 24 24"><path d="M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3z"/></svg></span>
+          <span class="tbtn"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>
+          <span class="tbtn"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="tbtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></span>
+        </div>
+      </div>
+
+      <div class="tabstrip">
+        <div class="tab sel">销售收入 <span class="bdg">执行中</span><span class="x">×</span></div>
+        <div class="tab">库存快照 <span class="bdg pend">待确认</span><span class="x">×</span></div>
+        <div class="tab">客户名单<span class="x">×</span></div>
+      </div>
+
+      <div class="canvas">
+        <div class="pill"><span>分支</span><span class="bd">2/3</span><span class="nm">销售额汇总</span><span style="color:var(--danger)">取消执行</span></div>
+        <div class="node n-input">
+          <div class="nh">输入数据</div>
+          <div class="nb">sales_2026.csv<br>1,284 行 × 6 列</div>
+        </div>
+        <div class="node n-step"><div class="nh">01 filter</div><div class="nb">status = paid</div></div>
+        <div class="node n-step2"><div class="nh">02 groupby</div><div class="nb">region · sum(amount)</div></div>
+        <div class="node n-res"><div class="nh">结果</div><div class="nb">338 行 × 3 列</div></div>
+        <div class="wire" style="left:274px;width:76px"></div>
+        <div class="wire" style="left:518px;width:48px"></div>
+        <div class="wire" style="left:734px;width:56px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       02 改后
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>02</span><b>改后</b><span>同一数据 · 运行与其它菜单项同排同款;展开的面板按状态分组(画布 pill 右移以便看清面板)</span></div>
+
+    <div class="win">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span>
+        <div class="menus">
+          <span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span>
+          <span class="mb">工具</span><span class="mb">帮助</span>
+        <div style="position:relative">
+          <span class="run-item busy">运行</span>
+          <div class="panel">
+            <div class="body">
+              <div class="grp">运行中 <span class="n">1</span></div>
+              <div class="prow cur">
+                <span class="lamp run"></span><span class="rname">销售收入</span>
+                <span class="rmeta">分支 2/3</span><span class="ract stop">停止</span>
+              </div>
+              <div class="grp">排队 <span class="n">1</span></div>
+              <div class="prow">
+                <span class="lamp queue"></span><span class="rname">库存快照</span>
+                <span class="rmeta">第 2 位</span><span class="ract stop">停止</span>
+              </div>
+              <div class="grp">待确认 <span class="n">1</span></div>
+              <div class="prow">
+                <span class="lamp pend"></span><span class="rname">客户名单</span>
+                <span class="rmeta">需要取值</span><span class="ract handle">处理</span>
+              </div>
+              <div class="grp">空闲 <span class="n">1</span></div>
+              <div class="prow">
+                <span class="lamp"></span><span class="rname">订单明细</span>
+                <span class="rmeta">12 步</span><span class="ract run">运行</span>
+              </div>
+            </div>
+            <div class="pfoot"><span>最多同时 4 个</span><span class="keys"><span class="kc">Ctrl+R</span></span></div>
+          </div>
+        </div>
+        </div>
+        <div class="spacer"></div>
+        <div class="tools">
+          <span class="tbtn"><svg viewBox="0 0 24 24"><path d="M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3z"/></svg></span>
+          <span class="tbtn"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>
+          <span class="tbtn"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="tbtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></span>
+        </div>
+      </div>
+
+      <div class="tabstrip">
+        <div class="tab sel">销售收入 <span class="bdg">执行中</span><span class="x">×</span></div>
+        <div class="tab">库存快照 <span class="bdg pend">待确认</span><span class="x">×</span></div>
+        <div class="tab">客户名单<span class="x">×</span></div>
+        <div class="tab">订单明细<span class="x">×</span></div>
+      </div>
+
+      <div class="canvas">
+        <div class="pill right"><span>分支</span><span class="bd">2/3</span><span class="nm">销售额汇总</span><span style="color:var(--danger)">取消执行</span></div>
+        <div class="node n-input"><div class="nh">输入数据</div><div class="nb">sales_2026.csv<br>1,284 行 × 6 列</div></div>
+        <div class="node n-step"><div class="nh">01 filter</div><div class="nb">status = paid</div></div>
+        <div class="node n-step2"><div class="nh">02 groupby</div><div class="nb">region · sum(amount)</div></div>
+        <div class="node n-res"><div class="nh">结果</div><div class="nb">338 行 × 3 列</div></div>
+        <div class="wire" style="left:274px;width:76px"></div>
+        <div class="wire" style="left:518px;width:48px"></div>
+        <div class="wire" style="left:734px;width:56px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       03 打开规则
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead"><b>打开规则</b><span>一条规则替代两种隐式状态</span></div>
+  <section class="rules">
+    <div><dt>悬停「运行」</dt><dd>与文件 / 编辑同一条规则:没有菜单展开时只变底色,<b>已有菜单展开时切过来</b></dd></div>
+    <div><dt>点击「运行」</dt><dd>展开 / 收起运行面板;再点、<code>Esc</code>、点外部都关</dd></div>
+    <div><dt>点击行</dt><dd>空闲 / 失败 = 运行该页;运行中 / 排队 / 待确认 = 切过去</dd></div>
+  </section>
+  <p class="rule-note">现状为什么飘:<code>useUIState.ts:14</code> 的 <code>isMenuActivated</code> 只被置 <code>true</code>、从不复位;<code>MainMenu.tsx:343-349</code> 的 <code>hoverExecuteMenu</code> 却拿它判断「没有菜单展开时悬停不打开」—— 本次启动点过任意菜单之后,鼠标划过「运行」就直接展开。最小补丁把守卫换成 <code>activeMenu</code>,「运行」因此和其它菜单项完全同组;052 只把展开的内容重做成分组面板。</p>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       03 状态
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead"><b>六种状态</b><span>空闲 / 当前运行 / 别的页在跑 / 待确认 / 空管道 / 暗色</span></div>
+  <div class="tiles">
+
+    <div class="tile">
+      <div class="tile-cap"><span>03-A · 空闲</span><em>与文件 / 编辑同款菜单项</em></div>
+      <div class="shot">
+        <span class="run-item">运行</span>
+        <div class="panel">
+          <div class="body">
+            <div class="grp">空闲 <span class="n">2</span></div>
+            <div class="prow"><span class="lamp"></span><span class="rname">库存快照</span><span class="rmeta">9 步</span><span class="ract run">运行</span></div>
+            <div class="prow"><span class="lamp"></span><span class="rname">客户名单</span><span class="rmeta">4 步</span><span class="ract run">运行</span></div>
+          </div>
+          <div class="pfoot"><span>最多同时 4 个</span><span class="keys"><span class="kc">Ctrl+R</span></span></div>
+        </div>
+      </div>
+      <p class="tile-note">「运行」只负责开合面板;点行即可运行该页,行尾还有一颗同样的运行按钮,两种点法结果一致。</p>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap"><span>03-B · 当前页运行中</span><em>标签转中性 + 2px 底轨</em></div>
+      <div class="shot">
+        <span class="run-item busy">运行</span>
+        <div class="panel">
+          <div class="body">
+            <div class="grp">运行中 <span class="n">1</span></div>
+            <div class="prow cur"><span class="lamp run"></span><span class="rname">销售收入</span><span class="rmeta">分支 2/3</span><span class="ract stop">停止</span></div>
+          </div>
+          <div class="pfoot"><span>最多同时 4 个</span><span class="keys"><span class="kc">Ctrl+R</span></span></div>
+        </div>
+      </div>
+      <p class="tile-note">文字、宽度、内边距都不变;只多一条 2px 底轨,工具栏不会跳。</p>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap"><span>03-C · 别的页在跑</span><em>运行标签后 6px 圆点</em></div>
+      <div class="shot">
+        <span class="run-item">运行<span class="dot"></span></span>
+        <div class="panel">
+          <div class="body">
+            <div class="grp">运行中 <span class="n">1</span></div>
+            <div class="prow"><span class="lamp run"></span><span class="rname">库存快照</span><span class="rmeta">分支 1/4</span><span class="ract stop">停止</span></div>
+            <div class="grp">空闲 <span class="n">1</span></div>
+            <div class="prow"><span class="lamp"></span><span class="rname">客户名单</span><span class="rmeta">4 步</span><span class="ract run">运行</span></div>
+          </div>
+          <div class="pfoot"><span>最多同时 4 个</span><span class="keys"><span class="kc">Ctrl+R</span></span></div>
+        </div>
+      </div>
+      <p class="tile-note">别的页在跑只在「运行」后留一个 6px 点,不影响入口本身;数量留在面板组名后面。</p>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap"><span>03-D · 待确认</span><em>琥珀灯 + 「处理」</em></div>
+      <div class="shot">
+        <span class="run-item">运行</span>
+        <div class="panel">
+          <div class="body">
+            <div class="grp">待确认 <span class="n">1</span></div>
+            <div class="prow cur"><span class="lamp pend"></span><span class="rname">销售收入</span><span class="rmeta">需要取值</span><span class="ract handle">处理</span></div>
+            <div class="grp">空闲 <span class="n">1</span></div>
+            <div class="prow"><span class="lamp"></span><span class="rname">客户名单</span><span class="rmeta">4 步</span><span class="ract run">运行</span></div>
+          </div>
+          <div class="pfoot"><span>最多同时 4 个</span><span class="keys"><span class="kc">Ctrl+R</span></span></div>
+        </div>
+      </div>
+      <p class="tile-note">待确认是「等你填变量」,不是失败;动作词用「处理」,点击切到该页 —— 补值对话框仍按现有队列弹出。</p>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap"><span>03-E · 空管道</span><em>入口置灰,与现状一致</em></div>
+      <div class="shot">
+        <span class="run-item off">运行</span>
+        <p style="position:absolute;left:14px;top:56px;margin:0;font-size:11px;line-height:1.7;color:var(--muted-fg)">
+          当前标签页还没有步骤<br>切换到一个带步骤的标签页即可运行
+        </p>
+      </div>
+      <p class="tile-note">唯一入口拿不到面板时,至少说清原因;不额外加一条「空管道」提示条。</p>
+    </div>
+
+    <div class="tile wide">
+      <div class="tile-cap"><span>03-F · 暗色</span><em>表面阶差 + 发丝线,不用阴影</em></div>
+      <div class="dark-row">
+        <div class="shot dark">
+          <span class="run-item busy">运行</span>
+          <div class="panel">
+            <div class="body">
+              <div class="grp">运行中 <span class="n">1</span></div>
+              <div class="prow cur"><span class="lamp run"></span><span class="rname">销售收入</span><span class="rmeta">分支 2/3</span><span class="ract stop">停止</span></div>
+              <div class="grp">空闲 <span class="n">1</span></div>
+              <div class="prow"><span class="lamp"></span><span class="rname">客户名单</span><span class="rmeta">4 步</span><span class="ract run">运行</span></div>
+            </div>
+            <div class="pfoot"><span>最多同时 4 个</span><span class="keys"><span class="kc">Ctrl+R</span></span></div>
+          </div>
+        </div>
+        <dl class="dark-note">
+          <div><dt>运行项</dt><dd>与菜单项同款;运行中转中性 + 亮墨蓝底轨</dd></div>
+          <div><dt>面板</dt><dd>比背景抬一阶,1px 10% 白边,阴影归零</dd></div>
+          <div><dt>状态灯</dt><dd>运行 = 亮墨蓝;排队 = 空心;待确认 = 琥珀</dd></div>
+          <div><dt>当前行</dt><dd>2px 亮墨蓝左轨,不用底色</dd></div>
+          <div><dt>动作</dt><dd>运行 = 12% 墨蓝底;停止 = 亮红文字 + 细边</dd></div>
+          <div><dt>键帽</dt><dd>发丝线 + 卡片底色,不用阴影也不隐形</dd></div>
+        </dl>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       04 解剖
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead"><b>解剖</b><span>菜单项 26 高 · 面板 240 宽 · 全部落 4px 栅格</span></div>
+  <section class="anat">
+    <div class="anat-stage">
+      <span class="run-item busy">运行</span>
+      <div class="panel">
+        <div class="body">
+          <div class="grp">运行中 <span class="n">1</span></div>
+          <div class="prow cur"><span class="lamp run"></span><span class="rname">销售收入</span><span class="rmeta">分支 2/3</span><span class="ract stop">停止</span></div>
+          <div class="grp">空闲 <span class="n">1</span></div>
+          <div class="prow"><span class="lamp"></span><span class="rname">客户名单</span><span class="rmeta">4 步</span><span class="ract run">运行</span></div>
+        </div>
+        <div class="pfoot"><span>最多同时 4 个</span><span class="keys"><span class="kc">Ctrl+R</span></span></div>
+      </div>
+      <span class="mk a" style="top:34px;left:22px">1</span>
+      <span class="mk a" style="top:54px;left:22px">2</span>
+      <span class="mk a" style="top:86px;left:22px">3</span>
+      <span class="mk a" style="top:116px;left:22px">4</span>
+      <span class="mk a" style="top:148px;left:22px">5</span>
+      <span class="mk a" style="top:150px;left:348px">6</span>
+    </div>
+
+    <div>
+      <div class="anat-list">
+        <div class="anat-row"><span class="no">1</span><span class="k">菜单项</span><span class="v">高 <b>26</b> · padding <b>0 10</b> · <b>11.5 / 500</b> · 与文件/编辑同一套 hover 与间距</span></div>
+        <div class="anat-row"><span class="no">2</span><span class="k">运行态</span><span class="v">文字转 muted-fg · 底部 <b>2px</b> 墨蓝轨(40% 宽)· 尺寸与文字都不变</span></div>
+        <div class="anat-row"><span class="no">3</span><span class="k">面板</span><span class="v">宽 <b>240</b> · 圆角 <b>10</b> · 内边距 <b>4</b> · 1px 发丝线 · 距菜单项 <b>6</b></span></div>
+        <div class="anat-row"><span class="no">4</span><span class="k">分组小标</span><span class="v"><b>10 mono</b> · muted-fg-2 · 上 <b>8</b> 下 <b>2</b> · 组名后接等宽计数</span></div>
+        <div class="anat-row"><span class="no">5</span><span class="k">行</span><span class="v">高 <b>32</b> · 灯 <b>7</b> · 名字 <b>12.5 / 500</b> · 读数 <b>10.5 mono</b></span></div>
+        <div class="anat-row"><span class="no">6</span><span class="k">动作</span><span class="v">h <b>22</b> · 圆角 <b>5</b> · <b>11 / 500</b> · 运行 / 停止 / 处理</span></div>
+      </div>
+      <p style="margin:14px 0 0;font-size:11px;line-height:1.7;color:var(--muted-fg)">
+        底栏 <b>32</b>:左「最多同时 N 个」、右 <code>Ctrl+R</code> 键帽 —— 排队的原因与快捷键都在伸手可及的地方。当前行只有 2px 左轨,不再用底色,与标签页选中线同一种表达。
+      </p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       诊断
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="legend">
+    <table>
+      <thead><tr><th>#</th><th>现状</th><th>改法</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><b>打开规则不一致(本次主诉)。</b><code>useUIState.ts:14</code> 的 <code>isMenuActivated</code> 只被置 <code>true</code>、从不复位;而 <code>MainMenu.tsx:343-349</code> 的 <code>hoverExecuteMenu</code> 用 <code>!activeMenu && !isMenuActivated</code> 判断要不要悬停展开 —— 本次启动点过任意菜单之后,鼠标划过「运行」就直接展开,没点过就必须点一下。</td>
+          <td><b>与菜单栏同一条规则:点击展开;悬停只在已有菜单展开时切过来。</b>把 <code>hoverExecuteMenu</code> 的守卫从永不复位的 <code>isMenuActivated</code> 换成 <code>activeMenu</code> —— 不删悬停,「运行」因此重新和文件 / 编辑同组。它仍留在菜单组里,位置、尺寸、间距都不动;要改的是展开以后的面板。</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><b>按钮叫「运行」,点下去只开菜单。</b><code>MainMenu.tsx:939-956</code> 的 <code>onClick</code> 是 <code>toggleExecuteMenu</code>;真正启动要再点一行 —— 名字与动作之间差一步,而这一步又和悬停规则叠在一起。</td>
+          <td><b>保留菜单项,把动作放进第一行。</b>不做独立的 CTA:运行仍是文件/编辑旁边的一个菜单项,点击展开面板;当前标签页固定排在最前,行尾就是「运行 / 停止」。入口与其它菜单项共用同一套尺寸、间距与 hover。</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><b>同一行点击,三种后果。</b><code>:218-223</code>:运行中 / 排队中的行点击只 <code>onSelectTab</code>,其余行点击 <code>onRunTab</code>;已完成的又回到「执行」。用户无法预判这一下会发生什么。</td>
+          <td><b>点行仍是快捷方式,但动作被写出来。</b>空闲 / 失败的行,点行 = 运行该页;运行中 / 排队 / 待确认 = 切过去。行尾再摆一颗同语义的按钮(运行 / 停止 / 处理),让「点哪儿会发生什么」不用猜。</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><b>空闲行的「运行」要悬停才出现。</b><code>:298-302</code> 用 <code>opacity-0 group-hover:opacity-100</code>;菜单打开时三行看起来都是纯标签,不像能点的东西。</td>
+          <td><b>行尾动作常显。</b>「运行」用 9% 墨蓝底 + 墨蓝字,22px 高;它同时承担「这一行可以启动」的说明,不再依赖鼠标。</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><b>180px 里塞四件事。</b><code>:958-967</code> 的菜单同时做选页、执行、看进度、取消;宽 180、标签名上限 96px,进度与「取消」一挤,名字先被截断。</td>
+          <td><b>240px 面板按状态分组。</b>运行中 / 排队中 / 待确认 / 空闲,组名 10px mono;每行只有灯、名字、读数、动作四个位置。</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><b>「分支 2/3」是内部术语,而且重复三遍。</b>菜单行 <code>:252-255</code>、画布进度 pill、标签栏「执行中」徽标都在说同一件事,但三处口径不同。</td>
+          <td><b>只在两处出现:</b>画布 pill 保留「分支 2/3」;面板行用等宽 <code>分支 2/3</code> 作为读数。工具栏按钮不再背数字,只负责「运行 / 停止」。</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><b>完成 / 失败徽标常驻菜单。</b><code>:287-297</code> 把「完成」「失败」做成胶囊,但它们描述历史、不可操作,还和标签栏徽标重复;失败的行反而没有任何「重跑」入口。</td>
+          <td><b>失败给红灯 + 「运行」。</b>失败行左侧红点、读数写「上次失败」,动作仍是「运行」(即重跑);「完成」从面板移除,只留在标签栏。</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><b>运行中只靠一条 2px 线表达。</b><code>:946-953</code> 把文字转灰,再叠一条 <code>.exec-busy</code>(<code>index.css:654-665</code>);在浅色工具栏里几乎看不见,反而像被禁用;点它只会开菜单,停止入口埋在行内。</td>
+          <td><b>入口保持中性,状态交给面板。</b>保留 2px 底轨作为「正在跑」的暗示;完整状态(哪一页、分支 x/y、停止)放在展开的面板与画布 pill 里,不要求一条线讲完三件事。</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td><b>别的页在跑,工具栏不吭声。</b>只有画布 pill 旁边一行 <code>otherTabsRunning</code>(<code>HomeView.tsx:595-599</code>);不看画布就不知道后台还有几条在跑。</td>
+          <td><b>运行标签后一颗 6px 蓝点。</b>只要当前页之外有运行中 / 排队 / 待确认,点就亮;数量留在面板的组名后面,不挤工具栏,也不把入口撑宽。</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       规格
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead" style="margin-top:40px"><b>规格</b><span>亮暗共用一套尺寸</span></div>
+  <section class="spec">
+    <div><dt>运行项</dt><dd>26 高 · padding 0 10 · 11.5 / 500</dd></div>
+    <div><dt>运行态</dt><dd>文字转 muted · 2px 底轨 40%</dd></div>
+    <div><dt>状态点</dt><dd>6 · 仅他页在跑</dd></div>
+    <div><dt>面板</dt><dd>240 宽 · 圆角 10 · 内边距 4</dd></div>
+    <div><dt>分组小标</dt><dd>10 mono · 上 8 下 2</dd></div>
+    <div><dt>行</dt><dd>32 高 · 灯 7 · 间距 8</dd></div>
+    <div><dt>名字</dt><dd>12.5 / 500 · 单行截断</dd></div>
+    <div><dt>读数</dt><dd>10.5 mono · muted</dd></div>
+    <div><dt>动作</dt><dd>h 22 · 圆角 5 · 11 / 500</dd></div>
+    <div><dt>当前行</dt><dd>2px 墨蓝左轨</dd></div>
+    <div><dt>底栏</dt><dd>32 高 · 发丝线 · 键帽</dd></div>
+    <div><dt>动效</dt><dd>160ms 淡入 + 上移 4</dd></div>
+  </section>
+
+  <section class="notes">
+    <h3>交互 / 键盘 / 边界</h3>
+    <p><b>两种手势,结果一致。</b>点「运行」= 开 / 关面板;点面板行 = 运行该页(运行中 / 排队 / 待确认则切过去并收起面板),行尾按钮把同一动作再摆一次(处理 = 切到该页,补值框仍按现有 FIFO 弹出)。</p>
+    <p><b>悬停跟菜单栏走。</b>没有菜单展开时,悬停「运行」只变底色;已有菜单展开时,移过来就直接切到运行面板。「运行」和文件 / 编辑 / 查看 / 工具 / 帮助 共用这一条规则,不再单独开一套。原先的毛病是守卫用了一个永不复位的 <code>isMenuActivated</code>,已按最小补丁改为 <code>activeMenu</code>。</p>
+    <p><b>入口与菜单组一致。</b>高度、padding、字号、hover 与文件 / 编辑 / 查看 / 工具 / 帮助完全相同,中间不留额外间距、不加分隔线、不做实心底色 —— 它只是这一排里的第六个入口。</p>
+    <p><b>键盘。</b><code>Ctrl+R</code> 不变;面板内 <code>Tab</code> 走行尾动作,<code>Enter</code> 触发,<code>Esc</code> 关闭;焦点回到「运行」。</p>
+    <p><b>排队与上限。</b>队列满时入口不置灰,点击后该 run 进入 <code>queued</code>,面板「排队」组出现新行;底栏写「最多同时 N 个」,数字取 <code>max_concurrent_runs</code>。</p>
+    <p><b>空管道。</b>当前页没有步骤时入口置灰(与现状一致),并在旁边说明「切换到一个带步骤的标签页」;切到有步骤的页后恢复。</p>
+    <p><b>完成态不进口。</b>「完成」只在标签栏徽标与结果区出现;面板的「空闲」组只列可运行的页和失败页,避免把历史当待办。</p>
+    <p><b>红线。</b>不把「运行」做成独立的实心 CTA、不加 <code>▾</code> 子按钮、不改它与菜单组的间距;不改 <code>runsByTab</code> / 并发上限 / 取消逻辑;不做「全部停止」(028 定稿);不显示步骤名与百分比;不做 <code>hover:scale</code> / 循环呼吸灯。</p>
+    <p><b>实现落点。</b>入口保持 <code>MainMenu.tsx:932-956</code> 的按钮与样式(只删悬停展开);<code>renderExecRow</code> 重写为「分组 + 行(点行运行 / 切页)+ 行尾动作」;新增 <code>otherRunning</code> 点判定(<code>Object.entries(runs).some(...)</code>)。面板用 <code>createPortal</code> 挂到 <code>body</code> —— 否则标题栏的 <code>data-tauri-drag-region</code> 会覆盖面板空白与底栏,拖着会移窗口、双击会最大化。</p>
+    <p><b>测试影响。</b><code>ExecuteMenu.test.tsx</code> 的既有断言(悬停展开、行点击即执行、hover 才出现的运行文案)需要按新语义重写;标签页徽标与 <code>LogPanel</code> 的用例不受影响。</p>
+    <h3 style="margin-top:6px">i18n 增删</h3>
+    <div class="keysbox">
+      <span>+ runStop(停止 / Stop)</span>
+      <span>+ runGroupRunning(运行中 / Running)</span>
+      <span>+ runGroupIdle(空闲 / Idle)</span>
+      <span>+ runLimitHint(最多同时 {count} 个 / Up to {count} at once)</span>
+      <span>+ runHandle(处理 / Review)</span>
+      <span>沿用 execute / runStateQueued / runStatePending / branchProgress / cancelExecution</span>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

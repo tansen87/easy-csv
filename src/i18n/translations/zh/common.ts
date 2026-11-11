@@ -41,6 +41,11 @@ export const zhCommon = {
   runStateDone: "完成",
   runStateFailed: "失败",
   cancelShort: "取消",
+  runStop: "停止",
+  runGroupRunning: "运行中",
+  runGroupIdle: "空闲",
+  runLimitHint: "最多同时 {count} 个",
+  runHandle: "处理",
   otherTabsRunning: "另有 {count} 个标签页在运行",
   crossTabOverwriteTitle: "另一个标签页正在写这个文件?",
   crossTabOverwriteMessage:

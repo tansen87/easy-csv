@@ -1931,6 +1931,7 @@ function AppContent() {
                   ui.setShowMergeExcel(true);
                 }}
                 isExecuting={isExecuting}
+                maxConcurrentRuns={settings.maxConcurrentRuns}
                 isCheckingUpdate={updater.isChecking}
                 hasUpdate={!!updater.updateInfo?.available}
                 updateVersion={updater.updateInfo?.version}

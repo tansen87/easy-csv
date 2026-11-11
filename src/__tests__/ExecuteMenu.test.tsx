@@ -2,16 +2,22 @@ import { describe, it, expect, vi } from "vitest";
 import type { ComponentProps } from "react";
 import { render, fireEvent } from "@testing-library/react";
 import { LanguageProvider } from "@/i18n";
+import { translations } from "@/i18n/translations";
 import { MainMenu } from "@/components/menu/MainMenu";
 import type { RunSession } from "@/types/execution";
 
+/** jsdom reports en-US, so the provider resolves to English here. */
+const copy = translations.en;
+
 /**
- * Execute menu.
+ * Run panel.
  *
- * The toolbar "执行" button is a per-tab menu: the current tab is pinned on top,
- * a thin divider separates the others, clicking a row runs that tab, and a
- * running row keeps only "取消". The button itself must stay structurally
- * identical in both states (no icon is added while running).
+ * "执行" stays a menu-bar item (click opens, hover switches only while another
+ * menu is open). Its panel groups tabs by run state — running / queued /
+ * preparing / idle — with the current tab first inside its group. Clicking an
+ * idle row runs that tab (a run already in flight only switches); running,
+ * stopping and reviewing also live in the trailing button. The trigger itself
+ * must stay structurally identical while busy.
  */
 
 function makeRun(tabId: string, patch: Partial<RunSession>): RunSession {
@@ -81,6 +87,7 @@ function baseProps(overrides: Record<string, unknown> = {}) {
     hasUpdate: false,
     showLogErrorBadge: false,
     currentPipelineLength: 2,
+    maxConcurrentRuns: 4,
     showCommandPanel: false,
     onToggleCommandPanel: vi.fn(),
     showLogPanel: false,
@@ -115,10 +122,12 @@ function renderMenu(overrides: Record<string, unknown> = {}) {
   return { ...utils, props, button };
 }
 
-const rows = (container: HTMLElement) =>
-  Array.from(container.querySelectorAll('[role="menuitem"]'));
+/** The panel is portalled to `document.body`, outside the render container. */
+const menuEl = () => document.querySelector<HTMLElement>('[role="menu"]');
+const rowEl = (id: string) =>
+  document.querySelector<HTMLElement>(`[data-tab-id="${id}"]`);
 
-describe("execute menu (design 028 §5.6)", () => {
+describe("run panel (design 052)", () => {
   it("keeps the button structurally identical while a run is in flight (T10)", () => {
     const idle = renderMenu({ isExecuting: false });
     const idleHtml = idle.button.innerHTML;
@@ -140,37 +149,58 @@ describe("execute menu (design 028 §5.6)", () => {
     expect(busy.button.getAttribute("data-busy")).toBe("true");
   });
 
-  it("pins the current tab first and separates the rest with a divider (T9)", () => {
-    const { container, button } = renderMenu();
+  it("uses the same hover and open states as the other menu-bar items", () => {
+    const { button } = renderMenu({
+      isExecuting: true,
+      runs: { a: makeRun("a", {}) },
+    });
+    // Busy only adds the 2px line; hover still behaves like 文件 / 编辑.
+    expect(button.className).toContain("hover:text-primary");
+    expect(button.className).toContain("hover:bg-primary/10");
+
     fireEvent.click(button);
-
-    const menu = container.querySelector('[role="menu"]')!;
-    expect(menu).toBeTruthy();
-
-    const order = rows(container).map((row) => row.getAttribute("data-tab-id"));
-    expect(order).toEqual(["a", "b", "c"]);
-
-    // The divider must sit immediately after the current tab's row.
-    const children = Array.from(menu.children);
-    const firstRowIndex = children.findIndex(
-      (child) => child.getAttribute("data-tab-id") === "a",
-    );
-    expect(children[firstRowIndex + 1].getAttribute("role")).not.toBe(
-      "menuitem",
-    );
-    expect(children[firstRowIndex + 1].className).toContain("bg-border");
+    // Open state matches the other menus' `bg-accent text-foreground`.
+    expect(button.className).toContain("bg-accent");
+    expect(button.className).toContain("text-foreground");
   });
 
-  it("re-pins the menu when the current tab changes", () => {
-    const { container, button } = renderMenu({ currentTabId: "b" });
+  it("groups tabs by state and keeps the current tab first inside its group", () => {
+    const { button } = renderMenu({
+      runs: {
+        b: makeRun("b", { state: "running" }),
+        c: makeRun("c", { state: "queued" }),
+        a: makeRun("a", { state: "queued" }),
+      },
+    });
     fireEvent.click(button);
+
+    const groups = Array.from(document.querySelectorAll("[data-group]")).map(
+      (group) => group.getAttribute("data-group"),
+    );
+    expect(groups).toEqual(["running", "queued"]);
+
+    const queued = document.querySelector('[data-group="queued"]')!;
     expect(
-      rows(container).map((row) => row.getAttribute("data-tab-id")),
+      Array.from(queued.querySelectorAll('[role="menuitem"]')).map((row) =>
+        row.getAttribute("data-tab-id"),
+      ),
+    ).toEqual(["a", "c"]);
+  });
+
+  it("re-orders the idle group when the current tab changes", () => {
+    const { button } = renderMenu({ currentTabId: "b" });
+    fireEvent.click(button);
+
+    const idle = document.querySelector('[data-group="idle"]')!;
+    expect(
+      Array.from(idle.querySelectorAll('[role="menuitem"]')).map((row) =>
+        row.getAttribute("data-tab-id"),
+      ),
     ).toEqual(["b", "a", "c"]);
   });
 
-  it("shows only progress + cancel on a running row, and switching on click (T4)", () => {
-    const { container, button, props } = renderMenu({
+  it("shows progress + stop on a running row, and only switches when the row is clicked", () => {
+    const { button, props } = renderMenu({
       runs: {
         a: makeRun("a", {
           branch: { current: 2, total: 3, name: "汇总", status: "executing" },
@@ -179,73 +209,153 @@ describe("execute menu (design 028 §5.6)", () => {
     });
     fireEvent.click(button);
 
-    const rowA = container.querySelector('[data-tab-id="a"]')!;
+    const rowA = rowEl("a")!;
     expect(rowA.getAttribute("data-state")).toBe("running");
     expect(rowA.textContent).toContain("2/3");
 
-    // The only control inside a running row is the cancel button.
-    const buttons = rowA.querySelectorAll("button");
-    expect(buttons.length).toBe(1);
+    const actions = rowA.querySelectorAll("button");
+    expect(actions.length).toBe(1);
+    expect(actions[0].textContent).toBe(copy.runStop);
 
-    fireEvent.click(buttons[0]);
+    fireEvent.click(actions[0]);
     expect(props.onCancelTab).toHaveBeenCalledWith("a");
-    // Cancelling must not also fire a run.
-    expect(props.onRunTab).not.toHaveBeenCalled();
-
-    fireEvent.click(rowA);
-    expect(props.onSelectTab).toHaveBeenCalledWith("a");
     expect(props.onRunTab).not.toHaveBeenCalled();
   });
 
-  it("runs that tab when an idle row is clicked, carrying no extra button (T9)", () => {
-    const { container, button, props } = renderMenu();
+  it("only switches tabs when a running row is clicked", () => {
+    const { button, props } = renderMenu({
+      runs: { a: makeRun("a", {}) },
+    });
     fireEvent.click(button);
 
-    const rowB = container.querySelector('[data-tab-id="b"]')!;
+    const rowA = rowEl("a")!;
+    fireEvent.click(rowA);
+
+    expect(props.onSelectTab).toHaveBeenCalledWith("a");
+    expect(props.onRunTab).not.toHaveBeenCalled();
+    expect(menuEl()).toBeNull();
+  });
+
+  it("runs an idle tab when its row is clicked, and offers the same action in the row", () => {
+    const { button, props } = renderMenu();
+    fireEvent.click(button);
+
+    const rowB = rowEl("b")!;
     expect(rowB.getAttribute("data-state")).toBe("idle");
-    expect(rowB.querySelectorAll("button").length).toBe(0);
+
+    const actions = rowB.querySelectorAll("button");
+    expect(actions.length).toBe(1);
+    expect(actions[0].textContent).toBe(copy.execute);
 
     fireEvent.click(rowB);
     expect(props.onRunTab).toHaveBeenCalledWith("b");
-    // Menu closes after choosing.
-    expect(container.querySelector('[role="menu"]')).toBeNull();
+    expect(props.onSelectTab).not.toHaveBeenCalled();
+    expect(menuEl()).toBeNull();
   });
 
-  it("marks a tab waiting on a dialog instead of offering a run (T9)", () => {
-    const { container, button } = renderMenu({
+  it("runs the tab from the row action and closes the panel", () => {
+    const { button, props } = renderMenu();
+    fireEvent.click(button);
+
+    const rowB = rowEl("b")!;
+    fireEvent.click(rowB.querySelector("button")!);
+
+    expect(props.onRunTab).toHaveBeenCalledWith("b");
+    expect(menuEl()).toBeNull();
+  });
+
+  it("shows a review action for a tab waiting on a dialog", () => {
+    const { button, props } = renderMenu({
       runs: { a: makeRun("a", { state: "preparing" }) },
     });
     fireEvent.click(button);
 
-    const rowA = container.querySelector('[data-tab-id="a"]')!;
+    const rowA = rowEl("a")!;
     expect(rowA.getAttribute("data-state")).toBe("preparing");
-    expect(rowA.querySelectorAll("button").length).toBe(0);
+
+    const actions = rowA.querySelectorAll("button");
+    expect(actions.length).toBe(1);
+    expect(actions[0].textContent).toBe(copy.runHandle);
+
+    fireEvent.click(actions[0]);
+    expect(props.onSelectTab).toHaveBeenCalledWith("a");
+    expect(props.onRunTab).not.toHaveBeenCalled();
   });
 
-  it("shows a queued row with only cancel, and only switches on click (design 028 §7.1)", () => {
-    const { container, button, props } = renderMenu({
+  it("keeps stop on a queued row and only switches on row click", () => {
+    const { button, props } = renderMenu({
       runs: { a: makeRun("a", { state: "queued" }) },
     });
     fireEvent.click(button);
 
-    const rowA = container.querySelector('[data-tab-id="a"]')!;
+    const rowA = rowEl("a")!;
     expect(rowA.getAttribute("data-state")).toBe("queued");
-    expect(rowA.querySelectorAll("button").length).toBe(1);
+    expect(rowA.querySelector("button")!.textContent).toBe(copy.runStop);
 
     fireEvent.click(rowA);
     expect(props.onSelectTab).toHaveBeenCalledWith("a");
     expect(props.onRunTab).not.toHaveBeenCalled();
   });
 
-  it("opens on hover while another menu-bar menu is open (design 028 §5.6)", () => {
-    const { container, button, props } = renderMenu({ activeMenu: "file" });
-    expect(container.querySelector('[role="menu"]')).toBeNull();
+  it("gives a failed tab a run action plus its failed readout", () => {
+    const { button, props } = renderMenu({
+      runs: { b: makeRun("b", { state: "error" }) },
+    });
+    fireEvent.click(button);
+
+    const rowB = rowEl("b")!;
+    expect(rowB.getAttribute("data-state")).toBe("error");
+    expect(rowB.textContent).toContain(copy.runStateFailed);
+    expect(rowB.querySelector("button")!.textContent).toBe(copy.execute);
+
+    fireEvent.click(rowB);
+    expect(props.onRunTab).toHaveBeenCalledWith("b");
+  });
+
+  it("shows the concurrency limit and Ctrl+R in the panel footer", () => {
+    const { button } = renderMenu({ maxConcurrentRuns: 6 });
+    fireEvent.click(button);
+
+    const menu = menuEl()!;
+    expect(menu.textContent).toContain(
+      copy.runLimitHint.replace("{count}", "6"),
+    );
+    expect(menu.querySelectorAll("kbd").length).toBe(1);
+    expect(menu.querySelector("kbd")!.textContent).toBe("Ctrl+R");
+  });
+
+  it("puts a dot on the trigger only when another tab is active", () => {
+    const other = renderMenu({ runs: { b: makeRun("b", {}) } });
+    expect(other.button.querySelector("span")).toBeTruthy();
+
+    const self = renderMenu({ runs: { a: makeRun("a", {}) } });
+    expect(self.button.querySelector("span")).toBeNull();
+  });
+
+  it("switches to the run menu on hover while another menu-bar menu is open (design 028 §5.6)", () => {
+    const { button, props } = renderMenu({ activeMenu: "file" });
+    expect(menuEl()).toBeNull();
 
     fireEvent.mouseEnter(button);
 
-    expect(container.querySelector('[role="menu"]')).toBeTruthy();
+    expect(menuEl()).toBeTruthy();
     // The sibling menu is disarmed so only one menu is ever open.
     expect(props.setActiveMenu).toHaveBeenCalledWith(null);
+  });
+
+  it("does not open on hover when no menu is open, even after a menu was activated", () => {
+    // Regression: `isMenuActivated` is sticky (never reset), so using it as the
+    // hover guard expanded the run menu on a bare hover after the first click
+    // of the session — "sometimes you must click, sometimes you don't".
+    const { button } = renderMenu({
+      activeMenu: null,
+      isMenuActivated: true,
+    });
+    fireEvent.mouseEnter(button);
+    expect(menuEl()).toBeNull();
+
+    fireEvent.click(button);
+    expect(menuEl()).toBeTruthy();
   });
 });
 
