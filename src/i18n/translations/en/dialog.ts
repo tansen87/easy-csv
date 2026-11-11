@@ -289,6 +289,11 @@ export const enDialog = {
   duckdbTableHint: "Choose the table to read from the DuckDB database",
   duckdbPluginRequired:
     "Reading .parquet / .duckdb files requires the DuckDB plugin (Settings → Plugins)",
+  duckdbSuggestionKindFunction: "Function",
+  duckdbSuggestionKindKeyword: "Keyword",
+  duckdbSuggestionKindColumn: "Column",
+  duckdbSuggestionKindTable: "Table function",
+  duckdbSuggestionNoMatch: "No matches",
   inputFormatParquet: "PARQUET",
   inputFormatDuckdb: "DUCKDB",
   batchFilter: "Batch Filter",

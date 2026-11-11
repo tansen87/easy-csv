@@ -892,6 +892,11 @@ export interface Translations {
   duckdbNoTables: string;
   duckdbTableHint: string;
   duckdbPluginRequired: string;
+  duckdbSuggestionKindFunction: string;
+  duckdbSuggestionKindKeyword: string;
+  duckdbSuggestionKindColumn: string;
+  duckdbSuggestionKindTable: string;
+  duckdbSuggestionNoMatch: string;
   inputFormatParquet: string;
   inputFormatDuckdb: string;
 

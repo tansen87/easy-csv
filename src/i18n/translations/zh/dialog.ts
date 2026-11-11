@@ -273,6 +273,11 @@ export const zhDialog = {
   duckdbTableHint: "选择要从 DuckDB 数据库读取的表",
   duckdbPluginRequired:
     "读取 .parquet / .duckdb 文件需要先安装 DuckDB 插件(设置 → 插件)",
+  duckdbSuggestionKindFunction: "函数",
+  duckdbSuggestionKindKeyword: "关键字",
+  duckdbSuggestionKindColumn: "列名",
+  duckdbSuggestionKindTable: "表函数",
+  duckdbSuggestionNoMatch: "无匹配",
   inputFormatParquet: "PARQUET",
   inputFormatDuckdb: "DUCKDB",
   batchFilter: "批量筛选",

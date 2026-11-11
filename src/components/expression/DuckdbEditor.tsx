@@ -8,6 +8,7 @@ import {
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n";
+import type { Translations } from "@/i18n/translations";
 
 interface DuckdbEditorProps {
   value: string;
@@ -31,6 +32,34 @@ interface Suggestion {
   signature?: string;
 }
 
+/** Rank of each kind in the list: columns first, table functions last. */
+const KIND_ORDER: Record<Suggestion["badge"], number> = {
+  column: 0,
+  function: 1,
+  keyword: 2,
+  table: 3,
+};
+
+/** Quiet three-letter code shown in the list's first column. */
+const TYPE_CODES: Record<Suggestion["badge"], string> = {
+  column: "col",
+  function: "fn",
+  keyword: "kw",
+  table: "tbl",
+};
+
+/** Only used for scrolling; the popover shows at most 6 rows at a time. */
+const MAX_SUGGESTIONS = 40;
+const MAX_ROWS = 6;
+const MIN_ROWS = 3;
+const ROW_HEIGHT = 28;
+/** 4px list padding above + below, plus the 32px footer. */
+const POPOVER_CHROME = 40;
+const POPOVER_WIDTH = 420;
+
+const KBD_CLASS =
+  "rounded border border-border bg-card px-1 py-px font-mono text-[10px] leading-4 text-muted-foreground";
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
@@ -47,7 +76,7 @@ export function DuckdbEditor({
   autoFocus = false,
   sourceTable,
 }: DuckdbEditorProps) {
-  const { effectiveLanguage } = useLanguage();
+  const { effectiveLanguage, t } = useLanguage();
   const isZh = effectiveLanguage === "zh";
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -57,6 +86,18 @@ export function DuckdbEditor({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selIndex, setSelIndex] = useState(0);
   const [range, setRange] = useState({ start: 0, end: 0 });
+  /** Current word when nothing matched, so the list can say so instead of vanishing. */
+  const [noMatch, setNoMatch] = useState<string | null>(null);
+  // Where to draw the popover: pinned to the word being typed instead of the
+  // bottom of the (240–400px tall) editor, so it stays in view without
+  // scrolling the dialog.
+  const [placement, setPlacement] = useState<{
+    above: boolean;
+    offset: number;
+    left: number;
+    width: number;
+    listHeight: number;
+  } | null>(null);
 
   const vocabulary = useMemo<Suggestion[]>(() => {
     const kw: Suggestion[] = [...duckdbKeywords]
@@ -85,7 +126,7 @@ export function DuckdbEditor({
       insert: c,
       badge: "column" as const,
     }));
-    return [...fn, ...tf, ...kw, ...col];
+    return [...col, ...fn, ...tf, ...kw];
   }, [columns]);
 
   const findSuggestions = useCallback(
@@ -97,9 +138,18 @@ export function DuckdbEditor({
       while (start > 0 && /[a-zA-Z0-9_$]/.test(text[start - 1])) start--;
       const word = text.slice(start, pos).toLowerCase();
       if (!word) return { items: [], start, end: pos };
+      // Columns first (typing a column name is the common case in a GROUP BY
+      // or a SELECT list), then functions, keywords and table functions;
+      // shorter names win inside a kind so the likely pick stays on top.
       const items = vocabulary
         .filter((s) => s.label.toLowerCase().startsWith(word))
-        .slice(0, 12);
+        .sort(
+          (a, b) =>
+            KIND_ORDER[a.badge] - KIND_ORDER[b.badge] ||
+            a.label.length - b.label.length ||
+            a.label.localeCompare(b.label),
+        )
+        .slice(0, MAX_SUGGESTIONS);
       return { items, start, end: pos };
     },
     [vocabulary],
@@ -124,8 +174,12 @@ export function DuckdbEditor({
         setSuggestions(res.items);
         setRange(res);
         setSelIndex(0);
+        setNoMatch(null);
       } else {
         setSuggestions([]);
+        setRange(res);
+        const word = v.slice(res.start, res.end);
+        setNoMatch(word.length >= 2 ? word : null);
       }
     },
     [onChange, findSuggestions],
@@ -136,6 +190,7 @@ export function DuckdbEditor({
       const next = text.slice(0, start) + insert + text.slice(end);
       onChange(next);
       setSuggestions([]);
+      setNoMatch(null);
       requestAnimationFrame(() => {
         const ta = textareaRef.current;
         if (ta) {
@@ -160,12 +215,22 @@ export function DuckdbEditor({
         const end = ta.selectionEnd ?? value.length;
         onChange(value.slice(0, start) + "\n" + value.slice(end));
         setSuggestions([]);
+        setNoMatch(null);
         requestAnimationFrame(() => {
           if (textareaRef.current) {
             textareaRef.current.selectionStart =
               textareaRef.current.selectionEnd = start + 1;
           }
         });
+        return;
+      }
+
+      if (e.key === "Escape" && (suggestions.length > 0 || noMatch)) {
+        e.preventDefault();
+        // Dismiss the popover only; a second Esc closes the dialog.
+        e.stopPropagation();
+        setSuggestions([]);
+        setNoMatch(null);
         return;
       }
 
@@ -185,13 +250,9 @@ export function DuckdbEditor({
           e.preventDefault();
           setSelIndex((i) => (i - 1 + suggestions.length) % suggestions.length);
           break;
-        case "Escape":
-          e.preventDefault();
-          setSuggestions([]);
-          break;
       }
     },
-    [suggestions, selIndex, value, range, insertAt, onChange],
+    [suggestions, selIndex, value, range, insertAt, onChange, noMatch],
   );
 
   const highlighted = useMemo(() => highlightSql(value), [value]);
@@ -209,6 +270,56 @@ export function DuckdbEditor({
     outer.scrollLeft = ta.scrollLeft;
   }, []);
 
+  // Read through a ref so `placeSuggestions` stays stable while still seeing
+  // the latest word boundaries.
+  const rangeRef = useRef(range);
+  rangeRef.current = range;
+
+  const placeSuggestions = useCallback(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const caret = caretPosition(ta, ta.selectionStart ?? ta.value.length);
+    const wordStart = caretPosition(ta, rangeRef.current.start);
+    const visibleTop = caret.top - ta.scrollTop;
+    const boxHeight = ta.offsetHeight;
+    const gap = 4;
+    // Stay inside the dialog's scroll viewport too, not just the editor box.
+    const viewport = ta.closest<HTMLElement>(
+      "[data-radix-scroll-area-viewport]",
+    );
+    const caretPageTop = ta.getBoundingClientRect().top + visibleTop;
+    const pageBottom = viewport
+      ? viewport.getBoundingClientRect().bottom
+      : window.innerHeight;
+    const pageTop = viewport ? viewport.getBoundingClientRect().top : 0;
+    const below = Math.min(
+      boxHeight - visibleTop - caret.lineHeight - gap,
+      pageBottom - caretPageTop - caret.lineHeight - gap,
+    );
+    const above = Math.min(visibleTop - gap, caretPageTop - pageTop - gap);
+
+    const width = Math.min(POPOVER_WIDTH, ta.clientWidth - 8);
+    const left = Math.max(
+      0,
+      Math.min(wordStart.left - ta.scrollLeft, ta.clientWidth - width),
+    );
+    const aboveCaret = !(below >= MIN_ROWS * ROW_HEIGHT + POPOVER_CHROME || below >= above);
+    const available = aboveCaret ? above : below;
+    // 3–6 full rows; never a half row.
+    const rows = Math.max(
+      MIN_ROWS,
+      Math.min(MAX_ROWS, Math.floor((available - POPOVER_CHROME) / ROW_HEIGHT)),
+    );
+
+    setPlacement({
+      above: aboveCaret,
+      offset: aboveCaret ? boxHeight - visibleTop + gap : visibleTop + caret.lineHeight + gap,
+      left,
+      width,
+      listHeight: rows * ROW_HEIGHT + 8,
+    });
+  }, []);
+
   useEffect(() => {
     syncHighlight();
   }, [value, highlighted, syncHighlight]);
@@ -216,10 +327,13 @@ export function DuckdbEditor({
   useEffect(() => {
     const ta = textareaRef.current;
     if (!ta || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => syncHighlight());
+    const ro = new ResizeObserver(() => {
+      syncHighlight();
+      placeSuggestions();
+    });
     ro.observe(ta);
     return () => ro.disconnect();
-  }, [syncHighlight]);
+  }, [syncHighlight, placeSuggestions]);
 
   // Auto-resize: grow the textarea from its content height up to `max` px,
   // after which it scrolls internally. CSS `min-h` still enforces the 160px floor.
@@ -230,7 +344,38 @@ export function DuckdbEditor({
     ta.style.height = `${Math.min(ta.scrollHeight, 400)}px`;
   }, [value]);
 
-  const handleScroll = syncHighlight;
+  // Runs after the auto-resize effect so the caret is measured against the
+  // editor's final height.
+  useEffect(() => {
+    if (suggestions.length > 0 || noMatch) placeSuggestions();
+  }, [suggestions, noMatch, value, placeSuggestions]);
+
+  // Keep the highlighted row inside the list's scroll viewport as ↑↓ walk
+  // past the visible rows (the list shows 3–6 rows, matches often exceed it).
+  useEffect(() => {
+    const row = listRef.current?.querySelector<HTMLElement>(
+      `[data-suggestion-index="${selIndex}"]`,
+    );
+    const viewport = row?.closest<HTMLElement>(
+      "[data-radix-scroll-area-viewport]",
+    );
+    if (!row || !viewport) return;
+    const rowRect = row.getBoundingClientRect();
+    const viewRect = viewport.getBoundingClientRect();
+    if (rowRect.top < viewRect.top) {
+      viewport.scrollTop += rowRect.top - viewRect.top;
+    } else if (rowRect.bottom > viewRect.bottom) {
+      viewport.scrollTop += rowRect.bottom - viewRect.bottom;
+    }
+  }, [selIndex, suggestions]);
+
+  const handleScroll = useCallback(() => {
+    syncHighlight();
+    placeSuggestions();
+  }, [syncHighlight, placeSuggestions]);
+
+  const activeSuggestion = suggestions[selIndex];
+  const typedWord = value.slice(range.start, range.end).toLowerCase();
 
   return (
     <div className="space-y-2">
@@ -279,8 +424,16 @@ export function DuckdbEditor({
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onScroll={handleScroll}
-          onMouseUp={() => setSuggestions([])}
-          onBlur={() => setTimeout(() => setSuggestions([]), 120)}
+          onMouseUp={() => {
+            setSuggestions([]);
+            setNoMatch(null);
+          }}
+          onBlur={() =>
+            setTimeout(() => {
+              setSuggestions([]);
+              setNoMatch(null);
+            }, 120)
+          }
           placeholder={placeholder}
           autoFocus={autoFocus}
           spellCheck={false}
@@ -289,60 +442,113 @@ export function DuckdbEditor({
           className="relative z-10 block w-full min-h-[240px] p-2 font-mono text-sm leading-relaxed resize-none bg-transparent text-transparent caret-black dark:caret-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-ring whitespace-pre-wrap break-all expr-editor-scrollbar"
         />
 
-        {/* Autocomplete dropdown */}
-        {suggestions.length > 0 && (
+        {/* Autocomplete popover — pinned to the word being typed, flipping
+            above the caret when the editor bottom is close. */}
+        {(suggestions.length > 0 || noMatch) && placement && (
           <div
             ref={listRef}
-            className="absolute top-full mt-1 left-0 right-0 z-50 bg-popover border rounded-md shadow-md"
+            className="absolute z-50 overflow-hidden rounded-lg border bg-popover shadow-md"
+            style={{
+              left: placement.left,
+              width: placement.width,
+              ...(placement.above
+                ? { bottom: placement.offset }
+                : { top: placement.offset }),
+            }}
           >
-            <ScrollArea className="h-40">
-              <div className="p-1">
-                {suggestions.map((s, i) => (
-                  <div
-                    key={`${s.badge}-${s.label}`}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      insertAt(value, range.start, range.end, s.insert);
-                    }}
-                    onMouseEnter={() => setSelIndex(i)}
-                    className={cn(
-                      "px-3 py-1.5 cursor-pointer flex items-center gap-2 text-sm rounded-sm",
-                      "hover:bg-accent hover:text-accent-foreground",
-                      i === selIndex && "bg-accent text-accent-foreground",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "px-1.5 py-0.5 text-[10px] uppercase rounded shrink-0",
-                        s.badge === "function" &&
-                          "bg-syntax-function/10 text-syntax-function",
-                        s.badge === "table" &&
-                          "bg-syntax-operator/10 text-syntax-operator",
-                        s.badge === "keyword" &&
-                          "bg-syntax-keyword/10 text-syntax-keyword",
-                        s.badge === "column" &&
-                          "bg-syntax-column/10 text-syntax-column",
-                      )}
-                    >
-                      {s.badge}
-                    </span>
-                    <span className="font-mono font-medium truncate">
-                      {s.label}
-                      {s.signature && (
-                        <span className="text-xs text-muted-foreground ml-1">
-                          {s.signature}
-                        </span>
-                      )}
-                    </span>
-                    {s.description && (
-                      <span className="text-muted-foreground text-xs ml-auto truncate">
-                        {s.description}
-                      </span>
-                    )}
+            {suggestions.length > 0 ? (
+              <>
+                <ScrollArea
+                  style={{ height: placement.listHeight }}
+                  hideHorizontalScrollbar
+                >
+                  <div className="p-1">
+                    {suggestions.map((s, i) => {
+                      const active = i === selIndex;
+                      const prefixLength = s.label
+                        .toLowerCase()
+                        .startsWith(typedWord)
+                        ? typedWord.length
+                        : 0;
+                      return (
+                        <div
+                          key={`${s.badge}-${s.label}`}
+                          data-suggestion-index={i}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            insertAt(
+                              value,
+                              range.start,
+                              range.end,
+                              s.insert,
+                            );
+                          }}
+                          onMouseEnter={() => setSelIndex(i)}
+                          className={cn(
+                            "relative grid h-7 cursor-pointer grid-cols-[24px_1fr_auto] items-center gap-x-2.5 rounded px-2",
+                            "hover:bg-muted/55",
+                            active && "bg-brand-soft hover:bg-brand-soft",
+                          )}
+                        >
+                          {active && (
+                            <span
+                              aria-hidden="true"
+                              className="absolute top-1 bottom-1 left-0 w-0.5 rounded-full bg-primary"
+                            />
+                          )}
+                          <span
+                            className={cn(
+                              "font-mono text-[10.5px]",
+                              active
+                                ? "text-primary"
+                                : "text-muted-foreground/70",
+                            )}
+                          >
+                            {TYPE_CODES[s.badge]}
+                          </span>
+                          <span className="min-w-0 truncate font-mono text-[13px] font-medium">
+                            <span className="text-primary">
+                              {s.label.slice(0, prefixLength)}
+                            </span>
+                            {s.label.slice(prefixLength)}
+                          </span>
+                          {s.signature && (
+                            <span className="max-w-[200px] justify-self-end truncate font-mono text-[11.5px] text-muted-foreground">
+                              {s.signature}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
+                </ScrollArea>
+                <div className="flex h-8 items-center gap-2.5 border-t border-border-soft px-2.5 text-[11.5px] text-muted-foreground">
+                  <span className="min-w-0 flex-1 truncate">
+                    <span className="font-medium text-foreground">
+                      {suggestionKindLabel(t, activeSuggestion?.badge)}
+                    </span>
+                    {activeSuggestion?.description
+                      ? ` · ${activeSuggestion.description}`
+                      : ""}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1">
+                    <span className={KBD_CLASS}>↑↓</span>
+                    <span className={KBD_CLASS}>Tab</span>
+                    <span className={KBD_CLASS}>Esc</span>
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="flex h-8 items-center gap-2 px-2.5 text-[11.5px] text-muted-foreground">
+                <span className="min-w-0 flex-1 truncate">
+                  {t.duckdbSuggestionNoMatch}{" "}
+                  <span className="font-mono text-foreground">
+                    “{noMatch}”
+                  </span>
+                </span>
+                <span className={KBD_CLASS}>Esc</span>
               </div>
-            </ScrollArea>
+            )}
           </div>
         )}
       </div>
@@ -352,6 +558,79 @@ export function DuckdbEditor({
 
 function isIdentChar(ch: string): boolean {
   return /[a-zA-Z0-9_$]/.test(ch);
+}
+
+/** Full name of a suggestion kind, used by the popover footer. */
+function suggestionKindLabel(
+  t: Translations,
+  badge: Suggestion["badge"] | undefined,
+): string {
+  switch (badge) {
+    case "column":
+      return t.duckdbSuggestionKindColumn;
+    case "function":
+      return t.duckdbSuggestionKindFunction;
+    case "keyword":
+      return t.duckdbSuggestionKindKeyword;
+    case "table":
+      return t.duckdbSuggestionKindTable;
+    default:
+      return "";
+  }
+}
+
+/**
+ * Caret offset (from the textarea's border box) at `pos`, plus the line
+ * height. Measured on a hidden mirror with the textarea's own text metrics so
+ * wrapped lines are accounted for — the popover can then sit under the word
+ * being typed instead of below the whole editor.
+ */
+function caretPosition(
+  ta: HTMLTextAreaElement,
+  pos: number,
+): { top: number; left: number; lineHeight: number } {
+  const cs = window.getComputedStyle(ta);
+  const borderTop = parseFloat(cs.borderTopWidth) || 0;
+  const borderLeft = parseFloat(cs.borderLeftWidth) || 0;
+  const mirror = document.createElement("div");
+  mirror.style.position = "absolute";
+  mirror.style.top = "0";
+  mirror.style.left = "-9999px";
+  mirror.style.visibility = "hidden";
+  mirror.style.boxSizing = "border-box";
+  mirror.style.width = `${ta.clientWidth}px`;
+  mirror.style.borderWidth = "0";
+  mirror.style.whiteSpace = "pre-wrap";
+  mirror.style.wordBreak = "break-all";
+  for (const prop of [
+    "fontFamily",
+    "fontSize",
+    "fontWeight",
+    "fontStyle",
+    "letterSpacing",
+    "lineHeight",
+    "paddingTop",
+    "paddingRight",
+    "paddingBottom",
+    "paddingLeft",
+    "tabSize",
+    "textIndent",
+  ] as const) {
+    mirror.style[prop] = cs[prop];
+  }
+  mirror.textContent = ta.value.slice(0, pos);
+  const marker = document.createElement("span");
+  marker.textContent = "\u200b";
+  mirror.appendChild(marker);
+  document.body.appendChild(mirror);
+  const top = marker.offsetTop + borderTop;
+  const left = marker.offsetLeft + borderLeft;
+  document.body.removeChild(mirror);
+  return {
+    top,
+    left,
+    lineHeight: parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.5 || 20,
+  };
 }
 
 function highlightSql(sql: string): string {

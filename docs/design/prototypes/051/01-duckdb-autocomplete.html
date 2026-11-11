@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 051 · DuckDB SQL 补全列表</title>
+<style>
+  /* ── tokens · 与 src/index.css 对齐 ───────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --popover:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.7 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 12%,var(--bg));
+    --chrome-line:color-mix(in oklab,var(--brand) 30%,transparent);
+
+    --syn-keyword:oklch(0.48 0.14 310);
+    --syn-function:oklch(0.5 0.11 245);
+    --syn-string:oklch(0.5 0.1 145);
+    --syn-number:oklch(0.55 0.12 60);
+    --syn-column:oklch(0.52 0.1 78);
+    --syn-comment:oklch(0.55 0.01 250);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --veil:oklch(0.2 0.02 80 / 20%);
+    --shadow-win:0 24px 60px -24px oklch(0.2 0.02 80 / 26%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-old:0 4px 10px 0 hsl(0 0% 0% / .1),0 8px 10px -1px hsl(0 0% 0% / .1);
+    --shadow-pop:0 10px 28px -14px oklch(0.2 0.02 80 / 30%),0 1px 3px oklch(0.2 0.02 80 / 6%);
+  }
+  .dark{
+    color:var(--fg);
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --popover:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.52 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 12%,transparent);
+    --syn-keyword:oklch(0.78 0.12 310);
+    --syn-function:oklch(0.78 0.09 245);
+    --syn-string:oklch(0.78 0.11 145);
+    --syn-number:oklch(0.78 0.12 60);
+    --syn-column:oklch(0.8 0.1 80);
+    --syn-comment:oklch(0.62 0.01 250);
+    --canvas:oklch(0.145 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --veil:oklch(0 0 0 / 38%);
+    --shadow-pop:inset 0 0 0 1px oklch(1 0 0 / 6%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;-webkit-font-smoothing:antialiased;
+  }
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:20px}
+  .stage-bar h1{margin:0;font-size:16px;font-weight:500}
+  .stage-bar p{margin:6px 0 0;font-size:12px;color:var(--muted-fg);max-width:980px;line-height:1.7}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+
+  .direction{
+    display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:34px;
+    border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden;
+  }
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.55}
+
+  .frame + .frame{margin-top:50px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span:last-child{color:var(--muted-fg-2)}
+
+  /* ── 应用窗口(语境) ────────────────────────────────────────────── */
+  .win{position:relative;width:1200px;height:700px;overflow:hidden;
+       border:1px solid var(--border);border-radius:8px;background:var(--bg);
+       box-shadow:var(--shadow-win)}
+  .chrome{height:36px;display:flex;align-items:center;padding-left:16px;gap:18px;
+          background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-line)}
+  .brand{font-size:12.5px;font-weight:500}
+  .menus{display:flex;gap:2px}
+  .mb{height:26px;display:flex;align-items:center;padding:0 10px;border-radius:6px;
+      font-size:11.5px;font-weight:500;color:var(--brand)}
+  .canvas{position:absolute;left:0;right:0;top:36px;bottom:0;background-color:var(--canvas);
+          background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+          background-size:22px 22px;background-position:11px 11px}
+  .veil{position:absolute;inset:0;background:var(--veil)}
+  .ghost{position:absolute;background:var(--card);border:1px solid var(--border);border-radius:6px;opacity:.5}
+  .ghost.g1{left:60px;top:110px;width:300px;height:150px}
+  .ghost.g2{left:430px;top:140px;width:190px;height:80px}
+  .ghost.g3{left:700px;top:100px;width:330px;height:170px}
+
+  /* ── 命令对话框外壳 · CommandDialog + CommandFormShell ──────────── */
+  .dlg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+       width:640px;background:var(--card);border:1px solid var(--border);border-radius:8px;
+       box-shadow:var(--shadow-old);overflow:hidden}
+  .dlg-head{height:52px;display:flex;align-items:center;gap:10px;padding:0 20px;
+            border-bottom:1px solid var(--border)}
+  .dlg-title{font-size:15px;font-weight:500}
+  .dlg-cmd{font-family:var(--mono);font-size:11px;color:var(--muted-fg)}
+  .dlg-x{margin-left:auto;width:28px;height:28px;display:grid;place-items:center;
+         border-radius:6px;color:var(--muted-fg)}
+  .dlg-x svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+  .dlg-body{padding:16px 20px 18px}
+  .f-label{font-family:var(--mono);font-size:11px;color:var(--muted-fg);margin-bottom:8px}
+  .tpl{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px}
+  .tpl-l{font-size:11px;font-family:var(--mono);color:var(--muted-fg);margin-right:2px}
+  .tpl-b{height:20px;display:inline-flex;align-items:center;padding:0 7px;border-radius:4px;
+         border:1px solid var(--border);background:color-mix(in oklab,var(--muted) 55%,transparent);
+         font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .dlg-foot{height:56px;display:flex;align-items:center;justify-content:flex-end;gap:8px;
+            padding:0 20px;border-top:1px solid var(--border)}
+  .dbtn{height:32px;padding:0 12px;border-radius:8px;display:inline-flex;align-items:center;
+        font-size:13px;font-weight:500;color:var(--fg)}
+  .dbtn-primary{background:var(--brand);color:var(--brand-fg)}
+  .dbtn[disabled]{opacity:.45}
+
+  /* ── SQL 编辑器 ─────────────────────────────────────────────────── */
+  .editor{position:relative;height:266px;padding:8px 10px;border-radius:6px;
+          background:var(--bg);overflow:hidden}
+  .code{margin:0;font-family:var(--mono);font-size:14px;line-height:1.625;
+        white-space:pre;color:var(--fg)}
+  .k{color:var(--syn-keyword)}
+  .f{color:var(--syn-function)}
+  .s{color:var(--syn-string)}
+  .n{color:var(--syn-number)}
+  .c{color:var(--syn-column)}
+  .cm{color:var(--syn-comment)}
+  .caret{display:inline-block;width:1.5px;height:17px;margin-bottom:-3px;
+         background:var(--fg);vertical-align:baseline}
+  .cursor-word{color:var(--fg)}
+
+  /* ══════════════════════════════════════════════════════════════════
+     现状 · DuckdbEditor.tsx:351-405
+     ══════════════════════════════════════════════════════════════════ */
+  .pop-old{position:absolute;left:0;right:0;top:58px;background:var(--popover);
+           border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow-old);
+           overflow:hidden}
+  .row-old{display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;font-size:14px}
+  .row-old.on{background:var(--muted)}
+  .badge{flex:none;padding:2px 6px;border-radius:4px;font-family:var(--mono);
+         font-size:10px;line-height:12px;text-transform:uppercase}
+  .badge.fn{background:color-mix(in oklab,var(--syn-function) 10%,transparent);color:var(--syn-function)}
+  .badge.kw{background:color-mix(in oklab,var(--syn-keyword) 10%,transparent);color:var(--syn-keyword)}
+  .badge.col{background:color-mix(in oklab,var(--syn-column) 10%,transparent);color:var(--syn-column)}
+  .badge.tbl{background:color-mix(in oklab,var(--syn-comment) 12%,transparent);color:var(--syn-comment)}
+  .nm-old{font-family:var(--mono);font-size:13.5px;font-weight:500;white-space:nowrap}
+  .sig-old{font-family:var(--mono);font-size:12px;color:var(--muted-fg);white-space:nowrap}
+  .desc-old{margin-left:auto;font-size:12px;color:var(--muted-fg);
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* ══════════════════════════════════════════════════════════════════
+     改后 · 贴住词的索引卡
+     ══════════════════════════════════════════════════════════════════ */
+  .pop{position:absolute;width:420px;background:var(--popover);
+       border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-pop);
+       overflow:hidden}
+  .dark .pop{border-color:var(--border);box-shadow:var(--shadow-pop)}
+  .pop-list{padding:4px}
+  .row{position:relative;display:grid;grid-template-columns:24px 1fr auto;
+       align-items:center;column-gap:10px;height:28px;padding:0 8px;border-radius:4px}
+  .row.hover{background:color-mix(in oklab,var(--muted) 55%,transparent)}
+  .row.on{background:var(--brand-soft)}
+  .row.on::before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:2px;
+                  border-radius:2px;background:var(--brand)}
+  .tcode{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-2)}
+  .row.on .tcode{color:var(--brand)}
+  .nm{font-family:var(--mono);font-size:13px;font-weight:500;white-space:nowrap;
+      overflow:hidden;text-overflow:ellipsis}
+  .nm em{font-style:normal;color:var(--brand)}
+  .sig{font-family:var(--mono);font-size:11.5px;color:var(--muted-fg);
+       white-space:nowrap;justify-self:end}
+  .pop-foot{height:32px;display:flex;align-items:center;gap:10px;padding:0 10px;
+            border-top:1px solid var(--border-soft);font-size:11.5px;color:var(--muted-fg)}
+  .pop-foot .txt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pop-foot .txt b{font-weight:500;color:var(--fg)}
+  .keys{display:flex;align-items:center;gap:4px;flex:none}
+  .kc{font-family:var(--mono);font-size:10.5px;line-height:18px;padding:0 5px;
+      border:1px solid var(--border);border-radius:4px;color:var(--muted-fg);background:var(--card)}
+
+  /* 无匹配条 */
+  .nomatch{position:absolute;left:20px;top:26px;width:420px;height:32px;
+           display:flex;align-items:center;gap:8px;padding:0 10px;border-radius:8px;
+           background:var(--popover);border:1px solid var(--border);
+           box-shadow:var(--shadow-pop);font-size:11.5px;color:var(--muted-fg)}
+  .nomatch .word{font-family:var(--mono);color:var(--fg)}
+  .nomatch .kc{margin-left:auto}
+
+  /* 编号标记 */
+  .mk{position:absolute;width:15px;height:15px;border-radius:50%;display:grid;place-items:center;
+      font-family:var(--mono);font-size:9.5px;font-weight:600;color:#fff;z-index:9}
+  .mk.a{background:var(--brand)}
+  .mk::before{content:"";position:absolute;left:7px;top:-9px;width:1px;height:9px;background:currentColor;opacity:.55}
+
+  /* ── 状态截图 ──────────────────────────────────────────────────── */
+  .subhead{display:flex;align-items:baseline;gap:10px;margin:40px 0 12px;
+           font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .subhead b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .tile{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px}
+  .tile.wide{grid-column:1/-1}
+  .tile-cap{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:10px;
+            display:flex;justify-content:space-between;gap:12px}
+  .tile-cap em{font-style:normal;color:var(--muted-fg)}
+  .shot{position:relative;height:280px;border:1px solid var(--border-soft);border-radius:8px;
+        overflow:hidden;background:var(--bg);padding:10px}
+  .shot .pop{left:26px;top:56px}
+  .shot .nomatch{left:14px;top:35px}
+  .shot .code{font-size:13px}
+  .shot.flip .pop{top:auto;bottom:127px}
+  .tile-note{margin:8px 0 0;font-size:10.5px;line-height:1.6;color:var(--muted-fg-2)}
+  .dark-row{display:grid;grid-template-columns:600px 1fr;gap:26px;align-items:stretch}
+  .dark-row .shot{height:300px;background:oklch(0.145 0 0)}
+  .dark-row .shot .code{color:oklch(0.9 0 0)}
+  .dark-row .shot .pop{top:56px}
+  .dark-note{border-top:1px solid var(--border);align-self:start}
+  .dark-note div{display:grid;grid-template-columns:112px 1fr;gap:12px;padding:9px 0;
+                 border-bottom:1px solid var(--border-soft);font-size:11px;line-height:1.6}
+  .dark-note dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2)}
+  .dark-note dd{margin:0;color:var(--muted-fg)}
+  .dark-note dd code{font-size:10px}
+
+  /* ── 解剖 ──────────────────────────────────────────────────────── */
+  .anat{display:grid;grid-template-columns:520px 1fr;gap:40px;align-items:center}
+  .anat-stage{position:relative;height:290px;display:grid;place-items:center start;padding-left:40px;
+              border:1px solid var(--border-soft);border-radius:10px;background-color:var(--bg);
+              background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:18px 18px}
+  .anat-stage .pop{position:relative;left:auto;top:auto;overflow:visible}
+  .anat-stage .mk{left:-22px}
+  .anat-list{border-top:1px solid var(--border)}
+  .anat-row{display:grid;grid-template-columns:24px 74px 1fr;gap:14px;align-items:baseline;
+            padding:11px 0;border-bottom:1px solid var(--border-soft);font-size:11.5px;line-height:1.6}
+  .anat-row .no{font-family:var(--mono);font-size:9.5px;color:#fff;background:var(--brand);
+                width:15px;height:15px;border-radius:50%;display:grid;place-items:center;
+                align-self:start;margin-top:1px}
+  .anat-row .k{font-size:11.5px;font-weight:500}
+  .anat-row .v{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);line-height:1.7}
+  .anat-row .v b{font-weight:500;color:var(--fg);font-family:var(--mono)}
+
+  /* ── 诊断 / 规格 / 说明 ─────────────────────────────────────────── */
+  .legend{width:1200px;margin-top:34px}
+  .legend table{width:100%;border-collapse:collapse;font-size:11.5px}
+  .legend th{text-align:left;font-family:var(--mono);font-size:10px;font-weight:400;
+             color:var(--muted-fg-2);padding:0 12px 8px 0;border-bottom:1px solid var(--border)}
+  .legend td{vertical-align:top;padding:12px 16px 12px 0;border-bottom:1px solid var(--border-soft);
+             line-height:1.65;color:var(--muted-fg)}
+  .legend td:first-child{width:26px;font-family:var(--mono);font-size:10.5px;color:#b42318}
+  .legend td:nth-child(2){width:510px}
+  .legend td b{font-weight:500;color:var(--fg)}
+
+  .spec{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--border);
+        border-radius:10px;background:var(--card);overflow:hidden;margin-top:6px}
+  .spec div{padding:11px 14px;border-right:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+  .spec div:nth-child(4n){border-right:0}
+  .spec dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-bottom:4px}
+  .spec dd{margin:0;font-size:11.5px;line-height:1.5}
+
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:8px 36px;margin-top:28px}
+  .notes h3{grid-column:1/-1;margin:0 0 6px;font-size:12px;font-weight:500}
+  .notes p{margin:0 0 10px;font-size:11.5px;line-height:1.7;color:var(--muted-fg)}
+  .notes p b{font-weight:500;color:var(--fg)}
+  .keysbox{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+  .keysbox span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);border:1px solid var(--border);
+                border-radius:4px;padding:2px 5px;background:var(--card)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">051 · DuckDB SQL 补全列表</div>
+    <h1>补全列表 —— 从「盖住代码的横板」到「贴住词的索引卡」</h1>
+    <p>上一步已经让列表跟着光标走(不再需要下滑),但卡片本身还是老样子:铺满编辑器整宽、每行一个四种颜色的英文胶囊、签名挤在名字后面、描述右对齐被截断、输入的前缀没有任何标记,也看不出可以键盘操作。这次只重做这一层渲染:定位、翻转、触发时机、<code>↑↓ / Tab / Esc</code> 快捷键都不动。</p>
+  </div>
+
+  <dl class="direction">
+    <div><dt>产品</dt><dd>把 CSV / Parquet / DuckDB 的清洗与导出编成一条管道;这个列表是写 SQL 时的「下一笔」索引。</dd></div>
+    <div><dt>性格</dt><dd>精确、克制、像页边的一条索引卡 —— 不抢代码的颜色。</dd></div>
+    <div><dt>世界</dt><dd>账本纸面与索引卡:发丝线、等宽字,颜色只留给代码本身,强调只用一个墨蓝。</dd></div>
+    <div><dt>两个瞬间</dt><dd>① 贴着词首浮起、不铺满整行的窄卡 ② 底部一行当前项的说明,右侧键帽。</dd></div>
+    <div><dt>签名</dt><dd>键帽 <span style="font-family:var(--mono)">↑↓ / Tab / Esc</span> —— 与设置搜索、画布 HUD 同一套。</dd></div>
+  </dl>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       01 现状
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>01</span><b>现状</b><span>DuckdbEditor.tsx:351-405 · 与下方诊断表逐条对应</span></div>
+
+    <div class="win">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span>
+        <div class="menus"><span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span><span class="mb">帮助</span></div>
+      </div>
+      <div class="canvas">
+        <div class="ghost g1"></div><div class="ghost g2"></div><div class="ghost g3"></div>
+      </div>
+      <div class="veil"></div>
+
+      <div class="dlg">
+        <div class="dlg-head">
+          <span class="dlg-title">DuckDB SQL</span>
+          <span class="dlg-cmd">duckdb</span>
+          <span class="dlg-x"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="dlg-body">
+          <div class="f-label">SQL 查询</div>
+          <div class="tpl">
+            <span class="tpl-l">插入模板</span>
+            <span class="tpl-b">SELECT *</span><span class="tpl-b">DuckDB TABLE</span>
+            <span class="tpl-b">GROUP BY</span><span class="tpl-b">WHERE</span>
+            <span class="tpl-b">JOIN</span><span class="tpl-b">WINDOW</span>
+          </div>
+          <div class="editor">
+<pre class="code"><span class="k">SELECT</span>
+  <span class="cursor-word">co</span><span class="caret"></span>
+  region,
+  <span class="f">count</span>(*) <span class="k">AS</span> n,
+  <span class="f">round</span>(<span class="f">avg</span>(amount), <span class="n">2</span>) <span class="k">AS</span> avg_amount
+<span class="k">FROM</span> input
+<span class="k">WHERE</span> status = <span class="s">'paid'</span>
+  <span class="k">AND</span> amount &gt; <span class="n">100</span>
+<span class="k">GROUP BY</span> region
+<span class="k">ORDER BY</span> n <span class="k">DESC</span>
+<span class="k">LIMIT</span> <span class="n">500</span>;</pre>
+
+            <div class="pop-old">
+              <div class="row-old on"><span class="badge fn">function</span><span class="nm-old">count</span><span class="sig-old">(* | expr)</span><span class="desc-old">Row / value count (aggregate)</span></div>
+              <div class="row-old"><span class="badge fn">function</span><span class="nm-old">coalesce</span><span class="sig-old">(a, b, ...)</span><span class="desc-old">First non-NULL value</span></div>
+              <div class="row-old"><span class="badge fn">function</span><span class="nm-old">contains</span><span class="sig-old">(str, sub)</span><span class="desc-old">Substring membership</span></div>
+              <div class="row-old"><span class="badge kw">keyword</span><span class="nm-old">copy</span></div>
+              <div class="row-old"><span class="badge col">column</span><span class="nm-old">country</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="dlg-foot">
+          <span class="dbtn">取消</span>
+          <span class="dbtn dbtn-primary">添加</span>
+        </div>
+      </div>
+
+      <!-- 现状:整行宽 / 四色胶囊 / 签名贴名字 / 描述右对齐 / 只 5 行 / 选中态同色 -->
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       02 改后
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>02</span><b>改后</b><span>同一段 SQL · 卡片对齐词首、宽 420、6 行 + 32px 底栏</span></div>
+
+    <div class="win">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span>
+        <div class="menus"><span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span><span class="mb">帮助</span></div>
+      </div>
+      <div class="canvas">
+        <div class="ghost g1"></div><div class="ghost g2"></div><div class="ghost g3"></div>
+      </div>
+      <div class="veil"></div>
+
+      <div class="dlg">
+        <div class="dlg-head">
+          <span class="dlg-title">DuckDB SQL</span>
+          <span class="dlg-cmd">duckdb</span>
+          <span class="dlg-x"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="dlg-body">
+          <div class="f-label">SQL 查询</div>
+          <div class="tpl">
+            <span class="tpl-l">插入模板</span>
+            <span class="tpl-b">SELECT *</span><span class="tpl-b">DuckDB TABLE</span>
+            <span class="tpl-b">GROUP BY</span><span class="tpl-b">WHERE</span>
+            <span class="tpl-b">JOIN</span><span class="tpl-b">WINDOW</span>
+          </div>
+          <div class="editor">
+<pre class="code"><span class="k">SELECT</span>
+  <span class="cursor-word">co</span><span class="caret"></span>
+  region,
+  <span class="f">count</span>(*) <span class="k">AS</span> n,
+  <span class="f">round</span>(<span class="f">avg</span>(amount), <span class="n">2</span>) <span class="k">AS</span> avg_amount
+<span class="k">FROM</span> input
+<span class="k">WHERE</span> status = <span class="s">'paid'</span>
+  <span class="k">AND</span> amount &gt; <span class="n">100</span>
+<span class="k">GROUP BY</span> region
+<span class="k">ORDER BY</span> n <span class="k">DESC</span>
+<span class="k">LIMIT</span> <span class="n">500</span>;</pre>
+
+            <div class="pop" style="left:27px;top:58px">
+              <div class="pop-list">
+                <div class="row"><span class="tcode">col</span><span class="nm"><em>co</em>untry</span></div>
+                <div class="row"><span class="tcode">col</span><span class="nm"><em>co</em>st_center</span></div>
+                <div class="row on"><span class="tcode">fn</span><span class="nm"><em>co</em>ntains</span><span class="sig">(str, sub)</span></div>
+                <div class="row"><span class="tcode">fn</span><span class="nm"><em>co</em>unt</span><span class="sig">(* | expr)</span></div>
+                <div class="row"><span class="tcode">fn</span><span class="nm"><em>co</em>alesce</span><span class="sig">(a, b, ...)</span></div>
+                <div class="row"><span class="tcode">kw</span><span class="nm"><em>co</em>py</span></div>
+              </div>
+              <div class="pop-foot">
+                <span class="txt"><b>函数</b> · Substring membership</span>
+                <span class="keys"><span class="kc split">↑↓</span><span class="kc">Tab</span><span class="kc">Esc</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dlg-foot">
+          <span class="dbtn">取消</span>
+          <span class="dbtn dbtn-primary">添加</span>
+        </div>
+      </div>
+
+      <!-- 改后:词首对齐 / 单色代号 / 前缀墨蓝 / 签名右列 / 6 行 / 底栏 -->
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       03 四种状态
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead"><b>四种状态</b><span>默认下翻 / 贴底上翻 / 列名优先 / 无匹配</span></div>
+  <div class="tiles">
+
+    <div class="tile">
+      <div class="tile-cap"><span>03-A · 默认</span><em>函数 + 列混排,选中项在第 3 行</em></div>
+      <div class="shot">
+        <pre class="code"><span class="k">SELECT</span>
+  <span class="cursor-word">co</span><span class="caret"></span>
+<span class="k">FROM</span> input</pre>
+        <div class="pop">
+          <div class="pop-list">
+            <div class="row"><span class="tcode">col</span><span class="nm"><em>co</em>untry</span></div>
+            <div class="row"><span class="tcode">col</span><span class="nm"><em>co</em>st_center</span></div>
+            <div class="row on"><span class="tcode">fn</span><span class="nm"><em>co</em>ntains</span><span class="sig">(str, sub)</span></div>
+            <div class="row"><span class="tcode">fn</span><span class="nm"><em>co</em>unt</span><span class="sig">(* | expr)</span></div>
+            <div class="row"><span class="tcode">fn</span><span class="nm"><em>co</em>alesce</span><span class="sig">(a, b, ...)</span></div>
+            <div class="row"><span class="tcode">kw</span><span class="nm"><em>co</em>py</span></div>
+          </div>
+          <div class="pop-foot">
+            <span class="txt"><b>函数</b> · Substring membership</span>
+            <span class="keys"><span class="kc split">↑↓</span><span class="kc">Tab</span><span class="kc">Esc</span></span>
+          </div>
+        </div>
+      </div>
+      <p class="tile-note">描述不再挤在行尾,而是当前项专属的一行;键帽占 3 个,不再需要「怎么操作」的说明文字。</p>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap"><span>03-B · 贴底上翻</span><em>剩余空间 &lt; 96 时翻到光标上方</em></div>
+      <div class="shot flip">
+        <pre class="code"><span class="k">SELECT</span> region,
+       <span class="f">count</span>(*) <span class="k">AS</span> n
+<span class="k">FROM</span> input
+<span class="k">WHERE</span> status = <span class="s">'paid'</span>
+<span class="k">GROUP BY</span> region
+<span class="k">ORDER BY</span> n <span class="k">DESC</span>
+<span class="k">LIMIT</span> <span class="n">100</span>
+  <span class="cursor-word">co</span><span class="caret"></span></pre>
+        <div class="pop">
+          <div class="pop-list">
+            <div class="row on"><span class="tcode">col</span><span class="nm"><em>co</em>untry</span></div>
+            <div class="row"><span class="tcode">col</span><span class="nm"><em>co</em>st_center</span></div>
+            <div class="row"><span class="tcode">fn</span><span class="nm"><em>co</em>unt</span><span class="sig">(* | expr)</span></div>
+          </div>
+          <div class="pop-foot">
+            <span class="txt"><b>列名</b> · 来自输入表 input</span>
+            <span class="keys"><span class="kc split">↑↓</span><span class="kc">Tab</span><span class="kc">Esc</span></span>
+          </div>
+        </div>
+      </div>
+      <p class="tile-note">翻转沿用已实现的测量;卡片最多 6 行,空间不足时按 3~6 行收缩,底栏始终可见。</p>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap"><span>03-C · 列名优先</span><em>同前缀时 col &gt; fn &gt; kw &gt; tbl</em></div>
+      <div class="shot">
+        <pre class="code"><span class="k">SELECT</span>
+  <span class="cursor-word">ord</span><span class="caret"></span></pre>
+        <div class="pop">
+          <div class="pop-list">
+            <div class="row on"><span class="tcode">col</span><span class="nm"><em>ord</em>er_id</span></div>
+            <div class="row"><span class="tcode">col</span><span class="nm"><em>ord</em>er_date</span></div>
+            <div class="row"><span class="tcode">kw</span><span class="nm"><em>ord</em>er</span></div>
+          </div>
+          <div class="pop-foot">
+            <span class="txt"><b>列名</b> · 来自输入表 input</span>
+            <span class="keys"><span class="kc split">↑↓</span><span class="kc">Tab</span><span class="kc">Esc</span></span>
+          </div>
+        </div>
+      </div>
+      <p class="tile-note">现状把列名排在函数、关键字之后,12 条上限时经常被切掉;排序是本稿唯一触及逻辑的改动,可单独拍板。</p>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap"><span>03-D · 无匹配</span><em>32px 提示条,替代「列表直接消失」</em></div>
+      <div class="shot">
+        <pre class="code"><span class="k">SELECT</span> <span class="cursor-word">xyz</span><span class="caret"></span>
+<span class="k">FROM</span> input</pre>
+        <div class="nomatch">
+          <span>无匹配 <span class="word">“xyz”</span></span>
+          <span class="kc">Esc</span>
+        </div>
+      </div>
+      <p class="tile-note">只在当前词至少 2 个字符时出现;继续输入即消失,不让提示条挡住代码。</p>
+    </div>
+
+    <div class="tile wide">
+      <div class="tile-cap"><span>03-E · 暗色</span><em>表面阶差 + 发丝线,不用阴影</em></div>
+      <div class="dark-row">
+        <div class="shot dark">
+          <pre class="code"><span class="k">SELECT</span>
+  <span class="cursor-word">co</span><span class="caret"></span>
+<span class="k">FROM</span> input</pre>
+          <div class="pop">
+            <div class="pop-list">
+              <div class="row"><span class="tcode">col</span><span class="nm"><em>co</em>untry</span></div>
+              <div class="row on"><span class="tcode">fn</span><span class="nm"><em>co</em>ntains</span><span class="sig">(str, sub)</span></div>
+              <div class="row"><span class="tcode">fn</span><span class="nm"><em>co</em>unt</span><span class="sig">(* | expr)</span></div>
+              <div class="row"><span class="tcode">kw</span><span class="nm"><em>co</em>py</span></div>
+            </div>
+            <div class="pop-foot">
+              <span class="txt"><b>函数</b> · Substring membership</span>
+              <span class="keys"><span class="kc split">↑↓</span><span class="kc">Tab</span><span class="kc">Esc</span></span>
+            </div>
+          </div>
+        </div>
+        <dl class="dark-note">
+          <div><dt>卡片</dt><dd>popover 比背景抬一阶,1px 10% 白边,阴影归零</dd></div>
+          <div><dt>选中行</dt><dd>12% 墨蓝底;竖线用亮墨蓝,2px 不变</dd></div>
+          <div><dt>代号</dt><dd>muted-fg-2 在暗色仍 ≥ 4.5:1,选中行才转墨蓝</dd></div>
+          <div><dt>前缀</dt><dd>亮墨蓝,与语法高亮里的函数蓝区分开</dd></div>
+          <div><dt>键帽</dt><dd>发丝线 + 卡片底色,不用阴影也不隐形</dd></div>
+        </dl>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       04 解剖
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead"><b>解剖</b><span>420 × 210 · 6 行 · 全部落 4px 栅格</span></div>
+  <section class="anat">
+    <div class="anat-stage">
+      <div class="pop">
+        <div class="pop-list">
+          <div class="row on"><span class="tcode">fn</span><span class="nm"><em>co</em>ntains</span><span class="sig">(str, sub)</span></div>
+          <div class="row"><span class="tcode">fn</span><span class="nm"><em>co</em>unt</span><span class="sig">(* | expr)</span></div>
+          <div class="row"><span class="tcode">col</span><span class="nm"><em>co</em>untry</span></div>
+          <div class="row"><span class="tcode">kw</span><span class="nm"><em>co</em>py</span></div>
+          <div class="row"><span class="tcode">tbl</span><span class="nm"><em>co</em>lumns</span></div>
+          <div class="row"><span class="tcode">fn</span><span class="nm"><em>co</em>alesce</span><span class="sig">(a, b, ...)</span></div>
+        </div>
+        <div class="pop-foot">
+          <span class="txt"><b>函数</b> · First non-NULL value</span>
+          <span class="keys"><span class="kc split">↑↓</span><span class="kc">Tab</span><span class="kc">Esc</span></span>
+        </div>
+        <span class="mk a" style="top:1px">1</span>
+        <span class="mk a" style="top:16px">2</span>
+        <span class="mk a" style="top:48px">3</span>
+        <span class="mk a" style="top:74px">4</span>
+        <span class="mk a" style="top:136px">5</span>
+        <span class="mk a" style="top:184px">6</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="anat-list">
+        <div class="anat-row"><span class="no">1</span><span class="k">卡片</span><span class="v">宽 <b>420</b>(≤ 编辑器内宽 − 8) · 圆角 <b>8</b> · 1px 发丝线 · 左缘对齐词首</span></div>
+        <div class="anat-row"><span class="no">2</span><span class="k">列表</span><span class="v">内边距 <b>4</b> · 行高 <b>28</b> · 可见 <b>3~6</b> 行 · 行圆角 <b>4</b>(8 − 4)</span></div>
+        <div class="anat-row"><span class="no">3</span><span class="k">代号</span><span class="v">列宽 <b>24</b> · <b>10.5 mono</b> · muted-fg-2 · <code>fn</code> / <code>kw</code> / <code>col</code> / <code>tbl</code></span></div>
+        <div class="anat-row"><span class="no">4</span><span class="k">名字</span><span class="v"><b>13 mono / 500</b> · 距代号 <b>10</b> · 匹配前缀转墨蓝 · 超长省略</span></div>
+        <div class="anat-row"><span class="no">5</span><span class="k">签名</span><span class="v"><b>11.5 mono</b> · muted-fg · 右对齐 · 距右 <b>8</b> · 无签名时列留空</span></div>
+        <div class="anat-row"><span class="no">6</span><span class="k">底栏</span><span class="v">高 <b>32</b> · 上 1px 发丝线 · 左「类型 · 描述」(<b>11.5</b> 截断)· 右键帽 <b>18 / 圆角 4</b></span></div>
+      </div>
+      <p style="margin:14px 0 0;font-size:11px;line-height:1.7;color:var(--muted-fg)">
+        选中行 = <code>--brand-soft</code> + 2px 左线(上下各内缩 4);悬停只到 55% <code>--muted</code>,不加线。卡片没有标题栏、没有分组标题、没有计数 —— 它是一张索引卡,不是一个小面板。
+      </p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       诊断
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="legend">
+    <table>
+      <thead><tr><th>#</th><th>现状</th><th>改法</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><b>铺满整行的横板。</b><code>DuckdbEditor.tsx:356</code> 用 <code>left-0 right-0</code>,卡片和编辑器同宽(这里 600px);它读起来像「编辑器长出来的第二条工具栏」,而不是「这一笔的备选」。</td>
+          <td><b>窄卡,对齐词首。</b>宽 <code>min(420, 编辑器内宽 − 8)</code>,左缘对齐正在输入的词的起点并夹在编辑器内;卡片窄于代码行,底下的 SQL 还能被看见一半。</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><b>四色英文胶囊。</b><code>:379-393</code> 每行一个 <code>keyword / function / column / table</code> 大写小标签,分别吃语法紫、蓝、琥珀、青;列表里出现第二种「配色系统」,和代码本身的高亮打架。</td>
+          <td><b>单色三字母代号。</b>固定 24px 列写 <code>fn / kw / col / tbl</code>(10.5 mono,muted-fg-2),选中行才转墨蓝。颜色还给代码;类型的完整中文名放到底栏,不再每行重复。</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><b>签名贴着名字、字号不一。</b><code>:394-401</code> 把 <code>signature</code> 塞进名字的 <code>&lt;span&gt;</code> 里,12px 灰字紧跟其后;名字长短不一时,签名起点每行都不同,无法竖着扫。</td>
+          <td><b>签名单独一列、右对齐。</b><code>24px 1fr auto</code> 三列;签名 11.5 mono 靠右,和右内边距一起形成一条干净的竖线,名字多长都不影响它。</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><b>描述被挤到行尾。</b><code>:402-405</code> 用 <code>ml-auto truncate</code> 占掉剩余宽度,同一条描述在这里被截成「Row / value count (a…」;而它恰恰是决定「选哪个」的信息。</td>
+          <td><b>描述降为底栏一行。</b>只显示当前项:左「类型 · 描述」,右键帽;行内不再放描述,名字和签名因此都能完整显示。</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><b>看不到输入了什么。</b>列表只显示候选,不打标已输入的前缀;在 <code>co</code> 这种两字母前缀下,要靠肉眼在 12 条里对齐。</td>
+          <td><b>前缀转墨蓝。</b>名字按 <code>range.start</code> 拆成「已输入 / 剩余」两段,前者用 <code>--brand</code>;不新增字号、不加下划线。</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><b>只看见 5 行,列名还排最后。</b><code>:363</code> 的高度上限 160,行高 30 → 5 行;<code>:69-97</code> 的词表顺序是 fn → tbl → kw → col,<code>:110</code> 又 <code>slice(0, 12)</code>,列名经常整组被切掉。</td>
+          <td><b>6 行 + 列名优先。</b>卡片高 ≤210(6×28 + 8 + 32);排序改为 col &gt; fn &gt; kw &gt; tbl,同组按名字长度升序。空间不足时按剩余高度取 3~6 行,不出现半行。</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><b>选中态与 hover 同色。</b><code>:373-377</code> 两者都是 <code>bg-accent</code>;键盘移动时看不出「当前是哪一条」,和鼠标划过完全一样。</td>
+          <td><b>选中 = 9% 墨蓝底 + 2px 左线。</b>hover 只到 55% muted 底色、不加线;键盘焦点靠线,鼠标靠底色,两种状态可以同时读出来。</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><b>没有键盘提示,无匹配也没有反馈。</b>列表从不说明 <code>↑↓ / Tab / Esc</code>;输入一个不存在的词时 <code>:135-137</code> 直接 <code>setSuggestions([])</code>,看起来像功能失效。</td>
+          <td><b>键帽常驻底栏;无匹配给 32px 提示条。</b>键帽与设置搜索、画布 HUD 同一套;提示条只在当前词 ≥2 字符时出现,写明「无匹配」并只留 <code>Esc</code>。</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       规格
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead" style="margin-top:40px"><b>规格</b><span>亮暗共用一套尺寸</span></div>
+  <section class="spec">
+    <div><dt>卡片</dt><dd>宽 ≤420 · 圆角 8 · 1px 发丝线</dd></div>
+    <div><dt>定位</dt><dd>左缘对齐词首 · 纵向跟随光标 + 翻转</dd></div>
+    <div><dt>列表</dt><dd>内边距 4 · 行高 28 · 可见 3~6 行</dd></div>
+    <div><dt>行栅格</dt><dd>24 / 1fr / auto · 列间距 10</dd></div>
+    <div><dt>代号</dt><dd>10.5 mono · muted-fg-2</dd></div>
+    <div><dt>名字</dt><dd>13 mono / 500 · 前缀墨蓝</dd></div>
+    <div><dt>签名</dt><dd>11.5 mono · 右对齐</dd></div>
+    <div><dt>选中行</dt><dd>9% 墨蓝底 + 2px 左线</dd></div>
+    <div><dt>底栏</dt><dd>32 高 · 11.5 截断 + 键帽</dd></div>
+    <div><dt>键帽</dt><dd>18 高 · 圆角 4 · 10 mono</dd></div>
+    <div><dt>阴影</dt><dd>亮色 10/28 · 暗色 1px 内描边</dd></div>
+    <div><dt>动效</dt><dd>120ms 淡入 + 上移 2px</dd></div>
+  </section>
+
+  <section class="notes">
+    <h3>交互 / 数据 / 边界</h3>
+    <p><b>触发与快捷键不改。</b><code>handleChange</code> 仍在每次输入后重算,<code>Tab</code> 补全、<code>↑↓</code> 移项、<code>Esc</code> 关闭、回车换行都不动;本次只换渲染层与排序。</p>
+    <p><b>宽度与位置。</b>卡片左缘取当前词的起点 <code>x</code>,再夹进编辑器内宽;右侧空间不足时整体左移,不改变对齐的「词」这一语义。纵向继续用 <code>caretTop()</code> 的结果与翻转规则。</p>
+    <p><b>高度。</b>6 行是扫描上限(28×6 + 8 + 32 = 208);剩余空间不足 208 时按行数取 6→5→4→3,不出现半行;底栏永远在卡片内。</p>
+    <p><b>排序(需拍板)。</b>现状是 <code>fn → tbl → kw → col</code> 且硬切 12 条。建议 <code>col &gt; fn &gt; kw &gt; tbl</code>,同组按名字长度升序(短名更可能是想要的那个),总数上限放到 40 只用于滚动。这条会改变候选顺序,接受后再动。</p>
+    <p><b>无匹配条。</b>当前词 ≥2 字符且零命中时,显示 32px 提示条「无匹配 “xyz”」+ <code>Esc</code>;下一次输入即重算。若嫌打扰,可以只保留现状的静默关闭,其余设计不受影响。</p>
+    <p><b>不做。</b>分组标题(可见行会被压到 4)、每行图标、图标色、鼠标悬停浮层、计数胶囊、两行描述、选中行展开 —— 都会让这张卡在 420 宽里重新变成一个小面板。</p>
+    <p><b>红线。</b>不改 <code>CommandDialog</code> 外壳与 52/56 的头尾;不动模板工具条;<code>input</code> / <code>src.&lt;table&gt;</code> 的语法高亮与列签不改;不引入新的字体或图标依赖。</p>
+    <p><b>实现落点。</b>只在 <code>DuckdbEditor.tsx</code>:<code>:353-410</code> 的列表 JSX 重写,新增 <code>typeCode</code> / <code>typeLabel</code> 两个映射与 <code>activeSuggestion</code> 派生;宽度、行数、水平对齐并入现有 <code>placement</code> 状态;排序若采纳,改 <code>findSuggestions</code> 的 <code>slice</code> 前后各一处。</p>
+    <h3 style="margin-top:6px">i18n 增删</h3>
+    <div class="keysbox">
+      <span>+ duckdbSuggestionKindFunction(函数 / Function)</span>
+      <span>+ duckdbSuggestionKindKeyword(关键字 / Keyword)</span>
+      <span>+ duckdbSuggestionKindColumn(列名 / Column)</span>
+      <span>+ duckdbSuggestionKindTable(表函数 / Table function)</span>
+      <span>+ duckdbSuggestionNoMatch(无匹配 / No matches)</span>
+      <span>描述沿用 data/duckdb.ts 的英文原文</span>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
