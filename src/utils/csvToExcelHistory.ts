@@ -1,5 +1,5 @@
 /**
- * Persistence for the "CSV to Excel" dialog: the last successful run
+ * Persistence for the "Convert to Excel" dialog: the last successful run
  * (output path, row / sheet totals, completion time) plus the options that
  * produced it. Stored in localStorage so the dialog can still show the outcome
  * after it is closed — or after the app is restarted.

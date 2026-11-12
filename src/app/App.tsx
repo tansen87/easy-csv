@@ -1628,7 +1628,7 @@ function AppContent() {
       {
         id: "csv-encoding",
         label: t.csvEncoding,
-        description: t.csvEncoding,
+        description: t.csvEncodingHint,
         group: t.paletteActions,
         groupIcon: Zap,
         onSelect: () => {

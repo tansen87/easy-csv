@@ -19,9 +19,27 @@ const withVersionPrefix = (version: string) =>
  */
 const RUN_PANEL_WIDTH = 240;
 
+/**
+ * Shell of all five dropdowns (design 054). Width follows the content instead
+ * of a fixed 180: `min` keeps the 2-item menus from looking like a stub, `max`
+ * stops a long localized label from turning the menu into a banner.
+ */
+const MENU_PANEL = cn(
+  "absolute left-0 top-full z-50 mt-1.5 w-max min-w-[208px] max-w-[268px] rounded-[10px]",
+  "border border-border bg-card p-1.5",
+  "shadow-[0_12px_28px_-14px_rgba(0,0,0,0.22),0_1px_3px_rgba(0,0,0,0.05)]",
+  "dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]",
+);
+
+/** The 12px underline that means "this entry has something open behind it". */
+const OPEN_UNDERLINE =
+  "absolute bottom-0.5 left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full bg-primary";
+
 interface MainMenuProps {
   activeMenu: "file" | "edit" | "view" | "tools" | "help" | null;
-  setActiveMenu: (menu: "file" | "edit" | "view" | "tools" | "help" | null) => void;
+  setActiveMenu: (
+    menu: "file" | "edit" | "view" | "tools" | "help" | null,
+  ) => void;
   isMenuActivated: boolean;
   setIsMenuActivated: (activated: boolean) => void;
   undoStack: Array<{ pipeline: PipelineStep[] }>;
@@ -262,7 +280,9 @@ export const MainMenu = React.memo(function MainMenu({
   const idleTabs = withCurrentFirst(
     tabs.filter((tab) => {
       const state = runs[tab.id]?.state;
-      return !state || state === "done" || state === "error" || state === "cancelled";
+      return (
+        !state || state === "done" || state === "error" || state === "cancelled"
+      );
     }),
   );
 
@@ -322,7 +342,7 @@ export const MainMenu = React.memo(function MainMenu({
             activate();
           }
         }}
-        className="group relative grid h-8 cursor-pointer grid-cols-[10px_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-md px-2 transition-colors hover:bg-accent/50"
+        className="group relative grid h-8 cursor-pointer grid-cols-[10px_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-md px-2 transition-colors hover:bg-foreground/8"
       >
         {isCurrent && (
           <span
@@ -340,17 +360,13 @@ export const MainMenu = React.memo(function MainMenu({
             failed && "bg-destructive",
           )}
         />
-        <span
-          className="truncate text-[12.5px] font-medium text-foreground"
-        >
+        <span className="truncate text-[12.5px] font-medium text-foreground">
           {tab.name}
         </span>
         <span className="whitespace-nowrap font-mono text-[10.5px] text-muted-foreground">
           {running
             ? `${t.branchProgress} ${
-                run?.branch
-                  ? `${run.branch.current}/${run.branch.total}`
-                  : "-"
+                run?.branch ? `${run.branch.current}/${run.branch.total}` : "-"
               }`
             : failed
               ? t.runStateFailed
@@ -455,10 +471,49 @@ export const MainMenu = React.memo(function MainMenu({
     setExecMenuOpen(true);
   };
 
+  /**
+   * Keyboard for the open dropdown (design 054 §4). Items are read from the DOM
+   * because the five panels are separate trees and only one is ever open.
+   * Focus stays on the trigger until the user presses an arrow key, and Escape
+   * hands it back — a menu that steals focus on open also steals it from the
+   * click that opened it.
+   */
   React.useEffect(() => {
     if (!activeMenu) return;
+    const items = () =>
+      Array.from(
+        document.querySelectorAll<HTMLButtonElement>(
+          '[role="menu"] button:not([disabled])',
+        ),
+      );
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setActiveMenu(null);
+      if (e.key === "Escape") {
+        setActiveMenu(null);
+        document
+          .querySelector<HTMLElement>(`[data-menu-trigger="${activeMenu}"]`)
+          ?.focus();
+        return;
+      }
+      if (
+        e.key !== "ArrowDown" &&
+        e.key !== "ArrowUp" &&
+        e.key !== "Home" &&
+        e.key !== "End"
+      ) {
+        return;
+      }
+      const list = items();
+      if (list.length === 0) return;
+      const current = list.indexOf(document.activeElement as HTMLButtonElement);
+      let next: number;
+      if (e.key === "Home") next = 0;
+      else if (e.key === "End") next = list.length - 1;
+      else if (current === -1)
+        next = e.key === "ArrowDown" ? 0 : list.length - 1;
+      else if (e.key === "ArrowDown") next = (current + 1) % list.length;
+      else next = (current - 1 + list.length) % list.length;
+      e.preventDefault();
+      list[next]?.focus();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -473,7 +528,7 @@ export const MainMenu = React.memo(function MainMenu({
   const commandButtonClass = (active: boolean) =>
     cn(
       "relative flex items-center justify-center h-7 w-7 rounded-md text-primary transition-colors",
-      active ? "bg-accent text-foreground" : "hover:bg-accent/60",
+      active ? "bg-primary/12" : "hover:bg-primary/10",
     );
 
   return (
@@ -483,25 +538,27 @@ export const MainMenu = React.memo(function MainMenu({
           <button
             onClick={() => toggleMenu("file")}
             onMouseEnter={() => hoverMenu("file")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              activeMenu === "file"
-                ? "bg-accent text-foreground"
-                : "text-primary hover:text-primary hover:bg-primary/10"
-            }`}
+            aria-haspopup="menu"
+            aria-expanded={activeMenu === "file"}
+            data-menu-trigger="file"
+            className={cn(
+              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-primary transition-colors",
+              activeMenu === "file" ? "bg-primary/12" : "hover:bg-primary/10",
+            )}
           >
             {t.file}
           </button>
           {activeMenu === "file" && (
-            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 w-[180px] p-1">
+            <div role="menu" className={MENU_PANEL}>
               <button
                 onClick={() => {
                   onOpenFile();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
                 <span className="flex-1 text-left">{t.open}</span>
-                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
                   Ctrl+O
                 </kbd>
               </button>
@@ -510,10 +567,10 @@ export const MainMenu = React.memo(function MainMenu({
                   onOpenNewTabWithFile();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
                 <span className="flex-1 text-left">{t.openNewTab}</span>
-                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
                   Ctrl+N
                 </kbd>
               </button>
@@ -522,28 +579,28 @@ export const MainMenu = React.memo(function MainMenu({
                   onUseOrSaveTemplate();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
                 <span className="flex-1 text-left">{t.paletteTemplates}</span>
-                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
                   Ctrl+T
                 </kbd>
               </button>
-              <div className="border-t border-border my-1" />
+              <div className="mx-2.5 my-1.5 border-t border-foreground/15" />
               <button
                 onClick={() => {
                   onSavePipeline();
                   setActiveMenu(null);
                 }}
                 disabled={currentPipelineLength === 0}
-                className={`flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors ${
+                className={`group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium transition-colors ${
                   currentPipelineLength === 0
-                    ? "text-muted-foreground/40 cursor-not-allowed"
-                    : "text-muted-foreground hover:bg-accent/60"
+                    ? "text-foreground/40 cursor-not-allowed"
+                    : "text-foreground hover:bg-foreground/8"
                 }`}
               >
                 <span className="flex-1 text-left">{t.savePipeline}</span>
-                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
                   Ctrl+S
                 </kbd>
               </button>
@@ -552,10 +609,10 @@ export const MainMenu = React.memo(function MainMenu({
                   onImportPipeline();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
                 <span className="flex-1 text-left">{t.importWorkflow}</span>
-                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
                   Ctrl+I
                 </kbd>
               </button>
@@ -565,14 +622,14 @@ export const MainMenu = React.memo(function MainMenu({
                   setActiveMenu(null);
                 }}
                 disabled={currentPipelineLength === 0}
-                className={`flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors ${
+                className={`group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium transition-colors ${
                   currentPipelineLength === 0
-                    ? "text-muted-foreground/40 cursor-not-allowed"
-                    : "text-muted-foreground hover:bg-accent/60"
+                    ? "text-foreground/40 cursor-not-allowed"
+                    : "text-foreground hover:bg-foreground/8"
                 }`}
               >
                 <span className="flex-1 text-left">{t.exportWorkflow}</span>
-                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
                   Ctrl+E
                 </kbd>
               </button>
@@ -585,30 +642,32 @@ export const MainMenu = React.memo(function MainMenu({
           <button
             onClick={() => toggleMenu("edit")}
             onMouseEnter={() => hoverMenu("edit")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              activeMenu === "edit"
-                ? "bg-accent text-foreground"
-                : "text-primary hover:text-primary hover:bg-primary/10"
-            }`}
+            aria-haspopup="menu"
+            aria-expanded={activeMenu === "edit"}
+            data-menu-trigger="edit"
+            className={cn(
+              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-primary transition-colors",
+              activeMenu === "edit" ? "bg-primary/12" : "hover:bg-primary/10",
+            )}
           >
             {t.edit}
           </button>
           {activeMenu === "edit" && (
-            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 w-[180px] p-1">
+            <div role="menu" className={MENU_PANEL}>
               <button
                 onClick={() => {
                   onUndo();
                   setActiveMenu(null);
                 }}
                 disabled={undoStack.length === 0}
-                className={`flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors ${
+                className={`group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium transition-colors ${
                   undoStack.length === 0
-                    ? "text-muted-foreground/40 cursor-not-allowed"
-                    : "text-muted-foreground hover:bg-accent/60"
+                    ? "text-foreground/40 cursor-not-allowed"
+                    : "text-foreground hover:bg-foreground/8"
                 }`}
               >
                 <span className="flex-1 text-left">{t.undo}</span>
-                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
                   Ctrl+Z
                 </kbd>
               </button>
@@ -618,14 +677,14 @@ export const MainMenu = React.memo(function MainMenu({
                   setActiveMenu(null);
                 }}
                 disabled={redoStack.length === 0}
-                className={`flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors ${
+                className={`group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium transition-colors ${
                   redoStack.length === 0
-                    ? "text-muted-foreground/40 cursor-not-allowed"
-                    : "text-muted-foreground hover:bg-accent/60"
+                    ? "text-foreground/40 cursor-not-allowed"
+                    : "text-foreground hover:bg-foreground/8"
                 }`}
               >
                 <span className="flex-1 text-left">{t.redo}</span>
-                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
                   Ctrl+Y
                 </kbd>
               </button>
@@ -640,37 +699,38 @@ export const MainMenu = React.memo(function MainMenu({
             onMouseEnter={() => hoverMenu("view")}
             aria-haspopup="menu"
             aria-expanded={activeMenu === "view"}
+            data-menu-trigger="view"
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-              anyCollapsedPanelOpen || activeMenu === "view"
-                ? "bg-accent text-foreground"
-                : "text-primary hover:text-primary hover:bg-primary/10",
+              "relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-primary transition-colors",
+              activeMenu === "view" ? "bg-primary/12" : "hover:bg-primary/10",
             )}
           >
             {t.view}
+            {/* Two separate signals: the surface says "this menu is open",
+                the underline says "a panel it controls is open". */}
+            {anyCollapsedPanelOpen && (
+              <span aria-hidden="true" className={OPEN_UNDERLINE} />
+            )}
           </button>
           {activeMenu === "view" && (
-            <div
-              role="menu"
-              className="absolute left-0 top-full mt-2 bg-card border border-border rounded-lg shadow-lg z-50 w-[180px] p-1"
-            >
+            <div role="menu" className={MENU_PANEL}>
               <button
                 role="menuitem"
                 onClick={() => {
                   onOpenPalette();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
-                <span className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <span className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.commandPalette}
                 </span>
-                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
                   Ctrl+K
                 </kbd>
               </button>
-              <div className="border-t border-border my-1" />
+              <div className="mx-2.5 my-1.5 border-t border-foreground/15" />
               <div
                 role="menuitemcheckbox"
                 aria-checked={showDataProfile}
@@ -684,17 +744,17 @@ export const MainMenu = React.memo(function MainMenu({
                   }}
                   disabled={!hasInputFile}
                   className={cn(
-                    "flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors",
+                    "group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium transition-colors",
                     !hasInputFile
-                      ? "text-muted-foreground/40 cursor-not-allowed"
+                      ? "text-foreground/40 cursor-not-allowed"
                       : showDataProfile
-                        ? "text-foreground hover:bg-accent/60"
-                        : "text-muted-foreground hover:bg-accent/60",
+                        ? "text-foreground hover:bg-foreground/8"
+                        : "text-muted-foreground hover:bg-foreground/8",
                   )}
                 >
                   <Check
                     className={cn(
-                      "h-3 w-3 shrink-0 text-primary",
+                      "h-2.5 w-2.5 shrink-0 text-primary",
                       !showDataProfile && "opacity-0",
                     )}
                     aria-hidden="true"
@@ -710,15 +770,15 @@ export const MainMenu = React.memo(function MainMenu({
                   setActiveMenu(null);
                 }}
                 className={cn(
-                  "flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors",
+                  "group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium transition-colors",
                   showVersionPanel
-                    ? "text-foreground hover:bg-accent/60"
-                    : "text-muted-foreground hover:bg-accent/60",
+                    ? "text-foreground hover:bg-foreground/8"
+                    : "text-muted-foreground hover:bg-foreground/8",
                 )}
               >
                 <Check
                   className={cn(
-                    "h-3 w-3 shrink-0 text-primary",
+                    "h-2.5 w-2.5 shrink-0 text-primary",
                     !showVersionPanel && "opacity-0",
                   )}
                   aria-hidden="true"
@@ -733,15 +793,15 @@ export const MainMenu = React.memo(function MainMenu({
                   setActiveMenu(null);
                 }}
                 className={cn(
-                  "flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors",
+                  "group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium transition-colors",
                   showLineagePanel
-                    ? "text-foreground hover:bg-accent/60"
-                    : "text-muted-foreground hover:bg-accent/60",
+                    ? "text-foreground hover:bg-foreground/8"
+                    : "text-muted-foreground hover:bg-foreground/8",
                 )}
               >
                 <Check
                   className={cn(
-                    "h-3 w-3 shrink-0 text-primary",
+                    "h-2.5 w-2.5 shrink-0 text-primary",
                     !showLineagePanel && "opacity-0",
                   )}
                   aria-hidden="true"
@@ -756,15 +816,15 @@ export const MainMenu = React.memo(function MainMenu({
                   setActiveMenu(null);
                 }}
                 className={cn(
-                  "flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors",
+                  "group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium transition-colors",
                   showVariablePanel
-                    ? "text-foreground hover:bg-accent/60"
-                    : "text-muted-foreground hover:bg-accent/60",
+                    ? "text-foreground hover:bg-foreground/8"
+                    : "text-muted-foreground hover:bg-foreground/8",
                 )}
               >
                 <Check
                   className={cn(
-                    "h-3 w-3 shrink-0 text-primary",
+                    "h-2.5 w-2.5 shrink-0 text-primary",
                     !showVariablePanel && "opacity-0",
                   )}
                   aria-hidden="true"
@@ -779,20 +839,20 @@ export const MainMenu = React.memo(function MainMenu({
                   </span>
                 )}
               </button>
-              <div className="border-t border-border my-1" />
+              <div className="mx-2.5 my-1.5 border-t border-foreground/15" />
               <button
                 role="menuitem"
                 onClick={() => {
                   onOpenSearch();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
-                <span className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <span className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.search}
                 </span>
-                <kbd className="text-[10px] text-muted-foreground/60 border border-border rounded px-1 leading-4">
+                <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
                   Ctrl+F
                 </kbd>
               </button>
@@ -813,26 +873,23 @@ export const MainMenu = React.memo(function MainMenu({
             onMouseEnter={() => hoverMenu("tools")}
             aria-haspopup="menu"
             aria-expanded={activeMenu === "tools"}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              activeMenu === "tools"
-                ? "bg-accent text-foreground"
-                : "text-primary hover:text-primary hover:bg-primary/10"
-            }`}
+            data-menu-trigger="tools"
+            className={cn(
+              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-primary transition-colors",
+              activeMenu === "tools" ? "bg-primary/12" : "hover:bg-primary/10",
+            )}
           >
             {t.tools}
           </button>
           {activeMenu === "tools" && (
-            <div
-              role="menu"
-              className="absolute left-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg z-50 w-[180px] p-1"
-            >
+            <div role="menu" className={MENU_PANEL}>
               <button
                 role="menuitem"
                 onClick={() => {
                   onOpenCsvDiff();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.csvDiff}
@@ -844,7 +901,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onOpenCsvEncoding();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.csvEncoding}
@@ -856,7 +913,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onOpenSeparateCsv();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.separateGoodBad}
@@ -868,7 +925,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onOpenSplitLines();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.splitLines}
@@ -880,19 +937,22 @@ export const MainMenu = React.memo(function MainMenu({
                   onOpenEnumerateByGroup();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.enumerateByGroup}
                 </span>
               </button>
+              {/* Tools split in two: five one-file utilities, then the format
+                  and merge jobs that read or write more than one file. */}
+              <div className="mx-2.5 my-1.5 border-t border-foreground/15" />
               <button
                 role="menuitem"
                 onClick={() => {
                   onOpenCsvToExcel();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.csvToExcel}
@@ -904,7 +964,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onOpenMergeExcel();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.mergeExcel}
@@ -930,11 +990,10 @@ export const MainMenu = React.memo(function MainMenu({
             aria-haspopup="menu"
             aria-expanded={activeMenu === "help"}
             data-checking={isCheckingUpdate ? "true" : "false"}
+            data-menu-trigger="help"
             className={cn(
-              "relative overflow-hidden flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-              activeMenu === "help"
-                ? "bg-accent text-foreground"
-                : "text-primary hover:text-primary hover:bg-primary/10",
+              "relative flex items-center gap-1.5 overflow-hidden rounded-md px-3 py-1.5 text-xs font-medium text-primary transition-colors",
+              activeMenu === "help" ? "bg-primary/12" : "hover:bg-primary/10",
               // The in-flight line is purely additive — no dimming, no
               // `cursor-not-allowed`, no `disabled`.
               isCheckingUpdate && "update-busy",
@@ -946,17 +1005,14 @@ export const MainMenu = React.memo(function MainMenu({
             )}
           </button>
           {activeMenu === "help" && (
-            <div
-              role="menu"
-              className="absolute left-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg z-50 w-[180px] p-1"
-            >
+            <div role="menu" className={MENU_PANEL}>
               <button
                 role="menuitem"
                 onClick={() => {
                   onLoadDemo();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.viewSample}
@@ -968,7 +1024,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onHelp();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.helpCenter}
@@ -980,7 +1036,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onReportIssue();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.reportIssue}
@@ -994,10 +1050,10 @@ export const MainMenu = React.memo(function MainMenu({
                 }}
                 disabled={isCheckingUpdate}
                 className={cn(
-                  "flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium transition-colors",
+                  "group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium transition-colors",
                   isCheckingUpdate
-                    ? "text-muted-foreground/40 cursor-not-allowed"
-                    : "text-muted-foreground hover:bg-accent/60",
+                    ? "text-foreground/40 cursor-not-allowed"
+                    : "text-foreground hover:bg-foreground/8",
                 )}
               >
                 <span className="flex-1 text-left whitespace-nowrap">
@@ -1005,9 +1061,7 @@ export const MainMenu = React.memo(function MainMenu({
                 </span>
                 {!isCheckingUpdate && (hasUpdate || currentVersion) && (
                   <span
-                    title={
-                      hasUpdate ? t.newVersionAvailable : t.currentVersion
-                    }
+                    title={hasUpdate ? t.newVersionAvailable : t.currentVersion}
                     className="flex flex-none items-center gap-1.5"
                   >
                     {hasUpdate && (
@@ -1027,7 +1081,7 @@ export const MainMenu = React.memo(function MainMenu({
                   onShowAbout();
                   setActiveMenu(null);
                 }}
-                className="flex items-center gap-2 w-full h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/60 transition-colors"
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
               >
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.about}
@@ -1060,12 +1114,12 @@ export const MainMenu = React.memo(function MainMenu({
             className={cn(
               "relative overflow-hidden flex items-center px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
               currentPipelineLength === 0
-                ? "text-muted-foreground/40 cursor-not-allowed"
+                ? "text-foreground/40 cursor-not-allowed"
                 : execMenuOpen
-                  ? "bg-accent text-foreground"
+                  ? "bg-primary/12 text-primary"
                   : isExecuting
-                    ? "exec-busy text-muted-foreground hover:text-primary hover:bg-primary/10 cursor-pointer"
-                    : "text-primary hover:text-primary hover:bg-primary/10 cursor-pointer",
+                    ? "exec-busy text-muted-foreground hover:bg-primary/10 cursor-pointer"
+                    : "text-primary hover:bg-primary/10 cursor-pointer",
             )}
           >
             {t.execute}

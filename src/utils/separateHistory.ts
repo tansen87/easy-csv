@@ -1,5 +1,5 @@
 /**
- * Persistence for the "Separate Good/Bad Rows" dialog: the last successful run
+ * Persistence for the "Separate Bad Rows" dialog: the last successful run
  * (output paths, row counts, completion time) plus the options that produced
  * it. Stored in localStorage so the dialog can still show the outcome after it
  * is closed — or after the app is restarted.

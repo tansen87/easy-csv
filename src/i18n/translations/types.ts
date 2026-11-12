@@ -659,6 +659,7 @@ export interface Translations {
 
   // CsvEncoding
   csvEncoding: string;
+  csvEncodingHint: string;
   inputFile: string;
   outputFile: string;
   sourceEncoding: string;

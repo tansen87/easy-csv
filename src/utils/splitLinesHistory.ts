@@ -1,5 +1,5 @@
 /**
- * Persistence for the "Split by Lines" dialog: the last successful run (output
+ * Persistence for the "Split by Line Count" dialog: the last successful run (output
  * directory, part count, row totals, completion time) plus the options that
  * produced it. Stored in localStorage so the dialog can still show the outcome
  * after it is closed — or after the app is restarted.

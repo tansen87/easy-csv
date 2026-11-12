@@ -8,7 +8,7 @@ export const enDialog = {
   searchMultiPatternPlaceholder: "Add search values; Enter to add",
   searchPatternConflictWarning:
     "Both manual values and a patterns file are set; results may combine unexpectedly.",
-  csvDiff: "CSV Compare",
+  csvDiff: "Compare Differences",
   fileA: "File A",
   fileB: "File B",
   csvDiffFileAPlaceholder: "Original CSV file",
@@ -36,7 +36,8 @@ export const enDialog = {
   prev: "Prev",
   next: "Next",
   page: "Page",
-  csvEncoding: "CSV Encoding",
+  csvEncoding: "Convert Encoding",
+  csvEncodingHint: "Re-encode a file from one character set to another",
   inputFile: "Input",
   outputFile: "Output",
   sourceEncoding: "Source",
@@ -64,7 +65,7 @@ export const enDialog = {
   csvEncodingRead: "Read",
   csvEncodingWritten: "Written",
   csvEncodingElapsed: "Elapsed",
-  separateGoodBad: "Separate Good/Bad Rows",
+  separateGoodBad: "Separate Bad Rows",
   outputDir: "Output",
   expectedColumns: "Expected columns",
   expectedColumnsHint: "Blank (from header)",
@@ -115,7 +116,7 @@ export const enDialog = {
   separateStreamingHint: "Constant memory for huge files; a little slower",
   separateReady: "Split on {columns} columns · delimiter「{delimiter}」",
   separateReadyHint: "Pick a file — rows are judged on the first row's count",
-  splitLines: "Split by Lines",
+  splitLines: "Split by Line Count",
   linesPerFile: "Lines per file",
   linesPerFileHint: "Rows per output file",
   splitLinesStart: "Split",
@@ -138,7 +139,7 @@ export const enDialog = {
   splitLinesNoHeadersHint: "Select when the source file lacks a header",
   splitLinesReady: "{rows} rows per file",
   // EnumerateByGroupDialog
-  enumerateByGroup: "Number Rows by Group",
+  enumerateByGroup: "Number Rows per Group",
   enumerateHint: "Add a per-group sequence number as the first column",
   groupByColumn: "Group col",
   indexColumnName: "Index column name",
@@ -168,7 +169,7 @@ export const enDialog = {
   groupEnumExampleNote:
     "Rows of the same group are numbered 1, 2, 3…; the new column is placed first.",
   // CsvToExcelDialog
-  csvToExcel: "CSV to Excel",
+  csvToExcel: "Convert to Excel",
   excelHint: "Convert a CSV file into an xlsx workbook",
   excelStepFile: "Input file",
   excelStepSettings: "Conversion settings",
@@ -196,7 +197,7 @@ export const enDialog = {
   excelExampleNote:
     "Values are written as text. The header is kept as the first row.",
   // MergeExcelDialog
-  mergeExcel: "Merge Excel Files",
+  mergeExcel: "Merge Workbooks",
   mergeExcelHint: "Combine the sheets of several workbooks into one table",
   mergeExcelSources: "Sources",
   mergeExcelAddFiles: "Add files",

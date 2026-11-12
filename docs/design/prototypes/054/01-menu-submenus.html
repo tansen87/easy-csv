@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 054 · 菜单栏的子菜单</title>
+<style>
+  /* ── tokens · 与 src/index.css 对齐 ───────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --popover:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+    --brand-8:color-mix(in oklab,var(--brand) 8%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 12%,var(--bg));
+    --chrome-line:color-mix(in oklab,var(--brand) 30%,transparent);
+
+    --success:oklch(0.55 0.1 150);
+    --warning:oklch(0.62 0.13 75);
+    --warning-soft:color-mix(in oklab,var(--warning) 12%,transparent);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-win:0 24px 60px -24px oklch(0.2 0.02 80 / 26%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-menu:0 12px 28px -14px oklch(0.2 0.02 80 / 22%),0 1px 3px oklch(0.2 0.02 80 / 5%);
+    --shadow-old:0 10px 15px -3px oklch(0.2 0.02 80 / 20%),0 4px 6px -4px oklch(0.2 0.02 80 / 20%);
+  }
+  .dark{
+    color:var(--fg);
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --popover:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.5 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 18%,transparent);
+    --brand-8:color-mix(in oklab,var(--brand) 12%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 10%,var(--bg));
+    --canvas:oklch(0.145 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-menu:inset 0 0 0 1px oklch(1 0 0 / 7%);
+    --shadow-old:inset 0 0 0 1px oklch(1 0 0 / 7%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;-webkit-font-smoothing:antialiased;
+  }
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:20px}
+  .stage-bar h1{margin:0;font-size:16px;font-weight:500}
+  .stage-bar p{margin:6px 0 0;font-size:12px;color:var(--muted-fg);max-width:1000px;line-height:1.75}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+
+  .direction{
+    display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:34px;
+    border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden;
+  }
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.55}
+
+  .frame + .frame{margin-top:50px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span:last-child{color:var(--muted-fg-3)}
+
+  /* ── 应用窗口 ──────────────────────────────────────────────────── */
+  .win{position:relative;width:1200px;overflow:hidden;
+       border:1px solid var(--border);border-radius:8px;background:var(--bg);
+       box-shadow:var(--shadow-win)}
+  .win.tall{height:700px}
+  .win.short{height:392px}
+
+  .chrome{height:36px;display:flex;align-items:center;padding-left:16px;gap:16px;
+          background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-line);
+          position:relative;z-index:8}
+  .brand{font-size:12.5px;font-weight:500}
+  .bar{display:flex;gap:2px}
+  .mi{position:relative}
+  .mt{display:flex;align-items:center;height:26px;padding:0 12px;border-radius:6px;
+      font-size:12px;font-weight:500;color:var(--brand);white-space:nowrap}
+  .mt.open{background:var(--brand-12)}
+  .mt.rail{position:relative}
+  .mt.rail::after{content:"";position:absolute;left:8px;right:8px;bottom:0;height:2px;
+                  border-radius:2px;background:var(--brand)}
+  .spacer{flex:1;height:36px}
+  .tools{display:flex;align-items:center;gap:2px;padding-right:12px}
+  .tbtn{width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:var(--brand)}
+  .tbtn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.5;
+            stroke-linecap:round;stroke-linejoin:round}
+
+  .tabstrip{position:absolute;left:0;right:0;top:36px;height:36px;display:flex;align-items:flex-start;
+            padding:4px 12px 0 20px;gap:4px;z-index:5}
+  .tab{height:24px;display:flex;align-items:center;gap:6px;padding:0 8px;border-radius:4px;
+       font-size:12px;color:var(--muted-fg)}
+  .tab.sel{background:color-mix(in oklab,var(--brand) 12%,transparent);color:var(--brand);font-weight:500}
+  .tab .x{color:var(--muted-fg-3);font-size:13px;line-height:1}
+  .canvas{position:absolute;left:0;right:0;top:72px;bottom:0;background-color:var(--canvas);
+          background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+          background-size:22px 22px;background-position:11px 11px}
+  .node{position:absolute;background:var(--card);border:1px solid var(--border);border-radius:8px;
+        box-shadow:0 1px 2px oklch(0.2 0.02 80 / 4%)}
+  .node .nh{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--border-soft);
+            font-size:11px;font-weight:500;color:var(--muted-fg)}
+  .node .nb{padding:8px 10px;font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-3);line-height:1.7}
+  .n-input{left:44px;top:120px;width:230px;height:112px}
+  .n-step{left:350px;top:140px;width:168px;height:76px}
+  .n-res{left:566px;top:130px;width:230px;height:96px}
+  .wire{position:absolute;height:1px;background:var(--border);top:178px}
+
+  /* ══════════════════════════════════════════════════════════════════
+     现状 · MainMenu.tsx:495/597/655/827/951
+     ══════════════════════════════════════════════════════════════════ */
+  .old-panel{position:absolute;left:0;top:calc(100% + 4px);width:180px;background:var(--card);
+             border:1px solid var(--border);border-radius:8px;padding:4px;
+             box-shadow:var(--shadow-old);z-index:50}
+  .old-row{display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:8px;
+           font-size:12px;font-weight:500;color:var(--muted-fg)}
+  .old-row.hov{background:color-mix(in oklab,var(--muted) 60%,transparent)}
+  .old-row .lbl{flex:1;text-align:left;white-space:nowrap}
+  .old-kc{font-size:10px;color:color-mix(in oklab,var(--muted-fg) 60%,transparent);
+          border:1px solid var(--border);border-radius:4px;padding:0 4px;line-height:16px;
+          font-family:var(--mono)}
+  .old-row.off{color:color-mix(in oklab,var(--muted-fg) 40%,transparent)}
+  .old-row.off .old-kc{color:color-mix(in oklab,var(--muted-fg) 60%,transparent)}
+
+  .mk{position:absolute;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;
+      font-family:var(--mono);font-size:9.5px;font-weight:600;color:#fff;z-index:60;background:#b42318}
+  .mk.a{background:var(--brand)}
+
+  /* ══════════════════════════════════════════════════════════════════
+     改后 · 面板
+     ══════════════════════════════════════════════════════════════════ */
+  .panel{position:absolute;left:0;top:calc(100% + 6px);width:216px;background:var(--popover);
+         border:1px solid var(--border);border-radius:10px;padding:6px;
+         box-shadow:var(--shadow-menu);z-index:50}
+  /* 分组:一条内缩的发丝线,不用小标。上下各 6 → 组间距 13,行距 0,比值够了 */
+  .sep{height:1px;margin:6px 10px;background:color-mix(in oklab,var(--fg) 16%,transparent)}
+  .row{position:relative;display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;
+       border-radius:6px;font-size:12.5px;font-weight:500;color:var(--fg);
+       transition:background-color .12s}
+  .row.hov{background:var(--brand-8)}
+  .row .lbl{flex:1;text-align:left;white-space:nowrap}
+  .row .kc{font-family:var(--mono);font-size:10px;line-height:16px;padding:0 4px;border-radius:4px;
+           border:1px solid var(--border);color:var(--muted-fg);white-space:nowrap}
+  .row.off{color:color-mix(in oklab,var(--fg) 38%,transparent)}
+  .row.off .kc{color:color-mix(in oklab,var(--fg) 24%,transparent);
+               border-color:color-mix(in oklab,var(--border) 60%,transparent)}
+  .row .chk{width:10px;height:10px;flex:none;stroke:var(--brand);fill:none;stroke-width:2;
+            stroke-linecap:round;stroke-linejoin:round}
+  .row .chk.off{opacity:0}
+  .row .pad{width:10px;height:10px;flex:none}
+  /* 开关未打开:回 muted —— 灰在这里表示「当前关着」,不是「不能点」(那是 38%) */
+  .row.tog:not(.on) .lbl{color:var(--muted-fg)}
+  .pill{margin-left:auto;border-radius:999px;background:var(--warning-soft);padding:0 6px;
+        font-family:var(--mono);font-size:9.5px;line-height:15px;color:var(--warning)}
+  .ver{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--success);flex:none}
+
+  /* ── 状态卡 ────────────────────────────────────────────────────── */
+  .subhead{display:flex;align-items:baseline;gap:10px;margin:40px 0 12px;
+           font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .subhead b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .tile{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px}
+  .tile.wide{grid-column:1/-1}
+  .tile-cap{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:10px;
+            display:flex;justify-content:space-between;gap:12px}
+  .tile-cap em{font-style:normal;color:var(--muted-fg)}
+  .shot{position:relative;height:322px;border:1px solid var(--border-soft);border-radius:8px;
+        overflow:hidden;background:var(--chrome);padding-top:36px}
+  .shot .bar-x{padding-left:12px;display:flex;gap:2px}
+  .shot .panel{left:12px;top:44px;width:216px;box-shadow:var(--shadow-menu)}
+  .tile-note{margin:8px 0 0;font-size:10.5px;line-height:1.6;color:var(--muted-fg-3)}
+  .dark .tile{background:oklch(0.18 0 0)}
+
+  /* ── 解剖 ──────────────────────────────────────────────────────── */
+  .anat{display:grid;grid-template-columns:520px 1fr;gap:36px;align-items:center}
+  .anat-stage{position:relative;padding:52px 60px 40px;border:1px solid var(--border-soft);
+              border-radius:10px;background:var(--chrome)}
+  .anat-stage .panel{position:relative;top:0;left:0;width:216px}
+  .anat-list{border-top:1px solid var(--border)}
+  .anat-row{display:grid;grid-template-columns:24px 92px 1fr;gap:14px;align-items:baseline;
+            padding:10px 0;border-bottom:1px solid var(--border-soft);font-size:11.5px;line-height:1.6}
+  .anat-row .no{font-family:var(--mono);font-size:9.5px;color:#fff;background:var(--brand);
+                width:15px;height:15px;border-radius:50%;display:grid;place-items:center;
+                align-self:start;margin-top:1px}
+  .anat-row .k{font-size:11.5px;font-weight:500}
+  .anat-row .v{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);line-height:1.7}
+  .anat-row .v b{font-weight:500;color:var(--fg);font-family:var(--mono)}
+
+  /* ── 诊断 / 备选 / 规格 / 说明 ─────────────────────────────────── */
+  .legend{width:1200px;margin-top:34px}
+  .legend table{width:100%;border-collapse:collapse;font-size:11.5px}
+  .legend th{text-align:left;font-family:var(--mono);font-size:10px;font-weight:400;
+             color:var(--muted-fg-3);padding:0 12px 8px 0;border-bottom:1px solid var(--border)}
+  .legend td{vertical-align:top;padding:12px 16px 12px 0;border-bottom:1px solid var(--border-soft);
+             line-height:1.65;color:var(--muted-fg)}
+  .legend td:first-child{width:26px;font-family:var(--mono);font-size:10.5px;color:#b42318}
+  .legend td:nth-child(2){width:500px}
+  .legend td b{font-weight:500;color:var(--fg)}
+
+  .opts{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:6px}
+  .opt{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:13px 15px}
+  .opt .ot{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+  .opt .ot b{font-size:11.5px;font-weight:500}
+  .opt .ot span{font-family:var(--mono);font-size:9.5px;padding:1px 5px;border-radius:999px;
+                border:1px solid var(--border);color:var(--muted-fg-2)}
+  .opt .ot span.no{color:#b42318;border-color:color-mix(in oklab,#b42318 35%,transparent)}
+  .opt .ot span.yes{color:var(--brand);border-color:color-mix(in oklab,var(--brand) 40%,transparent)}
+  .opt p{margin:0;font-size:11px;line-height:1.65;color:var(--muted-fg)}
+  .opt p b{font-weight:500;color:var(--fg)}
+
+  .spec{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--border);
+        border-radius:10px;background:var(--card);overflow:hidden;margin-top:6px}
+  .spec div{padding:11px 14px;border-right:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+  .spec div:nth-child(4n){border-right:0}
+  .spec dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .spec dd{margin:0;font-size:11.5px;line-height:1.5}
+
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:8px 36px;margin-top:28px}
+  .notes h3{grid-column:1/-1;margin:0 0 6px;font-size:12px;font-weight:500}
+  .notes p{margin:0 0 10px;font-size:11.5px;line-height:1.7;color:var(--muted-fg)}
+  .notes p b{font-weight:500;color:var(--fg)}
+  .keysbox{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+  .keysbox span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);border:1px solid var(--border);
+                border-radius:4px;padding:2px 5px;background:var(--card)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">054 · 菜单栏的子菜单</div>
+    <h1>五张目录 —— 让可点的项回到黑,让线去分段</h1>
+    <p>菜单是这一屏唯一的「有什么」目录:文件 6 项、编辑 2 项、查看 6 项、工具 7 项、帮助 5 项。它现在的问题不是不好看,是<b>读起来像一直处于半禁用状态</b> —— 每一条可点的项都写成 <code>text-muted-foreground</code>,只有真正禁用时才降到 40%,两者只差一档灰;五个面板又都是死的 180px,工具那张挤进 7 项、连一条分隔线都没有。<b>这次只做三件事</b>:启用项回到正文色、把工具那张用一条内缩的发丝线切成 5 + 2(文件与查看的旧线同样换成内缩的细线,不再贯到面板两端)、让「已经打开」由 2px 墨蓝轨说而不是靠触发器变灰。</p>
+  </div>
+
+  <dl class="direction">
+    <div><dt>产品</dt><dd>把 CSV 清洗编成管道的工具;菜单栏是「有什么」的目录,命令面板是「直接去」的捷径,两者说的是同一批动作。</dd></div>
+    <div><dt>性格</dt><dd>平实、可数、像一本薄手册 —— 每一项都能一眼看出会不会做、做了没有。</dd></div>
+    <div><dt>世界</dt><dd>工程台的活页目录:等宽的计数、发丝线、墨蓝只落在「现在开着」上。</dd></div>
+    <div><dt>两个瞬间</dt><dd>① 工具菜单被一条左右内缩 10px 的发丝线切成 5 + 2 ② 查看触发器底边那条 2px 墨蓝轨 —— 不打开菜单也知道面板开着。</dd></div>
+    <div><dt>签名</dt><dd><b>2px 左/底轨</b> —— 与 052 的运行面板当前行、053 面板选中行同一条语言,这次落在「已打开」上。</dd></div>
+  </dl>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       01 现状
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>01</span><b>现状</b><span>工具菜单 · MainMenu.tsx:824-913 · 7 项平铺,一行 180px</span></div>
+
+    <div class="win short">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span>
+        <div class="bar">
+          <div class="mi"><span class="mt">文件</span></div>
+          <div class="mi"><span class="mt">编辑</span></div>
+          <div class="mi"><span class="mt">查看</span></div>
+          <div class="mi">
+            <span class="mt open">工具</span>
+            <div class="old-panel">
+              <div class="old-row"><span class="lbl">CSV 对比</span></div>
+              <div class="old-row"><span class="lbl">CSV 编码转换</span></div>
+              <div class="old-row"><span class="lbl">拆分好/坏行</span></div>
+              <div class="old-row hov"><span class="lbl">按行拆分</span></div>
+              <div class="old-row"><span class="lbl">按组编号</span></div>
+              <div class="old-row"><span class="lbl">CSV 转 Excel</span></div>
+              <div class="old-row"><span class="lbl">合并 Excel 文件</span></div>
+            </div>
+          </div>
+          <div class="mi"><span class="mt">帮助</span></div>
+        </div>
+        <div class="spacer"></div>
+        <div class="tools">
+          <span class="tbtn"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>
+          <span class="tbtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></span>
+        </div>
+      </div>
+      <div class="tabstrip">
+        <div class="tab sel">销售收入<span class="x">×</span></div>
+        <div class="tab">库存快照<span class="x">×</span></div>
+        <div class="tab">客户名单<span class="x">×</span></div>
+      </div>
+      <div class="canvas">
+        <div class="node n-input"><div class="nh">输入数据</div><div class="nb">sales_2026.csv<br>1,284 行 × 6 列</div></div>
+        <div class="node n-step"><div class="nh">01 filter</div><div class="nb">status = paid</div></div>
+        <div class="node n-res"><div class="nh">结果</div><div class="nb">338 行 × 3 列</div></div>
+        <div class="wire" style="left:274px;width:76px"></div>
+        <div class="wire" style="left:518px;width:48px"></div>
+      </div>
+
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:14px">
+      <div style="border-left:2px solid #b42318;padding-left:11px;font-size:11px;line-height:1.65;color:var(--muted-fg)">
+        <b style="display:block;font-weight:500;color:var(--fg);margin-bottom:3px;font-size:11.5px">① 一整列灰字</b>
+        7 行全是 <code>text-muted-foreground</code>;只有禁用时才降到 40%,两者只差一档灰,菜单看起来永远半死。
+      </div>
+      <div style="border-left:2px solid #b42318;padding-left:11px;font-size:11px;line-height:1.65;color:var(--muted-fg)">
+        <b style="display:block;font-weight:500;color:var(--fg);margin-bottom:3px;font-size:11.5px">② 没有分段信号</b>
+        对比 / 编码 / 拆分 / 编号 / 转格式 / 合并全在一条竖列里,行距 0、组距 0,七项一样重。
+      </div>
+      <div style="border-left:2px solid #b42318;padding-left:11px;font-size:11px;line-height:1.65;color:var(--muted-fg)">
+        <b style="display:block;font-weight:500;color:var(--fg);margin-bottom:3px;font-size:11.5px">③ 180px 是给最长一项定的</b>
+        「合并 Excel 文件」刚好塞满,每一行右边都留一条不对称的空白。
+      </div>
+      <div style="border-left:2px solid #b42318;padding-left:11px;font-size:11px;line-height:1.65;color:var(--muted-fg)">
+        <b style="display:block;font-weight:500;color:var(--fg);margin-bottom:3px;font-size:11.5px">④ 一打开就变灰底黑字</b>
+        触发器关闭时是墨蓝,打开后 <code>bg-accent</code> + <code>text-foreground</code> —— 入口丢掉自己的颜色。
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       02 改后
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>02</span><b>改后 · 工具</b><span>同一批动作 · 一条内缩发丝线切成 5 + 2 · 216px 且跟内容伸缩</span></div>
+
+    <div class="win short">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span>
+        <div class="bar">
+          <div class="mi"><span class="mt">文件</span></div>
+          <div class="mi"><span class="mt">编辑</span></div>
+          <div class="mi"><span class="mt rail">查看</span></div>
+          <div class="mi">
+            <span class="mt open">工具</span>
+            <div class="panel">
+              <div class="row hov"><span class="lbl">对比差异</span></div>
+              <div class="row"><span class="lbl">转换编码</span></div>
+              <div class="row"><span class="lbl">拆分坏行</span></div>
+              <div class="row"><span class="lbl">按行数拆分</span></div>
+              <div class="row"><span class="lbl">组内编号</span></div>
+              <div class="sep"></div>
+              <div class="row"><span class="lbl">转为 Excel</span></div>
+              <div class="row"><span class="lbl">合并工作簿</span></div>
+            </div>
+          </div>
+          <div class="mi"><span class="mt">帮助</span></div>
+        </div>
+        <div class="spacer"></div>
+        <div class="tools">
+          <span class="tbtn"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>
+          <span class="tbtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></span>
+        </div>
+      </div>
+      <div class="tabstrip">
+        <div class="tab sel">销售收入<span class="x">×</span></div>
+        <div class="tab">库存快照<span class="x">×</span></div>
+        <div class="tab">客户名单<span class="x">×</span></div>
+      </div>
+      <div class="canvas">
+        <div class="node n-input"><div class="nh">输入数据</div><div class="nb">sales_2026.csv<br>1,284 行 × 6 列</div></div>
+        <div class="node n-step"><div class="nh">01 filter</div><div class="nb">status = paid</div></div>
+        <div class="node n-res"><div class="nh">结果</div><div class="nb">338 行 × 3 列</div></div>
+        <div class="wire" style="left:274px;width:76px"></div>
+        <div class="wire" style="left:518px;width:48px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       03 另外三张
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead"><b>另外三张</b><span>分组只靠一条线;开关用 ✓,已经打开的行转正文色</span></div>
+  <div class="tiles">
+
+    <div class="tile">
+      <div class="tile-cap"><span>03-A · 文件</span><em>6 项,中间一条线</em></div>
+      <div class="shot">
+        <div class="bar-x"><span class="mt open">文件</span></div>
+        <div class="panel">
+          <div class="row hov"><span class="lbl">打开文件</span><span class="kc">Ctrl+O</span></div>
+          <div class="row"><span class="lbl">新标签页打开</span><span class="kc">Ctrl+N</span></div>
+          <div class="row"><span class="lbl">模板</span><span class="kc">Ctrl+T</span></div>
+          <div class="sep"></div>
+          <div class="row off"><span class="lbl">保存为脚本</span><span class="kc">Ctrl+S</span></div>
+          <div class="row"><span class="lbl">导入工作流</span><span class="kc">Ctrl+I</span></div>
+          <div class="row off"><span class="lbl">导出工作流</span><span class="kc">Ctrl+E</span></div>
+        </div>
+      </div>
+      <p class="tile-note">禁用的两项连快捷键一起降到 24%,整行一个亮度 —— 不再出现「文字灰了、键帽还亮着」的半启用感。</p>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap"><span>03-B · 查看</span><em>开关独立成段,打开的行有 ✓</em></div>
+      <div class="shot">
+        <div class="bar-x"><span class="mt open">查看</span></div>
+        <div class="panel">
+          <div class="row"><span class="pad"></span><span class="lbl">命令面板</span><span class="kc">Ctrl+K</span></div>
+          <div class="sep"></div>
+          <div class="row on tog"><svg class="chk" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5"/></svg><span class="lbl">数据概览</span></div>
+          <div class="row tog"><svg class="chk off" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5"/></svg><span class="lbl">版本控制</span></div>
+          <div class="row tog"><svg class="chk off" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5"/></svg><span class="lbl">数据血缘</span></div>
+          <div class="row on tog"><svg class="chk" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5"/></svg><span class="lbl">管道变量</span><span class="pill">2</span></div>
+          <div class="sep"></div>
+          <div class="row"><span class="pad"></span><span class="lbl">搜索</span><span class="kc">Ctrl+F</span></div>
+        </div>
+      </div>
+      <p class="tile-note">✓ 列 10px + 间距 6(原 12 + 8),标签少缩进 8px;开关打开的整行转正文色,不用再靠「有没有勾」去猜。</p>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap"><span>03-C · 帮助 / 编辑</span><em>5 项、2 项都不分组</em></div>
+      <div class="shot">
+        <div class="bar-x"><span class="mt open">帮助</span></div>
+        <div class="panel">
+          <div class="row hov"><span class="lbl">查看示例</span></div>
+          <div class="row"><span class="lbl">帮助中心</span></div>
+          <div class="row"><span class="lbl">报告问题</span></div>
+          <div class="row"><span class="lbl">检查更新</span><span class="dot"></span><span class="ver">v0.8.1</span></div>
+          <div class="row"><span class="lbl">关于软件</span></div>
+        </div>
+        <div class="panel" style="top:232px">
+          <div class="row"><span class="lbl">撤销</span><span class="kc">Ctrl+Z</span></div>
+          <div class="row off"><span class="lbl">重做</span><span class="kc">Ctrl+Y</span></div>
+        </div>
+      </div>
+      <p class="tile-note">5 项与 2 项都不值得再切段;小圆点与等宽版本号留在右侧同一列,和快捷键共用一套对齐。</p>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       04 状态
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead"><b>状态</b><span>检查中 / 暗色 / 触发器</span></div>
+  <div class="tiles">
+
+    <div class="tile">
+      <div class="tile-cap"><span>04-A · 检查更新中</span><em>行内一条 2px 不定轨,不置灰</em></div>
+      <div class="shot" style="height:240px">
+        <div class="bar-x"><span class="mt open">帮助</span></div>
+        <div class="panel">
+          <div class="row"><span class="lbl">查看示例</span></div>
+          <div class="row"><span class="lbl">帮助中心</span></div>
+          <div class="row"><span class="lbl">报告问题</span></div>
+          <div class="row" style="overflow:hidden"><span class="lbl">正在检查更新…</span>
+            <span style="position:absolute;left:0;bottom:0;height:2px;width:42%;border-radius:2px;background:var(--brand)"></span>
+          </div>
+        </div>
+      </div>
+      <p class="tile-note">现在整行降到 40% + <code>cursor-not-allowed</code>,像禁用了;改成一条底轨 + 文案仍是正文色,和「运行中」同一个说法。</p>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap"><span>04-B · 禁用的两种原因</span><em>文字与键帽一个亮度</em></div>
+      <div class="shot" style="height:240px">
+        <div class="bar-x"><span class="mt open">文件</span></div>
+        <div class="panel">
+          <div class="row"><span class="lbl">打开文件</span><span class="kc">Ctrl+O</span></div>
+          <div class="row off"><span class="lbl">保存为脚本</span><span class="kc">Ctrl+S</span></div>
+          <div class="row"><span class="lbl">导入工作流</span><span class="kc">Ctrl+I</span></div>
+          <div class="row off"><span class="lbl">导出工作流</span><span class="kc">Ctrl+E</span></div>
+        </div>
+      </div>
+      <p class="tile-note">管道里还没有步骤 → 这两项不可用。原因足够显然,不加 tooltip;但禁用必须「整行」,否则看起来像可以点。</p>
+    </div>
+
+    <div class="tile" style="padding:0;border:0;background:transparent">
+      <div class="tile-cap"><span>04-C · 触发器</span><em>关闭 / 打开 / 有面板开着</em></div>
+      <div class="shot dark" style="height:240px;background:oklch(0.145 0 0);padding:14px">
+        <div style="background:var(--chrome);border-radius:6px;padding:6px 10px;display:flex;gap:2px">
+          <span class="mt">文件</span>
+          <span class="mt open" style="background:var(--brand-12)">查看</span>
+          <span class="mt rail">工具</span>
+        </div>
+        <p style="margin:14px 0 0;font-size:10.5px;line-height:1.7;color:var(--muted-fg)">
+          <b style="color:var(--fg);font-weight:500">关闭</b> = 墨蓝字 · <b style="color:var(--fg);font-weight:500">打开</b> = 墨蓝字 + 12% 墨蓝底 ·
+          <b style="color:var(--fg);font-weight:500">有面板开着</b> = 底边 2px 墨蓝轨
+        </p>
+      </div>
+      <p class="tile-note">三种状态互不覆盖:打开是底色,「里面有东西开着」是底轨 —— 原来两者都是同一块灰底,分不开。</p>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       05 解剖
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead"><b>解剖</b><span>216 宽 · 行 32 · 全部落 4px 栅格</span></div>
+  <section class="anat">
+    <div class="anat-stage">
+      <div class="panel">
+        <div class="row"><span class="pad"></span><span class="lbl">命令面板</span><span class="kc">Ctrl+K</span></div>
+        <div class="sep"></div>
+        <div class="row on tog"><svg class="chk" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5"/></svg><span class="lbl">数据概览</span></div>
+        <div class="row tog"><svg class="chk off" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5"/></svg><span class="lbl">版本控制</span></div>
+        <div class="row tog"><svg class="chk off" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5"/></svg><span class="lbl">数据血缘</span></div>
+        <div class="row on tog"><svg class="chk" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5"/></svg><span class="lbl">管道变量</span><span class="pill">2</span></div>
+        <div class="sep"></div>
+        <div class="row hov"><span class="pad"></span><span class="lbl">搜索</span><span class="kc">Ctrl+F</span></div>
+      </div>
+      <span class="mk a" style="left:24px;top:44px">1</span>
+      <span class="mk a" style="left:24px;top:89px">2</span>
+      <span class="mk a" style="left:24px;top:66px">3</span>
+      <span class="mk a" style="right:24px;top:66px">4</span>
+      <span class="mk a" style="left:24px;top:111px">5</span>
+      <span class="mk a" style="left:24px;top:207px">6</span>
+      <span class="mk a" style="right:24px;top:207px">7</span>
+      <span class="mk a" style="right:24px;top:252px">8</span>
+    </div>
+
+    <div>
+      <div class="anat-list">
+        <div class="anat-row"><span class="no">1</span><span class="k">面板</span><span class="v">宽 <b>216</b>(<code>min 208 / max 268</code>)· 圆角 <b>10</b> · 内边距 <b>6</b> · 距触发器 <b>6</b></span></div>
+        <div class="anat-row"><span class="no">2</span><span class="k">分隔线</span><span class="v"><b>1px</b> · 16% 墨 · 左右内缩 <b>10</b> · 上下各 <b>6</b>(组间 13,行间 0)</span></div>
+        <div class="anat-row"><span class="no">3</span><span class="k">行</span><span class="v">高 <b>32</b> · 内边距 <b>0 10</b> · 圆角 <b>6</b> · 字 <b>12.5 / 500</b></span></div>
+        <div class="anat-row"><span class="no">4</span><span class="k">右侧数据列</span><span class="v">快捷键 / 计数 / 版本号同一列右对齐 · 键帽 <b>10 mono</b> · 计数 <b>9.5 mono</b></span></div>
+        <div class="anat-row"><span class="no">5</span><span class="k">✓ 列</span><span class="v">宽 <b>10</b> + 间距 <b>6</b> · 关闭时占位不显示 —— 行高不变,标签不跳</span></div>
+        <div class="anat-row"><span class="no">6</span><span class="k">开关打开</span><span class="v">整行转 <b>fg</b>,不再只靠那枚 ✓;关着的回落 <b>muted-fg</b>(灰 = 当前关着,不是不能点)</span></div>
+        <div class="anat-row"><span class="no">7</span><span class="k">提醒</span><span class="v">琥珀胶囊 <b>9.5 mono</b> · 只给「等填值的变量数」这一类真状态</span></div>
+        <div class="anat-row"><span class="no">8</span><span class="k">悬停</span><span class="v"><b>8% 墨蓝</b> 底 · 与命令面板选中行同一色 · 120ms</span></div>
+      </div>
+      <p style="margin:14px 0 0;font-size:11px;line-height:1.7;color:var(--muted-fg)">
+        三种状态各有各的表达,不再挤在一块灰底上:<b style="color:var(--fg);font-weight:500">菜单开着</b> = 触发器底色,<b style="color:var(--fg);font-weight:500">这一项在做</b> = 行转正文色 + ✓,<b style="color:var(--fg);font-weight:500">这个菜单里有东西开着</b> = 触发器底边 2px 轨。
+      </p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       诊断
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="legend">
+    <div class="subhead" style="margin-top:0"><b>诊断</b><span>每一条都指向具体行号</span></div>
+    <table>
+      <thead><tr><th>#</th><th>现状</th><th>改法</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><b>可点的项全是灰的。</b>五个菜单的每一行都写 <code>text-muted-foreground</code>(<code>:501</code> / <code>:604</code> / <code>:663</code> / <code>:835</code> / <code>:959</code> …),禁用时才降到 <code>/40</code>;正文色 <code>text-foreground</code> 只留给「开关已打开」的行。</td>
+          <td><b>启用项回到 <code>fg</code>,次要信息才灰。</b>禁用的降到 38% 并把键帽一起降;「打开着的开关」用 ✓ + 正文色。</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><b>七个面板都是死的 180px。</b><code>:495/597/655/827/951</code> 全写 <code>w-[180px]</code>;工具那张 7 项挤满,编辑那张 2 项只占三分之一。</td>
+          <td><b>宽度跟内容走。</b><code>min-w-[208px] w-max max-w-[268px]</code>:216 是「标签 + 键帽不挤」的实测值,长标签(英文界面)自己撑开,短菜单自己收。</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><b>工具菜单没有分段。</b><code>:824-913</code> 七项竖排,对比 / 编码 / 拆分 / 编号 / 转格式 / 合并全同权重,连一条分隔线都没有。</td>
+          <td><b>按「对文件做了什么」分两段</b>:前 5 项是对这一份文件动手,后 2 项是转格式与并起来。段间一条左右内缩 10 的线,上下各留 6 —— 5 + 2 比 7 好扫,而且不用读任何字。</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><b>分隔线是唯一的分组信号,而且太硬。</b><code>:532/673/782</code> 的 <code>border-t border-border my-1</code> 横贯到面板两端,组间距≈10px、行距 0 —— 比值不够,线承担了全部语义。</td>
+          <td><b>线保留,但换成内缩的发丝线。</b>左右各内缩 10,不再贯到面板两端;上下各 6 —— 线坐在 13px 的空白里,行与行仍紧贴。<b>不加小标</b> —— 七个中文项下面再挂一行 10px 灰字,只是多一种要读的字号。编辑 2 项、帮助 5 项本来就不需要分段,保持无线。</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><b>禁用的行「半亮」。</b>文字降到 40%,但快捷键键帽仍是正常的 <code>text-muted-foreground/60</code>(<code>:541</code> 与 <code>:546</code> 同一行两种亮度),看起来像还能点。</td>
+          <td><b>整行一个亮度。</b>禁用时键帽跟着降到 24%、边框也变浅;需要解释的禁用(更新检查中)改用底轨而不是置灰。</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><b>「打开」和「有东西开着」是同一种灰。</b><code>:645</code> 用 <code>anyCollapsedPanelOpen || activeMenu === "view"</code> 决定 <code>bg-accent</code> —— 面板开着和菜单展开同一个底色,分不出是哪种。</td>
+          <td><b>拆成两个信号。</b>菜单展开 = 12% 墨蓝底;有面板开着 = 触发器底边 2px 墨蓝轨。两者可同时出现,互不覆盖。</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><b>一打开就丢掉品牌色。</b>关闭时 <code>text-primary</code>,打开时 <code>bg-accent text-foreground</code>(<code>:486-489</code>)—— 菜单条上唯一带色的元素变黑,和下面深灰的面板连成一片。</td>
+          <td><b>打开只加底,不改字色。</b>触发器永远 <code>text-primary</code>,打开时叠 12% 墨蓝底;悬停 10%。</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><b>悬停用的是「灰」。</b>行 <code>hover:bg-accent/60</code>,而 <code>--accent</code> 是 <code>oklch(0.97 0 0)</code> —— 白底上几乎看不见,暗色下又是一块突兀的灰。</td>
+          <td><b>悬停用 8% 墨蓝</b>,和命令面板选中行、运行面板当前行同一个色;暗色下同一条规则自动变亮。</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td><b>打开的菜单没有键盘。</b>只有窗口级 <code>Esc</code>(<code>:458-465</code>);↑↓ 不动、Home/End 无、Enter 不执行、焦点不进面板;五个面板里只有查看/工具/帮助写了 <code>role="menu"</code>,文件与编辑没有。</td>
+          <td><b>补齐菜单该有的键盘</b>:打开时焦点落到第一项,↑↓ 在项间移动(Space/Enter 触发),Esc 关闭并把焦点还给触发器;五个面板统一 <code>role="menu" / "menuitem"</code> 与 <code>aria-haspopup</code>。</td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td><b>距离与阴影不统一。</b>查看用 <code>mt-2</code>(<code>:655</code>),其余 <code>mt-1</code>;全部 <code>shadow-lg</code>,浅色 chrome 上偏重、暗色下看不见。</td>
+          <td><b>统一 <code>mt-1.5</code>(6px)</b>,阴影收到 <code>0 12px 28px -14px /22%</code>,暗色只留 1px 亮边 —— 与 053 的面板同一套。</td>
+        </tr>
+        <tr>
+          <td>11</td>
+          <td><b>内圆角算错了。</b>面板 <code>rounded-lg</code>(8)+ 内边距 4,行也是 <code>rounded-lg</code>(8)—— 内圆角应等于 8 − 4 = 4(<code>:495</code> 与 <code>:501</code>)。</td>
+          <td><b>面板 10 / 行 6 / 键帽 4</b>:外层 10 − 内边距 6 = 4,但行本身有 10px 内边距,视觉上用 6 更服帖;键帽 4 与外层差 6,符合嵌套规则。</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       备选
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead" style="margin-top:40px"><b>还可以怎么改</b><span>四条被认真考虑过的路,两条没走</span></div>
+  <section class="opts">
+    <div class="opt">
+      <div class="ot"><b>给每一项配图标</b><span class="no">不采用</span></div>
+      <p>7 项的 工具 确实难扫,但图标只在<b>这一张</b>菜单里有用:文件 6 项、编辑 2 项、帮助 5 项都不需要。<b>给一张菜单加,它就成了唯一的异类</b>;给五张都加,又多出二十多个要学的字形。用一条内缩的分隔线解决同一件事,成本更低、也更像手册。</p>
+    </div>
+    <div class="opt">
+      <div class="ot"><b>工具拆成二级菜单</b><span class="no">不采用</span></div>
+      <p>「转换 →」「合并 →」各只挂 1–2 项,二级菜单要多一次悬停与横移,换来的是更深的结构。<b>一条线已经能一眼分开</b>,等工具涨到 12 项以上再考虑。</p>
+    </div>
+    <div class="opt">
+      <div class="ot"><b>✓ 挪到右侧</b><span class="no">不采用</span></div>
+      <p>右对齐的 ✓ 能让查看的标签和其他菜单对齐(现在多缩进 16px),但勾选在右是少数派,和系统菜单的肌肉记忆相反。<b>用「整行转正文色」补足开关的可读性</b>,比换位置更安全。</p>
+    </div>
+    <div class="opt">
+      <div class="ot"><b>每个菜单底部加「在命令面板中打开」</b><span class="yes">可选,未画</span></div>
+      <p>点一下带着当前菜单的名字打开 Ctrl+K(比如打开面板就已过滤成「工具」)。是这产品独有的一步 —— 但它需要给 <code>CommandPalette</code> 传一个初始查询,属于新接口,<b>建议单独一稿</b>,不要塞进这次工艺整理。</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       规格
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead" style="margin-top:40px"><b>规格</b><span>亮暗共用一套尺寸</span></div>
+  <section class="spec">
+    <div><dt>面板宽</dt><dd>216 · min 208 / max 268</dd></div>
+    <div><dt>面板</dt><dd>圆角 10 · 内边距 6 · 距触发器 6</dd></div>
+    <div><dt>阴影</dt><dd>0 12 28 -14 / 22%(暗色只留亮边)</dd></div>
+    <div><dt>行</dt><dd>32 高 · 0 10 内边距 · 圆角 6</dd></div>
+    <div><dt>行文字</dt><dd>12.5 / 500 · 启用 fg</dd></div>
+    <div><dt>禁用</dt><dd>38% 文字 · 24% 键帽</dd></div>
+    <div><dt>悬停</dt><dd>8% 墨蓝 · 120ms</dd></div>
+    <div><dt>分隔线</dt><dd>1px · 16% 墨 · 内缩 10 · 上下各 6</dd></div>
+    <div><dt>键帽</dt><dd>10 mono · 圆角 4 · 无底</dd></div>
+    <div><dt>✓ 列</dt><dd>10 宽 + 6 间距</dd></div>
+    <div><dt>计数胶囊</dt><dd>9.5 mono · 琥珀 12%</dd></div>
+    <div><dt>触发器</dt><dd>间距 2 · 12 内边距 · 圆角 6</dd></div>
+    <div><dt>触发器打开</dt><dd>12% 墨蓝底 · 字色不变</dd></div>
+    <div><dt>有面板开着</dt><dd>底边 2px 墨蓝轨 · 左右缩 8</dd></div>
+    <div><dt>动效</dt><dd>120ms 淡入 + 上移 2</dd></div>
+    <div><dt>键盘</dt><dd>↑↓ 项间 · Enter 触发 · Esc 归还焦点</dd></div>
+  </section>
+
+  <section class="notes">
+    <h3>交互 / 键盘 / 边界</h3>
+    <p><b>打开规则不变。</b>点触发器开合;任何菜单展开时,悬停另一个触发器直接切过去;点外部、<code>Esc</code>、执行任一项都关闭。这次只改「展开之后长什么样」和「展开之后键盘怎么走」。</p>
+    <p><b>键盘补齐。</b>面板挂 <code>role="menu"</code>,行 <code>role="menuitem"</code>(开关用 <code>menuitemcheckbox</code> + <code>aria-checked</code>,现在只有查看这么写);打开时焦点进第一项,<code>↑↓</code> 跳过禁用项,<code>Home/End</code> 到首尾,<code>Esc</code> 关闭并把焦点还给触发器,<code>Tab</code> 关闭菜单(不留在面板里循环)。</p>
+    <p><b>三种状态不许重叠。</b>菜单展开 = 触发器 12% 墨蓝底;有面板开着 = 触发器底边 2px 轨;这一项开着 = 行转正文色 + ✓。原来「打开」和「有东西开着」共用一块 <code>bg-accent</code>,这是菜单看起来「一直亮着」的原因。</p>
+    <p><b>分组只靠线。</b>文件 6 项、查看 6 项、工具 7 项各切一刀;编辑 2 项、帮助 5 项不切。线左右内缩 10、上下各 6,组间 13px 对行间 0 —— 这是能读出「换了一类事」的最小代价,也省掉一行要读的小字。</p>
+    <p><b>不引入二级菜单。</b>工具分两段已经够清楚;二级菜单要多一次悬停与横移,还会带来「移出面板就关」的老问题。</p>
+    <p><b>不改的东西。</b>不改菜单项的顺序与名称、不改快捷键、不动命令面板、不给菜单加图标或图标位;不动 <code>isMenuActivated</code> 那套打开守卫(052 已定);不动「运行」入口(它是菜单组的第六个,052 管它)。</p>
+    <p><b>实现落点。</b><code>MainMenu.tsx</code> 五个面板的 <code>w-[180px] p-1</code> 换成同一套类;行类抽成 <code>menuItemClass(disabled, active)</code>;新增 <code>MenuGroupLabel</code> 与 <code>MenuShortcut</code> 两个小组件,消掉 19 处重复的 <code>kbd</code>。键盘用 <code>useMenuKeyboard</code>(↑↓/Home/End/Esc + 焦点归还),五个面板共用。</p>
+    <p><b>测试影响。</b><code>MainMenu</code> 相关用例按文本查询,不受样式影响;需要新增:↑↓ 跳过禁用项、Esc 归还焦点、<code>aria-checked</code> 与 ✓ 同步。若把「检查更新中」从 disabled 改成底轨,<code>ExecuteMenu.test.tsx</code> 之外那条「检查更新按钮置灰」的断言要改。</p>
+
+    <h3 style="margin-top:6px">i18n 增删</h3>
+    <div class="keysbox">
+      <span>+ checkingUpdate(正在检查更新…)</span>
+      <span>沿用现有全部菜单项文案,不改一个字</span>
+      <span>不新增任何分组文案(分组只用线)</span>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

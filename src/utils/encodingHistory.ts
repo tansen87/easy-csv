@@ -1,5 +1,5 @@
 /**
- * Persistence for the "CSV Encoding" dialog: the last successful conversion
+ * Persistence for the "Convert Encoding" dialog: the last successful conversion
  * (output path, byte counts, completion time) plus the options that produced
  * it. Stored in localStorage so the dialog can still show the outcome after it
  * is closed — or after the app is restarted.

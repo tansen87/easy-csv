@@ -122,8 +122,13 @@ function renderMenu(overrides: Record<string, unknown> = {}) {
   return { ...utils, props, button };
 }
 
-/** The panel is portalled to `document.body`, outside the render container. */
-const menuEl = () => document.querySelector<HTMLElement>('[role="menu"]');
+/**
+ * The run panel is portalled to `document.body`, outside the render container.
+ * Scoped to a direct child of body so it never picks up one of the five
+ * menu-bar dropdowns (design 054 gave them `role="menu"` too).
+ */
+const menuEl = () =>
+  document.querySelector<HTMLElement>('body > [role="menu"]');
 const rowEl = (id: string) =>
   document.querySelector<HTMLElement>(`[data-tab-id="${id}"]`);
 
@@ -154,14 +159,15 @@ describe("run panel (design 052)", () => {
       isExecuting: true,
       runs: { a: makeRun("a", {}) },
     });
-    // Busy only adds the 2px line; hover still behaves like 文件 / 编辑.
-    expect(button.className).toContain("hover:text-primary");
+    // Busy only adds the 2px line; hover is background-only, like 文件 / 编辑.
+    expect(button.className).not.toContain("hover:text-primary");
     expect(button.className).toContain("hover:bg-primary/10");
 
     fireEvent.click(button);
-    // Open state matches the other menus' `bg-accent text-foreground`.
-    expect(button.className).toContain("bg-accent");
-    expect(button.className).toContain("text-foreground");
+    // Open state matches the other menus: 12% ink under ink text, no grey.
+    expect(button.className).toContain("bg-primary/12");
+    expect(button.className).toContain("text-primary");
+    expect(button.className).not.toContain("bg-accent");
   });
 
   it("groups tabs by state and keeps the current tab first inside its group", () => {
@@ -484,16 +490,12 @@ describe("settings entry in the toolbar", () => {
     const settings = settingsButton(open.container)!;
     const openClass = settings.className;
 
-    // `commandButtonClass(active)` swaps the hover style for the pressed look.
-    // Matched as a whole token, because `hover:bg-accent/60` also contains the
-    // substring "bg-accent".
-    const hasActiveBackground = (cls: string) =>
-      /(?:^|\s)bg-accent(?:\s|$)/.test(cls);
-
-    expect(hasActiveBackground(openClass)).toBe(true);
-    expect(openClass).not.toContain("hover:bg-accent/60");
-    expect(hasActiveBackground(closedClass)).toBe(false);
-    expect(closedClass).toContain("hover:bg-accent/60");
+    // `commandButtonClass(active)` swaps the hover style for the pressed look,
+    // using the same 12% ink the menu triggers use when open.
+    expect(openClass).toContain("bg-primary/12");
+    expect(openClass).not.toContain("hover:bg-primary/10");
+    expect(closedClass).not.toContain("bg-primary/12");
+    expect(closedClass).toContain("hover:bg-primary/10");
     expect(settings.getAttribute("aria-expanded")).toBe("true");
 
     // The 12px underline that marks a toggle as "open" rather than "hovered".
@@ -527,5 +529,63 @@ describe("settings entry in the toolbar", () => {
   it("renders no underline while the settings dialog is closed", () => {
     const { container } = renderMenu({ showSettingsDialog: false });
     expect(underline(settingsButton(container)!)).toBeNull();
+  });
+});
+
+/**
+ * Design 054: the five dropdowns got keyboard walking and a rail that says
+ * "a panel behind this menu is open".
+ */
+describe("menu-bar dropdowns (design 054)", () => {
+  const trigger = (container: HTMLElement, menu: string) =>
+    container.querySelector<HTMLElement>(`[data-menu-trigger="${menu}"]`)!;
+
+  it("walks the open dropdown with arrows and skips disabled entries", () => {
+    // An empty pipeline disables 保存为脚本 / 导出工作流, leaving four items.
+    renderMenu({ activeMenu: "file", currentPipelineLength: 0 });
+
+    const enabled = () =>
+      Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '[role="menu"] button:not([disabled])',
+        ),
+      );
+    // Index into the enabled list: locale-independent, and index 3 proves the
+    // two disabled rows were stepped over rather than focused.
+    const at = () => enabled().indexOf(document.activeElement as HTMLElement);
+
+    expect(enabled().length).toBe(4);
+    const visited: number[] = [];
+    for (let i = 0; i < 5; i += 1) {
+      fireEvent.keyDown(window, { key: "ArrowDown" });
+      visited.push(at());
+    }
+
+    expect(visited).toEqual([0, 1, 2, 3, 0]);
+  });
+
+  it("returns focus to the trigger when Escape closes the menu", () => {
+    const { container, props } = renderMenu({ activeMenu: "tools" });
+    const view = trigger(container, "tools");
+
+    fireEvent.keyDown(window, { key: "ArrowDown" });
+    expect(document.activeElement).not.toBe(view);
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(props.setActiveMenu).toHaveBeenCalledWith(null);
+    expect(document.activeElement).toBe(view);
+  });
+
+  it("marks the 查看 trigger when one of its panels is open", () => {
+    const closed = renderMenu({ activeMenu: null });
+    expect(trigger(closed.container, "view").querySelector("span")).toBeNull();
+    closed.unmount();
+
+    const open = renderMenu({ showDataProfile: true });
+    const rail = trigger(open.container, "view").querySelector("span");
+    expect(rail).not.toBeNull();
+    // Same 12px bar the toolbar toggles use, so the bar reads as one system.
+    expect(rail!.className).toContain("bottom-0.5");
+    expect(rail!.className).toContain("bg-primary");
   });
 });

@@ -102,7 +102,7 @@ describe("CsvEncodingDialog", () => {
       </LanguageProvider>,
     );
 
-    expect(screen.getByText("CSV Encoding")).toBeInTheDocument();
+    expect(screen.getByText("Convert Encoding")).toBeInTheDocument();
     expect(screen.getByText(/Choose an input file/)).toBeInTheDocument();
   });
 
