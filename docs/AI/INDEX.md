@@ -101,6 +101,7 @@ Easy CSV 是一个基于 **Tauri v2** 的桌面应用,提供可视化界面来�
 | `docs/design/044_version-control-panel.md` | 版本控制面板改版(**已实施 2026-11-07**;unslop): 把「一版一卡 + 顶部固定 240px 对比区」改成**提交日志** —— 56px 一行、左侧连续竖轨(当前版本实心)、diff 落进行内、行内只留一个 `⋯`(重命名/标签/恢复/删除)、恢复升为展开区按钮而删除退成红字、清除所有版本移到面板底部、相对时间 + `tabular-nums`、允许留空描述(未命名版本)、空状态给解释与入口;「查看」菜单四项补可见勾选。新增 `VersionLogRow.tsx`(单行/展开 diff/行内编辑器)与 `utils/format.ts:relativeStamp`。**两条实测坑**: 轨道 `.version-rail` 作为栅格项只撑到行内容盒(36px),需 `margin-block:-10px` 才连成一条线;`--border-strong` **不是本项目的 token**,未定义变量在 `border` 简写里回落成 `currentColor`(空心节点会变近黑)。测试 678 例全绿。原型 `docs/design/prototypes/044/01-version-control.html` |
 | `docs/design/045_data-lineage-panel.md` | 数据血缘面板改版(**已实施 2026-11-07**;unslop): 320px 里放不下节点图(一步 5 列要 525px,`fitView` 后 10px 字只剩 5.5px),所以面板只做**列清单 + 列路径**:按「结果中的列 / 中途被移除」分组、选中列原地展开路径(源 → 每步 → 结果,没动过这列的步骤压成一行)、未选列时给「本次改动」四行摘要;图搬到全屏并改成**泳道图**(列=泳道、步骤=竖线,只有发生变化的列留节点)。类型从四组 tailwind 色退成等宽小字,唯一品牌色只给被追踪列。**数据层三处补丁**才能让路径成立:`rename` 输出列留 `previousName`;`groupby`/`agg` 从 `expression` 的 `as 别名` 解析真正输出列(否则「移除」分组永远为空);`map`/`transform`/`window` 记 `expression` 与来源列。新增 `panels/lib/columnLineage.ts`(纯函数推导)、`LineageColumnPath` / `LineageColumnRow` / `LineageFullscreen`、`utils/lineageSchema.ts`;测试 47 → 712 例全绿。原型 `docs/design/prototypes/045/01-data-lineage.html` |
 | `docs/design/046_pipeline-variables-panel.md` | 管道变量面板改版(**已实施 2026-11-07**;unslop):「查看 → 管道变量」的 320px 抽屉从卡片表单改成**变量台账** —— 按「待填写 → 已就绪 → 仅管道引用」分组,48px 两行行(`{{名}}` + 引用数/箭头 + 「默认」+ 值);空默认值置顶带琥珀标记(它会让执行停在补值弹窗),点值行就地改默认(⏎/esc/失焦),点名称行展开引用清单(步骤序号 + 命令 + 参数名,来自新增的 `collectVariableRefs`);类型/复制 `{{名}}`/删除收进行内 `⋯`,「全部清除」改行内确认,新增就地展开并按 `params.ts` 同一套 `[A-Za-z_][A-Za-z0-9_]*` 实时校验名称。**两个行为修复**:`setDefault` 不再用 `inferVariableType` 覆盖手选类型;中文名不再能加进面板(原来是「加得进去但 `{{}}` 永不匹配」的死变量)。菜单入口右侧加琥珀计数(引用且值为空的变量数,`MainMenu` 新可选 prop `pendingVariables`)。文件:`modules/variables/{VariablePanel,VariableRow}.tsx`;`variablePlaceholderHint` 保留(CommandFormShell/VariableHint 在用);045 遗留的 `lineageFullscreen`/`lineageClose` 值与测试期望不一致,按拍板保留「全屏」/「关闭」并同步测试期望。测试 60 文件 / 729 例全绿。原型 `docs/design/prototypes/046/01-pipeline-variables.html` |
+| `docs/design/053_command-palette.md` | 命令面板改版(**已实施 2026-11-12**;unslop):Ctrl+K 的 97 条入口从「97 行同权重的 `includes` 过滤 + 5 段分组」改成**命令行式搜索 + 相关度排序** —— 查询行换 `›` 提示符 + 13 等宽字 + `命中 / 可用` 计数;空查询保留分组(组名 11/500 + 等宽计数,去掉 `uppercase` 宽字距与组图标),**一打字就取消分组**,跨组按分数排单列、来源压成右列 10px 标签;命中片段只换 brand 色 + 600 重、不加底色,描述里的命中从灰转墨;**删掉每行那个 `text-transparent` 的 ↵**;680 宽 / 列表 ≤480 / 键帽平铺 / 遮罩 30% 纯色不模糊 / 顶部 48;`↑↓` 回环、IME 组字期间 Enter 不执行、悬停只在实际移动时接管(原来 `mouseenter` 早于 `mousemove`,得划过第二行才回来)。**新增** `src/modules/logs/lib/scoreItem.ts`(纯函数排序与高亮区间)、`lib/paletteTypes.ts`(避免循环依赖)、`src/utils/pinyinInitials.ts`(由 `scripts/gen-pinyin-initials.mjs` 喂 `plugins/pinyin-cli` 生成 711 字表,`dk` → 打开文件);`App.tsx` 给每类 item 补 `source`(同分时命令优先于文件的依据)。测试 768 例全绿。原型 `docs/design/prototypes/053/01-command-palette.html` |
 
 > 设计文档 001–015 已按「序号_主题」命名(见 `docs/design/` 目录),但尚未逐条登记于本表;016–046 已登记。
 
@@ -322,7 +323,8 @@ NODE_ENV=test       node -e "console.log(typeof require('react').act)"  # functi
 | `invoke.test.ts` | App.tsx 中所有 invoke 调用模式验证(read_csv_file、read_tabular_file、配置读写、历史记录、错误处理、历史重建) | ~21 |
 | `BatchFilterHooks.test.ts` | Batch Filter 执行逻辑: 文件名清理、正则构建、文本/数值筛选 invoke 形状、频率提取、多值批处理 | ~31 |
 | `BatchConvertHooks.test.ts` | 批量格式转换: globToRegex、getBaseName、getOutputDir、CSV↔XLSX↔JSON 转换 invoke 模式 | ~37 |
-| `CommandPalette.test.tsx` | 命令面板: 搜索过滤、键盘导航、选中执行、Esc 关闭 | ~11 |
+| `CommandPalette.test.tsx` | 命令面板: 分组渲染、过滤、相关度排序(前缀 > 子串、整词优先、命令优先于文件)、拼音首字母、命中高亮、键盘导航与回环、IME 组字不执行、悬停/键盘所有权、空态文案、Esc/点击关闭 | 18 |
+| `PaletteScore.test.ts` | 命令面板的纯排序层(`modules/logs/lib/scoreItem.ts`): 五档分数、描述/关键词/快捷键命中、描述多处命中区间、拼音首字母只在纯字母查询上生效、空查询保序且丢弃 disabled、同分命令优先于文件 | 10 |
 | `CsvEncodingDialog.test.tsx` | 编码转换对话框: 编码选择、invoke 形状、结果摘要 | ~5 |
 | `HelpDialog.test.tsx` | 帮助对话框搜索与打开 | ~2 |
 | `HelpMarkdown.test.tsx` | 自定义 Markdown 渲染器 | ~3 |
@@ -403,6 +405,7 @@ NODE_ENV=test       node -e "console.log(typeof require('react').act)"  # functi
 | `utils/format.ts` | `formatDateTime` / `formatElapsed` / `formatBytes`(后两者由 020、022 从业务文件上提复用) |
 | `utils/lineageSchema.ts` | 聚合表达式的保守解析(设计 045): `parseAggregations`(`sum(col("金额")) as 金额合计` → 别名 + 函数 + 参数,**拿不到别名就返回空数组**,调用方退回旧行为)、`pickSourceColumn`(参数里第一个真实存在的输入列)、`aggregationColumns`(groupby / agg 的输出列,带来源与表达式) |
 | `utils/settingsSearch.ts` | **设置搜索的纯函数**(设计 030 §4.3): `parseQuery` / `filterSettings`(空查询原样返回、逐词 AND、跨分组过滤并丢弃零命中分组、命中分组名则整组保留)/ `countMatches` / `highlightSegments`(按字面匹配,正则元字符不当模式;重叠区间合并) |
+| `utils/pinyinInitials.ts` | **自动生成,禁止手改**(`scripts/gen-pinyin-initials.mjs`): 711 个汉字的拼音首字母,写成两张并行字符串 + 首次调用时构一次 Map;`pinyinInitials(text)` 只取汉字、其余字符丢弃,查不到的字跳过(只会少匹配不会错匹配)。命令面板用 `dk` 匹配「打开文件」 |
 | `utils/params.ts` · `utils/platform.ts` · `utils/separateHistory.ts` · `utils/executionHistory.ts` · `utils/versionDiff.ts` · `utils/panelDock.ts` · `utils/csv.ts` · `utils/batchFilterValues.ts` | 其余纯函数工具(参数构造、平台判断、拆分结果/执行历史持久化、版本差异、面板停靠、CSV 工具;`batchFilterValues.ts` = 解析 `xan frequency` 的 `field,value,count` 表:按表头嗅探输出分隔符 + 引号感知拆行,供 Batch Filter「从列取值」用) |
 
 ### 服务层 (`services/`)
@@ -530,7 +533,9 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `variables/VariableRow.tsx` | 台账行组件(设计 046):行内编辑(Enter/Escape/失焦提交,`cancelledRef` 防 Esc 后 blur 误提交)、引用清单展开、行菜单(复制/类型三选/删除);`TYPE_OPTIONS` 与 `typeLabel` 由它导出 |
 | `logs/LogPanel.tsx` | 浮动日志面板,显示执行结果,支持拖拽和复制;**按标签页过滤**(design 028 §5.4):「仅当前标签页 / 全部」切换 + 每行标签页徽标(与按级别的 chips 叠加) |
 | `logs/CommandList.tsx` | **命令面板**,可拖拽浮动面板,按分类展示命令,支持搜索和历史记录 |
-| `logs/CommandPalette.tsx` | **全局命令面板**(Ctrl/Cmd+K): 可搜索、键盘导航的动作/标签/最近文件/xan 命令列表 |
+| `logs/CommandPalette.tsx` | **全局命令面板**(Ctrl/Cmd+K): `›` 提示符 + 等宽查询 + 命中/可用计数;空查询分组浏览(组名 + 计数),有查询跨组按分数单列排序并把来源压成右列 10px 标签;命中片段上色、`↑↓` 回环、IME 组字不执行;尺寸 680×(≤480) |
+| `logs/lib/scoreItem.ts` | 命令面板的排序与高亮区间(设计 053,纯函数): `matchItem`(整词 100 / 前缀 80 / 任意位置 60 / 拼音首字母 55 / 描述·关键词·快捷键 30)+ `searchItems`(丢 disabled、同分按来源 操作→命令→标签页→最近→模板) |
+| `logs/lib/paletteTypes.ts` | `PaletteItem` / `PaletteSource` 类型(从组件里搬出来,避免 `scoreItem.ts` 反向依赖组件造成循环) |
 | `modules/plugins/PluginSetupDialog.tsx` | 启动时缺 xan 的引导: 一键下载安装 + 打开插件目录的手动兜底;不走 `usePluginCatalog`(只管一个插件) |
 | `modules/plugins/DownloadPrefixSetting.tsx` | 「下载加速前缀」输入框(设计 023 §6): 读/存 `get_/set_plugin_download_prefix`,保存后回读后端规范化结果,清除时发 `null`;校验失败由后端文案透出 |
 ### 业务模块 — 对话框 (`modules/dialogs/`)
@@ -658,7 +663,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 修改自动更新 / 免提权安装 | `src-tauri/tauri.conf.json`(`bundle.targets`/`installMode`/`createUpdaterArtifacts`/`plugins.updater`)+ `src-tauri/src/update.rs`(`get_install_form`)+ `src-tauri/src/config.rs`(`get_resources_dir` 的就地布局、不可写回退与反向迁移)+ `src-tauri/nsis/hooks.nsh`(装入 `<用户选择路径>\EasyCsv` + 卸载时按「删除应用数据」勾选框删除该目录,配合 `bundle.windows.nsis.installerHooks`)+ `src/services/update/index.ts` + `src/hooks/useUpdater.ts` + `src/modules/dialogs/app/UpdateDialog.tsx` + `src/hooks/useSession.ts`(`flushSession`)+ `.github/workflows/release.yml`。设计:`docs/design/022_github-auto-update-and-admin-free-install.md` |
 | 修改首次使用引导 / 示例数据(027 §4.1/§4.2, **P0 已实现**) | 后端: `src-tauri/src/samples.rs`(`ensure_sample_data`,幂等写入 `<数据目录>/samples/`)+ `src-tauri/samples/easy-csv-sample-sales.csv`(嵌入的示例数据,**LF 字节由 `.gitattributes` 钉住**)+ `src-tauri/src/lib.rs`(注册命令)。前端: `src/hooks/useOnboarding.ts` + `src/components/onboarding/FirstStepGuide.tsx`(画布空态引导卡 + 手势卡,覆盖层,`pointer-events-none`)+ `src/data/templates/builtin.ts`(「示例」演示管道,仅供「查看示例」/空状态卡使用,**不再进模板库**,文案走 i18n)+ `src/hooks/usePipelineTemplates.ts`(用户模板存储)+ `src/modules/data-preview/HomeView.tsx`(「看看示例」卡 + 三步流程条 + 渲染引导层)+ `src/app/App.tsx`(`handleLoadDemo` + 示例自动执行一次 + `showOnboardingGuide`)+ `src/modules/logs/CommandList.tsx`(首个操作提示条)+ `src/components/menu/MainMenu.tsx`(置灰「执行」的 Tooltip、入口图标高亮、**帮助菜单第一行「查看示例」**)+ `src/components/setting/SettingsTabContent.tsx`(重新显示引导)。设计: `docs/design/027_first-run-onboarding.md` |
 | 修改执行完成提示(027 §4.3, **P1 已实现**) | `src/components/setting/Toast.tsx`(`ToastProps.action` + 关闭按钮 + `pointer-events-auto`)+ `src/hooks/useToast.ts`(透传 action/duration)+ `src/hooks/execution/runPipeline.ts`(`finally` 里按 `pipelineFailed`/`wasCancelled` 发成功/失败 Toast;**不改**既有的 `setShowLogPanel(true)` 与进度条行为)+ `src/hooks/execution/runPipelineDeps.ts`(labels)。**不做**结果节点高亮/fitView 定位/每步成功标记(失败红框是现状 `PipelineStepNode.tsx:265-280`) |
-| 修改命令面板 | `src/modules/logs/CommandPalette.tsx` + `src/hooks/useUIState.ts` + `src/hooks/useKeyboardShortcuts.ts`(Ctrl+K) |
+| 修改命令面板 | `src/modules/logs/CommandPalette.tsx` + `src/modules/logs/lib/scoreItem.ts`(排序/高亮区间)+ `src/modules/logs/lib/paletteTypes.ts` + `src/utils/pinyinInitials.ts`(生成物)+ `src/hooks/useUIState.ts` + `src/hooks/useKeyboardShortcuts.ts`(Ctrl+K)。设计: `docs/design/053_command-palette.md` |
 | 修改管道可视化布局 | `src/modules/pipeline/FlowPanel.tsx`(主逻辑) + `pipeline/lib/layout.ts`(布局) + `pipeline/nodes/`(节点样式) |
 | 修改连线方向/锚点(上下/左右连接点) | `src/modules/pipeline/lib/layout.ts`(`resolveHandles`/`handleAnchor`) + `pipeline/nodes/`(Handle 定义) |
 | 修改右键连线交互/预览 | `src/modules/pipeline/FlowPanel.tsx`(`handleCutStart`/`handleCutMove`/`handleCutEnd`) + `pipeline/overlays/ConnectionVisualization.tsx`(贝塞尔渲染) + `layout.ts`(`pickStartHandle`/`buildConnectPreviewPath`/`transformBezierPath`) |
@@ -719,7 +724,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 测试 Tauri invoke 调用模式 | `src/__tests__/invoke.test.ts` |
 | 测试 Batch Filter 逻辑 | `src/__tests__/BatchFilterHooks.test.ts` |
 | 测试 Batch Convert 逻辑 | `src/__tests__/BatchConvertHooks.test.ts` |
-| 测试命令面板 | `src/__tests__/CommandPalette.test.tsx` |
+| 测试命令面板 | `src/__tests__/CommandPalette.test.tsx`(组件)+ `src/__tests__/PaletteScore.test.ts`(排序纯函数) |
 | 测试右键快速操作(参数/定位/浮窗) | `src/__tests__/quickCommandParams.test.ts` · `src/__tests__/quickPosition.test.ts` · `src/__tests__/QuickActionDialog.test.tsx` |
 | 测试编码转换对话框 | `src/__tests__/CsvEncodingDialog.test.tsx` |
 | 修改测试 mock/setup | `src/test/setup.ts` |

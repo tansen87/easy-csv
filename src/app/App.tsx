@@ -1743,7 +1743,11 @@ function AppContent() {
     };
     const actionsWithSearch: PaletteItem[] = actions.map((a) => {
       const k = actionEnKey[a.id];
-      return k ? { ...a, search: translations.en[k] } : a;
+      return {
+        ...a,
+        source: "action" as const,
+        ...(k ? { search: translations.en[k] } : {}),
+      };
     });
 
     const templateItems: PaletteItem[] = templateStore.templates.map((tpl) => ({
@@ -1752,6 +1756,7 @@ function AppContent() {
       description: tpl.description || t.newFromTemplate,
       keywords: t.newFromTemplate,
       groupIcon: LibraryBig,
+      source: "template",
       group: t.paletteTemplates,
       onSelect: () => void handleApplyTemplate(tpl.id),
     }));
@@ -1761,6 +1766,7 @@ function AppContent() {
       label: tab.name,
       description: tab.inputFile || tab.id,
       groupIcon: NotebookTabs,
+      source: "tab",
       group: t.paletteTabs,
       onSelect: () => tabsHook.setSelectedTabId(tab.id),
     }));
@@ -1770,6 +1776,7 @@ function AppContent() {
       label: file.name,
       description: file.path,
       groupIcon: FileClock,
+      source: "file",
       group: t.recentFiles,
       onSelect: () => onOpenRecentFile(file.path),
     }));
@@ -1784,6 +1791,7 @@ function AppContent() {
         // still matches even while the UI (descriptions) is localized to zh.
         keywords: `${cmd.name} ${cmd.category} ${cmd.description}`,
         groupIcon: Command,
+        source: "command" as const,
         group: t.paletteCommands,
         onSelect: () => handleCommandClick(cmd),
       };
@@ -2114,10 +2122,7 @@ function AppContent() {
             content={ui.helpContent}
           />
 
-          <AboutDialog
-            isOpen={showAbout}
-            onClose={() => setShowAbout(false)}
-          />
+          <AboutDialog isOpen={showAbout} onClose={() => setShowAbout(false)} />
 
           <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
 

@@ -1,0 +1,947 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 053 · 命令面板 Ctrl+K</title>
+<style>
+  /* ── tokens · 与 src/index.css 对齐 ───────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --popover:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.68 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-line:color-mix(in oklab,var(--brand) 22%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 12%,var(--bg));
+    --chrome-line:color-mix(in oklab,var(--brand) 30%,transparent);
+
+    --danger:oklch(0.577 0.245 27.325);
+    --warning:oklch(0.62 0.13 75);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --scrim:oklch(0.145 0 0 / 30%);
+    --shadow-win:0 24px 60px -24px oklch(0.2 0.02 80 / 26%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-pal:0 18px 48px -20px oklch(0.2 0.02 80 / 24%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-old:0 25px 50px -12px oklch(0.2 0.02 80 / 30%);
+  }
+  .dark{
+    color:var(--fg);
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --popover:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.56 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-line:color-mix(in oklab,var(--brand) 34%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 10%,var(--bg));
+    --canvas:oklch(0.145 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --scrim:oklch(0 0 0 / 52%);
+    --shadow-pal:inset 0 0 0 1px oklch(1 0 0 / 7%);
+    --shadow-old:inset 0 0 0 1px oklch(1 0 0 / 7%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;-webkit-font-smoothing:antialiased;
+  }
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:20px}
+  .stage-bar h1{margin:0;font-size:16px;font-weight:500}
+  .stage-bar p{margin:6px 0 0;font-size:12px;color:var(--muted-fg);max-width:1000px;line-height:1.75}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+
+  .direction{
+    display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:34px;
+    border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden;
+  }
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.55}
+
+  .frame + .frame{margin-top:50px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span:last-child{color:var(--muted-fg-3)}
+
+  /* ── 应用窗口 ──────────────────────────────────────────────────── */
+  .win{position:relative;width:1200px;height:700px;overflow:hidden;
+       border:1px solid var(--border);border-radius:8px;background:var(--bg);
+       box-shadow:var(--shadow-win)}
+  .chrome{height:36px;display:flex;align-items:center;padding-left:16px;gap:16px;
+          background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-line);
+          position:relative;z-index:8}
+  .brand{font-size:12.5px;font-weight:500}
+  .menus{display:flex;gap:2px}
+  .mb{height:26px;display:flex;align-items:center;padding:0 10px;border-radius:6px;
+      font-size:11.5px;font-weight:500;color:var(--brand)}
+  .spacer{flex:1;height:36px}
+  .tools{display:flex;align-items:center;gap:2px;padding-right:12px}
+  .tbtn{width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:var(--brand)}
+  .tbtn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.5;
+            stroke-linecap:round;stroke-linejoin:round}
+
+  .tabstrip{position:absolute;left:0;right:0;top:36px;height:36px;display:flex;align-items:flex-start;
+            padding:4px 12px 0 20px;gap:4px;z-index:5}
+  .tab{height:24px;display:flex;align-items:center;gap:6px;padding:0 8px;border-radius:4px;
+       font-size:12px;color:var(--muted-fg)}
+  .tab.sel{background:color-mix(in oklab,var(--brand) 12%,transparent);color:var(--brand);font-weight:500}
+  .tab .x{color:var(--muted-fg-3);font-size:13px;line-height:1}
+
+  .canvas{position:absolute;left:0;right:0;top:72px;bottom:0;background-color:var(--canvas);
+          background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+          background-size:22px 22px;background-position:11px 11px}
+  .node{position:absolute;background:var(--card);border:1px solid var(--border);border-radius:8px;
+        box-shadow:0 1px 2px oklch(0.2 0.02 80 / 4%)}
+  .node .nh{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--border-soft);
+            font-size:11px;font-weight:500;color:var(--muted-fg)}
+  .node .nb{padding:8px 10px;font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-3);line-height:1.7}
+  .n-input{left:36px;top:236px;width:230px;height:132px}
+  .n-step{left:350px;top:258px;width:168px;height:88px}
+  .n-step2{left:566px;top:258px;width:168px;height:88px}
+  .n-res{left:790px;top:246px;width:230px;height:112px}
+  .wire{position:absolute;height:1px;background:var(--border);top:302px}
+
+  /* ══════════════════════════════════════════════════════════════════
+     现状 · CommandPalette.tsx:152-266
+     ══════════════════════════════════════════════════════════════════ */
+  .old-scrim{position:absolute;inset:0;z-index:20;background:oklch(0.145 0 0 / 20%);
+             backdrop-filter:blur(2px);display:flex;justify-content:center;align-items:flex-start;
+             padding-top:140px}
+  .old{width:576px;background:var(--card);border:1px solid var(--border);border-radius:12px;
+       box-shadow:var(--shadow-old);overflow:hidden}
+  .old-q{display:flex;align-items:center;gap:8px;height:49px;padding:0 16px;
+         border-bottom:1px solid var(--border)}
+  .old-q svg{width:16px;height:16px;flex:none;stroke:var(--muted-fg);fill:none;stroke-width:1.5}
+  .old-ph{flex:1;font-size:14px;color:color-mix(in oklab,var(--muted-fg) 60%,transparent)}
+  .old-esc{font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid var(--border);
+           background:var(--muted);color:var(--muted-fg-2)}
+  .old-list{height:420px;overflow:hidden;padding:8px 0}
+  .old-grp{display:flex;align-items:center;gap:6px;padding:6px 16px;
+           font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+           color:color-mix(in oklab,var(--muted-fg) 70%,transparent)}
+  .old-grp svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5}
+  .old-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;
+           gap:12px;padding:10px 16px 10px 36px}
+  .old-row.sel{background:var(--muted)}
+  .old-lbl{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .old-desc{display:block;font-size:12px;font-weight:400;color:var(--muted-fg);
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .old-kc{font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid var(--border);
+          background:var(--muted);color:var(--muted-fg-2);white-space:nowrap}
+  .old-ent{width:14px;height:14px;stroke:var(--brand);fill:none;stroke-width:1.5}
+  .old-ent.ghost{stroke:transparent}
+  .old-foot{display:flex;align-items:center;gap:16px;padding:8px 16px;
+            border-top:1px solid var(--border);background:color-mix(in oklab,var(--muted) 30%,transparent);
+            font-size:11px;color:var(--muted-fg)}
+  .old-foot span{display:flex;align-items:center;gap:4px}
+  .old-foot svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.5}
+
+  /* 问题标记 */
+  .mk{position:absolute;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;
+      font-family:var(--mono);font-size:9.5px;font-weight:600;color:#fff;z-index:40;background:#b42318}
+  .mk.a{background:var(--brand)}
+
+  /* ══════════════════════════════════════════════════════════════════
+     改后 · 命令面板
+     ══════════════════════════════════════════════════════════════════ */
+  .scrim{position:absolute;inset:0;z-index:20;background:var(--scrim);
+         display:flex;justify-content:center;align-items:flex-start;padding-top:48px}
+
+  .pal{width:600px;background:var(--card);border:1px solid var(--border);border-radius:12px;
+       box-shadow:var(--shadow-pal);overflow:hidden}
+
+  .pal-q{height:52px;display:grid;grid-template-columns:12px minmax(0,1fr) auto;
+         align-items:center;column-gap:10px;padding:0 14px 0 16px;
+         box-shadow:inset 0 -1px 0 var(--border-soft)}
+  .pal-prompt{font-family:var(--mono);font-size:14px;line-height:1;color:var(--brand);
+              text-align:center;transform:translateY(-1px)}
+  .pal-input{display:flex;align-items:center;font-family:var(--mono);font-size:13px;
+             color:var(--fg);min-height:18px;white-space:nowrap;overflow:hidden}
+  .pal-input.ph{color:var(--muted-fg-2)}
+  .caret{width:1px;height:15px;background:var(--brand);margin-left:1px;flex:none}
+  .pal-count{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-3);white-space:nowrap}
+
+  .pal-list{max-height:480px;overflow:hidden;padding:6px 0;position:relative}
+  .scrollthumb{position:absolute;right:3px;top:12px;width:3px;height:104px;border-radius:2px;
+               background:oklch(0.2 0.01 80 / 20%)}
+  .dark .scrollthumb{background:oklch(1 0 0 / 16%)}
+
+  .grp{display:flex;align-items:baseline;gap:6px;padding:10px 16px 4px;
+       font-size:11px;font-weight:500;color:var(--muted-fg-2)}
+  .grp i{font-family:var(--mono);font-size:10px;font-style:normal;color:var(--muted-fg-3)}
+
+  .prow{position:relative;display:grid;align-items:center;column-gap:12px;
+        height:34px;margin:0 6px;padding:0 10px;border-radius:6px}
+  .prow.grouped{grid-template-columns:minmax(0,1fr) auto auto}
+  .prow.flat{grid-template-columns:minmax(0,1fr) auto auto auto}
+  .prow .rail{position:absolute;left:0;top:8px;bottom:8px;width:2px;border-radius:1px;
+              background:transparent}
+  .prow.on{background:var(--brand-soft)}
+  .prow.on .rail{background:var(--brand)}
+
+  .lbl{font-size:13px;font-weight:500;color:var(--fg);white-space:nowrap;
+       overflow:hidden;text-overflow:ellipsis}
+  .lbl b{font-weight:600;color:var(--brand)}
+  .lbl.mono{font-family:var(--mono);font-size:12.5px;letter-spacing:-.01em}
+  .desc{font-size:11.5px;color:var(--muted-fg);white-space:nowrap;overflow:hidden;
+        text-overflow:ellipsis;max-width:196px;text-align:right}
+  .desc b{font-weight:500;color:var(--fg)}
+  .desc.path{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-3)}
+  .tag{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);
+       min-width:26px;text-align:right;white-space:nowrap}
+  .keys{display:flex;gap:3px;flex:none}
+  .kc{display:inline-flex;align-items:center;justify-content:center;
+      height:18px;min-width:18px;padding:0 4px;border-radius:4px;
+      border:1px solid var(--border);
+      font-family:var(--mono);font-size:10px;font-style:normal;line-height:1;
+      color:var(--muted-fg-2);white-space:nowrap}
+
+  .empty{padding:26px 16px 28px}
+  .empty .t{font-size:13px;color:var(--fg);margin:0 0 6px}
+  .empty .s{font-size:11.5px;color:var(--muted-fg);margin:0;line-height:1.7}
+  .empty .s b{font-weight:500;color:var(--fg)}
+
+  .pal-foot{height:40px;display:flex;align-items:center;gap:14px;padding:0 14px 0 16px;
+            box-shadow:inset 0 1px 0 var(--border-soft)}
+  .hint{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted-fg)}
+  .totals{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-3)}
+
+  /* ── 状态卡 ────────────────────────────────────────────────────── */
+  .subhead{display:flex;align-items:baseline;gap:10px;margin:40px 0 12px;
+           font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .subhead b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .tile{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px}
+  .tile.wide{grid-column:1/-1}
+  .tile-cap{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:10px;
+            display:flex;justify-content:space-between;gap:12px}
+  .tile-cap em{font-style:normal;color:var(--muted-fg)}
+  .shot{position:relative;border:1px solid var(--border-soft);border-radius:8px;
+        overflow:hidden;padding:14px;background:var(--chrome)}
+  .shot .pal{width:100%;box-shadow:none;border-radius:8px}
+  .shot .pal-list{max-height:none}
+  .tile-note{margin:8px 0 0;font-size:10.5px;line-height:1.6;color:var(--muted-fg-3)}
+
+  /* ── 检索规则 ──────────────────────────────────────────────────── */
+  .split{display:grid;grid-template-columns:600px 1fr;gap:36px;align-items:start}
+  .rank{border-top:1px solid var(--border)}
+  .rank-row{display:grid;grid-template-columns:1fr 46px;gap:12px;align-items:baseline;
+            padding:10px 0;border-bottom:1px solid var(--border-soft);font-size:11.5px;line-height:1.6}
+  .rank-row .k{color:var(--fg)}
+  .rank-row .k i{font-family:var(--mono);font-style:normal;font-size:10.5px;color:var(--muted-fg);
+                 display:block;margin-top:2px}
+  .rank-row .w{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-3);text-align:right}
+
+  /* ── 解剖 ──────────────────────────────────────────────────────── */
+  .anat{display:grid;grid-template-columns:720px 1fr;gap:36px;align-items:center}
+  .anat-stage{position:relative;padding:44px 60px 24px;border:1px solid var(--border-soft);
+              border-radius:10px;background:var(--chrome)}
+  .anat-stage .pal{width:100%;box-shadow:0 8px 24px -16px oklch(0.2 0.02 80 / 30%)}
+  .anat-list{border-top:1px solid var(--border)}
+  .anat-row{display:grid;grid-template-columns:24px 88px 1fr;gap:14px;align-items:baseline;
+            padding:10px 0;border-bottom:1px solid var(--border-soft);font-size:11.5px;line-height:1.6}
+  .anat-row .no{font-family:var(--mono);font-size:9.5px;color:#fff;background:var(--brand);
+                width:15px;height:15px;border-radius:50%;display:grid;place-items:center;
+                align-self:start;margin-top:1px}
+  .anat-row .k{font-size:11.5px;font-weight:500}
+  .anat-row .v{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);line-height:1.7}
+  .anat-row .v b{font-weight:500;color:var(--fg);font-family:var(--mono)}
+
+  /* ── 诊断 / 规格 / 说明 ─────────────────────────────────────────── */
+  .legend{width:1200px;margin-top:34px}
+  .legend table{width:100%;border-collapse:collapse;font-size:11.5px}
+  .legend th{text-align:left;font-family:var(--mono);font-size:10px;font-weight:400;
+             color:var(--muted-fg-3);padding:0 12px 8px 0;border-bottom:1px solid var(--border)}
+  .legend td{vertical-align:top;padding:12px 16px 12px 0;border-bottom:1px solid var(--border-soft);
+             line-height:1.65;color:var(--muted-fg)}
+  .legend td:first-child{width:26px;font-family:var(--mono);font-size:10.5px;color:#b42318}
+  .legend td:nth-child(2){width:500px}
+  .legend td b{font-weight:500;color:var(--fg)}
+
+  .spec{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--border);
+        border-radius:10px;background:var(--card);overflow:hidden;margin-top:6px}
+  .spec div{padding:11px 14px;border-right:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+  .spec div:nth-child(4n){border-right:0}
+  .spec dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .spec dd{margin:0;font-size:11.5px;line-height:1.5}
+
+  .issues{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:14px}
+  .issues div{border-left:2px solid #b42318;padding-left:11px;font-size:11px;line-height:1.65;
+              color:var(--muted-fg)}
+  .issues div b{display:block;font-weight:500;color:var(--fg);margin-bottom:3px;font-size:11.5px}
+
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:8px 36px;margin-top:28px}
+  .notes h3{grid-column:1/-1;margin:0 0 6px;font-size:12px;font-weight:500}
+  .notes p{margin:0 0 10px;font-size:11.5px;line-height:1.7;color:var(--muted-fg)}
+  .notes p b{font-weight:500;color:var(--fg)}
+  .keysbox{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+  .keysbox span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg);border:1px solid var(--border);
+                border-radius:4px;padding:2px 5px;background:var(--card)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">053 · 命令面板 Ctrl+K</div>
+    <h1>命令面板 —— 一条命令行，一份可读的排序</h1>
+    <p>Ctrl+K 是这个产品里最快的路径:97 条入口(26 个操作、61 条 xan 命令、标签页、最近文件、模板)全靠键盘取用。现在它<b>能用但不好用</b>——一打开就是 97 行同权重的列表,搜索只做 <code>includes</code>,命中了也不告诉你命中在哪里;26 个操作和 61 条命令被放进同一个平铺的「操作」组;面板 576 宽、420 高,坐在 20vh 的位置上,底下垫一层毛玻璃。<b>这次不改它能做什么,只改它怎么被读</b>:一条等宽的查询行、一份按相关度排过的单列结果、一处只属于「你输入的字」的品牌色。</p>
+  </div>
+
+  <dl class="direction">
+    <div><dt>产品</dt><dd>把 CSV 清洗编成管道;Ctrl+K 是键盘用户的唯一入口,要在一秒内找到 97 个入口里的任意一个。</dd></div>
+    <div><dt>性格</dt><dd>精确、快、不寒暄 —— 像一个会记住你打到第几个字的终端。</dd></div>
+    <div><dt>世界</dt><dd>命令行与表格列:等宽的名字、键帽、一个 <code>›</code> 提示符;正文仍是中性灰,只有命中处上墨蓝。</dd></div>
+    <div><dt>两个瞬间</dt><dd>① 查询行 <code>› fi</code> 后面跟着实时计数 ② 结果里你敲的那两个字母上色,其余全灰。</dd></div>
+    <div><dt>签名</dt><dd>键帽 —— 快捷键写成和菜单栏完全同一种小键帽 <code>Ctrl+O</code>(细边、无底、等宽),底栏的 <code>↑ ↓ ↵ esc</code> 用同一套。</dd></div>
+  </dl>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       01 现状
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>01</span><b>现状</b><span>CommandPalette.tsx:152-266 · 576×420 卡片 · 四条最扎眼的,完整 11 条见下方诊断表</span></div>
+
+    <div class="win">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span>
+        <div class="menus"><span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span><span class="mb">帮助</span></div>
+        <div class="spacer"></div>
+        <div class="tools">
+          <span class="tbtn"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>
+          <span class="tbtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></span>
+        </div>
+      </div>
+      <div class="tabstrip">
+        <div class="tab sel">销售收入<span class="x">×</span></div>
+        <div class="tab">库存快照<span class="x">×</span></div>
+        <div class="tab">客户名单<span class="x">×</span></div>
+      </div>
+      <div class="canvas">
+        <div class="node n-input"><div class="nh">输入数据</div><div class="nb">sales_2026.csv<br>1,284 行 × 6 列</div></div>
+        <div class="node n-step"><div class="nh">01 filter</div><div class="nb">status = paid</div></div>
+        <div class="node n-step2"><div class="nh">02 groupby</div><div class="nb">region · sum(amount)</div></div>
+        <div class="node n-res"><div class="nh">结果</div><div class="nb">338 行 × 3 列</div></div>
+        <div class="wire" style="left:274px;width:76px"></div>
+        <div class="wire" style="left:518px;width:48px"></div>
+        <div class="wire" style="left:734px;width:56px"></div>
+      </div>
+
+      <div class="old-scrim">
+        <div class="old">
+          <div class="old-q">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+            <span class="old-ph">输入命令或搜索</span>
+            <span class="old-esc">esc</span>
+          </div>
+          <div class="old-list">
+            <div class="old-grp"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>操作</div>
+            <div class="old-row sel">
+              <span class="old-lbl">打开文件<span class="old-desc">CSV, Excel, JSON</span></span>
+              <span class="old-kc">Ctrl+O</span>
+              <svg class="old-ent" viewBox="0 0 24 24"><path d="M9 10l-5 5 5 5"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>
+            </div>
+            <div class="old-row">
+              <span class="old-lbl">打开到新标签页</span>
+              <span class="old-kc">Ctrl+N</span>
+              <svg class="old-ent ghost" viewBox="0 0 24 24"><path d="M9 10l-5 5 5 5"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>
+            </div>
+            <div class="old-row">
+              <span class="old-lbl">保存管道</span>
+              <span class="old-kc">Ctrl+S</span>
+              <svg class="old-ent ghost" viewBox="0 0 24 24"><path d="M9 10l-5 5 5 5"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>
+            </div>
+            <div class="old-row">
+              <span class="old-lbl">导入工作流</span>
+              <span class="old-kc">Ctrl+I</span>
+              <svg class="old-ent ghost" viewBox="0 0 24 24"><path d="M9 10l-5 5 5 5"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>
+            </div>
+            <div class="old-row">
+              <span class="old-lbl">导出工作流</span>
+              <span class="old-kc">Ctrl+E</span>
+              <svg class="old-ent ghost" viewBox="0 0 24 24"><path d="M9 10l-5 5 5 5"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>
+            </div>
+            <div class="old-row">
+              <span class="old-lbl">撤销</span>
+              <span class="old-kc">Ctrl+Z</span>
+              <svg class="old-ent ghost" viewBox="0 0 24 24"><path d="M9 10l-5 5 5 5"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>
+            </div>
+            <div class="old-row">
+              <span class="old-lbl">重做</span>
+              <span class="old-kc">Ctrl+Y</span>
+              <svg class="old-ent ghost" viewBox="0 0 24 24"><path d="M9 10l-5 5 5 5"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>
+            </div>
+            <div class="old-grp"><svg viewBox="0 0 24 24" style="visibility:hidden"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>标签页</div>
+            <div class="old-row"><span class="old-lbl">销售收入<span class="old-desc">sales_2026.csv</span></span>
+              <svg class="old-ent ghost" viewBox="0 0 24 24"><path d="M9 10l-5 5 5 5"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg></div>
+            <div class="old-row"><span class="old-lbl">库存快照<span class="old-desc">inventory_q3.csv</span></span>
+              <svg class="old-ent ghost" viewBox="0 0 24 24"><path d="M9 10l-5 5 5 5"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg></div>
+          </div>
+          <div class="old-foot">
+            <span><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg><svg viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>导航</span>
+            <span><svg viewBox="0 0 24 24"><path d="M9 10l-5 5 5 5"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>选择</span>
+            <span>ESC 关闭</span>
+          </div>
+        </div>
+      </div>
+
+      <span class="mk" style="left:286px;top:152px">1</span>
+      <span class="mk" style="left:286px;top:214px">2</span>
+      <span class="mk" style="left:894px;top:244px">3</span>
+      <span class="mk" style="left:286px;top:600px">4</span>
+    </div>
+
+    <div class="issues">
+      <div><b>① 576 × 420，坐在 20vh</b>命令名 + 中文描述挤在 576 里,描述先被截断;列表只露 7 行,97 条入口要靠滚。</div>
+      <div><b>② 组名大写 + 宽字距</b>11px / 600 / <code>uppercase</code> / <code>tracking-wider</code>,再挂一枚组图标 —— 控制台味的装饰,却不像这个产品。</div>
+      <div><b>③ 每行一个透明 ↵</b>未选中的行仍然占着 14px 画一个 <code>text-transparent</code> 图标,行尾多出一列死空间。</div>
+      <div><b>④ 毛玻璃 + 阴影撑场</b>遮罩 <code>backdrop-blur</code> + <code>shadow-2xl</code>:面板块和背景的关系靠模糊与阴影说,而不是靠尺寸和位置说。</div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       02 改后 · 空查询
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>02</span><b>改后 · 空查询</b><span>600 宽 · 分组保留 · 右缘一条 3px 滚动指示;末尾还有模板与命令两组</span></div>
+
+    <div class="win">
+      <div class="chrome">
+        <span class="brand">Easy Csv</span>
+        <div class="menus"><span class="mb">文件</span><span class="mb">编辑</span><span class="mb">查看</span><span class="mb">工具</span><span class="mb">帮助</span></div>
+        <div class="spacer"></div>
+        <div class="tools">
+          <span class="tbtn"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>
+          <span class="tbtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></span>
+        </div>
+      </div>
+      <div class="tabstrip">
+        <div class="tab sel">销售收入<span class="x">×</span></div>
+        <div class="tab">库存快照<span class="x">×</span></div>
+        <div class="tab">客户名单<span class="x">×</span></div>
+      </div>
+      <div class="canvas">
+        <div class="node n-input"><div class="nh">输入数据</div><div class="nb">sales_2026.csv<br>1,284 行 × 6 列</div></div>
+        <div class="node n-step"><div class="nh">01 filter</div><div class="nb">status = paid</div></div>
+        <div class="node n-step2"><div class="nh">02 groupby</div><div class="nb">region · sum(amount)</div></div>
+        <div class="node n-res"><div class="nh">结果</div><div class="nb">338 行 × 3 列</div></div>
+        <div class="wire" style="left:274px;width:76px"></div>
+        <div class="wire" style="left:518px;width:48px"></div>
+        <div class="wire" style="left:734px;width:56px"></div>
+      </div>
+
+      <div class="scrim">
+        <div class="pal">
+          <div class="pal-q">
+            <span class="pal-prompt">›</span>
+            <span class="pal-input ph">输入命令、文件名或标签页<span class="caret"></span></span>
+            <span class="pal-count">97 项</span>
+          </div>
+          <div class="pal-list">
+            <div class="grp">操作<i>26</i></div>
+            <div class="prow grouped on">
+              <span class="rail"></span>
+              <span class="lbl">打开文件</span>
+              <span class="desc">CSV, Excel, JSON</span>
+              <span class="keys"><i class="kc">Ctrl+O</i></span>
+            </div>
+            <div class="prow grouped">
+              <span class="rail"></span><span class="lbl">打开到新标签页</span><span class="desc"></span>
+              <span class="keys"><i class="kc">Ctrl+N</i></span>
+            </div>
+            <div class="prow grouped">
+              <span class="rail"></span><span class="lbl">保存管道</span><span class="desc"></span>
+              <span class="keys"><i class="kc">Ctrl+S</i></span>
+            </div>
+            <div class="prow grouped">
+              <span class="rail"></span><span class="lbl">执行</span><span class="desc"></span>
+              <span class="keys"><i class="kc">Ctrl+R</i></span>
+            </div>
+            <div class="prow grouped">
+              <span class="rail"></span><span class="lbl">导入工作流</span><span class="desc"></span>
+              <span class="keys"><i class="kc">Ctrl+I</i></span>
+            </div>
+            <div class="prow grouped">
+              <span class="rail"></span><span class="lbl">导出工作流</span><span class="desc"></span>
+              <span class="keys"><i class="kc">Ctrl+E</i></span>
+            </div>
+
+            <div class="grp">标签页<i>3</i></div>
+            <div class="prow grouped">
+              <span class="rail"></span><span class="lbl">销售收入</span>
+              <span class="desc path">sales_2026.csv</span><span class="tag">当前</span>
+            </div>
+            <div class="prow grouped">
+              <span class="rail"></span><span class="lbl">库存快照</span>
+              <span class="desc path">inventory_q3.csv</span><span class="tag">3 步</span>
+            </div>
+            <div class="prow grouped">
+              <span class="rail"></span><span class="lbl">客户名单</span>
+              <span class="desc path">customers.csv</span><span class="tag">4 步</span>
+            </div>
+
+            <div class="grp">最近文件<i>5</i></div>
+            <div class="prow grouped">
+              <span class="rail"></span><span class="lbl">finance_2025.csv</span>
+              <span class="desc path">D:\data\finance_2025.csv</span><span class="tag">2 天前</span>
+            </div>
+            <div class="prow grouped">
+              <span class="rail"></span><span class="lbl">orders_2026_q3.csv</span>
+              <span class="desc path">D:\data\orders_2026_q3.csv</span><span class="tag">5 天前</span>
+            </div>
+            <span class="scrollthumb"></span>
+          </div>
+          <div class="pal-foot">
+            <span class="hint"><i class="kc">↑</i><i class="kc">↓</i>移动</span>
+            <span class="hint"><i class="kc">↵</i>执行</span>
+            <span class="hint"><i class="kc">esc</i>关闭</span>
+            <span class="totals">操作 26 · 命令 61</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       03 输入 · 跨组排序
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>03</span><b>输入 · 跨组排序</b><span>一打字就取消分组,按相关度重排;来源退到右列做标签</span></div>
+
+    <div class="split">
+      <div>
+        <div class="pal" style="box-shadow:0 8px 24px -18px oklch(0.2 0.02 80 / 30%)">
+          <div class="pal-q">
+            <span class="pal-prompt">›</span>
+            <span class="pal-input">fi<span class="caret"></span></span>
+            <span class="pal-count">5 / 97</span>
+          </div>
+          <div class="pal-list">
+            <div class="prow flat on">
+              <span class="rail"></span>
+              <span class="lbl mono"><b>fi</b>lter</span>
+              <span class="desc">根据表达式结果筛选 CSV 行</span>
+              <span class="tag">命令</span>
+              <span></span>
+            </div>
+            <div class="prow flat">
+              <span class="rail"></span>
+              <span class="lbl mono"><b>fi</b>ll</span>
+              <span class="desc">填充空值</span>
+              <span class="tag">命令</span>
+              <span></span>
+            </div>
+            <div class="prow flat">
+              <span class="rail"></span>
+              <span class="lbl mono"><b>fi</b>xlengths</span>
+              <span class="desc">补齐长度不一致的行</span>
+              <span class="tag">命令</span>
+              <span></span>
+            </div>
+            <div class="prow flat">
+              <span class="rail"></span>
+              <span class="lbl mono"><b>fi</b>nance_2025.csv</span>
+              <span class="desc path">D:\data\finance_2025.csv</span>
+              <span class="tag">文件</span>
+              <span></span>
+            </div>
+            <div class="prow flat">
+              <span class="rail"></span>
+              <span class="lbl mono">batch-<b>fi</b>lter</span>
+              <span class="desc">搜索多个值并输出单独文件</span>
+              <span class="tag">命令</span>
+              <span></span>
+            </div>
+          </div>
+          <div class="pal-foot">
+            <span class="hint"><i class="kc">↑</i><i class="kc">↓</i>移动</span>
+            <span class="hint"><i class="kc">↵</i>执行</span>
+            <span class="hint"><i class="kc">esc</i>关闭</span>
+            <span class="totals">操作 26 · 命令 61</span>
+          </div>
+        </div>
+        <p style="margin:14px 0 0;font-size:11px;line-height:1.75;color:var(--muted-fg)">
+          五条命中:三条命令前缀、一条文件名前缀、一条中间命中。<b style="font-weight:500;color:var(--fg)">同分时命令排在文件前面</b>
+          —— 在命令面板里找的多半是命令 —— 所以 <code>finance_2025.csv</code> 落在 <code>fixlengths</code> 之后;
+          而浏览时的分区顺序仍是「操作 / 标签页 / 最近 / 模板 / 命令」,两者是两件事。
+        </p>
+      </div>
+
+      <div>
+        <div class="grp" style="padding:0 0 4px">排序依据</div>
+        <div class="rank">
+          <div class="rank-row"><span class="k">标签整词相符<i>输入 filter</i></span><span class="w">100</span></div>
+          <div class="rank-row"><span class="k">标签前缀<i>fi → filter / fill</i></span><span class="w">80</span></div>
+          <div class="rank-row"><span class="k">标签内任意位置<i>batch-fi… → batch-filter</i></span><span class="w">60</span></div>
+          <div class="rank-row"><span class="k">拼音首字母<i>dk → 打开文件</i></span><span class="w">55</span></div>
+          <div class="rank-row"><span class="k">描述 / 关键词命中<i>去重 → dedup</i></span><span class="w">30</span></div>
+          <div class="rank-row"><span class="k">同分按来源排,再按原顺序<i>操作 → 命令 → 标签页 → 最近 → 模板</i></span><span class="w">—</span></div>
+        </div>
+        <p style="margin:14px 0 0;font-size:11px;line-height:1.75;color:var(--muted-fg)">
+          命中处只换色、再加重到 <b style="font-weight:500;color:var(--fg)">600</b> —— 不加底色、不加下划线,也不给整行染色。
+          标签里命中的是 <code>brand</code>;描述里命中的那一处从灰转墨,其余仍灰,所以「为什么这条在结果里」不用猜。
+        </p>
+        <p style="margin:10px 0 0;font-size:11px;line-height:1.75;color:var(--muted-fg)">
+          一打字就不再有分组标题:跨组按相关度排,来源压成右列 10px 标签(命令 / 操作 / 文件 / 标签页 / 模板)。
+          空查询时回退成分组视图,标签位置改放快捷键 —— 组内不重复来源。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       04 状态
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead"><b>四种状态</b><span>无结果 / 拼音首字母 / 长路径 / 暗色</span></div>
+  <div class="tiles">
+
+    <div class="tile">
+      <div class="tile-cap"><span>04-A · 无结果</span><em>说清没匹配到什么,并给三条出路</em></div>
+      <div class="shot">
+        <div class="pal">
+          <div class="pal-q"><span class="pal-prompt">›</span><span class="pal-input">xyz<span class="caret"></span></span><span class="pal-count">0 / 97</span></div>
+          <div class="pal-list">
+            <div class="empty">
+              <p class="t">没有匹配「xyz」的入口</p>
+              <p class="s">试试 <b>filter</b>、<b>去重</b>,或直接打标签页名 <b>销售</b>。<br>也支持拼音首字母,比如 <b>dk</b> 打开文件。</p>
+            </div>
+          </div>
+          <div class="pal-foot">
+            <span class="hint"><i class="kc">esc</i>关闭</span>
+          </div>
+        </div>
+      </div>
+      <p class="tile-note">空态不只是一个居中的「没有匹配的命令」:计数归零,再给出三条真正能走的路。</p>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap"><span>04-B · 拼音首字母</span><em>dk → 打开文件</em></div>
+      <div class="shot">
+        <div class="pal">
+          <div class="pal-q"><span class="pal-prompt">›</span><span class="pal-input">dk<span class="caret"></span></span><span class="pal-count">2 / 97</span></div>
+          <div class="pal-list">
+            <div class="prow flat on">
+              <span class="rail"></span><span class="lbl">打开文件</span>
+              <span class="desc">CSV, Excel, JSON</span><span class="tag">操作</span>
+              <span class="keys"><i class="kc">Ctrl+O</i></span>
+            </div>
+            <div class="prow flat">
+              <span class="rail"></span><span class="lbl">打开到新标签页</span>
+              <span class="desc"></span><span class="tag">操作</span>
+              <span class="keys"><i class="kc">Ctrl+N</i></span>
+            </div>
+          </div>
+          <div class="pal-foot">
+            <span class="hint"><i class="kc">↑</i><i class="kc">↓</i>移动</span>
+            <span class="hint"><i class="kc">↵</i>执行</span>
+          </div>
+        </div>
+      </div>
+      <p class="tile-note">首字母命中不给汉字上色(没有可比的字形),只在名字前保留位置顺序;字表静态生成,查不到的字直接跳过,不会误匹配。</p>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap"><span>04-C · 长路径</span><em>截断只发生在描述列,名字永远完整</em></div>
+      <div class="shot">
+        <div class="pal">
+          <div class="pal-q"><span class="pal-prompt">›</span><span class="pal-input">销售<span class="caret"></span></span><span class="pal-count">4 / 97</span></div>
+          <div class="pal-list">
+            <div class="prow flat on">
+              <span class="rail"></span><span class="lbl">销售收入</span>
+              <span class="desc path">D:\work\2026\q3\sales_2026.csv</span>
+              <span class="tag">标签页</span><span class="tag">当前</span>
+            </div>
+            <div class="prow flat">
+              <span class="rail"></span><span class="lbl">销售汇总模板</span>
+              <span class="desc">筛选已付款 → 按地区聚合 → 导出</span>
+              <span class="tag">模板</span><span></span>
+            </div>
+            <div class="prow flat">
+              <span class="rail"></span><span class="lbl mono">groupby</span>
+              <span class="desc">按组聚合数据</span>
+              <span class="tag">命令</span><span></span>
+            </div>
+          </div>
+          <div class="pal-foot">
+            <span class="hint"><i class="kc">↑</i><i class="kc">↓</i>移动</span>
+            <span class="hint"><i class="kc">↵</i>执行</span>
+          </div>
+        </div>
+      </div>
+      <p class="tile-note">描述列固定 196 上限、单行截断;名字列吃掉剩下的宽度,再长也只截自己。</p>
+    </div>
+
+    <div class="tile">
+      <div class="tile-cap"><span>04-D · 只有一条</span><em>唯一结果仍是第一行,不自动执行</em></div>
+      <div class="shot">
+        <div class="pal">
+          <div class="pal-q"><span class="pal-prompt">›</span><span class="pal-input">dedup<span class="caret"></span></span><span class="pal-count">1 / 97</span></div>
+          <div class="pal-list">
+            <div class="prow flat on">
+              <span class="rail"></span><span class="lbl mono">dedup</span>
+              <span class="desc">去重 CSV 文件</span><span class="tag">命令</span><span></span>
+            </div>
+          </div>
+          <div class="pal-foot">
+            <span class="hint"><i class="kc">↵</i>执行</span>
+          </div>
+        </div>
+      </div>
+      <p class="tile-note">砍掉「只剩一条就自动跑」的念头:回车永远是唯一的执行动作,列表短下去也不改变节奏。</p>
+    </div>
+
+    <div class="tile wide">
+      <div class="tile-cap"><span>04-E · 暗色</span><em>表面抬一阶 + 1px 亮边,阴影归零</em></div>
+      <div style="display:grid;grid-template-columns:628px 1fr;gap:26px;align-items:start">
+        <div class="dark" style="padding:14px;border-radius:8px;background:oklch(0.115 0 0)">
+          <div class="pal">
+            <div class="pal-q"><span class="pal-prompt">›</span><span class="pal-input">fi<span class="caret"></span></span><span class="pal-count">5 / 97</span></div>
+            <div class="pal-list">
+              <div class="prow flat on">
+                <span class="rail"></span><span class="lbl mono"><b>fi</b>lter</span>
+                <span class="desc">根据表达式结果筛选 CSV 行</span><span class="tag">命令</span><span></span>
+              </div>
+              <div class="prow flat">
+                <span class="rail"></span><span class="lbl mono"><b>fi</b>ll</span>
+                <span class="desc">填充空值</span><span class="tag">命令</span><span></span>
+              </div>
+              <div class="prow flat">
+                <span class="rail"></span><span class="lbl mono"><b>fi</b>xlengths</span>
+                <span class="desc">补齐长度不一致的行</span><span class="tag">命令</span><span></span>
+              </div>
+            </div>
+            <div class="pal-foot">
+              <span class="hint"><i class="kc">↑</i><i class="kc">↓</i>移动</span>
+              <span class="hint"><i class="kc">↵</i>执行</span>
+              <span class="totals">操作 26 · 命令 61</span>
+            </div>
+          </div>
+        </div>
+        <dl style="border-top:1px solid var(--border);margin:0;align-self:start">
+          <div style="display:grid;grid-template-columns:104px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid var(--border-soft);font-size:11px;line-height:1.6">
+            <dt style="font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)">面板</dt>
+            <dd style="margin:0;color:var(--muted-fg)">比遮罩抬两阶,1px 8% 亮边,没有投影</dd></div>
+          <div style="display:grid;grid-template-columns:104px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid var(--border-soft);font-size:11px;line-height:1.6">
+            <dt style="font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)">遮罩</dt>
+            <dd style="margin:0;color:var(--muted-fg)">52% 纯黑,不用模糊 —— 暗底上模糊只会变脏</dd></div>
+          <div style="display:grid;grid-template-columns:104px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid var(--border-soft);font-size:11px;line-height:1.6">
+            <dt style="font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)">选中行</dt>
+            <dd style="margin:0;color:var(--muted-fg)">14% 亮墨蓝 + 2px 左轨,不让文字变色</dd></div>
+          <div style="display:grid;grid-template-columns:104px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid var(--border-soft);font-size:11px;line-height:1.6">
+            <dt style="font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)">命中</dt>
+            <dd style="margin:0;color:var(--muted-fg)">亮墨蓝,对比 7.4:1</dd></div>
+          <div style="display:grid;grid-template-columns:104px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid var(--border-soft);font-size:11px;line-height:1.6">
+            <dt style="font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)">键帽</dt>
+            <dd style="margin:0;color:var(--muted-fg)">发丝线 + 面板同色底,暗底上仍看得见轮廓</dd></div>
+        </dl>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       05 解剖
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead"><b>解剖</b><span>600 宽 · 查询行 52 · 行 34 · 全部落 4px 栅格</span></div>
+  <section class="anat">
+    <div class="anat-stage">
+      <div class="pal">
+        <div class="pal-q">
+          <span class="pal-prompt">›</span>
+          <span class="pal-input">fi<span class="caret"></span></span>
+          <span class="pal-count">5 / 97</span>
+        </div>
+        <div class="pal-list" style="max-height:none">
+          <div class="grp">命令<i>61</i></div>
+          <div class="prow flat on">
+            <span class="rail"></span><span class="lbl mono"><b>fi</b>lter</span>
+            <span class="desc">根据表达式结果筛选 CSV 行</span><span class="tag">命令</span>
+            <span class="keys"><i class="kc">↵</i></span>
+          </div>
+          <div class="prow flat">
+            <span class="rail"></span><span class="lbl mono"><b>fi</b>ll</span>
+            <span class="desc">填充空值</span><span class="tag">命令</span><span></span>
+          </div>
+        </div>
+        <div class="pal-foot">
+          <span class="hint"><i class="kc">↑</i><i class="kc">↓</i>移动</span>
+          <span class="hint"><i class="kc">↵</i>执行</span>
+          <span class="hint"><i class="kc">esc</i>关闭</span>
+          <span class="totals">操作 26 · 命令 61</span>
+        </div>
+      </div>
+      <span class="mk a" style="left:36px;top:62px">1</span>
+      <span class="mk a" style="right:36px;top:62px">2</span>
+      <span class="mk a" style="left:36px;top:103px">3</span>
+      <span class="mk a" style="left:36px;top:135px">4</span>
+      <span class="mk a" style="right:36px;top:135px">5</span>
+      <span class="mk a" style="left:36px;top:169px">6</span>
+      <span class="mk a" style="left:36px;top:206px">7</span>
+    </div>
+
+    <div>
+      <div class="anat-list">
+        <div class="anat-row"><span class="no">1</span><span class="k">提示符与查询</span><span class="v"><b>›</b> 等宽 <b>14</b> 品牌色 · 查询 <b>13 mono</b> · 光标 <b>1×15</b> · 行高 <b>52</b></span></div>
+        <div class="anat-row"><span class="no">2</span><span class="k">计数</span><span class="v"><b>10.5 mono</b> · muted-3 · <b>命中 / 可用</b>(可用量已扣 disabled)</span></div>
+        <div class="anat-row"><span class="no">3</span><span class="k">分组小标</span><span class="v"><b>11 / 500</b> 正文体 · 上 <b>10</b> 下 <b>4</b> · 组后接 mono 计数 · 无图标</span></div>
+        <div class="anat-row"><span class="no">4</span><span class="k">行</span><span class="v">高 <b>34</b> · 左右内缩 <b>6</b> · 圆角 <b>6</b> · 内边距 <b>0 10</b> · 列距 <b>12</b></span></div>
+        <div class="anat-row"><span class="no">5</span><span class="k">来源与键帽</span><span class="v">来源 <b>10 mono</b> muted-3(仅跨组)· 键帽 <b>18</b> 高 / <b>10 mono</b> / 圆角 <b>4</b></span></div>
+        <div class="anat-row"><span class="no">6</span><span class="k">名字与高亮</span><span class="v">命令 <b>12.5 mono</b> · 操作 <b>13 / 500</b> · 命中只换 <b>brand</b> 色,不加底色</span></div>
+        <div class="anat-row"><span class="no">7</span><span class="k">底栏</span><span class="v">高 <b>40</b> · 上发丝线 · 左键帽、右总计 <b>10.5 mono</b></span></div>
+      </div>
+      <p style="margin:14px 0 0;font-size:11px;line-height:1.7;color:var(--muted-fg)">
+        选中行 = <b style="font-weight:500;color:var(--fg)">9% 墨蓝底 + 2px 左轨</b>,和标签页选中线、运行面板当前行同一种表达;
+        文字颜色不跟着变,所以扫读时行与行之间不会闪烁。
+      </p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       诊断
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="legend">
+    <div class="subhead" style="margin-top:0"><b>诊断</b><span>每条都指向具体行号</span></div>
+    <table>
+      <thead><tr><th>#</th><th>现状</th><th>改法</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><b>97 行同权重。</b><code>CommandPalette.tsx:62-80</code> 只做 <code>haystack.includes(q)</code>,结果保持 <code>paletteItems</code> 的原顺序;26 个操作里「打开文件」和「枚举分组」在同一个组里平等排列,61 条命令又按 <code>data/commands/*</code> 的文件顺序排。</td>
+          <td><b>给一个分数。</b>标签整词 100 / 前缀 80 / 任意位置 60 / 拼音首字母 55 / 描述与关键词 30;同分按组序再按原顺序。分数只在渲染前算一次,<code>useMemo</code> 依赖仍是 <code>[items, query]</code>。</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><b>打字之后仍然是五段分组。</b>相关度第一的 <code>filter</code> 被压在「命令」组标题下面,排在「操作」组 26 行之后 —— 最该在第一行的东西在第三屏。</td>
+          <td><b>有查询就取消分组。</b>跨组按分数排成单列,来源压成右列 10px 标签;<b>空查询才回退分组</b>,此时右列换回快捷键。分组只在「浏览」时有用,搜索时只会挡路。</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><b>命中了不告诉你命中在哪。</b>打 <code>fi</code> 得到 <code>filter</code>、<code>fill</code>、<code>batch-filter</code>,三行看起来一样长,谁是前缀命中、谁是中间命中,只能自己逐字比。</td>
+          <td><b>把命中的字上色。</b>标签里的命中片段用 <code>brand</code>,描述里的命中片段从 <code>muted-fg</code> 转 <code>fg</code>。这是面板里唯一的有色元素。</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><b>26 个操作平铺一个组。</b><code>App.tsx:1460-1714</code> 每个操作都写 <code>group: t.paletteActions</code>,组名后面的 26 条没有任何次级结构,也不跟菜单栏顺序一致。</td>
+          <td><b>按菜单栏顺序重排。</b>文件 → 编辑 → 视图 → 工具 → 帮助,高频项(打开 / 保存 / 执行)置顶;组名右侧显示 <code>26</code>。不改分组归属,只改 <code>actions</code> 数组顺序。</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><b>组名 11px 大写宽字距。</b><code>:193</code> 的 <code>uppercase tracking-wider font-semibold text-muted-foreground/70</code>,再挂一枚组图标(Zap / Command / LibraryBig / NotebookTabs / FileClock 各不相同)。</td>
+          <td><b>11 / 500 正文体,去掉组图标。</b>组名只留中文与计数,组间用 10px 上间距分开;五个组不再各带一枚不同字形。对齐靠 <code>padding-left:16</code>,和行内文字同一条竖线。</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><b>每行一个透明 ↵。</b><code>:238-242</code> 用 <code>text-transparent</code> 占位,行尾固定多一列;只有选中行才亮起,其余行白占 14px。</td>
+          <td><b>删掉它。</b>执行提示只在底栏出现一次(<code>↵</code> 键帽);行尾留给快捷键键帽或来源标签,宽度按内容走。</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><b>576 × 420 的卡片。</b><code>:161</code> <code>max-w-xl</code>;<code>:181</code> 列表 <code>min(420px, calc(100vh-300px))</code>;命令名 + 中文描述在 576 里先截描述。</td>
+          <td><b>600 宽、列表 480。</b>名字 1fr、描述最多 196、来源 26、<code>Ctrl+O</code> 键帽自适应。600 是「名字不被截、四条信息仍然一眼配对」的上界 —— 再宽,眼睛要从行首扫到行尾才把名字和键帽连起来,反而更慢。</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><b>位置与遮罩靠模糊和阴影说。</b><code>:154</code> <code>bg-foreground/20 backdrop-blur-xs</code> + <code>:161</code> <code>shadow-2xl</code> + <code>pt-[20vh]</code>。</td>
+          <td><b>顶部 48、30% 纯色遮罩、一层软阴影。</b>面板靠尺寸和发丝线与画布分开;遮罩不模糊 —— 模糊在 4K 上既费 GPU 又让背景变成一坨灰。</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td><b>Esc 说两遍。</b>查询行右侧给了 <code>esc</code> 键帽(<code>:176-178</code>),底栏又写一句「ESC 关闭」(<code>:262</code>);底栏另外两条提示用 12px 图标 + 文字,与键帽不是一套语言。</td>
+          <td><b>键帽只留底栏。</b><code>↑ ↓</code> 移动 / <code>↵</code> 执行 / <code>esc</code> 关闭,三条同一套键帽;查询行右端改为实时计数,那里更该说「还剩几条」。</td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td><b>不可用的项直接消失。</b><code>:63</code> <code>items.filter(item =&gt; !item.disabled)</code>;空管道时「保存管道」从列表里蒸发,计数也不解释少了几条。</td>
+          <td><b>保持过滤,但让计数说话。</b>查询行显示 <code>命中 / 可用</code>(可用量已扣掉 disabled),所以「为什么 26 个操作只搜到 24 条」有答案。不新增「置灰原因」字段。</td>
+        </tr>
+        <tr>
+          <td>11</td>
+          <td><b>键盘与鼠标互相抢。</b><code>:164</code> 在整块 dialog 上 <code>onMouseMove</code> 复位 <code>keyboardNav</code>,光标微动一下,hover 立刻接管选中;<code>:127</code> 的 ArrowDown 用 <code>Math.min</code> 夹住,到底不回环。</td>
+          <td><b>只在真正进入行时接管。</b>复位放到 <code>onMouseEnter</code>(行级),ArrowDown / ArrowUp 改成回环;键盘与鼠标各自有明确的所有权,不多不少。</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       规格
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="subhead" style="margin-top:40px"><b>规格</b><span>亮暗共用一套尺寸</span></div>
+  <section class="spec">
+    <div><dt>面板</dt><dd>600 宽 · 圆角 12 · 顶距 48</dd></div>
+    <div><dt>查询行</dt><dd>52 高 · 提示符 14 mono</dd></div>
+    <div><dt>查询字</dt><dd>13 mono · 光标 1×15</dd></div>
+    <div><dt>计数</dt><dd>10.5 mono · muted-3</dd></div>
+    <div><dt>分组小标</dt><dd>11 / 500 · 上 10 下 4</dd></div>
+    <div><dt>行高</dt><dd>34 · 内缩 6 · 圆角 6</dd></div>
+    <div><dt>行内边距</dt><dd>0 10 · 列距 12</dd></div>
+    <div><dt>名字</dt><dd>13 / 500 · 命令 12.5 mono</dd></div>
+    <div><dt>描述</dt><dd>11.5 · 最多 196</dd></div>
+    <div><dt>路径</dt><dd>10.5 mono · muted-3</dd></div>
+    <div><dt>来源标签</dt><dd>10 mono · 仅跨组</dd></div>
+    <div><dt>键帽</dt><dd>18 高 · 10 mono · 圆角 4</dd></div>
+    <div><dt>选中行</dt><dd>9% 墨蓝底 + 2px 左轨</dd></div>
+    <div><dt>列表</dt><dd>最多 480 · 内边距 6 0</dd></div>
+    <div><dt>底栏</dt><dd>40 高 · 上发丝线</dd></div>
+    <div><dt>动效</dt><dd>120ms 淡入 + 上移 4</dd></div>
+  </section>
+
+  <section class="notes">
+    <h3>交互 / 键盘 / 边界</h3>
+    <p><b>一条输入框做三件事。</b>打中文搜名字,打英文搜命令名(<code>filter</code>),打文件名搜最近文件;都进同一个分数表,不切模式、不加前缀语法。<code>&gt;</code> 之类的作用域前缀不做 —— 一个有 97 项的列表不值得记第二套语法。</p>
+    <p><b>键盘。</b><code>Ctrl+K</code> 开,<code>Esc</code> 关;上下在结果里回环移动,<code>Enter</code> 执行当前行并关闭,<code>Tab</code> 不具备「补全」语义(不做行内补全)。输入法组字期间<code>Enter</code>不触发执行(<code>e.isComposing</code>),这一条现在就是缺的。</p>
+    <p><b>鼠标。</b>悬停只改高亮,不改列表;进入行时复位键盘模式,箭头键立刻重新接管。点击行 = 执行并关闭,与 <code>Enter</code> 完全同义。</p>
+    <p><b>空查询是一条完整的可滚清单。</b>操作 → 标签页 → 最近文件 → 模板 → 命令,五段按固定顺序分区,不折叠、不截断、不加「还有 N 条」的尾巴 —— 分区只是让滚动时有地标。真正的入口是输入:空查询负责「让你知道有什么」,打字负责「一秒到那一条」。</p>
+    <p><b>拼音首字母是可选层。</b>用 <code>scripts/gen-pinyin-initials.mjs</code> 从标签字表生成一个静态 <code>Record&lt;char, initial&gt;</code>(约 200 个字),运行时不引任何依赖;查不到的字跳过,只会少匹配,不会多匹配。首字母命中不参与上色。</p>
+    <p><b>不做的。</b>不做最近使用排序(需要新的持久化 key 与清理策略)、不做预览面板、不做 <code>&gt;</code> 作用域前缀、不做「只剩一条自动执行」、不做行内补全;命令面板<b>不</b>复用 <code>CommandList</code> 的拖拽浮动面板。</p>
+    <p><b>实现落点。</b>面板结构在 <code>src/modules/logs/CommandPalette.tsx</code>;排序抽到同目录 <code>lib/scoreItem.ts</code>(纯函数,便于单测);来源标签由 <code>group</code> 反查,不改 <code>PaletteItem</code> 的公共字段,只加一个可选 <code>source?: "action" | "tab" | "file" | "template" | "command"</code>,由 <code>App.tsx</code> 在构造 items 时填。</p>
+    <p><b>测试影响。</b><code>CommandPalette.test.tsx</code> 的 11 条断言里,「渲染分组」「按 query 过滤」「keywords 与快捷键匹配」保持语义;<code>re-enables hover selection after the mouse moves</code> 要改成 <code>mouseEnter</code> 触发(复位点从 dialog 搬到行);另需新增:分数排序、高亮片段、回环移动、<code>isComposing</code> 不执行。断言里用 <code>container.textContent</code> 找名字的方式仍然可用 —— 高亮只是把命中片段包进 <code>&lt;b&gt;</code>,文本不变。</p>
+
+    <h3 style="margin-top:6px">i18n 增删</h3>
+    <div class="keysbox">
+      <span>改 palettePlaceholder → 输入命令、文件名或标签页</span>
+      <span>改 paletteNavigateHint → 移动</span>
+      <span>删 paletteCloseHint(改用键帽 esc + 关闭)</span>
+      <span>+ paletteCount(命中 / 可用)</span>
+      <span>+ paletteEmptyTitle(没有匹配「{query}」的入口)</span>
+      <span>+ paletteEmptyHint(试试 filter、去重,或标签页名)</span>
+      <span>+ paletteTotals(操作 {a} · 命令 {c})</span>
+      <span>+ paletteSourceAction / Tab / File / Template(命令沿用 paletteCommands)</span>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

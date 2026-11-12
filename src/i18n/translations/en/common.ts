@@ -73,12 +73,17 @@ export const enCommon = {
   resultTruncated:
     "Result truncated to first rows; use an output/to step to export the full data.",
   commandPalette: "Command Palette",
-  palettePlaceholder: "Type a command or search",
+  palettePlaceholder: "Type a command, file name or tab",
   paletteActions: "Actions",
   paletteCommands: "Commands",
   paletteTabs: "Tabs",
-  paletteNoResults: "No matching commands",
-  paletteNavigateHint: "Navigate",
-  paletteSelectHint: "Select",
-  paletteCloseHint: "ESC Close",
+  paletteCount: "{shown} / {total}",
+  paletteTotal: "{count} items",
+  paletteEmptyTitle: "No entry matches \"{query}\"",
+  paletteEmptyHint:
+    "Try filter, dedup, or a tab name. Pinyin initials work too — dk opens 打开文件.",
+  paletteSourceAction: "Action",
+  paletteNavigateHint: "Move",
+  paletteSelectHint: "Run",
+  paletteCloseHint: "Close",
 } satisfies Partial<Translations>;

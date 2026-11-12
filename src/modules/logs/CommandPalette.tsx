@@ -5,35 +5,16 @@ import React, {
   useMemo,
   useCallback,
 } from "react";
-import {
-  Search,
-  CornerDownLeft,
-  ArrowUp,
-  ArrowDown,
-  type LucideIcon,
-} from "lucide-react";
 
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { useLanguage } from "@/i18n";
+import { cn } from "@/lib/utils";
 import { modKeySymbol } from "@/utils/platform";
 
-export interface PaletteItem {
-  id: string;
-  label: string;
-  description?: string;
-  keywords?: string;
-  /** Extra searchable tokens (e.g. English aliases for localized labels). */
-  search?: string;
-  icon?: LucideIcon;
-  /** Icon shown once on the group header; when set, per-item icons are hidden. */
-  groupIcon?: LucideIcon;
-  /** Suppress icons entirely for this item's group (no header, no per-item). */
-  noIcon?: boolean;
-  group: string;
-  shortcut?: string;
-  disabled?: boolean;
-  onSelect: () => void;
-}
+import { searchItems, type ScoredItem } from "./lib/scoreItem";
+import type { PaletteItem, PaletteSource } from "./lib/paletteTypes";
+
+export type { PaletteItem, PaletteSource } from "./lib/paletteTypes";
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -41,10 +22,59 @@ interface CommandPaletteProps {
   items: PaletteItem[];
 }
 
-/** Render a shortcut with the platform modifier (⌘ on macOS, Ctrl elsewhere). */
-function displayShortcut(shortcut?: string): string {
-  if (!shortcut) return "";
-  return shortcut.replace(/^Ctrl\+/, `${modKeySymbol()}+`);
+/**
+ * The chord as one string with the platform modifier: `Ctrl+O` → `⌘+O` on macOS.
+ * Same shape as the menu bar (`MainMenu.tsx` prints `Ctrl+O` inside one `kbd`),
+ * so the palette and the menus teach the same notation.
+ */
+function displayShortcut(shortcut: string): string {
+  return shortcut.replace(/^Ctrl/, modKeySymbol());
+}
+
+/** One keycap. Matches the menu bar's shortcut chip: 18px tall, hairline, no fill. */
+function Key({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded border border-border px-1 font-mono text-[10px] leading-none text-muted-foreground/70">
+      {children}
+    </kbd>
+  );
+}
+
+/**
+ * Highlight the matched runs of a string. Only colour and weight change: no
+ * background, no underline, no colour on the whole row — the query is the one
+ * coloured thing in the palette (design 053 §4).
+ */
+function Highlighted({
+  text,
+  ranges,
+  className,
+}: {
+  text: string;
+  ranges: { start: number; end: number }[];
+  className?: string;
+}) {
+  if (ranges.length === 0) return <>{text}</>;
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+  ranges.forEach((range, i) => {
+    if (range.start > cursor) parts.push(text.slice(cursor, range.start));
+    parts.push(
+      <b key={i} className={className}>
+        {text.slice(range.start, range.end)}
+      </b>,
+    );
+    cursor = range.end;
+  });
+  if (cursor < text.length) parts.push(text.slice(cursor));
+  return <>{parts}</>;
+}
+
+interface PaletteGroup {
+  name: string;
+  /** Flat index of the first row, so keyboard navigation stays global. */
+  offset: number;
+  items: ScoredItem[];
 }
 
 export const CommandPalette = React.memo(function CommandPalette({
@@ -59,38 +89,34 @@ export const CommandPalette = React.memo(function CommandPalette({
   const inputRef = useRef<HTMLInputElement>(null);
   const activeItemRef = useRef<HTMLButtonElement>(null);
 
-  const filtered = useMemo(() => {
-    const available = items.filter((item) => !item.disabled);
-    const q = query.trim().toLowerCase();
-    if (!q) return available;
-    return available.filter((item) => {
-      const haystack = [
-        item.label,
-        item.description,
-        item.keywords,
-        item.search,
-        item.group,
-        item.shortcut,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [items, query]);
+  const trimmed = query.trim();
+  const searching = trimmed.length > 0;
 
-  const groups = useMemo(() => {
-    const result: Array<{ name: string; items: PaletteItem[] }> = [];
-    filtered.forEach((item) => {
-      const last = result[result.length - 1];
-      if (last && last.name === item.group) {
-        last.items.push(item);
+  const results = useMemo(() => searchItems(items, query), [items, query]);
+  // Available = what the count divides by; disabled entries are never offered.
+  const availableCount = useMemo(
+    () => items.filter((item) => !item.disabled).length,
+    [items],
+  );
+
+  /** Empty query keeps the browsing groups; a query collapses them into one list. */
+  const groups = useMemo<PaletteGroup[]>(() => {
+    if (searching) return [];
+    const out: PaletteGroup[] = [];
+    results.forEach((row) => {
+      const last = out[out.length - 1];
+      if (last && last.name === row.item.group) {
+        last.items.push(row);
       } else {
-        result.push({ name: item.group, items: [item] });
+        out.push({
+          name: row.item.group,
+          offset: last ? last.offset + last.items.length : 0,
+          items: [row],
+        });
       }
     });
-    return result;
-  }, [filtered]);
+    return out;
+  }, [results, searching]);
 
   useEffect(() => {
     if (isOpen) {
@@ -107,11 +133,11 @@ export const CommandPalette = React.memo(function CommandPalette({
 
   useEffect(() => {
     activeItemRef.current?.scrollIntoView({ block: "nearest" });
-  }, [activeIndex, filtered.length]);
+  }, [activeIndex, results.length]);
 
   const select = useCallback(
-    (item: PaletteItem) => {
-      item.onSelect();
+    (row: ScoredItem) => {
+      row.item.onSelect();
       onClose();
     },
     [onClose],
@@ -119,25 +145,29 @@ export const CommandPalette = React.memo(function CommandPalette({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      // An IME composition ends with Enter; that Enter belongs to the input
+      // method, not to "run the selected row".
+      if (e.isComposing || e.keyCode === 229) return;
+      const last = results.length - 1;
       if (e.key === "Escape") {
         e.preventDefault();
         onClose();
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
         setKeyboardNav(true);
-        setActiveIndex((prev) => Math.min(prev + 1, filtered.length - 1));
+        setActiveIndex((prev) => (prev >= last ? 0 : prev + 1));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setKeyboardNav(true);
-        setActiveIndex((prev) => Math.max(prev - 1, 0));
+        setActiveIndex((prev) => (prev <= 0 ? last : prev - 1));
       } else if (e.key === "Enter") {
         e.preventDefault();
         setKeyboardNav(true);
-        const item = filtered[activeIndex];
-        if (item) select(item);
+        const row = results[activeIndex];
+        if (row) select(row);
       }
     },
-    [filtered, activeIndex, select, onClose],
+    [results, activeIndex, select, onClose],
   );
 
   useEffect(() => {
@@ -149,117 +179,197 @@ export const CommandPalette = React.memo(function CommandPalette({
 
   if (!isOpen) return null;
 
+  const countLabel = searching
+    ? t.paletteCount
+        .replace("{shown}", String(results.length))
+        .replace("{total}", String(availableCount))
+    : t.paletteTotal.replace("{count}", String(availableCount));
+
+  const sourceLabel = (source?: PaletteSource): string => {
+    switch (source) {
+      case "action":
+        return t.paletteSourceAction;
+      case "command":
+        return t.paletteCommands;
+      case "tab":
+        return t.paletteTabs;
+      case "file":
+        return t.recentFiles;
+      case "template":
+        return t.paletteTemplates;
+      default:
+        return "";
+    }
+  };
+
+  const renderRow = (row: ScoredItem, index: number) => {
+    const { item, match } = row;
+    const isActive = index === activeIndex;
+    const isPath = item.source === "file" || item.source === "tab";
+
+    return (
+      <button
+        key={item.id}
+        ref={isActive ? activeItemRef : undefined}
+        type="button"
+        // Keep the caret in the input: rows are click targets, not focus stops.
+        onMouseDown={(e) => e.preventDefault()}
+        onMouseEnter={() => {
+          // A still pointer must not steal the selection — `scrollIntoView`
+          // drags rows under it while the user is arrowing.
+          if (!keyboardNav) setActiveIndex(index);
+        }}
+        onMouseMove={() => {
+          // …but the moment the pointer really moves, it takes over.
+          if (keyboardNav) {
+            setKeyboardNav(false);
+            setActiveIndex(index);
+          }
+        }}
+        onClick={() => select(row)}
+        className={cn(
+          "relative grid h-[34px] w-full items-center gap-x-3 rounded-md px-2.5 text-left",
+          searching
+            ? "grid-cols-[minmax(0,1fr)_auto_auto_auto]"
+            : "grid-cols-[minmax(0,1fr)_auto_auto]",
+          isActive && "bg-[var(--brand-soft)]",
+        )}
+      >
+        <span
+          aria-hidden
+          className={cn(
+            "absolute bottom-2 left-0 top-2 w-0.5 rounded-full",
+            isActive ? "bg-primary" : "bg-transparent",
+          )}
+        />
+        <span
+          className={cn(
+            "min-w-0 truncate text-[13px] font-medium text-foreground",
+            item.source === "command" && "font-mono text-[12.5px]",
+          )}
+        >
+          <Highlighted
+            text={item.label}
+            ranges={match.labelRanges}
+            className="font-semibold text-primary"
+          />
+        </span>
+        <span
+          className={cn(
+            "max-w-[196px] truncate text-[11.5px] text-muted-foreground",
+            isPath && "font-mono text-[10.5px] text-muted-foreground/70",
+          )}
+        >
+          {item.description ? (
+            <Highlighted
+              text={item.description}
+              ranges={match.descRanges}
+              className="font-medium text-foreground"
+            />
+          ) : null}
+        </span>
+        {searching && (
+          <span className="min-w-[26px] text-right font-mono text-[10px] text-muted-foreground/80">
+            {sourceLabel(item.source)}
+          </span>
+        )}
+        <span className="flex shrink-0 gap-[3px]">
+          {item.shortcut ? <Key>{displayShortcut(item.shortcut)}</Key> : null}
+        </span>
+      </button>
+    );
+  };
+
   return (
     <div
-      className="fixed inset-0 bg-foreground/20 backdrop-blur-xs flex items-start justify-center z-50 pt-[20vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 pt-12 dark:bg-black/55"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
       onContextMenu={(e) => e.preventDefault()}
     >
       <div
-        className="w-full max-w-xl bg-card border border-border rounded-xl shadow-2xl overflow-hidden"
+        className="w-[560px] max-w-[calc(100vw-32px)] overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_48px_-20px_rgba(0,0,0,0.24),0_2px_6px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]"
         role="dialog"
         aria-modal="true"
-        onMouseMove={() => setKeyboardNav(false)}
       >
-        <div className="flex items-center gap-2 px-4 border-b border-border">
-          <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+        <div className="grid h-[52px] grid-cols-[12px_minmax(0,1fr)_auto] items-center gap-x-2.5 pl-4 pr-3.5 shadow-[inset_0_-1px_0_var(--border-soft)]">
+          <span
+            aria-hidden
+            className="relative -top-px select-none text-center font-mono text-sm leading-none text-primary"
+          >
+            ›
+          </span>
           <input
             ref={inputRef}
             type="text"
             placeholder={t.palettePlaceholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 h-12 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+            className="h-full min-w-0 bg-transparent font-mono text-[13px] text-foreground outline-none placeholder:font-sans placeholder:text-muted-foreground/70"
           />
-          <kbd className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-muted text-muted-foreground/70 flex-shrink-0">
-            esc
-          </kbd>
+          <span className="font-mono text-[10.5px] tabular-nums text-muted-foreground/60">
+            {countLabel}
+          </span>
         </div>
 
-        <ScrollArea className="h-[min(420px,calc(100vh-300px))]">
-          <div className="py-2">
-            {groups.length === 0 && (
-              <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-                {t.paletteNoResults}
+        <ScrollArea
+          className="max-h-[min(480px,calc(100vh_-_220px))]"
+          viewportClassName="max-h-[min(480px,calc(100vh_-_220px))] overflow-y-auto"
+          hideHorizontalScrollbar
+        >
+          <div className="px-1.5 py-1.5">
+            {results.length === 0 ? (
+              <div className="px-2.5 pb-7 pt-6">
+                <p className="m-0 text-[13px] text-foreground">
+                  {t.paletteEmptyTitle.replace("{query}", trimmed)}
+                </p>
+                <p className="m-0 mt-1.5 text-[11.5px] leading-relaxed text-muted-foreground">
+                  {t.paletteEmptyHint}
+                </p>
               </div>
-            )}
-            {groups.map((group) => {
-              const noIcon = group.items[0]?.noIcon;
-              const GroupIcon = noIcon ? undefined : group.items[0]?.groupIcon;
-              return (
+            ) : searching ? (
+              results.map((row, index) => renderRow(row, index))
+            ) : (
+              groups.map((group) => (
                 <div key={group.name}>
-                  <div className="px-4 py-1.5 text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider flex items-center gap-1.5">
-                    {GroupIcon && (
-                      <GroupIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                    )}
-                    {group.name}
+                  <div className="flex items-baseline gap-1.5 px-2.5 pb-1 pt-2.5">
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      {group.name}
+                    </span>
+                    <span className="font-mono text-[10px] text-muted-foreground/70">
+                      {group.items.length}
+                    </span>
                   </div>
-                  {group.items.map((item) => {
-                    const index = filtered.indexOf(item);
-                    const isActive = index === activeIndex;
-                    // Per-item icons are hidden for groups with a header icon or
-                    // with no icons at all (reduces visual noise).
-                    const Icon = noIcon || GroupIcon ? undefined : item.icon;
-                    return (
-                      <button
-                        key={item.id}
-                        ref={isActive ? activeItemRef : undefined}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onMouseEnter={() => {
-                          if (!keyboardNav) setActiveIndex(index);
-                        }}
-                        onClick={() => select(item)}
-                        className={`w-full grid items-center gap-3 pr-4 py-2.5 text-left transition-colors ${
-                          Icon
-                            ? "grid-cols-[auto_minmax(0,1fr)_auto_auto] pl-4"
-                            : "grid-cols-[minmax(0,1fr)_auto_auto] pl-9"
-                        } ${isActive ? "bg-accent text-accent-foreground" : ""}`}
-                      >
-                        {Icon ? (
-                          <Icon className="h-4 w-4 text-muted-foreground/70 flex-shrink-0" />
-                        ) : null}
-                        <span className="min-w-0 overflow-hidden">
-                          <span className="block text-sm font-medium truncate">
-                            {item.label}
-                          </span>
-                          {item.description && (
-                            <span className="block text-xs text-muted-foreground/80 truncate">
-                              {item.description}
-                            </span>
-                          )}
-                        </span>
-                        {item.shortcut && (
-                          <kbd className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-muted text-muted-foreground/70 flex-shrink-0">
-                            {displayShortcut(item.shortcut)}
-                          </kbd>
-                        )}
-                        <CornerDownLeft
-                          className={`h-3.5 w-3.5 flex-shrink-0 ${
-                            isActive ? "text-primary" : "text-transparent"
-                          }`}
-                        />
-                      </button>
-                    );
-                  })}
+                  {group.items.map((row, i) =>
+                    renderRow(row, group.offset + i),
+                  )}
                 </div>
-              );
-            })}
+              ))
+            )}
           </div>
         </ScrollArea>
 
-        <div className="flex items-center gap-4 px-4 py-2 border-t border-border bg-muted/30 text-[11px] text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <ArrowUp className="h-3 w-3" />
-            <ArrowDown className="h-3 w-3" />
-            {t.paletteNavigateHint}
+        <div className="flex h-10 items-center gap-3.5 pl-4 pr-3.5 shadow-[inset_0_1px_0_var(--border-soft)]">
+          {results.length > 0 && (
+            <>
+              <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <span className="flex gap-[2px]">
+                  <Key>↑</Key>
+                  <Key>↓</Key>
+                </span>
+                {t.paletteNavigateHint}
+              </span>
+              <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <Key>↵</Key>
+                {t.paletteSelectHint}
+              </span>
+            </>
+          )}
+          <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Key>esc</Key>
+            {t.paletteCloseHint}
           </span>
-          <span className="flex items-center gap-1">
-            <CornerDownLeft className="h-3 w-3" />
-            {t.paletteSelectHint}
-          </span>
-          <span className="flex items-center gap-1">{t.paletteCloseHint}</span>
         </div>
       </div>
     </div>

@@ -619,7 +619,11 @@ export interface Translations {
   paletteActions: string;
   paletteCommands: string;
   paletteTabs: string;
-  paletteNoResults: string;
+  paletteCount: string;
+  paletteTotal: string;
+  paletteEmptyTitle: string;
+  paletteEmptyHint: string;
+  paletteSourceAction: string;
   paletteNavigateHint: string;
   paletteSelectHint: string;
   paletteCloseHint: string;
