@@ -591,7 +591,6 @@ export interface Translations {
   pluginSourceRegistry: string;
   pluginSourceManual: string;
   pluginSourcePath: string;
-  pluginRequiredBadge: string;
   pluginUpdateAvailable: string;
   pluginCatalogFailed: string;
   pluginInstallFailed: string;

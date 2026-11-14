@@ -3,7 +3,6 @@ import {
   ExternalLink,
   FolderOpen,
   Trash2,
-  X,
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-shell";
 
@@ -72,9 +71,10 @@ export const PluginEntryRow = memo(function PluginEntryRow({
   const size = entry.size && entry.size > 0 ? formatBytes(entry.size) : "";
 
   // The status is a single line of facts, in the order a reader asks them:
-  // 必需 · 已安装 / 未安装 · 有可用更新 · 版本 · 来源 · 体积
+  // 已安装 / 未安装 · 有可用更新 · 版本 · 来源 · 体积
+  // `entry.required` is intentionally not surfaced: the catalogue is app-owned,
+  // so "必需" on every row said nothing a reader could act on.
   const status: string[] = [];
-  if (entry.required) status.push(t.pluginRequiredBadge);
   status.push(entry.installed ? t.pluginInstalled : t.pluginMissing);
   if (progress) {
     status.push(
@@ -168,7 +168,6 @@ export const PluginEntryRow = memo(function PluginEntryRow({
           disabled={cancelling}
           onClick={() => onCancel(entry.name)}
         >
-          <X className="h-3 w-3" />
           {t.pluginCancel}
         </Button>
       )}

@@ -30,7 +30,6 @@ export const enPlugins = {
   pluginSourceRegistry: "Installed by the app",
   pluginSourceManual: "Added by hand",
   pluginSourcePath: "On system PATH",
-  pluginRequiredBadge: "Required",
   pluginUpdateAvailable: "Update available",
 
   // Errors

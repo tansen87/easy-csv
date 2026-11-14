@@ -626,7 +626,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `setting/SettingsGroupCard.tsx` | 分组卡片容器(设计 030 §11.15 方案 B / 040): `rounded-xl border bg-card`,**无阴影、无内边距**(深度靠对话框的灰画布分出面阶,内边距由行自己出),最后一行去底边线 |
 | `setting/SettingsSectionHeading.tsx` | 分组小标(设计 030 §11.15 / 040 §3): 卡片外的 `12px muted` 一行 + **等宽序号 + 尾部细线**(把六个组名读成一张目录),**不再吸顶**;序号同样走 `data-index`;通用分组与插件组共用同一份,天然不会漂 |
 | `setting/PluginSection.tsx` | **插件组**(设计 030 §11.11 / 040): 唯一持有插件目录的地方(`usePluginCatalog`),标题行 = `05 插件 ─── 2/3 [目录][刷新]`(刷新改图标按钮,`aria-label` 沿用 `pluginRefreshHint`),下面一插件一行 + 下载加速前缀行 |
-| `setting/PluginEntryRow.tsx` | **一个插件 = 一行**(设计 030 §11.11): 标题=插件名,描述=一行状态(必需 · 已安装 / 未安装 · 有新版 · 版本 · 体积),控件=项目主页 / 打开目录 / 卸载 / 下载 / 更新(下载中改显取消 + 百分比);状态全部由后端字段决定 |
+| `setting/PluginEntryRow.tsx` | **一个插件 = 一行**(设计 030 §11.11): 标题=插件名,描述=一行状态(已安装 / 未安装 · 有新版 · 版本 · 体积;**不再显示「必需」徽标**,`entry.required` 仍有值但不上屏),控件=项目主页 / 打开目录 / 卸载 / 下载 / 更新(下载中改显取消 + 百分比);状态全部由后端字段决定 |
 | `setting/SettingsSearch.tsx` | **设置搜索框**(设计 030 §4.3 / 040): 清空用输入框内的 ✕(**刻意不用「清除」二字**);空查询时右侧显示 `/` **键帽**(快捷键早就绑了,界面以前没说);界面不显示任何计数,结果条数只走 `sr-only` 的 `aria-live` 播报 |
 | `setting/Toast.tsx` | Toast 通知系统 — 019 §2.1 计划迁往 `components/ui/` |
 | `help/HelpContent.ts` · `HelpContentCn.ts` | 英文/中文帮助内容(Markdown) |

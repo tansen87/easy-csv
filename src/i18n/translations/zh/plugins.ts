@@ -29,7 +29,6 @@ export const zhPlugins = {
   pluginSourceRegistry: "由应用安装",
   pluginSourceManual: "手动放入",
   pluginSourcePath: "系统 PATH",
-  pluginRequiredBadge: "必需",
   pluginUpdateAvailable: "有新版本",
 
   // Errors
