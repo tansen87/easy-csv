@@ -5,6 +5,7 @@ import {
   useLayoutEffect,
   useCallback,
 } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,13 @@ interface SelectProps {
    * otherwise be clipped by the container instead of the viewport.
    */
   flip?: boolean;
+  /**
+   * Render the open list in a body portal with fixed positioning. Needed
+   * inside the right-click quick panels: their scroll body clips an in-flow
+   * dropdown, so a list near the bottom would cut off and scroll the body
+   * instead. The list follows its input on resize and scroll (design 055).
+   */
+  portal?: boolean;
 }
 
 export function Select({
@@ -56,13 +64,21 @@ export function Select({
   listMaxHeight = "max-h-40",
   ariaLabel,
   flip = false,
+  portal = false,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [openUp, setOpenUp] = useState(false);
+  const [anchorRect, setAnchorRect] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    bottom: number;
+  } | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const portalListRef = useRef<HTMLDivElement>(null);
 
   const filteredOptions = searchValue
     ? options.filter((opt) =>
@@ -92,9 +108,11 @@ export function Select({
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
+        !dropdownRef.current.contains(target) &&
+        !portalListRef.current?.contains(target)
       ) {
         setIsOpen(false);
         setSearchValue("");
@@ -106,6 +124,41 @@ export function Select({
         document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [isOpen]);
+
+  // Portal mode: measure the input before paint and keep the fixed-position
+  // list glued to it while the panel scrolls or the window resizes.
+  useLayoutEffect(() => {
+    if (!isOpen || !portal) {
+      setAnchorRect(null);
+      return;
+    }
+    const update = () => {
+      const el = dropdownRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setAnchorRect((prev) =>
+        prev &&
+        prev.left === rect.left &&
+        prev.top === rect.top &&
+        prev.width === rect.width &&
+        prev.bottom === rect.bottom
+          ? prev
+          : {
+              left: rect.left,
+              top: rect.top,
+              width: rect.width,
+              bottom: rect.bottom,
+            },
+      );
+    };
+    update();
+    window.addEventListener("resize", update);
+    document.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      document.removeEventListener("scroll", update, true);
+    };
+  }, [isOpen, portal]);
 
   const handleSelect = useCallback(
     (optValue: string) => {
@@ -174,10 +227,86 @@ export function Select({
     size === "md"
       ? "w-full h-8 px-3 pr-8 text-sm border rounded-md bg-background"
       : "w-full h-8 px-3 pr-8 text-xs border rounded-md bg-background",
+    "outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/40",
     height,
   );
 
   const iconSize = size === "md" ? "h-3 w-3" : "h-3 w-3";
+
+  // In portal mode the list floats over the viewport, so pick the side from
+  // the live rect and cap it to the space that is actually free.
+  const spaceBelow = anchorRect ? window.innerHeight - anchorRect.bottom : 0;
+  const portalOpenUp =
+    portal && anchorRect
+      ? spaceBelow < 220 && anchorRect.top > spaceBelow
+      : openUp;
+  const portalMaxHeight =
+    portal && anchorRect
+      ? Math.max(
+          96,
+          Math.min(160, (portalOpenUp ? anchorRect.top : spaceBelow) - 12),
+        )
+      : undefined;
+
+  const dropdown = (
+    <div
+      ref={portalListRef}
+      role="listbox"
+      style={
+        portal && anchorRect
+          ? {
+              position: "fixed",
+              left: anchorRect.left,
+              width: anchorRect.width,
+              top: portalOpenUp ? undefined : anchorRect.bottom + 2,
+              bottom: portalOpenUp
+                ? window.innerHeight - anchorRect.top + 2
+                : undefined,
+            }
+          : undefined
+      }
+      onMouseDown={portal ? (e) => e.stopPropagation() : undefined}
+      className={cn(
+        "border rounded-md bg-background shadow-lg",
+        portal ? "z-[60]" : "absolute z-50 w-full",
+        !portal && (openUp ? "bottom-full mb-0.5" : "mt-0.5"),
+      )}
+    >
+      <ScrollAreaPrimitive.Root className="relative overflow-hidden">
+        <ScrollAreaPrimitive.Viewport
+          className={cn("w-full overflow-y-auto px-2 rounded-[inherit]", listMaxHeight)}
+          style={portalMaxHeight ? { maxHeight: portalMaxHeight } : undefined}
+        >
+          <div className="p-0.5" ref={listRef}>
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt, index) => (
+                <button
+                  key={opt.value}
+                  id={`ss-option-${index}`}
+                  role="option"
+                  aria-selected={activeIndex === index}
+                  onClick={() => handleSelect(opt.value)}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  className={`w-full px-2 py-1.5 text-xs text-left transition-colors truncate rounded-md ${
+                    activeIndex === index
+                      ? "bg-accent text-accent-foreground"
+                      : "hover:bg-accent"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))
+            ) : (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                No options found
+              </div>
+            )}
+          </div>
+        </ScrollAreaPrimitive.Viewport>
+        <ScrollBar />
+      </ScrollAreaPrimitive.Root>
+    </div>
+  );
 
   return (
     <div
@@ -219,46 +348,12 @@ export function Select({
           className={`${iconSize} text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
         />
       </button>
-      {isOpen && (
-        <div
-          role="listbox"
-          className={cn(
-            "absolute z-50 w-full border rounded-md bg-background shadow-lg",
-            openUp ? "bottom-full mb-0.5" : "mt-0.5",
-          )}
-        >
-          <ScrollAreaPrimitive.Root className="relative overflow-hidden">
-            <ScrollAreaPrimitive.Viewport className={cn("w-full overflow-y-auto px-2 rounded-[inherit]", listMaxHeight)}>
-              <div className="p-0.5" ref={listRef}>
-                {filteredOptions.length > 0 ? (
-                  filteredOptions.map((opt, index) => (
-                    <button
-                      key={opt.value}
-                      id={`ss-option-${index}`}
-                      role="option"
-                      aria-selected={activeIndex === index}
-                      onClick={() => handleSelect(opt.value)}
-                      onMouseEnter={() => setActiveIndex(index)}
-                      className={`w-full px-2 py-1.5 text-xs text-left transition-colors truncate rounded-md ${
-                        activeIndex === index
-                          ? "bg-accent text-accent-foreground"
-                          : "hover:bg-accent"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))
-                ) : (
-                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                    No options found
-                  </div>
-                )}
-              </div>
-            </ScrollAreaPrimitive.Viewport>
-            <ScrollBar />
-          </ScrollAreaPrimitive.Root>
-        </div>
-      )}
+      {isOpen &&
+        (portal
+          ? anchorRect
+            ? createPortal(dropdown, document.body)
+            : null
+          : dropdown)}
     </div>
   );
 }

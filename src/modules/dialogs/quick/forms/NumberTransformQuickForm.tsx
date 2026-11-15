@@ -1,14 +1,16 @@
 import { useState } from "react";
 import type { NumberTransformKind } from "@/types/dialog";
+import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n";
 import { QuickActionShell } from "@/modules/dialogs/quick/QuickActionShell";
 import { buildQuickCommand } from "@/modules/dialogs/quick/lib/buildQuickCommand";
 import { useQuickAliasLabels } from "@/modules/dialogs/quick/lib/labels";
+import { quickScope } from "@/modules/dialogs/quick/lib/scope";
 import type {
   NumberTransformDraft,
   QuickFormProps,
 } from "@/modules/dialogs/quick/types";
-import { ColumnPicker, Field } from "./_shared";
+import { ColumnPicker, SectionHeader } from "./_shared";
 
 export function NumberTransformQuickForm({
   request,
@@ -49,49 +51,53 @@ export function NumberTransformQuickForm({
     transform,
   };
   const result = buildQuickCommand(draft, labels);
+  const transformLabel =
+    options.find((o) => o.value === transform)?.label || transform;
+  const detail = `${t.quickCountColumns.replace("{count}", String(columns.length))} · ${transformLabel}`;
 
   return (
     <QuickActionShell
       title={t.numTransformAction}
+      scope={quickScope(request, clicked)}
       anchor={request}
-      width={280}
+      width={288}
+      summary={result ? { command: result.type, detail } : undefined}
+      blocked={!result ? t.filterColumn : undefined}
       canApply={!!result}
       onApply={() => result && onApply(result)}
       onAdvanced={() => result && onAdvanced(result)}
       onClose={onClose}
     >
       <ColumnPicker
+        label={t.filterColumn}
+        meta={`${t.quickSelected} ${columns.length}`}
         columns={request.headers}
         selected={columns}
         onToggle={toggleColumn}
         searchPlaceholder={t.numTransformSearchColumns}
         noMatches={t.numTransformNoMatches}
-        countLabel={t.numTransformColumnsSelected.replace(
-          "{count}",
-          String(columns.length),
-        )}
       />
 
-      <Field label={t.numTransformType}>
-        <div className="border rounded-md bg-background p-1.5">
-          <div className="flex flex-wrap -mx-0.5">
-            {options.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setTransform(option.value)}
-                className={`w-1/3 text-center px-1 py-1.5 text-xs rounded transition-colors ${
-                  transform === option.value
-                    ? "bg-primary/10 text-primary"
-                    : "hover:bg-accent"
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+      <div>
+        <SectionHeader label={t.numTransformType} />
+        <div className="grid grid-cols-3 gap-1 rounded-md border bg-background p-1">
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setTransform(option.value)}
+              className={cn(
+                "h-6 rounded-[4px] text-[11.5px] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/40",
+                transform === option.value
+                  ? "bg-primary/10 font-medium text-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
-      </Field>
+      </div>
     </QuickActionShell>
   );
 }

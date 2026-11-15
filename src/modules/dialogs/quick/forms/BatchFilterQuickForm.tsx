@@ -32,12 +32,18 @@ export function BatchFilterQuickForm({
       title={t.batchFilter}
       anchor={request}
       width={360}
+      summary={
+        result
+          ? { command: result.type, detail: String(params.column) }
+          : undefined
+      }
+      blocked={!result ? t.filterColumn : undefined}
       canApply={!!result}
       onApply={() => result && onApply(result)}
       onAdvanced={() => result && onAdvanced(result)}
       onClose={onClose}
     >
-      <BatchFilterFields params={params} onChange={setParams} />
+      <BatchFilterFields params={params} onChange={setParams} dense />
     </QuickActionShell>
   );
 }

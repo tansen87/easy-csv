@@ -1095,6 +1095,14 @@ export interface Translations {
   replaceAlias: string;
   quickAdvanced: string;
   quickAdvancedHint: string;
+  quickWillAdd: string;
+  quickMissing: string;
+  quickAddStep: string;
+  quickSelected: string;
+  quickCountColumns: string;
+  quickCountPairs: string;
+  quickCountValues: string;
+  quickCountExpressions: string;
 
   // SortDialog
   sortAction: string;

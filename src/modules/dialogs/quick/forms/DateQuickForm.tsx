@@ -10,8 +10,9 @@ import {
   DATE_OUTPUT_COLUMN_DEFAULT,
   DATE_OUTPUT_DEFAULT,
 } from "@/modules/dialogs/quick/lib/dateFormats";
+import { quickScope } from "@/modules/dialogs/quick/lib/scope";
 import type { DateDraft, QuickFormProps } from "@/modules/dialogs/quick/types";
-import { Field } from "./_shared";
+import { Field, QuickInput } from "./_shared";
 
 export function DateQuickForm({
   request,
@@ -42,8 +43,15 @@ export function DateQuickForm({
   return (
     <QuickActionShell
       title={t.dateAction}
+      scope={quickScope(request, column)}
       anchor={request}
-      width={280}
+      width={288}
+      summary={
+        result
+          ? { command: result.type, detail: `${column} → ${outputFormat}` }
+          : undefined
+      }
+      blocked={!result ? t.filterColumn : undefined}
       canApply={!!result}
       onApply={() => result && onApply(result)}
       onAdvanced={() => result && onAdvanced(result)}
@@ -56,6 +64,8 @@ export function DateQuickForm({
           options={request.headers.map((h) => ({ label: h, value: h }))}
           placeholder={t.dateTransformSearchColumn}
           ariaLabel={t.filterColumn}
+          portal
+          height="h-7"
         />
       </Field>
 
@@ -66,6 +76,8 @@ export function DateQuickForm({
           options={DATE_FORMATS}
           placeholder={t.dateTransformSearchInputFormat}
           ariaLabel={t.inputFormat}
+          portal
+          height="h-7"
         />
       </Field>
 
@@ -76,16 +88,16 @@ export function DateQuickForm({
           options={DATE_FORMATS}
           placeholder={t.dateTransformSearchOutputFormat}
           ariaLabel={t.outputFormat}
+          portal
+          height="h-7"
         />
       </Field>
 
       <Field label={t.dateTransformAlias}>
-        <input
-          type="text"
+        <QuickInput
           value={outputColumn}
           onChange={(e) => setOutputColumn(e.target.value)}
           placeholder={t.dateTransformAliasPlaceholder}
-          className="w-full h-8 px-2 text-xs border rounded-md bg-background"
         />
       </Field>
     </QuickActionShell>

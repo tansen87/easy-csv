@@ -611,6 +611,37 @@
   animation: dialog-enter 0.16s cubic-bezier(0.2, 0, 0, 1);
 }
 
+/**
+ * Right-click quick-action panel (design 055). It floats over the canvas
+ * without a backdrop, so depth comes from a surface step and a hairline; the
+ * shadow stays soft and low. Dark themes drop it for an inset hairline.
+ */
+.quick-slip {
+  box-shadow:
+    0 14px 32px -18px oklch(0.2 0.02 80 / 24%),
+    0 1px 3px oklch(0.2 0.02 80 / 5%);
+}
+
+.dark .quick-slip {
+  box-shadow: inset 0 0 0 1px oklch(1 0 0 / 7%);
+}
+
+/** One entrance, same as the shell: fade plus a 4px rise, 120ms. */
+@keyframes quick-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.quick-enter {
+  animation: quick-enter 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+
 /* Splash screen animations */
 @keyframes fade-in {
   0% {

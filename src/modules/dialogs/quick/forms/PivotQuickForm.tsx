@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
 import { Select } from "@/components/ui/Select";
 import { useLanguage } from "@/i18n";
 import { QuickActionShell } from "@/modules/dialogs/quick/QuickActionShell";
@@ -10,7 +9,14 @@ import type {
   PivotValueDraft,
   QuickFormProps,
 } from "@/modules/dialogs/quick/types";
-import { ColumnPicker, Field } from "./_shared";
+import {
+  AddButton,
+  ColumnPicker,
+  DeleteButton,
+  Field,
+  QuickInput,
+  SectionHeader,
+} from "./_shared";
 
 export function PivotQuickForm({
   request,
@@ -75,61 +81,67 @@ export function PivotQuickForm({
     columnSep,
   };
   const result = buildQuickCommand(draft, labels);
+  const valueCount = t.quickCountValues.replace(
+    "{count}",
+    String(values.length),
+  );
 
   return (
     <QuickActionShell
       title={t.pivotAction}
       anchor={request}
       width={360}
+      summary={result ? { command: result.type, detail: valueCount } : undefined}
+      blocked={!result ? t.pivotValues : undefined}
       canApply={!!result}
       onApply={() => result && onApply(result)}
       onAdvanced={() => result && onAdvanced(result)}
       onClose={onClose}
     >
       <ColumnPicker
+        label={t.pivotColumns}
+        meta={String(columns.length)}
         columns={request.headers}
         selected={columns}
         onToggle={(column) => toggle(setColumns, column)}
         searchPlaceholder={t.pivotSearchColumns}
         noMatches={t.pivotNoMatches}
-        countLabel={t.pivotColumns}
-        height={80}
+        height={84}
       />
 
       <ColumnPicker
+        label={t.pivotRows}
+        meta={String(groupBy.length)}
         columns={request.headers}
         selected={groupBy}
         onToggle={(column) => toggle(setGroupBy, column)}
         searchPlaceholder={t.pivotSearchColumns}
         noMatches={t.pivotNoMatches}
-        countLabel={t.pivotRows}
-        height={80}
+        height={84}
       />
 
       <div>
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-medium text-muted-foreground">
-            {t.pivotValues}
-          </span>
-          <button
-            type="button"
-            onClick={addValue}
-            className="flex items-center gap-1 px-2 py-0.5 text-xs hover:bg-accent rounded-md transition-colors text-muted-foreground"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {t.pivotAdd}
-          </button>
-        </div>
+        <SectionHeader
+          label={t.pivotValues}
+          meta={valueCount}
+          action={<AddButton label={t.pivotAdd} onClick={addValue} />}
+        />
 
         {values.length === 0 ? (
-          <div className="p-2 border rounded-md bg-muted/30 text-xs text-muted-foreground text-center">
+          <div className="rounded-md border border-dashed py-1.5 text-center text-[11.5px] text-muted-foreground/70">
             {t.pivotClickToAdd}
           </div>
         ) : (
-          <div className="space-y-1.5">
+          <div className="border-t">
             {values.map((value, index) => (
-              <div key={index} className="flex items-center gap-1">
-                <div className="flex-1 min-w-0">
+              <div
+                key={index}
+                className="grid grid-cols-[18px_minmax(0,1fr)_22px] items-center gap-2 border-b py-1.5 last:border-b-0"
+              >
+                <span className="font-mono text-[10px] text-muted-foreground/60">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <div className="flex min-w-0 items-center gap-1.5">
                   <Select
                     value={value.column}
                     onChange={(v) => updateValue(index, "column", v)}
@@ -139,27 +151,27 @@ export function PivotQuickForm({
                     }))}
                     placeholder={t.selectColumn}
                     ariaLabel={t.selectColumn}
+                    portal
+                    height="h-7"
                   />
+                  <div className="w-[88px] shrink-0">
+                    <Select
+                      value={value.aggregation}
+                      onChange={(v) => updateValue(index, "aggregation", v)}
+                      options={aggregations}
+                      placeholder={t.pivotAggPlaceholder}
+                      ariaLabel={t.pivotAggPlaceholder}
+                      portal
+                    height="h-7"
+                    />
+                  </div>
                 </div>
-                <div className="w-24 shrink-0">
-                  <Select
-                    value={value.aggregation}
-                    onChange={(v) => updateValue(index, "aggregation", v)}
-                    options={aggregations}
-                    placeholder={t.pivotAggPlaceholder}
-                    ariaLabel={t.pivotAggPlaceholder}
-                  />
-                </div>
-                <button
-                  type="button"
+                <DeleteButton
+                  label={t.cancel}
                   onClick={() =>
                     setValues((prev) => prev.filter((_, i) => i !== index))
                   }
-                  className="p-0.5 hover:bg-accent rounded transition-colors shrink-0"
-                  aria-label={t.cancel}
-                >
-                  <Trash2 className="h-3 w-3 text-muted-foreground" />
-                </button>
+                />
               </div>
             ))}
           </div>
@@ -167,13 +179,12 @@ export function PivotQuickForm({
       </div>
 
       <Field label={t.pivotColumnSeparator}>
-        <input
-          type="text"
+        <QuickInput
           value={columnSep}
           onChange={(e) => setColumnSep(e.target.value)}
           placeholder={t.pivotColumnSeparatorPlaceholder}
           maxLength={1}
-          className="w-full h-7 px-2 text-xs border rounded-md bg-background"
+          className="font-mono w-[72px]"
         />
       </Field>
     </QuickActionShell>

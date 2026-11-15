@@ -1,0 +1,1218 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 055 · 右键快捷操作浮窗</title>
+<style>
+  /* ── tokens · 与 src/index.css 对齐 ───────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --edge:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 12%,var(--bg));
+    --chrome-line:color-mix(in oklab,var(--brand) 30%,transparent);
+
+    --warn:oklch(0.55 0.1 72);
+    --warn-soft:color-mix(in oklab,var(--warn) 12%,transparent);
+    --mark:oklch(0.56 0.17 27);
+
+    --panel:oklch(0.995 0.004 85);
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-win:0 24px 60px -24px oklch(0.2 0.02 80 / 26%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-panel:0 14px 32px -18px oklch(0.2 0.02 80 / 24%),0 1px 3px oklch(0.2 0.02 80 / 5%);
+    --shadow-old:0 20px 25px -5px oklch(0.2 0.02 80 / 18%),0 8px 10px -6px oklch(0.2 0.02 80 / 18%);
+  }
+  .dark{
+    color:var(--fg);
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.56 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --edge:oklch(1 0 0 / 24%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 18%,transparent);
+    --chrome:color-mix(in oklab,var(--brand) 10%,var(--bg));
+    --panel:oklch(0.215 0.008 75);
+    --canvas:oklch(0.145 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-panel:inset 0 0 0 1px oklch(1 0 0 / 7%);
+    --shadow-old:inset 0 0 0 1px oklch(1 0 0 / 7%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;-webkit-font-smoothing:antialiased;
+  }
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1000px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+
+  .direction{
+    display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+    border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden;
+  }
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+
+  /* ── 画布舞台 ──────────────────────────────────────────────────── */
+  .stage{position:relative;width:1200px;height:540px;overflow:hidden;
+         border:1px solid var(--border);border-radius:8px;background-color:var(--canvas);
+         background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+         background-size:22px 22px;background-position:11px 11px}
+
+  .node{position:absolute;left:40px;top:52px;width:520px;background:var(--card);
+        border:1px solid var(--border);border-radius:8px;overflow:hidden;
+        box-shadow:0 1px 2px oklch(0.2 0.02 80 / 4%)}
+  .node-h{height:34px;display:flex;align-items:center;gap:8px;padding:0 12px;
+          border-bottom:1px solid var(--border-soft);font-size:12px;font-weight:500}
+  .node-h .meta{margin-left:auto;font-family:var(--mono);font-size:10px;font-weight:400;color:var(--muted-fg-3)}
+  .node-f{height:26px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;
+          border-top:1px solid var(--border-soft);font-size:10.5px;color:var(--muted-fg-3)}
+  .node-f .meta{font-family:var(--mono);font-size:10px}
+
+  .grid{width:100%;border-collapse:collapse;table-layout:fixed}
+  .grid th{height:26px;text-align:left;font-size:10.5px;font-weight:500;color:var(--muted-fg);
+           border-bottom:1px solid var(--border);padding:0 8px;white-space:nowrap}
+  .grid td{height:25px;font-size:11.5px;padding:0 8px;border-bottom:1px solid var(--border-soft);
+           white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+  .grid tr:last-child td{border-bottom:0}
+  .grid .rn{width:26px;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);text-align:right;padding-right:6px}
+  .grid .num{text-align:right}
+  .grid th.num{text-align:right}
+  .grid .hi{background:var(--brand-soft)}
+  .grid th.hi{color:var(--brand)}
+  .grid td.hi{color:var(--brand);font-weight:500}
+
+  /* ── 现状浮窗 · QuickActionShell ───────────────────────────────── */
+  .old{position:absolute;width:240px;background:var(--card);border:1px solid var(--border);
+       border-radius:8px;overflow:hidden;box-shadow:var(--shadow-old);z-index:5}
+  .old.w280{width:280px}
+  .old.w300{width:300px}
+  .old-h{display:flex;align-items:center;justify-content:space-between;
+         padding:8px 12px;border-bottom:1px solid var(--border);
+         background:color-mix(in oklab,var(--muted) 20%,transparent)}
+  .old-h span{font-size:12px;font-weight:500}
+  .old-h .x{color:var(--muted-fg-2);font-size:13px;line-height:1}
+  .old-b{padding:12px;display:flex;flex-direction:column;gap:12px}
+  .old-f{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--border)}
+  .old-f .adv{font-size:10.5px;color:var(--muted-fg);text-decoration:underline;text-underline-offset:2px}
+  .old-f .right{margin-left:auto;display:flex;gap:8px}
+  .old-btn{height:28px;padding:0 10px;border:1px solid var(--border);border-radius:6px;
+           background:var(--muted);color:var(--fg);font-size:11px;display:inline-flex;align-items:center}
+  .old-btn.dis{opacity:.45}
+
+  .old-seg{display:flex;background:color-mix(in oklab,var(--muted) 50%,transparent);
+           border:1px solid var(--border-soft);border-radius:8px;padding:2px}
+  .old-seg i{flex:1;height:24px;display:grid;place-items:center;font-style:normal;
+             font-size:11px;font-weight:500;color:var(--muted-fg);border-radius:6px}
+  .old-seg i.on{background:var(--brand);color:var(--brand-fg);box-shadow:0 1px 2px oklch(0.2 0.02 80 / 18%)}
+
+  .old-lab{font-size:11px;font-weight:500;color:var(--muted-fg);margin-bottom:4px}
+  .old-input{height:28px;display:flex;align-items:center;padding:0 8px;border:1px solid var(--border);
+             border-radius:6px;background:var(--bg);font-size:11px;color:var(--muted-fg-2)}
+  .old-input.sm{height:24px}
+  .old-input .chev{margin-left:auto;color:var(--muted-fg-3);font-size:9px}
+  .old-tags{height:28px;display:flex;align-items:center;gap:3px;padding:0 5px;border:1px solid var(--border);
+            border-radius:6px;background:var(--bg);font-size:11px;color:var(--muted-fg-3)}
+  .old-tag{display:inline-flex;align-items:center;height:18px;padding:0 5px;border-radius:3px;
+           background:var(--muted);color:var(--fg);font-size:10px}
+  .old-check{display:flex;align-items:center;gap:6px;font-size:11px}
+  .old-check .nb{width:14px;height:14px;border:1px solid var(--muted-fg-3);border-radius:2px;background:var(--bg)}
+  .old-check .nb.on{background:var(--brand);border-color:var(--brand);position:relative}
+  .old-check .nb.on::after{content:"";position:absolute;left:3.5px;top:1px;width:4px;height:7px;
+                           border:1.5px solid var(--brand-fg);border-top:0;border-left:0;transform:rotate(42deg)}
+  .old-list{height:120px;border:1px solid var(--border);border-radius:6px;background:var(--bg);
+            padding:6px;overflow:hidden}
+  .old-item{display:flex;align-items:center;gap:8px;height:20px;padding:0 6px;border-radius:3px;font-size:11px}
+  .old-item.on{background:color-mix(in oklab,var(--brand) 10%,transparent);color:var(--brand)}
+  .old-item .cb{width:14px;height:14px;border:1px solid var(--muted-fg-3);border-radius:2px;
+                display:grid;place-items:center;font-size:9px;line-height:1;background:var(--bg)}
+  .old-item.on .cb{background:var(--brand);border-color:var(--brand);color:var(--brand-fg)}
+  .old-search{height:24px;display:flex;align-items:center;padding:0 8px;border:1px solid var(--border);
+              border-radius:6px;background:var(--bg);font-size:11px;color:var(--muted-fg-3);margin-bottom:4px}
+  .old-card{padding:8px;border:1px solid var(--border);border-radius:6px;
+            background:color-mix(in oklab,var(--muted) 30%,transparent);display:flex;flex-direction:column;gap:8px}
+  .old-card .idx{font-size:10.5px;color:var(--muted-fg);font-weight:500;display:flex;justify-content:space-between}
+  .old-card .pair{display:flex;align-items:center;gap:4px}
+  .old-card .pair .old-input{flex:1;min-width:0}
+
+  /* ── 改后浮窗 · 操作单据 ───────────────────────────────────────── */
+  .slip{position:absolute;width:288px;background:var(--panel);border:1px solid var(--border);
+        border-radius:10px;box-shadow:var(--shadow-panel);overflow:hidden;z-index:6;color:var(--fg)}
+  .slip.w320{width:320px}
+  .slip.w360{width:360px}
+  .slip-h{height:40px;display:flex;align-items:center;gap:8px;padding:0 8px 0 14px;
+          border-bottom:1px solid var(--border-soft);cursor:grab}
+  .slip-t{font-size:13px;font-weight:500}
+  .slip-scope{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-3);
+              white-space:nowrap;display:flex;align-items:center;gap:5px}
+  .slip-scope .num{color:var(--muted-fg-2)}
+  .slip-h .icon-btn{width:22px;height:22px;display:grid;place-items:center;border:0;background:transparent;
+                    border-radius:5px;color:var(--muted-fg-2);padding:0;margin-left:2px}
+  .slip-h .icon-btn:hover{background:var(--muted);color:var(--fg)}
+
+  .slip-b{padding:12px 14px 10px;display:flex;flex-direction:column;gap:12px}
+  .fields{display:flex;flex-direction:column;gap:8px}
+  .row{display:grid;grid-template-columns:72px 1fr;gap:8px;align-items:center;min-height:28px}
+  .row .lab{font-size:11.5px;color:var(--muted-fg);line-height:1.35}
+  .row.stack{align-items:start}
+  .row.stack .lab{padding-top:6px}
+
+  .tabs{display:flex;gap:16px;border-bottom:1px solid var(--border-soft)}
+  .tab{height:28px;display:flex;align-items:center;font-size:12px;color:var(--muted-fg);
+       position:relative;padding:0}
+  .tab.on{color:var(--fg);font-weight:500}
+  .tab.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1.5px;background:var(--brand)}
+
+  .ctl{height:28px;display:flex;align-items:center;gap:6px;padding:0 8px;border:1px solid var(--border);
+       border-radius:6px;background:var(--card);font-size:12px;color:var(--fg);min-width:0}
+  .ctl .chev{margin-left:auto;color:var(--muted-fg-3);flex:none}
+  .ctl .ph{color:var(--muted-fg-3)}
+  .ctl.mono{font-family:var(--mono);font-size:11.5px}
+  .ctl.tagbox{height:28px;flex-wrap:wrap;gap:4px;padding:2px 5px}
+  .ctl .unit{margin-left:auto;font-family:var(--font);font-size:10px;color:var(--muted-fg-3)}
+  .tag{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 5px;border-radius:4px;
+       background:var(--muted);font-size:11px;color:var(--fg)}
+  .tag .x{color:var(--muted-fg-3);font-size:10px;line-height:1}
+  .caret{width:1px;height:14px;background:var(--fg);opacity:.55;margin-left:1px}
+
+  .check{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--fg)}
+  .box{width:13px;height:13px;flex:none;border:1px solid var(--edge);border-radius:3px;
+       background:var(--card);display:grid;place-items:center;color:var(--brand-fg)}
+  .box.on{background:var(--brand);border-color:var(--brand)}
+
+  .sec-head{display:flex;align-items:center;justify-content:space-between;min-height:18px;margin-bottom:6px}
+  .sec-t{font-size:11.5px;color:var(--muted-fg)}
+  .sec-meta{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-left:6px}
+  .sec-act{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--muted-fg);
+           background:none;border:0;padding:0}
+  .sec-act:hover{color:var(--fg)}
+
+  .picker{border:1px solid var(--border);border-radius:6px;background:var(--card);overflow:hidden}
+  .picker-s{height:28px;display:flex;align-items:center;gap:6px;padding:0 8px;
+            border-bottom:1px solid var(--border-soft);font-size:11.5px;color:var(--muted-fg-3)}
+  .picker-l{padding:3px}
+  .pick{position:relative;display:flex;align-items:center;gap:8px;height:26px;padding:0 6px;
+        border-radius:4px;font-size:12px;color:var(--fg)}
+  .pick:hover{background:var(--muted)}
+  .pick.on{background:var(--brand-soft)}
+  .pick.on::before{content:"";position:absolute;left:0;top:5px;bottom:5px;width:2px;
+                   border-radius:1px;background:var(--brand)}
+
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:6px;background:var(--card);
+       overflow:hidden;height:28px;width:100%}
+  .seg i{font-style:normal;display:flex;align-items:center;justify-content:center;flex:1;padding:0 12px;
+         font-size:11.5px;color:var(--muted-fg);border-right:1px solid var(--border-soft)}
+  .seg i:last-child{border-right:0}
+  .seg i.on{background:var(--brand-soft);color:var(--brand);font-weight:500}
+
+  .ledger{border-top:1px solid var(--border-soft)}
+  .lrow{display:grid;grid-template-columns:18px 1fr 22px;gap:8px;padding:8px 0;
+        border-bottom:1px solid var(--border-soft);align-items:start}
+  .lrow:last-child{border-bottom:0}
+  .lrow .idx{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);padding-top:8px}
+  .lrow .del{width:22px;height:22px;display:grid;place-items:center;border:0;background:transparent;
+             border-radius:4px;color:var(--muted-fg-2);padding:0;margin-top:2px}
+  .lrow .del:hover{background:var(--muted);color:var(--fg)}
+  .lrow .pane{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .mini{display:flex;align-items:center;gap:6px}
+  .mini .ctl{flex:1;min-width:0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .flags{display:flex;align-items:center;gap:12px;padding-top:1px}
+
+  .slip-f{padding:10px 14px 12px;border-top:1px solid var(--border-soft)}
+  .note{display:flex;align-items:center;gap:6px;min-height:14px;margin-bottom:8px;
+        font-size:11px;color:var(--muted-fg);white-space:nowrap;overflow:hidden}
+  .note code{background:none;padding:0;color:var(--fg);font-size:10.5px}
+  .note .dash{color:var(--muted-fg-3)}
+  .note.warn{color:var(--warn)}
+  .actions{display:flex;align-items:center;gap:8px}
+  .link-q{font-size:11.5px;color:var(--muted-fg);background:none;border:0;padding:0}
+  .link-q:hover{color:var(--fg)}
+  .actions .spacer{margin-left:auto}
+  .btn{height:28px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;
+       border:1px solid transparent;border-radius:6px;font-size:12px;background:transparent;color:var(--muted-fg)}
+  .btn:hover{background:var(--muted);color:var(--fg)}
+  .btn-primary{background:var(--brand);color:var(--brand-fg);font-weight:500;padding:0 10px 0 12px}
+  .btn-primary:hover{background:var(--brand);color:var(--brand-fg);opacity:.92}
+  .btn-primary.dis{background:var(--muted);color:var(--muted-fg-2)}
+  .kbd{display:grid;place-items:center;height:16px;min-width:16px;padding:0 3px;border-radius:3px;
+       background:color-mix(in oklab,var(--brand-fg) 22%,transparent);color:var(--brand-fg);
+       font-family:var(--mono);font-size:9.5px}
+
+  /* ── 标注 ──────────────────────────────────────────────────────── */
+  .mark,.fix{position:absolute;width:16px;height:16px;border-radius:50%;z-index:9;
+             font-family:var(--mono);font-size:9.5px;line-height:16px;text-align:center;font-weight:500}
+  .mark{background:var(--mark);color:#fff;box-shadow:0 0 0 2px var(--canvas)}
+  .fix{background:var(--card);color:var(--brand);box-shadow:0 0 0 2px var(--canvas),inset 0 0 0 1px var(--brand-12)}
+  .note-band{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 22px;margin-top:12px;
+             font-size:10.5px;color:var(--muted-fg);line-height:1.55}
+  .note-band .leg{display:flex;gap:7px;align-items:flex-start}
+  .dot-red{width:16px;height:16px;border-radius:50%;background:var(--mark);color:#fff;
+           font-family:var(--mono);font-size:9.5px;line-height:16px;text-align:center;flex:none}
+  .dot-blue{width:16px;height:16px;border-radius:50%;background:var(--card);color:var(--brand);
+            box-shadow:inset 0 0 0 1px var(--brand-12);font-family:var(--mono);font-size:9.5px;
+            line-height:16px;text-align:center;flex:none}
+
+  /* ── 说明表 ────────────────────────────────────────────────────── */
+  .h2{font-size:13px;font-weight:500;margin:44px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border-soft)}
+  table.spec{width:100%;border-collapse:collapse;background:var(--card);
+             border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  table.spec th{text-align:left;font-size:10.5px;font-weight:500;color:var(--muted-fg);
+                padding:8px 12px;border-bottom:1px solid var(--border);background:color-mix(in oklab,var(--muted) 45%,transparent)}
+  table.spec td{font-size:11.5px;padding:9px 12px;border-bottom:1px solid var(--border-soft);
+                vertical-align:top;line-height:1.6}
+  table.spec tr:last-child td{border-bottom:0}
+  table.spec td.n{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);width:34px}
+  table.spec th.n{width:34px}
+  table.spec td.k{white-space:nowrap;color:var(--muted-fg);width:150px}
+  table.spec b{font-weight:500}
+  .credit{margin-top:40px;font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">原型 055 · 右键快捷操作浮窗</div>
+    <h1>把 11 个引导式浮窗从「通用卡片」改成操作单据</h1>
+    <p>范围：<code>src/modules/dialogs/quick/</code> 的 <code>QuickActionShell</code> 与 11 个表单。字段、参数规则、提交与「高级参数」交接都不变——只改工艺：<b>一行一设置</b>、<b>一个主操作</b>、<b>一套控件与图标</b>，并把「作用在哪一列、会新增什么步骤」写回面板。红色编号是现状问题，蓝色编号是改法。</p>
+  </div>
+
+  <div class="direction">
+    <div><dt>产品</dt><dd>在数据列上就地写下一条 xan 操作，应用后成为管道里的一个步骤。</dd></div>
+    <div><dt>性格</dt><dd>精确、克制、动手即得。不像表单，像一张填写中的操作单据。</dd></div>
+    <div><dt>世界</dt><dd>账本纸面与索引卡：纸的微暖、墨蓝的墨、等宽的行号与列号。</dd></div>
+    <div><dt>时刻</dt><dd>① 标题右侧的列索引片「03 · 地区」；② 底部一行即将新增的步骤摘要。</dd></div>
+    <div><dt>签名</dt><dd>等宽索引号沿用画布的 01/02/03 纸片：出现在列标签、条目行与摘要里。</dd></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       01 · 现状
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>01</span><b>现状 · 筛选浮窗</b><span class="file">QuickActionShell.tsx · FilterQuickForm.tsx</span></div>
+    <div class="stage" style="height:520px">
+      <div class="node" style="top:64px">
+        <div class="node-h">销售明细.csv <span class="meta">2026 Q4</span></div>
+        <table class="grid">
+          <colgroup>
+            <col style="width:26px"><col style="width:96px"><col style="width:82px"><col style="width:56px">
+            <col style="width:56px"><col style="width:88px"><col style="width:58px">
+          </colgroup>
+          <thead>
+            <tr><th class="rn">#</th><th>订单号</th><th>日期</th><th class="hi">地区</th><th>品类</th><th class="num">金额</th><th class="num">数量</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="rn">1</td><td>SO-2026-0417</td><td>2026-11-03</td><td class="hi">华东</td><td>家具</td><td class="num">1,280.00</td><td class="num">2</td></tr>
+            <tr><td class="rn">2</td><td>SO-2026-0418</td><td>2026-11-03</td><td class="hi">华南</td><td>数码</td><td class="num">640.00</td><td class="num">1</td></tr>
+            <tr><td class="rn">3</td><td>SO-2026-0419</td><td>2026-11-04</td><td class="hi">华东</td><td>食品</td><td class="num">96.50</td><td class="num">6</td></tr>
+            <tr><td class="rn">4</td><td>SO-2026-0420</td><td>2026-11-04</td><td class="hi">华北</td><td>服饰</td><td class="num">2,190.00</td><td class="num">3</td></tr>
+            <tr><td class="rn">5</td><td>SO-2026-0421</td><td>2026-11-05</td><td class="hi">西南</td><td>数码</td><td class="num">458.00</td><td class="num">1</td></tr>
+            <tr><td class="rn">6</td><td>SO-2026-0422</td><td>2026-11-05</td><td class="hi">华东</td><td>家具</td><td class="num">3,560.00</td><td class="num">4</td></tr>
+            <tr><td class="rn">7</td><td>SO-2026-0423</td><td>2026-11-06</td><td class="hi">华南</td><td>食品</td><td class="num">128.00</td><td class="num">2</td></tr>
+          </tbody>
+        </table>
+        <div class="node-f"><span>sales_2026q4.csv</span><span class="meta">7 行 × 6 列</span></div>
+      </div>
+
+      <div class="old" style="left:660px;top:96px">
+        <div class="old-h"><span>筛选</span><span class="x">✕</span></div>
+        <div class="old-b">
+          <div class="old-seg"><i class="on">文本</i><i>数值</i></div>
+          <div>
+            <div class="old-lab">列</div>
+            <div class="old-input">地区<span class="chev">▾</span></div>
+          </div>
+          <div>
+            <div class="old-lab">运算符</div>
+            <div class="old-input">等于<span class="chev">▾</span></div>
+          </div>
+          <div>
+            <div class="old-lab">值</div>
+            <div class="old-tags"><span class="old-tag">华东</span><span>添加值，回车分隔</span></div>
+          </div>
+          <label class="old-check"><span class="nb"></span>忽略大小写</label>
+        </div>
+        <div class="old-f">
+          <span class="adv">高级参数</span>
+          <div class="right"><button class="old-btn">取消</button><button class="old-btn">应用</button></div>
+        </div>
+      </div>
+
+      <span class="mark" style="left:904px;top:106px">2</span>
+      <span class="mark" style="left:904px;top:400px">3</span>
+      <span class="mark" style="left:640px;top:400px">4</span>
+      <span class="mark" style="left:640px;top:196px">5</span>
+      <span class="mark" style="left:640px;top:140px">6</span>
+      <span class="mark" style="left:640px;top:352px">7</span>
+      <span class="mark" style="left:904px;top:262px">8</span>
+      <span class="mark" style="left:640px;top:448px">1</span>
+    </div>
+  </section>
+
+  <!-- 02 · 现状 · 卡中卡 -->
+  <section class="frame">
+    <div class="cap"><span>02</span><b>现状 · 条目型表单</b><span class="file">ReplaceQuickForm.tsx · WindowQuickForm.tsx</span></div>
+    <div class="stage" style="height:520px">
+      <div class="node" style="top:64px;left:40px;width:470px">
+        <div class="node-h">销售明细.csv <span class="meta">2026 Q4</span></div>
+        <table class="grid">
+          <colgroup>
+            <col style="width:26px"><col style="width:96px"><col style="width:82px"><col style="width:56px">
+            <col style="width:56px"><col style="width:88px"><col style="width:58px">
+          </colgroup>
+          <thead>
+            <tr><th class="rn">#</th><th>订单号</th><th>日期</th><th class="hi">地区</th><th>品类</th><th class="num">金额</th><th class="num">数量</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="rn">1</td><td>SO-2026-0417</td><td>2026-11-03</td><td class="hi">华东</td><td>家具</td><td class="num">1,280.00</td><td class="num">2</td></tr>
+            <tr><td class="rn">2</td><td>SO-2026-0418</td><td>2026-11-03</td><td class="hi">华南</td><td>数码</td><td class="num">640.00</td><td class="num">1</td></tr>
+            <tr><td class="rn">3</td><td>SO-2026-0419</td><td>2026-11-04</td><td class="hi">华东</td><td>食品</td><td class="num">96.50</td><td class="num">6</td></tr>
+            <tr><td class="rn">4</td><td>SO-2026-0420</td><td>2026-11-04</td><td class="hi">华北</td><td>服饰</td><td class="num">2,190.00</td><td class="num">3</td></tr>
+            <tr><td class="rn">5</td><td>SO-2026-0421</td><td>2026-11-05</td><td class="hi">西南</td><td>数码</td><td class="num">458.00</td><td class="num">1</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="old w280" style="left:576px;top:76px">
+        <div class="old-h"><span>替换</span><span class="x">✕</span></div>
+        <div class="old-b">
+          <div>
+            <div class="old-lab">列</div>
+            <div class="old-input">地区<span class="chev">▾</span></div>
+          </div>
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+              <span class="old-lab" style="margin:0">替换对</span>
+              <span style="font-size:10.5px;color:var(--muted-fg)">＋ 添加</span>
+            </div>
+            <div class="old-card">
+              <div class="idx"><span>#1</span><span style="color:var(--muted-fg-3)">🗑</span></div>
+              <div class="pair">
+                <div class="old-input">华东</div><span style="color:var(--muted-fg-3);font-size:10px">→</span><div class="old-input">东区</div>
+              </div>
+              <div style="display:flex;gap:12px">
+                <label class="old-check"><span class="nb"></span>正则</label>
+                <label class="old-check"><span class="nb on"></span>忽略大小写</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="old-f">
+          <span class="adv">高级参数</span>
+          <div class="right"><button class="old-btn">取消</button><button class="old-btn">应用</button></div>
+        </div>
+      </div>
+
+      <div class="old w300" style="left:872px;top:76px">
+        <div class="old-h"><span>窗口聚合</span><span class="x">✕</span></div>
+        <div class="old-b">
+          <div>
+            <div class="old-lab">分组依据（可选）</div>
+            <div class="old-input">分组的列</div>
+          </div>
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+              <span class="old-lab" style="margin:0">表达式</span>
+              <span style="font-size:10.5px;color:var(--muted-fg)">＋ 添加</span>
+            </div>
+            <div class="old-card">
+              <div class="idx"><span>#1</span><span style="color:var(--muted-fg-3)">🗑</span></div>
+              <div class="old-input">sum_over<span class="chev">▾</span></div>
+              <div class="old-input">金额<span class="chev">▾</span></div>
+              <div class="old-input">窗口大小</div>
+              <div class="old-input">别名</div>
+            </div>
+          </div>
+        </div>
+        <div class="old-f">
+          <span class="adv">高级参数</span>
+          <div class="right"><button class="old-btn">取消</button><button class="old-btn">应用</button></div>
+        </div>
+      </div>
+
+      <span class="mark" style="left:568px;top:246px">9</span>
+      <span class="mark" style="left:864px;top:246px">9</span>
+      <span class="mark" style="left:864px;top:84px">10</span>
+      <span class="mark" style="left:1180px;top:84px">10</span>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       03 · 改后 · 筛选（亮）
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>03</span><b>改后 · 筛选</b><span class="file">宽 288 · 一行一设置 · 底部交代将要新增的步骤</span></div>
+    <div class="stage" style="height:520px">
+      <div class="node" style="top:64px">
+        <div class="node-h">销售明细.csv <span class="meta">2026 Q4</span></div>
+        <table class="grid">
+          <colgroup>
+            <col style="width:26px"><col style="width:96px"><col style="width:82px"><col style="width:56px">
+            <col style="width:56px"><col style="width:88px"><col style="width:58px">
+          </colgroup>
+          <thead>
+            <tr><th class="rn">#</th><th>订单号</th><th>日期</th><th class="hi">地区</th><th>品类</th><th class="num">金额</th><th class="num">数量</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="rn">1</td><td>SO-2026-0417</td><td>2026-11-03</td><td class="hi">华东</td><td>家具</td><td class="num">1,280.00</td><td class="num">2</td></tr>
+            <tr><td class="rn">2</td><td>SO-2026-0418</td><td>2026-11-03</td><td class="hi">华南</td><td>数码</td><td class="num">640.00</td><td class="num">1</td></tr>
+            <tr><td class="rn">3</td><td>SO-2026-0419</td><td>2026-11-04</td><td class="hi">华东</td><td>食品</td><td class="num">96.50</td><td class="num">6</td></tr>
+            <tr><td class="rn">4</td><td>SO-2026-0420</td><td>2026-11-04</td><td class="hi">华北</td><td>服饰</td><td class="num">2,190.00</td><td class="num">3</td></tr>
+            <tr><td class="rn">5</td><td>SO-2026-0421</td><td>2026-11-05</td><td class="hi">西南</td><td>数码</td><td class="num">458.00</td><td class="num">1</td></tr>
+            <tr><td class="rn">6</td><td>SO-2026-0422</td><td>2026-11-05</td><td class="hi">华东</td><td>家具</td><td class="num">3,560.00</td><td class="num">4</td></tr>
+            <tr><td class="rn">7</td><td>SO-2026-0423</td><td>2026-11-06</td><td class="hi">华南</td><td>食品</td><td class="num">128.00</td><td class="num">2</td></tr>
+          </tbody>
+        </table>
+        <div class="node-f"><span>sales_2026q4.csv</span><span class="meta">7 行 × 6 列</span></div>
+      </div>
+
+      <div class="slip" style="left:660px;top:96px">
+        <div class="slip-h">
+          <span class="slip-t">筛选</span>
+          <span class="slip-scope"><span class="num">03</span>·<span>地区</span></span>
+          <button class="icon-btn" aria-label="关闭">
+            <svg class="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="slip-b">
+          <div class="tabs"><span class="tab on">文本</span><span class="tab">数值</span></div>
+
+          <div class="fields">
+          <div class="row">
+            <span class="lab">列</span>
+            <div class="ctl">地区
+              <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
+
+          <div class="row">
+            <span class="lab">运算符</span>
+            <div class="ctl">等于
+              <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
+
+          <div class="row stack">
+            <span class="lab">值</span>
+            <div class="ctl tagbox">
+              <span class="tag">华东 <span class="x">✕</span></span>
+              <span class="ph">添加值，回车分隔</span><span class="caret"></span>
+            </div>
+          </div>
+
+          </div>
+
+          <label class="check"><span class="box"></span>忽略大小写</label>
+        </div>
+        <div class="slip-f">
+          <div class="note">将新增 <code>search</code> <span class="dash">·</span> <code>地区 = 华东</code></div>
+          <div class="actions">
+            <button class="link-q">高级参数</button>
+            <span class="spacer"></span>
+            <button class="btn">取消</button>
+            <button class="btn btn-primary">添加步骤<span class="kbd">↵</span></button>
+          </div>
+        </div>
+      </div>
+
+      <span class="fix" style="left:952px;top:106px">1</span>
+      <span class="fix" style="left:646px;top:196px">2</span>
+      <span class="fix" style="left:952px;top:336px">3</span>
+      <span class="fix" style="left:952px;top:360px">4</span>
+      <span class="fix" style="left:646px;top:268px">5</span>
+      <span class="fix" style="left:646px;top:152px">6</span>
+    </div>
+    <div class="note-band">
+      <span class="leg"><span class="dot-blue">1</span>标题右侧多一个等宽列索引片，写明作用对象</span>
+      <span class="leg"><span class="dot-blue">2</span>标签进 72px 左列，四行字段 169px（原 236px）</span>
+      <span class="leg"><span class="dot-blue">3</span>底部一行「将新增 search · 地区 = 华东」</span>
+      <span class="leg"><span class="dot-blue">4</span>主操作只有一个，「添加步骤」</span>
+      <span class="leg"><span class="dot-blue">5</span>33px 输入框与 28px 下拉统一成 28px</span>
+      <span class="leg"><span class="dot-blue">6</span>模式切换由实心药丸改成下划线页签</span>
+    </div>
+  </section>
+
+  <!-- 04 · 改后 · 暗色 -->
+  <section class="frame">
+    <div class="cap"><span>04</span><b>改后 · 筛选（暗色）</b><span class="file">面阶 + 细线，不靠阴影浮起</span></div>
+    <div class="stage dark" style="height:520px">
+      <div class="node" style="top:64px">
+        <div class="node-h">销售明细.csv <span class="meta">2026 Q4</span></div>
+        <table class="grid">
+          <colgroup>
+            <col style="width:26px"><col style="width:96px"><col style="width:82px"><col style="width:56px">
+            <col style="width:56px"><col style="width:88px"><col style="width:58px">
+          </colgroup>
+          <thead>
+            <tr><th class="rn">#</th><th>订单号</th><th>日期</th><th class="hi">地区</th><th>品类</th><th class="num">金额</th><th class="num">数量</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="rn">1</td><td>SO-2026-0417</td><td>2026-11-03</td><td class="hi">华东</td><td>家具</td><td class="num">1,280.00</td><td class="num">2</td></tr>
+            <tr><td class="rn">2</td><td>SO-2026-0418</td><td>2026-11-03</td><td class="hi">华南</td><td>数码</td><td class="num">640.00</td><td class="num">1</td></tr>
+            <tr><td class="rn">3</td><td>SO-2026-0419</td><td>2026-11-04</td><td class="hi">华东</td><td>食品</td><td class="num">96.50</td><td class="num">6</td></tr>
+            <tr><td class="rn">4</td><td>SO-2026-0420</td><td>2026-11-04</td><td class="hi">华北</td><td>服饰</td><td class="num">2,190.00</td><td class="num">3</td></tr>
+            <tr><td class="rn">5</td><td>SO-2026-0421</td><td>2026-11-05</td><td class="hi">西南</td><td>数码</td><td class="num">458.00</td><td class="num">1</td></tr>
+            <tr><td class="rn">6</td><td>SO-2026-0422</td><td>2026-11-05</td><td class="hi">华东</td><td>家具</td><td class="num">3,560.00</td><td class="num">4</td></tr>
+            <tr><td class="rn">7</td><td>SO-2026-0423</td><td>2026-11-06</td><td class="hi">华南</td><td>食品</td><td class="num">128.00</td><td class="num">2</td></tr>
+          </tbody>
+        </table>
+        <div class="node-f"><span>sales_2026q4.csv</span><span class="meta">7 行 × 6 列</span></div>
+      </div>
+
+      <div class="slip" style="left:660px;top:96px">
+        <div class="slip-h">
+          <span class="slip-t">筛选</span>
+          <span class="slip-scope"><span class="num">03</span>·<span>地区</span></span>
+          <button class="icon-btn" aria-label="关闭">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="slip-b">
+          <div class="tabs"><span class="tab on">文本</span><span class="tab">数值</span></div>
+          <div class="fields">
+          <div class="row">
+            <span class="lab">列</span>
+            <div class="ctl">地区
+              <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
+          <div class="row">
+            <span class="lab">运算符</span>
+            <div class="ctl">等于
+              <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
+          <div class="row stack">
+            <span class="lab">值</span>
+            <div class="ctl tagbox">
+              <span class="tag">华东 <span class="x">✕</span></span>
+              <span class="ph">添加值，回车分隔</span><span class="caret"></span>
+            </div>
+          </div>
+          </div>
+
+          <label class="check"><span class="box"></span>忽略大小写</label>
+        </div>
+        <div class="slip-f">
+          <div class="note">将新增 <code>search</code> <span class="dash">·</span> <code>地区 = 华东</code></div>
+          <div class="actions">
+            <button class="link-q">高级参数</button>
+            <span class="spacer"></span>
+            <button class="btn">取消</button>
+            <button class="btn btn-primary">添加步骤<span class="kbd">↵</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 · 排序 -->
+  <section class="frame">
+    <div class="cap"><span>05</span><b>改后 · 排序</b><span class="file">宽 320 · 多选清单：计数进右列，勾选只有一种语法</span></div>
+    <div class="stage" style="height:540px">
+      <div class="node" style="top:64px">
+        <div class="node-h">销售明细.csv <span class="meta">2026 Q4</span></div>
+        <table class="grid">
+          <colgroup>
+            <col style="width:26px"><col style="width:96px"><col style="width:82px"><col style="width:56px">
+            <col style="width:56px"><col style="width:88px"><col style="width:58px">
+          </colgroup>
+          <thead>
+            <tr><th class="rn">#</th><th>订单号</th><th>日期</th><th>地区</th><th>品类</th><th class="hi num">金额</th><th class="num">数量</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="rn">1</td><td>SO-2026-0417</td><td>2026-11-03</td><td>华东</td><td>家具</td><td class="hi num">1,280.00</td><td class="num">2</td></tr>
+            <tr><td class="rn">2</td><td>SO-2026-0418</td><td>2026-11-03</td><td>华南</td><td>数码</td><td class="hi num">640.00</td><td class="num">1</td></tr>
+            <tr><td class="rn">3</td><td>SO-2026-0419</td><td>2026-11-04</td><td>华东</td><td>食品</td><td class="hi num">96.50</td><td class="num">6</td></tr>
+            <tr><td class="rn">4</td><td>SO-2026-0420</td><td>2026-11-04</td><td>华北</td><td>服饰</td><td class="hi num">2,190.00</td><td class="num">3</td></tr>
+            <tr><td class="rn">5</td><td>SO-2026-0421</td><td>2026-11-05</td><td>西南</td><td>数码</td><td class="hi num">458.00</td><td class="num">1</td></tr>
+          </tbody>
+        </table>
+        <div class="node-f"><span>sales_2026q4.csv</span><span class="meta">7 行 × 6 列</span></div>
+      </div>
+
+      <div class="slip w320" style="left:640px;top:76px">
+        <div class="slip-h">
+          <span class="slip-t">排序</span>
+          <span class="slip-scope"><span class="num">05</span>·<span>金额</span></span>
+          <button class="icon-btn" aria-label="关闭">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="slip-b">
+          <div>
+            <div class="sec-head">
+              <span><span class="sec-t">列</span><span class="sec-meta">已选 2</span></span>
+            </div>
+            <div class="picker">
+              <div class="picker-s">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                搜索列
+              </div>
+              <div class="picker-l">
+                <div class="pick"><span class="box"></span>订单号</div>
+                <div class="pick"><span class="box"></span>日期</div>
+                <div class="pick on"><span class="box on">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>
+                </span>地区</div>
+                <div class="pick"><span class="box"></span>品类</div>
+                <div class="pick on"><span class="box on">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>
+                </span>金额</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <span class="lab">排序方式</span>
+            <div class="seg"><i class="on">升序</i><i>降序</i></div>
+          </div>
+
+          <label class="check"><span class="box on">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>
+          </span>按数值排序</label>
+        </div>
+        <div class="slip-f">
+          <div class="note">将新增 <code>sort</code> <span class="dash">·</span> <code>地区, 金额 · 升序 · 数值</code></div>
+          <div class="actions">
+            <button class="link-q">高级参数</button>
+            <span class="spacer"></span>
+            <button class="btn">取消</button>
+            <button class="btn btn-primary">添加步骤<span class="kbd">↵</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 · 替换 -->
+  <section class="frame">
+    <div class="cap"><span>06</span><b>改后 · 替换</b><span class="file">宽 320 · 条目改台账行：序号进左侧窄栏，去掉卡中卡</span></div>
+    <div class="stage" style="height:540px">
+      <div class="node" style="top:64px">
+        <div class="node-h">销售明细.csv <span class="meta">2026 Q4</span></div>
+        <table class="grid">
+          <colgroup>
+            <col style="width:26px"><col style="width:96px"><col style="width:82px"><col style="width:56px">
+            <col style="width:56px"><col style="width:88px"><col style="width:58px">
+          </colgroup>
+          <thead>
+            <tr><th class="rn">#</th><th>订单号</th><th>日期</th><th class="hi">地区</th><th>品类</th><th class="num">金额</th><th class="num">数量</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="rn">1</td><td>SO-2026-0417</td><td>2026-11-03</td><td class="hi">华东</td><td>家具</td><td class="num">1,280.00</td><td class="num">2</td></tr>
+            <tr><td class="rn">2</td><td>SO-2026-0418</td><td>2026-11-03</td><td class="hi">华南</td><td>数码</td><td class="num">640.00</td><td class="num">1</td></tr>
+            <tr><td class="rn">3</td><td>SO-2026-0419</td><td>2026-11-04</td><td class="hi">华东</td><td>食品</td><td class="num">96.50</td><td class="num">6</td></tr>
+            <tr><td class="rn">4</td><td>SO-2026-0420</td><td>2026-11-04</td><td class="hi">华北</td><td>服饰</td><td class="num">2,190.00</td><td class="num">3</td></tr>
+            <tr><td class="rn">5</td><td>SO-2026-0421</td><td>2026-11-05</td><td class="hi">西南</td><td>数码</td><td class="num">458.00</td><td class="num">1</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="slip w320" style="left:640px;top:90px">
+        <div class="slip-h">
+          <span class="slip-t">替换</span>
+          <span class="slip-scope"><span class="num">03</span>·<span>地区</span></span>
+          <button class="icon-btn" aria-label="关闭">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="slip-b">
+          <div class="row">
+            <span class="lab">列</span>
+            <div class="ctl">地区
+              <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
+
+          <div>
+            <div class="sec-head">
+              <span><span class="sec-t">替换规则</span><span class="sec-meta">2 条</span></span>
+              <button class="sec-act">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                添加
+              </button>
+            </div>
+            <div class="ledger">
+              <div class="lrow">
+                <span class="idx">01</span>
+                <div class="pane">
+                  <div class="mini">
+                    <div class="ctl">华东</div>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted-fg-3);flex:none"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    <div class="ctl">东区</div>
+                  </div>
+                  <div class="flags">
+                    <label class="check"><span class="box"></span>正则</label>
+                    <label class="check"><span class="box on">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>
+                    </span>忽略大小写</label>
+                  </div>
+                </div>
+                <button class="del" aria-label="删除">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                </button>
+              </div>
+
+              <div class="lrow">
+                <span class="idx">02</span>
+                <div class="pane">
+                  <div class="mini">
+                    <div class="ctl">华南</div>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted-fg-3);flex:none"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    <div class="ctl">南区</div>
+                  </div>
+                  <div class="flags">
+                    <label class="check"><span class="box"></span>正则</label>
+                    <label class="check"><span class="box"></span>忽略大小写</label>
+                  </div>
+                </div>
+                <button class="del" aria-label="删除">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="slip-f">
+          <div class="note">将新增 <code>map</code> <span class="dash">·</span> <code>2 组替换</code></div>
+          <div class="actions">
+            <button class="link-q">高级参数</button>
+            <span class="spacer"></span>
+            <button class="btn">取消</button>
+            <button class="btn btn-primary">添加步骤<span class="kbd">↵</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 · 窗口 -->
+  <section class="frame">
+    <div class="cap"><span>07</span><b>改后 · 窗口聚合</b><span class="file">宽 360 · 多字段条目：两行一组，别名与窗口大小并排</span></div>
+    <div class="stage" style="height:560px">
+      <div class="node" style="top:64px">
+        <div class="node-h">销售明细.csv <span class="meta">2026 Q4</span></div>
+        <table class="grid">
+          <colgroup>
+            <col style="width:26px"><col style="width:96px"><col style="width:82px"><col style="width:56px">
+            <col style="width:56px"><col style="width:88px"><col style="width:58px">
+          </colgroup>
+          <thead>
+            <tr><th class="rn">#</th><th>订单号</th><th>日期</th><th>地区</th><th>品类</th><th class="hi num">金额</th><th class="num">数量</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="rn">1</td><td>SO-2026-0417</td><td>2026-11-03</td><td>华东</td><td>家具</td><td class="hi num">1,280.00</td><td class="num">2</td></tr>
+            <tr><td class="rn">2</td><td>SO-2026-0418</td><td>2026-11-03</td><td>华南</td><td>数码</td><td class="hi num">640.00</td><td class="num">1</td></tr>
+            <tr><td class="rn">3</td><td>SO-2026-0419</td><td>2026-11-04</td><td>华东</td><td>食品</td><td class="hi num">96.50</td><td class="num">6</td></tr>
+            <tr><td class="rn">4</td><td>SO-2026-0420</td><td>2026-11-04</td><td>华北</td><td>服饰</td><td class="hi num">2,190.00</td><td class="num">3</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="slip w360" style="left:620px;top:76px">
+        <div class="slip-h">
+          <span class="slip-t">窗口聚合</span>
+          <span class="slip-scope"><span class="num">05</span>·<span>金额</span></span>
+          <button class="icon-btn" aria-label="关闭">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="slip-b">
+          <div class="row">
+            <span class="lab">分组依据</span>
+            <div class="ctl"><span class="ph">分组的列（可选）</span></div>
+          </div>
+
+          <div>
+            <div class="sec-head">
+              <span><span class="sec-t">表达式</span><span class="sec-meta">1 条</span></span>
+              <button class="sec-act">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                添加
+              </button>
+            </div>
+            <div class="ledger">
+              <div class="lrow">
+                <span class="idx">01</span>
+                <div class="pane">
+                  <div class="grid2">
+                    <div class="ctl mono">sum_over
+                      <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+                    </div>
+                    <div class="ctl">金额
+                      <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+                    </div>
+                  </div>
+                  <div class="mini">
+                    <div class="ctl mono" style="max-width:96px">3<span class="unit">行</span></div>
+                    <div class="ctl"><span class="ph">别名</span></div>
+                  </div>
+                </div>
+                <button class="del" aria-label="删除">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                </button>
+              </div>
+
+              <div class="lrow">
+                <span class="idx">02</span>
+                <div class="pane">
+                  <div class="grid2">
+                    <div class="ctl mono">mean_over
+                      <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+                    </div>
+                    <div class="ctl">金额
+                      <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+                    </div>
+                  </div>
+                  <div class="mini">
+                    <div class="ctl mono" style="max-width:96px">3<span class="unit">行</span></div>
+                    <div class="ctl">mean_3</div>
+                  </div>
+                </div>
+                <button class="del" aria-label="删除">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="slip-f">
+          <div class="note">将新增 <code>window</code> <span class="dash">·</span> <code>2 条表达式</code></div>
+          <div class="actions">
+            <button class="link-q">高级参数</button>
+            <span class="spacer"></span>
+            <button class="btn">取消</button>
+            <button class="btn btn-primary">添加步骤<span class="kbd">↵</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 · 透视 -->
+  <section class="frame">
+    <div class="cap"><span>08</span><b>改后 · 透视表</b><span class="file">宽 360 · 三段：列 / 行 / 值，段间距大于行间距</span></div>
+    <div class="stage" style="height:700px">
+      <div class="node" style="top:64px">
+        <div class="node-h">销售明细.csv <span class="meta">2026 Q4</span></div>
+        <table class="grid">
+          <colgroup>
+            <col style="width:26px"><col style="width:96px"><col style="width:82px"><col style="width:56px">
+            <col style="width:56px"><col style="width:88px"><col style="width:58px">
+          </colgroup>
+          <thead>
+            <tr><th class="rn">#</th><th>订单号</th><th>日期</th><th>地区</th><th class="hi">品类</th><th class="num">金额</th><th class="num">数量</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="rn">1</td><td>SO-2026-0417</td><td>2026-11-03</td><td>华东</td><td class="hi">家具</td><td class="num">1,280.00</td><td class="num">2</td></tr>
+            <tr><td class="rn">2</td><td>SO-2026-0418</td><td>2026-11-03</td><td>华南</td><td class="hi">数码</td><td class="num">640.00</td><td class="num">1</td></tr>
+            <tr><td class="rn">3</td><td>SO-2026-0419</td><td>2026-11-04</td><td>华东</td><td class="hi">食品</td><td class="num">96.50</td><td class="num">6</td></tr>
+            <tr><td class="rn">4</td><td>SO-2026-0420</td><td>2026-11-04</td><td>华北</td><td class="hi">服饰</td><td class="num">2,190.00</td><td class="num">3</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="slip w360" style="left:620px;top:64px">
+        <div class="slip-h">
+          <span class="slip-t">透视表</span>
+          <span class="slip-scope">未指定列</span>
+          <button class="icon-btn" aria-label="关闭">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="slip-b">
+          <div>
+            <div class="sec-head"><span><span class="sec-t">列（透视）</span><span class="sec-meta">2</span></span></div>
+            <div class="picker">
+              <div class="picker-s">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                搜索列
+              </div>
+              <div class="picker-l">
+                <div class="pick on"><span class="box on">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>
+                </span>品类</div>
+                <div class="pick on"><span class="box on">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>
+                </span>地区</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="sec-head"><span><span class="sec-t">行（分组）</span><span class="sec-meta">1</span></span></div>
+            <div class="picker">
+              <div class="picker-s">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                搜索列
+              </div>
+              <div class="picker-l">
+                <div class="pick on"><span class="box on">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>
+                </span>日期</div>
+                <div class="pick"><span class="box"></span>订单号</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="sec-head">
+              <span><span class="sec-t">值（聚合）</span><span class="sec-meta">2 个</span></span>
+              <button class="sec-act">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                添加
+              </button>
+            </div>
+            <div class="ledger">
+              <div class="lrow">
+                <span class="idx">01</span>
+                <div class="pane">
+                  <div class="mini">
+                    <div class="ctl">金额
+                      <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+                    </div>
+                    <div class="ctl" style="flex:none;width:88px">求和
+                      <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+                    </div>
+                  </div>
+                </div>
+                <button class="del" aria-label="删除">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                </button>
+              </div>
+              <div class="lrow">
+                <span class="idx">02</span>
+                <div class="pane">
+                  <div class="mini">
+                    <div class="ctl">数量
+                      <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+                    </div>
+                    <div class="ctl" style="flex:none;width:88px">计数
+                      <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+                    </div>
+                  </div>
+                </div>
+                <button class="del" aria-label="删除">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <span class="lab">列分隔符</span>
+            <div class="ctl mono" style="width:72px">_</div>
+          </div>
+        </div>
+        <div class="slip-f">
+          <div class="note">将新增 <code>pivot</code> <span class="dash">·</span> <code>2 个值 · 按 _ 连接</code></div>
+          <div class="actions">
+            <button class="link-q">高级参数</button>
+            <span class="spacer"></span>
+            <button class="btn">取消</button>
+            <button class="btn btn-primary">添加步骤<span class="kbd">↵</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 09 · 状态 -->
+  <section class="frame">
+    <div class="cap"><span>09</span><b>改后 · 不可应用时</b><span class="file">按钮变灰的同时，摘要行说明缺什么</span></div>
+    <div class="stage" style="height:440px">
+      <div class="slip" style="left:120px;top:56px">
+        <div class="slip-h">
+          <span class="slip-t">筛选</span>
+          <span class="slip-scope"><span class="num">03</span>·<span>地区</span></span>
+          <button class="icon-btn" aria-label="关闭">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="slip-b">
+          <div class="tabs"><span class="tab on">文本</span><span class="tab">数值</span></div>
+          <div class="fields">
+          <div class="row">
+            <span class="lab">列</span>
+            <div class="ctl">地区
+              <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
+          <div class="row">
+            <span class="lab">运算符</span>
+            <div class="ctl">等于
+              <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
+          <div class="row stack">
+            <span class="lab">值</span>
+            <div class="ctl tagbox">
+              <span class="ph">添加值，回车分隔</span><span class="caret"></span>
+            </div>
+          </div>
+          </div>
+          <label class="check"><span class="box"></span>忽略大小写</label>
+        </div>
+        <div class="slip-f">
+          <div class="note warn">还缺 <span style="color:var(--fg)">值</span></div>
+          <div class="actions">
+            <button class="link-q">高级参数</button>
+            <span class="spacer"></span>
+            <button class="btn">取消</button>
+            <button class="btn btn-primary dis">添加步骤</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="slip w320" style="left:520px;top:56px">
+        <div class="slip-h">
+          <span class="slip-t">排序</span>
+          <span class="slip-scope">未选列</span>
+          <button class="icon-btn" aria-label="关闭">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="slip-b">
+          <div>
+            <div class="sec-head"><span><span class="sec-t">列</span><span class="sec-meta">已选 0</span></span></div>
+            <div class="picker">
+              <div class="picker-s">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                搜索列
+              </div>
+              <div class="picker-l">
+                <div class="pick"><span class="box"></span>订单号</div>
+                <div class="pick"><span class="box"></span>日期</div>
+                <div class="pick"><span class="box"></span>地区</div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <span class="lab">排序方式</span>
+            <div class="seg"><i class="on">升序</i><i>降序</i></div>
+          </div>
+          <label class="check"><span class="box"></span>按数值排序</label>
+        </div>
+        <div class="slip-f">
+          <div class="note warn">还缺 <span style="color:var(--fg)">列</span></div>
+          <div class="actions">
+            <button class="link-q">高级参数</button>
+            <span class="spacer"></span>
+            <button class="btn">取消</button>
+            <button class="btn btn-primary dis">添加步骤</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="position:absolute;left:900px;top:56px;width:250px;font-size:11px;line-height:1.8;color:var(--muted-fg)">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:6px">状态</div>
+        主按钮保持原位，只换面阶与文字色，不改变尺寸；<br>
+        原因写在标题下方的摘要行，用 <span style="color:var(--warn)">琥珀</span>，不新增图标；<br>
+        Enter 在不可应用时不提交，Esc 关闭行为不变。
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 问题清单 ──────────────────────────────────────────────── -->
+  <div class="h2">问题清单</div>
+  <table class="spec">
+    <thead><tr><th class="n">#</th><th style="width:220px">位置</th><th>现状</th><th style="width:300px">改法</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td class="k">QuickActionShell.tsx:147</td><td><code>shadow-xl</code> 落在非模态浮窗上，阴影比窗口本身更重。</td><td>换成面阶 + 1px 细线 + 一层很浅的中性阴影；暗色只留 inset 细线。</td></tr>
+      <tr><td class="n">2</td><td class="k">QuickActionShell.tsx:154</td><td>标题栏 <code>bg-muted/20</code> + 边框，卡面、标题栏、内容三层底色。</td><td>标题栏与内容同底色，只用一条 <code>border-soft</code> 分隔；标题右侧加列索引片。</td></tr>
+      <tr><td class="n">3</td><td class="k">QuickActionShell.tsx:197-203</td><td>「取消」和「应用」都是 <code>secondary</code>，主操作不可见。</td><td>取消退成静默文字按钮，主操作唯一实心，文案改为「添加步骤」。</td></tr>
+      <tr><td class="n">4</td><td class="k">QuickActionShell.tsx:186-193</td><td>「高级参数」是带下划线的 12px 文字，和两个按钮不同权重。</td><td>保持文字链，但降为 11.5px 静默色，与底部按钮同一条基线。</td></tr>
+      <tr><td class="n">5</td><td class="k">_shared.tsx:5-20</td><td>字段标签 12px/500 压在控件上方，四行字段 236px；标签与值同字号，层级靠颜色。</td><td>标签进 72px 左列（11.5/400），控件右对齐，四行字段 169px；标签与值不在同一行竞争。</td></tr>
+      <tr><td class="n">6</td><td class="k">_shared.tsx:118-135</td><td>分段控件选中项用 <code>bg-primary</code> 实心 + <code>shadow-sm</code> + <code>transition-all</code>，抢走主操作的位置。</td><td>模式切换改成下划线页签；二选一（升序/降序）用细线描边的 <code>.seg</code>，选中 = brand-soft + brand 文字。</td></tr>
+      <tr><td class="n">7</td><td class="k">_shared.tsx:84-99 · 各表单</td><td>自绘 3.5px 方框与原生 <code>accent-primary</code> checkbox 并存，同屏两种勾选语法。</td><td>统一 13px、3px 圆角、brand 实心的勾选框，选中态用同一个勾。</td></tr>
+      <tr><td class="n">8</td><td class="k">Filter:167 · Pivot:176 · Select.tsx:175</td><td>h-7 与 h-8 混用，同一表单里输入框比下拉矮 4px。</td><td>所有控件统一 28px 高；行高 28，行距 8。</td></tr>
+      <tr><td class="n">9</td><td class="k">Replace:91-155 · Window:105-170</td><td>条目卡放在浮窗里形成「卡中卡」，<code>#1</code> 与删除图标单独占一行。</td><td>改成台账行：18px 等宽序号栏 + 内容 + 行尾删除，行间用细线，不套卡片。</td></tr>
+      <tr><td class="n">10</td><td class="k">11 个 form 的 title</td><td>标题只说命令名，不说作用于哪一列；Apply 也不说会新增步骤。</td><td>标题右侧「03 · 地区」；底部摘要「将新增 search · 地区 = 华东」。</td></tr>
+      <tr><td class="n">11</td><td class="k">Shell:164 · Replace:126 · Plus</td><td>关闭 14、删除 12、加号 14，右键菜单却是 16。</td><td>同一流程统一 14px、1.5 stroke；删除按钮 22×22 命中区。</td></tr>
+      <tr><td class="n">12</td><td class="k">Shell + _shared</td><td>外框 8、内层 6、分段容器 8 套 6、勾选框 2，半径没有按嵌套递减。</td><td>外框 10 / 控件 6 / 标签 4 / 勾选框 3，内层 = 外层 − 间距。</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── 规格 ──────────────────────────────────────────────────── -->
+  <div class="h2">规格</div>
+  <table class="spec">
+    <thead><tr><th style="width:170px">项</th><th>值</th></tr></thead>
+    <tbody>
+      <tr><td class="k">宽度</td><td>单列表单 <b>288</b>（筛选 / 日期 / 补位 / 切片 / 文本 / 数值）；多选与条目 <b>320</b>（排序 / 替换）；密集三段 <b>360</b>（透视 / 窗口 / 批量筛选）。全部为 4 的倍数。</td></tr>
+      <tr><td class="k">高度节奏</td><td>标题栏 40；内容内边距 12 / 14；行 28；行距 8；块距 12；段标题 18 + 6；底部 10 + 摘要 14 + 8 + 操作 28 + 12。</td></tr>
+      <tr><td class="k">字号</td><td>标题 13/500；字段标签 11.5/400 muted；控件与勾选 12/400；条目序号 mono 10；底部摘要 mono 10.5；按钮 12/500。两档字号、两个字重。</td></tr>
+      <tr><td class="k">颜色</td><td>面板 <code>--paper</code>，控件 <code>--card</code>，细线 <code>--border-soft</code>；选中 = brand-soft 9% + 左侧 2px brand；主操作 brand 实心；缺项提示 <code>--empty-warn</code>；不出现第二个强调色。</td></tr>
+      <tr><td class="k">圆角</td><td>面板 10；输入 / 下拉 / 按钮 / 清单 6；tag 与清单行 4；勾选框 3。</td></tr>
+      <tr><td class="k">图标</td><td>lucide，14px，1.5 stroke，取所处文字的语义色（muted 或 fg）；删除按钮命中区 22×22，图标 14。</td></tr>
+      <tr><td class="k">动效</td><td>进场 <code>opacity 0→1</code> + <code>translateY(4px)</code>，120ms，一条 easing；hover 只动颜色与面阶，80ms；不用 <code>transition-all</code>、不加缩放。</td></tr>
+      <tr><td class="k">键盘</td><td>Enter 应用（不可应用时不提交）、Esc 关闭、Tab 焦点环 2px brand/30%；保留标题栏拖动与外部点击关闭。</td></tr>
+      <tr><td class="k">滚动</td><td>内容区 <code>max-height: calc(浮窗 max-height − 标题 − 底部)</code>，常量从 86 改为新的 <b>40 + 72</b>；条目型表单先滚条目，摘要与主操作始终可见。</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── 文案 ──────────────────────────────────────────────────── -->
+  <div class="h2">文案对照</div>
+  <table class="spec">
+    <thead><tr><th style="width:200px">位置</th><th style="width:220px">现状</th><th>改后</th><th style="width:280px">理由</th></tr></thead>
+    <tbody>
+      <tr><td class="k">主按钮</td><td>应用</td><td>添加步骤</td><td>说明点击后发生什么，而不是通用确认词。</td></tr>
+      <tr><td class="k">面板标题</td><td>筛选</td><td>筛选 ＋ <code>03 · 地区</code></td><td>同一命令可从任意列进入，作用对象必须写明。</td></tr>
+      <tr><td class="k">多选计数</td><td>列（已选 2 列）</td><td>列 ＋ <code>已选 2</code></td><td>计数退成等宽小字，不与字段名同权重。</td></tr>
+      <tr><td class="k">条目标题</td><td>替换对 / #1</td><td>替换规则 / <code>01</code></td><td>与画布的步骤索引一致；序号进窄栏，不占一行。</td></tr>
+      <tr><td class="k">禁用态</td><td>按钮变灰，无说明</td><td>摘要行：还缺 值</td><td>把「为什么不能点」放在动作上方。</td></tr>
+      <tr><td class="k">底部摘要</td><td>（无）</td><td>将新增 <code>search</code> · <code>地区 = 华东</code></td><td>用生成结果本身做确认，不是新增数据或新功能。</td></tr>
+    </tbody>
+  </table>
+
+  <p style="font-size:11px;color:var(--muted-fg);line-height:1.9;margin-top:18px">
+    实施时会改 <code>QuickActionShell.tsx</code>、<code>_shared.tsx</code> 与 11 个表单的样式，并补若干 i18n key（「添加步骤」「缺少 {item}」「已选 {count}」）；<code>buildQuickCommand</code>、参数规则、右键菜单项与顺序、「高级参数」交接均不动。字段结构保持不变，因此测试断言只需替换按钮文案与勾选角色。
+  </p>
+  <div class="credit">工艺方法：unslop by @heydamir · CC BY 4.0</div>
+</div>
+</body>
+</html>

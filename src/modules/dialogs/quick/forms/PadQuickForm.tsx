@@ -4,12 +4,13 @@ import { useLanguage } from "@/i18n";
 import { QuickActionShell } from "@/modules/dialogs/quick/QuickActionShell";
 import { buildQuickCommand } from "@/modules/dialogs/quick/lib/buildQuickCommand";
 import { useQuickAliasLabels } from "@/modules/dialogs/quick/lib/labels";
+import { quickScope } from "@/modules/dialogs/quick/lib/scope";
 import type {
   PadDraft,
   PadDraftKind,
   QuickFormProps,
 } from "@/modules/dialogs/quick/types";
-import { Field } from "./_shared";
+import { Field, QuickInput } from "./_shared";
 
 export function PadQuickForm({
   request,
@@ -30,14 +31,35 @@ export function PadQuickForm({
   const [width, setWidth] = useState("10");
   const [char, setChar] = useState("");
 
+  const padOptions: { label: string; value: PadDraftKind }[] = [
+    { label: t.padTypePad, value: "pad" },
+    { label: t.padTypeLpad, value: "lpad" },
+    { label: t.padTypeRpad, value: "rpad" },
+  ];
+
   const draft: PadDraft = { kind: "pad", column, padType, width, char };
   const result = buildQuickCommand(draft, labels);
+  const padLabel =
+    padOptions.find((o) => o.value === padType)?.label || padType;
 
   return (
     <QuickActionShell
       title={t.padAction}
+      scope={quickScope(request, column)}
       anchor={request}
-      width={240}
+      width={288}
+      summary={
+        result
+          ? { command: result.type, detail: `${column} · ${padLabel}` }
+          : undefined
+      }
+      blocked={
+        !result
+          ? !column
+            ? t.filterColumn
+            : t.padWidth
+          : undefined
+      }
       canApply={!!result}
       onApply={() => result && onApply(result)}
       onAdvanced={() => result && onAdvanced(result)}
@@ -50,6 +72,8 @@ export function PadQuickForm({
           options={request.headers.map((h) => ({ label: h, value: h }))}
           placeholder={t.selectColumn}
           ariaLabel={t.filterColumn}
+          portal
+          height="h-7"
         />
       </Field>
 
@@ -57,33 +81,28 @@ export function PadQuickForm({
         <Select
           value={padType}
           onChange={(v) => setPadType(v as PadDraftKind)}
-          options={[
-            { label: t.padTypePad, value: "pad" },
-            { label: t.padTypeLpad, value: "lpad" },
-            { label: t.padTypeRpad, value: "rpad" },
-          ]}
+          options={padOptions}
           placeholder={t.padSelectType}
           ariaLabel={t.padPadType}
+          portal
+          height="h-7"
         />
       </Field>
 
       <Field label={t.padWidth}>
-        <input
+        <QuickInput
           type="number"
           value={width}
           onChange={(e) => setWidth(e.target.value)}
           placeholder={t.padWidthPlaceholder}
-          className="w-full h-8 px-2 text-xs border rounded-md bg-background"
         />
       </Field>
 
       <Field label={t.padCharacter}>
-        <input
-          type="text"
+        <QuickInput
           value={char}
           onChange={(e) => setChar(e.target.value)}
           placeholder={t.padCharacterPlaceholder}
-          className="w-full h-8 px-2 text-xs border rounded-md bg-background"
         />
       </Field>
     </QuickActionShell>

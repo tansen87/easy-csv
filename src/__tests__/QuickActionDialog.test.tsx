@@ -53,7 +53,7 @@ describe("QuickActionDialog", () => {
 
   it("applies the prefilled column and reports the built command", () => {
     const { onApply } = renderDialog();
-    fireEvent.click(screen.getByText("Apply"));
+    fireEvent.click(screen.getByText("Add step"));
     expect(onApply).toHaveBeenCalledTimes(1);
     expect(onApply.mock.calls[0][0]).toMatchObject({
       type: "sort",
@@ -62,16 +62,34 @@ describe("QuickActionDialog", () => {
     expect(onApply.mock.calls[0][0].alias).toBeTruthy();
   });
 
-  it("disables Apply until a column is selected", () => {
+  it("disables Add step until a column is selected", () => {
     const { onApply } = renderDialog({ col: undefined });
-    const apply = screen.getByText("Apply") as HTMLButtonElement;
+    const apply = screen.getByText("Add step") as HTMLButtonElement;
     expect(apply.disabled).toBe(true);
 
     fireEvent.click(screen.getByText("age"));
-    expect((screen.getByText("Apply") as HTMLButtonElement).disabled).toBe(false);
-    fireEvent.click(screen.getByText("Apply"));
+    expect((screen.getByText("Add step") as HTMLButtonElement).disabled).toBe(
+      false,
+    );
+    fireEvent.click(screen.getByText("Add step"));
 
     expect(onApply.mock.calls[0][0].params.select).toBe("age");
+  });
+
+  it("names the column in the header and states what will be added", () => {
+    renderDialog();
+    expect(screen.getByText("01 · name")).toBeTruthy();
+    expect(screen.getByText("Will add")).toBeTruthy();
+    expect(screen.getByText("sort")).toBeTruthy();
+    expect(screen.getByText("name · Ascending")).toBeTruthy();
+  });
+
+  it("explains what is missing while the draft cannot be applied", () => {
+    renderDialog({ col: undefined });
+    expect(screen.getByText("Missing")).toBeTruthy();
+    expect(
+      (screen.getByText("Add step") as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 
   it("hands the current values over to the advanced form", () => {
@@ -99,10 +117,10 @@ describe("QuickActionDialog", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("scrolls the body and gives the filter dialog more height", () => {
+  it("caps the scroll body below the header and footer", () => {
     renderDialog({ kind: "filter" });
     const dialog = screen.getByRole("dialog") as HTMLElement;
-    expect(dialog.getAttribute("style")).toContain("min(56vh, 560px)");
+    expect(dialog.getAttribute("style")).toContain("min(78vh, 680px)");
 
     const viewport = dialog.querySelector(
       "[data-radix-scroll-area-viewport]",
@@ -111,10 +129,10 @@ describe("QuickActionDialog", () => {
     expect(viewport.className).toContain("overflow-y-auto");
     const viewportStyle = viewport.getAttribute("style") ?? "";
     expect(viewportStyle).toContain("max-height");
-    expect(viewportStyle).toContain("56vh");
-    expect(viewportStyle).toContain("560px");
-    expect(viewportStyle).toContain("min-height");
-    expect(viewportStyle).toContain("33vh");
+    expect(viewportStyle).toContain("78vh");
+    expect(viewportStyle).toContain("680px");
+    // 112px = 40px header + 72px footer (design 055).
+    expect(viewportStyle).toContain("112px");
     // Radix always mounts its vertical scrollbar on this viewport.
     expect(viewportStyle).toContain("overflow-y: scroll");
   });
@@ -130,6 +148,29 @@ describe("QuickActionDialog", () => {
     viewports.forEach((viewport) => {
       expect(viewport.getAttribute("style")).toContain("overflow-y: scroll");
     });
+  });
+
+  it("portals the select list out of the scroll body so it is never clipped", () => {
+    renderDialog({ kind: "filter" });
+    fireEvent.focus(screen.getAllByRole("combobox")[0]);
+
+    const dialog = screen.getByRole("dialog");
+    const list = screen.getByRole("listbox");
+    expect(dialog.contains(list)).toBe(false);
+    expect(document.body.contains(list)).toBe(true);
+  });
+
+  it("keeps the panel open when picking from a portaled select list", () => {
+    const { onClose } = renderDialog({ kind: "filter" });
+    fireEvent.focus(screen.getAllByRole("combobox")[0]);
+
+    const option = screen.getByRole("option", { name: "age" });
+    fireEvent.mouseDown(option);
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.click(option);
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
   it("switches the filter form between text and number", () => {

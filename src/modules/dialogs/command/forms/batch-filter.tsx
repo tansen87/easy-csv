@@ -1,34 +1,49 @@
 import { CommandFormProps } from "@/types/dialog";
 import { CommandFormShell } from "@/modules/dialogs/command/CommandFormShell";
 import { Select } from "@/components/ui/Select";
+import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n";
 
 interface BatchFilterFieldsProps {
   params: Record<string, any>;
   onChange: (params: Record<string, any>) => void;
+  /** Compact type and 28px controls for the right-click panel (design 055). */
+  dense?: boolean;
 }
 
 /** Field body shared by the unified command form and the quick-action form. */
-export function BatchFilterFields({ params, onChange }: BatchFilterFieldsProps) {
+export function BatchFilterFields({
+  params,
+  onChange,
+  dense = false,
+}: BatchFilterFieldsProps) {
   const { t } = useLanguage();
   const update = (patch: Record<string, any>) =>
     onChange({ ...params, ...patch });
 
+  const labelClass = dense
+    ? "mb-1 block text-[11.5px] text-muted-foreground"
+    : "text-sm font-medium";
+  const inputClass = dense
+    ? "h-7 w-full rounded-md border bg-background px-2 text-xs outline-none placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring/40"
+    : "w-full h-8 px-3 text-sm border rounded-md bg-background";
+  const gridClass = dense ? "grid grid-cols-2 gap-2" : "grid grid-cols-2 gap-4";
+
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-4">
+    <div className={dense ? "flex flex-col gap-2" : "space-y-3"}>
+      <div className={gridClass}>
         <div>
-          <label className="text-sm font-medium">{t.filterColumn}</label>
+          <label className={labelClass}>{t.filterColumn}</label>
           <input
             type="text"
             value={params.column || ""}
             onChange={(e) => update({ column: e.target.value })}
             placeholder={t.filterColumnToFilterOn}
-            className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+            className={inputClass}
           />
         </div>
         <div>
-          <label className="text-sm font-medium">{t.filterType}</label>
+          <label className={labelClass}>{t.filterType}</label>
           <Select
             value={params["filter-type"] || "text"}
             onChange={(value) => {
@@ -55,12 +70,14 @@ export function BatchFilterFields({ params, onChange }: BatchFilterFieldsProps) 
               { label: t.number, value: "number" },
             ]}
             placeholder={t.selectType}
+            portal={dense}
+            height={dense ? "h-7" : undefined}
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className={gridClass}>
         <div>
-          <label className="text-sm font-medium">{t.filterOperator}</label>
+          <label className={labelClass}>{t.filterOperator}</label>
           <Select
             value={
               params["text-operator"] || params["number-operator"] || "equals"
@@ -97,10 +114,12 @@ export function BatchFilterFields({ params, onChange }: BatchFilterFieldsProps) 
                   ]
             }
             placeholder={t.selectOperator}
+            portal={dense}
+            height={dense ? "h-7" : undefined}
           />
         </div>
         <div>
-          <label className="text-sm font-medium">{t.valueSource}</label>
+          <label className={labelClass}>{t.valueSource}</label>
           <Select
             value={params["value-mode"] || "manual"}
             onChange={(value) => {
@@ -119,42 +138,52 @@ export function BatchFilterFields({ params, onChange }: BatchFilterFieldsProps) 
               { label: t.fromColumn, value: "column" },
             ]}
             placeholder={t.selectSource}
+            portal={dense}
+            height={dense ? "h-7" : undefined}
           />
         </div>
       </div>
       {params["value-mode"] === "manual" ? (
         <div>
-          <label className="text-sm font-medium">{t.valuesOnePerLine}</label>
+          <label className={labelClass}>{t.valuesOnePerLine}</label>
           <textarea
             value={params["manual-values"] || ""}
             onChange={(e) => update({ "manual-values": e.target.value })}
             placeholder={"value1\nvalue2\nvalue3"}
-            className="w-full h-24 px-3 text-sm border rounded-md bg-background resize-none font-mono focus:outline-none focus:ring-2 focus:ring-ring expr-editor-scrollbar"
+            className={cn(
+              "w-full resize-none rounded-md border bg-background font-mono focus:outline-none focus:ring-2 focus:ring-ring expr-editor-scrollbar",
+              dense ? "h-20 px-2 py-1 text-xs" : "h-24 px-3 text-sm",
+            )}
           />
         </div>
       ) : (
         <div>
-          <label className="text-sm font-medium">{t.extractColumn}</label>
+          <label className={labelClass}>{t.extractColumn}</label>
           <input
             type="text"
             value={params["extract-column"] || ""}
             onChange={(e) => update({ "extract-column": e.target.value })}
             placeholder={t.extractColumnPlaceholder}
-            className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+            className={inputClass}
           />
         </div>
       )}
       <div>
-        <label className="text-sm font-medium">{t.outputDirectoryOptional}</label>
+        <label className={labelClass}>{t.outputDirectoryOptional}</label>
         <input
           type="text"
           value={params["output-dir"] || ""}
           onChange={(e) => update({ "output-dir": e.target.value })}
           placeholder={t.sameAsSourceFile}
-          className="w-full h-8 px-3 text-sm border rounded-md bg-background"
+          className={inputClass}
         />
       </div>
-      <label className="flex items-center gap-2 text-sm cursor-pointer">
+      <label
+        className={cn(
+          "flex cursor-pointer items-center gap-2",
+          dense ? "text-xs" : "text-sm",
+        )}
+      >
         <input
           type="checkbox"
           checked={params["case-insensitive"] || false}
