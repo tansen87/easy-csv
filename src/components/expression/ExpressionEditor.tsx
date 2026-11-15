@@ -2,12 +2,14 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { highlightExpression } from "@/components/expression/highlight";
 import {
   getAutocompleteSuggestions,
-  insertAutocomplete,
   AutocompleteItem,
 } from "@/components/expression/autocomplete";
+import { measurePopover, type PopoverPlacement } from "@/components/expression/popover";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { getFunctionByName } from "@/data/functions";
+import { useLanguage } from "@/i18n";
+import type { Translations } from "@/i18n/translations";
 
 interface ExpressionEditorProps {
   value: string;
@@ -18,6 +20,26 @@ interface ExpressionEditorProps {
   autoFocus?: boolean;
 }
 
+/** Quiet code shown in the suggestion list's first column. */
+const TYPE_CODES: Record<AutocompleteItem["type"], string> = {
+  column: "col",
+  function: "fn",
+  keyword: "kw",
+  operator: "op",
+};
+
+const KBD_CLASS =
+  "rounded border border-border bg-card px-1 py-px font-mono text-[10px] leading-4 text-muted-foreground";
+
+const MIN_EDITOR_HEIGHT = 210;
+const MAX_EDITOR_HEIGHT = 330;
+
+/**
+ * xan expression editor (design 056). Mirrors the DuckDB editor: a 240px
+ * bordered area (210px of code + a 28px signature strip), syntax highlight
+ * behind a transparent textarea, and an autocomplete popover anchored to the
+ * word being typed instead of hanging below the whole editor.
+ */
 export function ExpressionEditor({
   value,
   onChange,
@@ -26,268 +48,438 @@ export function ExpressionEditor({
   className,
   autoFocus = false,
 }: ExpressionEditorProps) {
-  const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const [autocompleteItems, setAutocompleteItems] = useState<
-    AutocompleteItem[]
-  >([]);
+  const { t } = useLanguage();
+  const [suggestions, setSuggestions] = useState<AutocompleteItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [autocompleteStart, setAutocompleteStart] = useState(0);
-  const [autocompleteEnd, setAutocompleteEnd] = useState(0);
+  const [range, setRange] = useState({ start: 0, end: 0 });
+  /** Current word when nothing matched, so the popover can say so. */
+  const [noMatch, setNoMatch] = useState<string | null>(null);
+  const [placement, setPlacement] = useState<PopoverPlacement | null>(null);
+  const [cursorPos, setCursorPos] = useState(0);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
-  const autocompleteRef = useRef<HTMLDivElement>(null);
-  const [cursorPos, setCursorPos] = useState(0);
+  const highlightInnerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
-  // Detect current function context and parameter index
-  const functionContext = useMemo(() => {
-    return detectFunctionContext(value, cursorPos);
-  }, [value, cursorPos]);
+  const functionContext = useMemo(
+    () => detectFunctionContext(value, cursorPos),
+    [value, cursorPos],
+  );
 
-  // Sync scroll between textarea and highlight layer
-  const handleScroll = useCallback(() => {
-    if (textareaRef.current && highlightRef.current) {
-      highlightRef.current.scrollTop = textareaRef.current.scrollTop;
-      highlightRef.current.scrollLeft = textareaRef.current.scrollLeft;
-    }
+  const rangeRef = useRef(range);
+  rangeRef.current = range;
+
+  const syncHighlight = useCallback(() => {
+    const ta = textareaRef.current;
+    const outer = highlightRef.current;
+    const inner = highlightInnerRef.current;
+    if (!ta || !outer || !inner) return;
+    // The textarea's scrollbar narrows its content box; match it so wrapped
+    // lines stay under the caret.
+    const width = `${ta.clientWidth}px`;
+    if (inner.style.width !== width) inner.style.width = width;
+    outer.scrollTop = ta.scrollTop;
+    outer.scrollLeft = ta.scrollLeft;
   }, []);
 
-  // Track cursor position on click/key events
-  const handleCursorMove = useCallback(() => {
-    if (textareaRef.current) {
-      setCursorPos(textareaRef.current.selectionStart);
-    }
+  const placeSuggestions = useCallback(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    setPlacement(measurePopover(ta, rangeRef.current.start));
   }, []);
 
-  // Handle input changes
+  const closeSuggestions = useCallback(() => {
+    setSuggestions([]);
+    setNoMatch(null);
+  }, []);
+
+  /** Suggestions need at least one typed character, and duplicate labels
+   * (e.g. two `count` entries) collapse into one row. */
+  const updateSuggestions = useCallback(
+    (text: string, pos: number) => {
+      const result = getAutocompleteSuggestions(text, pos, columns);
+      const word = text.slice(result.start, result.end);
+      setRange({ start: result.start, end: result.end });
+      if (!word) {
+        closeSuggestions();
+        return;
+      }
+      const seen = new Set<string>();
+      const items = result.items.filter((item) => {
+        if (seen.has(item.label)) return false;
+        seen.add(item.label);
+        return true;
+      });
+      if (items.length === 0) {
+        setSuggestions([]);
+        setNoMatch(word);
+        return;
+      }
+      setSuggestions(items);
+      setSelectedIndex(0);
+      setNoMatch(null);
+    },
+    [columns, closeSuggestions],
+  );
+
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = e.target.value;
-      const newCursorPos = e.target.selectionStart;
-
+      const newCursorPos = e.target.selectionStart || 0;
       onChange(newValue);
       setCursorPos(newCursorPos);
-
-      // Check for autocomplete
-      const result = getAutocompleteSuggestions(newValue, cursorPos, columns);
-      if (result.items.length > 0) {
-        setAutocompleteItems(result.items);
-        setAutocompleteStart(result.start);
-        setAutocompleteEnd(result.end);
-        setShowAutocomplete(true);
-        setSelectedIndex(0);
-      } else {
-        setShowAutocomplete(false);
-      }
+      updateSuggestions(newValue, newCursorPos);
     },
-    [onChange, columns],
+    [onChange, updateSuggestions],
   );
 
-  // Handle keyboard navigation
+  const syncCursor = useCallback(() => {
+    if (textareaRef.current) {
+      setCursorPos(textareaRef.current.selectionStart || 0);
+    }
+  }, []);
+
+  const insertAt = useCallback(
+    (text: string, start: number, end: number, insert: string) => {
+      const next = text.slice(0, start) + insert + text.slice(end);
+      onChange(next);
+      setCursorPos(start + insert.length);
+      closeSuggestions();
+      requestAnimationFrame(() => {
+        const ta = textareaRef.current;
+        if (ta) {
+          ta.selectionStart = ta.selectionEnd = start + insert.length;
+          ta.focus();
+        }
+      });
+    },
+    [onChange, closeSuggestions],
+  );
+
+  const selectSuggestion = useCallback(
+    (item: AutocompleteItem) => {
+      insertAt(value, range.start, range.end, item.value);
+    },
+    [value, range, insertAt],
+  );
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (!showAutocomplete) return;
+      // Enter is always a newline and never bubbles: the dialog must not add a
+      // step while the caret is in the expression.
+      if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        const ta = e.currentTarget;
+        const start = ta.selectionStart ?? value.length;
+        const end = ta.selectionEnd ?? value.length;
+        onChange(value.slice(0, start) + "\n" + value.slice(end));
+        setCursorPos(start + 1);
+        closeSuggestions();
+        requestAnimationFrame(() => {
+          if (textareaRef.current) {
+            textareaRef.current.selectionStart =
+              textareaRef.current.selectionEnd = start + 1;
+          }
+        });
+        return;
+      }
 
+      if (e.key === "Escape" && (suggestions.length > 0 || noMatch)) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeSuggestions();
+        return;
+      }
+
+      if (suggestions.length === 0) return;
       switch (e.key) {
+        case "Tab":
+          e.preventDefault();
+          e.stopPropagation();
+          selectSuggestion(suggestions[selectedIndex]);
+          break;
         case "ArrowDown":
           e.preventDefault();
-          setSelectedIndex((prev) =>
-            prev < autocompleteItems.length - 1 ? prev + 1 : 0,
-          );
+          setSelectedIndex((i) => (i + 1) % suggestions.length);
           break;
         case "ArrowUp":
           e.preventDefault();
-          setSelectedIndex((prev) =>
-            prev > 0 ? prev - 1 : autocompleteItems.length - 1,
+          setSelectedIndex(
+            (i) => (i - 1 + suggestions.length) % suggestions.length,
           );
           break;
-        case "Enter":
-        case "Tab":
-          if (autocompleteItems.length > 0) {
-            e.preventDefault();
-            selectAutocompleteItem(autocompleteItems[selectedIndex]);
-          }
-          break;
-        case "Escape":
-          e.preventDefault();
-          setShowAutocomplete(false);
-          break;
       }
     },
-    [showAutocomplete, autocompleteItems, selectedIndex],
+    [
+      value,
+      suggestions,
+      selectedIndex,
+      noMatch,
+      onChange,
+      selectSuggestion,
+      closeSuggestions,
+    ],
   );
 
-  // Select an autocomplete item
-  const selectAutocompleteItem = useCallback(
-    (item: AutocompleteItem) => {
-      const textarea = textareaRef.current;
-      if (!textarea) return;
-
-      const { newExpression, newCursorPos } = insertAutocomplete(
-        value,
-        autocompleteStart,
-        autocompleteEnd,
-        item.value,
-      );
-
-      onChange(newExpression);
-      setShowAutocomplete(false);
-
-      // Set cursor position after React re-render
-      requestAnimationFrame(() => {
-        textarea.selectionStart = newCursorPos;
-        textarea.selectionEnd = newCursorPos;
-        textarea.focus();
-      });
-    },
-    [value, autocompleteStart, autocompleteEnd, onChange],
-  );
-
-  // Close autocomplete when clicking outside
+  // Grow the code area from 210px up to 330px, then scroll internally. Runs
+  // before the placement effect below so the caret is measured at the final
+  // height.
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        autocompleteRef.current &&
-        !autocompleteRef.current.contains(e.target as Node)
-      ) {
-        setShowAutocomplete(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Auto-resize textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(
-        textareaRef.current.scrollHeight,
-        150,
-      )}px`;
-    }
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = `${Math.min(
+      Math.max(ta.scrollHeight, MIN_EDITOR_HEIGHT),
+      MAX_EDITOR_HEIGHT,
+    )}px`;
   }, [value]);
 
+  useEffect(() => {
+    if (suggestions.length === 0 && !noMatch) {
+      setPlacement(null);
+      return;
+    }
+    placeSuggestions();
+  }, [suggestions, noMatch, value, range.start, placeSuggestions]);
+
+  useEffect(() => {
+    syncHighlight();
+  }, [value, syncHighlight]);
+
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      syncHighlight();
+      placeSuggestions();
+    });
+    ro.observe(ta);
+    return () => ro.disconnect();
+  }, [syncHighlight, placeSuggestions]);
+
+  // Keep the highlighted row inside the 3–6 row viewport as ↑↓ walk.
+  useEffect(() => {
+    const row = listRef.current?.querySelector<HTMLElement>(
+      `[data-suggestion-index="${selectedIndex}"]`,
+    );
+    const viewport = row?.closest<HTMLElement>(
+      "[data-radix-scroll-area-viewport]",
+    );
+    if (!row || !viewport) return;
+    const rowRect = row.getBoundingClientRect();
+    const viewRect = viewport.getBoundingClientRect();
+    if (rowRect.top < viewRect.top) {
+      viewport.scrollTop += rowRect.top - viewRect.top;
+    } else if (rowRect.bottom > viewRect.bottom) {
+      viewport.scrollTop += rowRect.bottom - viewRect.bottom;
+    }
+  }, [selectedIndex, suggestions]);
+
   const highlighted = highlightExpression(value);
+  const activeSuggestion = suggestions[selectedIndex];
+  const typedWord = value.slice(range.start, range.end).toLowerCase();
 
   return (
-    <div className={cn("relative", className)}>
-      {/* Highlight layer (behind textarea, no own scrollbar) */}
-      <div
-        ref={highlightRef}
-        className="absolute inset-0 pointer-events-none whitespace-pre-wrap break-words font-mono text-sm p-2 bg-background border rounded-md z-0 overflow-hidden"
-        aria-hidden="true"
-        dangerouslySetInnerHTML={{ __html: highlighted + "\n" }}
-        style={{
-          minHeight: "120px",
-          maxHeight: "120px",
-        }}
-      />
-
-      {/* Textarea (on top, so caret is visible) */}
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        onScroll={handleScroll}
-        onClick={handleCursorMove}
-        onKeyUp={handleCursorMove}
-        placeholder={placeholder}
-        autoFocus={autoFocus}
-        className={cn(
-          "relative z-10 w-full min-h-[120px] max-h-[120px] p-2 font-mono text-sm",
-          "bg-transparent border border-transparent rounded-md resize-none",
-          "focus:outline-none focus:ring-2 focus:ring-ring",
-          "text-transparent caret-black dark:caret-white",
-          "expr-editor-scrollbar",
-        )}
-      />
-
-      {/* Autocomplete dropdown */}
-      {showAutocomplete && autocompleteItems.length > 0 && (
+    <div
+      className={cn(
+        "rounded-md border border-input bg-background transition-[border-color,box-shadow] focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-ring/20",
+        className,
+      )}
+    >
+      <div className="relative">
         <div
-          ref={autocompleteRef}
-          className="absolute z-50 mt-3 w-full bg-popover border rounded-md shadow-md"
+          ref={highlightRef}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
         >
-          <ScrollArea className="h-42">
-            <div className="p-1">
-              {autocompleteItems.map((item, index) => (
-                <div
-                  key={`${item.type}-${item.label}`}
-                  className={cn(
-                    "px-3 py-2 cursor-pointer flex items-center gap-2 rounded-sm",
-                    "hover:bg-accent hover:text-accent-foreground",
-                    index === selectedIndex &&
-                      "bg-accent text-accent-foreground",
-                  )}
-                  onClick={() => selectAutocompleteItem(item)}
-                  onMouseEnter={() => setSelectedIndex(index)}
+          <div
+            ref={highlightInnerRef}
+            className="whitespace-pre-wrap break-words px-3 py-3 font-mono text-[13px] leading-[22px] tab-2"
+            dangerouslySetInnerHTML={{ __html: highlighted + "\n" }}
+          />
+        </div>
+
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onKeyUp={syncCursor}
+          onScroll={() => {
+            syncHighlight();
+            placeSuggestions();
+          }}
+          onMouseUp={() => {
+            syncCursor();
+            closeSuggestions();
+          }}
+          onBlur={() =>
+            setTimeout(() => {
+              closeSuggestions();
+            }, 120)
+          }
+          placeholder={placeholder}
+          autoFocus={autoFocus}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoComplete="off"
+          className={cn(
+            "expr-editor-scrollbar relative z-10 block min-h-[210px] w-full resize-none whitespace-pre-wrap break-words tab-2",
+            "border-0 bg-transparent px-3 py-3 font-mono text-[13px] leading-[22px]",
+            "text-transparent caret-black outline-none placeholder:text-muted-foreground/50 dark:caret-white",
+          )}
+        />
+
+        {/* Popover anchored to the word being typed; flips above the caret
+            when the editor bottom is close. */}
+        {(suggestions.length > 0 || noMatch) && placement && (
+          <div
+            ref={listRef}
+            role="listbox"
+            className="absolute z-50 overflow-hidden rounded-lg border bg-popover shadow-md"
+            style={{
+              left: placement.left,
+              width: placement.width,
+              ...(placement.above
+                ? { bottom: placement.offset }
+                : { top: placement.offset }),
+            }}
+          >
+            {suggestions.length > 0 ? (
+              <>
+                <ScrollArea
+                  style={{ height: placement.listHeight }}
+                  hideHorizontalScrollbar
                 >
-                  <span
-                    className={cn(
-                      "px-1.5 py-0.5 text-xs rounded",
-                      item.type === "function" &&
-                        "bg-syntax-function/10 text-syntax-function",
-                      item.type === "keyword" &&
-                        "bg-syntax-keyword/10 text-syntax-keyword",
-                      item.type === "column" &&
-                        "bg-syntax-column/10 text-syntax-column",
-                      item.type === "operator" &&
-                        "bg-syntax-operator/10 text-syntax-operator",
-                    )}
-                  >
-                    {item.type}
-                  </span>
-                  <span className="font-mono font-medium">{item.label}</span>
-                  {item.type === "function" &&
-                    item.params &&
-                    item.params.length > 0 && (
-                      <span className="font-mono text-xs text-muted-foreground">
-                        ({item.params.join(", ")})
-                      </span>
-                    )}
-                  {item.description && (
-                    <span className="text-muted-foreground text-xs ml-auto truncate">
-                      {item.description}
+                  <div className="p-1">
+                    {suggestions.map((item, index) => {
+                      const active = index === selectedIndex;
+                      const prefixLength = item.label
+                        .toLowerCase()
+                        .startsWith(typedWord)
+                        ? typedWord.length
+                        : 0;
+                      const signature =
+                        item.type === "function" &&
+                        item.params &&
+                        item.params.length > 0
+                          ? `(${item.params.join(", ")})`
+                          : undefined;
+                      return (
+                        <div
+                          key={`${item.type}-${item.label}`}
+                          role="option"
+                          aria-label={item.label}
+                          aria-selected={active}
+                          data-suggestion-index={index}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            selectSuggestion(item);
+                          }}
+                          onMouseEnter={() => setSelectedIndex(index)}
+                          className={cn(
+                            "relative grid h-7 cursor-pointer grid-cols-[24px_1fr_auto] items-center gap-x-2.5 rounded px-2",
+                            "hover:bg-muted/55",
+                            active && "bg-brand-soft hover:bg-brand-soft",
+                          )}
+                        >
+                          {active && (
+                            <span
+                              aria-hidden="true"
+                              className="absolute top-1 bottom-1 left-0 w-0.5 rounded-full bg-primary"
+                            />
+                          )}
+                          <span
+                            className={cn(
+                              "font-mono text-[10.5px]",
+                              active
+                                ? "text-primary"
+                                : "text-muted-foreground/70",
+                            )}
+                          >
+                            {TYPE_CODES[item.type]}
+                          </span>
+                          <span className="min-w-0 truncate font-mono text-[13px] font-medium">
+                            <span className="text-primary">
+                              {item.label.slice(0, prefixLength)}
+                            </span>
+                            {item.label.slice(prefixLength)}
+                          </span>
+                          {signature && (
+                            <span className="max-w-[200px] justify-self-end truncate font-mono text-[11.5px] text-muted-foreground">
+                              {signature}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+                <div className="flex h-8 items-center gap-2.5 border-t border-border-soft px-2.5 text-[11.5px] text-muted-foreground">
+                  <span className="min-w-0 flex-1 truncate">
+                    <span className="font-medium text-foreground">
+                      {suggestionKindLabel(t, activeSuggestion?.type)}
                     </span>
-                  )}
+                    {activeSuggestion?.description
+                      ? ` · ${activeSuggestion.description}`
+                      : ""}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1">
+                    <span className={KBD_CLASS}>↑↓</span>
+                    <span className={KBD_CLASS}>Tab</span>
+                    <span className={KBD_CLASS}>Esc</span>
+                  </span>
                 </div>
-              ))}
-            </div>
-          </ScrollArea>
-        </div>
-      )}
+              </>
+            ) : (
+              <div className="flex h-8 items-center gap-2 px-2.5 text-[11.5px] text-muted-foreground">
+                <span className="min-w-0 flex-1 truncate">
+                  {t.exprNoMatch}{" "}
+                  <span className="font-mono text-foreground">
+                    “{noMatch}”
+                  </span>
+                </span>
+                <span className={KBD_CLASS}>Esc</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
-      {/* Parameter hint bar */}
-      {functionContext && (
-        <div
-          className={`px-2 py-1 text-xs font-mono bg-muted rounded-md flex items-center ${showAutocomplete ? "relative z-toast" : ""}`}
-        >
-          <span className="text-muted-foreground">
-            {functionContext.funcName}(
-          </span>
-          {functionContext.params.map((param, i) => (
-            <span key={i}>
-              <span
-                className={cn(
-                  "px-1 py-0.5 rounded",
-                  i === functionContext.paramIndex
-                    ? "bg-primary text-primary-foreground font-bold"
-                    : "text-muted-foreground",
-                )}
-              >
-                {param}
+      {/* Signature strip: parameters of the function under the caret, or a
+          quiet hint when the caret is outside a function call. */}
+      <div className="flex h-7 items-center gap-3 border-t border-border-soft px-3 font-mono text-[11.5px] text-muted-foreground">
+        {functionContext ? (
+          <span className="flex min-w-0 items-center">
+            <span>{functionContext.funcName}(</span>
+            {functionContext.params.map((param, i) => (
+              <span key={i} className="whitespace-nowrap">
+                {i > 0 && ", "}
+                <span
+                  className={cn(
+                    i === functionContext.paramIndex &&
+                      "font-medium text-primary underline decoration-primary decoration-2 underline-offset-[3px]",
+                  )}
+                >
+                  {param}
+                </span>
               </span>
-              {i < functionContext.params.length - 1 && (
-                <span className="text-muted-foreground">, </span>
-              )}
-            </span>
-          ))}
-          <span className="text-muted-foreground">)</span>
-        </div>
-      )}
+            ))}
+            <span>)</span>
+          </span>
+        ) : (
+          <span className="font-sans text-[11.5px] text-muted-foreground/70">
+            {t.exprHint}
+          </span>
+        )}
+        <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground/60">
+          {functionContext
+            ? `${functionContext.paramIndex + 1} / ${functionContext.params.length}`
+            : "xan"}
+        </span>
+      </div>
     </div>
   );
 }
@@ -296,6 +488,25 @@ interface FunctionContext {
   funcName: string;
   params: string[];
   paramIndex: number;
+}
+
+/** Full name of a suggestion kind, used by the popover footer. */
+function suggestionKindLabel(
+  t: Translations,
+  type: AutocompleteItem["type"] | undefined,
+): string {
+  switch (type) {
+    case "column":
+      return t.exprKindColumn;
+    case "function":
+      return t.exprKindFunction;
+    case "keyword":
+      return t.exprKindKeyword;
+    case "operator":
+      return t.exprKindOperator;
+    default:
+      return "";
+  }
 }
 
 function detectFunctionContext(

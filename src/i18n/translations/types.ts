@@ -906,6 +906,16 @@ export interface Translations {
   duckdbSuggestionKindColumn: string;
   duckdbSuggestionKindTable: string;
   duckdbSuggestionNoMatch: string;
+  // xan expression editor (map)
+  mapExpression: string;
+  mapOptions: string;
+  exprHint: string;
+  exprNoMatch: string;
+  exprMissing: string;
+  exprKindFunction: string;
+  exprKindColumn: string;
+  exprKindKeyword: string;
+  exprKindOperator: string;
   inputFormatParquet: string;
   inputFormatDuckdb: string;
 

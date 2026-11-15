@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 056 · map 表达式编辑器</title>
+<style>
+  /* ── tokens · 与 src/index.css 对齐 ───────────────────────────────── */
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --popover:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --edge:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+    --brand-line:color-mix(in oklab,var(--brand) 45%,transparent);
+
+    --syntax-keyword:oklch(0.48 0.14 310);
+    --syntax-function:oklch(0.5 0.11 245);
+    --syntax-string:oklch(0.5 0.1 145);
+    --syntax-number:oklch(0.55 0.12 60);
+    --syntax-operator:oklch(0.5 0.08 200);
+    --syntax-column:oklch(0.52 0.1 78);
+
+    --mark:oklch(0.56 0.17 27);
+    --warn:oklch(0.55 0.1 72);
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-win:0 24px 60px -24px oklch(0.2 0.02 80 / 26%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-pop:0 14px 32px -18px oklch(0.2 0.02 80 / 26%),0 1px 3px oklch(0.2 0.02 80 / 6%);
+  }
+  .dark{
+    color:var(--fg);
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --popover:oklch(0.225 0.004 80);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --edge:oklch(1 0 0 / 24%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 18%,transparent);
+    --brand-line:color-mix(in oklab,var(--brand) 50%,transparent);
+    --syntax-keyword:oklch(0.78 0.12 310);
+    --syntax-function:oklch(0.78 0.09 245);
+    --syntax-string:oklch(0.78 0.11 145);
+    --syntax-number:oklch(0.78 0.12 60);
+    --syntax-operator:oklch(0.76 0.08 200);
+    --syntax-column:oklch(0.8 0.1 80);
+    --warn:oklch(0.78 0.1 72);
+    --canvas:oklch(0.145 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-win:inset 0 0 0 1px oklch(1 0 0 / 7%);
+    --shadow-pop:inset 0 0 0 1px oklch(1 0 0 / 7%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+    background-size:16px 16px;-webkit-font-smoothing:antialiased;
+  }
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+
+  .direction{
+    display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+    border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden;
+  }
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+
+  .stage{position:relative;width:1200px;overflow:hidden;
+         border:1px solid var(--border);border-radius:8px;background-color:var(--canvas);
+         background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+         background-size:22px 22px;background-position:11px 11px}
+  .scrim{position:absolute;inset:0;background:oklch(0.145 0 0 / 20%)}
+
+  /* ── 对话框 ────────────────────────────────────────────────────── */
+  .dlg{position:absolute;width:672px;background:var(--card);border:1px solid var(--border);
+       border-radius:8px;overflow:hidden;box-shadow:var(--shadow-win);z-index:4}
+  .dlg-h{height:52px;display:flex;align-items:center;gap:10px;padding:0 20px;
+         border-bottom:1px solid var(--border);cursor:grab}
+  .dlg-h .t{font-size:15px;font-weight:500}
+  .dlg-h .id{font-family:var(--mono);font-size:11px;color:var(--muted-fg)}
+  .dlg-h .x{margin-left:auto;width:28px;height:28px;display:grid;place-items:center;
+            border-radius:6px;color:var(--muted-fg-2);font-size:14px;line-height:1}
+  .dlg-b{padding:16px 20px;position:relative;overflow:hidden}
+  .dlg-f{height:56px;display:flex;align-items:center;justify-content:flex-end;gap:8px;
+         border-top:1px solid var(--border);padding:0 20px}
+  .btn{height:32px;padding:0 12px;border-radius:8px;border:1px solid transparent;
+       font-size:12.5px;display:inline-flex;align-items:center;gap:6px;background:transparent;color:var(--muted-fg)}
+  .btn-primary{background:var(--brand);color:var(--brand-fg);font-weight:500;height:30px;padding:0 14px}
+  .btn-primary.dis{background:var(--muted);color:var(--muted-fg-3)}
+
+  /* ── 字段 ──────────────────────────────────────────────────────── */
+  .field-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .field-name{font-size:13px;font-weight:500}
+  .field-param{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-3)}
+
+  /* ── 编辑器 ────────────────────────────────────────────────────── */
+  .ed{position:relative;border:1px solid var(--border);border-radius:8px;background:var(--card)}
+  .ed.focus{border-color:var(--brand-line);box-shadow:0 0 0 2px var(--brand-12)}
+  .ed-code{min-height:210px;padding:12px 14px;font-family:var(--mono);font-size:13px;line-height:22px;
+           white-space:pre-wrap;overflow:hidden}
+  .ed-code .ph{color:var(--muted-fg-3)}
+  .caret{display:inline-block;width:1.5px;height:16px;background:var(--fg);margin-left:1px;vertical-align:-3px}
+  .s-fn{color:var(--syntax-function)}
+  .s-kw{color:var(--syntax-keyword);font-weight:500}
+  .s-str{color:var(--syntax-string)}
+  .s-col{color:var(--syntax-column)}
+  .s-num{color:var(--syntax-number)}
+  .s-op{color:var(--syntax-operator)}
+
+  .ed-status{height:28px;display:flex;align-items:center;gap:12px;padding:0 12px;
+             border-top:1px solid var(--border-soft);font-family:var(--mono);font-size:11.5px;color:var(--muted-fg)}
+  .ed-status .sigline{display:flex;align-items:center;gap:2px}
+  .ed-status .on{color:var(--brand);font-weight:500;border-bottom:2px solid var(--brand);padding-bottom:1px}
+  .ed-status .hint{font-family:var(--font);font-size:11.5px;color:var(--muted-fg-3)}
+  .ed-status .idx{margin-left:auto;font-size:10px;color:var(--muted-fg-3)}
+
+  /* ── 现状编辑器 ────────────────────────────────────────────────── */
+  .ed-old{position:relative;height:120px;border:1px solid var(--border);border-radius:6px;
+          background:var(--card);box-shadow:0 0 0 2px var(--muted)}
+  .ed-old .ed-code{font-size:14px;line-height:20px;padding:8px}
+  .old-label{font-family:var(--mono);font-size:11px;color:var(--muted-fg);margin-bottom:4px}
+
+  /* ── 补全弹层 · 现状 ───────────────────────────────────────────── */
+  .old-pop{position:absolute;left:20px;right:20px;top:165px;z-index:8;
+           background:var(--popover);border:1px solid var(--border);border-radius:6px;
+           box-shadow:var(--shadow-pop);padding:4px}
+  .old-row{height:36px;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:4px}
+  .old-row.on{background:var(--muted)}
+  .old-type{font-size:10px;padding:2px 6px;border-radius:4px;font-family:var(--mono)}
+  .t-fn{background:color-mix(in oklab,var(--syntax-function) 10%,transparent);color:var(--syntax-function)}
+  .t-kw{background:color-mix(in oklab,var(--syntax-keyword) 10%,transparent);color:var(--syntax-keyword)}
+  .t-col{background:color-mix(in oklab,var(--syntax-column) 10%,transparent);color:var(--syntax-column)}
+  .t-op{background:color-mix(in oklab,var(--syntax-operator) 10%,transparent);color:var(--syntax-operator)}
+  .old-row .lab{font-family:var(--mono);font-size:13px;font-weight:500}
+  .old-row .args{font-family:var(--mono);font-size:11.5px;color:var(--muted-fg)}
+  .old-row .desc{margin-left:auto;font-size:11px;color:var(--muted-fg-2);max-width:160px;
+                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* ── 参数提示 · 现状 ───────────────────────────────────────────── */
+  .old-hint{display:flex;align-items:center;gap:2px;height:26px;padding:0 8px;margin-top:4px;
+            border-radius:6px;background:var(--muted);font-family:var(--mono);font-size:11.5px;color:var(--muted-fg)}
+  .old-hint .pill{background:var(--brand);color:var(--brand-fg);font-weight:700;padding:1px 6px;border-radius:4px}
+
+  /* ── 选项 · 现状 ───────────────────────────────────────────────── */
+  .old-opts{display:flex;align-items:center;gap:16px;margin-top:12px}
+  .old-check{display:flex;align-items:center;gap:6px;font-size:12.5px}
+  .old-box{width:14px;height:14px;border:1px solid var(--muted-fg-3);border-radius:2px;background:var(--bg)}
+  .old-box.on{background:var(--brand);border-color:var(--brand);position:relative}
+  .old-box.on::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:7px;
+                     border:1.5px solid var(--brand-fg);border-top:0;border-left:0;transform:rotate(42deg)}
+  .old-threads{flex:1;height:32px;display:flex;align-items:center;padding:0 12px;border:1px solid var(--border);
+               border-radius:6px;font-size:12.5px;color:var(--muted-fg-3);background:var(--card)}
+
+  /* ── 补全弹层 · 改后 ───────────────────────────────────────────── */
+  .pop{position:absolute;z-index:9;width:420px;background:var(--popover);
+       border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-pop);overflow:hidden}
+  .pop-list{padding:4px}
+  .pop-row{position:relative;display:grid;grid-template-columns:24px 1fr auto;gap:10px;
+           align-items:center;height:28px;padding:0 8px;border-radius:5px}
+  .pop-row.on{background:var(--brand-soft)}
+  .pop-row.on::before{content:"";position:absolute;left:0;top:5px;bottom:5px;width:2px;
+                      border-radius:1px;background:var(--brand)}
+  .pop-code{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-3)}
+  .pop-row.on .pop-code{color:var(--brand)}
+  .pop-lab{font-family:var(--mono);font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pop-lab b{color:var(--brand);font-weight:500}
+  .pop-sig{font-family:var(--mono);font-size:11.5px;color:var(--muted-fg);white-space:nowrap}
+  .pop-f{height:32px;display:flex;align-items:center;gap:8px;padding:0 10px;
+         border-top:1px solid var(--border-soft);font-size:11.5px;color:var(--muted-fg)}
+  .pop-f .kind{font-weight:500;color:var(--fg)}
+  .pop-f .keys{margin-left:auto;display:flex;gap:4px}
+  .kbd{display:grid;place-items:center;height:16px;min-width:18px;padding:0 4px;border-radius:3px;
+       border:1px solid var(--border);background:var(--card);font-family:var(--mono);font-size:9.5px;color:var(--muted-fg)}
+
+  /* ── 选项 · 改后 ───────────────────────────────────────────────── */
+  .opts{margin-top:16px;border-top:1px solid var(--border-soft);padding-top:14px}
+  .opts-h{font-size:11.5px;color:var(--muted-fg);margin-bottom:8px}
+  .opts-g{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .opt{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .opt-l{height:28px;display:flex;align-items:center;gap:7px;font-size:12.5px;white-space:nowrap}
+  .pname{font-family:var(--mono);font-size:11.5px;color:var(--fg)}
+  .opt-d{font-size:11px;color:var(--muted-fg-3);line-height:1.45}
+  .box{width:13px;height:13px;flex:none;border:1px solid var(--edge);border-radius:3px;background:var(--card);
+       display:grid;place-items:center;color:var(--brand-fg)}
+  .box.on{background:var(--brand);border-color:var(--brand)}
+  .threads{height:28px;width:88px;display:flex;align-items:center;padding:0 8px;border:1px solid var(--border);
+           border-radius:6px;font-family:var(--mono);font-size:11.5px;color:var(--muted-fg-3);background:var(--card)}
+
+  /* ── 标注 ──────────────────────────────────────────────────────── */
+  .mark,.fix{position:absolute;width:16px;height:16px;border-radius:50%;z-index:12;
+             font-family:var(--mono);font-size:9.5px;line-height:16px;text-align:center;font-weight:500}
+  .mark{background:var(--mark);color:#fff;box-shadow:0 0 0 2px var(--canvas)}
+  .fix{background:var(--card);color:var(--brand);box-shadow:0 0 0 2px var(--canvas),inset 0 0 0 1px var(--brand-12)}
+  .note-band{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 22px;margin-top:12px;
+             font-size:10.5px;color:var(--muted-fg);line-height:1.55}
+  .note-band .leg{display:flex;gap:7px;align-items:flex-start}
+  .dot-red{width:16px;height:16px;border-radius:50%;background:var(--mark);color:#fff;
+           font-family:var(--mono);font-size:9.5px;line-height:16px;text-align:center;flex:none}
+  .dot-blue{width:16px;height:16px;border-radius:50%;background:var(--card);color:var(--brand);
+            box-shadow:inset 0 0 0 1px var(--brand-12);font-family:var(--mono);font-size:9.5px;
+            line-height:16px;text-align:center;flex:none}
+
+  /* ── 细节卡 ────────────────────────────────────────────────────── */
+  .details{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+  .mini{border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .mini-h{height:34px;display:flex;align-items:center;gap:8px;padding:0 12px;
+          border-bottom:1px solid var(--border-soft);font-size:11.5px;font-weight:500}
+  .mini-h .tag{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .mini-b{padding:12px}
+  .mini-f{height:44px;display:flex;align-items:center;justify-content:flex-end;gap:8px;
+          padding:0 12px;border-top:1px solid var(--border-soft);font-size:11.5px}
+  .mini .ed-code{min-height:190px;font-size:12px;line-height:20px}
+  .mini-note{padding:8px 12px;font-size:10.5px;line-height:1.6;color:var(--muted-fg);border-top:1px solid var(--border-soft)}
+
+  /* ── 说明表 ────────────────────────────────────────────────────── */
+  .h2{font-size:13px;font-weight:500;margin:44px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border-soft)}
+  table.spec{width:100%;border-collapse:collapse;background:var(--card);
+             border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  table.spec th{text-align:left;font-size:10.5px;font-weight:500;color:var(--muted-fg);
+                padding:8px 12px;border-bottom:1px solid var(--border);background:color-mix(in oklab,var(--muted) 45%,transparent)}
+  table.spec td{font-size:11.5px;padding:9px 12px;border-bottom:1px solid var(--border-soft);
+                vertical-align:top;line-height:1.6}
+  table.spec tr:last-child td{border-bottom:0}
+  table.spec td.n{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);width:34px}
+  table.spec th.n{width:34px}
+  table.spec td.k{white-space:nowrap;color:var(--muted-fg);width:170px}
+  table.spec b{font-weight:500}
+  .credit{margin-top:40px;font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">原型 056 · map 表达式编辑器</div>
+    <h1>把 map 的表达式编辑器做成和 DuckDB 编辑器同一套语言</h1>
+    <p>范围：<code>MapForm</code> 与 <code>ExpressionEditor</code>。字段、参数、提交逻辑都不变——把它对齐 DuckDB 编辑器的工艺：<b>补全贴着光标</b>、<b>类型码代替彩色胶囊</b>、<b>签名与键帽进弹层</b>、<b>函数签名做成编辑器底部状态条</b>；选项保持参数名，只做对齐。红圈是现状问题，蓝圈是改法。</p>
+  </div>
+
+  <div class="direction">
+    <div><dt>产品</dt><dd>在 672 宽的对话框里写一条 xan 表达式，为 CSV 算出新列。</dd></div>
+    <div><dt>性格</dt><dd>精确、安静、可被检验。像在手边调试一条表达式，不像在填表。</dd></div>
+    <div><dt>世界</dt><dd>账本纸面与仪器面板：白纸上的等宽字，一条墨蓝的下划线。</dd></div>
+    <div><dt>时刻</dt><dd>① 贴着光标的补全卡（类型码 / 前缀高亮 / 签名 / 键帽）；② 底部的函数签名与当前参数下划线。</dd></div>
+    <div><dt>签名</dt><dd>24px 的等宽类型码列 <code>col</code> / <code>fn</code> / <code>kw</code> / <code>op</code>，与 DuckDB 编辑器共用同一套语言。</dd></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       01 · 现状 · 补全
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>01</span><b>现状 · 补全打开</b><span class="file">ExpressionEditor.tsx:209-261</span></div>
+    <div class="stage" style="height:456px">
+      <div class="scrim"></div>
+
+      <div class="dlg" style="left:264px;top:24px">
+        <div class="dlg-h"><span class="t">Map</span><span class="id">map</span><span class="x">✕</span></div>
+        <div class="dlg-b">
+          <div class="old-label">expression</div>
+          <div class="ed-old">
+            <div class="ed-code"><span class="s-fn">coalesce</span>(<span class="s-fn">col</span>(<span class="s-str">"地区"</span>), <span class="s-fn">col</span>(<span class="s-str">"省份"</span>)) <span class="s-kw">as</span> <span class="s-str">"区域"</span>
+<span class="s-fn">co</span><span class="caret"></span></div>
+          </div>
+
+          <div class="old-pop">
+            <div class="old-row on">
+              <span class="old-type t-fn">function</span>
+              <span class="lab">coalesce</span>
+              <span class="args">(v1, v2)</span>
+              <span class="desc">Return first non-null value</span>
+            </div>
+            <div class="old-row">
+              <span class="old-type t-fn">function</span>
+              <span class="lab">col</span>
+              <span class="args">(name_or_pos, nth?)</span>
+              <span class="desc">Access column value</span>
+            </div>
+            <div class="old-row">
+              <span class="old-type t-kw">keyword</span>
+              <span class="lab">as</span>
+              <span class="args"></span>
+              <span class="desc">Alias expression</span>
+            </div>
+            <div class="old-row">
+              <span class="old-type t-col">column</span>
+              <span class="lab">country</span>
+              <span class="args"></span>
+              <span class="desc">Table column</span>
+            </div>
+          </div>
+
+          <div class="old-hint">
+            <span>strftime(</span>
+            <span>target</span><span>, </span>
+            <span class="pill">format</span>
+            <span>)</span>
+          </div>
+
+          <div class="old-opts">
+            <label class="old-check"><span class="old-box"></span>overwrite</label>
+            <label class="old-check"><span class="old-box on"></span>filter</label>
+            <label class="old-check"><span class="old-box"></span>parallel</label>
+            <div class="old-threads">Number of threads used</div>
+          </div>
+        </div>
+        <div class="dlg-f"><button class="btn">取消</button><button class="btn btn-primary">添加</button></div>
+      </div>
+
+      <span class="mark" style="left:944px;top:246px">2</span>
+      <span class="mark" style="left:272px;top:250px">3</span>
+      <span class="mark" style="left:944px;top:300px">4</span>
+      <span class="mark" style="left:272px;top:314px">5</span>
+    </div>
+    <div class="note-band">
+      <span class="leg"><span class="dot-red">2</span>补全从编辑器底部整宽弹出（<code>mt-3 w-full</code>），与光标脱节</span>
+      <span class="leg"><span class="dot-red">3</span>类型用彩色胶囊表示（function / keyword / column / operator 各一色），靠颜色扫读</span>
+      <span class="leg"><span class="dot-red">4</span>36px 行、无签名、无键帽；被滚动区截断后最多看两行</span>
+      <span class="leg"><span class="dot-red">5</span>同时盖住下面的参数提示与选项，滚动区还要跟着滚</span>
+    </div>
+  </section>
+
+  <!-- 02 · 现状 · 参数与选项 -->
+  <section class="frame">
+    <div class="cap"><span>02</span><b>现状 · 参数与选项</b><span class="file">map.tsx:14-70</span></div>
+    <div class="stage" style="height:436px">
+      <div class="scrim"></div>
+
+      <div class="dlg" style="left:264px;top:24px">
+        <div class="dlg-h"><span class="t">Map</span><span class="id">map</span><span class="x">✕</span></div>
+        <div class="dlg-b">
+          <div class="old-label">expression</div>
+          <div class="ed-old">
+            <div class="ed-code"><span class="s-fn">strftime</span>(<span class="s-fn">col</span>(<span class="s-str">"日期"</span>), <span class="s-str">"%Y/%m"</span>) <span class="s-kw">as</span> <span class="s-str">"月份"</span>
+<span class="s-fn">co</span><span class="caret"></span></div>
+          </div>
+
+          <div class="old-hint">
+            <span>strftime(</span>
+            <span>target</span><span>, </span>
+            <span class="pill">format</span>
+            <span>)</span>
+          </div>
+
+          <div class="old-opts">
+            <label class="old-check"><span class="old-box"></span>overwrite</label>
+            <label class="old-check"><span class="old-box on"></span>filter</label>
+            <label class="old-check"><span class="old-box"></span>parallel</label>
+            <div class="old-threads">Number of threads used</div>
+          </div>
+        </div>
+        <div class="dlg-f"><button class="btn">取消</button><button class="btn btn-primary">添加</button></div>
+      </div>
+
+      <span class="mark" style="left:944px;top:94px">1</span>
+      <span class="mark" style="left:272px;top:110px">8</span>
+      <span class="mark" style="left:272px;top:238px">6</span>
+      <span class="mark" style="left:272px;top:284px">7</span>
+      <span class="mark" style="left:520px;top:280px">9</span>
+    </div>
+    <div class="note-band">
+      <span class="leg"><span class="dot-red">1</span>字段标签是原始参数名 <code>expression</code></span>
+      <span class="leg"><span class="dot-red">8</span>编辑器固定 120px，与 DuckDB 的 240px 不是一套</span>
+      <span class="leg"><span class="dot-red">6</span>函数签名独立成条，当前参数是实心药丸 + 700 字重</span>
+      <span class="leg"><span class="dot-red">7</span>开关与线程数挤成一行，线程数没有可见名称</span>
+      <span class="leg"><span class="dot-red">9</span>原生 3.5px 勾选框，与项目其他勾选不一致</span>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       03 · 改后 · 主态
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="frame">
+    <div class="cap"><span>03</span><b>改后 · 主态</b><span class="file">编辑器 240px · 补全贴光标 · 弹层带签名与键帽</span></div>
+    <div class="stage" style="height:596px">
+      <div class="scrim"></div>
+
+      <div class="dlg" style="left:264px;top:24px">
+        <div class="dlg-h"><span class="t">Map</span><span class="id">map</span><span class="x">✕</span></div>
+        <div class="dlg-b">
+          <div class="field-head">
+            <span class="field-name">表达式</span>
+            <span class="field-param">expression</span>
+          </div>
+
+          <div class="ed focus">
+            <div class="ed-code"><span class="s-fn">coalesce</span>(<span class="s-fn">col</span>(<span class="s-str">"地区"</span>), <span class="s-fn">col</span>(<span class="s-str">"省份"</span>)) <span class="s-kw">as</span> <span class="s-str">"区域"</span>
+<span class="s-fn">co</span><span class="caret"></span></div>
+
+            <div class="pop" style="left:24px;top:62px">
+              <div class="pop-list">
+                <div class="pop-row on">
+                  <span class="pop-code">fn</span>
+                  <span class="pop-lab"><b>co</b>alesce</span>
+                  <span class="pop-sig">(v1, v2)</span>
+                </div>
+                <div class="pop-row">
+                  <span class="pop-code">fn</span>
+                  <span class="pop-lab"><b>co</b>l</span>
+                  <span class="pop-sig">(name_or_pos, nth?)</span>
+                </div>
+                <div class="pop-row">
+                  <span class="pop-code">fn</span>
+                  <span class="pop-lab"><b>co</b>ncat</span>
+                  <span class="pop-sig">(s1, ...strings)</span>
+                </div>
+                <div class="pop-row">
+                  <span class="pop-code">fn</span>
+                  <span class="pop-lab"><b>co</b>ntains</span>
+                  <span class="pop-sig">(s, substr)</span>
+                </div>
+              </div>
+              <div class="pop-f">
+                <span><span class="kind">函数</span> · Return first non-null value</span>
+                <span class="keys"><span class="kbd">↑↓</span><span class="kbd">Tab</span><span class="kbd">Esc</span></span>
+              </div>
+            </div>
+
+            <div class="ed-status">
+              <span class="hint">输入列名、函数或运算符</span>
+              <span class="idx">xan</span>
+            </div>
+          </div>
+
+          <div class="opts">
+            <div class="opts-h">选项</div>
+            <div class="opts-g">
+              <label class="opt-l"><span class="box"></span><span class="pname">overwrite</span></label>
+              <label class="opt-l"><span class="box on">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>
+              </span><span class="pname">filter</span></label>
+              <label class="opt-l"><span class="box"></span><span class="pname">parallel</span></label>
+              <label class="opt-l"><span class="pname">threads</span><span class="threads"></span></label>
+            </div>
+          </div>
+        </div>
+        <div class="dlg-f"><button class="btn">取消</button><button class="btn btn-primary">添加</button></div>
+      </div>
+
+      <span class="fix" style="left:940px;top:96px">1</span>
+      <span class="fix" style="left:268px;top:124px">2</span>
+      <span class="fix" style="left:280px;top:180px">3</span>
+      <span class="fix" style="left:722px;top:206px">4</span>
+      <span class="fix" style="left:722px;top:316px">5</span>
+      <span class="fix" style="left:268px;top:340px">6</span>
+      <span class="fix" style="left:268px;top:418px">7</span>
+      <span class="fix" style="left:940px;top:492px">8</span>
+    </div>
+    <div class="note-band">
+      <span class="leg"><span class="dot-blue">1</span>字段名写「表达式」，原始参数名退成右上角等宽小字</span>
+      <span class="leg"><span class="dot-blue">2</span>编辑器 240px、13px 等宽、22px 行高；焦点是一圈 2px 墨蓝</span>
+      <span class="leg"><span class="dot-blue">3</span>补全贴着光标，宽 420，不再从底部整宽弹出</span>
+      <span class="leg"><span class="dot-blue">4</span>类型码列 + 前缀高亮 + 右对齐签名，扫读不用点开</span>
+      <span class="leg"><span class="dot-blue">5</span>弹层底部：当前项类型与说明，加 ↑↓ / Tab / Esc 键帽</span>
+      <span class="leg"><span class="dot-blue">6</span>函数签名常驻编辑器底部，当前参数用墨蓝下划线</span>
+      <span class="leg"><span class="dot-blue">7</span>四项对齐成一行，保留 overwrite / filter / parallel / threads，不加解释</span>
+      <span class="leg"><span class="dot-blue">8</span>主按钮唯一实心；空表达式时禁用并给出原因</span>
+    </div>
+  </section>
+
+  <!-- 04 · 暗色 -->
+  <section class="frame">
+    <div class="cap"><span>04</span><b>改后 · 暗色</b><span class="file">面阶 + 细线，补全卡比画布亮一档</span></div>
+    <div class="stage dark" style="height:596px">
+      <div class="scrim"></div>
+
+      <div class="dlg" style="left:264px;top:24px">
+        <div class="dlg-h"><span class="t">Map</span><span class="id">map</span><span class="x">✕</span></div>
+        <div class="dlg-b">
+          <div class="field-head">
+            <span class="field-name">表达式</span>
+            <span class="field-param">expression</span>
+          </div>
+
+          <div class="ed focus">
+            <div class="ed-code"><span class="s-fn">coalesce</span>(<span class="s-fn">col</span>(<span class="s-str">"地区"</span>), <span class="s-fn">col</span>(<span class="s-str">"省份"</span>)) <span class="s-kw">as</span> <span class="s-str">"区域"</span>
+<span class="s-fn">co</span><span class="caret"></span></div>
+
+            <div class="pop" style="left:24px;top:62px">
+              <div class="pop-list">
+                <div class="pop-row on">
+                  <span class="pop-code">fn</span>
+                  <span class="pop-lab"><b>co</b>alesce</span>
+                  <span class="pop-sig">(v1, v2)</span>
+                </div>
+                <div class="pop-row">
+                  <span class="pop-code">fn</span>
+                  <span class="pop-lab"><b>co</b>l</span>
+                  <span class="pop-sig">(name_or_pos, nth?)</span>
+                </div>
+                <div class="pop-row">
+                  <span class="pop-code">fn</span>
+                  <span class="pop-lab"><b>co</b>ncat</span>
+                  <span class="pop-sig">(s1, ...strings)</span>
+                </div>
+                <div class="pop-row">
+                  <span class="pop-code">fn</span>
+                  <span class="pop-lab"><b>co</b>ntains</span>
+                  <span class="pop-sig">(s, substr)</span>
+                </div>
+              </div>
+              <div class="pop-f">
+                <span><span class="kind">函数</span> · Return first non-null value</span>
+                <span class="keys"><span class="kbd">↑↓</span><span class="kbd">Tab</span><span class="kbd">Esc</span></span>
+              </div>
+            </div>
+
+            <div class="ed-status">
+              <span class="hint">输入列名、函数或运算符</span>
+              <span class="idx">xan</span>
+            </div>
+          </div>
+
+          <div class="opts">
+            <div class="opts-h">选项</div>
+            <div class="opts-g">
+              <label class="opt-l"><span class="box"></span><span class="pname">overwrite</span></label>
+              <label class="opt-l"><span class="box on">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>
+              </span><span class="pname">filter</span></label>
+              <label class="opt-l"><span class="box"></span><span class="pname">parallel</span></label>
+              <label class="opt-l"><span class="pname">threads</span><span class="threads"></span></label>
+            </div>
+          </div>
+        </div>
+        <div class="dlg-f"><button class="btn">取消</button><button class="btn btn-primary">添加</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 · 细节 -->
+  <section class="frame">
+    <div class="cap"><span>05</span><b>改后 · 三个状态</b><span class="file">函数参数 · 无匹配 · 空表达式</span></div>
+    <div class="details">
+
+      <div class="mini">
+        <div class="mini-h">参数提示<span class="tag">fn context</span></div>
+        <div class="mini-b">
+          <div class="ed focus">
+            <div class="ed-code"><span class="s-fn">strftime</span>(<span class="s-fn">col</span>(<span class="s-str">"日期"</span>), <span class="s-str">"%Y/%m"</span><span class="caret"></span>)</div>
+            <div class="ed-status">
+              <span class="sigline"><span>strftime(</span><span>target</span><span>,&nbsp;</span><span class="on">format</span><span>)</span></span>
+              <span class="idx">2 / 2</span>
+            </div>
+          </div>
+        </div>
+        <div class="mini-note">光标在函数调用里时，底部状态条显示签名；当前参数加墨蓝下划线，右侧是第几个参数。</div>
+      </div>
+
+      <div class="mini">
+        <div class="mini-h">无匹配<span class="tag">no match</span></div>
+        <div class="mini-b">
+          <div class="ed focus">
+            <div class="ed-code"><span class="s-fn">lower</span>(<span class="s-fn">col</span>(<span class="s-str">"品类"</span>)) <span class="s-kw">as</span> <span class="s-str">"品类"</span>
+<span>zz</span><span class="caret"></span></div>
+            <div class="pop" style="left:12px;top:62px;width:356px">
+              <div class="pop-f" style="border-top:0;height:36px">
+                <span>无匹配 <span style="font-family:var(--mono);color:var(--fg)">“zz”</span></span>
+                <span class="keys"><span class="kbd">Esc</span></span>
+              </div>
+            </div>
+            <div class="ed-status">
+              <span class="hint">输入列名、函数或运算符</span>
+              <span class="idx">xan</span>
+            </div>
+          </div>
+        </div>
+        <div class="mini-note">输入了 1 个字符以上才出建议；没有匹配时保留一条「无匹配」，而不是让弹层突然消失。</div>
+      </div>
+
+      <div class="mini">
+        <div class="mini-h">空表达式<span class="tag">empty</span></div>
+        <div class="mini-b">
+          <div class="ed">
+            <div class="ed-code" style="min-height:190px"><span class="ph">例如 col("金额") * 1.06 as "含税金额"</span></div>
+            <div class="ed-status">
+              <span class="hint">输入列名、函数或运算符</span>
+              <span class="idx">xan</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--muted-fg)">
+            <span style="color:var(--warn)">还缺</span><span style="color:var(--fg)">表达式</span>
+          </div>
+        </div>
+        <div class="mini-f"><button class="btn">取消</button><button class="btn btn-primary dis">添加</button></div>
+        <div class="mini-note">空表达式时「添加」禁用，并在按钮上方说明缺什么——与右键快捷面板同一条规则。</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── 问题清单 ──────────────────────────────────────────────── -->
+  <div class="h2">问题清单</div>
+  <table class="spec">
+    <thead><tr><th class="n">#</th><th style="width:210px">位置</th><th>现状</th><th style="width:330px">改法</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td class="k">map.tsx:14</td><td>字段标签写的是原始参数名 <code>expression</code>，中文界面里也还是英文。</td><td>标签「表达式」；原始名退到右上角 10.5px 等宽小字。</td></tr>
+      <tr><td class="n">2</td><td class="k">ExpressionEditor.tsx:209-261</td><td>补全固定在编辑器底部、整宽弹出（<code>mt-3 w-full</code>），与光标脱节，还盖住参数提示与选项。</td><td>沿用 DuckDB 的 <code>caretPosition</code> / <code>placeSuggestions</code>：贴光标、宽 420、上下翻转、3–6 行。</td></tr>
+      <tr><td class="n">3</td><td class="k">ExpressionEditor.tsx:228-240</td><td>四种类型各用一个彩色胶囊（function / keyword / column / operator），一屏四色，靠颜色扫读。</td><td>统一成等宽类型码列 <code>fn</code> / <code>kw</code> / <code>col</code> / <code>op</code>；只有选中项用墨蓝。</td></tr>
+      <tr><td class="n">4</td><td class="k">ExpressionEditor.tsx:219-256</td><td>行高 36px、没有签名列、没有说明、没有键帽；最多只能扫到 4 行。</td><td>28px 行、签名右对齐、底部 32px 说明条与键帽；3–6 行完整可见。</td></tr>
+      <tr><td class="n">5</td><td class="k">ExpressionEditor.tsx:214</td><td>列表高度写死成 <code>h-42</code>（168px），36px 行只放得下 4 行，也不会根据可用空间收缩或翻转。</td><td>按可用空间取 3–6 行（行 28 + 内边距 8），不写死高度。</td></tr>
+      <tr><td class="n">6</td><td class="k">ExpressionEditor.tsx:263-290</td><td>函数签名是一个独立的灰色条，当前参数是实心 brand 药丸 + 700 字重，和主按钮争主次。</td><td>签名并入编辑器底部状态条，当前参数改成墨蓝下划线；右侧给「第几个参数」。</td></tr>
+      <tr><td class="n">7</td><td class="k">map.tsx:29-70</td><td>三个开关与线程数挤在同一行：线程数没有可见名称，只靠占位符。参数名本身保持英文。</td><td>四项对齐成一行：勾选框 + 参数名；线程数用 <code>threads</code> 作标签 + 88px 输入框，不加解释。</td></tr>
+      <tr><td class="n">8</td><td class="k">ExpressionEditor.tsx:179-206</td><td>编辑器固定 120px、透明边框；DuckDB 编辑器是 240px、有边框与 2px 焦点环，两个编辑器像两个产品。</td><td>240px（212 内容 + 28 状态条）、13/22 等宽、1px 边框 + 2px 墨蓝焦点环。</td></tr>
+      <tr><td class="n">9</td><td class="k">map.tsx:35-40</td><td>原生 3.5px 勾选框，与项目其他自绘勾选（13px brand 实心）不一致。</td><td>沿用 13px 勾选框，与右键快捷面板同一套。</td></tr>
+      <tr><td class="n">10</td><td class="k">autocomplete.ts:58-79</td><td>当前词为空时也弹全量建议（每次空格/左括号都弹），噪声大。</td><td>至少输入 1 个字符才出建议；空词只留状态条里的提示。</td></tr>
+      <tr><td class="n">11</td><td class="k">ExpressionEditor.tsx:218</td><td>建议行用 <code>type-label</code> 作 key，数据里两个 <code>count</code> 会撞 key 并出现两行。</td><td>按标签去重（或把不同签名合并成一行）。</td></tr>
+      <tr><td class="n">12</td><td class="k">CommandDialog + MapForm</td><td>表达式为空时「添加」仍可点，点了才知道不行。</td><td>空表达式禁用主按钮，并在其上方写「还缺 表达式」。</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── 规格 ──────────────────────────────────────────────────── -->
+  <div class="h2">规格</div>
+  <table class="spec">
+    <thead><tr><th style="width:170px">项</th><th>值</th></tr></thead>
+    <tbody>
+      <tr><td class="k">对话框</td><td>宽 <b>672</b>、头部 52、底部 56、内容内边距 20；与现在一致，不动外壳。</td></tr>
+      <tr><td class="k">编辑器</td><td>高 <b>240</b>（212 内容 + 28 状态条）；等宽 13 / 22；内边距 12 / 14；圆角 8；边框 1px，焦点 2px 墨蓝 12%。内容超过 212 后内部滚动，最长到 360。</td></tr>
+      <tr><td class="k">补全卡</td><td>宽 <b>420</b>（不超过编辑器宽 − 8）；行 28；内边距 4；行数 3–6；距光标 4；下方放不下时翻到上一行；圆角 8；中性阴影。</td></tr>
+      <tr><td class="k">补全行</td><td>三列 <b>24 / 1fr / auto</b>：类型码 mono 10.5、标签 mono 13/500、签名 mono 11.5 右对齐；选中行 = brand-soft + 左侧 2px 竖线。</td></tr>
+      <tr><td class="k">弹层底部</td><td>高 32；左「函数 / 列 / 关键字 / 运算符 · 说明」，右 ↑↓ / Tab / Esc 键帽（16px，mono 9.5）。</td></tr>
+      <tr><td class="k">状态条</td><td>高 28；mono 11.5；左侧函数签名，当前参数 brand + 2px 下划线；右侧「第几个参数」或 <code>xan</code>；不在函数里时显示「输入列名、函数或运算符」。</td></tr>
+      <tr><td class="k">选项</td><td>距编辑器 16；顶部 1px 细线 + 14 内边距；标题 11.5；四列网格，列距 12；参数名 mono 11.5；勾选框 13 / 圆角 3；线程输入 88 × 28；不加解释文案。</td></tr>
+      <tr><td class="k">图标 / 动效</td><td>补全卡不做缩放入场；只做 60ms 内透明度变化。选中行只换底色与竖线，不移动。</td></tr>
+      <tr><td class="k">键盘</td><td>↑↓ 换行、Tab / Enter 接受、Esc 先关补全再关对话框；鼠标点选不夺焦。</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── 文案 ──────────────────────────────────────────────────── -->
+  <div class="h2">文案对照</div>
+  <table class="spec">
+    <thead><tr><th style="width:180px">位置</th><th style="width:190px">现状</th><th>改后</th><th style="width:290px">理由</th></tr></thead>
+    <tbody>
+      <tr><td class="k">字段标签</td><td><code>expression</code></td><td>表达式 <span style="color:var(--muted-fg-3)">（右上角 expression）</span></td><td>中文界面先说人话，原始参数名留给需要查文档的人。</td></tr>
+      <tr><td class="k">选项</td><td><code>overwrite / filter / parallel</code> + 原生勾选</td><td>保留参数名，四项对齐，统一勾选框</td><td>参数名是 xan 的接口，不翻译、不加解释。</td></tr>
+      <tr><td class="k">线程</td><td>只有占位符</td><td><code>threads</code> + 输入框</td><td>给它一个可见名称，仍然不解释。</td></tr>
+      <tr><td class="k">补全类型</td><td>彩色胶囊 function / keyword</td><td><code>fn</code> · 底部写「函数」</td><td>列表里只需要扫读的短码，全称放底部。</td></tr>
+      <tr><td class="k">无匹配</td><td>列表直接消失</td><td>无匹配 “zz” ＋ Esc</td><td>让「没有结果」也是一个明确状态。</td></tr>
+      <tr><td class="k">空状态</td><td>按钮可点</td><td>还缺 表达式 ＋ 禁用按钮</td><td>先解释，再禁用。</td></tr>
+    </tbody>
+  </table>
+
+  <div class="h2">实施映射</div>
+  <table class="spec">
+    <thead><tr><th style="width:240px">文件</th><th>改动</th></tr></thead>
+    <tbody>
+      <tr><td class="k">components/expression/ExpressionEditor.tsx</td><td>对齐 DuckDB：光标定位与翻转、类型码 / 签名 / 弹层底部、无匹配、去重；高度 240 + 状态条；只显示 1 个字符以上的建议。</td></tr>
+      <tr><td class="k">components/expression/DuckdbEditor.tsx</td><td><b>建议</b>：把 <code>caretPosition</code> / <code>placeSuggestions</code> / 弹层外壳抽成共享模块，两个编辑器共用一套，不复制 200 行。</td></tr>
+      <tr><td class="k">modules/dialogs/command/forms/map.tsx</td><td>字段标签、选项四列（保留参数名）、<code>threads</code> 标签；表达式为空时给 <code>CommandFormShell</code> 传 <code>disabled</code>，并显示缺项说明。</td></tr>
+      <tr><td class="k">i18n</td><td>新增 <code>mapExpression</code>、<code>mapOptions</code>、<code>exprHint</code>、<code>exprNoMatch</code>、<code>exprMissing</code>、<code>exprKindFunction / Column / Keyword / Operator</code>。选项标签直接用参数名，不加 key。</td></tr>
+      <tr><td class="k">不做</td><td>不搬 DuckDB 的「插入模板」：map 的模板必须是真实列名，属于新功能；需要的话单开一稿，从当前选中列生成。</td></tr>
+    </tbody>
+  </table>
+
+  <p style="font-size:11px;color:var(--muted-fg);line-height:1.9;margin-top:18px">
+    原型只改工艺与文案：表达式语法、<code>map</code> 的参数、提交与步骤命名都不变。弹层定位与键帽沿用 DuckDB 编辑器已验证的实现方式，避免两套编辑器行为漂移。
+  </p>
+  <div class="credit">工艺方法：unslop by @heydamir · CC BY 4.0</div>
+</div>
+</body>
+</html>

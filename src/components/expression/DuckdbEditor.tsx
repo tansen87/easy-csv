@@ -7,6 +7,7 @@ import {
 } from "@/data/duckdb";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { cn } from "@/lib/utils";
+import { measurePopover, type PopoverPlacement } from "./popover";
 import { useLanguage } from "@/i18n";
 import type { Translations } from "@/i18n/translations";
 
@@ -50,12 +51,6 @@ const TYPE_CODES: Record<Suggestion["badge"], string> = {
 
 /** Only used for scrolling; the popover shows at most 6 rows at a time. */
 const MAX_SUGGESTIONS = 40;
-const MAX_ROWS = 6;
-const MIN_ROWS = 3;
-const ROW_HEIGHT = 28;
-/** 4px list padding above + below, plus the 32px footer. */
-const POPOVER_CHROME = 40;
-const POPOVER_WIDTH = 420;
 
 const KBD_CLASS =
   "rounded border border-border bg-card px-1 py-px font-mono text-[10px] leading-4 text-muted-foreground";
@@ -91,13 +86,7 @@ export function DuckdbEditor({
   // Where to draw the popover: pinned to the word being typed instead of the
   // bottom of the (240–400px tall) editor, so it stays in view without
   // scrolling the dialog.
-  const [placement, setPlacement] = useState<{
-    above: boolean;
-    offset: number;
-    left: number;
-    width: number;
-    listHeight: number;
-  } | null>(null);
+  const [placement, setPlacement] = useState<PopoverPlacement | null>(null);
 
   const vocabulary = useMemo<Suggestion[]>(() => {
     const kw: Suggestion[] = [...duckdbKeywords]
@@ -278,46 +267,7 @@ export function DuckdbEditor({
   const placeSuggestions = useCallback(() => {
     const ta = textareaRef.current;
     if (!ta) return;
-    const caret = caretPosition(ta, ta.selectionStart ?? ta.value.length);
-    const wordStart = caretPosition(ta, rangeRef.current.start);
-    const visibleTop = caret.top - ta.scrollTop;
-    const boxHeight = ta.offsetHeight;
-    const gap = 4;
-    // Stay inside the dialog's scroll viewport too, not just the editor box.
-    const viewport = ta.closest<HTMLElement>(
-      "[data-radix-scroll-area-viewport]",
-    );
-    const caretPageTop = ta.getBoundingClientRect().top + visibleTop;
-    const pageBottom = viewport
-      ? viewport.getBoundingClientRect().bottom
-      : window.innerHeight;
-    const pageTop = viewport ? viewport.getBoundingClientRect().top : 0;
-    const below = Math.min(
-      boxHeight - visibleTop - caret.lineHeight - gap,
-      pageBottom - caretPageTop - caret.lineHeight - gap,
-    );
-    const above = Math.min(visibleTop - gap, caretPageTop - pageTop - gap);
-
-    const width = Math.min(POPOVER_WIDTH, ta.clientWidth - 8);
-    const left = Math.max(
-      0,
-      Math.min(wordStart.left - ta.scrollLeft, ta.clientWidth - width),
-    );
-    const aboveCaret = !(below >= MIN_ROWS * ROW_HEIGHT + POPOVER_CHROME || below >= above);
-    const available = aboveCaret ? above : below;
-    // 3–6 full rows; never a half row.
-    const rows = Math.max(
-      MIN_ROWS,
-      Math.min(MAX_ROWS, Math.floor((available - POPOVER_CHROME) / ROW_HEIGHT)),
-    );
-
-    setPlacement({
-      above: aboveCaret,
-      offset: aboveCaret ? boxHeight - visibleTop + gap : visibleTop + caret.lineHeight + gap,
-      left,
-      width,
-      listHeight: rows * ROW_HEIGHT + 8,
-    });
+    setPlacement(measurePopover(ta, rangeRef.current.start));
   }, []);
 
   useEffect(() => {
@@ -580,59 +530,9 @@ function suggestionKindLabel(
 }
 
 /**
- * Caret offset (from the textarea's border box) at `pos`, plus the line
- * height. Measured on a hidden mirror with the textarea's own text metrics so
- * wrapped lines are accounted for — the popover can then sit under the word
- * being typed instead of below the whole editor.
+ * SQL highlighter for the DuckDB editor. Kept local because it knows DuckDB's
+ * keywords; xan highlighting lives in `highlight.ts`.
  */
-function caretPosition(
-  ta: HTMLTextAreaElement,
-  pos: number,
-): { top: number; left: number; lineHeight: number } {
-  const cs = window.getComputedStyle(ta);
-  const borderTop = parseFloat(cs.borderTopWidth) || 0;
-  const borderLeft = parseFloat(cs.borderLeftWidth) || 0;
-  const mirror = document.createElement("div");
-  mirror.style.position = "absolute";
-  mirror.style.top = "0";
-  mirror.style.left = "-9999px";
-  mirror.style.visibility = "hidden";
-  mirror.style.boxSizing = "border-box";
-  mirror.style.width = `${ta.clientWidth}px`;
-  mirror.style.borderWidth = "0";
-  mirror.style.whiteSpace = "pre-wrap";
-  mirror.style.wordBreak = "break-all";
-  for (const prop of [
-    "fontFamily",
-    "fontSize",
-    "fontWeight",
-    "fontStyle",
-    "letterSpacing",
-    "lineHeight",
-    "paddingTop",
-    "paddingRight",
-    "paddingBottom",
-    "paddingLeft",
-    "tabSize",
-    "textIndent",
-  ] as const) {
-    mirror.style[prop] = cs[prop];
-  }
-  mirror.textContent = ta.value.slice(0, pos);
-  const marker = document.createElement("span");
-  marker.textContent = "\u200b";
-  mirror.appendChild(marker);
-  document.body.appendChild(mirror);
-  const top = marker.offsetTop + borderTop;
-  const left = marker.offsetLeft + borderLeft;
-  document.body.removeChild(mirror);
-  return {
-    top,
-    left,
-    lineHeight: parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.5 || 20,
-  };
-}
-
 function highlightSql(sql: string): string {
   let out = "";
   let i = 0;
