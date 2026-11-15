@@ -275,6 +275,8 @@ export interface Translations {
   // CommandList
   cmds: string;
   searchCommand: string;
+  stepActionParams: string;
+  stepActionRename: string;
   noCommandsFound: string;
   tryDifferentSearch: string;
   executePipelinesHint: string;

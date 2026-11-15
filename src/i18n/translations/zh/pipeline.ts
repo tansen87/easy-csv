@@ -178,6 +178,8 @@ export const zhPipeline = {
   versionTimeFull: "{year}年{month}月{day}日",
   cmds: "命令",
   searchCommand: "搜索命令",
+  stepActionParams: "参数",
+  stepActionRename: "重命名",
   noCommandsFound: "未找到命令",
   tryDifferentSearch: "请尝试其他搜索词",
   executePipelinesHint: "执行工作流后将在此显示",

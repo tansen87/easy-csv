@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { Handle, Position } from "reactflow";
-import { Settings, Edit3, Check } from "lucide-react";
+import { SlidersHorizontal, Pencil, Check } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { useLanguage } from "@/i18n";
 import { PipelineStep } from "@/types/xan";
 import { CutPartInfo } from "@/modules/pipeline/lib/cutGeometry";
 
@@ -26,6 +28,7 @@ export function PipelineStepNode({
   data: PipelineStepNodeData;
   selected: boolean;
 }) {
+  const { t } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(data.step.alias || "");
 
@@ -210,27 +213,40 @@ export function PipelineStepNode({
           </div>
         )}
       </div>
-      <div className="absolute -top-2 -right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            data.onStepClick(data.step);
-          }}
-          className="w-5 h-5 bg-background border shadow-sm rounded flex items-center justify-center hover:bg-accent transition-colors"
-        >
-          <Settings className="h-2.5 w-2.5" />
-        </button>
-        {!isEditing && (
+      <div
+        className={`absolute -top-4 right-2 flex h-[26px] items-stretch rounded-[6px] border border-border bg-card transition-opacity duration-100 group-hover:opacity-100 group-focus-within:opacity-100 ${
+          selected ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <Tooltip content={t.stepActionParams} side="top">
           <button
+            type="button"
+            aria-label={t.stepActionParams}
+            onClick={(e) => {
+              e.stopPropagation();
+              data.onStepClick(data.step);
+            }}
+            className="grid h-6 w-[25px] place-items-center rounded-l-[5px] border-r border-border-soft text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={1.5} />
+          </button>
+        </Tooltip>
+        <Tooltip content={t.stepActionRename} side="top">
+          <button
+            type="button"
+            aria-label={t.stepActionRename}
+            aria-pressed={isEditing}
             onClick={(e) => {
               e.stopPropagation();
               setIsEditing(true);
             }}
-            className="w-5 h-5 bg-background border shadow-sm rounded flex items-center justify-center hover:bg-accent transition-colors"
+            className={`grid h-6 w-[25px] place-items-center rounded-r-[5px] text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 ${
+              isEditing ? "bg-brand-soft text-primary" : ""
+            }`}
           >
-            <Edit3 className="h-2.5 w-2.5" />
+            <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
           </button>
-        )}
+        </Tooltip>
       </div>
       {/* 双向 Handle - 右侧既是 source 也是 target */}
       <Handle

@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 057 · 步骤卡片右上角动作</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --edge:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+
+    --mark:oklch(0.56 0.17 27);
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+  }
+  .dark{
+    color:var(--fg);
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --edge:oklch(1 0 0 / 24%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 18%,transparent);
+    --canvas:oklch(0.145 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-card:none;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased}
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+
+  .stage{position:relative;width:1200px;overflow:hidden;border:1px solid var(--border);border-radius:8px;
+         background-color:var(--canvas);
+         background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+         background-size:22px 22px;background-position:11px 11px}
+
+  /* ── 步骤卡 ────────────────────────────────────────────────────── */
+  .step{position:absolute;width:220px;background:var(--paper);border:1px solid var(--border);
+        border-radius:8px;padding:12px;box-shadow:var(--shadow-card)}
+  .step .row{display:flex;align-items:center;gap:8px;min-width:0}
+  .step .title{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .step .cmd{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted-fg);
+             background:var(--muted);border:1px solid var(--border-soft);border-radius:3px;padding:1px 4px}
+  .step .chips{display:flex;flex-wrap:wrap;gap:2px;margin-top:6px}
+  .chip{font-family:var(--mono);font-size:9px;padding:1px 4px;border-radius:3px;
+        background:color-mix(in oklab,var(--muted) 70%,transparent);border:1px solid var(--border-soft);
+        color:var(--muted-fg)}
+  .chip b{font-weight:500;color:var(--fg)}
+  .step.selected{border-color:color-mix(in oklab,var(--fg) 55%,transparent);
+                 box-shadow:0 0 0 2px var(--border-soft)}
+
+  /* ── 现状：两个浮动小方块 ─────────────────────────────────────── */
+  .old-acts{position:absolute;top:-8px;right:-8px;display:flex;gap:2px}
+  .old-act{width:20px;height:20px;display:grid;place-items:center;border-radius:4px;
+           background:var(--bg);border:1px solid var(--border);box-shadow:0 1px 2px oklch(0.2 0.02 80 / 12%);
+           color:var(--muted-fg)}
+  .old-act svg{width:10px;height:10px;stroke-width:2}
+
+  /* ── 改后：贴边两格工具条 ─────────────────────────────────────── */
+  .acts{position:absolute;top:-16px;right:8px;display:flex;height:26px;
+        border:1px solid var(--border);border-radius:6px;background:var(--paper);
+        box-shadow:var(--shadow-card);opacity:0;transition:opacity 100ms ease}
+  .step:hover .acts,.step:focus-within .acts,.step.selected .acts,.acts.show{opacity:1}
+  .act{width:26px;height:26px;display:grid;place-items:center;background:transparent;
+       color:var(--muted-fg);border:0;border-right:1px solid var(--border-soft);padding:0}
+  .act:first-child{border-radius:5px 0 0 5px}
+  .act:last-child{border-right:0;border-radius:0 5px 5px 0}
+  .act:hover{background:color-mix(in oklab,var(--fg) 4%,transparent);color:var(--fg)}
+  .act:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--brand-12);color:var(--brand)}
+  .act svg{width:14px;height:14px;stroke-width:1.5}
+  .act.on{background:var(--brand-soft);color:var(--brand)}
+
+  /* 现有 Tooltip：popover 面、1px 边、无箭头、无延迟 */
+  .tip{position:absolute;top:-46px;right:34px;height:22px;padding:0 8px;
+       display:flex;align-items:center;border-radius:6px;background:var(--card);color:var(--fg);
+       border:1px solid var(--border);box-shadow:0 4px 12px -6px oklch(0.2 0.02 80 / 24%);
+       font-size:11px;font-weight:500;white-space:nowrap;z-index:5}
+
+  /* 编辑态 */
+  .alias-input{display:flex;align-items:center;gap:4px;min-width:0}
+  .alias-input .inp{height:24px;flex:1;min-width:0;border:1px solid var(--border);border-radius:4px;
+                    background:var(--bg);padding:0 6px;font-size:12px;display:flex;align-items:center}
+  .alias-input .ok{width:24px;height:24px;display:grid;place-items:center;border-radius:4px;
+                   background:color-mix(in oklab,oklch(0.55 0.12 145) 12%,transparent);
+                   color:oklch(0.5 0.1 145)}
+  .alias-input .ok svg{width:12px;height:12px;stroke-width:2}
+
+  /* ── 放大示意 ──────────────────────────────────────────────────── */
+  .zoom{position:absolute;right:40px;bottom:32px;width:420px;border:1px solid var(--border);
+        border-radius:10px;background:var(--card);padding:14px 16px 16px}
+  .zoom-h{display:flex;align-items:baseline;gap:8px;margin-bottom:10px;
+          font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+  .zoom-h b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .zoom-row{display:flex;align-items:flex-end;gap:28px}
+  .zoom-cell{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .zoom-box{width:104px;height:52px;display:flex;border:1px solid var(--border);border-radius:6px;
+            background:var(--paper);overflow:hidden}
+  .zoom-box .act{width:52px;height:50px}
+  .zoom-box .act svg{width:28px;height:28px;stroke-width:1.5}
+  .zoom-note{font-size:10px;color:var(--muted-fg);line-height:1.5;text-align:center;max-width:120px}
+  .spec-list{margin:12px 0 0;padding:0;list-style:none;font-size:11px;color:var(--muted-fg);line-height:1.9}
+  .spec-list b{color:var(--fg);font-weight:500}
+
+  /* ── 状态四格 ──────────────────────────────────────────────────── */
+  .states{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+  .state{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:44px 18px 18px;
+         position:relative;min-height:190px;display:flex;justify-content:center}
+  .state .tag{position:absolute;left:12px;top:12px;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .state-note{position:absolute;left:12px;right:12px;bottom:12px;font-size:10.5px;color:var(--muted-fg);
+              line-height:1.55}
+
+  /* ── 标注 / 表格 ──────────────────────────────────────────────── */
+  .mark,.fix{position:absolute;width:16px;height:16px;border-radius:50%;z-index:12;
+             font-family:var(--mono);font-size:9.5px;line-height:16px;text-align:center;font-weight:500}
+  .mark{background:var(--mark);color:#fff;box-shadow:0 0 0 2px var(--canvas)}
+  .fix{background:var(--card);color:var(--brand);box-shadow:0 0 0 2px var(--canvas),inset 0 0 0 1px var(--brand-12)}
+  .note-band{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 22px;margin-top:12px;
+             font-size:10.5px;color:var(--muted-fg);line-height:1.55}
+  .note-band .leg{display:flex;gap:7px;align-items:flex-start}
+  .dot-red{width:16px;height:16px;border-radius:50%;background:var(--mark);color:#fff;
+           font-family:var(--mono);font-size:9.5px;line-height:16px;text-align:center;flex:none}
+  .dot-blue{width:16px;height:16px;border-radius:50%;background:var(--card);color:var(--brand);
+            box-shadow:inset 0 0 0 1px var(--brand-12);font-family:var(--mono);font-size:9.5px;
+            line-height:16px;text-align:center;flex:none}
+
+  .h2{font-size:13px;font-weight:500;margin:44px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border-soft)}
+  table.spec{width:100%;border-collapse:collapse;background:var(--card);
+             border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  table.spec th{text-align:left;font-size:10.5px;font-weight:500;color:var(--muted-fg);
+                padding:8px 12px;border-bottom:1px solid var(--border);background:color-mix(in oklab,var(--muted) 45%,transparent)}
+  table.spec td{font-size:11.5px;padding:9px 12px;border-bottom:1px solid var(--border-soft);
+                vertical-align:top;line-height:1.6}
+  table.spec tr:last-child td{border-bottom:0}
+  table.spec td.n{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);width:34px}
+  table.spec th.n{width:34px}
+  table.spec td.k{white-space:nowrap;color:var(--muted-fg);width:170px}
+  table.spec b{font-weight:500}
+  .credit{margin-top:40px;font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">原型 057 · 步骤卡片右上角动作</div>
+    <h1>把两个浮动白色小方块，收成一条贴着卡片上沿的两格工具条</h1>
+    <p>范围：<code>PipelineStepNode</code> 右上角的两个动作（打开参数 / 重命名）。功能、位置与触发方式都不变，只重做它们的形状与状态：<b>一个控件组、14px 线条图标、hairline 而不是阴影</b>，并让键盘和触摸也能发现它们。</p>
+  </div>
+
+  <div class="direction">
+    <div><dt>产品</dt><dd>画布上一张 220px 的步骤卡就是一条 xan 命令，右上角两个动作打开参数、改名字。</dd></div>
+    <div><dt>性格</dt><dd>精确、安静、像盖在卡片边缘的一枚小工具。</dd></div>
+    <div><dt>世界</dt><dd>索引卡与制图板：纸卡的边、细线、墨蓝，动作像夹在卡边上的标签页。</dd></div>
+    <div><dt>时刻</dt><dd>悬停时从卡沿浮出的两格工具条，一格一个动作，14px 线条图标。</dd></div>
+    <div><dt>签名</dt><dd>贴边上沿的两格工具条：右对齐、26px 一格、中间一条 hairline。</dd></div>
+  </div>
+
+  <!-- 01 · 现状 -->
+  <section class="frame">
+    <div class="cap"><span>01</span><b>现状</b><span class="file">PipelineStepNode.tsx:213-233</span></div>
+    <div class="stage" style="height:460px">
+      <div class="step" style="left:80px;top:96px">
+        <div class="old-acts">
+          <span class="old-act">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+          </span>
+          <span class="old-act">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
+          </span>
+        </div>
+        <div class="row"><span class="title">duckdb</span></div>
+        <div class="chips"><span class="chip"><b>overwrite</b></span><span class="chip"><b>threads</b>=4</span></div>
+      </div>
+
+      <div class="step" style="left:340px;top:96px">
+        <div class="row"><span class="title">销售额</span><span class="cmd">sort</span></div>
+        <div class="chips"><span class="chip"><b>reverse</b></span></div>
+      </div>
+
+      <div class="step" style="left:600px;top:96px">
+        <div class="row"><span class="title">华东订单</span><span class="cmd">search</span></div>
+        <div class="chips"><span class="chip">region=<b>华东</b></span><span class="chip"><b>ignore-case</b></span></div>
+      </div>
+
+      <div class="zoom" style="right:40px;bottom:24px;width:400px">
+        <div class="zoom-h"><b>两个方块</b><span>4× · 20 × 20</span></div>
+        <div class="zoom-row">
+          <div class="zoom-box" style="width:200px;height:88px;align-items:center;justify-content:center;gap:8px">
+            <span class="old-act" style="width:80px;height:80px;border-radius:16px">
+              <svg style="width:40px;height:40px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+            </span>
+            <span class="old-act" style="width:80px;height:80px;border-radius:16px">
+              <svg style="width:40px;height:40px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
+            </span>
+          </div>
+          <ul class="spec-list" style="margin:0">
+            <li><b>20 × 20</b> 白底 + 边框 + 阴影</li>
+            <li><b>10px</b> 图标 · 2px stroke</li>
+            <li>只在 hover 出现 · 无名称</li>
+          </ul>
+        </div>
+      </div>
+
+      <span class="mark" style="left:324px;top:72px">1</span>
+      <span class="mark" style="left:324px;top:100px">2</span>
+      <span class="mark" style="left:266px;top:80px">3</span>
+      <span class="mark" style="left:266px;top:104px">4</span>
+    </div>
+    <div class="note-band">
+      <span class="leg"><span class="dot-red">1</span>整体在 <code>-top-2 -right-2</code>，伸出卡片 8px，密排时压到邻居</span>
+      <span class="leg"><span class="dot-red">2</span>20px 白底 + 边框 + 阴影，是两块独立贴纸，比卡片更重</span>
+      <span class="leg"><span class="dot-red">3</span>图标只有 10px、2px stroke，比全应用的 14px / 1.5 更黑更糊</span>
+      <span class="leg"><span class="dot-red">4</span>只在 hover 出现；键盘能 Tab 到不可见的按钮，也没有 tooltip</span>
+    </div>
+  </section>
+
+  <!-- 02 · 改后 -->
+  <section class="frame">
+    <div class="cap"><span>02</span><b>改后 · 亮色</b><span class="file">两格工具条 · 14px / 1.5 · 键盘可达</span></div>
+    <div class="stage" style="height:540px">
+      <div class="step" style="left:80px;top:96px">
+        <div class="acts show">
+          <button class="act" aria-label="参数">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h9M17 18h3"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="18" r="2"/></svg>
+          </button>
+          <button class="act" aria-label="重命名">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/><path d="M14 20h6"/></svg>
+          </button>
+        </div>
+        <div class="row"><span class="title">duckdb</span></div>
+        <div class="chips"><span class="chip"><b>overwrite</b></span><span class="chip"><b>threads</b>=4</span></div>
+      </div>
+
+      <div class="step selected" style="left:340px;top:96px">
+        <div class="acts show">
+          <button class="act" aria-label="参数">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h9M17 18h3"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="18" r="2"/></svg>
+          </button>
+          <button class="act" aria-label="重命名">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/><path d="M14 20h6"/></svg>
+          </button>
+        </div>
+        <div class="row"><span class="title">销售额</span><span class="cmd">sort</span></div>
+        <div class="chips"><span class="chip"><b>reverse</b></span></div>
+      </div>
+
+      <div class="step" style="left:600px;top:96px">
+        <div class="row"><span class="title">华东订单</span><span class="cmd">search</span></div>
+        <div class="chips"><span class="chip">region=<b>华东</b></span><span class="chip"><b>ignore-case</b></span></div>
+      </div>
+
+      <div class="zoom">
+        <div class="zoom-h"><b>工具条</b><span>2× · 52 × 26</span></div>
+        <div class="zoom-row">
+          <div class="zoom-cell">
+            <div class="zoom-box">
+              <button class="act">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h9M17 18h3"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="18" r="2"/></svg>
+              </button>
+              <button class="act">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/><path d="M14 20h6"/></svg>
+              </button>
+            </div>
+            <span class="zoom-note">26px 一格<br>14px / 1.5 图标<br>中间一条 hairline</span>
+          </div>
+          <div class="zoom-cell">
+            <div class="zoom-box" style="width:56px">
+              <button class="act" style="width:52px;background:color-mix(in oklab,var(--fg) 4%,transparent);color:var(--fg)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h9M17 18h3"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="18" r="2"/></svg>
+              </button>
+            </div>
+            <span class="zoom-note">hover 只换 4% 面阶<br>不位移、不加阴影</span>
+          </div>
+        </div>
+        <ul class="spec-list">
+          <li><b>参数</b> <code>SlidersHorizontal</code> · 开命令参数</li>
+          <li><b>重命名</b> <code>Pencil</code> · 就地改别名</li>
+          <li>两个按钮都有 <code>aria-label</code> 与现有 Tooltip（top，无延迟）</li>
+        </ul>
+      </div>
+
+      <span class="fix" style="left:300px;top:72px">1</span>
+      <span class="fix" style="left:226px;top:72px">2</span>
+      <span class="fix" style="left:300px;top:116px">3</span>
+      <span class="fix" style="left:226px;top:116px">4</span>
+    </div>
+    <div class="note-band">
+      <span class="leg"><span class="dot-blue">1</span>一个 52 × 26 的两格工具条，右对齐、贴卡片上沿，不再伸出卡片右边</span>
+      <span class="leg"><span class="dot-blue">2</span>hairline 边框 + 卡片面阶，无投影；两格共用一条分隔线</span>
+      <span class="leg"><span class="dot-blue">3</span>图标 14px / 1.5 stroke；齿轮换滑杆（参数），铅笔保留（重命名）</span>
+      <span class="leg"><span class="dot-blue">4</span>悬停、focus-within、选中三种情况都显示；两个按钮都有 aria-label 与现有 Tooltip</span>
+    </div>
+  </section>
+
+  <!-- 03 · 暗色 -->
+  <section class="frame">
+    <div class="cap"><span>03</span><b>改后 · 暗色</b><span class="file">面阶 + inset hairline，不是两块亮贴纸</span></div>
+    <div class="stage dark" style="height:340px">
+      <div class="step" style="left:80px;top:96px">
+        <div class="acts show">
+          <button class="act" aria-label="参数">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h9M17 18h3"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="18" r="2"/></svg>
+          </button>
+          <button class="act" aria-label="重命名">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/><path d="M14 20h6"/></svg>
+          </button>
+        </div>
+        <div class="row"><span class="title">duckdb</span></div>
+        <div class="chips"><span class="chip"><b>overwrite</b></span><span class="chip"><b>threads</b>=4</span></div>
+      </div>
+
+      <div class="step selected" style="left:340px;top:96px">
+        <div class="acts show">
+          <button class="act" aria-label="参数">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h9M17 18h3"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="18" r="2"/></svg>
+          </button>
+          <button class="act on" aria-label="重命名">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/><path d="M14 20h6"/></svg>
+          </button>
+        </div>
+        <div class="row"><span class="title">销售额</span><span class="cmd">sort</span></div>
+        <div class="chips"><span class="chip"><b>reverse</b></span></div>
+      </div>
+
+      <div class="step" style="left:600px;top:96px">
+        <div class="row"><span class="title">华东订单</span><span class="cmd">search</span></div>
+        <div class="chips"><span class="chip">region=<b>华东</b></span><span class="chip"><b>ignore-case</b></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 · 状态 -->
+  <section class="frame">
+    <div class="cap"><span>04</span><b>四个状态</b><span class="file">默认隐藏 · hover · focus-visible · 编辑中</span></div>
+    <div class="states">
+
+      <div class="state">
+        <span class="tag">rest</span>
+        <div class="step" style="position:relative;top:0;left:0">
+          <div class="row"><span class="title">duckdb</span></div>
+          <div class="chips"><span class="chip"><b>overwrite</b></span></div>
+        </div>
+        <span class="state-note">不显示工具条；卡片本身没有多出任何边框或占位。</span>
+      </div>
+
+      <div class="state">
+        <span class="tag">hover</span>
+        <div class="step" style="position:relative;top:0;left:0">
+          <div class="acts show">
+            <button class="act">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h9M17 18h3"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="18" r="2"/></svg>
+            </button>
+            <button class="act">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/><path d="M14 20h6"/></svg>
+            </button>
+          </div>
+          <span class="tip">参数</span>
+          <div class="row"><span class="title">duckdb</span></div>
+          <div class="chips"><span class="chip"><b>overwrite</b></span></div>
+        </div>
+        <span class="state-note">100ms 淡入；hover 单格只换 4% 面阶；Tooltip 用现成组件，出现在格子上方 8px。</span>
+      </div>
+
+      <div class="state">
+        <span class="tag">focus-visible</span>
+        <div class="step" style="position:relative;top:0;left:0">
+          <div class="acts show">
+            <button class="act" style="box-shadow:inset 0 0 0 2px var(--brand-12);color:var(--brand)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h9M17 18h3"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="18" r="2"/></svg>
+            </button>
+            <button class="act">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/><path d="M14 20h6"/></svg>
+            </button>
+          </div>
+          <div class="row"><span class="title">duckdb</span></div>
+          <div class="chips"><span class="chip"><b>overwrite</b></span></div>
+        </div>
+        <span class="state-note">Tab 进入时整条显示；2px 墨蓝内环，焦点始终可见。</span>
+      </div>
+
+      <div class="state">
+        <span class="tag">editing</span>
+        <div class="step" style="position:relative;top:0;left:0">
+          <div class="acts show">
+            <button class="act">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h9M17 18h3"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="18" r="2"/></svg>
+            </button>
+            <button class="act on">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/><path d="M14 20h6"/></svg>
+            </button>
+          </div>
+          <div class="alias-input">
+            <span class="inp">duckdb</span>
+            <span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg></span>
+          </div>
+          <div class="chips"><span class="chip"><b>overwrite</b></span></div>
+        </div>
+        <span class="state-note">两格始终保留；铅笔格是 pressed 态，工具条不跳宽。</span>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 问题清单 -->
+  <div class="h2">问题清单</div>
+  <table class="spec">
+    <thead><tr><th class="n">#</th><th style="width:210px">位置</th><th>现状</th><th style="width:330px">改法</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td class="k">PipelineStepNode.tsx:213</td><td>动作组在 <code>-top-2 -right-2</code>，伸出卡片右上角各 8px，密排时压到邻居。</td><td>右对齐、贴卡片上沿：<code>top:-16px; right:8px</code>，不越过卡片右边。</td></tr>
+      <tr><td class="n">2</td><td class="k">:219 · :229</td><td>两个 20px 白底方块，各自带边框与 <code>shadow-sm</code>，比卡片更重。</td><td>合成一条 52 × 26 的工具条：1px hairline、卡片面阶、无投影。</td></tr>
+      <tr><td class="n">3</td><td class="k">:221 · :231</td><td>图标 10px、lucide 默认 2px stroke，小而发黑。</td><td>14px / 1.5 stroke，与全应用图标一致。</td></tr>
+      <tr><td class="n">4</td><td class="k">:219 · :229</td><td><code>rounded</code> 4px + 各自边框，两格不像一个控件组。</td><td>外框 6px，两格共用一条竖分隔线，右对齐。</td></tr>
+      <tr><td class="n">5</td><td class="k">:213</td><td>只有 <code>group-hover</code>；键盘能 Tab 到不可见按钮，触摸端没有 hover。</td><td><code>group-hover</code> + <code>group-focus-within</code> + 选中卡片；Tab 进入时整条显示。</td></tr>
+      <tr><td class="n">6</td><td class="k">:214-233</td><td>两个 icon-only 按钮没有 <code>aria-label</code> / tooltip。</td><td>补 <code>aria-label</code> 与现有 Tooltip（<code>side="top"</code>）：「参数」「重命名」。</td></tr>
+      <tr><td class="n">7</td><td class="k">:221</td><td>齿轮读作「设置」，与铅笔的「编辑」语义重叠。</td><td>齿轮换 <code>SlidersHorizontal</code>，明确是参数；铅笔保留为改名。</td></tr>
+      <tr><td class="n">8</td><td class="k">:223</td><td>进入编辑态时铅笔被移除，工具条宽度跳变。</td><td>两格始终保留；编辑时铅笔格为 pressed 态。</td></tr>
+      <tr><td class="n">9</td><td class="k">:219 · :229</td><td>只有 hover，没有 focus-visible 环与按压态。</td><td>2px 墨蓝内环；按压只换 4% 面阶，不使用 scale。</td></tr>
+      <tr><td class="n">10</td><td class="k">:219 · :229</td><td><code>bg-background</code> 在暗色下是页面底色，两个方块像亮贴纸。</td><td>工具条用卡片面阶；暗色只留 inset hairline。</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 规格 -->
+  <div class="h2">规格</div>
+  <table class="spec">
+    <thead><tr><th style="width:170px">项</th><th>值</th></tr></thead>
+    <tbody>
+      <tr><td class="k">位置</td><td>卡片上沿，<code>top:-16px</code>、<code>right:8px</code>；工具条高 26，压住卡片边 10px，不进入标题行（标题从 12px 开始）。</td></tr>
+      <tr><td class="k">尺寸</td><td>整体 <b>52 × 26</b>；两格各 26 × 26；图标 14 / 1.5；分隔线 1px。</td></tr>
+      <tr><td class="k">形状</td><td>外框圆角 6，与 8px 卡片嵌套；无额外阴影（跟随卡片的 <code>--shadow-card</code>）。</td></tr>
+      <tr><td class="k">颜色</td><td>工具条面阶 = 卡片面阶；边框 = <code>--border</code>；图标默认 <code>--muted-fg</code>，hover / focus = <code>--fg</code>；hover 面阶 +4%；焦点墨蓝。</td></tr>
+      <tr><td class="k">可见性</td><td><code>group-hover</code>、<code>group-focus-within</code>、卡片选中，三选一即显示；100ms 只改透明度，不位移。</td></tr>
+      <tr><td class="k">键盘</td><td>两个按钮可 Tab；进入时整条显示；<code>focus-visible</code> 用 2px 墨蓝内环；Enter / Space 触发，和鼠标一致。</td></tr>
+      <tr><td class="k">编辑态</td><td>保留两格；铅笔格 <code>aria-pressed</code> + 墨蓝浅底；工具条宽度不变，右边缘固定。</td></tr>
+      <tr><td class="k">触摸</td><td>无 hover 时，点击卡片先显示工具条（或长按）；工具条本身可点，命中区 26 × 26。</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 图标与文案 -->
+  <div class="h2">图标与文案</div>
+  <table class="spec">
+    <thead><tr><th style="width:170px">动作</th><th style="width:200px">现状</th><th>改后</th><th style="width:280px">理由</th></tr></thead>
+    <tbody>
+      <tr><td class="k">参数</td><td><code>Settings</code> 齿轮 · 10px · 无名称</td><td><code>SlidersHorizontal</code> · 14 / 1.5 · tooltip「参数」</td><td>齿轮更像应用设置；滑杆在数据工具里就是参数。</td></tr>
+      <tr><td class="k">重命名</td><td><code>Edit3</code> 铅笔 · 10px · 无名称</td><td><code>Pencil</code> · 14 / 1.5 · tooltip「重命名」</td><td>铅笔保留；加上名称后不再和参数混淆。</td></tr>
+      <tr><td class="k">容器</td><td>两个独立白方块</td><td>一条两格工具条</td><td>一个控件组只出现一次，不再像两张贴纸。</td></tr>
+      <tr><td class="k">无障碍</td><td>无 aria-label</td><td><code>aria-label="参数"</code> / <code>"重命名"</code></td><td>图标按钮必须有名称。</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 实施映射 -->
+  <div class="h2">实施映射</div>
+  <table class="spec">
+    <thead><tr><th style="width:260px">文件</th><th>改动</th></tr></thead>
+    <tbody>
+      <tr><td class="k">modules/pipeline/nodes/PipelineStepNode.tsx</td><td>动作组改为单条两格工具条；图标换成 <code>SlidersHorizontal</code> / <code>Pencil</code>；补 <code>aria-label</code>、现有 Tooltip、<code>focus-visible</code>、<code>group-focus-within</code>；编辑态保留两格。</td></tr>
+      <tr><td class="k">i18n</td><td>新增 <code>stepActionParams</code>（参数 / Parameters）与 <code>stepActionRename</code>（重命名 / Rename），用作 Tooltip 与 aria-label。</td></tr>
+      <tr><td class="k">components/ui/Tooltip.tsx</td><td>直接用现有组件，<code>side="top"</code>，不新增样式、不加延迟。工具条因此不设 <code>overflow:hidden</code>，首尾格各自圆角，避免弹层被裁切。</td></tr>
+      <tr><td class="k">不做</td><td>不把两个动作并进「更多」菜单，也不改卡片内容与连接线；只重做这两个动作的外观与可达性。</td></tr>
+    </tbody>
+  </table>
+
+  <p style="font-size:11px;color:var(--muted-fg);line-height:1.9;margin-top:18px">
+    原型只改这两个动作：命令、参数、别名与拖拽行为都不变。工具条挂在卡片上沿而不是卡片内部，长命令名与参数再多也不会被它盖住。
+  </p>
+  <div class="credit">工艺方法：unslop by @heydamir · CC BY 4.0</div>
+</div>
+</body>
+</html>

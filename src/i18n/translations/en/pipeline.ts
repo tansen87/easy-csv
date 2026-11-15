@@ -185,6 +185,8 @@ export const enPipeline = {
   versionTimeFull: "{month}/{day}/{year}",
   cmds: "Cmd",
   searchCommand: "Search command",
+  stepActionParams: "Parameters",
+  stepActionRename: "Rename",
   noCommandsFound: "No commands found",
   tryDifferentSearch: "Try a different search term",
   executePipelinesHint: "Execute pipelines to see them here",
