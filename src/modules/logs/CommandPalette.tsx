@@ -23,12 +23,13 @@ interface CommandPaletteProps {
 }
 
 /**
- * The chord as one string with the platform modifier: `Ctrl+O` → `⌘+O` on macOS.
- * Same shape as the menu bar (`MainMenu.tsx` prints `Ctrl+O` inside one `kbd`),
- * so the palette and the menus teach the same notation.
+ * The chord as one string with the platform modifier and no plus sign:
+ * `Ctrl+O` → `Ctrl O`, and `⌘ O` on macOS. Same shape as the menu bar
+ * (`MainMenu.tsx` prints `Ctrl O` inside one `kbd`) and the empty state's
+ * `Ctrl O` hint, so the app teaches one notation everywhere.
  */
 function displayShortcut(shortcut: string): string {
-  return shortcut.replace(/^Ctrl/, modKeySymbol());
+  return shortcut.replace(/^Ctrl/, modKeySymbol()).replace(/\+/g, " ");
 }
 
 /** One keycap. Matches the menu bar's shortcut chip: 18px tall, hairline, no fill. */

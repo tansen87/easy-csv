@@ -559,7 +559,7 @@ export const MainMenu = React.memo(function MainMenu({
               >
                 <span className="flex-1 text-left">{t.open}</span>
                 <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
-                  Ctrl+O
+                  Ctrl O
                 </kbd>
               </button>
               <button
@@ -571,7 +571,7 @@ export const MainMenu = React.memo(function MainMenu({
               >
                 <span className="flex-1 text-left">{t.openNewTab}</span>
                 <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
-                  Ctrl+N
+                  Ctrl N
                 </kbd>
               </button>
               <button
@@ -583,7 +583,7 @@ export const MainMenu = React.memo(function MainMenu({
               >
                 <span className="flex-1 text-left">{t.paletteTemplates}</span>
                 <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
-                  Ctrl+T
+                  Ctrl T
                 </kbd>
               </button>
               <div className="mx-2.5 my-1.5 border-t border-foreground/15" />
@@ -601,7 +601,7 @@ export const MainMenu = React.memo(function MainMenu({
               >
                 <span className="flex-1 text-left">{t.savePipeline}</span>
                 <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
-                  Ctrl+S
+                  Ctrl S
                 </kbd>
               </button>
               <button
@@ -613,7 +613,7 @@ export const MainMenu = React.memo(function MainMenu({
               >
                 <span className="flex-1 text-left">{t.importWorkflow}</span>
                 <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
-                  Ctrl+I
+                  Ctrl I
                 </kbd>
               </button>
               <button
@@ -630,7 +630,7 @@ export const MainMenu = React.memo(function MainMenu({
               >
                 <span className="flex-1 text-left">{t.exportWorkflow}</span>
                 <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
-                  Ctrl+E
+                  Ctrl E
                 </kbd>
               </button>
             </div>
@@ -668,7 +668,7 @@ export const MainMenu = React.memo(function MainMenu({
               >
                 <span className="flex-1 text-left">{t.undo}</span>
                 <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
-                  Ctrl+Z
+                  Ctrl Z
                 </kbd>
               </button>
               <button
@@ -685,7 +685,7 @@ export const MainMenu = React.memo(function MainMenu({
               >
                 <span className="flex-1 text-left">{t.redo}</span>
                 <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
-                  Ctrl+Y
+                  Ctrl Y
                 </kbd>
               </button>
             </div>
@@ -727,7 +727,7 @@ export const MainMenu = React.memo(function MainMenu({
                   {t.commandPalette}
                 </span>
                 <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
-                  Ctrl+K
+                  Ctrl K
                 </kbd>
               </button>
               <div className="mx-2.5 my-1.5 border-t border-foreground/15" />
@@ -853,7 +853,7 @@ export const MainMenu = React.memo(function MainMenu({
                   {t.search}
                 </span>
                 <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
-                  Ctrl+F
+                  Ctrl F
                 </kbd>
               </button>
             </div>
@@ -1161,7 +1161,7 @@ export const MainMenu = React.memo(function MainMenu({
                   </span>
                   <span className="flex items-center gap-1">
                     <kbd className="rounded border border-border bg-card px-1 py-px font-mono text-[10px] leading-4 text-muted-foreground">
-                      Ctrl+R
+                      Ctrl R
                     </kbd>
                   </span>
                 </div>

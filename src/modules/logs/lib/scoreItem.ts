@@ -125,6 +125,9 @@ export function matchItem(item: PaletteItem, query: string): ItemMatch | null {
     item.search,
     item.group,
     item.shortcut,
+    // Shortcuts are displayed without the plus (`Ctrl R`), so the query has to
+    // match that spelling as well as the stored `Ctrl+R`.
+    item.shortcut?.replace(/\+/g, " "),
   ]
     .filter(Boolean)
     .join(" ")

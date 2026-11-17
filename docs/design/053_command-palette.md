@@ -100,6 +100,15 @@
 
 **快捷键写法**:第一版拆成两枚键帽(`Ctrl` + `O`),看着像两个要依次按的键,和菜单栏(`MainMenu.tsx` 一个 `kbd` 里写 `Ctrl+O`)也不是一套语言。现在统一成**一枚 chip 装整串**,字体/边框/透明度都对齐菜单栏;只有底栏的 `↑ ↓ ↵ esc` 还是单枚键帽(它们本来就是单键)。面板宽度同时从 680 收到 600:名字、描述、来源、键帽四段仍能一眼配对,再宽眼睛就要从行首扫到行尾。
 
+**2026-11-17 修订 · 键帽去掉 `+`**:上一段统一了「一枚 chip」,但 chip 里仍写 `Ctrl+O`;`+` 在等宽细边框里看着像第二个字符而不是分隔符,空状态早就写成 `Ctrl O`(`EmptyState.tsx`),两处读起来不是一种语言。现在**全应用统一成空格分隔**:
+
+- `CommandPalette.tsx` 的 `displayShortcut()` 从「只换修饰键」变成 `replace(/^Ctrl/, modKeySymbol()).replace(/\+/g, " ")` → `Ctrl O`(macOS `⌘ O`)。键帽本身、字号、边框一律不动。
+- `MainMenu.tsx` 的 11 处静态 chip(`Ctrl+O/N/T/S/I/E/Z/Y/K/F` 与运行面板底栏的 `Ctrl+R`)改成 `Ctrl O` 这类写法。菜单栏仍是一枚 `kbd` 装整串,不拆成两枚键帽。
+- **面板能搜到显示出来的写法**:`scoreItem.ts` 的 meta 里除了 `item.shortcut`(`Ctrl+R`)再拼一份 `+/→空格` 的变体,否则按看到的 `ctrl r` 搜不到、只有 `ctrl+r` 能命中。数据层(`App.tsx` 的 `shortcut` 字段)保持 `Ctrl+X` 不变,只改渲染与检索。
+- 测试:`CommandPalette.test.tsx` 加 2 例(键帽不含 `+`、按 `ctrl r` 命中「执行」),`ExecuteMenu.test.tsx` 的底栏断言由 `Ctrl+R` 改成 `Ctrl R`。
+
+**仍未统一**:帮助中心正文(`HelpContent.ts` / `HelpContentCn.ts` 的 `Ctrl` + `O` 表格)还是旧的加号写法,和它自己的 `Ctrl F` 键帽也不一致;那次改动不在本次范围,要统一需另开一条。数据层里的 `shortcut` 值也继续写 `Ctrl+X`。
+
 **两个实现坑**:
 
 1. **行必须 `w-full`**。`button` 虽然 `display:grid`,宽度仍是 `fit-content`,于是描述与键帽会紧贴名字而不是靠右。改成「列表容器 `px-1.5 py-1.5` + 行 `w-full`」;组头随即从 `px-4` 改成 `px-2.5`,才能和行内文字落在同一条 16px 竖线上。

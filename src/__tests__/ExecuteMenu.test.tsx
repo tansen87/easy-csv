@@ -318,7 +318,7 @@ describe("run panel (design 052)", () => {
     expect(props.onRunTab).toHaveBeenCalledWith("b");
   });
 
-  it("shows the concurrency limit and Ctrl+R in the panel footer", () => {
+  it("shows the concurrency limit and Ctrl R in the panel footer", () => {
     const { button } = renderMenu({ maxConcurrentRuns: 6 });
     fireEvent.click(button);
 
@@ -327,7 +327,8 @@ describe("run panel (design 052)", () => {
       copy.runLimitHint.replace("{count}", "6"),
     );
     expect(menu.querySelectorAll("kbd").length).toBe(1);
-    expect(menu.querySelector("kbd")!.textContent).toBe("Ctrl+R");
+    // Shortcut chips print the chord without a plus ("Ctrl R", not "Ctrl+R").
+    expect(menu.querySelector("kbd")!.textContent).toBe("Ctrl R");
   });
 
   it("puts a dot on the trigger only when another tab is active", () => {

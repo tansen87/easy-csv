@@ -146,6 +146,25 @@ describe("CommandPalette", () => {
     expect(buttons[0].textContent).toContain("Execute");
   });
 
+  it("prints shortcut chips without a plus sign", () => {
+    const { container } = renderPalette(makeItems());
+    const caps = Array.from(container.querySelectorAll("kbd")).map(
+      (k) => k.textContent,
+    );
+    // `Ctrl+O` is stored on the item; the chip must read `Ctrl O`.
+    expect(caps).toContain("Ctrl O");
+    expect(caps).toContain("Ctrl R");
+    expect(caps.some((c) => (c ?? "").includes("+"))).toBe(false);
+  });
+
+  it("matches the displayed spelling of a shortcut too", () => {
+    const { container } = renderPalette(makeItems());
+    typeQuery(container, "ctrl r");
+    const buttons = Array.from(container.querySelectorAll("button"));
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].textContent).toContain("Execute");
+  });
+
   it("ranks by score: prefix beats substring, exact beats everything", () => {
     const { container } = renderPalette(rankingItems());
     typeQuery(container, "fi");
