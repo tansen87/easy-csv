@@ -23,18 +23,6 @@ export const enOnboarding = {
   onboardingPanelHint:
     "Your first operation applies straight to the input data (its own branch) - no need to connect anything first.",
 
-  // Gesture card
-  onboardingGestureTitle: "Canvas gestures",
-  onboardingGestureCollapse: "Collapse",
-  onboardingGestureRightDrag: "Right-drag",
-  onboardingGestureConnect: "from a step node onto a target → connect",
-  onboardingGestureRightSlash: "Right-slash",
-  onboardingGestureCut: "cuts an edge / node",
-  onboardingGestureSpaceOrMiddle: "Space / middle",
-  onboardingGesturePan: "drag to pan the canvas",
-  onboardingGestureLeftDrag: "Left-drag",
-  onboardingGestureSelect: "on empty space to box-select nodes",
-
   // Sample data
   onboardingSampleFailed: "Could not prepare the sample data: {error}",
   // Step-by-step replay: each caption names the action that added the step.

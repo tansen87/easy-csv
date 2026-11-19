@@ -361,12 +361,11 @@ export const HomeView = React.memo(function HomeView({
         />
       </div>
 
-      {/* First-run guide + gesture card (design 027 §4.2/§4.6). Rendered here
-          rather than inside FlowPanel so no canvas gesture code is touched. */}
+      {/* First-run guide (design 027 §4.2). Rendered here rather than inside
+          FlowPanel so no canvas gesture code is touched. */}
       <FirstStepGuide
         showGuide={showOnboardingGuide}
         commandCount={commandCount}
-        gestureCardExpanded={showOnboardingGuide}
         reveal={demoReveal}
         onAdvanceReveal={onAdvanceDemoReveal}
         onSkipReveal={onSkipDemoReveal}

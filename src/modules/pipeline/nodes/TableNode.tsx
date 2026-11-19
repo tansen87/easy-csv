@@ -29,6 +29,8 @@ export interface TableNodeData {
   inputFormat?: TabularFormat;
   /** Chosen table when the input is a `.duckdb` file. */
   sourceTable?: string;
+  /** Canvas lock: hides delete/save affordances. */
+  locked?: boolean;
 }
 
 export function TableNode({
@@ -55,6 +57,7 @@ export function TableNode({
     onDelimiterChange,
     inputFormat,
     sourceTable,
+    locked,
   } = data;
   const [editingCol, setEditingCol] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -294,12 +297,14 @@ export function TableNode({
             )}
           </div>
         )}
-        <button
-          onClick={() => onDelete?.()}
-          className="nodrag w-5 h-5 rounded-md flex items-center justify-center hover:bg-primary/10 transition-colors"
-        >
-          <X className="h-3 w-3" />
-        </button>
+        {!locked && (
+          <button
+            onClick={() => onDelete?.()}
+            className="nodrag w-5 h-5 rounded-md flex items-center justify-center hover:bg-primary/10 transition-colors"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
       </div>
       <ScrollArea
         className="nodrag nowheel cursor-default"
@@ -380,7 +385,7 @@ export function TableNode({
         </div>
       )}
       <div className="table-node-footer flex h-7 cursor-grab select-none items-center gap-2 border-t border-border/40 px-3 active:cursor-grabbing">
-        {showSaveButton ? (
+        {showSaveButton && !locked ? (
           <div className="ml-auto flex min-w-0 items-center gap-2">
             <span className="shrink-0 text-[11px] text-warning">
               {t.renamePending}

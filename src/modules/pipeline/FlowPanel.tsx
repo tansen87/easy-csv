@@ -28,6 +28,7 @@ import { SearchOverlay } from "@/modules/pipeline/overlays/SearchOverlay";
 import { CutVisualization } from "@/modules/pipeline/overlays/CutVisualization";
 import { ConnectionVisualization } from "@/modules/pipeline/overlays/ConnectionVisualization";
 import { KeyIndicatorOverlay } from "@/modules/pipeline/overlays/KeyIndicatorOverlay";
+import { GestureLegend } from "@/modules/pipeline/overlays/GestureLegend";
 import {
   PipelineStep,
   PipelineEdge,
@@ -51,6 +52,13 @@ import {
   BoxSelect,
   Hand,
   ArrowLeftRight,
+  MoreHorizontal,
+  LayoutGrid,
+  Maximize2,
+  ZoomIn,
+  Grid3x3,
+  Lock,
+  Mouse,
 } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Button } from "@/components/ui/Button";
@@ -61,6 +69,27 @@ type CanvasLeftTool = "select" | "pan";
 const LEFT_TOOL_STORAGE_KEY = "easy-csv-canvas-left-tool";
 /** Swap left/right mouse buttons for every canvas gesture. */
 const SWAP_MOUSE_STORAGE_KEY = "easy-csv-canvas-swap-buttons";
+/** Canvas options persisted with the tool choices. */
+const SNAP_GRID_STORAGE_KEY = "easy-csv-canvas-snap-grid";
+const LOCK_CANVAS_STORAGE_KEY = "easy-csv-canvas-locked";
+const GESTURE_LEGEND_STORAGE_KEY = "easy-csv-canvas-gesture-legend";
+const SNAP_GRID_STEP = 22;
+
+function readStoredFlag(key: string): boolean {
+  try {
+    return localStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function storeFlag(key: string, value: boolean) {
+  try {
+    localStorage.setItem(key, value ? "1" : "0");
+  } catch {
+    // Private mode / quota errors fall back to session-only.
+  }
+}
 
 /** Drag captured on the right button while the buttons are swapped. */
 type SwapDragState =
@@ -277,6 +306,40 @@ export function FlowPanel({
     setContextMenu(null);
     setTableContextMenu(null);
   }, []);
+
+  // Canvas options: snap, read-only lock, gesture legend.
+  const [snapToGrid, setSnapToGrid] = useState(() =>
+    readStoredFlag(SNAP_GRID_STORAGE_KEY),
+  );
+  const [locked, setLocked] = useState(() =>
+    readStoredFlag(LOCK_CANVAS_STORAGE_KEY),
+  );
+  const [showGestureLegend, setShowGestureLegend] = useState(() =>
+    readStoredFlag(GESTURE_LEGEND_STORAGE_KEY),
+  );
+  const [layoutResetKey, setLayoutResetKey] = useState(0);
+  const [zoomPct, setZoomPct] = useState(100);
+  const [canvasToolsOpen, setCanvasToolsOpen] = useState(false);
+  const canvasToolsRef = useRef<HTMLDivElement>(null);
+
+  const toggleSnapToGrid = useCallback(() => {
+    setSnapToGrid((prev) => {
+      storeFlag(SNAP_GRID_STORAGE_KEY, !prev);
+      return !prev;
+    });
+  }, []);
+  const toggleLocked = useCallback(() => {
+    setLocked((prev) => {
+      storeFlag(LOCK_CANVAS_STORAGE_KEY, !prev);
+      return !prev;
+    });
+  }, []);
+  const toggleGestureLegend = useCallback(() => {
+    setShowGestureLegend((prev) => {
+      storeFlag(GESTURE_LEGEND_STORAGE_KEY, !prev);
+      return !prev;
+    });
+  }, []);
   const [canvasMenu, setCanvasMenu] = useState<{
     x: number;
     y: number;
@@ -286,8 +349,8 @@ export function FlowPanel({
   const handleContextMenu = useCallback(
     (stepId: string, x: number, y: number) => {
       // Swapped buttons: the right button drives the left tool, so node
-      // context menus must not open from it.
-      if (swapMouseButtons) return;
+      // context menus must not open from it. Locked canvas is read-only.
+      if (swapMouseButtons || locked) return;
       // In menu mode, right-clicking a step node opens the canvas context menu
       // (with that step under the cursor). Nodes call this via their own
       // onContextMenu which stops propagation, so we route here explicitly.
@@ -297,7 +360,7 @@ export function FlowPanel({
         setContextMenu({ x, y, stepId });
       }
     },
-    [rightClickMode, swapMouseButtons],
+    [rightClickMode, swapMouseButtons, locked],
   );
 
   const [tableContextMenu, setTableContextMenu] = useState<{
@@ -312,10 +375,10 @@ export function FlowPanel({
 
   const handleTableContextMenu = useCallback(
     (col: number, x: number, y: number) => {
-      if (swapMouseButtons) return;
+      if (swapMouseButtons || locked) return;
       setTableContextMenu({ x, y, col });
     },
-    [swapMouseButtons],
+    [swapMouseButtons, locked],
   );
 
   const handleTableRename = useCallback(
@@ -335,6 +398,9 @@ export function FlowPanel({
   // event callbacks rather than from the render closure.
   const nodesRef = useRef<Node[]>(nodes);
   nodesRef.current = nodes;
+  // Set after persistNodePositions is defined; the layout hook calls it when a
+  // forced "tidy" layout produces new positions.
+  const persistNodePositionsRef = useRef<(nodeList: Node[]) => void>(() => {});
 
   // Cutting function status (line delay 200ms), must read current state
   // instead of old snapshot when cutting in succession,
@@ -444,6 +510,9 @@ export function FlowPanel({
     nodes,
     setNodes,
     setEdges,
+    layoutResetKey,
+    locked,
+    onLayoutApplied: (list) => persistNodePositionsRef.current(list),
   });
 
   // Transient notice shown when a cyclic connection is rejected
@@ -508,6 +577,7 @@ export function FlowPanel({
     },
     [steps, onStepsChange, onInputPositionChange],
   );
+  persistNodePositionsRef.current = persistNodePositions;
 
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, _node: Node, draggedNodes: Node[]) => {
@@ -528,7 +598,7 @@ export function FlowPanel({
 
   const handleSwapMouseDownCapture = useCallback(
     (e: React.MouseEvent) => {
-      if (!swapMouseButtons || e.button !== 2 || spaceDown) return;
+      if (!swapMouseButtons || locked || e.button !== 2 || spaceDown) return;
       const clickedNode = getNodeAtPosition(e.clientX, e.clientY);
       if (!clickedNode) {
         // Pan tool: React Flow owns the right-drag pan.
@@ -582,6 +652,7 @@ export function FlowPanel({
     },
     [
       swapMouseButtons,
+      locked,
       spaceDown,
       leftTool,
       getNodeAtPosition,
@@ -594,7 +665,7 @@ export function FlowPanel({
   // or opening the menu when the buttons are swapped.
   const handleCutStart = useCallback(
     (e: React.MouseEvent) => {
-      if (spaceDown) return;
+      if (spaceDown || locked) return;
       const primaryButton = swapMouseButtons ? 0 : 2;
       if (e.button !== primaryButton) return;
       // Normal menu mode: the contextmenu event opens the menu.
@@ -620,12 +691,25 @@ export function FlowPanel({
     },
     [
       spaceDown,
+      locked,
       swapMouseButtons,
       rightClickMode,
       getNodeAtPosition,
       startConnect,
       startCut,
     ],
+  );
+
+  // Swap-drag positions respect the optional 22px grid.
+  const snapPosition = useCallback(
+    (position: { x: number; y: number }) =>
+      snapToGrid
+        ? {
+            x: Math.round(position.x / SNAP_GRID_STEP) * SNAP_GRID_STEP,
+            y: Math.round(position.y / SNAP_GRID_STEP) * SNAP_GRID_STEP,
+          }
+        : position,
+    [snapToGrid],
   );
 
   // Primary button move - swapped drags first, then connect / cut.
@@ -651,10 +735,10 @@ export function FlowPanel({
         if (!drag.moved && Math.hypot(dx, dy) < 3) return;
         drag.moved = true;
         const zoom = reactFlowInstance.current?.getZoom?.() ?? 1;
-        const position = {
+        const position = snapPosition({
           x: drag.startPosition.x + dx / zoom,
           y: drag.startPosition.y + dy / zoom,
-        };
+        });
         setNodes((nds) =>
           nds.map((n) => (n.id === drag.nodeId ? { ...n, position } : n)),
         );
@@ -675,6 +759,7 @@ export function FlowPanel({
       moveCut,
       setNodes,
       reactFlowWrapper,
+      snapPosition,
     ],
   );
 
@@ -725,14 +810,14 @@ export function FlowPanel({
 
         if (drag.moved) {
           const zoom = reactFlowInstance.current?.getZoom?.() ?? 1;
-          const position = {
+          const position = snapPosition({
             x:
               drag.startPosition.x +
               (e.clientX - drag.startClientX) / zoom,
             y:
               drag.startPosition.y +
               (e.clientY - drag.startClientY) / zoom,
-          };
+          });
           const nextNodes = nodesRef.current.map((n) =>
             n.id === drag.nodeId ? { ...n, position } : n,
           );
@@ -762,6 +847,7 @@ export function FlowPanel({
       setNodes,
       persistNodePositions,
       reactFlowInstance,
+      snapPosition,
     ],
   );
 
@@ -769,7 +855,7 @@ export function FlowPanel({
   const handlePanelContextMenu = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
-      if (swapMouseButtons) return;
+      if (swapMouseButtons || locked) return;
       if (rightClickMode === "menu") {
         const nodeId = getNodeAtPosition(e.clientX, e.clientY);
         setCanvasMenu({
@@ -779,7 +865,7 @@ export function FlowPanel({
         });
       }
     },
-    [rightClickMode, getNodeAtPosition, swapMouseButtons],
+    [rightClickMode, getNodeAtPosition, swapMouseButtons, locked],
   );
 
   useEffect(() => {
@@ -934,7 +1020,7 @@ export function FlowPanel({
   );
 
   const handleDeleteSelected = useCallback(() => {
-    if (selectedNodeIds.size === 0) return;
+    if (locked || selectedNodeIds.size === 0) return;
     const ids = [...selectedNodeIds];
     const extraEdgeIds = edges
       .filter(
@@ -947,7 +1033,7 @@ export function FlowPanel({
       .map((e) => e.id);
     onStepRemove(ids, extraEdgeIds);
     setSelectedNodeIds(new Set());
-  }, [selectedNodeIds, edges, onStepRemove]);
+  }, [selectedNodeIds, edges, onStepRemove, locked]);
 
   // Delete / Backspace / Ctrl+C / Ctrl+V keyboard handling
   useEffect(() => {
@@ -968,12 +1054,12 @@ export function FlowPanel({
         handleCopySelected();
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") {
         e.preventDefault();
-        handlePasteClipboard();
+        if (!locked) handlePasteClipboard();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleDeleteSelected, handleCopySelected, handlePasteClipboard]);
+  }, [handleDeleteSelected, handleCopySelected, handlePasteClipboard, locked]);
 
   // Double-click blank canvas → fit view
   const handleCanvasDoubleClick = useCallback(
@@ -986,12 +1072,45 @@ export function FlowPanel({
     [doubleClickFitView],
   );
 
+  // Canvas menu actions
+  const handleTidyCanvas = useCallback(() => {
+    setCanvasToolsOpen(false);
+    setLayoutResetKey((key) => key + 1);
+  }, []);
+  const handleFitCanvas = useCallback(() => {
+    setCanvasToolsOpen(false);
+    reactFlowInstance.current?.fitView({ padding: 0.3, duration: 300 });
+  }, []);
+  const handleZoomReset = useCallback(() => {
+    setCanvasToolsOpen(false);
+    reactFlowInstance.current?.zoomTo(1, { duration: 200 });
+  }, []);
+
+  // Close the canvas menu on an outside click or Escape.
+  useEffect(() => {
+    if (!canvasToolsOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!canvasToolsRef.current?.contains(event.target as globalThis.Node)) {
+        setCanvasToolsOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setCanvasToolsOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [canvasToolsOpen]);
+
   // Canvas context menu items (right-click menu mode). Built on every render
   // so the paste disabled state reflects the current clipboard and the save
   // entry only shows when the cursor is over a step node. Extend this list as
   // more menu features are added.
   const canvasMenuItems: CanvasMenuItem[] = [
-    ...(canvasMenu?.stepId && onSaveIntermediate
+    ...(canvasMenu?.stepId && onSaveIntermediate && !locked
       ? [
           {
             key: "save-intermediate",
@@ -1005,7 +1124,7 @@ export function FlowPanel({
       key: "paste",
       label: t.paste,
       icon: ClipboardPaste,
-      disabled: !clipboardRef.current,
+      disabled: !clipboardRef.current || locked,
       onSelect: handlePasteClipboard,
     },
   ];
@@ -1048,11 +1167,17 @@ export function FlowPanel({
         panActivationKeyCode="Space"
         selectionOnDrag={!swapMouseButtons && leftTool === "select"}
         selectionKeyCode={swapMouseButtons ? null : "Shift"}
-        // Swapped mode moves nodes with a custom right-drag.
-        nodesDraggable={!swapMouseButtons}
+        // Swapped mode moves nodes with a custom right-drag; the lock also
+        // disables every direct move.
+        nodesDraggable={!swapMouseButtons && !locked}
+        snapToGrid={snapToGrid}
+        snapGrid={[SNAP_GRID_STEP, SNAP_GRID_STEP]}
         selectionMode={SelectionMode.Partial}
         zoomOnDoubleClick={!doubleClickFitView}
         onDoubleClick={handleCanvasDoubleClick}
+        onMove={(_, viewport) => {
+          if (canvasToolsOpen) setZoomPct(Math.round(viewport.zoom * 100));
+        }}
         fitView
         fitViewOptions={{ padding: 0.3 }}
         minZoom={0.3}
@@ -1187,7 +1312,8 @@ export function FlowPanel({
               setCanvasMenu(null);
             }}
             aria-pressed={rightClickMode === "cut"}
-            className={`flex h-[26px] w-[26px] items-center justify-center rounded-[5px] transition-colors ${
+            disabled={locked}
+            className={`flex h-[26px] w-[26px] items-center justify-center rounded-[5px] transition-colors disabled:opacity-35 ${
               rightClickMode === "cut"
                 ? "bg-canvas-ink-soft text-canvas-ink"
                 : "text-muted-foreground hover:bg-accent/60"
@@ -1209,7 +1335,8 @@ export function FlowPanel({
               setCanvasMenu(null);
             }}
             aria-pressed={rightClickMode === "menu"}
-            className={`flex h-[26px] w-[26px] items-center justify-center rounded-[5px] transition-colors ${
+            disabled={locked}
+            className={`flex h-[26px] w-[26px] items-center justify-center rounded-[5px] transition-colors disabled:opacity-35 ${
               rightClickMode === "menu"
                 ? "bg-canvas-ink-soft text-canvas-ink"
                 : "text-muted-foreground hover:bg-accent/60"
@@ -1238,6 +1365,153 @@ export function FlowPanel({
             <ArrowLeftRight className="h-3.5 w-3.5" />
           </button>
         </Tooltip>
+        <span className="mx-auto my-0.5 h-px w-[18px] bg-border/60" />
+        <div className="relative" ref={canvasToolsRef}>
+          <Tooltip content={t.canvasTools} side="right">
+            <button
+              type="button"
+              onClick={() => {
+                if (!canvasToolsOpen) {
+                  setZoomPct(
+                    Math.round(
+                      (reactFlowInstance.current?.getZoom?.() ?? 1) * 100,
+                    ),
+                  );
+                }
+                setCanvasToolsOpen((open) => !open);
+              }}
+              aria-haspopup="menu"
+              aria-expanded={canvasToolsOpen}
+              className={`relative flex h-[26px] w-[26px] items-center justify-center rounded-[5px] transition-colors ${
+                canvasToolsOpen
+                  ? "bg-canvas-ink-soft text-canvas-ink"
+                  : "text-muted-foreground hover:bg-accent/60"
+              }`}
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+              {(snapToGrid || locked || showGestureLegend) && (
+                <span className="absolute right-[3px] top-[3px] h-1 w-1 rounded-full bg-primary" />
+              )}
+            </button>
+          </Tooltip>
+
+          {canvasToolsOpen && (
+            <div
+              role="menu"
+              className="absolute bottom-0 left-[34px] z-40 w-[236px] rounded-[10px] border border-border bg-card p-1.5 shadow-[0_12px_28px_-14px_rgba(0,0,0,0.22)] dark:shadow-none"
+            >
+              <div className="px-2 pb-0.5 pt-1 font-mono text-[9px] text-muted-foreground/60">
+                {t.canvasActions}
+              </div>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={locked}
+                onClick={handleTidyCanvas}
+                className="flex h-8 w-full items-center gap-2 rounded-[7px] px-2 text-left text-xs text-foreground transition-colors hover:bg-foreground/8 disabled:opacity-35"
+              >
+                <LayoutGrid className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>{t.tidyCanvas}</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleFitCanvas}
+                className="flex h-8 w-full items-center gap-2 rounded-[7px] px-2 text-left text-xs text-foreground transition-colors hover:bg-foreground/8"
+              >
+                <Maximize2 className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>{t.fitCanvas}</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleZoomReset}
+                className="flex h-8 w-full items-center gap-2 rounded-[7px] px-2 text-left text-xs text-foreground transition-colors hover:bg-foreground/8"
+              >
+                <ZoomIn className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>{t.zoomReset}</span>
+                <span className="ml-auto font-mono text-[10px] text-muted-foreground/60">
+                  {zoomPct}%
+                </span>
+              </button>
+
+              <div className="my-1 border-t border-border/50" />
+              <div className="px-2 pb-0.5 pt-1 font-mono text-[9px] text-muted-foreground/60">
+                {t.canvasSwitches}
+              </div>
+              <button
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={snapToGrid}
+                onClick={toggleSnapToGrid}
+                className="flex h-8 w-full items-center gap-2 rounded-[7px] px-2 text-left text-xs text-foreground transition-colors hover:bg-foreground/8"
+              >
+                <Grid3x3 className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>{t.snapToGrid}</span>
+                <span
+                  className={`relative ml-auto h-[14px] w-[24px] shrink-0 rounded-full transition-colors ${
+                    snapToGrid ? "bg-primary" : "bg-muted"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-[2px] h-[10px] w-[10px] rounded-full bg-background transition-[left] ${
+                      snapToGrid ? "left-[12px]" : "left-[2px]"
+                    }`}
+                  />
+                </span>
+              </button>
+              <button
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={locked}
+                onClick={() => {
+                  if (!locked) {
+                    setCanvasMenu(null);
+                    setContextMenu(null);
+                    setTableContextMenu(null);
+                  }
+                  toggleLocked();
+                }}
+                className="flex h-8 w-full items-center gap-2 rounded-[7px] px-2 text-left text-xs text-foreground transition-colors hover:bg-foreground/8"
+              >
+                <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>{t.lockCanvas}</span>
+                <span
+                  className={`relative ml-auto h-[14px] w-[24px] shrink-0 rounded-full transition-colors ${
+                    locked ? "bg-primary" : "bg-muted"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-[2px] h-[10px] w-[10px] rounded-full bg-background transition-[left] ${
+                      locked ? "left-[12px]" : "left-[2px]"
+                    }`}
+                  />
+                </span>
+              </button>
+              <button
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={showGestureLegend}
+                onClick={toggleGestureLegend}
+                className="flex h-8 w-full items-center gap-2 rounded-[7px] px-2 text-left text-xs text-foreground transition-colors hover:bg-foreground/8"
+              >
+                <Mouse className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>{t.showGestureHints}</span>
+                <span
+                  className={`relative ml-auto h-[14px] w-[24px] shrink-0 rounded-full transition-colors ${
+                    showGestureLegend ? "bg-primary" : "bg-muted"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-[2px] h-[10px] w-[10px] rounded-full bg-background transition-[left] ${
+                      showGestureLegend ? "left-[12px]" : "left-[2px]"
+                    }`}
+                  />
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Canvas context menu (right-click menu mode) */}
@@ -1292,6 +1566,15 @@ export function FlowPanel({
           right: t.mouseRight,
         }}
       />
+
+      {showGestureLegend && (
+        <GestureLegend
+          leftTool={leftTool}
+          rightClickMode={rightClickMode}
+          swapMouseButtons={swapMouseButtons}
+          locked={locked}
+        />
+      )}
 
       {/* Canvas status indicator - Bottom-left */}
       <div

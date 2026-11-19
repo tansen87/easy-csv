@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 063 · 左栏还能加什么</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --edge:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+    --canvas-ink:oklch(0.3 0.006 80);
+    --canvas-ink-soft:oklch(0.2 0.01 80 / 7%);
+
+    --danger:oklch(0.55 0.17 27);
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-fly:0 12px 28px -14px oklch(0.2 0.02 80 / 26%);
+    --mark:oklch(0.56 0.17 27);
+  }
+  .dark{
+    color-scheme:dark;
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --edge:oklch(1 0 0 / 24%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 18%,transparent);
+    --canvas-ink:oklch(0.92 0.005 85);
+    --canvas-ink-soft:oklch(1 0 0 / 8%);
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.12 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-card:none;
+    --shadow-fly:0 12px 28px -14px oklch(0 0 0 / 75%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased;transition:background-color .18s ease,color .18s ease}
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme-toggle{position:absolute;right:0;top:2px;height:26px;padding:0 10px;border-radius:6px;
+                border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+                font-family:var(--mono);font-size:10.5px;cursor:pointer}
+  .theme-toggle:hover{color:var(--fg)}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+  .state-note{font-size:10.5px;color:var(--muted-fg);line-height:1.7;padding:10px 2px 0}
+  .state-note b{color:var(--fg);font-weight:500}
+
+  /* 画布 */
+  .stage{position:relative;width:1200px;height:420px;overflow:hidden;border:1px solid var(--border);
+         border-radius:8px;background-color:var(--canvas);
+         background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+         background-size:22px 22px;background-position:11px 11px}
+  .node{position:absolute;width:186px;padding:11px;border:1px solid var(--border);border-radius:8px;
+        background:var(--paper);box-shadow:var(--shadow-card)}
+  .node .t{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .node .c{margin-top:5px;font-family:var(--mono);font-size:9px;color:var(--muted-fg);
+           background:var(--muted);border:1px solid var(--border-soft);border-radius:3px;
+           padding:1px 4px;display:inline-block}
+  .link{position:absolute;height:1px;background:var(--border)}
+  .node.locked{opacity:.55}
+
+  /* 工具条 */
+  .rail{position:absolute;left:12px;top:50%;transform:translateY(-50%);z-index:5;
+        display:flex;flex-direction:column;gap:2px;padding:3px;border:1px solid var(--border);
+        border-radius:9px;background:var(--card);box-shadow:var(--shadow-card)}
+  .rail .b{position:relative;width:26px;height:26px;display:grid;place-items:center;border:0;border-radius:5px;
+           background:transparent;color:var(--muted-fg)}
+  .rail .b svg{width:14px;height:14px;stroke-width:1.5;fill:none;stroke:currentColor}
+  .rail .b:hover{background:var(--canvas-ink-soft);color:var(--fg)}
+  .rail .b.on{background:var(--canvas-ink-soft);color:var(--canvas-ink)}
+  .rail .b[disabled]{opacity:.35}
+  .rail .sep{height:1px;width:18px;margin:2px auto;background:var(--border)}
+  .rail .dot{position:absolute;right:3px;top:3px;width:4px;height:4px;border-radius:50%;background:var(--brand)}
+  .rail.wide{position:relative;left:auto;top:auto;transform:none}
+
+  /* 浮出面板 */
+  .fly{width:236px;padding:6px;border:1px solid var(--border);border-radius:10px;background:var(--card);
+       box-shadow:var(--shadow-fly)}
+  .fly .row{display:flex;align-items:center;gap:9px;height:32px;padding:0 9px;border-radius:7px;
+            font-size:12px;color:var(--fg)}
+  .fly .row:hover{background:color-mix(in oklab,var(--fg) 7%,transparent)}
+  .fly .row .ic{width:14px;height:14px;flex:none;color:var(--muted-fg)}
+  .fly .row .ic svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5}
+  .fly .row .meta{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+  .fly .row.disabled{opacity:.4}
+  .fly .sep{height:1px;margin:5px 9px;background:color-mix(in oklab,var(--fg) 13%,transparent)}
+  .fly .group{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);padding:6px 9px 3px;letter-spacing:.02em}
+  .sw{width:24px;height:14px;border-radius:999px;background:var(--muted);position:relative;flex:none;transition:background-color .15s ease}
+  .sw::after{content:"";position:absolute;left:2px;top:2px;width:10px;height:10px;border-radius:50%;
+             background:var(--card);box-shadow:0 1px 1px oklch(0.2 0.02 80 / 20%)}
+  .sw.on{background:var(--brand)}
+  .sw.on::after{left:12px;background:var(--brand-fg)}
+
+  .zoom-wrap{display:flex;align-items:flex-start;gap:36px;padding:26px 30px;border:1px solid var(--border);
+             border-radius:8px;background:var(--card)}
+  .zoom{display:flex;align-items:flex-start;gap:14px}
+  .tip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;
+       border:1px solid var(--border);background:var(--card);color:var(--fg);font-size:11px;font-weight:500;
+       white-space:nowrap;box-shadow:0 4px 12px -6px oklch(0.2 0.02 80 / 24%)}
+
+  /* 状态卡 */
+  .cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  .cand{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:14px 16px}
+  .cand .rank{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);margin-bottom:7px}
+  .cand h3{margin:0 0 5px;font-size:12px;font-weight:500}
+  .cand p{margin:0;font-size:10.5px;line-height:1.7;color:var(--muted-fg)}
+  .cand p b{color:var(--fg);font-weight:500}
+
+  /* 手势图例 */
+  .legend{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);display:flex;align-items:center;
+          gap:10px;height:30px;padding:0 10px;border:1px solid var(--border);border-radius:8px;
+          background:var(--card);box-shadow:var(--shadow-card);font-size:10.5px;color:var(--muted-fg);
+          z-index:4;white-space:nowrap}
+  .legend .it{display:inline-flex;align-items:center;gap:5px}
+  .legend kbd{display:inline-flex;align-items:center;height:18px;padding:0 5px;border:1px solid var(--border);
+              border-radius:3px;background:var(--bg);font-family:var(--mono);font-size:9.5px;color:var(--fg)}
+  .legend .sp{width:1px;height:12px;background:var(--border)}
+  .legend.inline{position:relative;left:auto;bottom:auto;transform:none}
+  .legend-row{display:flex;align-items:center;gap:14px;margin-top:10px}
+  .legend-row .k{width:86px;flex:none;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+
+  .callout{display:flex;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;
+           background:var(--card);font-size:11px;line-height:1.7;color:var(--muted-fg);margin-top:12px}
+  .callout b{color:var(--fg);font-weight:500}
+  .callout .mk{width:18px;height:18px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
+               font-family:var(--mono);font-size:9.5px;display:grid;place-items:center;flex:none;margin-top:1px}
+
+  table.spec{width:100%;border-collapse:collapse;background:var(--card);
+             border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:11px}
+  table.spec th{text-align:left;font-weight:500;color:var(--muted-fg);font-size:10px;
+                padding:8px 12px;border-bottom:1px solid var(--border);background:color-mix(in oklab,var(--muted) 45%,transparent)}
+  table.spec td{padding:8px 12px;border-bottom:1px solid var(--border-soft);color:var(--muted-fg);line-height:1.6;vertical-align:top}
+  table.spec tr:last-child td{border-bottom:0}
+  table.spec td:first-child{color:var(--fg);font-weight:500;white-space:nowrap}
+  table.spec code{font-size:10.5px}
+
+  .mark{position:absolute;width:16px;height:16px;border-radius:50%;background:var(--mark);color:#fff;
+        font-family:var(--mono);font-size:9.5px;line-height:16px;text-align:center;font-weight:500;z-index:6}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">PROTOTYPE 063 · CANVAS RAIL: WHAT ELSE</div>
+    <h1>左栏还能加什么操作</h1>
+    <p>左栏现在有三组：左键工具、右键模式、左右键交换。继续往里塞按钮会让它变成一条长杆，所以把“整理、适应、对齐、锁定、手势图例”收进第四组的<b>画布菜单</b>，点开才出现。</p>
+    <button class="theme-toggle" id="themeToggle" type="button">DARK</button>
+  </div>
+
+  <dl class="direction">
+    <div><dt>PRODUCT</dt><dd>在无限画布上搭建并执行 CSV 管道的桌面工具</dd></div>
+    <div><dt>CHARACTER</dt><dd>安静、可核对、像仪器面板</dd></div>
+    <div><dt>WORLD</dt><dd>画布与仪表</dd></div>
+    <div><dt>MOMENTS</dt><dd>第四格的画布菜单；锁定后的只读画布</dd></div>
+    <div><dt>SIGNATURE</dt><dd>模式用高亮按钮，动作与开关收进浮出面板</dd></div>
+  </dl>
+
+  <!-- 01 约束 -->
+  <section class="frame">
+    <div class="cap"><b>01 · 现状与约束</b><span>左栏已经 5 格；再加直按钮会太长，也会混掉“模式 / 动作”</span><span class="file">FlowPanel · 左栏</span></div>
+    <div class="zoom-wrap">
+      <div class="zoom">
+        <div class="rail wide">
+          <button class="b on" type="button"><svg viewBox="0 0 24 24"><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M21 19a2 2 0 0 1-2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h1"/><path d="M14 3h1"/><path d="M14 21h1"/><path d="M3 9v1"/><path d="M21 9v1"/><path d="M3 14v1"/><path d="M21 14v1"/></svg></button>
+          <button class="b" type="button"><svg viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></button>
+          <span class="sep"></span>
+          <button class="b on" type="button"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg></button>
+          <button class="b" type="button"><svg viewBox="0 0 24 24"><path d="M9 9l5 12 1.8-5.2L21 14z"/><path d="M7.2 2.2v3M2.2 7.2h3M4 4l2 2"/></svg></button>
+          <span class="sep"></span>
+          <button class="b" type="button"><svg viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><line x1="3" y1="12" x2="21" y2="12"/></svg></button>
+        </div>
+        <div style="padding-top:6px;max-width:430px">
+          <div class="tip" style="margin-bottom:10px">当前：5 格 = 左键 2 + 右键 2 + 交换 1</div>
+          <p style="margin:0;font-size:11px;line-height:1.8;color:var(--muted-fg)">
+            <b style="color:var(--fg)">继续加 4 个直按钮</b>：栏高从约 150px 涨到约 250px，且“整理 / 适应”是一次性动作，和带高亮的模式按钮混在一列，状态语义会乱。
+          </p>
+        </div>
+      </div>
+
+      <div style="margin-left:auto;max-width:480px">
+        <div class="callout" style="margin-top:0">
+          <span class="mk">i</span>
+          <span><b>分工</b>：模式留在栏里（框选/平移、划线/菜单、交换）；<b>一次性动作和开关</b>收进第四格浮出面板。栏保持 6 格，后续还能继续长。</span>
+        </div>
+        <div class="callout">
+          <span class="mk">i</span>
+          <span><b>为什么不是二级工具栏</b>：画布已经有左栏、顶栏批量条、底栏状态；再开一条会抢画布。浮出面板只在点开时存在。</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 方案 -->
+  <section class="frame">
+    <div class="cap"><b>02 · 第四格：画布菜单</b><span>整理 / 适应 / 100% + 三个开关</span><span class="file">FlowPanel · 浮出面板</span></div>
+    <div class="stage" style="height:470px">
+      <div class="node" style="left:120px;top:96px"><div class="t">读取 orders_2026.csv</div><div class="c">csv · 250,000 行</div></div>
+      <div class="node" style="left:400px;top:96px"><div class="t">清洗空值</div><div class="c">fill</div></div>
+      <div class="node" style="left:680px;top:96px"><div class="t">按城市汇总</div><div class="c">groupby</div></div>
+      <div class="node" style="left:960px;top:96px"><div class="t">转为 Excel</div><div class="c">to</div></div>
+      <div class="link" style="left:308px;top:138px;width:88px"></div>
+      <div class="link" style="left:588px;top:138px;width:88px"></div>
+      <div class="link" style="left:868px;top:138px;width:88px"></div>
+
+      <div class="rail" style="top:240px">
+        <button class="b on" type="button"><svg viewBox="0 0 24 24"><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M21 19a2 2 0 0 1-2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h1"/><path d="M14 3h1"/><path d="M14 21h1"/><path d="M3 9v1"/><path d="M21 9v1"/><path d="M3 14v1"/><path d="M21 14v1"/></svg></button>
+        <button class="b" type="button"><svg viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></button>
+        <span class="sep"></span>
+        <button class="b on" type="button"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg></button>
+        <button class="b" type="button"><svg viewBox="0 0 24 24"><path d="M9 9l5 12 1.8-5.2L21 14z"/><path d="M7.2 2.2v3M2.2 7.2h3M4 4l2 2"/></svg></button>
+        <span class="sep"></span>
+        <button class="b" type="button"><svg viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><line x1="3" y1="12" x2="21" y2="12"/></svg></button>
+        <span class="sep"></span>
+        <button class="b on" type="button" aria-pressed="true">
+          <span class="dot"></span>
+          <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>
+        </button>
+      </div>
+
+      <div class="fly" style="position:absolute;left:52px;top:150px;z-index:6">
+        <div class="group">画布动作</div>
+        <div class="row">
+          <span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+          整理画布
+        </div>
+        <div class="row">
+          <span class="ic"><svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span>
+          适应画布
+        </div>
+        <div class="row">
+          <span class="ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M8.5 11h5"/></svg></span>
+          缩放 100%
+          <span class="meta">72%</span>
+        </div>
+        <div class="sep"></div>
+        <div class="group">画布开关</div>
+        <div class="row">
+          <span class="ic"><svg viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg></span>
+          对齐网格
+          <span class="sw on" style="margin-left:auto"></span>
+        </div>
+        <div class="row">
+          <span class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+          锁定画布
+          <span class="sw" style="margin-left:auto"></span>
+        </div>
+        <div class="row">
+          <span class="ic"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="5"/><path d="M12 6v4"/></svg></span>
+          显示画布手势
+          <span class="sw on" style="margin-left:auto"></span>
+        </div>
+      </div>
+      <span class="mark" style="left:46px;top:386px">1</span>
+    </div>
+    <p class="state-note"><b>1</b> 第四格是菜单触发，不是模式开关；它不参与高亮互斥。右上角小圆点只在有开关被打开时出现（对齐网格 / 锁定 / 画布手势）。</p>
+  </section>
+
+  <!-- 03 状态 -->
+  <section class="frame">
+    <div class="cap"><b>03 · 三个状态</b><span>默认、开启开关、锁定只读</span><span class="file">画布菜单</span></div>
+    <div class="cards">
+      <div class="cand" style="padding:12px 14px">
+        <div class="rank">DEFAULT</div>
+        <div style="height:150px;display:flex;align-items:center;justify-content:center">
+          <div class="fly" style="width:204px">
+            <div class="group">画布动作</div>
+            <div class="row"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>整理画布</div>
+            <div class="row"><span class="ic"><svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span>适应画布</div>
+            <div class="row"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M8.5 11h5"/></svg></span>缩放 100%</div>
+          </div>
+        </div>
+        <p style="margin-top:8px">三个动作执行后立即关闭面板。</p>
+      </div>
+      <div class="cand" style="padding:12px 14px">
+        <div class="rank">SWITCHES ON</div>
+        <div style="height:150px;display:flex;align-items:center;justify-content:center">
+          <div class="fly" style="width:204px">
+            <div class="group">画布开关</div>
+            <div class="row"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg></span>对齐网格<span class="sw on" style="margin-left:auto"></span></div>
+            <div class="row"><span class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>锁定画布<span class="sw on" style="margin-left:auto"></span></div>
+            <div class="row"><span class="ic"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="5"/><path d="M12 6v4"/></svg></span>显示画布手势<span class="sw on" style="margin-left:auto"></span></div>
+          </div>
+        </div>
+        <p style="margin-top:8px">开关不关闭面板；触发按钮出现小圆点。</p>
+      </div>
+      <div class="cand" style="padding:12px 14px">
+        <div class="rank">LOCKED</div>
+        <div style="height:150px;position:relative;border:1px solid var(--border);border-radius:8px;overflow:hidden;
+             background-color:var(--canvas);background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:18px 18px">
+          <div class="node locked" style="position:absolute;left:18px;top:26px;width:120px;padding:8px">
+            <div class="t" style="font-size:11px">按城市汇总</div>
+          </div>
+          <div class="node locked" style="position:absolute;left:18px;top:84px;width:120px;padding:8px">
+            <div class="t" style="font-size:11px">转为 Excel</div>
+          </div>
+          <div style="position:absolute;right:10px;top:10px;height:22px;padding:0 8px;display:flex;align-items:center;gap:5px;
+               border:1px solid var(--border);border-radius:5px;background:var(--card);font-size:10px;color:var(--muted-fg)">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            只读
+          </div>
+        </div>
+        <p style="margin-top:8px">锁定后节点变淡；移动、划线、菜单停用，框选/平移/缩放仍可用。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 手势图例 -->
+  <section class="frame">
+    <div class="cap"><b>04 · 显示画布手势</b><span>底部居中的一条图例，随当前绑定改写</span><span class="file">GestureLegend</span></div>
+    <div class="stage" style="height:300px">
+      <div class="node" style="left:140px;top:80px"><div class="t">读取 orders_2026.csv</div><div class="c">csv · 250,000 行</div></div>
+      <div class="node" style="left:420px;top:80px"><div class="t">清洗空值</div><div class="c">fill</div></div>
+      <div class="node" style="left:700px;top:80px"><div class="t">按城市汇总</div><div class="c">groupby</div></div>
+      <div class="link" style="left:328px;top:122px;width:88px"></div>
+      <div class="link" style="left:608px;top:122px;width:88px"></div>
+
+      <div class="legend">
+        <span class="it"><kbd>左键</kbd>框选</span>
+        <span class="sp"></span>
+        <span class="it"><kbd>右键</kbd>划线</span>
+        <span class="sp"></span>
+        <span class="it"><kbd>Space</kbd>+<kbd>左键</kbd>平移</span>
+        <span class="sp"></span>
+        <span class="it"><kbd>滚轮</kbd>缩放</span>
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <div class="legend-row">
+        <span class="k">默认</span>
+        <span class="legend inline">
+          <span class="it"><kbd>左键</kbd>框选</span><span class="sp"></span>
+          <span class="it"><kbd>右键</kbd>划线</span><span class="sp"></span>
+          <span class="it"><kbd>Space</kbd>+<kbd>左键</kbd>平移</span><span class="sp"></span>
+          <span class="it"><kbd>滚轮</kbd>缩放</span>
+        </span>
+      </div>
+      <div class="legend-row">
+        <span class="k">平移工具</span>
+        <span class="legend inline">
+          <span class="it"><kbd>左键</kbd>平移</span><span class="sp"></span>
+          <span class="it"><kbd>Shift</kbd>+<kbd>左键</kbd>框选</span><span class="sp"></span>
+          <span class="it"><kbd>右键</kbd>划线</span><span class="sp"></span>
+          <span class="it"><kbd>滚轮</kbd>缩放</span>
+        </span>
+      </div>
+      <div class="legend-row">
+        <span class="k">已交换左右键</span>
+        <span class="legend inline">
+          <span class="it"><kbd>右键</kbd>框选</span><span class="sp"></span>
+          <span class="it"><kbd>左键</kbd>划线</span><span class="sp"></span>
+          <span class="it"><kbd>Space</kbd>+<kbd>左键</kbd>平移</span><span class="sp"></span>
+          <span class="it"><kbd>滚轮</kbd>缩放</span>
+        </span>
+      </div>
+    </div>
+    <p class="state-note">图例固定在画布底部居中，距底 12px；只读、不接收点击。左键工具、右键模式或交换状态一变，文字立即改写。锁定画布时末尾追加 <b>只读</b>，与左下角按键 HUD 互不遮挡。</p>
+  </section>
+
+  <!-- 05 规范 -->
+  <section class="frame">
+    <div class="cap"><b>05 · 每项的定义</b><span>动作与开关的行为边界</span><span class="file">FlowPanel · ReactFlow</span></div>
+    <table class="spec">
+      <thead><tr><th>操作</th><th>行为</th></tr></thead>
+      <tbody>
+        <tr><td>整理画布</td><td>忽略手工位置，用现有 dagre 布局重排一次并写回步骤坐标；保持选中与视口中心；运行中禁用。</td></tr>
+        <tr><td>适应画布</td><td>与双击空白相同：<code>fitView({ padding: 0.3, duration: 300 })</code>；单选/多选状态不变。</td></tr>
+        <tr><td>缩放 100%</td><td>以当前视口中心 <code>zoomTo(1)</code>；右侧显示当前缩放比例（等宽）。</td></tr>
+        <tr><td>对齐网格</td><td><code>snapToGrid</code> + <code>snapGrid=[22,22]</code>，与画布点阵同间距；只影响拖动后的落点，不主动挪动已有节点。</td></tr>
+        <tr><td>锁定画布</td><td>只读：关闭节点拖动、划线、连线、菜单里的编辑项；框选、平移、缩放、适应仍可用；执行管道不受影响。</td></tr>
+        <tr><td>显示画布手势</td><td>画布底部居中显示一条图例：当前左键工具、右键模式、平移与缩放；随工具与交换状态实时改写。默认关闭，选择持久化。</td></tr>
+        <tr><td>状态</td><td>三个开关持久化（本地设置）；“整理/适应/100%”不进设置，属一次性动作。</td></tr>
+        <tr><td>键盘</td><td>不新增全局快捷键；面板内 ↑↓ 移动、Enter 执行、Esc 关闭，与现有菜单一致。</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 05 取舍 -->
+  <section class="frame">
+    <div class="cap"><b>06 · 取舍</b><span>为什么是这四项，不是别的</span><span class="file">—</span></div>
+    <div class="cards">
+      <div class="cand">
+        <div class="rank">推荐</div>
+        <h3>整理 + 适应</h3>
+        <p>解决“拖乱收不回”和“找不到全局”<b>两个高频问题</b>，都是只读动作，不引入新状态。</p>
+      </div>
+      <div class="cand">
+        <div class="rank">可选</div>
+        <h3>对齐网格 + 锁定 + 手势图例</h3>
+        <p>网格让手工摆放更整齐；锁定适合评审与演示；手势图例把当前绑定写在画布上。<b>都是开关</b>，放同一组。</p>
+      </div>
+      <div class="cand">
+        <div class="rank">暂不做</div>
+        <h3>导出图片 / 注释</h3>
+        <p>导出需要额外渲染库，注释会改变数据模型；等画布操作稳定后再评估。</p>
+      </div>
+    </div>
+    <div class="callout">
+      <span class="mk">i</span>
+      <span><b>下一步</b>：先做“整理画布 + 适应画布”两个动作和第四格触发，再做三个开关（对齐网格 / 锁定 / 画布手势图例）。</span>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const toggle = document.getElementById('themeToggle');
+  toggle.addEventListener('click', () => {
+    const dark = document.documentElement.classList.toggle('dark');
+    toggle.textContent = dark ? 'LIGHT' : 'DARK';
+  });
+</script>
+</body>
+</html>

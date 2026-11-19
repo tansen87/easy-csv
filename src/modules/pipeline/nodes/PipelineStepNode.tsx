@@ -19,6 +19,8 @@ export interface PipelineStepNodeData {
   isPendingDelete?: boolean;
   cutParts?: CutPartInfo[];
   isHighlighted?: boolean;
+  /** Canvas lock: hides the hover action strip and rename input. */
+  locked?: boolean;
 }
 
 export function PipelineStepNode({
@@ -147,7 +149,7 @@ export function PipelineStepNode({
       />
       <div className="p-3">
         <div className="flex items-center gap-2 w-full">
-          {isEditing ? (
+          {isEditing && !data.locked ? (
             <div className="flex items-center gap-1 w-full">
               <input
                 type="text"
@@ -213,11 +215,12 @@ export function PipelineStepNode({
           </div>
         )}
       </div>
-      <div
-        className={`absolute -top-4 right-2 flex h-[26px] items-stretch rounded-[6px] border border-border bg-card transition-opacity duration-100 group-hover:opacity-100 group-focus-within:opacity-100 ${
-          selected ? "opacity-100" : "opacity-0"
-        }`}
-      >
+      {!data.locked && (
+        <div
+          className={`absolute -top-4 right-2 flex h-[26px] items-stretch rounded-[6px] border border-border bg-card transition-opacity duration-100 group-hover:opacity-100 group-focus-within:opacity-100 ${
+            selected ? "opacity-100" : "opacity-0"
+          }`}
+        >
         <Tooltip content={t.stepActionParams} side="top">
           <button
             type="button"
@@ -248,6 +251,7 @@ export function PipelineStepNode({
           </button>
         </Tooltip>
       </div>
+      )}
       {/* 双向 Handle - 右侧既是 source 也是 target */}
       <Handle
         type="source"

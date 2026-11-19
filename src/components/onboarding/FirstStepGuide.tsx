@@ -1,22 +1,12 @@
-import React, { useState } from "react";
-import {
-  ChevronDown,
-  ChevronUp,
-  Lightbulb,
-  Play,
-  Plus,
-  Sparkles,
-} from "lucide-react";
+import React from "react";
+import { Lightbulb, Play, Plus, Sparkles } from "lucide-react";
 import { useLanguage } from "@/i18n";
-import { cn } from "@/lib/utils";
 
 export interface FirstStepGuideProps {
   /** Show the "start here" card: input loaded, pipeline still empty, guide unseen. */
   showGuide: boolean;
   /** Number of xan commands, for the "browse all N operations" line. */
   commandCount: number;
-  /** Whether the gesture card starts expanded (first run). */
-  gestureCardExpanded?: boolean;
   /**
    * Caption for the sample pipeline's step-by-step reveal (design 027 §11.2).
    * Shown as a pill while the demo builds itself, so the user sees *how* each
@@ -45,13 +35,12 @@ export interface FirstStepGuideProps {
 }
 
 /**
- * Canvas overlays for first-run onboarding:
- * the empty-state guide card and the persistent gesture card.
+ * Canvas overlay for first-run onboarding: the empty-state guide card.
  *
- * Both are **plain overlays, not nodes**: nothing here touches ReactFlow's
+ * It is a **plain overlay, not a node**: nothing here touches ReactFlow's
  * `nodes` array, the pipeline state, dagre layout, or any canvas gesture. The
  * overlay root is `pointer-events-none` so panning / box-selecting / the
- * right-drag gestures keep working everywhere except on the cards themselves.
+ * right-drag gestures keep working everywhere except on the card itself.
  *
  * There is deliberately no ghost/mock node: adding an operation has exactly one
  * entry point (the command panel, `Alt+C` / `Ctrl+K`), and inventing a
@@ -61,7 +50,6 @@ export interface FirstStepGuideProps {
 export const FirstStepGuide = React.memo(function FirstStepGuide({
   showGuide,
   commandCount,
-  gestureCardExpanded = false,
   reveal,
   onAdvanceReveal,
   onSkipReveal,
@@ -71,17 +59,14 @@ export const FirstStepGuide = React.memo(function FirstStepGuide({
   onDismissGuide,
 }: FirstStepGuideProps) {
   const { t } = useLanguage();
-  const [showGestures, setShowGestures] = useState(gestureCardExpanded);
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-10">
       {/* Sample-pipeline reveal caption (design 027 §11.2). Bottom centre: the
           top of the canvas belongs to the data being built on, and a control
-          the user must keep clicking sits more naturally at the bottom. The
-          right inset keeps it clear of the gesture card, which lives in the
-          bottom-right corner. */}
+          the user must keep clicking sits more naturally at the bottom. */}
       {reveal && (
-        <div className="absolute bottom-4 left-0 right-[272px] flex justify-center pl-4">
+        <div className="absolute bottom-4 left-0 right-0 flex justify-center pl-4">
           <div
             data-testid="onboarding-reveal"
             className="animate-slide-up pointer-events-auto flex max-w-full items-center gap-2.5 rounded-full border border-info/30 bg-info-soft py-1.5 pl-3 pr-2 shadow-md backdrop-blur-sm"
@@ -220,51 +205,6 @@ export const FirstStepGuide = React.memo(function FirstStepGuide({
           </div>
         </div>
       )}
-
-      <div className="absolute bottom-3 right-3">
-        <div className="pointer-events-auto w-[248px] max-w-[calc(100vw-24px)] rounded-xl border border-border bg-card/95 p-3 shadow-md backdrop-blur-sm">
-          <button
-            onClick={() => setShowGestures((prev) => !prev)}
-            aria-expanded={showGestures}
-            className="flex w-full items-center gap-1.5 text-[11.5px] font-bold text-foreground/80"
-          >
-            {t.onboardingGestureTitle}
-            <span className="ml-auto font-medium text-muted-foreground/70">
-              {showGestures
-                ? t.onboardingGestureCollapse
-                : t.onboardingGestureTitle}
-              {showGestures ? (
-                <ChevronDown className="ml-1 inline h-3 w-3" />
-              ) : (
-                <ChevronUp className="ml-1 inline h-3 w-3" />
-              )}
-            </span>
-          </button>
-
-          {showGestures && (
-            <div className="mt-2">
-              {[
-                [t.onboardingGestureRightDrag, t.onboardingGestureConnect],
-                [t.onboardingGestureRightSlash, t.onboardingGestureCut],
-                [t.onboardingGestureSpaceOrMiddle, t.onboardingGesturePan],
-                [t.onboardingGestureLeftDrag, t.onboardingGestureSelect],
-              ].map(([gesture, meaning]) => (
-                <div
-                  key={gesture}
-                  className={cn(
-                    "flex items-center gap-2 py-0.5 text-[11px] text-muted-foreground",
-                  )}
-                >
-                  <span className="shrink-0 rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">
-                    {gesture}
-                  </span>
-                  <span className="min-w-0">{meaning}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 });

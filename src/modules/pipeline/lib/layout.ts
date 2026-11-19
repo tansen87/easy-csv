@@ -282,6 +282,7 @@ export function getLayoutedElements(
   savedInputPosition?: { x: number; y: number },
   highlightedNodeId?: string | null,
   onTableDelete?: () => void,
+  locked?: boolean,
 ): { nodes: Node[]; edges: Edge[] } {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -303,6 +304,7 @@ export function getLayoutedElements(
         onRename: onTableRename,
         onSave,
         onDelete: onTableDelete,
+        locked: !!locked,
       },
       // Keep selectable so React Flow's elevateNodesOnSelect lifts the node
       // to the top layer while selected (matches result-table behavior);
@@ -338,6 +340,7 @@ export function getLayoutedElements(
         onContextMenu,
         isSelected: selectedStepId === step.id,
         isHighlighted: highlightedNodeId === step.id,
+        locked: !!locked,
       },
       selected: selectedStepId === step.id,
     });

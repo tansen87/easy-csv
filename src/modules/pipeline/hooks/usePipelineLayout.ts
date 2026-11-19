@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { Edge, Node } from "reactflow";
 import type { PipelineStep } from "@/types/xan";
@@ -41,6 +41,12 @@ interface UsePipelineLayoutArgs {
   nodes: Node[];
   setNodes: Dispatch<SetStateAction<Node[]>>;
   setEdges: Dispatch<SetStateAction<Edge[]>>;
+  /** Bumped to re-run layout while ignoring saved/manual positions. */
+  layoutResetKey?: number;
+  /** Locked canvas: hide step action strips. */
+  locked?: boolean;
+  /** Called once after a forced layout so the new positions can be persisted. */
+  onLayoutApplied?: (nodes: Node[]) => void;
 }
 
 /**
@@ -78,7 +84,14 @@ export function usePipelineLayout({
   nodes,
   setNodes,
   setEdges,
+  layoutResetKey,
+  locked,
+  onLayoutApplied,
 }: UsePipelineLayoutArgs) {
+  const lastLayoutResetRef = useRef(layoutResetKey ?? 0);
+  const onLayoutAppliedRef = useRef(onLayoutApplied);
+  onLayoutAppliedRef.current = onLayoutApplied;
+
   // Result preview nodes the user dismissed (removed from the canvas)
   const [dismissedResults, setDismissedResults] = useState<Set<string>>(
     new Set(),
@@ -94,9 +107,19 @@ export function usePipelineLayout({
 
   // Re-compute layout when data changes (not callbacks)
   useEffect(() => {
+    // "Tidy" bumps the key: recompute the default layout, ignoring manual
+    // positions.
+    const forceReset =
+      layoutResetKey !== undefined &&
+      layoutResetKey !== lastLayoutResetRef.current;
+    if (forceReset) lastLayoutResetRef.current = layoutResetKey;
+    const layoutSteps = forceReset
+      ? steps.map((step) => ({ ...step, position: undefined }))
+      : steps;
+
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
       hasTable,
-      steps,
+      layoutSteps,
       headers,
       rows,
       columnWidths,
@@ -109,15 +132,16 @@ export function usePipelineLayout({
       onSaveRef.current,
       selectedStepId,
       savedEdges as any,
-      savedInputPosition,
+      forceReset ? undefined : savedInputPosition,
       highlightedNodeId,
       onTableDeleteRef.current,
+      locked,
     );
 
     const updatedNodes = layoutedNodes.map((newNode) => {
       const existingNode = nodes.find((n) => n.id === newNode.id);
       const withPosition =
-        existingNode && existingNode.position
+        !forceReset && existingNode && existingNode.position
           ? {
               ...newNode,
               position: existingNode.position,
@@ -193,6 +217,9 @@ export function usePipelineLayout({
 
     setNodes([...updatedNodes, ...resultNodes]);
     setEdges(layoutedEdges);
+    if (forceReset) {
+      onLayoutAppliedRef.current?.(updatedNodes);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     hasTable,
@@ -211,6 +238,8 @@ export function usePipelineLayout({
     delimiterConfidence,
     inputFormat,
     sourceTable,
+    layoutResetKey,
+    locked,
   ]);
 
   // Apply selection/highlight as visual-only properties (no layout recompute)

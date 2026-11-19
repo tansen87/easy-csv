@@ -21,18 +21,6 @@ export const zhOnboarding = {
   onboardingPanelHint:
     "选中第一个操作后, 它会直接对输入数据生效(自成一条分支) - 不需要先连线",
 
-  // 手势提示卡
-  onboardingGestureTitle: "画布手势",
-  onboardingGestureCollapse: "收起",
-  onboardingGestureRightDrag: "右键拖拽",
-  onboardingGestureConnect: "从操作节点拖到目标 → 连线",
-  onboardingGestureRightSlash: "右键划过",
-  onboardingGestureCut: "切掉连线 / 节点",
-  onboardingGestureSpaceOrMiddle: "空格 / 中键",
-  onboardingGesturePan: "拖拽平移画布",
-  onboardingGestureLeftDrag: "左键拖拽",
-  onboardingGestureSelect: "空白处框选节点",
-
   // 示例数据
   onboardingSampleFailed: "示例数据准备失败：{error}",
   // 示例逐步骤回放: 每一步都写明「这一步是怎么加进来的」

@@ -56,22 +56,6 @@ describe("FirstStepGuide (design 027 §4.2)", () => {
     fireEvent.click(screen.getByTestId("onboarding-dismiss"));
     expect(props.onDismissGuide).toHaveBeenCalledTimes(1);
   });
-
-  it("keeps the gesture card available even without the guide", () => {
-    renderGuide({ showGuide: false });
-    expect(document.body.textContent).not.toBe("");
-    // The gesture card is a persistent affordance, toggled rather than removed.
-    const toggle = screen.getByRole("button", { expanded: false });
-    fireEvent.click(toggle);
-    expect(
-      screen.getByRole("button", { expanded: true }),
-    ).toBeInTheDocument();
-  });
-
-  it("starts the gesture card expanded on the first run only", () => {
-    renderGuide({ showGuide: true, gestureCardExpanded: true });
-    expect(screen.getByRole("button", { expanded: true })).toBeInTheDocument();
-  });
 });
 
 describe("sample-pipeline reveal caption (design 027 §11.2)", () => {
