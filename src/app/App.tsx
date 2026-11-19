@@ -33,6 +33,7 @@ import { collectVariablesFromPipeline } from "@/utils/params";
 import { CsvDiffDialog } from "@/modules/dialogs/file/CsvDiffDialog";
 import { CsvEncodingDialog } from "@/modules/dialogs/file/CsvEncodingDialog";
 import { SeparateCSVDialog } from "@/modules/dialogs/file/SeparateCSVDialog";
+import { CleanCharsDialog } from "@/modules/dialogs/file/CleanCharsDialog";
 import { DuckdbTableDialog } from "@/modules/dialogs/file/DuckdbTableDialog";
 import { SplitLinesDialog } from "@/modules/dialogs/file/SplitLinesDialog";
 import { EnumerateByGroupDialog } from "@/modules/dialogs/file/EnumerateByGroupDialog";
@@ -1652,6 +1653,19 @@ function AppContent() {
         },
       },
       {
+        id: "clean-special-chars",
+        label: t.cleanChars,
+        description: t.cleanCharsEmptyResult,
+        group: t.paletteActions,
+        groupIcon: Zap,
+        onSelect: () => {
+          ui.setCleanCharsInitialInput(
+            tabsHook.getCurrentTab()?.inputFile || undefined,
+          );
+          ui.setShowCleanChars(true);
+        },
+      },
+      {
         id: "split-lines",
         label: t.splitLines,
         description: t.linesPerFileHint,
@@ -1737,6 +1751,7 @@ function AppContent() {
       "csv-diff": "csvDiff",
       "csv-encoding": "csvEncoding",
       "separate-good-bad": "separateGoodBad",
+      "clean-special-chars": "cleanChars",
       "enumerate-by-group": "enumerateByGroup",
       "csv-to-excel": "csvToExcel",
       "use-or-save-template": "paletteTemplates",
@@ -1913,6 +1928,12 @@ function AppContent() {
                     tabsHook.getCurrentTab()?.inputFile || undefined,
                   );
                   ui.setShowSeparateCsv(true);
+                }}
+                onOpenCleanChars={() => {
+                  ui.setCleanCharsInitialInput(
+                    tabsHook.getCurrentTab()?.inputFile || undefined,
+                  );
+                  ui.setShowCleanChars(true);
                 }}
                 onOpenSplitLines={() => {
                   ui.setSplitLinesInitialInput(
@@ -2265,6 +2286,13 @@ function AppContent() {
             initialInputFile={ui.separateCsvInitialInput}
             defaultDelimiter={settings.defaultDelimiter}
             onDefaultDelimiterChange={settings.setDefaultDelimiter}
+            onShowToast={showToast}
+          />
+
+          <CleanCharsDialog
+            isOpen={ui.showCleanChars}
+            onClose={() => ui.setShowCleanChars(false)}
+            initialInputFile={ui.cleanCharsInitialInput}
             onShowToast={showToast}
           />
 

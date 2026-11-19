@@ -1229,6 +1229,337 @@ pub async fn separate_csv(
   .map_err(|e| format!("Task join error: {e}"))?
 }
 
+// --- Cleaning special characters ---
+
+/// Result of cleaning special characters from a text file (design 064).
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CleanCharsResult {
+  pub output_path: String,
+  /// Non-empty lines written.
+  pub rows: u64,
+  /// Characters removed outright (quotes, `\r`).
+  pub removed_chars: u64,
+  /// Characters replaced with a single space (tabs, custom characters).
+  pub replaced_chars: u64,
+  /// Physical lines that stayed inside an unclosed quote at EOF.
+  pub unclosed_lines: u64,
+  /// Wall-clock duration of the cleaning pass (excludes IPC/render time).
+  pub elapsed_ms: u64,
+}
+
+#[derive(Debug, Clone)]
+struct CleanCharsOptions {
+  remove_cr: bool,
+  merge_blank_lines: bool,
+  tab_to_space: bool,
+  remove_quotes: bool,
+  custom_chars: Vec<char>,
+  merge_quoted_newlines: bool,
+}
+
+#[derive(Debug, Default, PartialEq, Eq)]
+struct CleanCharsCounts {
+  rows: u64,
+  removed_chars: u64,
+  replaced_chars: u64,
+  unclosed_lines: u64,
+}
+
+/// True when both paths point at the same existing file, or at the same
+/// not-yet-created file in the same directory. Used to refuse overwriting the
+/// input.
+fn paths_refer_to_same_file(a: &str, b: &str) -> bool {
+  let pa = std::path::Path::new(a);
+  let pb = std::path::Path::new(b);
+  if let (Ok(ca), Ok(cb)) = (pa.canonicalize(), pb.canonicalize()) {
+    return ca == cb;
+  }
+  let parent_a = pa.parent().unwrap_or_else(|| std::path::Path::new("."));
+  let parent_b = pb.parent().unwrap_or_else(|| std::path::Path::new("."));
+  match (parent_a.canonicalize(), parent_b.canonicalize()) {
+    (Ok(ca), Ok(cb)) if ca == cb => match (pa.file_name(), pb.file_name()) {
+      (Some(fa), Some(fb)) => {
+        #[cfg(target_os = "windows")]
+        {
+          fa.to_string_lossy()
+            .eq_ignore_ascii_case(&fb.to_string_lossy())
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+          fa == fb
+        }
+      }
+      _ => false,
+    },
+    _ => a == b,
+  }
+}
+
+/// Write side of the pass: collapses blank runs, cleans each line and counts
+/// what happened. Kept separate so the streaming loop stays readable.
+struct CleanCharsWriter<'a, W: Write> {
+  writer: &'a mut W,
+  opts: &'a CleanCharsOptions,
+  counts: CleanCharsCounts,
+  pending_blank: bool,
+  wrote_any: bool,
+}
+
+impl<W: Write> CleanCharsWriter<'_, W> {
+  fn flush_pending_blank(&mut self) -> Result<(), String> {
+    if self.pending_blank {
+      self
+        .writer
+        .write_all(b"\n")
+        .map_err(|e| format!("Failed to write output file: {e}"))?;
+      self.pending_blank = false;
+    }
+    Ok(())
+  }
+
+  fn clean_line(&mut self, line: &str) -> String {
+    let mut out = String::with_capacity(line.len());
+    for ch in line.chars() {
+      if ch == '\r' && self.opts.remove_cr {
+        self.counts.removed_chars += 1;
+        continue;
+      }
+      if ch == '"' && self.opts.remove_quotes {
+        self.counts.removed_chars += 1;
+        continue;
+      }
+      if ch == '\t' && self.opts.tab_to_space {
+        out.push(' ');
+        self.counts.replaced_chars += 1;
+        continue;
+      }
+      if self.opts.custom_chars.contains(&ch) {
+        out.push(' ');
+        self.counts.replaced_chars += 1;
+        continue;
+      }
+      out.push(ch);
+    }
+    out
+  }
+
+  fn emit(&mut self, line: &str) -> Result<(), String> {
+    if line.is_empty() {
+      if self.opts.merge_blank_lines {
+        // A blank run becomes one blank line, and a trailing run disappears.
+        if self.wrote_any {
+          self.pending_blank = true;
+        }
+        return Ok(());
+      }
+      self
+        .writer
+        .write_all(b"\n")
+        .map_err(|e| format!("Failed to write output file: {e}"))?;
+      return Ok(());
+    }
+
+    self.flush_pending_blank()?;
+    let cleaned = self.clean_line(line);
+    self
+      .writer
+      .write_all(cleaned.as_bytes())
+      .map_err(|e| format!("Failed to write output file: {e}"))?;
+    self
+      .writer
+      .write_all(b"\n")
+      .map_err(|e| format!("Failed to write output file: {e}"))?;
+    self.wrote_any = true;
+    self.counts.rows += 1;
+    Ok(())
+  }
+}
+
+/// Stream physical lines through the cleaner. Line breaks stay as record
+/// separators; only `\r`, blank runs and the selected characters are touched.
+/// With `merge_quoted_newlines`, a physical line that leaves a quote open is
+/// joined to the next one with a single space; at EOF an unclosed run is
+/// written back line by line and counted.
+fn clean_chars_stream<R: BufRead, W: Write>(
+  reader: &mut R,
+  writer: &mut W,
+  opts: &CleanCharsOptions,
+) -> Result<CleanCharsCounts, String> {
+  let mut sink = CleanCharsWriter {
+    writer,
+    opts,
+    counts: CleanCharsCounts::default(),
+    pending_blank: false,
+    wrote_any: false,
+  };
+
+  let mut line_buf: Vec<u8> = Vec::new();
+  let mut pending: Vec<String> = Vec::new();
+  let mut in_quotes = false;
+  let mut stripped_crs: u64 = 0;
+
+  loop {
+    line_buf.clear();
+    let n = reader
+      .read_until(b'\n', &mut line_buf)
+      .map_err(|e| format!("Failed to read input file: {e}"))?;
+    if n == 0 {
+      break;
+    }
+
+    let mut raw: &[u8] = &line_buf;
+    if raw.last() == Some(&b'\n') {
+      raw = &raw[..raw.len() - 1];
+    }
+    if opts.remove_cr && raw.last() == Some(&b'\r') {
+      raw = &raw[..raw.len() - 1];
+      stripped_crs += 1;
+    }
+    let line = std::str::from_utf8(raw).map_err(|_| {
+      "Input is not valid UTF-8; convert it to UTF-8 first (Convert Encoding)".to_string()
+    })?;
+
+    if opts.merge_quoted_newlines {
+      pending.push(line.to_string());
+      if line.bytes().filter(|b| *b == b'"').count() % 2 == 1 {
+        in_quotes = !in_quotes;
+      }
+      if !in_quotes {
+        let joined = pending.join(" ");
+        pending.clear();
+        sink.emit(&joined)?;
+      }
+    } else {
+      sink.emit(line)?;
+    }
+  }
+
+  if !pending.is_empty() {
+    sink.counts.unclosed_lines = pending.len() as u64;
+    for line in pending {
+      sink.emit(&line)?;
+    }
+  }
+
+  // Trailing `\r` bytes are stripped before the per-character pass, so count
+  // them here; the per-character pass never sees them.
+  sink.counts.removed_chars += stripped_crs;
+
+  Ok(sink.counts)
+}
+
+/// Clean special characters from a text file without parsing CSV (design 064).
+/// Writes a copy to `out_path`; the input is never modified. `custom_chars` is
+/// a string whose characters are each replaced with one space.
+#[tauri::command]
+pub async fn clean_special_chars(
+  path: String,
+  out_path: String,
+  remove_cr: bool,
+  merge_blank_lines: bool,
+  tab_to_space: bool,
+  remove_quotes: bool,
+  custom_chars: Option<String>,
+  merge_quoted_newlines: Option<bool>,
+) -> Result<CleanCharsResult, String> {
+  tokio::task::spawn_blocking(move || -> Result<CleanCharsResult, String> {
+    let started = std::time::Instant::now();
+    let opts = CleanCharsOptions {
+      remove_cr,
+      merge_blank_lines,
+      tab_to_space,
+      remove_quotes,
+      custom_chars: custom_chars
+        .unwrap_or_default()
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect(),
+      merge_quoted_newlines: merge_quoted_newlines.unwrap_or(false),
+    };
+
+    if !opts.remove_cr
+      && !opts.merge_blank_lines
+      && !opts.tab_to_space
+      && !opts.remove_quotes
+      && opts.custom_chars.is_empty()
+      && !opts.merge_quoted_newlines
+    {
+      return Err("Nothing to clean: select at least one option".to_string());
+    }
+    if path.trim().is_empty() {
+      return Err("Input file is required".to_string());
+    }
+    if out_path.trim().is_empty() {
+      return Err("Output file is required".to_string());
+    }
+    if paths_refer_to_same_file(&path, &out_path) {
+      return Err("Output path must differ from the input file".to_string());
+    }
+
+    if let Some(dir) = std::path::Path::new(&out_path).parent() {
+      if !dir.as_os_str().is_empty() {
+        std::fs::create_dir_all(dir)
+          .map_err(|e| format!("Failed to create output directory: {e}"))?;
+      }
+    }
+
+    let input =
+      File::open(&path).map_err(|e| format!("Failed to open input file: {e}"))?;
+    let mut reader = BufReader::with_capacity(1 << 20, input);
+
+    let output = std::path::Path::new(&out_path);
+    let file_name = output
+      .file_name()
+      .map(|s| s.to_string_lossy().into_owned())
+      .unwrap_or_else(|| "clean.tmp".to_string());
+    let tmp_path = output.with_file_name(format!(
+      ".{file_name}.{}.{}.tmp",
+      std::process::id(),
+      started.elapsed().as_nanos()
+    ));
+    let tmp_file = File::create(&tmp_path)
+      .map_err(|e| format!("Failed to write output file: {e}"))?;
+    let mut writer = BufWriter::with_capacity(1 << 20, tmp_file);
+
+    let counts = match clean_chars_stream(&mut reader, &mut writer, &opts) {
+      Ok(counts) => counts,
+      Err(err) => {
+        drop(writer);
+        let _ = std::fs::remove_file(&tmp_path);
+        return Err(err);
+      }
+    };
+
+    if let Err(e) = writer.flush() {
+      drop(writer);
+      let _ = std::fs::remove_file(&tmp_path);
+      return Err(format!("Failed to write output file: {e}"));
+    }
+    drop(writer);
+
+    // Windows rejects renaming onto an existing file.
+    if output.exists() {
+      std::fs::remove_file(output)
+        .map_err(|e| format!("Failed to replace output file: {e}"))?;
+    }
+    std::fs::rename(&tmp_path, output).map_err(|e| {
+      let _ = std::fs::remove_file(&tmp_path);
+      format!("Failed to finalize output file: {e}")
+    })?;
+
+    Ok(CleanCharsResult {
+      output_path: out_path,
+      rows: counts.rows,
+      removed_chars: counts.removed_chars,
+      replaced_chars: counts.replaced_chars,
+      unclosed_lines: counts.unclosed_lines,
+      elapsed_ms: started.elapsed().as_millis() as u64,
+    })
+  })
+  .await
+  .map_err(|e| format!("Task join error: {e}"))?
+}
+
 // ── Splitting a text file into N-line parts ──────────────────────────
 
 /// Result of splitting a text file into parts of at most N lines each.
@@ -3339,6 +3670,101 @@ mod tests {
     assert_eq!(dir.to_string_lossy().replace('\\', "/"), "/out");
     assert_eq!(stem, "b");
     assert_eq!(ext, ".txt");
+  }
+
+  // clean_special_chars (design 064)
+
+  fn clean_in_memory(input: &str, opts: CleanCharsOptions) -> (String, CleanCharsCounts) {
+    let mut out = Vec::new();
+    let counts =
+      clean_chars_stream(&mut Cursor::new(input.as_bytes()), &mut out, &opts).unwrap();
+    (String::from_utf8(out).unwrap(), counts)
+  }
+
+  fn default_clean_options() -> CleanCharsOptions {
+    CleanCharsOptions {
+      remove_cr: true,
+      merge_blank_lines: true,
+      tab_to_space: true,
+      remove_quotes: true,
+      custom_chars: Vec::new(),
+      merge_quoted_newlines: false,
+    }
+  }
+
+  #[test]
+  fn clean_chars_removes_cr_quotes_and_collapses_blank_runs() {
+    let input = "a,b\r\n\"x\"\ty\r\n\r\n\r\nc,d\r\n";
+    let (out, counts) = clean_in_memory(input, default_clean_options());
+
+    assert_eq!(out, "a,b\nx y\n\nc,d\n");
+    assert_eq!(counts.rows, 3);
+    assert_eq!(counts.removed_chars, 7); // two quotes + five CRs
+    assert_eq!(counts.replaced_chars, 1); // one tab
+  }
+
+  #[test]
+  fn clean_chars_replaces_custom_characters_with_a_space() {
+    let mut opts = default_clean_options();
+    opts.custom_chars = vec!['·', '、'];
+    let (out, counts) = clean_in_memory("a·b、c\n", opts);
+
+    assert_eq!(out, "a b c\n");
+    assert_eq!(counts.replaced_chars, 2);
+  }
+
+  #[test]
+  fn clean_chars_keeps_pipe_and_backslash() {
+    let (out, _) = clean_in_memory("a|b\\c\n", default_clean_options());
+    assert_eq!(out, "a|b\\c\n");
+  }
+
+  #[test]
+  fn clean_chars_merges_paired_quoted_newlines() {
+    let mut opts = default_clean_options();
+    opts.merge_quoted_newlines = true;
+    let input = "id,note\n1,\"hello\nworld\"\n2,plain\n";
+    let (out, counts) = clean_in_memory(input, opts);
+
+    assert_eq!(out, "id,note\n1,hello world\n2,plain\n");
+    assert_eq!(counts.unclosed_lines, 0);
+    assert_eq!(counts.rows, 3);
+  }
+
+  #[test]
+  fn clean_chars_writes_unclosed_quoted_run_line_by_line() {
+    let mut opts = default_clean_options();
+    opts.merge_quoted_newlines = true;
+    let (out, counts) = clean_in_memory("a,\"b\nc\n", opts);
+
+    assert_eq!(out, "a,b\nc\n");
+    assert_eq!(counts.unclosed_lines, 2);
+  }
+
+  #[test]
+  fn clean_chars_preserves_line_separators() {
+    let opts = CleanCharsOptions {
+      remove_cr: false,
+      merge_blank_lines: false,
+      tab_to_space: false,
+      remove_quotes: false,
+      custom_chars: Vec::new(),
+      merge_quoted_newlines: false,
+    };
+    let (out, counts) = clean_in_memory("a\n\nb\n", opts);
+
+    assert_eq!(out, "a\n\nb\n");
+    assert_eq!(counts.rows, 2);
+  }
+
+  #[test]
+  fn clean_chars_refuses_the_input_as_output() {
+    let dir = std::env::temp_dir();
+    let path = dir.join("easy-csv-clean-same-path.csv");
+    std::fs::write(&path, "a\n").unwrap();
+    let text = path.to_string_lossy().into_owned();
+    assert!(paths_refer_to_same_file(&text, &text));
+    let _ = std::fs::remove_file(&path);
   }
 
   // enumerate_by_group (prepend a per-group counter)

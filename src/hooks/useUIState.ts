@@ -56,6 +56,10 @@ export function useUIState() {
   const [separateCsvInitialInput, setSeparateCsvInitialInput] = useState<
     string | undefined
   >(undefined);
+  const [showCleanChars, setShowCleanChars] = useState(false);
+  const [cleanCharsInitialInput, setCleanCharsInitialInput] = useState<
+    string | undefined
+  >(undefined);
   const [showSplitLines, setShowSplitLines] = useState(false);
   const [splitLinesInitialInput, setSplitLinesInitialInput] = useState<
     string | undefined
@@ -121,6 +125,10 @@ export function useUIState() {
     setShowSeparateCsv,
     separateCsvInitialInput,
     setSeparateCsvInitialInput,
+    showCleanChars,
+    setShowCleanChars,
+    cleanCharsInitialInput,
+    setCleanCharsInitialInput,
     showSplitLines,
     setShowSplitLines,
     splitLinesInitialInput,

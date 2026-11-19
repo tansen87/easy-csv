@@ -762,6 +762,53 @@ export interface Translations {
   separateReady: string;
   separateReadyHint: string;
 
+  // CleanCharacters
+  cleanChars: string;
+  cleanCharsRule: string;
+  /** `{file}` placeholder. */
+  cleanCharsRuleDesc: string;
+  cleanCharsRuleQuotes: string;
+  cleanCharsRuleCr: string;
+  cleanCharsRuleBlank: string;
+  cleanCharsRuleTab: string;
+  /** `{chars}` placeholder. */
+  cleanCharsRuleCustom: string;
+  cleanCharsRuleMergeQuoted: string;
+  cleanCharsRuleNone: string;
+  cleanCharsStepFile: string;
+  cleanCharsStepOptions: string;
+  cleanCharsStepOutput: string;
+  /** `{count}` placeholder. */
+  cleanCharsSelectedCount: string;
+  cleanCharsCharCR: string;
+  cleanCharsCharBlank: string;
+  cleanCharsCharTab: string;
+  cleanCharsCharQuote: string;
+  cleanCharsModeDelete: string;
+  cleanCharsModeMerge: string;
+  cleanCharsModeSpace: string;
+  cleanCharsCustom: string;
+  cleanCharsCustomPlaceholder: string;
+  cleanCharsMergeQuotedNewlines: string;
+  cleanCharsMergeQuotedHint: string;
+  cleanCharsSaveAs: string;
+  /** `{output}` placeholder. */
+  cleanCharsReady: string;
+  cleanCharsReadyHint: string;
+  cleanCharsNoOptionSelected: string;
+  cleanCharsEmptyResult: string;
+  cleanCharsStart: string;
+  cleanCharsRunning: string;
+  cleanCharsDone: string;
+  cleanCharsRows: string;
+  cleanCharsRemoved: string;
+  cleanCharsReplaced: string;
+  /** `{count}` placeholder. */
+  cleanCharsUnclosedLines: string;
+  cleanCharsSelectFile: string;
+  cleanCharsSelectOutput: string;
+  cleanCharsSamePath: string;
+
   // SplitLinesDialog
   splitLines: string;
   linesPerFile: string;

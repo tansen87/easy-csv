@@ -75,6 +75,7 @@ interface MainMenuProps {
   onOpenCsvDiff: () => void;
   onOpenCsvEncoding: () => void;
   onOpenSeparateCsv: () => void;
+  onOpenCleanChars: () => void;
   onOpenSplitLines: () => void;
   onOpenEnumerateByGroup: () => void;
   onOpenCsvToExcel: () => void;
@@ -166,6 +167,7 @@ export const MainMenu = React.memo(function MainMenu({
   onOpenCsvDiff,
   onOpenCsvEncoding,
   onOpenSeparateCsv,
+  onOpenCleanChars,
   onOpenSplitLines,
   onOpenEnumerateByGroup,
   onOpenCsvToExcel,
@@ -922,6 +924,18 @@ export const MainMenu = React.memo(function MainMenu({
               <button
                 role="menuitem"
                 onClick={() => {
+                  onOpenCleanChars();
+                  setActiveMenu(null);
+                }}
+                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
+              >
+                <span className="flex-1 text-left whitespace-nowrap">
+                  {t.cleanChars}
+                </span>
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => {
                   onOpenSplitLines();
                   setActiveMenu(null);
                 }}
@@ -943,7 +957,7 @@ export const MainMenu = React.memo(function MainMenu({
                   {t.enumerateByGroup}
                 </span>
               </button>
-              {/* Tools split in two: five one-file utilities, then the format
+              {/* Tools split in two: six one-file utilities, then the format
                   and merge jobs that read or write more than one file. */}
               <div className="mx-2.5 my-1.5 border-t border-foreground/15" />
               <button

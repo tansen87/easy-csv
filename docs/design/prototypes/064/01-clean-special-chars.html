@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 064 · 清除符号</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --edge:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+    --brand-ink:oklch(0.4 0.06 250);
+
+    --success:oklch(0.5 0.1 145);
+    --success-soft:color-mix(in oklab,var(--success) 11%,transparent);
+    --danger:oklch(0.55 0.17 27);
+    --danger-soft:color-mix(in oklab,var(--danger) 10%,transparent);
+    --warning:oklch(0.55 0.1 72);
+
+    --mark:oklch(0.56 0.17 27);
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-dialog:0 18px 46px -22px oklch(0.2 0.02 80 / 34%);
+  }
+  .dark{
+    color-scheme:dark;
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --edge:oklch(1 0 0 / 24%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 18%,transparent);
+    --brand-ink:oklch(0.82 0.05 245);
+    --success:oklch(0.72 0.1 145);
+    --success-soft:color-mix(in oklab,var(--success) 14%,transparent);
+    --danger:oklch(0.7 0.14 27);
+    --danger-soft:color-mix(in oklab,var(--danger) 15%,transparent);
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.12 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-card:none;
+    --shadow-dialog:0 18px 46px -22px oklch(0 0 0 / 70%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased;transition:background-color .18s ease,color .18s ease}
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme-toggle{position:absolute;right:0;top:2px;height:26px;padding:0 10px;border-radius:6px;
+                border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+                font-family:var(--mono);font-size:10.5px;cursor:pointer}
+  .theme-toggle:hover{color:var(--fg)}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+  .h2{font-size:13px;font-weight:500;margin:44px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border-soft)}
+  .lede{font-size:11.5px;line-height:1.75;color:var(--muted-fg);margin:0 0 14px;max-width:1000px}
+  .lede b{font-weight:500;color:var(--fg)}
+
+  /* ── 工具子菜单 ───────────────────────────────────────────────── */
+  .menu-stage{display:flex;gap:34px;align-items:flex-start;padding:26px 30px;
+              border:1px solid var(--border);border-radius:8px;background:var(--canvas)}
+  .menubar{display:flex;gap:2px;padding:6px;border:1px solid var(--border);border-radius:8px;
+           background:var(--card);align-self:flex-start;margin-bottom:10px}
+  .menubar span{padding:5px 11px;border-radius:6px;font-size:11.5px;color:var(--muted-fg)}
+  .menubar span.on{background:var(--brand-12);color:var(--brand);font-weight:500}
+  .tools-menu{width:224px;padding:6px;border:1px solid var(--border);border-radius:10px;
+              background:var(--card);box-shadow:0 12px 28px -14px oklch(0.2 0.02 80 / 22%)}
+  .tools-menu .mi{display:flex;align-items:center;height:32px;padding:0 10px;border-radius:8px;
+                  font-size:12px;font-weight:500;color:var(--fg)}
+  .tools-menu .mi:hover{background:color-mix(in oklab,var(--fg) 8%,transparent)}
+  .tools-menu .mi.new{background:var(--brand-soft);color:var(--brand)}
+  .tools-menu .mi .tag{margin-left:auto;font-family:var(--mono);font-size:9px;font-weight:400;
+                       color:var(--brand);border:1px solid color-mix(in oklab,var(--brand) 35%,transparent);
+                       border-radius:3px;padding:0 4px;line-height:14px}
+  .tools-menu .sep{margin:6px 10px;border-top:1px solid color-mix(in oklab,var(--fg) 15%,transparent)}
+  .menu-note{max-width:560px;font-size:11px;line-height:1.8;color:var(--muted-fg)}
+  .menu-note b{color:var(--fg);font-weight:500}
+  .menu-note ul{margin:8px 0 0;padding-left:17px}
+  .menu-note li{margin-bottom:4px}
+  .mini-flow{display:flex;align-items:center;gap:8px;margin-top:16px}
+  .mini-flow .st{border:1px solid var(--border);border-radius:6px;background:var(--card);
+                 padding:5px 9px;font-size:10.5px;color:var(--muted-fg);white-space:nowrap}
+  .mini-flow .st.on{border-color:color-mix(in oklab,var(--brand) 40%,transparent);background:var(--brand-soft);color:var(--brand)}
+  .mini-flow .arw{font-size:10px;color:var(--muted-fg-3)}
+
+  /* ── 对话框 ───────────────────────────────────────────────────── */
+  .dialog-wrap{display:flex;gap:26px;align-items:flex-start}
+  .dialog{width:664px;border:1px solid var(--border);border-radius:10px;background:var(--card);
+          box-shadow:var(--shadow-dialog);overflow:hidden}
+  .dlg-head{display:flex;align-items:center;height:48px;padding:0 16px;background:color-mix(in oklab,var(--muted) 20%,transparent)}
+  .dlg-head h3{margin:0;font-size:13px;font-weight:500}
+  .dlg-head .x{margin-left:auto;width:24px;height:24px;display:grid;place-items:center;color:var(--muted-fg);
+                border-radius:5px;font-size:14px}
+  .dlg-body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px}
+
+  .rule{border-radius:7px;background:color-mix(in oklab,var(--muted) 40%,transparent);padding:10px 12px;
+        display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted-fg)}
+  .rule .t{font-weight:500;color:var(--fg)}
+  .rule .mono{font-family:var(--mono);font-size:10.5px;color:color-mix(in oklab,var(--fg) 80%,transparent)}
+
+  .sect{border:1px solid var(--border-soft);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:10px}
+  .sect-h{display:flex;align-items:center;gap:8px}
+  .sect-h .idx{width:20px;height:20px;border-radius:50%;background:var(--brand-12);color:var(--brand);
+               font-size:11px;font-weight:500;display:grid;place-items:center;flex:none}
+  .sect-h .name{font-size:13px;font-weight:500}
+  .sect-h .aside{margin-left:auto;font-size:10.5px;color:var(--muted-fg-2)}
+
+  .fieldrow{display:flex;align-items:center;gap:8px}
+  .inp{height:30px;flex:1;min-width:0;padding:0 8px;border:1px solid var(--border);border-radius:6px;
+       background:var(--bg);font-family:var(--mono);font-size:11px;color:var(--fg);display:flex;align-items:center;overflow:hidden;white-space:nowrap}
+  .inp.placeholder{color:var(--muted-fg-3)}
+  .mini{height:28px;padding:0 9px;border:1px solid var(--border);border-radius:6px;background:var(--card);
+        color:var(--muted-fg);font-size:11px;display:inline-flex;align-items:center;flex:none}
+  .hint{font-size:10.5px;line-height:1.6;color:var(--muted-fg-2)}
+  .hint b{font-weight:500;color:var(--fg)}
+  .warn{color:var(--warning)}
+
+  .probe{font-size:10.5px;line-height:1.6;color:var(--muted-fg-2)}
+  .probe b{color:var(--fg);font-weight:500}
+  .probe code{font-size:10.5px}
+
+  /* 字符选择 */
+  .chars{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px}
+  .chk{display:flex;align-items:center;gap:7px;height:24px;font-size:11.5px;color:var(--fg)}
+  .box{width:13px;height:13px;border-radius:3px;border:1px solid var(--edge);background:var(--bg);
+       flex:none;display:grid;place-items:center;font-size:9px;line-height:1;color:var(--brand-fg)}
+  .box.on{background:var(--brand);border-color:var(--brand)}
+  .chk .glyph{font-family:var(--mono);font-size:10.5px;color:var(--fg);min-width:22px}
+  .chk .mode{margin-left:auto;font-size:10px;color:var(--muted-fg-3)}
+
+  /* 前后对照 */
+  .sample{border:1px solid var(--border-soft);border-radius:7px;overflow:hidden;background:var(--bg)}
+  .sample .row{display:grid;grid-template-columns:44px 1fr;align-items:flex-start;
+               border-bottom:1px solid var(--border-soft)}
+  .sample .row:last-child{border-bottom:0}
+  .sample .tag{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);padding:7px 8px;background:color-mix(in oklab,var(--muted) 40%,transparent)}
+  .sample .code{font-family:var(--mono);font-size:10.5px;line-height:1.65;padding:6px 9px;color:var(--fg);
+                white-space:pre-wrap;word-break:break-all}
+  .sample .del{color:var(--mark);text-decoration:line-through;text-decoration-thickness:1px}
+  .sample .ctrl{display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:14px;
+                padding:0 2px;border:1px solid color-mix(in oklab,var(--mark) 40%,transparent);
+                border-radius:2px;font-size:8px;color:var(--mark);vertical-align:1px;margin:0 1px}
+  .sample .ins{background:color-mix(in oklab,var(--success) 12%,transparent);border-radius:2px;padding:0 2px}
+
+  /* 结果 */
+  .result-card{border:1px solid var(--border-soft);border-radius:8px;padding:12px}
+  .result-empty{font-size:11px;line-height:1.8;color:var(--muted-fg)}
+  .done-head{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:500;color:var(--success)}
+  .done-head .meta{font-size:10.5px;font-weight:400;color:var(--muted-fg)}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+  .stat{border-radius:6px;background:color-mix(in oklab,var(--muted) 60%,transparent);padding:7px 9px;min-width:0}
+  .stat dt{font-size:9.5px;color:var(--muted-fg-3);margin-bottom:3px}
+  .stat dd{margin:0;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;
+           white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .result-path{margin-top:8px;font-size:10.5px;line-height:1.6;color:var(--muted-fg-2);word-break:break-all}
+  .result-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+  .ghost{height:26px;padding:0 9px;border:1px solid var(--border);border-radius:6px;background:var(--card);
+         color:var(--muted-fg);font-size:10.5px;display:inline-flex;align-items:center}
+
+  .dlg-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;
+            padding:10px 16px;background:color-mix(in oklab,var(--muted) 20%,transparent);
+            border-top:1px solid var(--border-soft)}
+  .foot-hint{font-size:11px;color:var(--muted-fg)}
+  .right-group{display:flex;align-items:center;gap:12px}
+  .btn{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:6px;
+       border:1px solid var(--brand);background:var(--brand);color:var(--brand-fg);
+       font-size:11.5px;font-weight:500;white-space:nowrap}
+  .btn[disabled]{opacity:.5}
+  .runline{display:inline-flex;align-items:baseline;gap:7px;font-size:11px;color:var(--muted-fg);white-space:nowrap}
+  .runline .num{font-family:var(--mono);font-size:11.5px;font-variant-numeric:tabular-nums;
+                color:var(--fg);min-width:46px;text-align:right;display:inline-block}
+
+  .side{flex:1;display:flex;flex-direction:column;gap:12px}
+  .callout{display:flex;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;
+           background:var(--card);font-size:11px;line-height:1.7;color:var(--muted-fg)}
+  .callout b{color:var(--fg);font-weight:500}
+  .callout .mk{width:18px;height:18px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
+               font-family:var(--mono);font-size:9.5px;display:grid;place-items:center;flex:none;margin-top:1px}
+  .callout .mk.w{background:color-mix(in oklab,var(--warning) 14%,transparent);color:var(--warning)}
+
+  table.spec{width:100%;border-collapse:collapse;background:var(--card);
+             border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:11px}
+  table.spec th{text-align:left;font-weight:500;color:var(--muted-fg);font-size:10px;
+                padding:8px 12px;border-bottom:1px solid var(--border);background:color-mix(in oklab,var(--muted) 45%,transparent)}
+  table.spec td{padding:8px 12px;border-bottom:1px solid var(--border-soft);color:var(--muted-fg);line-height:1.6;vertical-align:top}
+  table.spec tr:last-child td{border-bottom:0}
+  table.spec td:first-child{color:var(--fg);font-weight:500;white-space:nowrap}
+  table.spec code{font-size:10.5px}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .state-note{font-size:10.5px;color:var(--muted-fg);line-height:1.7;padding:8px 2px 0}
+  .state-note b{color:var(--fg);font-weight:500}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">PROTOTYPE 064 · CLEAN CHARACTERS</div>
+    <h1>清除符号</h1>
+    <p>拆分坏行经常要勾「忽略引号」，拆出来的好行里仍残留成对的 <code>"</code>、<code>\t</code>、<code>\r</code> 和空行，xan 读取时继续报错。这个动作<b>不解析 CSV</b>，按物理行扫一遍，把会干扰解析的字符去掉或换成空格，另存为干净副本。</p>
+    <button class="theme-toggle" id="themeToggle" type="button">DARK</button>
+  </div>
+
+  <dl class="direction">
+    <div><dt>PRODUCT</dt><dd>给人整理 CSV 的桌面工具，这是拆分坏行之后的清扫动作</dd></div>
+    <div><dt>CHARACTER</dt><dd>克制、可核对、像校对纸面</dd></div>
+    <div><dt>WORLD</dt><dd>校样与红笔：划掉不该在的符号，留下正文</dd></div>
+    <div><dt>MOMENTS</dt><dd>清理前后的同一行对照，被划掉的字符用红笔标出</dd></div>
+    <div><dt>SIGNATURE</dt><dd>控制符以键帽形式出现（CR · TAB · ¶），同一套符号贯穿选择与预览</dd></div>
+  </dl>
+
+  <!-- 01 入口 -->
+  <section class="frame">
+    <div class="cap"><b>01 · 入口</b><span>放在工具子菜单「拆分坏行」下方，两件事常连着用</span><span class="file">MainMenu.tsx · tools</span></div>
+    <div class="menu-stage">
+      <div>
+        <div class="menubar">
+          <span>文件</span><span>编辑</span><span>视图</span><span class="on">工具</span><span>帮助</span>
+        </div>
+        <div class="tools-menu">
+          <div class="mi">对比差异</div>
+          <div class="mi">转换编码</div>
+          <div class="mi">拆分坏行</div>
+          <div class="mi new">清除符号<span class="tag">NEW</span></div>
+          <div class="mi">按行数拆分</div>
+          <div class="mi">组内编号</div>
+          <div class="sep"></div>
+          <div class="mi">转为 Excel</div>
+          <div class="mi">合并工作簿</div>
+        </div>
+      </div>
+      <div class="menu-note">
+        <b>为什么紧挨着拆分坏行</b>
+        <p style="margin:8px 0 0">拆分坏行负责「把列数不对的行挑走」，清除符号负责「把挑剩下的好行里的脏字符扫掉」。顺序固定，所以位置上连在一起，不跨过分隔线。</p>
+        <div class="mini-flow">
+          <span class="st">原始 CSV</span><span class="arw">→</span>
+          <span class="st">拆分坏行</span><span class="arw">→</span>
+          <span class="st on">清除符号</span><span class="arw">→</span>
+          <span class="st">xan 可读</span>
+        </div>
+        <ul>
+          <li>菜单文案用「清除符号」，与「拆分坏行」同为动词开头的四字，长度完全一致。</li>
+          <li>只做一次性文件动作，不进管道、不改原文件。</li>
+          <li>与其它工具一致：从当前标签页进入时自动带出输入文件。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 对话框 -->
+  <section class="frame">
+    <div class="cap"><b>02 · 对话框（已选文件）</b><span>三步结构沿用拆分坏行；清理项是唯一的重点</span><span class="file">CleanSpecialCharsDialog.tsx</span></div>
+    <div class="dialog-wrap">
+      <div class="dialog">
+        <div class="dlg-head">
+          <h3>清除符号</h3>
+          <span class="x">×</span>
+        </div>
+        <div class="dlg-body">
+
+          <div class="rule">
+            <p class="t" style="margin:0">处理规则</p>
+            <p style="margin:0">按物理行处理 orders.csv · 不解析 CSV，引号不成对也能清理</p>
+            <p class="mono" style="margin:0">删除 "、\r 与空行 · \t 替换为空格 · 竖线原样保留</p>
+          </div>
+
+          <div class="sect">
+            <div class="sect-h"><span class="idx">1</span><span class="name">选择要清理的 CSV</span></div>
+            <div class="fieldrow">
+              <span class="inp">D:\data\orders.csv</span>
+              <span class="mini">打开</span>
+            </div>
+            <p class="probe">✓ 第一行 <b>4</b> 列 · 表头：订单号 | 客户 | 地址 | 备注</p>
+          </div>
+
+          <div class="sect">
+            <div class="sect-h">
+              <span class="idx">2</span><span class="name">清理内容</span>
+              <span class="aside">已选 4 项</span>
+            </div>
+            <div class="chars">
+              <label class="chk"><span class="box on">✓</span><span class="glyph">\r</span>回车符<span class="mode">删除</span></label>
+              <label class="chk"><span class="box on">✓</span><span class="glyph">¶</span>空行<span class="mode">合并</span></label>
+              <label class="chk"><span class="box on">✓</span><span class="glyph">\t</span>制表符<span class="mode">空格</span></label>
+              <label class="chk"><span class="box on">✓</span><span class="glyph">"</span>双引号<span class="mode">删除</span></label>
+            </div>
+            <div class="fieldrow">
+              <span class="lbl" style="font-size:11px;color:var(--muted-fg);flex:none">其他符号</span>
+              <span class="inp placeholder">可选，例如 · 、 或 ;</span>
+            </div>
+            <label class="chk" style="height:auto;margin-top:2px">
+              <span class="box">　</span>
+              <span>合并引号内换行</span>
+            </label>
+            <p class="hint" style="margin-top:-4px">引号成对时，把字段里的物理换行合并为一个空格；引号未闭合时按行原样保留，不吞并后续内容。</p>
+          </div>
+
+          <div class="sect">
+            <div class="sect-h"><span class="idx">3</span><span class="name">输出文件</span></div>
+            <div class="fieldrow">
+              <span class="inp">D:\data\orders_clean.csv</span>
+              <span class="mini">另存为</span>
+            </div>
+          </div>
+
+          <div class="result-card">
+            <p class="result-empty" style="margin:0">选择 CSV 与要清除的字符后点击开始清理。输出写在输入文件旁，原文件保持不动。</p>
+          </div>
+
+        </div>
+        <div class="dlg-foot">
+          <span class="foot-hint">将写入 orders_clean.csv · 保留行尾换行</span>
+          <span class="right-group">
+            <button class="btn">开始清理</button>
+          </span>
+        </div>
+      </div>
+
+      <div class="side">
+        <div class="callout">
+          <span class="mk">i</span>
+          <span><b>按行处理，不做 CSV 解析</b>：引号不成对是常见输入，任何“聪明”的解析都会在这里报错或错位。逐行扫字符反而能稳定产出 xan 可读的文件。</span>
+        </div>
+        <div class="callout">
+          <span class="mk w">!</span>
+          <span><b>换行不删</b>：<code>\n</code> 是记录分隔符，删掉会把整个文件压成一行。默认只清理 <b>回车 <code>\r</code></b> 和 <b>连续空行</b>；需要处理字段内换行时，勾选「合并引号内换行」，成对引号里的物理换行会并成一个空格。</span>
+        </div>
+        <div class="callout">
+          <span class="mk">i</span>
+          <span><b>默认勾选就是最常见的脏数据</b>：<code>"</code>、<code>\t</code>、<code>\r</code> 与空行。用户通常只需选文件、点开始。</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 前后对照 -->
+  <section class="frame">
+    <div class="cap"><b>03 · 清理前 / 后</b><span>红笔划掉被清除的字符，插入的空格用浅底标出</span><span class="file">dialog · 预览面板</span></div>
+    <div class="dialog-wrap">
+      <div class="dialog" style="width:664px">
+        <div class="dlg-body" style="padding:16px">
+          <div class="sample">
+            <div class="row">
+              <span class="tag">前</span>
+              <span class="code">A-1042,林一鸣,<span class="del">"</span>上海市<span class="ctrl">TAB</span>浦东新区<span class="del">"</span>,含<span class="del">"</span>加急<span class="del">"</span><span class="del">|</span>下午送达<span class="ctrl">CR</span></span>
+            </div>
+            <div class="row">
+              <span class="tag">后</span>
+              <span class="code">A-1042,林一鸣,上海市<span class="ins"> </span>浦东新区,含加急<span class="ins"> </span>下午送达</span>
+            </div>
+            <div class="row">
+              <span class="tag">前</span>
+              <span class="code">A-1043,周颂,北京市朝阳区,<span class="del">"</span>需回访<span class="del">"</span></span>
+            </div>
+            <div class="row">
+              <span class="tag">后</span>
+              <span class="code">A-1043,周颂,北京市朝阳区,需回访</span>
+            </div>
+            <div class="row">
+              <span class="tag">前</span>
+              <span class="code">A-1044,陈以宁,杭州市西湖区,汇总|复核</span>
+            </div>
+            <div class="row">
+              <span class="tag">后</span>
+              <span class="code">A-1044,陈以宁,杭州市西湖区,汇总|复核</span>
+            </div>
+          </div>
+          <p class="hint" style="margin-top:10px">预览取输入前 5 行，仅用于核对规则，不参与结果统计。<b>竖线不在清理范围，原样保留</b>。</p>
+        </div>
+      </div>
+
+      <div class="side">
+        <div class="callout">
+          <span class="mk">i</span>
+          <span><b>控制符显示为键帽</b>：<code>CR</code>、<code>TAB</code>、<code>¶</code> 与选择区的写法一致，用户看到的和删掉的永远是同一个东西。</span>
+        </div>
+        <div class="callout">
+          <span class="mk">i</span>
+          <span><b>红笔只划掉字符本身</b>：不划整格、不染整行，避免把“这行坏了”误读成“这行没救”。</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 运行与完成 -->
+  <section class="frame">
+    <div class="cap"><b>04 · 运行与完成</b><span>运行中显示秒表读数；完成后替换为可核对的结果卡</span><span class="file">RunTimer · 结果卡</span></div>
+    <div class="dialog-wrap">
+      <div class="dialog" style="width:664px">
+        <div class="dlg-head"><h3>清除符号</h3><span class="x">×</span></div>
+        <div class="dlg-body" style="padding:16px">
+          <div class="result-card">
+            <p class="done-head" style="margin:0">
+              <span>✓</span>已完成
+              <span class="meta">· 完成时间 2026-11-19 14:32 · 耗时 620 ms</span>
+            </p>
+            <div class="stats">
+              <div class="stat"><dt>清理行数</dt><dd>9,412</dd></div>
+              <div class="stat"><dt>删除字符</dt><dd>1,208</dd></div>
+              <div class="stat"><dt>替换为空格</dt><dd>3,046</dd></div>
+            </div>
+            <p class="result-path">D:\data\orders_clean.csv</p>
+            <div class="result-actions">
+              <span class="ghost">打开路径</span>
+              <span class="ghost">清除记录</span>
+            </div>
+          </div>
+        </div>
+        <div class="dlg-foot">
+          <span class="foot-hint">已写入 orders_clean.csv · 原文件未改动</span>
+          <span class="right-group"><button class="btn">再次清理</button></span>
+        </div>
+      </div>
+
+      <div class="side">
+        <div class="callout">
+          <span class="mk">i</span>
+          <span><b>运行中</b>：按钮变为「清理中…」并在左侧出现等宽秒表读数；完成后读数消失，由结果卡的“耗时”接管。</span>
+        </div>
+        <div class="callout">
+          <span class="mk">i</span>
+          <span><b>空态</b>：结果卡只有一句说明；若未勾选任何字符，主按钮置灰，页脚提示「至少选择一项要清除的符号」。</span>
+        </div>
+        <div class="callout">
+          <span class="mk w">!</span>
+          <span><b>失败</b>：读取失败或输出无法写入时，底部出现错误条；不改变已有结果卡。</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 规范 -->
+  <section class="frame">
+    <div class="cap"><b>05 · 实现约定</b><span>新增一个工具对话框与一个后端命令</span><span class="file">src-tauri · CleanSpecialCharsDialog</span></div>
+    <div class="two-col">
+      <table class="spec">
+        <thead><tr><th>项</th><th>约定</th></tr></thead>
+        <tbody>
+          <tr><td>入口</td><td>工具菜单「拆分坏行」下方；命令面板 action id <code>clean-special-chars</code>；从当前标签页带出输入文件。</td></tr>
+          <tr><td>处理单位</td><td>按物理行扫描，不做 CSV 解析；引号不成对不报错。按字节保留原有非清理内容与行序。</td></tr>
+          <tr><td>字符处理</td><td><code>\r</code> 删除；连续空行合并为一行；<code>\t</code> 与自定义符号固定替换为空格；<code>"</code> 删除；<b>竖线 <code>|</code> 与反斜杠 <code>\</code> 不处理，原样保留</b>。</td></tr>
+          <tr><td>换行</td><td>行尾 <code>\n</code> 始终保留，输出统一 LF。勾选「合并引号内换行」时，成对引号内的物理换行合并为一个空格；引号未闭合则该段按行原样保留，并计入未闭合行数。</td></tr>
+          <tr><td>输出</td><td>默认 <code>{stem}_clean{ext}</code>，与输入同目录；可另存为其它路径；禁止与输入同路径。</td></tr>
+          <tr><td>编码</td><td>按 UTF-8 读取；非法 UTF-8 直接报错并提示先用「转换编码」。不自动猜编码。</td></tr>
+        </tbody>
+      </table>
+      <table class="spec">
+        <thead><tr><th>项</th><th>约定</th></tr></thead>
+        <tbody>
+          <tr><td>返回</td><td><code>{ output_path, rows, removed_chars, replaced_chars, unclosed_lines, elapsed_ms }</code>，前端据此渲染结果卡；<code>unclosed_lines &gt; 0</code> 时结果卡下方追加一行提示。</td></tr>
+          <tr><td>大文件</td><td>逐行流式读写，常量内存；不在前端整文件读入。</td></tr>
+          <tr><td>记录</td><td>写入与拆分坏行相同的本地历史（输入、选项、输出、耗时、完成时间），下次打开自动带出。</td></tr>
+          <tr><td>文案</td><td>新增 <code>cleanChars*</code> 系列 i18n 键，中英文同步；不写“运行中”文字，运行状态由按钮承担。</td></tr>
+          <tr><td>测试</td><td>后端：CRLF、空行、引号、制表符、竖线与反斜杠保留、自定义符号、UTF-8 失败、同路径拒绝；前端：默认勾选、空选禁用、结果卡、历史恢复。</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="state-note" style="padding-top:14px"><b>非目标</b>：不修列数、不重新加引号、不改编码、不去 BOM。字段内换行只做「成对引号内合并」这一种确定性处理；引号语义的完整解析不在本工具范围，避免一个对话框承担互相矛盾的规则。</p>
+  </section>
+
+</div>
+
+<script>
+  const toggle = document.getElementById('themeToggle');
+  toggle.addEventListener('click', () => {
+    const dark = document.documentElement.classList.toggle('dark');
+    toggle.textContent = dark ? 'LIGHT' : 'DARK';
+  });
+</script>
+</body>
+</html>
