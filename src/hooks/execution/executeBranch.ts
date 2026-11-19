@@ -31,7 +31,7 @@ interface ExecuteBranchArgs {
 
 /**
  * Run one branch of the execution graph: batch-from/batch-to pairing,
- * batch-filter (with optional pre-batch pipeline), frontend chart rendering,
+ * batch-search (with optional pre-batch pipeline), frontend chart rendering,
  * or a plain xan pipeline with the output param appended.
  */
 export async function executeSingleBranch({
@@ -98,14 +98,14 @@ export async function executeSingleBranch({
     );
     result = { success: true, output: "" };
   } else if (
-    branchSteps.findIndex((s) => s.command.id === "batch-filter") >= 0
+    branchSteps.findIndex((s) => s.command.id === "batch-search") >= 0
   ) {
-    // Check if branch contains batch-filter step
+    // Check if branch contains batch-search step
     const batchFilterIndex = branchSteps.findIndex(
-      (s) => s.command.id === "batch-filter",
+      (s) => s.command.id === "batch-search",
     );
 
-    // Split branch: steps before batch-filter + batch-filter step
+    // Split branch: steps before batch-search + batch-search step
     const preBatchSteps = branchSteps.slice(0, batchFilterIndex);
     const batchFilterStep = branchSteps[batchFilterIndex];
 
@@ -142,7 +142,7 @@ export async function executeSingleBranch({
       }
     }
 
-    // Execute batch-filter if pre-batch steps succeeded (or no pre-batch steps)
+    // Execute batch-search if pre-batch steps succeeded (or no pre-batch steps)
     if (!result || result.success) {
       const bfParams = batchFilterStep.parameters;
       const bfConfig: BatchFilterConfig = {
@@ -173,7 +173,7 @@ export async function executeSingleBranch({
       deps,
     });
   } else {
-    // Normal pipeline execution (no batch-filter)
+    // Normal pipeline execution (no batch-search)
     const commands = branchSteps.map((step, i) => {
       let params = serializeStepParams(step);
 

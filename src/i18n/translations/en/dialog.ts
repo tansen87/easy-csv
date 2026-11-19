@@ -306,7 +306,7 @@ export const enDialog = {
   exprKindOperator: "Operator",
   inputFormatParquet: "PARQUET",
   inputFormatDuckdb: "DUCKDB",
-  batchFilter: "Batch Filter",
+  batchFilter: "Batch Search",
   filterColumn: "Column",
   selectColumn: "Select column",
   text: "Text",

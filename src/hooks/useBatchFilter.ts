@@ -8,7 +8,7 @@ import { parseFrequencyValues } from "@/utils/batchFilterValues";
 /**
  * Batch filter execution. Every entry point takes a `RunContext`, so the loop
  * reads the run's own tab / delimiter / cancel flag instead of "the current
- * tab" - that is what lets two tabs batch-filter at once.
+ * tab" - that is what lets two tabs batch-search at once.
  * Logging goes through `ctx.log`, which tags every line with the run's tab.
  */
 export function useBatchFilter() {

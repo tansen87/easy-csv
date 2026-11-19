@@ -142,7 +142,7 @@ export interface WindowDraft {
 }
 
 export interface BatchFilterDraft {
-  kind: "batch-filter";
+  kind: "batch-search";
   params: Record<string, any>;
 }
 

@@ -73,7 +73,7 @@ export type CommandDialogType =
   | "run"
   | "eval"
   | "output"
-  | "batch-filter"
+  | "batch-search"
   | "batch-from"
   | "batch-to"
   | "pinyin"
@@ -159,7 +159,7 @@ export const COMMAND_LABELS: Record<CommandDialogType, string> = {
   run: "Run",
   eval: "Eval",
   output: "Output",
-  "batch-filter": "Batch Filter",
+  "batch-search": "Batch Search",
   "batch-from": "Batch From",
   "batch-to": "Batch To",
   pinyin: "Pinyin",
@@ -206,7 +206,7 @@ export type QuickActionKind =
   | "slice"
   | "pad"
   | "window"
-  | "batch-filter";
+  | "batch-search";
 
 /** Everything the table context menu knows when a quick action is opened. */
 export interface QuickActionRequest {

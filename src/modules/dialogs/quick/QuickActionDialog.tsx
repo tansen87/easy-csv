@@ -34,7 +34,7 @@ export function QuickActionDialog(props: QuickFormProps) {
       return <PadQuickForm {...props} />;
     case "window":
       return <WindowQuickForm {...props} />;
-    case "batch-filter":
+    case "batch-search":
       return <BatchFilterQuickForm {...props} />;
     default:
       return null;

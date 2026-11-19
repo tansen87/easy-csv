@@ -1,9 +1,9 @@
-# batch-filter
+# batch-search
 
 Purpose: search for multiple values and output separate files
 
 Parameters:
-- column: Column to filter on (required)
+- column: Column to search on (required)
 - filter-type: Filter type: text or number [text|number] (required)
 - text-operator: Text filter operator [equals|not_equals|starts_with|not_starts_with|ends_with|not_ends_with|contains|not_contains|regex|is_null|is_not_null]
 - number-operator: Number filter operator [equals|not_equals|greater_than|less_than|greater_or_equal|less_or_equal]
@@ -14,4 +14,4 @@ Parameters:
 - output-dir: Custom output directory (empty = same as source file)
 
 Examples:
-- Split file into multiple files by city column values: batch-filter --column city
+- Split file into multiple files by city column values: batch-search --column city

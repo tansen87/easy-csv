@@ -19,7 +19,7 @@ Examples:
 
 ---
 
-# batch-filter
+# batch-search
 
 Purpose: search for multiple values and output separate files
 
@@ -35,7 +35,7 @@ Parameters:
 - output-dir: Custom output directory (empty = same as source file)
 
 Examples:
-- Split file into multiple files by city column values: batch-filter --column city
+- Split file into multiple files by city column values: batch-search --column city
 
 ---
 

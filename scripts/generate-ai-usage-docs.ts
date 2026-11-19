@@ -172,8 +172,8 @@ const EXAMPLES: Record<string, string> = {
     "Inner join two files on id: join id a.csv b.csv\nLeft join: join --left id a.csv b.csv",
   pivot:
     "Pivot product column into columns, grouped by category, value = sum of sales: pivot product 'sales.sum()' -g category",
-  "batch-filter":
-    "Split file into multiple files by city column values: batch-filter --column city",
+  "batch-search":
+    "Split file into multiple files by city column values: batch-search --column city",
   window: "Add rank column, ranked by score descending: window 'score.rank()'",
   sample: "Randomly sample 100 rows: sample 100",
   explode: "Explode tags column by | separator: explode tags",

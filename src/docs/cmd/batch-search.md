@@ -1,14 +1,14 @@
-# batch-filter
+# batch-search
 
 ```txt
-Batch filter: search for multiple values and output separate files.
+Batch search: search for multiple values and output separate files.
 
 This command splits a CSV file into multiple output files based on column values.
 For each unique value (or manually specified value), it creates a separate CSV file
 containing only the rows that match that value.
 
-batch-filter options:
-    --column <column>          Column to filter on (required).
+batch-search options:
+    --column <column>          Column to search on (required).
     --filter-type <type>       Filter type: "text" or "number" (required).
                                [default: text]
     --text-operator <op>       Text filter operator. One of: equals, not_equals,

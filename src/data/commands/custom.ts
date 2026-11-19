@@ -20,8 +20,8 @@ export const customCommands: XanCommand[] = [
     ],
   },
   {
-    id: "batch-filter",
-    name: "batch-filter",
+    id: "batch-search",
+    name: "batch-search",
     description: "search for multiple values and output separate files",
     descriptionCn: "搜索多个值并输出单独文件",
     category: "Batch method",

@@ -985,7 +985,7 @@ describe("All command IDs are defined", () => {
     "range",
     "run",
     "eval",
-    "batch-filter",
+    "batch-search",
     "batch-from",
     "batch-to",
   ];

@@ -147,7 +147,7 @@ export const COMMAND_FORMS: Record<
 
   // Custom method
   output: OutputForm,
-  "batch-filter": BatchFilterForm,
+  "batch-search": BatchFilterForm,
   "batch-from": BatchFromForm,
   "batch-to": BatchToForm,
 

@@ -397,9 +397,9 @@ export function buildQuickCommand(
       return buildPad(draft, labels);
     case "window":
       return buildWindow(draft, labels);
-    case "batch-filter":
+    case "batch-search":
       return {
-        type: "batch-filter",
+        type: "batch-search",
         params: draft.params,
         alias: labels.batchFilter,
       };

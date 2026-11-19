@@ -230,7 +230,7 @@ export function ContextMenu({
         className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
         onClick={(e) => {
           e.stopPropagation();
-          emit("batch-filter");
+          emit("batch-search");
         }}
       >
         <FunnelPlus className="h-4 w-4 text-muted-foreground" />

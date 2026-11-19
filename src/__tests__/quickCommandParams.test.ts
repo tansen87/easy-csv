@@ -303,7 +303,7 @@ describe("buildQuickCommand · slice / pad", () => {
   });
 });
 
-describe("buildQuickCommand · pivot / window / batch-filter", () => {
+describe("buildQuickCommand · pivot / window / batch-search", () => {
   it("picks agg/groupby/pivot from the selections", () => {
     const values = [{ column: "amount", aggregation: "sum" }];
 
@@ -370,14 +370,14 @@ describe("buildQuickCommand · pivot / window / batch-filter", () => {
     });
   });
 
-  it("passes batch-filter params through", () => {
+  it("passes batch-search params through", () => {
     expect(
       buildQuickCommand(
-        { kind: "batch-filter", params: { column: "name" } },
+        { kind: "batch-search", params: { column: "name" } },
         LABELS,
       ),
     ).toEqual({
-      type: "batch-filter",
+      type: "batch-search",
       params: { column: "name" },
       alias: "Batch Filter",
     });

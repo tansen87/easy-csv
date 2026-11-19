@@ -117,7 +117,7 @@ export type DelimiterSource = "detected" | "forced" | "fallback" | "global";
 // --- batch filter -----------------------------------------------------------
 //
 // Moved here from the deleted `BatchFilterDialog`. It is the
-// runtime configuration of the `batch-filter` command — built by
+// runtime configuration of the `batch-search` command — built by
 // MainMenuHooks from the command's parameters and consumed by
 // useBatchFilter — so it belongs with the command types, not with a dialog.
 

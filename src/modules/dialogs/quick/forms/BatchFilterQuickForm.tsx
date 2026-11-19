@@ -24,7 +24,7 @@ export function BatchFilterQuickForm({
     column: "",
   });
 
-  const draft: BatchFilterDraft = { kind: "batch-filter", params };
+  const draft: BatchFilterDraft = { kind: "batch-search", params };
   const result = params.column ? buildQuickCommand(draft, labels) : null;
 
   return (

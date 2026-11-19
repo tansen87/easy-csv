@@ -290,7 +290,7 @@ export const zhDialog = {
   exprKindOperator: "运算符",
   inputFormatParquet: "PARQUET",
   inputFormatDuckdb: "DUCKDB",
-  batchFilter: "批量筛选",
+  batchFilter: "批量搜索",
   filterColumn: "列",
   selectColumn: "选择列",
   text: "文本",

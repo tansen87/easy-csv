@@ -287,7 +287,7 @@ const INTENT_ROUTES: IntentRoute[] = [
     intent: "批量处理",
     keywords: ["批量", "多文件", "批次"],
     synonyms: ["batch", "multi", "批量处理", "批处理", "多个文件"],
-    commands: ["batch-filter", "batch-from", "batch-to"],
+    commands: ["batch-search", "batch-from", "batch-to"],
   },
   {
     intent: "抽取/爬取",
@@ -604,7 +604,7 @@ const CLARIFICATION_PATTERNS: ClarificationPattern[] = [
     question: "您是想按行拆分,还是按条件拆分为多个文件?",
     options: [
       "按行拆分为多个文件(split)",
-      "按条件拆分为多个文件(batch-filter)",
+      "按条件拆分为多个文件(batch-search)",
     ],
   },
   {

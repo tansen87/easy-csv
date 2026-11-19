@@ -1,13 +1,14 @@
 <!-- Generated -->
-# batch-filter
+# batch-search
 
 ```txt
-批量过滤: 搜索多个值并输出单独文件.
+批量搜索: 搜索多个值并输出单独文件.
 
-此命令根据列值将CSV文件拆分为多个输出文件.对于每个唯一值(或手动指定的值),它会创建一个单独的CSV文件,仅包含匹配该值的行.
+此命令根据列值将CSV文件拆分为多个输出文件.对于每个唯一值(或手动指定的值),
+它会创建一个单独的CSV文件,仅包含匹配该值的行.
 
-batch-filter options:
-    --column <column>          要过滤的列(必填).
+batch-search options:
+    --column <column>          要搜索的列(必填).
     --filter-type <type>       过滤类型: "text" 或 "number"(必填).
                                [default: text]
     --text-operator <op>       文本过滤运算符.可选: equals, not_equals,
