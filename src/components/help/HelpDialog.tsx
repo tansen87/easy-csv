@@ -240,7 +240,7 @@ export const HelpDialog: React.FC<HelpDialogProps> = ({
         </div>
 
         <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
-          <div className="mx-auto max-w-[660px] px-4 py-6">
+          <div className="mx-auto max-w-[960px] px-6 py-6">
             <HelpMarkdown
               content={content}
               searchQuery={searchQuery}
