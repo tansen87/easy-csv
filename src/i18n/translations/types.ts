@@ -372,6 +372,14 @@ export interface Translations {
   saved: string;
   unsaved: string;
   rightClickCutMode: string;
+  leftToolSelect: string;
+  leftToolPan: string;
+  rightToolSelect: string;
+  rightToolPan: string;
+  leftClickCutMode: string;
+  leftClickMenuMode: string;
+  swapMouseButtons: string;
+  restoreMouseButtons: string;
   rightClickMenuMode: string;
   saveIntermediateAsInput: string;
   mouseLeft: string;

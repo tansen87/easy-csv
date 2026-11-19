@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 060 · 画布左右键交换</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --edge:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+    --canvas-ink:oklch(0.3 0.006 80);
+    --canvas-ink-soft:oklch(0.2 0.01 80 / 7%);
+
+    --danger:oklch(0.55 0.17 27);
+    --danger-soft:color-mix(in oklab,var(--danger) 10%,transparent);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --mark:oklch(0.56 0.17 27);
+  }
+  .dark{
+    color-scheme:dark;
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --edge:oklch(1 0 0 / 24%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 18%,transparent);
+    --canvas-ink:oklch(0.92 0.005 85);
+    --canvas-ink-soft:oklch(1 0 0 / 8%);
+    --danger:oklch(0.7 0.14 27);
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.12 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-card:none;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased;transition:background-color .18s ease,color .18s ease}
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme-toggle{position:absolute;right:0;top:2px;height:26px;padding:0 10px;border-radius:6px;
+                border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+                font-family:var(--mono);font-size:10.5px;cursor:pointer}
+  .theme-toggle:hover{color:var(--fg)}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+  .state-note{font-size:10.5px;color:var(--muted-fg);line-height:1.7;padding:10px 2px 0}
+  .state-note b{color:var(--fg);font-weight:500}
+
+  /* ── 画布 ─────────────────────────────────────────────────────── */
+  .stage{position:relative;width:1200px;height:400px;overflow:hidden;border:1px solid var(--border);
+         border-radius:8px;background-color:var(--canvas);
+         background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+         background-size:22px 22px;background-position:11px 11px}
+  .node{position:absolute;width:186px;padding:11px;border:1px solid var(--border);border-radius:8px;
+        background:var(--paper);box-shadow:var(--shadow-card)}
+  .node .t{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .node .c{margin-top:5px;font-family:var(--mono);font-size:9px;color:var(--muted-fg);
+           background:var(--muted);border:1px solid var(--border-soft);border-radius:3px;
+           padding:1px 4px;display:inline-block}
+  .link{position:absolute;height:1px;background:var(--border)}
+
+  /* 左栏（现状） */
+  .rail{position:absolute;left:12px;top:50%;transform:translateY(-50%);z-index:3;
+        display:flex;flex-direction:column;gap:2px;padding:3px;border:1px solid var(--border);
+        border-radius:9px;background:var(--card);box-shadow:var(--shadow-card)}
+  .rail .b{width:26px;height:26px;display:grid;place-items:center;border:0;border-radius:5px;background:transparent;
+           color:var(--muted-fg)}
+  .rail .b svg{width:14px;height:14px;stroke-width:1.5;fill:none;stroke:currentColor}
+  .rail .b:hover{background:var(--canvas-ink-soft);color:var(--fg)}
+  .rail .b.on{background:var(--canvas-ink-soft);color:var(--canvas-ink)}
+  .rail .sep{height:1px;width:18px;margin:2px auto;background:var(--border)}
+
+  /* Tooltip（现有 popover 面） */
+  .tip{position:absolute;display:flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;
+       border:1px solid var(--border);background:var(--card);color:var(--fg);
+       font-size:11px;font-weight:500;white-space:nowrap;
+       box-shadow:0 4px 12px -6px oklch(0.2 0.02 80 / 24%);z-index:5}
+  .tip.warn{color:var(--danger)}
+
+  /* 左栏（改后：三格 + 分隔） */
+  .rail.wide{position:relative;left:auto;top:auto;transform:none}
+  .zoom-wrap{display:flex;align-items:flex-start;gap:34px;padding:26px 30px;border:1px solid var(--border);
+             border-radius:8px;background:var(--card)}
+  .zoom{display:flex;align-items:center;gap:14px}
+  .zoom-label{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-top:8px;text-align:center}
+  .tip-stack{display:flex;flex-direction:column;gap:8px}
+  .tip-stack .row{display:flex;align-items:center;gap:10px}
+  .tip-stack .k{width:58px;font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+
+  /* 手势矩阵 */
+  table.matrix{width:100%;border-collapse:collapse;background:var(--card);
+               border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:11px}
+  table.matrix th{text-align:left;font-weight:500;color:var(--muted-fg);font-size:10px;
+                  padding:9px 12px;border-bottom:1px solid var(--border);
+                  background:color-mix(in oklab,var(--muted) 45%,transparent)}
+  table.matrix td{padding:9px 12px;border-bottom:1px solid var(--border-soft);color:var(--muted-fg);line-height:1.6}
+  table.matrix tr:last-child td{border-bottom:0}
+  table.matrix td:first-child{color:var(--fg);font-weight:500;white-space:nowrap}
+  table.matrix th:nth-child(2),table.matrix th:nth-child(3),
+  table.matrix td:nth-child(2),table.matrix td:nth-child(3){width:36%}
+
+  .key{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;
+       border:1px solid var(--border);border-radius:4px;background:var(--bg);font-family:var(--mono);
+       font-size:10px;color:var(--fg);vertical-align:middle}
+  .swapped{color:var(--brand);font-weight:500}
+
+  /* 演示：交换后的画布 */
+  .selrect{position:absolute;border:1px dashed var(--brand);background:var(--brand-soft);
+           border-radius:2px;pointer-events:none}
+  .cutline{position:absolute;height:2px;background:var(--danger);border-radius:1px;
+           transform-origin:0 50%;pointer-events:none}
+  .cursor-l{position:absolute;width:0;height:0;border:0;z-index:4}
+  .cursor-l::before{content:"";position:absolute;left:-5px;top:-1px;width:10px;height:14px;
+                    background:var(--fg);clip-path:polygon(0 0,0 100%,34% 70%,52% 100%,64% 94%,46% 64%,100% 64%)}
+  .cursor-r{position:absolute;width:13px;height:13px;border-radius:50%;border:1.5px solid var(--brand);
+            background:var(--brand-soft);z-index:4}
+
+  /* toast */
+  .toast{position:absolute;right:16px;bottom:16px;display:flex;align-items:center;gap:8px;
+         height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--border);
+         background:var(--card);box-shadow:var(--shadow-card);font-size:11px;color:var(--fg);z-index:5}
+  .toast .dot{width:6px;height:6px;border-radius:50%;background:var(--brand)}
+
+  /* 状态卡 */
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .state-card{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:16px 18px;
+              display:flex;align-items:center;gap:22px}
+  .state-card .body{min-width:0}
+  .state-card .tag{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);margin-bottom:8px}
+  .state-card .name{font-size:12px;font-weight:500;margin-bottom:4px}
+  .state-card .desc{font-size:10.5px;line-height:1.65;color:var(--muted-fg)}
+  .state-card .desc b{color:var(--fg);font-weight:500}
+
+  .callout{display:flex;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;
+           background:var(--card);font-size:11px;line-height:1.7;color:var(--muted-fg);margin-top:12px}
+  .callout b{color:var(--fg);font-weight:500}
+  .callout .mk{width:18px;height:18px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
+               font-family:var(--mono);font-size:9.5px;display:grid;place-items:center;flex:none;margin-top:1px}
+
+  table.spec{width:100%;border-collapse:collapse;background:var(--card);
+             border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:11px}
+  table.spec th{text-align:left;font-weight:500;color:var(--muted-fg);font-size:10px;
+                padding:8px 12px;border-bottom:1px solid var(--border);background:color-mix(in oklab,var(--muted) 45%,transparent)}
+  table.spec td{padding:8px 12px;border-bottom:1px solid var(--border-soft);color:var(--muted-fg);line-height:1.6;vertical-align:top}
+  table.spec tr:last-child td{border-bottom:0}
+  table.spec td:first-child{color:var(--fg);font-weight:500;white-space:nowrap}
+  table.spec code{font-size:10.5px}
+
+  .mark{position:absolute;width:16px;height:16px;border-radius:50%;background:var(--mark);color:#fff;
+        font-family:var(--mono);font-size:9.5px;line-height:16px;text-align:center;font-weight:500;z-index:6}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">PROTOTYPE 060 · CANVAS MOUSE SWAP</div>
+    <h1>画布左右键交换</h1>
+    <p>画布左侧的两格工具条管着“右键划线 / 右键菜单”。再加一格左右键交换：开启后划线、菜单、框选、平移整体换到另一只键，左栏提示同步改写，并记住选择。</p>
+    <button class="theme-toggle" id="themeToggle" type="button">DARK</button>
+  </div>
+
+  <dl class="direction">
+    <div><dt>PRODUCT</dt><dd>在画布上连步骤、划线删边、右键出菜单的 CSV 管道工具</dd></div>
+    <div><dt>CHARACTER</dt><dd>顺手、可预期、写在工具条上</dd></div>
+    <div><dt>WORLD</dt><dd>桌面画布与鼠标手势</dd></div>
+    <div><dt>MOMENTS</dt><dd>工具条第三格的交换开关；提示文案随开关改写</dd></div>
+    <div><dt>SIGNATURE</dt><dd>所有提示都以“左键/右键”开头，状态永远写在按钮旁</dd></div>
+  </dl>
+
+  <!-- 01 现状 -->
+  <section class="frame">
+    <div class="cap"><b>01 · 现状</b><span>两格工具条只回答“右键做什么”，不回答“能不能换手”</span><span class="file">FlowPanel.tsx · 左右键工具条</span></div>
+    <div class="stage">
+      <div class="node" style="left:150px;top:120px"><div class="t">读取 orders_2026.csv</div><div class="c">csv · 250,000 行</div></div>
+      <div class="node" style="left:430px;top:120px"><div class="t">清洗空值</div><div class="c">fill</div></div>
+      <div class="node" style="left:710px;top:120px"><div class="t">按城市汇总</div><div class="c">groupby</div></div>
+      <div class="link" style="left:338px;top:162px;width:90px"></div>
+      <div class="link" style="left:618px;top:162px;width:90px"></div>
+
+      <div class="rail" style="top:186px">
+        <button class="b on" type="button" aria-label="右键: 划线">
+          <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+        </button>
+        <button class="b" type="button" aria-label="右键: 菜单">
+          <svg viewBox="0 0 24 24"><path d="M9 9l5 12 1.8-5.2L21 14z"/><path d="M7.2 2.2v3M2.2 7.2h3M4 4l2 2"/></svg>
+        </button>
+      </div>
+      <div class="tip" style="left:58px;top:174px">右键: 划线</div>
+      <span class="mark" style="left:268px;top:96px">1</span>
+    </div>
+    <p class="state-note"><b>问题</b>：习惯左键操作、或用触控板的人，划线/菜单都要靠右键；工具条没有换手的入口，只能去系统里改鼠标主键，影响整个系统。</p>
+  </section>
+
+  <!-- 02 方案 -->
+  <section class="frame">
+    <div class="cap"><b>02 · 方案</b><span>工具条加第三格；开启后两格提示从“右键”改成“左键”</span><span class="file">FlowPanel.tsx</span></div>
+    <div class="zoom-wrap">
+      <div>
+        <div class="zoom">
+          <div class="rail wide">
+            <button class="b on" type="button">
+              <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+            </button>
+            <button class="b" type="button">
+              <svg viewBox="0 0 24 24"><path d="M9 9l5 12 1.8-5.2L21 14z"/><path d="M7.2 2.2v3M2.2 7.2h3M4 4l2 2"/></svg>
+            </button>
+            <span class="sep"></span>
+            <button class="b" type="button" aria-pressed="false">
+              <svg viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+            </button>
+          </div>
+          <div class="tip-stack">
+            <div class="row"><span class="k">第一格</span><span class="tip" style="position:relative">右键: 划线</span></div>
+            <div class="row"><span class="k">第二格</span><span class="tip" style="position:relative">右键: 菜单</span></div>
+            <div class="row"><span class="k">第三格</span><span class="tip" style="position:relative">交换左右键</span></div>
+          </div>
+        </div>
+        <div class="zoom-label">默认 · 第三格未开启</div>
+      </div>
+
+      <div>
+        <div class="zoom">
+          <div class="rail wide">
+            <button class="b on" type="button">
+              <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+            </button>
+            <button class="b" type="button">
+              <svg viewBox="0 0 24 24"><path d="M9 9l5 12 1.8-5.2L21 14z"/><path d="M7.2 2.2v3M2.2 7.2h3M4 4l2 2"/></svg>
+            </button>
+            <span class="sep"></span>
+            <button class="b on" type="button" aria-pressed="true">
+              <svg viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+            </button>
+          </div>
+          <div class="tip-stack">
+            <div class="row"><span class="k">第一格</span><span class="tip" style="position:relative">左键: 划线</span></div>
+            <div class="row"><span class="k">第二格</span><span class="tip" style="position:relative">左键: 菜单</span></div>
+            <div class="row"><span class="k">第三格</span><span class="tip" style="position:relative">恢复默认左右键</span></div>
+          </div>
+        </div>
+        <div class="zoom-label">已交换 · 第三格高亮</div>
+      </div>
+
+      <div style="max-width:330px;margin-left:auto">
+        <div class="state-card" style="flex-direction:column;align-items:stretch;gap:0">
+          <div class="tag">开启反馈</div>
+          <div class="name">交换后立即生效</div>
+          <div class="desc">工具条高亮 + 两格提示改写，不再弹额外说明；画布底部状态栏保持原样。</div>
+        </div>
+        <div class="toast" style="position:relative;right:auto;bottom:auto;margin-top:10px;width:max-content">
+          <span class="dot"></span>已交换左右键 · 左键划线，右键框选
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 手势矩阵 -->
+  <section class="frame">
+    <div class="cap"><b>03 · 手势对照</b><span>交换只动“哪只键”，动作本身不变</span><span class="file">FlowPanel · useCutTool</span></div>
+    <table class="matrix">
+      <thead>
+        <tr><th>画布操作</th><th>默认</th><th>已交换</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>空白拖拽</td><td><span class="key">左</span> 框选</td><td class="swapped"><span class="key">右</span> 框选</td></tr>
+        <tr><td>空白拖拽 · 划线模式</td><td><span class="key">右</span> 划线删边 / 连线</td><td class="swapped"><span class="key">左</span> 划线删边 / 连线</td></tr>
+        <tr><td>空白单击 · 菜单模式</td><td><span class="key">右</span> 打开菜单</td><td class="swapped"><span class="key">左</span> 打开菜单</td></tr>
+        <tr><td>节点拖拽</td><td><span class="key">左</span> 移动节点</td><td class="swapped"><span class="key">右</span> 移动节点</td></tr>
+        <tr><td>节点拖拽 · 划线模式</td><td><span class="key">右</span> 从节点拉线</td><td class="swapped"><span class="key">左</span> 从节点拉线</td></tr>
+        <tr><td>平移画布</td><td><span class="key">中</span> 或 <span class="key">Space</span>+<span class="key">左</span></td><td>不变；按住 Space 时不触发划线/菜单</td></tr>
+        <tr><td>缩放</td><td>滚轮</td><td>不变</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      <span class="mk">i</span>
+      <span><b>保留两个逃生口</b>：中键拖拽与 <code>Space</code>+左键始终平移；交换后右键框选时，系统右键菜单继续在面板上屏蔽，不会弹出浏览器/系统菜单。</span>
+    </div>
+  </section>
+
+  <!-- 04 交换后的画布 -->
+  <section class="frame">
+    <div class="cap"><b>04 · 交换后的画布</b><span>左键划线、右键框选，提示与手势一致</span><span class="file">FlowPanel · 画布</span></div>
+    <div class="stage" style="height:360px">
+      <div class="node" style="left:170px;top:96px"><div class="t">读取 orders_2026.csv</div><div class="c">csv · 250,000 行</div></div>
+      <div class="node" style="left:450px;top:96px"><div class="t">清洗空值</div><div class="c">fill</div></div>
+      <div class="node" style="left:730px;top:96px"><div class="t">按城市汇总</div><div class="c">groupby</div></div>
+      <div class="link" style="left:358px;top:138px;width:88px"></div>
+      <div class="link" style="left:638px;top:138px;width:88px"></div>
+
+      <div class="rail" style="top:196px">
+        <button class="b on" type="button" aria-label="左键: 划线">
+          <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+        </button>
+        <button class="b" type="button" aria-label="左键: 菜单">
+          <svg viewBox="0 0 24 24"><path d="M9 9l5 12 1.8-5.2L21 14z"/><path d="M7.2 2.2v3M2.2 7.2h3M4 4l2 2"/></svg>
+        </button>
+        <span class="sep"></span>
+        <button class="b on" type="button" aria-pressed="true">
+          <svg viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+        </button>
+      </div>
+      <div class="tip" style="left:56px;top:184px">左键: 划线</div>
+
+      <div class="cutline" style="left:400px;top:238px;width:270px;transform:rotate(-7deg)"></div>
+      <div class="cursor-l" style="left:400px;top:238px"></div>
+      <div class="selrect" style="left:640px;top:210px;width:250px;height:96px"></div>
+      <div class="cursor-r" style="left:888px;top:304px"></div>
+
+      <div class="toast"><span class="dot"></span>已交换左右键 · 左键划线，右键框选</div>
+      <span class="mark" style="left:300px;top:74px">1</span>
+    </div>
+    <p class="state-note">左键从左向右划出删除线；右键拖出框选区域。两者互斥，互不抢占。<b>点击节点仍是选中</b>，只有在按住并移动后才落入移动/连线。</p>
+  </section>
+
+  <!-- 05 规范 -->
+  <section class="frame">
+    <div class="cap"><b>05 · 实现约定</b><span>一个布尔值，贯穿画布的四个手势</span><span class="file">FlowPanel.tsx · settings</span></div>
+    <table class="spec">
+      <thead><tr><th>项</th><th>约定</th></tr></thead>
+      <tbody>
+        <tr><td>开关</td><td>左栏第三格，<code>ArrowLeftRight</code> 14px/1.5，26×26；开启时与两格模式按钮同一高亮，<code>aria-pressed</code> 同步。</td></tr>
+        <tr><td>状态</td><td>布尔值 <code>swapMouseButtons</code>，存本地设置，默认关闭；重启后保持。</td></tr>
+        <tr><td>提示</td><td>两格模式按钮的 tooltip 由 <code>rightClick*</code> 切换为 <code>leftClick*</code>；第三格在开启后改为“恢复默认左右键”。</td></tr>
+        <tr><td>手势</td><td>划线/菜单/框选/节点移动四项按 03 的矩阵互换；中键与 <code>Space</code> 平移、滚轮缩放不变。</td></tr>
+        <tr><td>菜单</td><td>两种状态下都在画布面板上 <code>preventDefault</code>，交换后右键只负责框选，不弹系统菜单。</td></tr>
+        <tr><td>取消</td><td>划线中途按 <code>Esc</code> 取消；发起键按住移动、松开结束，另一只键不参与划线。</td></tr>
+        <tr><td>文案</td><td>新增 i18n：<code>swapMouseButtons</code> / <code>restoreMouseButtons</code> / <code>leftClickCutMode</code> / <code>leftClickMenuMode</code>，中英文同步。</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+
+<script>
+  const toggle = document.getElementById('themeToggle');
+  toggle.addEventListener('click', () => {
+    const dark = document.documentElement.classList.toggle('dark');
+    toggle.textContent = dark ? 'LIGHT' : 'DARK';
+  });
+</script>
+</body>
+</html>

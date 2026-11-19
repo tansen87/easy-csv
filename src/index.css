@@ -1046,3 +1046,11 @@ html[data-window-maximized="true"] .window-resize-handle {
   width: 1px;
   background-color: color-mix(in oklab, var(--foreground) 14%, transparent);
 }
+
+/* Left tool = pan: the pane shows a grab cursor instead of the select arrow. */
+.canvas-pan-tool .react-flow__pane.draggable {
+  cursor: grab;
+}
+.canvas-pan-tool .react-flow__pane.dragging {
+  cursor: grabbing;
+}

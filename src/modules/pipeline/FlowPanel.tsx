@@ -48,10 +48,36 @@ import {
   Scissors,
   MousePointerClick,
   FileDown,
+  BoxSelect,
+  Hand,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Button } from "@/components/ui/Button";
 import { useLanguage } from "@/i18n";
+
+/** Left-button tool: box select or pan, persisted across restarts. */
+type CanvasLeftTool = "select" | "pan";
+const LEFT_TOOL_STORAGE_KEY = "easy-csv-canvas-left-tool";
+/** Swap left/right mouse buttons for every canvas gesture. */
+const SWAP_MOUSE_STORAGE_KEY = "easy-csv-canvas-swap-buttons";
+
+/** Drag captured on the right button while the buttons are swapped. */
+type SwapDragState =
+  | {
+      kind: "node";
+      nodeId: string;
+      startClientX: number;
+      startClientY: number;
+      startPosition: { x: number; y: number };
+      moved: boolean;
+    }
+  | {
+      kind: "select";
+      startClientX: number;
+      startClientY: number;
+      additive: boolean;
+    };
 
 function formatRelativeTime(
   date: Date,
@@ -207,6 +233,50 @@ export function FlowPanel({
   // Right-click interaction mode: "cut" keeps the cut-to-delete / connect
   // gesture; "menu" opens the canvas context menu instead (paste, more later).
   const [rightClickMode, setRightClickMode] = useState<"cut" | "menu">("cut");
+
+  // Left-button tool: box select (default, matches the old behaviour) or pan
+  // the view. Persisted so the canvas keeps the chosen hand across restarts.
+  const [leftTool, setLeftTool] = useState<CanvasLeftTool>(() => {
+    try {
+      return localStorage.getItem(LEFT_TOOL_STORAGE_KEY) === "pan"
+        ? "pan"
+        : "select";
+    } catch {
+      return "select";
+    }
+  });
+  const chooseLeftTool = useCallback((tool: CanvasLeftTool) => {
+    setLeftTool(tool);
+    try {
+      localStorage.setItem(LEFT_TOOL_STORAGE_KEY, tool);
+    } catch {
+      // Private mode / quota errors fall back to session-only.
+    }
+  }, []);
+
+  // Swap left/right buttons: left handles the right-click mode, right handles
+  // the left tool. Persisted with the tool choice.
+  const [swapMouseButtons, setSwapMouseButtons] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(SWAP_MOUSE_STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleSwapMouseButtons = useCallback(() => {
+    setSwapMouseButtons((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SWAP_MOUSE_STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        // Private mode / quota errors fall back to session-only.
+      }
+      return next;
+    });
+    setCanvasMenu(null);
+    setContextMenu(null);
+    setTableContextMenu(null);
+  }, []);
   const [canvasMenu, setCanvasMenu] = useState<{
     x: number;
     y: number;
@@ -215,6 +285,9 @@ export function FlowPanel({
 
   const handleContextMenu = useCallback(
     (stepId: string, x: number, y: number) => {
+      // Swapped buttons: the right button drives the left tool, so node
+      // context menus must not open from it.
+      if (swapMouseButtons) return;
       // In menu mode, right-clicking a step node opens the canvas context menu
       // (with that step under the cursor). Nodes call this via their own
       // onContextMenu which stops propagation, so we route here explicitly.
@@ -224,7 +297,7 @@ export function FlowPanel({
         setContextMenu({ x, y, stepId });
       }
     },
-    [rightClickMode],
+    [rightClickMode, swapMouseButtons],
   );
 
   const [tableContextMenu, setTableContextMenu] = useState<{
@@ -239,9 +312,10 @@ export function FlowPanel({
 
   const handleTableContextMenu = useCallback(
     (col: number, x: number, y: number) => {
+      if (swapMouseButtons) return;
       setTableContextMenu({ x, y, col });
     },
-    [],
+    [swapMouseButtons],
   );
 
   const handleTableRename = useCallback(
@@ -257,6 +331,10 @@ export function FlowPanel({
 
   const [nodes, setNodes] = useNodesState([]);
   const [edges, setEdges] = useEdgesState([]);
+  // Latest nodes for the swapped-button drag handlers, which read state from
+  // event callbacks rather than from the render closure.
+  const nodesRef = useRef<Node[]>(nodes);
+  nodesRef.current = nodes;
 
   // Cutting function status (line delay 200ms), must read current state
   // instead of old snapshot when cutting in succession,
@@ -406,92 +484,10 @@ export function FlowPanel({
     handlePointerChange,
   );
 
-  // Right-click - start connecting (on a step node) or cutting (blank/table)
-  const handleCutStart = useCallback(
-    (e: React.MouseEvent) => {
-      // In "menu" mode right-click is reserved for the context menu.
-      if (rightClickMode !== "cut") return;
-      if (e.button === 2) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const clickedNode = getNodeAtPosition(e.clientX, e.clientY);
-        if (clickedNode && clickedNode !== "table-node") {
-          startConnect(clickedNode);
-        } else {
-          startCut(e);
-        }
-      }
-    },
-    [rightClickMode, getNodeAtPosition, startConnect, startCut],
-  );
-
-  // Right-click move - connect or cut mode
-  const handleCutMove = useCallback(
-    (e: React.MouseEvent) => {
-      if (isConnecting) {
-        moveConnect(e);
-      } else if (isCutting && !isClosingCut) {
-        moveCut(e);
-      }
-    },
-    [isConnecting, isCutting, isClosingCut, moveConnect, moveCut],
-  );
-
-  // Right-click release - complete connecting or cutting
-  const handleCutEnd = useCallback(
-    (e: React.MouseEvent) => {
-      if (isConnecting) {
-        e.preventDefault();
-        e.stopPropagation();
-        finishConnect();
-      } else if (isCutting) {
-        e.preventDefault();
-        e.stopPropagation();
-        finishCut();
-      }
-    },
-    [isConnecting, isCutting, finishConnect, finishCut],
-  );
-
-  // Prevent default right-click menu on panel
-  const handlePanelContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      if (rightClickMode === "menu") {
-        const nodeId = getNodeAtPosition(e.clientX, e.clientY);
-        setCanvasMenu({
-          x: e.clientX,
-          y: e.clientY,
-          stepId: nodeId && nodeId !== "table-node" ? nodeId : null,
-        });
-      }
-    },
-    [rightClickMode, getNodeAtPosition],
-  );
-
-  useEffect(() => {
-    const handleClickOutside = () => {
-      closeContextMenu();
-      closeTableContextMenu();
-    };
-    if (contextMenu || tableContextMenu) {
-      document.addEventListener("click", handleClickOutside);
-      return () => document.removeEventListener("click", handleClickOutside);
-    }
-  }, [contextMenu, tableContextMenu, closeContextMenu, closeTableContextMenu]);
-
-  const onNodesChange = useCallback(
-    (changes: NodeChange[]) => {
-      setNodes((nds) => applyNodeChanges(changes, nds));
-    },
-    [setNodes],
-  );
-
-  const onNodeDragStop = useCallback(
-    (_event: React.MouseEvent, _node: Node, nodes: Node[]) => {
+  const persistNodePositions = useCallback(
+    (nodeList: Node[]) => {
       const positionMap = new Map<string, { x: number; y: number }>();
-      nodes.forEach((node) => {
+      nodeList.forEach((node) => {
         positionMap.set(node.id, node.position);
       });
 
@@ -511,6 +507,297 @@ export function FlowPanel({
       }
     },
     [steps, onStepsChange, onInputPositionChange],
+  );
+
+  const onNodeDragStop = useCallback(
+    (_event: React.MouseEvent, _node: Node, draggedNodes: Node[]) => {
+      persistNodePositions(draggedNodes);
+    },
+    [persistNodePositions],
+  );
+
+  // Swapped buttons: the right button drives the left tool. Capture before
+  // React Flow so a right-drag on a node moves it instead of panning.
+  const swapDragRef = useRef<SwapDragState | null>(null);
+  const [swapSelectRect, setSwapSelectRect] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
+
+  const handleSwapMouseDownCapture = useCallback(
+    (e: React.MouseEvent) => {
+      if (!swapMouseButtons || e.button !== 2 || spaceDown) return;
+      const clickedNode = getNodeAtPosition(e.clientX, e.clientY);
+      if (!clickedNode) {
+        // Pan tool: React Flow owns the right-drag pan.
+        if (leftTool !== "select") return;
+        const wrapper = reactFlowWrapper.current;
+        if (!wrapper) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = wrapper.getBoundingClientRect();
+        swapDragRef.current = {
+          kind: "select",
+          startClientX: e.clientX,
+          startClientY: e.clientY,
+          additive: e.shiftKey,
+        };
+        setSwapSelectRect({
+          left: e.clientX - rect.left,
+          top: e.clientY - rect.top,
+          width: 0,
+          height: 0,
+        });
+        return;
+      }
+
+      const node = nodesRef.current.find((n) => n.id === clickedNode);
+      if (!node) return;
+      e.preventDefault();
+      e.stopPropagation();
+      swapDragRef.current = {
+        kind: "node",
+        nodeId: clickedNode,
+        startClientX: e.clientX,
+        startClientY: e.clientY,
+        startPosition: { ...node.position },
+        moved: false,
+      };
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === clickedNode
+            ? { ...n, selected: true }
+            : e.shiftKey
+              ? n
+              : { ...n, selected: false },
+        ),
+      );
+      setSelectedNodeIds((prev) => {
+        const next = e.shiftKey ? new Set(prev) : new Set<string>();
+        if (clickedNode !== "table-node") next.add(clickedNode);
+        return next;
+      });
+    },
+    [
+      swapMouseButtons,
+      spaceDown,
+      leftTool,
+      getNodeAtPosition,
+      setNodes,
+      reactFlowWrapper,
+    ],
+  );
+
+  // Primary button - start connecting (on a step node), cutting (blank/table),
+  // or opening the menu when the buttons are swapped.
+  const handleCutStart = useCallback(
+    (e: React.MouseEvent) => {
+      if (spaceDown) return;
+      const primaryButton = swapMouseButtons ? 0 : 2;
+      if (e.button !== primaryButton) return;
+      // Normal menu mode: the contextmenu event opens the menu.
+      if (!swapMouseButtons && rightClickMode !== "cut") return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const clickedNode = getNodeAtPosition(e.clientX, e.clientY);
+      if (rightClickMode === "cut") {
+        if (clickedNode && clickedNode !== "table-node") {
+          startConnect(clickedNode);
+        } else {
+          startCut(e);
+        }
+      } else {
+        setCanvasMenu({
+          x: e.clientX,
+          y: e.clientY,
+          stepId:
+            clickedNode && clickedNode !== "table-node" ? clickedNode : null,
+        });
+      }
+    },
+    [
+      spaceDown,
+      swapMouseButtons,
+      rightClickMode,
+      getNodeAtPosition,
+      startConnect,
+      startCut,
+    ],
+  );
+
+  // Primary button move - swapped drags first, then connect / cut.
+  const handleCutMove = useCallback(
+    (e: React.MouseEvent) => {
+      const drag = swapDragRef.current;
+      if (drag) {
+        if (drag.kind === "select") {
+          const wrapper = reactFlowWrapper.current;
+          if (!wrapper) return;
+          const rect = wrapper.getBoundingClientRect();
+          setSwapSelectRect({
+            left: Math.min(drag.startClientX, e.clientX) - rect.left,
+            top: Math.min(drag.startClientY, e.clientY) - rect.top,
+            width: Math.abs(e.clientX - drag.startClientX),
+            height: Math.abs(e.clientY - drag.startClientY),
+          });
+          return;
+        }
+
+        const dx = e.clientX - drag.startClientX;
+        const dy = e.clientY - drag.startClientY;
+        if (!drag.moved && Math.hypot(dx, dy) < 3) return;
+        drag.moved = true;
+        const zoom = reactFlowInstance.current?.getZoom?.() ?? 1;
+        const position = {
+          x: drag.startPosition.x + dx / zoom,
+          y: drag.startPosition.y + dy / zoom,
+        };
+        setNodes((nds) =>
+          nds.map((n) => (n.id === drag.nodeId ? { ...n, position } : n)),
+        );
+        return;
+      }
+
+      if (isConnecting) {
+        moveConnect(e);
+      } else if (isCutting && !isClosingCut) {
+        moveCut(e);
+      }
+    },
+    [
+      isConnecting,
+      isCutting,
+      isClosingCut,
+      moveConnect,
+      moveCut,
+      setNodes,
+      reactFlowWrapper,
+    ],
+  );
+
+  // Primary button release - finish a swapped drag, connect, or cut.
+  const handleCutEnd = useCallback(
+    (e: React.MouseEvent) => {
+      const drag = swapDragRef.current;
+      if (drag) {
+        swapDragRef.current = null;
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (drag.kind === "select") {
+          const instance = reactFlowInstance.current;
+          if (instance) {
+            const topLeft = instance.screenToFlowPosition({
+              x: Math.min(drag.startClientX, e.clientX),
+              y: Math.min(drag.startClientY, e.clientY),
+            });
+            const bottomRight = instance.screenToFlowPosition({
+              x: Math.max(drag.startClientX, e.clientX),
+              y: Math.max(drag.startClientY, e.clientY),
+            });
+            const selected = new Set<string>(
+              drag.additive ? selectedNodeIds : [],
+            );
+            nodesRef.current.forEach((node) => {
+              const rect = getNodeRect(node);
+              if (
+                rect.x < bottomRight.x &&
+                rect.x + rect.width > topLeft.x &&
+                rect.y < bottomRight.y &&
+                rect.y + rect.height > topLeft.y
+              ) {
+                selected.add(node.id);
+              }
+            });
+            setNodes((nds) =>
+              nds.map((n) => ({ ...n, selected: selected.has(n.id) })),
+            );
+            setSelectedNodeIds(
+              new Set([...selected].filter((id) => id !== "table-node")),
+            );
+          }
+          setSwapSelectRect(null);
+          return;
+        }
+
+        if (drag.moved) {
+          const zoom = reactFlowInstance.current?.getZoom?.() ?? 1;
+          const position = {
+            x:
+              drag.startPosition.x +
+              (e.clientX - drag.startClientX) / zoom,
+            y:
+              drag.startPosition.y +
+              (e.clientY - drag.startClientY) / zoom,
+          };
+          const nextNodes = nodesRef.current.map((n) =>
+            n.id === drag.nodeId ? { ...n, position } : n,
+          );
+          setNodes(nextNodes);
+          persistNodePositions(nextNodes);
+        }
+        return;
+      }
+
+      if (isConnecting) {
+        e.preventDefault();
+        e.stopPropagation();
+        finishConnect();
+      } else if (isCutting) {
+        e.preventDefault();
+        e.stopPropagation();
+        finishCut();
+      }
+    },
+    [
+      isConnecting,
+      isCutting,
+      finishConnect,
+      finishCut,
+      selectedNodeIds,
+      getNodeRect,
+      setNodes,
+      persistNodePositions,
+      reactFlowInstance,
+    ],
+  );
+
+  // Prevent default right-click menu on panel
+  const handlePanelContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (swapMouseButtons) return;
+      if (rightClickMode === "menu") {
+        const nodeId = getNodeAtPosition(e.clientX, e.clientY);
+        setCanvasMenu({
+          x: e.clientX,
+          y: e.clientY,
+          stepId: nodeId && nodeId !== "table-node" ? nodeId : null,
+        });
+      }
+    },
+    [rightClickMode, getNodeAtPosition, swapMouseButtons],
+  );
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      closeContextMenu();
+      closeTableContextMenu();
+    };
+    if (contextMenu || tableContextMenu) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [contextMenu, tableContextMenu, closeContextMenu, closeTableContextMenu]);
+
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      setNodes((nds) => applyNodeChanges(changes, nds));
+    },
+    [setNodes],
   );
 
   const handleEdgesChange = useCallback(
@@ -726,7 +1013,8 @@ export function FlowPanel({
   return (
     <div
       ref={reactFlowWrapper}
-      className="w-full h-full relative"
+      className={`relative h-full w-full ${leftTool === "pan" ? "canvas-pan-tool" : ""}`}
+      onMouseDownCapture={handleSwapMouseDownCapture}
       onMouseDown={handleCutStart}
       onMouseMove={handleCutMove}
       onMouseUp={handleCutEnd}
@@ -748,11 +1036,20 @@ export function FlowPanel({
         connectionMode={ConnectionMode.Loose}
         onSelectionChange={handleSelectionChange}
         deleteKeyCode={null}
-        // Left-drag on blank → box select; pan via Space+left or middle-button drag
-        panOnDrag={[1]}
+        // Left drag follows the left tool: box select, or pan the view.
+        // Swapped: the right button drives the left tool.
+        panOnDrag={
+          leftTool === "pan"
+            ? swapMouseButtons
+              ? [1, 2]
+              : [0, 1]
+            : [1]
+        }
         panActivationKeyCode="Space"
-        selectionOnDrag={true}
-        selectionKeyCode="Shift"
+        selectionOnDrag={!swapMouseButtons && leftTool === "select"}
+        selectionKeyCode={swapMouseButtons ? null : "Shift"}
+        // Swapped mode moves nodes with a custom right-drag.
+        nodesDraggable={!swapMouseButtons}
         selectionMode={SelectionMode.Partial}
         zoomOnDoubleClick={!doubleClickFitView}
         onDoubleClick={handleCanvasDoubleClick}
@@ -798,6 +1095,19 @@ export function FlowPanel({
         cutPath={cutPath}
       />
 
+      {/* Swapped buttons: right-drag box selection */}
+      {swapSelectRect && (
+        <div
+          className="pointer-events-none absolute z-20 rounded-[2px] border border-dashed border-primary/70 bg-primary/[0.08]"
+          style={{
+            left: swapSelectRect.left,
+            top: swapSelectRect.top,
+            width: swapSelectRect.width,
+            height: swapSelectRect.height,
+          }}
+        />
+      )}
+
       {tableContextMenu && (
         <ContextMenu
           contextMenu={{
@@ -821,15 +1131,55 @@ export function FlowPanel({
         connectTargetNode={connectTargetNode}
       />
 
-      {/* Right-click interaction mode: a persistent two-segment rail. Keeping
-          it visible makes the second right-click mode discoverable without
-          hiding it behind a proximity-revealed dot. */}
+      {/* Canvas tools: a persistent rail with the left-button tool (select /
+          pan) above the right-click mode (cut / menu). Keeping both visible
+          makes each mode discoverable without hiding it behind a dot. */}
       <div
         className="absolute left-3 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-0.5 rounded-[9px] border border-border bg-card p-[3px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-none"
         onMouseDown={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.stopPropagation()}
       >
-        <Tooltip content={t.rightClickCutMode} side="right">
+        <Tooltip
+          content={swapMouseButtons ? t.rightToolSelect : t.leftToolSelect}
+          side="right"
+        >
+          <button
+            type="button"
+            onClick={() => chooseLeftTool("select")}
+            aria-pressed={leftTool === "select"}
+            className={`flex h-[26px] w-[26px] items-center justify-center rounded-[5px] transition-colors ${
+              leftTool === "select"
+                ? "bg-canvas-ink-soft text-canvas-ink"
+                : "text-muted-foreground hover:bg-accent/60"
+            }`}
+          >
+            <BoxSelect className="h-3.5 w-3.5" />
+          </button>
+        </Tooltip>
+        <Tooltip
+          content={swapMouseButtons ? t.rightToolPan : t.leftToolPan}
+          side="right"
+        >
+          <button
+            type="button"
+            onClick={() => chooseLeftTool("pan")}
+            aria-pressed={leftTool === "pan"}
+            className={`flex h-[26px] w-[26px] items-center justify-center rounded-[5px] transition-colors ${
+              leftTool === "pan"
+                ? "bg-canvas-ink-soft text-canvas-ink"
+                : "text-muted-foreground hover:bg-accent/60"
+            }`}
+          >
+            <Hand className="h-3.5 w-3.5" />
+          </button>
+        </Tooltip>
+        <span className="mx-auto my-0.5 h-px w-[18px] bg-border/60" />
+        <Tooltip
+          content={
+            swapMouseButtons ? t.leftClickCutMode : t.rightClickCutMode
+          }
+          side="right"
+        >
           <button
             type="button"
             onClick={() => {
@@ -846,7 +1196,12 @@ export function FlowPanel({
             <Scissors className="h-3.5 w-3.5" />
           </button>
         </Tooltip>
-        <Tooltip content={t.rightClickMenuMode} side="right">
+        <Tooltip
+          content={
+            swapMouseButtons ? t.leftClickMenuMode : t.rightClickMenuMode
+          }
+          side="right"
+        >
           <button
             type="button"
             onClick={() => {
@@ -861,6 +1216,26 @@ export function FlowPanel({
             }`}
           >
             <MousePointerClick className="h-3.5 w-3.5" />
+          </button>
+        </Tooltip>
+        <span className="mx-auto my-0.5 h-px w-[18px] bg-border/60" />
+        <Tooltip
+          content={
+            swapMouseButtons ? t.restoreMouseButtons : t.swapMouseButtons
+          }
+          side="right"
+        >
+          <button
+            type="button"
+            onClick={toggleSwapMouseButtons}
+            aria-pressed={swapMouseButtons}
+            className={`flex h-[26px] w-[26px] items-center justify-center rounded-[5px] transition-colors ${
+              swapMouseButtons
+                ? "bg-canvas-ink-soft text-canvas-ink"
+                : "text-muted-foreground hover:bg-accent/60"
+            }`}
+          >
+            <ArrowLeftRight className="h-3.5 w-3.5" />
           </button>
         </Tooltip>
       </div>
