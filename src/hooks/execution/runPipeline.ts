@@ -83,10 +83,14 @@ export async function runPipeline(
     return;
   }
 
-  deps.updateRun(ctx.runId, { state: "running", showProgress: true });
+  const runStartedAt = Date.now();
+  deps.updateRun(ctx.runId, {
+    state: "running",
+    showProgress: true,
+    executingStartedAt: runStartedAt,
+  });
   setShowLogPanel(true);
 
-  const runStartedAt = Date.now();
   // Hoisted so the finally block can determine the final status.
   let pipelineFailed = false;
   let wasCancelled = false;
@@ -216,6 +220,7 @@ export async function runPipeline(
     executionError = String(error);
     ctx.log("error", `${error}`);
   } finally {
+    const durationMs = Date.now() - runStartedAt;
     const status: ExecutionHistoryStatus = wasCancelled
       ? "cancelled"
       : pipelineFailed || executionError
@@ -240,7 +245,7 @@ export async function runPipeline(
         ),
         versionId: currentTab.currentVersionId ?? null,
         status,
-        durationMs: Date.now() - runStartedAt,
+        durationMs,
         rows: summary.rows,
         outputSummary: JSON.stringify(summary),
         startedAt: deps.formatDateTime(new Date()),
@@ -255,6 +260,7 @@ export async function runPipeline(
     deps.finishRun(
       ctx.runId,
       wasCancelled ? "cancelled" : pipelineFailed || executionError ? "error" : "done",
+      durationMs,
     );
   }
 }

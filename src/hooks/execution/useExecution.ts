@@ -196,11 +196,11 @@ export function useExecution({
   }, []);
 
   const finishRun = useCallback(
-    (runId: RunId, state: RunState) => {
+    (runId: RunId, state: RunState, durationMs?: number) => {
       // Free the concurrency slot first: the drain effect picks up the next
       // queued run as soon as this render lands.
       activeRunsRef.current.delete(runId);
-      updateRun(runId, { state });
+      updateRun(runId, { state, durationMs });
       const existing = timersRef.current.get(runId);
       if (existing) clearTimeout(existing);
       const timer = setTimeout(() => {

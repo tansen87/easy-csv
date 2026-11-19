@@ -4,6 +4,14 @@ import { cn } from "@/lib/utils";
 interface RunTimerProps {
   /** Starts the clock when it turns true, unmounts the readout when false. */
   running: boolean;
+  /**
+   * Epoch ms when the run entered "running". When given, the readout counts
+   * from that moment instead of the component's own mount, so it matches the
+   * duration saved in the execution history.
+   */
+  startedAt?: number;
+  /** Final duration in ms; rendered frozen while a finished pill lingers. */
+  frozenMs?: number;
   className?: string;
 }
 
@@ -22,22 +30,31 @@ function formatRunningTime(ms: number): { value: string; unit?: string } {
   return { value: `${minutes}:${String(seconds).padStart(2, "0")}` };
 }
 
-export function RunTimer({ running, className }: RunTimerProps) {
+export function RunTimer({
+  running,
+  startedAt,
+  frozenMs,
+  className,
+}: RunTimerProps) {
   const [elapsedMs, setElapsedMs] = useState(0);
 
   useEffect(() => {
     if (!running) return;
-    const startedAt = performance.now();
-    setElapsedMs(0);
+    const mountedAt = performance.now();
+    const read = () =>
+      startedAt !== undefined
+        ? Math.max(0, Date.now() - startedAt)
+        : performance.now() - mountedAt;
+    setElapsedMs(read());
     const id = window.setInterval(() => {
-      setElapsedMs(performance.now() - startedAt);
+      setElapsedMs(read());
     }, 250);
     return () => window.clearInterval(id);
-  }, [running]);
+  }, [running, startedAt]);
 
-  if (!running) return null;
+  if (!running && frozenMs === undefined) return null;
 
-  const { value, unit } = formatRunningTime(elapsedMs);
+  const { value, unit } = formatRunningTime(running ? elapsedMs : frozenMs ?? 0);
 
   return (
     <span

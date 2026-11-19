@@ -37,7 +37,7 @@ export interface RunPipelineDeps {
    * Mark a run finished and schedule its registry entry to be dropped once the
    * progress pill has been shown for a few seconds.
    */
-  finishRun: (runId: RunId, state: RunState) => void;
+  finishRun: (runId: RunId, state: RunState, durationMs?: number) => void;
   /**
    * Hand back the run's concurrency slot while a prompt keeps it parked, so it
    * does not occupy one of the limited parallel runs.

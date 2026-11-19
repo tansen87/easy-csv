@@ -95,6 +95,14 @@ export interface RunSession {
   /** The pill stays visible for a few seconds after the run ends. */
   showProgress: boolean;
   startedAt: number;
+  /**
+   * Epoch ms when the run actually entered "running" (after prompts and
+   * queueing). The canvas pill counts from here so its readout matches the
+   * duration stored in the execution history.
+   */
+  executingStartedAt?: number;
+  /** Final wall time in ms; the canvas pill freezes it while lingering. */
+  durationMs?: number;
   /** Everything the runner needs, resolved at start (never "the current tab"). */
   snapshot: PendingRun & { delimiter: string };
 }

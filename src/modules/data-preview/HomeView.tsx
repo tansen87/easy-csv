@@ -26,6 +26,7 @@ import type {
 } from "@/modules/dialogs/quick/types";
 import { FlowPanel } from "@/modules/pipeline/FlowPanel";
 import { FirstStepGuide } from "@/components/onboarding/FirstStepGuide";
+import { RunTimer } from "@/components/ui/RunTimer";
 import { EmptyState, RecentFile } from "@/modules/data-preview/EmptyState";
 import { VersionControlPanel } from "@/modules/pipeline/panels/VersionControlPanel";
 import { DataLineagePanel } from "@/modules/pipeline/panels/DataLineagePanel";
@@ -215,6 +216,12 @@ export const HomeView = React.memo(function HomeView({
   );
 
   const currentTab = tabs.find((tab) => tab.id === selectedTabId);
+  const currentRun = tabRuns[selectedTabId];
+  /** Show the readout while running, and the frozen duration while the pill lingers. */
+  const showPillTimer =
+    !!branchProgress &&
+    (branchProgress.status === "executing" ||
+      currentRun?.durationMs !== undefined);
   const data = currentTab?.data || [];
   const headers = currentTab?.headers || [];
   const displayHeaders = headers.map((header, index) =>
@@ -530,7 +537,7 @@ export const HomeView = React.memo(function HomeView({
       {((showProgressBar && branchProgress) || otherRunningCount > 0) && (
         <div className="absolute left-1/2 top-24 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 flex items-center gap-2">
           {showProgressBar && branchProgress && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-transparent rounded-lg shadow-md pointer-events-auto">
+            <div className="flex h-[34px] items-center gap-2.5 rounded-lg border border-border bg-card px-2.5 pointer-events-auto">
               <span className="text-xs font-medium text-muted-foreground">
                 {t.branchProgress} {branchProgress.current}/
                 {branchProgress.total}
@@ -581,6 +588,19 @@ export const HomeView = React.memo(function HomeView({
                   {branchProgress.name}
                 </span>
               </div>
+              {showPillTimer && (
+                <>
+                  <span className="h-3.5 w-px flex-none bg-border" />
+                  <RunTimer
+                    running={branchProgress.status === "executing"}
+                    startedAt={currentRun?.executingStartedAt}
+                    frozenMs={currentRun?.durationMs}
+                  />
+                </>
+              )}
+              {showPillTimer && isExecuting && onCancelExecution && (
+                <span className="h-3.5 w-px flex-none bg-border" />
+              )}
               {isExecuting && onCancelExecution && (
                 <button
                   onClick={onCancelExecution}

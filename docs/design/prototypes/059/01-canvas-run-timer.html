@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 059 · 画布运行通知计时</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+
+    --info:oklch(0.5 0.1 245);
+    --info-soft:color-mix(in oklab,var(--info) 11%,transparent);
+    --success:oklch(0.5 0.1 145);
+    --success-soft:color-mix(in oklab,var(--success) 11%,transparent);
+    --danger:oklch(0.55 0.17 27);
+    --danger-soft:color-mix(in oklab,var(--danger) 10%,transparent);
+
+    --mark:oklch(0.56 0.17 27);
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+  }
+  .dark{
+    color-scheme:dark;
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 18%,transparent);
+    --info:oklch(0.74 0.08 245);
+    --success:oklch(0.72 0.1 145);
+    --danger:oklch(0.7 0.14 27);
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.12 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-card:none;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased;transition:background-color .18s ease,color .18s ease}
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1000px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme-toggle{position:absolute;right:0;top:2px;height:26px;padding:0 10px;border-radius:6px;
+                border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+                font-family:var(--mono);font-size:10.5px;cursor:pointer}
+  .theme-toggle:hover{color:var(--fg)}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+  .state-note{font-size:10.5px;color:var(--muted-fg);line-height:1.7;padding:10px 2px 0}
+  .state-note b{color:var(--fg);font-weight:500}
+
+  /* ── 画布 ─────────────────────────────────────────────────────── */
+  .stage{position:relative;width:1200px;height:380px;overflow:hidden;border:1px solid var(--border);
+         border-radius:8px;background-color:var(--canvas);
+         background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+         background-size:22px 22px;background-position:11px 11px}
+
+  /* 运行通知（现状） */
+  .notify{position:absolute;left:50%;top:96px;transform:translate(-50%,-50%);
+          display:flex;align-items:center;gap:8px;pointer-events:none}
+  .notify .inner{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;
+                 background:transparent;box-shadow:0 4px 12px -6px oklch(0.2 0.02 80 / 30%);pointer-events:auto}
+  .branch{font-size:11.5px;font-weight:500;color:var(--muted-fg);white-space:nowrap}
+  .chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:4px;
+        font-size:11.5px;font-weight:500;white-space:nowrap}
+  .chip.info{background:var(--info-soft);color:var(--info)}
+  .chip.ok{background:var(--success-soft);color:var(--success)}
+  .chip.err{background:var(--danger-soft);color:var(--danger)}
+  .chip .name{max-width:240px;overflow:hidden;text-overflow:ellipsis}
+  .spin{width:10px;height:10px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;
+        animation:spin .9s linear infinite;flex:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .cancel{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:4px;
+          font-size:11.5px;font-weight:500;color:var(--danger);background:transparent;border:0}
+  .cancel:hover{background:var(--danger-soft)}
+
+  /* 改后：通知卡 + 计时 */
+  .notify2{position:absolute;left:50%;top:96px;transform:translate(-50%,-50%);pointer-events:none}
+  .notify2 .inner{display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:8px;
+                  border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow-card);pointer-events:auto}
+  .divider{width:1px;height:14px;background:var(--border);flex:none}
+  .timer{display:inline-flex;align-items:baseline;gap:2px;white-space:nowrap}
+  .timer .n{display:inline-block;min-width:46px;text-align:right;font-family:var(--mono);
+            font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--fg)}
+  .timer .u{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2)}
+
+  /* 画布上的步骤卡 */
+  .node{position:absolute;width:190px;padding:11px;border:1px solid var(--border);border-radius:8px;
+        background:var(--paper);box-shadow:var(--shadow-card)}
+  .node .t{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .node .c{margin-top:5px;font-family:var(--mono);font-size:9px;color:var(--muted-fg);
+           background:var(--muted);border:1px solid var(--border-soft);border-radius:3px;
+           padding:1px 4px;display:inline-block}
+  .node.dim{opacity:.45}
+  .link{position:absolute;height:1px;background:var(--border);transform-origin:0 0}
+
+  /* ── 状态矩阵 ─────────────────────────────────────────────────── */
+  .cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  .card{border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .card .tag{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);padding:10px 12px 0}
+  .card .field{height:112px;display:flex;align-items:center;justify-content:center}
+  .card .note{font-size:10.5px;line-height:1.6;color:var(--muted-fg);padding:0 12px 12px}
+  .card .note b{color:var(--fg);font-weight:500}
+
+  /* ── 读数解剖 ─────────────────────────────────────────────────── */
+  .anatomy{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .panel{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:16px 18px}
+  .panel .lbl{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:12px}
+  .panel .big{display:flex;align-items:center;justify-content:center;height:64px;border:1px dashed var(--border);
+              border-radius:8px;margin-bottom:12px}
+  .panel .big .timer .n{font-size:17px;min-width:64px}
+  .spec-list{margin:0;padding:0;list-style:none;font-size:11px;line-height:1.9;color:var(--muted-fg)}
+  .spec-list b{color:var(--fg);font-weight:500}
+  .spec-list code{font-size:10.5px}
+
+  .callout{display:flex;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;
+           background:var(--card);font-size:11px;line-height:1.7;color:var(--muted-fg);margin-top:12px}
+  .callout b{color:var(--fg);font-weight:500}
+  .callout .mk{width:18px;height:18px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
+               font-family:var(--mono);font-size:9.5px;display:grid;place-items:center;flex:none;margin-top:1px}
+
+  table.spec{width:100%;border-collapse:collapse;background:var(--card);
+             border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:11px}
+  table.spec th{text-align:left;font-weight:500;color:var(--muted-fg);font-size:10px;
+                padding:8px 12px;border-bottom:1px solid var(--border);background:color-mix(in oklab,var(--muted) 45%,transparent)}
+  table.spec td{padding:8px 12px;border-bottom:1px solid var(--border-soft);color:var(--muted-fg);line-height:1.6;vertical-align:top}
+  table.spec tr:last-child td{border-bottom:0}
+  table.spec td:first-child{color:var(--fg);font-weight:500;white-space:nowrap}
+  table.spec code{font-size:10.5px}
+
+  .mark{position:absolute;width:16px;height:16px;border-radius:50%;background:var(--mark);color:#fff;
+        font-family:var(--mono);font-size:9.5px;line-height:16px;text-align:center;font-weight:500;z-index:5}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">PROTOTYPE 059 · CANVAS RUN TIMER</div>
+    <h1>画布运行通知计时</h1>
+    <p>画布顶部居中的运行通知现在只说“分支 2/3、执行中”，看不到已经跑了多久。给它加一个等宽计时读数：运行中实时走，完成/失败后停在最终值，与工具对话框的读数保持同一套写法。</p>
+    <button class="theme-toggle" id="themeToggle" type="button">DARK</button>
+  </div>
+
+  <dl class="direction">
+    <div><dt>PRODUCT</dt><dd>把 CSV 管道摆到画布上执行，运行通知是唯一的全局进度</dd></div>
+    <div><dt>CHARACTER</dt><dd>安静、可核对、像仪表</dd></div>
+    <div><dt>WORLD</dt><dd>画布与仪器读数</dd></div>
+    <div><dt>MOMENTS</dt><dd>通知条上的等宽计时；完成后定格的最终值</dd></div>
+    <div><dt>SIGNATURE</dt><dd>与工具对话框一致的等宽秒表，只在运行时出现</dd></div>
+  </dl>
+
+  <!-- 01 现状 -->
+  <section class="frame">
+    <div class="cap"><b>01 · 现状</b><span>只知道在第几个分支，不知道花了多久</span><span class="file">HomeView.tsx · 分支进度条</span></div>
+    <div class="stage">
+      <div class="node" style="left:96px;top:210px"><div class="t">读取 orders_2026.csv</div><div class="c">csv · 250,000 行</div></div>
+      <div class="node dim" style="left:390px;top:210px"><div class="t">清洗空值</div><div class="c">fill</div></div>
+      <div class="node dim" style="left:684px;top:210px"><div class="t">按城市汇总</div><div class="c">groupby</div></div>
+      <div class="link" style="left:286px;top:252px;width:104px"></div>
+      <div class="link" style="left:580px;top:252px;width:104px"></div>
+
+      <div class="notify">
+        <div class="inner">
+          <span class="branch">分支 1/3</span>
+          <span class="chip info"><span class="spin"></span><span class="name">清洗空值</span></span>
+          <button class="cancel" type="button">■ 取消执行</button>
+        </div>
+      </div>
+      <span class="mark" style="left:806px;top:82px">1</span>
+    </div>
+    <p class="state-note"><b>问题</b>：通知条没有时间维度。分支跑得久时，用户无法判断是仍在推进还是卡住；完成后的停留阶段也没有留下这次运行用了多久。</p>
+  </section>
+
+  <!-- 02 改后 -->
+  <section class="frame">
+    <div class="cap"><b>02 · 改后</b><span>通知条右侧加一个读数，取消仍在最右</span><span class="file">HomeView.tsx</span></div>
+    <div class="stage" style="height:330px">
+      <div class="node" style="left:96px;top:186px"><div class="t">读取 orders_2026.csv</div><div class="c">csv · 250,000 行</div></div>
+      <div class="node" style="left:390px;top:186px"><div class="t">清洗空值</div><div class="c">fill · 执行中</div></div>
+      <div class="node dim" style="left:684px;top:186px"><div class="t">按城市汇总</div><div class="c">groupby</div></div>
+      <div class="link" style="left:286px;top:228px;width:104px"></div>
+      <div class="link" style="left:580px;top:228px;width:104px"></div>
+
+      <div class="notify2">
+        <div class="inner">
+          <span class="branch">分支 2/3</span>
+          <span class="chip info"><span class="spin"></span><span class="name">清洗空值</span></span>
+          <span class="divider"></span>
+          <span class="timer live"><span class="n">12.4</span><span class="u">s</span></span>
+          <span class="divider"></span>
+          <button class="cancel" type="button">■ 取消执行</button>
+        </div>
+      </div>
+    </div>
+    <div class="anatomy" style="margin-top:14px">
+      <div class="panel">
+        <div class="lbl">读数 / RUNNING</div>
+        <div class="big"><span class="timer"><span class="n">12.4</span><span class="u">s</span></span></div>
+        <ul class="spec-list">
+          <li><b>数字</b> 11.5px JetBrains Mono，<code>tabular-nums</code>，定宽 46px 右对齐</li>
+          <li><b>单位</b> 10px，弱一档，不和数字抢注意力</li>
+          <li>0–59.9s 一位小数；≥60s 显示 <code>1:04</code></li>
+        </ul>
+      </div>
+      <div class="panel">
+        <div class="lbl">通知条结构</div>
+        <div class="big" style="height:auto;padding:12px 0;border-style:solid;border-color:var(--border-soft)">
+          <div class="inner" style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:8px;
+               border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow-card)">
+            <span class="branch">分支 2/3</span>
+            <span class="chip info"><span class="spin"></span><span class="name">汇总</span></span>
+            <span class="divider"></span>
+            <span class="timer"><span class="n">12.4</span><span class="u">s</span></span>
+            <span class="divider"></span>
+            <button class="cancel" type="button">■ 取消执行</button>
+          </div>
+        </div>
+        <ul class="spec-list">
+          <li>顺序：分支序号 → 状态胶囊 → 分隔线 → 计时 → 分隔线 → 取消</li>
+          <li>读数用前台色，颜色只留给状态胶囊</li>
+          <li>通知条改为 <b>card + hairline</b>，去掉透明底上的浮空阴影</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 状态 -->
+  <section class="frame">
+    <div class="cap"><b>03 · 三种状态</b><span>运行中走表，结束后定格</span><span class="file">branchProgress.status</span></div>
+    <div class="cards">
+      <div class="card">
+        <div class="tag">RUNNING</div>
+        <div class="field">
+          <div class="inner" style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:8px;
+               border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow-card)">
+            <span class="branch">分支 2/3</span>
+            <span class="chip info"><span class="spin"></span><span class="name">汇总</span></span>
+            <span class="divider"></span>
+            <span class="timer"><span class="n">12.4</span><span class="u">s</span></span>
+            <span class="divider"></span>
+            <button class="cancel" type="button">■ 取消执行</button>
+          </div>
+        </div>
+        <div class="note">从进入 <code>running</code> 开始计时，250ms 刷新；取消按钮始终在最右。</div>
+      </div>
+      <div class="card">
+        <div class="tag">COMPLETED · 停留</div>
+        <div class="field">
+          <div class="inner" style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:8px;
+               border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow-card)">
+            <span class="branch">分支 3/3</span>
+            <span class="chip ok">✓ <span class="name">完成</span></span>
+            <span class="divider"></span>
+            <span class="timer"><span class="n">14.8</span><span class="u">s</span></span>
+          </div>
+        </div>
+        <div class="note">结束后通知停留几秒：计时定格在最终值，取消按钮消失，这段停留同时充当“这次跑了多久”的回执。</div>
+      </div>
+      <div class="card">
+        <div class="tag">FAILED · 停留</div>
+        <div class="field">
+          <div class="inner" style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:8px;
+               border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow-card)">
+            <span class="branch">分支 2/3</span>
+            <span class="chip err">× <span class="name">失败</span></span>
+            <span class="divider"></span>
+            <span class="timer"><span class="n">8.1</span><span class="u">s</span></span>
+          </div>
+        </div>
+        <div class="note">失败也保留耗时，方便判断是“秒失败”还是“跑了很久才失败”。</div>
+      </div>
+    </div>
+    <div class="callout">
+      <span class="mk">i</span>
+      <span><b>计时口径</b>：以管道进入 <code>running</code> 的时刻为起点，和“执行历史”里的耗时一致；排队、变量弹窗、覆盖确认的时间不计入，避免读数与历史记录对不上。</span>
+    </div>
+  </section>
+
+  <!-- 04 实现约定 -->
+  <section class="frame">
+    <div class="cap"><b>04 · 实现约定</b><span>复用 058 的 RunTimer</span><span class="file">RunTimer.tsx · RunSession</span></div>
+    <table class="spec">
+      <thead><tr><th>项</th><th>约定</th></tr></thead>
+      <tbody>
+        <tr><td>组件</td><td>复用 <code>&lt;RunTimer /&gt;</code>；新增可选 <code>startedAt</code> 与冻结值支持，画布通知与工具对话框共用同一份读数样式。</td></tr>
+        <tr><td>数据</td><td><code>RunSession</code> 增加执行起点与结束时刻（或最终 <code>durationMs</code>），由 <code>runPipeline</code> 在 <code>running</code> 进入与 <code>finally</code> 时写入。</td></tr>
+        <tr><td>布局</td><td>通知条高 34px、圆角 8、card 底 + hairline 边；读数与取消各用一条 1px 分隔线，间距 10px。</td></tr>
+        <tr><td>停止条件</td><td><code>branchProgress.status !== "executing"</code> 时停止走表；通知消失时组件卸载。</td></tr>
+        <tr><td>无障碍</td><td><code>role="timer"</code>、<code>aria-live="off"</code>；取消按钮的 <code>aria-label</code> 不变。</td></tr>
+        <tr><td>保持</td><td>分支序号、状态胶囊、分支名、取消按钮、其他标签页运行提示均不改；只加读数并去掉透明底的浮空阴影。</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+
+<script>
+  const toggle = document.getElementById('themeToggle');
+  toggle.addEventListener('click', () => {
+    const dark = document.documentElement.classList.toggle('dark');
+    toggle.textContent = dark ? 'LIGHT' : 'DARK';
+  });
+
+  // 演示：通知条的主读数持续走表
+  const fmt = (ms) => {
+    if (ms < 60000) return (ms / 1000).toFixed(1);
+    const total = Math.floor(ms / 1000);
+    return String(Math.floor(total / 60)) + ':' + String(total % 60).padStart(2, '0');
+  };
+  const started = performance.now();
+  const live = document.querySelectorAll('.timer.live .n');
+  const liveCard = document.querySelectorAll('.card .timer .n');
+  let index = 0;
+  setInterval(() => {
+    const text = fmt((performance.now() - started) % 90000);
+    live.forEach((el) => (el.textContent = text));
+    // 状态卡里的 RUNNING 读数也跟着走，另外两张保持定格
+    if (liveCard[0]) liveCard[0].textContent = text;
+    index += 1;
+  }, 250);
+</script>
+</body>
+</html>
