@@ -11,6 +11,7 @@ import {
 
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
+import { RunTimer } from "@/components/ui/RunTimer";
 import { Select } from "@/components/ui/Select";
 import { useLanguage } from "@/i18n";
 import { formatBytes, formatDateTime, formatElapsed } from "@/utils/format";
@@ -526,14 +527,17 @@ export function CsvEncodingDialog({
             {isSameEncoding && <AlertCircle className="h-3 w-3" />}
             {isSameEncoding ? t.sameEncoding : t.csvEncodingFooterHint}
           </span>
-          <Button
-            size="sm"
-            onClick={handleConvert}
-            disabled={isConverting || isSameEncoding}
-          >
-            {isConverting && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
-            {isConverting ? t.converting : t.convert}
-          </Button>
+          <span className="flex items-center gap-3">
+            <RunTimer running={isConverting} />
+            <Button
+              size="sm"
+              onClick={handleConvert}
+              disabled={isConverting || isSameEncoding}
+            >
+              {isConverting && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+              {isConverting ? t.converting : t.convert}
+            </Button>
+          </span>
         </div>
       </div>
     </div>

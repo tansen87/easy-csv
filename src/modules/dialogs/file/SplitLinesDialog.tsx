@@ -6,6 +6,7 @@ import { X, CheckCircle2, AlertCircle } from "lucide-react";
 
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
+import { RunTimer } from "@/components/ui/RunTimer";
 import { useLanguage } from "@/i18n";
 import { formatDateTime, formatElapsed } from "@/utils/format";
 import {
@@ -583,9 +584,12 @@ export function SplitLinesDialog({
           <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
             {t.splitLinesReady.replace("{rows}", rowsLabel)}
           </span>
-          <Button size="sm" onClick={handleSplit} disabled={isSplitting}>
-            {isSplitting ? t.splitting : t.splitLinesStart}
-          </Button>
+          <span className="flex items-center gap-3">
+            <RunTimer running={isSplitting} />
+            <Button size="sm" onClick={handleSplit} disabled={isSplitting}>
+              {isSplitting ? t.splitting : t.splitLinesStart}
+            </Button>
+          </span>
         </div>
       </div>
     </div>

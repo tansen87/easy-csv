@@ -14,7 +14,7 @@ export const enDialog = {
   csvDiffFileAPlaceholder: "Original CSV file",
   csvDiffFileBPlaceholder: "Modified CSV file",
   compare: "Compare",
-  comparing: "Comparing...",
+  comparing: "Comparing",
   csvDiffSelectBoth: "Please select both files",
   csvDiffNoResult: "Select two CSV files and click Compare",
   csvDiffEmptyTitle: "Not compared yet",

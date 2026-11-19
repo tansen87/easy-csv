@@ -6,6 +6,7 @@ import { X, CheckCircle2, AlertCircle } from "lucide-react";
 
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
+import { RunTimer } from "@/components/ui/RunTimer";
 import { Select } from "@/components/ui/Select";
 import { useLanguage } from "@/i18n";
 import { useCsvProbe } from "@/hooks/useCsvProbe";
@@ -737,9 +738,12 @@ export function EnumerateByGroupDialog({
                   .replace("{column}", groupColumn)
                   .replace("{index}", indexColumn.trim() || "—")}
           </span>
-          <Button size="sm" onClick={handleRun} disabled={isRunning}>
-            {isRunning ? t.groupEnumRunning : t.groupEnumStart}
-          </Button>
+          <span className="flex items-center gap-3">
+            <RunTimer running={isRunning} />
+            <Button size="sm" onClick={handleRun} disabled={isRunning}>
+              {isRunning ? t.groupEnumRunning : t.groupEnumStart}
+            </Button>
+          </span>
         </div>
       </div>
     </div>

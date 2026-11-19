@@ -6,6 +6,7 @@ import { X, CheckCircle2, AlertCircle } from "lucide-react";
 
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
+import { RunTimer } from "@/components/ui/RunTimer";
 import { Select } from "@/components/ui/Select";
 import { useLanguage } from "@/i18n";
 import { useCsvProbe } from "@/hooks/useCsvProbe";
@@ -718,9 +719,12 @@ export function CsvToExcelDialog({
                   multi ? `${formatRows(chunkSizeValue)} × N` : "1",
                 )}
           </span>
-          <Button size="sm" onClick={handleRun} disabled={isRunning}>
-            {isRunning ? t.excelRunning : t.excelStart}
-          </Button>
+          <span className="flex items-center gap-3">
+            <RunTimer running={isRunning} />
+            <Button size="sm" onClick={handleRun} disabled={isRunning}>
+              {isRunning ? t.excelRunning : t.excelStart}
+            </Button>
+          </span>
         </div>
       </div>
     </div>

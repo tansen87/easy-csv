@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 058 · 工具运行计时</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --edge:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+
+    --success:oklch(0.5 0.1 145);
+    --success-soft:color-mix(in oklab,var(--success) 11%,transparent);
+    --danger:oklch(0.55 0.17 27);
+    --danger-soft:color-mix(in oklab,var(--danger) 10%,transparent);
+
+    --mark:oklch(0.56 0.17 27);
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-dialog:0 18px 46px -22px oklch(0.2 0.02 80 / 34%);
+  }
+  .dark{
+    color-scheme:dark;
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --edge:oklch(1 0 0 / 24%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 18%,transparent);
+    --success:oklch(0.72 0.1 145);
+    --danger:oklch(0.7 0.14 27);
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.12 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-card:none;
+    --shadow-dialog:0 18px 46px -22px oklch(0 0 0 / 70%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased;transition:background-color .18s ease,color .18s ease}
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1000px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme-toggle{position:absolute;right:0;top:2px;height:26px;padding:0 10px;border-radius:6px;
+                border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+                font-family:var(--mono);font-size:10.5px;cursor:pointer}
+  .theme-toggle:hover{color:var(--fg)}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+  .h2{font-size:13px;font-weight:500;margin:44px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border-soft)}
+  .lede{font-size:11.5px;line-height:1.75;color:var(--muted-fg);margin:0 0 14px;max-width:980px}
+  .lede b{font-weight:500;color:var(--fg)}
+
+  /* ── 工具子菜单（现状参照） ─────────────────────────────────── */
+  .menu-stage{display:flex;gap:34px;align-items:flex-start;padding:26px 30px;
+              border:1px solid var(--border);border-radius:8px;background:var(--canvas)}
+  .menubar{display:flex;gap:2px;padding:6px;border:1px solid var(--border);border-radius:8px;
+           background:var(--card);align-self:flex-start}
+  .menubar span{padding:5px 11px;border-radius:6px;font-size:11.5px;color:var(--muted-fg)}
+  .menubar span.on{background:var(--brand-12);color:var(--brand);font-weight:500}
+  .tools-menu{width:212px;padding:6px;border:1px solid var(--border);border-radius:10px;
+              background:var(--card);box-shadow:0 12px 28px -14px oklch(0.2 0.02 80 / 22%)}
+  .tools-menu .mi{display:flex;align-items:center;height:32px;padding:0 10px;border-radius:8px;
+                  font-size:12px;font-weight:500;color:var(--fg)}
+  .tools-menu .mi:hover{background:color-mix(in oklab,var(--fg) 8%,transparent)}
+  .tools-menu .sep{margin:6px 10px;border-top:1px solid color-mix(in oklab,var(--fg) 15%,transparent)}
+  .menu-note{max-width:520px;font-size:11px;line-height:1.8;color:var(--muted-fg)}
+  .menu-note b{color:var(--fg);font-weight:500}
+  .menu-note ul{margin:8px 0 0;padding-left:17px}
+  .menu-note li{margin-bottom:3px}
+
+  /* ── 页脚运行态对照 ─────────────────────────────────────────── */
+  .footer-states{display:grid;grid-template-columns:1fr;gap:12px}
+  .fs{border:1px solid var(--border);border-radius:8px;background:var(--card);overflow:hidden}
+  .fs-tag{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);padding:8px 12px 0}
+  .footer{display:flex;align-items:center;justify-content:space-between;gap:12px;
+          padding:10px 16px;background:color-mix(in oklab,var(--muted) 20%,transparent);
+          border-top:1px solid var(--border-soft)}
+  .right-group{display:flex;align-items:center;gap:12px;flex:none}
+  .foot-hint{font-size:11px;color:var(--muted-fg)}
+  .btn{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:6px;
+       border:1px solid var(--brand);background:var(--brand);color:var(--brand-fg);
+       font-size:11.5px;font-weight:500;font-family:var(--font);white-space:nowrap}
+  .btn[disabled]{opacity:.55;cursor:default}
+  .spin{width:12px;height:12px;border-radius:50%;border:1.5px solid currentColor;
+        border-right-color:transparent;animation:spin .9s linear infinite;flex:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .old-run{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted-fg)}
+
+  /* 计时读数 */
+  .runline{display:inline-flex;align-items:baseline;gap:7px;font-size:11px;color:var(--muted-fg);white-space:nowrap}
+  .runline .num{font-family:var(--mono);font-size:11.5px;font-variant-numeric:tabular-nums;
+                color:var(--fg);min-width:46px;text-align:right;display:inline-block}
+  .runline .num b{font-weight:400}
+  .runline .unit{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);margin-left:-3px}
+
+  /* ── 对话框示意 ─────────────────────────────────────────────── */
+  .dialog-wrap{display:flex;gap:26px;align-items:flex-start}
+  .dialog{width:640px;border:1px solid var(--border);border-radius:10px;background:var(--card);
+          box-shadow:var(--shadow-dialog);overflow:hidden}
+  .dlg-head{display:flex;align-items:center;height:48px;padding:0 16px;border-bottom:1px solid var(--border-soft)}
+  .dlg-head h3{margin:0;font-size:13px;font-weight:500}
+  .dlg-head .x{margin-left:auto;width:24px;height:24px;display:grid;place-items:center;color:var(--muted-fg);
+                border-radius:5px;font-size:14px}
+  .dlg-body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px}
+  .sect{display:flex;flex-direction:column;gap:7px}
+  .sect-h{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:500;color:var(--muted-fg)}
+  .sect-h .idx{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .fieldrow{display:flex;align-items:center;gap:8px}
+  .inp{height:30px;flex:1;min-width:0;padding:0 8px;border:1px solid var(--border);border-radius:6px;
+       background:var(--bg);font-family:var(--mono);font-size:11px;color:var(--fg);display:flex;align-items:center;overflow:hidden;white-space:nowrap}
+  .inp .path{color:var(--muted-fg-2)}
+  .mini{height:28px;padding:0 9px;border:1px solid var(--border);border-radius:6px;background:var(--card);
+        color:var(--muted-fg);font-size:11px;display:inline-flex;align-items:center}
+  .preset{height:22px;padding:0 9px;border:1px solid var(--border);border-radius:999px;font-size:10.5px;
+          color:var(--muted-fg);display:inline-flex;align-items:center}
+  .preset.on{border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}
+  .result-card{border:1px solid var(--border-soft);border-radius:8px;padding:12px}
+
+  /* 完成态 */
+  .done-head{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:500;color:var(--success)}
+  .done-head .meta{margin-left:2px;font-size:10.5px;font-weight:400;color:var(--muted-fg)}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+  .stat{border:1px solid var(--border-soft);border-radius:6px;padding:7px 9px}
+  .stat dt{font-size:9.5px;color:var(--muted-fg-3);margin-bottom:3px}
+  .stat dd{margin:0;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+  .done-foot{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;
+             border-top:1px solid var(--border-soft);background:color-mix(in oklab,var(--muted) 20%,transparent)}
+  .done-foot .hint{font-size:11px;color:var(--muted-fg)}
+
+  /* 计时解剖 */
+  .anatomy{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:18px 20px;width:430px}
+  .anatomy .lbl{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:14px}
+  .anatomy .row{display:flex;align-items:baseline;gap:8px;padding:12px 0;border-bottom:1px solid var(--border-soft)}
+  .anatomy .row:last-of-type{border-bottom:0}
+  .anatomy .samples{display:flex;flex-direction:column;gap:9px}
+  .anatomy .tag{font-size:10px;color:var(--muted-fg-2);width:78px;flex:none}
+  .anatomy .val{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px}
+  .anatomy .val.muted{color:var(--muted-fg)}
+  .anatomy .note{font-size:10.5px;color:var(--muted-fg);line-height:1.65;margin-top:10px}
+  .anatomy .note b{color:var(--fg);font-weight:500}
+
+  /* 对比差异 */
+  .diff-body{height:300px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;
+             background:
+               linear-gradient(var(--border-soft),var(--border-soft)) top / 100% 1px no-repeat,
+               linear-gradient(var(--border-soft),var(--border-soft)) bottom / 100% 1px no-repeat}
+  .diff-center{display:flex;align-items:center;gap:10px;color:var(--muted-fg);font-size:12px}
+  .diff-center .spin{width:12px;height:12px;border-color:var(--muted-fg);border-right-color:transparent}
+  .diff-center .num{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--fg)}
+  .stats-strip{height:40px;display:flex;align-items:center;gap:16px;padding:0 16px;border-bottom:1px solid var(--border-soft)}
+  .stats-strip .item{display:inline-flex;align-items:baseline;gap:5px;font-size:10.5px;color:var(--muted-fg)}
+  .stats-strip .n{font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;color:var(--fg)}
+  .stats-strip .spent{margin-left:auto;display:inline-flex;align-items:baseline;gap:5px;font-size:10.5px;color:var(--muted-fg)}
+  .stats-strip .spent .n{color:var(--fg)}
+
+  /* 规范表 */
+  table.spec{width:100%;border-collapse:collapse;background:var(--card);
+             border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:11px}
+  table.spec th{text-align:left;font-weight:500;color:var(--muted-fg);font-size:10px;
+                padding:8px 12px;border-bottom:1px solid var(--border);background:color-mix(in oklab,var(--muted) 45%,transparent)}
+  table.spec td{padding:8px 12px;border-bottom:1px solid var(--border-soft);color:var(--muted-fg);line-height:1.6;vertical-align:top}
+  table.spec tr:last-child td{border-bottom:0}
+  table.spec td:first-child{color:var(--fg);font-weight:500;white-space:nowrap}
+  table.spec code{font-size:10.5px}
+
+  .callout{display:flex;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;
+           background:var(--card);font-size:11px;line-height:1.7;color:var(--muted-fg)}
+  .callout b{color:var(--fg);font-weight:500}
+  .callout .mk{width:18px;height:18px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
+               font-family:var(--mono);font-size:9.5px;display:grid;place-items:center;flex:none;margin-top:1px}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .state-note{font-size:10.5px;color:var(--muted-fg);line-height:1.6;padding:8px 2px 0}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">PROTOTYPE 058 · TOOLS RUNTIME</div>
+    <h1>工具运行计时</h1>
+    <p>工具子菜单里的七个一次性动作（对比差异、转换编码、拆分坏行、按行数拆分、组内编号、转为 Excel、合并工作簿）在运行中显示<b>当前运行时间</b>，让长任务不再像卡住；完成后由结果区已有的“耗时”接管。</p>
+    <button class="theme-toggle" id="themeToggle" type="button">DARK</button>
+  </div>
+
+  <dl class="direction">
+    <div><dt>PRODUCT</dt><dd>给数据工作者整理 CSV 的桌面工具，这七项是一次性文件动作</dd></div>
+    <div><dt>CHARACTER</dt><dd>克制、精确、像仪器读数</dd></div>
+    <div><dt>WORLD</dt><dd>桌面工具的秒表与纸面台账</dd></div>
+    <div><dt>MOMENTS</dt><dd>运行中的等宽计时读数；完成后的结果数字</dd></div>
+    <div><dt>SIGNATURE</dt><dd>只在运行时出现的等宽秒表读数，位数不跳动</dd></div>
+  </dl>
+
+  <!-- 01 现状 -->
+  <section class="frame">
+    <div class="cap"><b>01 · 现状</b><span>子菜单只负责打开对话框，运行中没有任何时间反馈</span><span class="file">MainMenu.tsx · file/*Dialog.tsx</span></div>
+    <div class="menu-stage">
+      <div>
+        <div class="menubar">
+          <span>文件</span><span>编辑</span><span>视图</span><span class="on">工具</span><span>帮助</span>
+        </div>
+        <div class="tools-menu" style="margin-top:10px">
+          <div class="mi">对比差异</div>
+          <div class="mi">转换编码</div>
+          <div class="mi">拆分坏行</div>
+          <div class="mi">按行数拆分</div>
+          <div class="mi">组内编号</div>
+          <div class="sep"></div>
+          <div class="mi">转为 Excel</div>
+          <div class="mi">合并工作簿</div>
+        </div>
+      </div>
+      <div class="menu-note">
+        <b>运行中现在只换一个词</b>
+        <ul>
+          <li>六个带页脚的对话框：按钮变成“拆分中 / 合并中…”，左侧仍停在就绪提示，看不出已经跑了多久。</li>
+          <li>“对比差异”连完成后的耗时都没有，只有一句“对比中...”。</li>
+          <li>超过几秒的任务，用户无法区分“在跑”和“卡住”，只能等。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 计时读数 -->
+  <section class="frame">
+    <div class="cap"><b>02 · 读数</b><span>一个等宽秒表：定宽数字 + 单位</span><span class="file">RunTimer</span></div>
+    <div class="dialog-wrap">
+      <div class="anatomy">
+        <div class="lbl">运行读数 / RUNNING</div>
+        <div class="row">
+          <span class="tag">读数</span>
+          <span class="runline"><span class="num"><b>3.2</b></span><span class="unit">s</span></span>
+          <span style="font-size:10.5px;color:var(--muted-fg-3);margin-left:14px">状态由按钮说明</span>
+        </div>
+        <div class="row" style="align-items:flex-start">
+          <span class="tag">定宽数字</span>
+          <div class="samples">
+            <span class="runline"><span class="num"><b>0.0</b></span><span class="unit">s</span></span>
+            <span class="runline"><span class="num"><b>59.9</b></span><span class="unit">s</span></span>
+            <span class="runline"><span class="num"><b>1:04</b></span></span>
+          </div>
+        </div>
+        <div class="row">
+          <span class="tag">完成态</span>
+          <span class="runline" style="color:var(--success)">
+            <span style="font-size:11px">已完成</span><span style="font-size:10.5px;color:var(--muted-fg)">· 耗时</span>
+            <span class="num" style="color:var(--fg)"><b>1.4</b></span><span class="unit">s</span>
+          </span>
+        </div>
+        <div class="note"><b>小于 1 秒也只显示 0.8 s</b>：运行中用十分之一秒，避免三位毫秒数每 250ms 抖动；结束后交给结果区现有的 <code>formatElapsed</code>（420 ms / 1.4 s）。</div>
+      </div>
+
+      <div class="two-col" style="flex:1">
+        <div class="fs">
+          <div class="fs-tag">运行中 · 0.4 s</div>
+          <div class="footer">
+            <span class="foot-hint">将按 100,000 行拆分</span>
+            <span class="right-group">
+              <span class="runline"><span class="num"><b>0.4</b></span><span class="unit">s</span></span>
+              <button class="btn" disabled><span class="spin"></span>拆分中</button>
+            </span>
+          </div>
+        </div>
+        <div class="fs">
+          <div class="fs-tag">运行中 · 12.8 s</div>
+          <div class="footer">
+            <span class="foot-hint">3 个工作簿</span>
+            <span class="right-group">
+              <span class="runline"><span class="num"><b>12.8</b></span><span class="unit">s</span></span>
+              <button class="btn" disabled><span class="spin"></span>合并中</button>
+            </span>
+          </div>
+        </div>
+        <div class="fs">
+          <div class="fs-tag">运行 ≥ 60 s · 1:04</div>
+          <div class="footer">
+            <span class="foot-hint">GB18030 → UTF-8</span>
+            <span class="right-group">
+              <span class="runline"><span class="num"><b>1:04</b></span></span>
+              <button class="btn" disabled><span class="spin"></span>转换中</button>
+            </span>
+          </div>
+        </div>
+        <div class="fs">
+          <div class="fs-tag">完成 · 提示恢复，耗时留在结果区</div>
+          <div class="footer">
+            <span class="foot-hint">已按 100,000 行拆分，共 3 个文件</span>
+            <button class="btn">开始拆分</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="state-note">读数紧贴主按钮左侧，按钮右缘保持不动；状态由按钮给出，读数只报数。计时在点击后立即开始，早于后端返回。</p>
+  </section>
+
+  <!-- 03 完整对话框 -->
+  <section class="frame">
+    <div class="cap"><b>03 · 对话框内</b><span>以“按行数拆分”为例：运行中不画假进度条，只给读数</span><span class="file">SplitLinesDialog.tsx</span></div>
+    <div class="dialog-wrap">
+      <div class="dialog" style="width:587px">
+        <div class="dlg-head"><h3>按行数拆分</h3><span class="x">×</span></div>
+        <div class="dlg-body">
+          <div class="sect">
+            <div class="sect-h"><span class="idx">01</span>输入文件</div>
+            <div class="fieldrow">
+              <div class="inp"><span class="path">D:\data\</span>&nbsp;orders_2026.csv</div>
+              <button class="mini">打开</button>
+            </div>
+          </div>
+          <div class="sect">
+            <div class="sect-h"><span class="idx">02</span>拆分行数</div>
+            <div class="fieldrow">
+              <div class="inp" style="max-width:110px;justify-content:flex-end;padding-right:10px">100000</div>
+              <span class="preset">1,000</span><span class="preset">10,000</span><span class="preset on">100,000</span><span class="preset">1,000,000</span>
+            </div>
+          </div>
+          <div class="result-card" style="display:flex;align-items:center;gap:9px">
+            <span style="width:22px;height:22px;border-radius:50%;border:1px solid var(--border);display:grid;place-items:center;color:var(--muted-fg-3);font-size:11px">·</span>
+            <span style="font-size:10.5px;color:var(--muted-fg-3)">运行完成后在这里显示文件数、总行数与样本路径</span>
+          </div>
+        </div>
+        <div class="footer">
+          <span class="foot-hint">将按 100,000 行拆分</span>
+          <span class="right-group">
+            <span class="runline"><span class="num"><span class="t" data-mirror>0.0</span></span><span class="unit">s</span></span>
+            <button class="btn" disabled><span class="spin"></span>拆分中</button>
+          </span>
+        </div>
+      </div>
+
+      <div class="two-col" style="width:587px;grid-template-columns:1fr">
+        <div class="dialog" style="width:100%">
+          <div class="dlg-head"><h3>按行数拆分</h3><span class="x">×</span></div>
+          <div class="dlg-body" style="gap:10px">
+            <div class="result-card">
+              <div class="done-head">
+                已完成
+                <span class="meta">· 耗时 <span style="font-family:var(--mono)">1.4 s</span></span>
+                <span class="meta" style="margin-left:auto">14:32</span>
+              </div>
+              <div class="stats">
+                <div class="stat"><dt>文件数</dt><dd>3</dd></div>
+                <div class="stat"><dt>总行数</dt><dd>250,000</dd></div>
+                <div class="stat"><dt>每份行数</dt><dd>100,000</dd></div>
+                <div class="stat"><dt>表头</dt><dd>已写入</dd></div>
+              </div>
+            </div>
+          </div>
+          <div class="done-foot">
+            <span class="hint">已按 100,000 行拆分，共 3 个文件</span>
+            <button class="btn">开始拆分</button>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="mk">i</span>
+          <span><b>结果区沿用现有结构</b>：六个工具本来就在完成卡片里显示“耗时”，这次只补运行中的读数；“对比差异”完成后把耗时加进结果统计条。</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 对比差异 -->
+  <section class="frame">
+    <div class="cap"><b>04 · 对比差异</b><span>没有页脚，读数放在居中的运行态里；完成后进统计条</span><span class="file">CsvDiffDialog.tsx</span></div>
+    <div class="dialog-wrap">
+      <div class="dialog" style="width:700px">
+        <div class="dlg-head"><h3>对比差异</h3><span class="x">×</span></div>
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border-soft);display:flex;gap:10px">
+          <div class="inp"><span class="path">A</span>&nbsp;orders_v1.csv</div>
+          <div class="inp"><span class="path">B</span>&nbsp;orders_v2.csv</div>
+        </div>
+        <div class="diff-body">
+          <div class="diff-center">
+            <span class="spin"></span>
+            <span>对比中</span>
+            <span class="num live-timer" data-start="0"><span class="t">0.0</span> s</span>
+          </div>
+          <span style="font-size:10.5px;color:var(--muted-fg-3)">按关键列匹配行，逐行列出新增、删除与修改</span>
+        </div>
+      </div>
+
+      <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+        <div class="fs">
+          <div class="fs-tag">完成 · 统计条右侧新增耗时</div>
+          <div class="stats-strip">
+            <span class="item"><span style="color:var(--success)">+</span>新增 <span class="n">128</span></span>
+            <span class="item"><span style="color:var(--danger)">−</span>删除 <span class="n">31</span></span>
+            <span class="item"><span>~</span>修改 <span class="n">42</span></span>
+            <span class="item"><span>=</span>未变 <span class="n">9,412</span></span>
+            <span class="spent">耗时 <span class="n">1.4 s</span></span>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="mk">i</span>
+          <span><b>为什么不做全屏进度条</b>：对比是单次后端调用，没有可信的百分比；给一个真实递增的读数，比一条停在 80% 的假进度诚实。</span>
+        </div>
+        <div class="callout">
+          <span class="mk">i</span>
+          <span><b>读数不挤按钮</b>：读数与按钮在同一个右侧分组里，按钮右缘固定不动，结束时读数消失即可。</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 规范 -->
+  <section class="frame">
+    <div class="cap"><b>05 · 实现约定</b><span>一个组件、一个 hook，七处接入</span><span class="file">src/components/ui/RunTimer.tsx</span></div>
+    <table class="spec">
+      <thead>
+        <tr><th>项</th><th>约定</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>组件</td><td><code>&lt;RunTimer running elapsedMs? /&gt;</code> 或 <code>useRunTimer(running)</code>，放 <code>src/hooks</code>；六个页脚与对比差异共用同一份读数样式。</td></tr>
+        <tr><td>位置</td><td>六个带页脚的对话框：读数放进右侧分组、紧贴主按钮左侧（间距 12px），左端就绪提示保持原样；对比差异放在居中“对比中”之后，完成后进统计条右侧。</td></tr>
+        <tr><td>排版</td><td>数字 11.5px JetBrains Mono + <code>tabular-nums</code>，右对齐定宽 46px；单位 10px 弱化；只输出读数，不再写“运行中”标签。</td></tr>
+        <tr><td>格式</td><td>0–59.9 s 保留一位小数；≥60 s 显示 <code>m:ss</code>；结束后显示结果区的 <code>formatElapsed</code>。</td></tr>
+        <tr><td>刷新</td><td>250ms 一次，用 <code>performance.now()</code> 起算，卸载/结束后清除；不使用 CSS 动画循环。</td></tr>
+        <tr><td>状态</td><td>空闲不出现；运行中出现；完成/失败立即消失，失败由错误条接管；切换文件或关闭对话框清零。</td></tr>
+        <tr><td>无障碍</td><td><code>role="timer"</code>、<code>aria-live="off"</code>，避免读屏逐帧播报；最后的耗时由结果文本朗读一次。</td></tr>
+        <tr><td>文案</td><td>读数不写状态词；运行状态由按钮现有的“拆分中 / 合并中 / 转换中”表达，避免两处重复。</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+
+<script>
+  // 暗色切换
+  const toggle = document.getElementById('themeToggle');
+  toggle.addEventListener('click', () => {
+    const dark = document.documentElement.classList.toggle('dark');
+    toggle.textContent = dark ? 'LIGHT' : 'DARK';
+  });
+
+  // 运行读数：250ms 刷新，演示用 0.1s 精度
+  const fmt = (ms) => {
+    if (ms < 60000) return (ms / 1000).toFixed(1);
+    const total = Math.floor(ms / 1000);
+    return String(Math.floor(total / 60)) + ':' + String(total % 60).padStart(2, '0');
+  };
+  const started = performance.now();
+  const timers = document.querySelectorAll('.live-timer');
+  const mirrors = document.querySelectorAll('[data-mirror]');
+  setInterval(() => {
+    const ms = performance.now() - started;
+    const text = fmt(ms % 90000); // 90 秒后循环，方便长期停留演示
+    timers.forEach((el) => {
+      const t = el.querySelector('.t');
+      if (t) t.textContent = text;
+      else el.textContent = text + ' s';
+    });
+    mirrors.forEach((el) => (el.textContent = text));
+  }, 250);
+</script>
+</body>
+</html>

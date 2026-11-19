@@ -6,8 +6,10 @@ import { ChevronLeft, ChevronRight, RefreshCw, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
+import { RunTimer } from "@/components/ui/RunTimer";
 import { useLanguage } from "@/i18n";
 import { cn } from "@/lib/utils";
+import { formatElapsed } from "@/utils/format";
 
 export interface CsvDiffEntry {
   status: "equal" | "added" | "removed" | "modified";
@@ -110,6 +112,7 @@ export function CsvDiffDialog({
   const [headersA, setHeadersA] = useState<string[] | null>(null);
   const [keyColumns, setKeyColumns] = useState<number[]>([]);
   const [result, setResult] = useState<CsvDiffResult | null>(null);
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const [isComparing, setIsComparing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +123,7 @@ export function CsvDiffDialog({
       setFileA(initialFileA || "");
       setFileB("");
       setResult(null);
+      setElapsedMs(null);
       setError(null);
       setDelimiter(defaultDelimiter || ",");
       setKeyColumns([]);
@@ -193,6 +197,8 @@ export function CsvDiffDialog({
     }
     setIsComparing(true);
     setError(null);
+    setElapsedMs(null);
+    const startedAt = performance.now();
     try {
       const data = await invoke<CsvDiffResult>("diff_csv_files", {
         fileA,
@@ -202,6 +208,7 @@ export function CsvDiffDialog({
         keyColumns: keyColumns.length ? keyColumns : null,
       });
       setResult(data);
+      setElapsedMs(performance.now() - startedAt);
       setPage(0);
     } catch (err) {
       setError(String(err));
@@ -555,6 +562,14 @@ export function CsvDiffDialog({
                 </span>
               </span>
             ))}
+            {elapsedMs !== null && (
+              <span className="inline-flex items-baseline gap-1.5 text-[11px] text-muted-foreground">
+                {t.elapsed}
+                <span className="font-mono text-[11px] tabular-nums text-foreground">
+                  {formatElapsed(elapsedMs)}
+                </span>
+              </span>
+            )}
             <div className="ml-auto flex items-center gap-1">
               {result.modified_count > 0 && (
                 <span className="mr-2.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -654,7 +669,11 @@ export function CsvDiffDialog({
           </div>
         ) : isComparing ? (
           <div className="flex flex-1 items-center justify-center">
-            <p className="text-xs text-muted-foreground">{t.comparing}</p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+              <span>{t.comparing}</span>
+              <RunTimer running={isComparing} />
+            </div>
           </div>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 pb-6">

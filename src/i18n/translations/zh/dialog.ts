@@ -14,7 +14,7 @@ export const zhDialog = {
   csvDiffFileAPlaceholder: "原始 CSV 文件",
   csvDiffFileBPlaceholder: "修改后的 CSV 文件",
   compare: "开始对比",
-  comparing: "对比中...",
+  comparing: "对比中",
   csvDiffSelectBoth: "请选择两个文件",
   csvDiffNoResult: "选择两个 CSV 文件并点击开始对比",
   csvDiffEmptyTitle: "尚未对比",

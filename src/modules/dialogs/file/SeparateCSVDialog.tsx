@@ -12,6 +12,7 @@ import {
 
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
+import { RunTimer } from "@/components/ui/RunTimer";
 import { Select } from "@/components/ui/Select";
 import { useLanguage } from "@/i18n";
 import { useCsvProbe } from "@/hooks/useCsvProbe";
@@ -855,9 +856,12 @@ export function SeparateCSVDialog({
                   .replace("{columns}", effectiveColumns)
                   .replace("{delimiter}", delimiterLabel(effectiveDelimiter))}
           </span>
-          <Button size="sm" onClick={handleSeparate} disabled={isSeparating}>
-            {isSeparating ? t.separating : t.separateStart}
-          </Button>
+          <span className="flex items-center gap-3">
+            <RunTimer running={isSeparating} />
+            <Button size="sm" onClick={handleSeparate} disabled={isSeparating}>
+              {isSeparating ? t.separating : t.separateStart}
+            </Button>
+          </span>
         </div>
       </div>
     </div>

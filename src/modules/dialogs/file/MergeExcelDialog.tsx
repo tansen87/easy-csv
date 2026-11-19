@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
+import { RunTimer } from "@/components/ui/RunTimer";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Select } from "@/components/ui/Select";
 import { useLanguage } from "@/i18n";
@@ -1275,9 +1276,12 @@ export function MergeExcelDialog({
           <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
             {readyLine}
           </span>
-          <Button size="sm" onClick={handleMerge} disabled={isMerging}>
-            {isMerging ? t.mergeExcelRunning : t.mergeExcelStart}
-          </Button>
+          <span className="flex items-center gap-3">
+            <RunTimer running={isMerging} />
+            <Button size="sm" onClick={handleMerge} disabled={isMerging}>
+              {isMerging ? t.mergeExcelRunning : t.mergeExcelStart}
+            </Button>
+          </span>
         </div>
       </div>
     </div>
