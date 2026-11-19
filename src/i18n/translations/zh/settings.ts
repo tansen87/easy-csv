@@ -46,7 +46,6 @@ export const zhSettings = {
   accentPink: "胭脂",
   accentPurple: "青莲",
   settingsLiveNote: "改动保存后生效并写入本地配置",
-  settingsSampleColumns: "{count} 列",
   settingsDecrease: "减少",
   settingsIncrease: "增加",
   settingsShowKey: "显示密钥",

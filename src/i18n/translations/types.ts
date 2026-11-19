@@ -256,8 +256,6 @@ export interface Translations {
   accentPurple: string;
   /** When a settings change takes effect - the footer's left-hand note. */
   settingsLiveNote: string;
-  /** `{count}` placeholder: how many columns the delimiter sample splits into. */
-  settingsSampleColumns: string;
   /** Accessible names for the concurrency stepper's two buttons. */
   settingsDecrease: string;
   settingsIncrease: string;

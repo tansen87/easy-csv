@@ -51,7 +51,6 @@ export const enSettings = {
   accentPink: "Rose",
   accentPurple: "Violet",
   settingsLiveNote: "Changes take effect and are written to the local configuration after saving",
-  settingsSampleColumns: "{count} columns",
   settingsDecrease: "Decrease",
   settingsIncrease: "Increase",
   settingsShowKey: "Show key",

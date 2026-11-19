@@ -97,15 +97,6 @@ const CLEAR_COMMANDS: Record<ClearTarget, string> = {
 };
 
 /**
- * The header of the sample file the app ships with
- * (`src-tauri/samples/easy-csv-sample-sales.csv`), shown under the delimiter
- * setting so the choice explains itself: switch to `;` and the line collapses
- * to one column. Kept in sync by hand - the dialog has no file open, so there
- * is nothing to read it from.
- */
-const SAMPLE_HEADER = "日期,地区,品类,金额,数量";
-
-/**
  * Shared segmented picker (language / theme).
  *
  * 040 §3: the thumb is positioned by `transform` and sized by `width`, both
@@ -601,35 +592,12 @@ export function SettingsTabContent({
   /**
    * The description column's second line (design 040 §3).
    *
-   * Both cases used to be **extra rows** in the card - a bordered sub-row under
-   * the delimiter and another under the API key - which made two settings 60px
-   * tall for reasons unrelated to their controls. As a second line they cost 16px
-   * and stay attached to what they explain.
+   * This used to be an **extra row** in the card - a bordered sub-row under the
+   * API key - which made the setting 60px tall for a reason unrelated to its
+   * control. As a second line it costs 16px and stays attached to what it
+   * explains.
    */
   const renderExtra = (row: SettingsRowModel) => {
-    if (row.id === "delimiter") {
-      const separator = delimiterMode === "auto" ? "," : delimiterMode;
-      const cells = SAMPLE_HEADER.split(separator);
-      const splits = cells.length > 1;
-      return (
-        <span className="mt-1 flex items-center gap-2 font-mono text-[10.5px] leading-none text-muted-foreground">
-          <span className="flex min-w-0 items-center overflow-hidden rounded border border-border">
-            {cells.map((cell, index) => (
-              <span
-                key={index}
-                className="max-w-[180px] truncate border-r border-border px-1.5 py-0.5 last:border-r-0"
-              >
-                {cell.replace(/\t/g, "⇥")}
-              </span>
-            ))}
-          </span>
-          <span className={cn("shrink-0 tabular-nums", !splits && "text-destructive")}>
-            {t.settingsSampleColumns.replace("{count}", String(cells.length))}
-          </span>
-        </span>
-      );
-    }
-
     // Where to get a token / check the balance - only the built-in providers
     // have a console to point at.
     if (row.id === "ai-api-key" && isBuiltinProvider(aiConfig.provider)) {

@@ -19,7 +19,7 @@ export const enPipeline = {
   executionCancelled: "Execution cancelled",
   maxConcurrentRuns: "Concurrent executions",
   maxConcurrentRunsDesc:
-    "Runs beyond this limit wait in line and start as soon as a slot frees up (1-16, default 4)",
+    "Runs beyond this limit wait in line and start as soon as a slot frees up (1-16)",
   commandPanel: "Command",
   logPanel: "Logs",
   view: "View",
@@ -279,8 +279,7 @@ export const enPipeline = {
   templateSearchPlaceholder: "Search templates",
   templateNoMatches: "No matching templates",
   templateDescriptionPlaceholder: "Optional description",
-  noTemplates:
-    "Saved pipelines appear here, ready to apply.",
+  noTemplates: "Saved pipelines appear here, ready to apply.",
   templateApply: "Apply",
   templateRename: "Rename",
   templateDelete: "Delete",
