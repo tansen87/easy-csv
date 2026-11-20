@@ -384,7 +384,6 @@ export interface Translations {
   tidyCanvas: string;
   fitCanvas: string;
   zoomReset: string;
-  snapToGrid: string;
   lockCanvas: string;
   showGestureHints: string;
   gestureSelect: string;
@@ -696,11 +695,8 @@ export interface Translations {
   bytes: string;
   csvEncodingLastResult: string;
   csvEncodingStep1: string;
-  csvEncodingStep1Hint: string;
   csvEncodingStep2: string;
-  csvEncodingStep2Hint: string;
   csvEncodingStep3: string;
-  csvEncodingStep3Hint: string;
   csvEncodingSaveAs: string;
   csvEncodingFooterHint: string;
   csvEncodingRead: string;

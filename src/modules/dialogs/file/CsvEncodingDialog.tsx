@@ -49,20 +49,23 @@ const ENCODINGS = [
   { value: "latin1", label: "Latin-1 / Windows-1252" },
 ];
 
-const ENCODING_SUFFIXES: Record<string, string> = {
-  "utf-8": "utf8",
-  gbk: "gbk",
-  gb18030: "gb18030",
-  "utf-16le": "utf16le",
-  "utf-16be": "utf16be",
-  latin1: "latin1",
-};
-
 /** Display name for a raw encoding id, falling back to the id itself. */
 const ENCODING_LABELS = new Map(ENCODINGS.map((e) => [e.value, e.label]));
 
 function encodingLabel(value: string): string {
   return ENCODING_LABELS.get(value) ?? value;
+}
+
+/** `{stem}_encoding{ext}`, keeping the input's extension. */
+function encodingOutputPath(path: string): string {
+  const trimmed = path.trim();
+  if (trimmed === "") return "";
+  const slash = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
+  const dot = trimmed.lastIndexOf(".");
+  if (dot > slash) {
+    return `${trimmed.slice(0, dot)}_encoding${trimmed.slice(dot)}`;
+  }
+  return `${trimmed}_encoding`;
 }
 
 export function CsvEncodingDialog({
@@ -86,7 +89,7 @@ export function CsvEncodingDialog({
   const [outputExists, setOutputExists] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const autoBaseRef = useRef<{ name: string; ext: string } | null>(null);
+  const outputTouchedRef = useRef(false);
   const isOpenRef = useRef(isOpen);
   isOpenRef.current = isOpen;
 
@@ -98,30 +101,27 @@ export function CsvEncodingDialog({
     setIsStaleResult(true);
   }, []);
 
-  const suffixFor = useCallback((encoding: string) => {
-    return ENCODING_SUFFIXES[encoding] ?? "utf8";
-  }, []);
-
   useEffect(() => {
     if (isOpen) {
       const stored = loadLastEncodingResult();
+      const hasInitialInput = !!initialInputFile?.trim();
       setInputFile(initialInputFile || stored?.inputFile || "");
-      setOutputFile(stored?.outputPath ?? "");
+      setOutputFile(hasInitialInput ? "" : (stored?.outputPath ?? ""));
       setSourceEncoding(stored?.sourceEncoding ?? DEFAULT_ENCODING);
       setTargetEncoding(stored?.targetEncoding ?? DEFAULT_ENCODING);
       setLastResult(stored);
       setIsStaleResult(stored !== null);
       setError(null);
-      autoBaseRef.current = null;
+      // A restored run keeps its own output path; a fresh one follows the
+      // input as `{stem}_encoding{ext}`.
+      outputTouchedRef.current = !hasInitialInput && stored !== null;
     }
   }, [isOpen, initialInputFile]);
 
   useEffect(() => {
-    if (autoBaseRef.current) {
-      const { name, ext } = autoBaseRef.current;
-      setOutputFile(`${name}_${suffixFor(targetEncoding)}${ext}`);
-    }
-  }, [targetEncoding, suffixFor]);
+    if (!isOpen || outputTouchedRef.current) return;
+    setOutputFile(encodingOutputPath(inputFile));
+  }, [isOpen, inputFile]);
 
   // Flag a stored result whose output file was moved/deleted meanwhile.
   useEffect(() => {
@@ -172,14 +172,11 @@ export function CsvEncodingDialog({
     });
     if (file) {
       clearFeedback();
+      outputTouchedRef.current = false;
       setInputFile(file);
-      const extIndex = file.lastIndexOf(".");
-      const ext = extIndex >= 0 ? file.slice(extIndex) : ".csv";
-      const name = file.slice(0, extIndex);
-      autoBaseRef.current = { name, ext };
-      setOutputFile(`${name}_${suffixFor(targetEncoding)}${ext}`);
+      setOutputFile(encodingOutputPath(file));
     }
-  }, [clearFeedback, suffixFor, targetEncoding]);
+  }, [clearFeedback]);
 
   const browseOutput = useCallback(async () => {
     const file = await save({
@@ -190,7 +187,7 @@ export function CsvEncodingDialog({
     });
     if (file) {
       clearFeedback();
-      autoBaseRef.current = null;
+      outputTouchedRef.current = true;
       setOutputFile(file);
     }
   }, [clearFeedback]);
@@ -309,15 +306,12 @@ export function CsvEncodingDialog({
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-xs text-muted-foreground shrink-0 w-16">
-                  {t.inputFile}
-                </label>
                 <input
                   type="text"
                   value={inputFile}
                   onChange={(e) => {
                     clearFeedback();
-                    autoBaseRef.current = null;
+                    outputTouchedRef.current = false;
                     setInputFile(e.target.value);
                   }}
                   placeholder={t.inputFile}
@@ -332,9 +326,6 @@ export function CsvEncodingDialog({
                   {t.open}
                 </Button>
               </div>
-              <p className="text-[11px] text-muted-foreground/80 mt-2">
-                {t.csvEncodingStep1Hint}
-              </p>
             </section>
 
             {/* Encoding setting */}
@@ -380,9 +371,6 @@ export function CsvEncodingDialog({
                   />
                 </div>
               </div>
-              <p className="text-[11px] text-muted-foreground/80 mt-2">
-                {t.csvEncodingStep2Hint}
-              </p>
             </section>
 
             {/* Output file */}
@@ -396,15 +384,12 @@ export function CsvEncodingDialog({
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-xs text-muted-foreground shrink-0 w-16">
-                  {t.outputFile}
-                </label>
                 <input
                   type="text"
                   value={outputFile}
                   onChange={(e) => {
                     clearFeedback();
-                    autoBaseRef.current = null;
+                    outputTouchedRef.current = true;
                     setOutputFile(e.target.value);
                   }}
                   placeholder={t.outputFile}
@@ -419,9 +404,6 @@ export function CsvEncodingDialog({
                   {t.csvEncodingSaveAs}
                 </Button>
               </div>
-              <p className="text-[11px] text-muted-foreground/80 mt-2">
-                {t.csvEncodingStep3Hint}
-              </p>
             </section>
 
             {error && (

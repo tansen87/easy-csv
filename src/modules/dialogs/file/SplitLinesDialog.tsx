@@ -32,7 +32,7 @@ export interface SplitLinesResult {
 const DEFAULT_LINES_PER_FILE = 1_000_000;
 
 /** Quick row-count presets offered next to the number field. */
-const ROWS_PRESETS = [1_000, 10_000, 100_000, 1_000_000];
+const ROWS_PRESETS = [1_000_000, 2_000_000, 5_000_000, 10_000_000];
 
 /** How many part paths the result panel lists at most (`fileCount` carries the
  * full count; the cap also keeps the persisted record small). */
@@ -452,9 +452,6 @@ export function SplitLinesDialog({
             {/* Output location */}
             <StepSection index={3} title={t.splitLinesStepOutput}>
               <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-muted-foreground shrink-0">
-                  {t.outputDir}
-                </label>
                 <input
                   type="text"
                   value={outputDir}

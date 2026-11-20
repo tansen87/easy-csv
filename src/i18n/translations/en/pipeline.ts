@@ -219,7 +219,6 @@ export const enPipeline = {
   tidyCanvas: "Tidy canvas",
   fitCanvas: "Fit canvas",
   zoomReset: "Zoom 100%",
-  snapToGrid: "Snap to grid",
   lockCanvas: "Lock canvas",
   showGestureHints: "Show gesture hints",
   gestureSelect: "Select",

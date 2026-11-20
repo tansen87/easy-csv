@@ -51,15 +51,9 @@ export const enDialog = {
   sameEncoding: "Source and target encodings are the same",
   bytes: "bytes",
   csvEncodingLastResult: "Last conversion",
-  csvEncodingStep1: "Select file",
-  csvEncodingStep1Hint:
-    "Supports CSV / TXT / TSV; pre-filled when opened from a tab",
+  csvEncodingStep1: "Input file",
   csvEncodingStep2: "Encoding",
-  csvEncodingStep2Hint:
-    "Converts the source encoding into the target, following the arrow",
   csvEncodingStep3: "Output file",
-  csvEncodingStep3Hint:
-    "Auto-named with the target encoding suffix after picking an input; editable",
   csvEncodingSaveAs: "Save as",
   csvEncodingFooterHint: "Pick files and encodings, then click Convert",
   csvEncodingRead: "Read",

@@ -56,7 +56,6 @@ import {
   LayoutGrid,
   Maximize2,
   ZoomIn,
-  Grid3x3,
   Lock,
   Mouse,
 } from "lucide-react";
@@ -70,10 +69,8 @@ const LEFT_TOOL_STORAGE_KEY = "easy-csv-canvas-left-tool";
 /** Swap left/right mouse buttons for every canvas gesture. */
 const SWAP_MOUSE_STORAGE_KEY = "easy-csv-canvas-swap-buttons";
 /** Canvas options persisted with the tool choices. */
-const SNAP_GRID_STORAGE_KEY = "easy-csv-canvas-snap-grid";
 const LOCK_CANVAS_STORAGE_KEY = "easy-csv-canvas-locked";
 const GESTURE_LEGEND_STORAGE_KEY = "easy-csv-canvas-gesture-legend";
-const SNAP_GRID_STEP = 22;
 
 function readStoredFlag(key: string): boolean {
   try {
@@ -307,10 +304,7 @@ export function FlowPanel({
     setTableContextMenu(null);
   }, []);
 
-  // Canvas options: snap, read-only lock, gesture legend.
-  const [snapToGrid, setSnapToGrid] = useState(() =>
-    readStoredFlag(SNAP_GRID_STORAGE_KEY),
-  );
+  // Canvas options: read-only lock and gesture legend.
   const [locked, setLocked] = useState(() =>
     readStoredFlag(LOCK_CANVAS_STORAGE_KEY),
   );
@@ -322,12 +316,6 @@ export function FlowPanel({
   const [canvasToolsOpen, setCanvasToolsOpen] = useState(false);
   const canvasToolsRef = useRef<HTMLDivElement>(null);
 
-  const toggleSnapToGrid = useCallback(() => {
-    setSnapToGrid((prev) => {
-      storeFlag(SNAP_GRID_STORAGE_KEY, !prev);
-      return !prev;
-    });
-  }, []);
   const toggleLocked = useCallback(() => {
     setLocked((prev) => {
       storeFlag(LOCK_CANVAS_STORAGE_KEY, !prev);
@@ -700,18 +688,6 @@ export function FlowPanel({
     ],
   );
 
-  // Swap-drag positions respect the optional 22px grid.
-  const snapPosition = useCallback(
-    (position: { x: number; y: number }) =>
-      snapToGrid
-        ? {
-            x: Math.round(position.x / SNAP_GRID_STEP) * SNAP_GRID_STEP,
-            y: Math.round(position.y / SNAP_GRID_STEP) * SNAP_GRID_STEP,
-          }
-        : position,
-    [snapToGrid],
-  );
-
   // Primary button move - swapped drags first, then connect / cut.
   const handleCutMove = useCallback(
     (e: React.MouseEvent) => {
@@ -735,10 +711,10 @@ export function FlowPanel({
         if (!drag.moved && Math.hypot(dx, dy) < 3) return;
         drag.moved = true;
         const zoom = reactFlowInstance.current?.getZoom?.() ?? 1;
-        const position = snapPosition({
+        const position = {
           x: drag.startPosition.x + dx / zoom,
           y: drag.startPosition.y + dy / zoom,
-        });
+        };
         setNodes((nds) =>
           nds.map((n) => (n.id === drag.nodeId ? { ...n, position } : n)),
         );
@@ -759,7 +735,6 @@ export function FlowPanel({
       moveCut,
       setNodes,
       reactFlowWrapper,
-      snapPosition,
     ],
   );
 
@@ -810,14 +785,14 @@ export function FlowPanel({
 
         if (drag.moved) {
           const zoom = reactFlowInstance.current?.getZoom?.() ?? 1;
-          const position = snapPosition({
+          const position = {
             x:
               drag.startPosition.x +
               (e.clientX - drag.startClientX) / zoom,
             y:
               drag.startPosition.y +
               (e.clientY - drag.startClientY) / zoom,
-          });
+          };
           const nextNodes = nodesRef.current.map((n) =>
             n.id === drag.nodeId ? { ...n, position } : n,
           );
@@ -847,7 +822,6 @@ export function FlowPanel({
       setNodes,
       persistNodePositions,
       reactFlowInstance,
-      snapPosition,
     ],
   );
 
@@ -1170,8 +1144,6 @@ export function FlowPanel({
         // Swapped mode moves nodes with a custom right-drag; the lock also
         // disables every direct move.
         nodesDraggable={!swapMouseButtons && !locked}
-        snapToGrid={snapToGrid}
-        snapGrid={[SNAP_GRID_STEP, SNAP_GRID_STEP]}
         selectionMode={SelectionMode.Partial}
         zoomOnDoubleClick={!doubleClickFitView}
         onDoubleClick={handleCanvasDoubleClick}
@@ -1389,7 +1361,7 @@ export function FlowPanel({
               }`}
             >
               <MoreHorizontal className="h-3.5 w-3.5" />
-              {(snapToGrid || locked || showGestureLegend) && (
+              {(locked || showGestureLegend) && (
                 <span className="absolute right-[3px] top-[3px] h-1 w-1 rounded-full bg-primary" />
               )}
             </button>
@@ -1439,27 +1411,6 @@ export function FlowPanel({
               <div className="px-2 pb-0.5 pt-1 font-mono text-[9px] text-muted-foreground/60">
                 {t.canvasSwitches}
               </div>
-              <button
-                type="button"
-                role="menuitemcheckbox"
-                aria-checked={snapToGrid}
-                onClick={toggleSnapToGrid}
-                className="flex h-8 w-full items-center gap-2 rounded-[7px] px-2 text-left text-xs text-foreground transition-colors hover:bg-foreground/8"
-              >
-                <Grid3x3 className="h-3.5 w-3.5 text-muted-foreground" />
-                <span>{t.snapToGrid}</span>
-                <span
-                  className={`relative ml-auto h-[14px] w-[24px] shrink-0 rounded-full transition-colors ${
-                    snapToGrid ? "bg-primary" : "bg-muted"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-[2px] h-[10px] w-[10px] rounded-full bg-background transition-[left] ${
-                      snapToGrid ? "left-[12px]" : "left-[2px]"
-                    }`}
-                  />
-                </span>
-              </button>
               <button
                 type="button"
                 role="menuitemcheckbox"

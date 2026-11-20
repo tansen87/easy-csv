@@ -616,9 +616,6 @@ export function EnumerateByGroupDialog({
             {/* Output location */}
             <StepSection index={3} title={t.groupEnumStepOutput}>
               <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-muted-foreground shrink-0">
-                  {t.outputDir}
-                </label>
                 <input
                   type="text"
                   value={outputDir}

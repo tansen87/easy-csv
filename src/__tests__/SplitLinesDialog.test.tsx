@@ -178,19 +178,19 @@ describe("SplitLinesDialog options", () => {
     expect(container.textContent).toContain("app_part3.log");
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Lines per file 10,000" }),
+      screen.getByRole("button", { name: "Lines per file 2,000,000" }),
     );
-    expect(screen.getByRole("spinbutton")).toHaveValue(10000);
-    // The presets run up to a million rows.
+    expect(screen.getByRole("spinbutton")).toHaveValue(2000000);
+    // The presets run up to ten million rows.
     expect(
-      screen.getByRole("button", { name: "Lines per file 1,000,000" }),
+      screen.getByRole("button", { name: "Lines per file 10,000,000" }),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Split" }));
     await waitFor(() => {
       expect(mockInvoke).toHaveBeenCalledWith("split_lines", {
         path: "/data/logs/app.log",
-        linesPerFile: 10000,
+        linesPerFile: 2000000,
         outDir: null,
         noHeaders: false,
       });

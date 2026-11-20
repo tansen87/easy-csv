@@ -341,6 +341,37 @@ describe("CsvEncodingDialog last result", () => {
     expect(pathInput("Input")).toHaveValue("/tmp/tab.csv");
   });
 
+  it("defaults the output to the input name plus _encoding", async () => {
+    mockOpen.mockResolvedValue("/tmp/test.csv");
+    render(
+      <LanguageProvider>
+        <CsvEncodingDialog isOpen onClose={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("/tmp/test_encoding.csv")).toBeInTheDocument();
+    });
+  });
+
+  it("derives the output from an input supplied by the caller", async () => {
+    render(
+      <LanguageProvider>
+        <CsvEncodingDialog
+          isOpen
+          onClose={vi.fn()}
+          initialInputFile="/tmp/tab.csv"
+        />
+      </LanguageProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("/tmp/tab_encoding.csv")).toBeInTheDocument();
+    });
+  });
+
   it("persists a successful run and keeps showing it after edits", async () => {
     const { container } = render(
       <LanguageProvider>

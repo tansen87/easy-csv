@@ -211,7 +211,6 @@ export const zhPipeline = {
   tidyCanvas: "整理画布",
   fitCanvas: "适应画布",
   zoomReset: "缩放 100%",
-  snapToGrid: "对齐网格",
   lockCanvas: "锁定画布",
   showGestureHints: "显示画布手势",
   gestureSelect: "框选",
