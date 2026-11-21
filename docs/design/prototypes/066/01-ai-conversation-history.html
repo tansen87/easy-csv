@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 066 · AI 会话历史</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --edge:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+
+    --success:oklch(0.5 0.1 145);
+    --danger:oklch(0.55 0.17 27);
+    --warning:oklch(0.55 0.1 72);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.94 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-fly:0 12px 28px -14px oklch(0.2 0.02 80 / 26%);
+    --shadow-shell:0 18px 46px -24px oklch(0.2 0.02 80 / 30%);
+  }
+  .dark{
+    color-scheme:dark;
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --edge:oklch(1 0 0 / 24%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 18%,transparent);
+    --success:oklch(0.72 0.1 145);
+    --danger:oklch(0.7 0.14 27);
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.12 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-card:none;
+    --shadow-fly:0 12px 28px -14px oklch(0 0 0 / 75%);
+    --shadow-shell:0 18px 46px -24px oklch(0 0 0 / 70%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased;transition:background-color .18s ease,color .18s ease}
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme-toggle{position:absolute;right:0;top:2px;height:26px;padding:0 10px;border-radius:6px;
+                border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+                font-family:var(--mono);font-size:10.5px;cursor:pointer}
+  .theme-toggle:hover{color:var(--fg)}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+  .lede{font-size:11.5px;line-height:1.75;color:var(--muted-fg);margin:0 0 14px;max-width:1000px}
+  .lede b{font-weight:500;color:var(--fg)}
+  .state-note{font-size:10.5px;color:var(--muted-fg);line-height:1.7;padding:10px 2px 0}
+  .state-note b{color:var(--fg);font-weight:500}
+
+  /* ── 应用外壳 ─────────────────────────────────────────────── */
+  .shell{position:relative;width:1200px;height:604px;border:1px solid var(--border);border-radius:10px;
+         background:var(--canvas);overflow:hidden;box-shadow:var(--shadow-shell)}
+  .shell.short{height:520px}
+  .topbar{position:absolute;inset:0 0 auto 0;height:36px;display:flex;align-items:center;gap:16px;
+          padding:0 12px;border-bottom:1px solid var(--border);background:var(--card);z-index:6}
+  .brand{font-size:12px;font-weight:500;letter-spacing:-.01em}
+  .brand span{font-family:var(--mono);font-size:9.5px;font-weight:400;color:var(--muted-fg-3);margin-left:6px}
+  .menubar{display:flex;gap:2px}
+  .menubar span{padding:4px 8px;border-radius:5px;font-size:11px;color:var(--muted-fg)}
+  .menubar span.on{background:var(--brand-12);color:var(--brand);font-weight:500}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:4px}
+  .ticon{width:24px;height:24px;border-radius:5px;display:grid;place-items:center;color:var(--muted-fg);
+         border:1px solid transparent}
+  .ticon.on{background:var(--brand-soft);color:var(--brand);border-color:color-mix(in oklab,var(--brand) 24%,transparent)}
+  .ticon svg{width:13px;height:13px;stroke-width:1.6;fill:none;stroke:currentColor}
+  .tabstrip{position:absolute;left:0;right:0;top:36px;height:26px;display:flex;align-items:center;gap:6px;
+            padding:0 10px;border-bottom:1px solid var(--border-soft);background:var(--card);z-index:5}
+  .tabstrip .t{height:19px;padding:0 8px;border-radius:4px;font-size:10.5px;display:flex;align-items:center;
+               color:var(--muted-fg);border:1px solid transparent}
+  .tabstrip .t.on{border-color:var(--border);background:var(--bg);color:var(--fg);font-weight:500}
+
+  .workspace{position:absolute;top:62px;left:0;right:0;bottom:0;display:flex}
+  .canvas{position:relative;flex:1;min-width:0;overflow:hidden;background-color:var(--canvas);
+          background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px}
+  .legend{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;
+          padding:5px 10px;border:1px solid var(--border);border-radius:7px;background:var(--card);
+          font-size:9.5px;color:var(--muted-fg);white-space:nowrap}
+  .legend kbd{font-family:var(--mono);font-size:9px;border:1px solid var(--border);border-radius:3px;padding:0 3px;color:var(--fg)}
+  .stage-node{position:absolute;border:1px solid var(--border);border-radius:7px;background:var(--paper);
+              box-shadow:var(--shadow-card);padding:9px 10px}
+  .stage-node .n{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stage-node .m{margin-top:4px;font-family:var(--mono);font-size:9px;color:var(--muted-fg)}
+  .stage-node.table{width:186px}
+  .stage-node.step{width:142px}
+  .wire{position:absolute;height:1px;background:var(--edge);transform-origin:0 0}
+
+  /* ── AI 停靠（360）+ 历史（160） ─────────────────────────── */
+  .ai-wrap{flex:none;display:flex;border-left:1px solid var(--border);background:var(--card)}
+  .history{width:160px;flex:none;display:flex;flex-direction:column;border-right:1px solid var(--border-soft);
+           background:color-mix(in oklab,var(--muted) 28%,var(--card))}
+  .hist-head{height:40px;flex:none;display:flex;align-items:center;gap:6px;padding:0 10px;
+             border-bottom:1px solid var(--border-soft)}
+  .hist-head .h-title{font-size:11px;font-weight:500}
+  .hist-head .h-count{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);margin-left:auto}
+  .hist-new{height:28px;margin:8px 8px 4px;border:1px solid var(--border);border-radius:6px;background:var(--card);
+            display:flex;align-items:center;justify-content:center;gap:5px;font-size:10.5px;color:var(--muted-fg)}
+  .hist-new svg{width:11px;height:11px;stroke-width:1.7;fill:none;stroke:currentColor}
+  .hist-scroll{flex:1;min-height:0;overflow:hidden;padding:2px 6px 8px}
+  .hist-group{font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-3);padding:9px 5px 4px}
+  .hist-row{display:flex;flex-direction:column;gap:2px;padding:6px 7px;border-radius:6px;border:1px solid transparent}
+  .hist-row:hover{background:var(--muted)}
+  .hist-row.on{background:var(--brand-soft);border-color:color-mix(in oklab,var(--brand) 22%,transparent)}
+  .hist-row .rt{font-size:10.5px;line-height:1.45;color:var(--fg);display:-webkit-box;-webkit-line-clamp:2;
+                -webkit-box-orient:vertical;overflow:hidden;word-break:break-all}
+  .hist-row.on .rt{color:var(--brand);font-weight:500}
+  .hist-row .rm{font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-3);font-variant-numeric:tabular-nums}
+
+  .dock{width:360px;flex:none;display:flex;flex-direction:column;background:var(--card)}
+  .dock-head{height:40px;display:flex;align-items:center;gap:8px;padding:0 12px;
+             border-bottom:1px solid var(--border-soft);flex:none}
+  .bot{width:22px;height:22px;border-radius:6px;background:var(--brand-soft);color:var(--brand);
+       display:grid;place-items:center;flex:none}
+  .bot svg{width:13px;height:13px;stroke-width:1.6;fill:none;stroke:currentColor}
+  .dock-head .title{font-size:12px;font-weight:500}
+  .dock-head .tokens{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);
+                     font-variant-numeric:tabular-nums;white-space:nowrap}
+  .dock-head .acts{display:flex;gap:2px;margin-left:4px}
+  .dock-head .a{width:22px;height:22px;border-radius:5px;display:grid;place-items:center;color:var(--muted-fg)}
+  .dock-head .a:hover{background:var(--muted);color:var(--fg)}
+  .dock-head .a svg{width:12.5px;height:12.5px;stroke-width:1.6;fill:none;stroke:currentColor}
+  .dock-head .a.on{background:var(--brand-soft);color:var(--brand)}
+
+  .thread{flex:1;min-width:0;min-height:0;overflow:hidden;padding:12px 14px;display:flex;flex-direction:column;gap:14px}
+
+  /* 对话正文左侧的消息时间线（截图功能） */
+  .thread-wrap{flex:1;min-height:0;display:flex}
+  .minimap{width:14px;flex:none;position:relative;display:flex;flex-direction:column;
+           align-items:center;justify-content:space-between;padding:16px 0 18px}
+  .minimap .dot{width:4px;height:4px;border-radius:50%;background:var(--border);flex:none}
+  .minimap .dot.near{background:var(--muted-fg-3)}
+  .minimap .dot.on{width:6px;height:6px;background:var(--brand)}
+  .mpreview{position:absolute;left:14px;width:196px;padding:7px 9px;border:1px solid var(--border);
+            border-radius:7px;background:var(--card);box-shadow:var(--shadow-fly)}
+  .mpreview .mp-t{font-size:10px;line-height:1.5;color:var(--fg);display:-webkit-box;-webkit-line-clamp:2;
+                  -webkit-box-orient:vertical;overflow:hidden;word-break:break-all}
+  .mpreview .mp-m{font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-3);margin-top:3px;
+                  font-variant-numeric:tabular-nums}
+  .msg{display:flex;flex-direction:column;gap:5px;max-width:100%}
+  .msg .who{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);letter-spacing:.02em}
+  .msg.user{align-items:flex-end}
+  .msg.user .bubble{background:var(--muted);border-radius:9px 9px 3px 9px;padding:7px 10px;
+                    font-size:11.5px;line-height:1.6;max-width:86%}
+  .msg.ai .bubble{font-size:11.5px;line-height:1.7;color:var(--fg);max-width:96%}
+  .msg.ai .bubble p{margin:0 0 6px}
+  .msg.ai .bubble p:last-child{margin-bottom:0}
+
+  .cmd{border:1px solid var(--border);border-radius:7px;background:var(--bg);overflow:hidden;margin-top:2px}
+  .cmd .c-head{display:flex;align-items:center;gap:6px;padding:6px 9px;border-bottom:1px solid var(--border-soft);
+               font-size:9.5px;color:var(--muted-fg-2)}
+  .cmd .c-head .dot{width:5px;height:5px;border-radius:50%;background:var(--brand);flex:none}
+  .cmd .c-body{padding:8px 9px;font-family:var(--mono);font-size:10.5px;line-height:1.7;color:var(--fg);
+               white-space:pre-wrap;word-break:break-all}
+  .cmd .c-foot{display:flex;align-items:center;gap:6px;padding:6px 8px;border-top:1px solid var(--border-soft)}
+  .cmd .c-foot .why{font-size:9.5px;color:var(--muted-fg-3);margin-right:auto;white-space:nowrap;
+                    overflow:hidden;text-overflow:ellipsis}
+  .mini-btn{height:22px;padding:0 8px;border-radius:5px;font-size:10px;display:inline-flex;align-items:center;gap:4px;
+            border:1px solid var(--border);color:var(--muted-fg);background:var(--card);white-space:nowrap}
+  .mini-btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-fg)}
+  .mini-btn svg{width:11px;height:11px;stroke-width:1.6;fill:none;stroke:currentColor}
+
+  .composer{border-top:1px solid var(--border-soft);padding:10px 12px 8px;flex:none}
+  .composer .box{border:1px solid var(--border);border-radius:8px;background:var(--bg);
+                 padding:8px 34px 8px 9px;position:relative;min-height:56px}
+  .composer .ph{font-size:11.5px;color:var(--muted-fg-3);line-height:1.5}
+  .composer .send{position:absolute;right:6px;bottom:6px;width:22px;height:22px;border-radius:5px;
+                  background:var(--brand);display:grid;place-items:center}
+  .composer .send svg{width:11px;height:11px;stroke-width:1.8;fill:none;stroke:var(--brand-fg)}
+  .composer .keys{display:flex;align-items:center;gap:8px;margin-top:7px;font-size:9px;color:var(--muted-fg-3)}
+  .composer .keys kbd{font-family:var(--mono);font-size:8.5px;border:1px solid var(--border);border-radius:3px;
+                      padding:0 3px;color:var(--muted-fg-2)}
+
+  /* 方案 B：历史覆盖对话 */
+  .overlay{position:absolute;inset:40px 0 0 0;background:var(--card);display:flex;flex-direction:column}
+  .overlay .ohead{height:36px;display:flex;align-items:center;gap:6px;padding:0 10px;border-bottom:1px solid var(--border-soft)}
+  .overlay .ohead .back{width:22px;height:22px;border-radius:5px;display:grid;place-items:center;color:var(--muted-fg)}
+  .overlay .ohead .back svg{width:13px;height:13px;stroke-width:1.6;fill:none;stroke:currentColor}
+  .overlay .otitle{font-size:11px;font-weight:500}
+  .overlay .olist{flex:1;overflow:hidden;padding:4px 8px}
+
+  /* 方案 C：对话内目录 */
+  .toc{position:absolute;right:10px;top:44px;width:216px;border:1px solid var(--border);border-radius:8px;
+       background:var(--card);box-shadow:var(--shadow-fly);padding:5px}
+  .toc .th{font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-3);padding:5px 6px 4px}
+  .toc .ti{display:flex;align-items:center;gap:6px;padding:6px;border-radius:5px;font-size:10.5px;color:var(--muted-fg)}
+  .toc .ti:hover{background:var(--muted);color:var(--fg)}
+  .toc .ti .num{font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-3);flex:none;width:12px}
+
+  /* ── 对照与规范 ───────────────────────────────────────────── */
+  .options{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start}
+  .bshell{position:relative;width:592px;height:420px;border:1px solid var(--border);border-radius:9px;
+          background:var(--canvas);overflow:hidden;box-shadow:var(--shadow-card)}
+  .bshell .bcanvas{position:absolute;inset:0 0 0 232px;background-color:var(--canvas);
+                   background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;opacity:.6}
+  .bdock{position:absolute;right:0;top:0;bottom:0;width:232px;border-left:1px solid var(--border);
+         background:var(--card);display:flex;flex-direction:column}
+  .bdock .bh{height:34px;display:flex;align-items:center;gap:6px;padding:0 9px;border-bottom:1px solid var(--border-soft)}
+  .bdock .bh .bt{font-size:10.5px;font-weight:500}
+  .bdock .bh .ba{margin-left:auto;display:flex;gap:2px}
+  .bdock .bh .ba span{width:20px;height:20px;border-radius:4px;display:grid;place-items:center;color:var(--muted-fg);
+                      border:1px solid transparent}
+  .bdock .bh .ba span.on{background:var(--brand-soft);color:var(--brand);border-color:color-mix(in oklab,var(--brand) 20%,transparent)}
+  .bdock .bh .ba svg{width:11px;height:11px;stroke-width:1.6;fill:none;stroke:currentColor}
+  .bdock .bthread{flex:1;padding:9px;display:flex;flex-direction:column;gap:8px}
+  .bdock .bb{background:var(--muted);border-radius:7px;padding:6px 8px;font-size:10px;line-height:1.55;color:var(--muted-fg)}
+  .bdock .bi{margin:0 9px 9px;height:34px;border:1px solid var(--border);border-radius:6px;font-size:10px;
+             color:var(--muted-fg-3);padding:9px 8px;background:var(--bg)}
+
+  table.spec{width:100%;border-collapse:collapse;background:var(--card);
+             border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:11px}
+  table.spec th{text-align:left;font-weight:500;color:var(--muted-fg);font-size:10px;
+                padding:8px 12px;border-bottom:1px solid var(--border);background:color-mix(in oklab,var(--muted) 45%,transparent)}
+  table.spec td{padding:8px 12px;border-bottom:1px solid var(--border-soft);color:var(--muted-fg);line-height:1.6;vertical-align:top}
+  table.spec tr:last-child td{border-bottom:0}
+  table.spec td:first-child{color:var(--fg);font-weight:500;white-space:nowrap}
+  table.spec code{font-size:10.5px}
+  .callout{display:flex;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;
+           background:var(--card);font-size:11px;line-height:1.7;color:var(--muted-fg)}
+  .callout b{color:var(--fg);font-weight:500}
+  .callout .mk{width:18px;height:18px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
+               font-family:var(--mono);font-size:9.5px;display:grid;place-items:center;flex:none;margin-top:1px}
+  .callout .mk.w{background:color-mix(in oklab,var(--warning) 14%,transparent);color:var(--warning)}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+  .verdict{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+  .vcard{border:1px solid var(--border);border-radius:8px;background:var(--card);padding:12px 14px}
+  .vcard .vt{font-size:11.5px;font-weight:500;color:var(--fg);margin-bottom:6px}
+  .vcard .vl{font-size:10.5px;line-height:1.7;color:var(--muted-fg)}
+  .vcard .score{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);margin-top:8px}
+  .vcard.rec{border-color:color-mix(in oklab,var(--brand) 30%,transparent);background:var(--brand-soft)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">PROTOTYPE 066 · AI CONVERSATION HISTORY</div>
+    <h1>AI 面板要不要加会话历史</h1>
+    <p>当前 AI 只有一个固定会话：点「清空」会把唯一一段对话删掉，没有地方找回。用户问的是「左侧加历史会话，点击跳回那次对话」，并补充了截图里的<b>消息时间线</b>：对话正文左侧一列圆点，悬停预览、点击跳回那条提问。结论是<b>两件都值得做，但都不常驻</b>：历史点开才从左侧滑出，时间线只占 14px。</p>
+    <button class="theme-toggle" id="themeToggle" type="button">DARK</button>
+  </div>
+
+  <dl class="direction">
+    <div><dt>PRODUCT</dt><dd>用自然语言编排 CSV 处理管道的桌面工具</dd></div>
+    <div><dt>CHARACTER</dt><dd>安静、可核对、像一张工作台</dd></div>
+    <div><dt>WORLD</dt><dd>制图台：助手是一册可以翻回前几页的便签本</dd></div>
+    <div><dt>MOMENTS</dt><dd>历史里的一条记录，标题就是当时那句需求</dd></div>
+    <div><dt>SIGNATURE</dt><dd>会话标题取第一条用户消息，等宽时间戳在右侧</dd></div>
+  </dl>
+
+  <!-- 01 现状 -->
+  <section class="frame">
+    <div class="cap"><b>01 · 现状</b><span>单会话，清空即丢失</span><span class="file">AIPanel.tsx · session_id 固定</span></div>
+    <div class="shell short">
+      <div class="topbar">
+        <div class="brand">easy-csv<span>0.8.2</span></div>
+        <div class="menubar"><span>文件</span><span>编辑</span><span>视图</span><span>工具</span><span>帮助</span></div>
+        <div class="top-right"><div class="ticon on"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12h8"/></svg></div></div>
+      </div>
+      <div class="tabstrip"><div class="t on">A 销售数据</div><div class="t">B 库存</div></div>
+      <div class="workspace">
+        <div class="canvas">
+          <div class="stage-node table" style="left:30px;top:46px"><div class="n">sales_2026.csv</div><div class="m">5 列 · 12,480 行</div></div>
+          <div class="stage-node step" style="left:250px;top:58px"><div class="n">filter 金额 &gt; 0</div><div class="m">第 1 步</div></div>
+          <div class="stage-node step" style="left:412px;top:58px"><div class="n">groupby 地区</div><div class="m">第 2 步</div></div>
+          <div class="wire" style="left:216px;top:81px;width:34px"></div>
+          <div class="legend"><span><kbd>左键</kbd> 框选</span><span><kbd>右键</kbd> 菜单</span><span><kbd>滚轮</kbd> 缩放</span></div>
+        </div>
+        <div class="dock">
+          <div class="dock-head">
+            <span class="bot"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M12 4v3M9 13h.01M15 13h.01"/></svg></span>
+            <span class="title">助手</span>
+            <span class="tokens">2,840 tokens</span>
+            <span class="acts">
+              <span class="a"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></span>
+              <span class="a"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+            </span>
+          </div>
+          <div class="thread" style="justify-content:center;align-items:center;text-align:center;color:var(--muted-fg)">
+            <div class="bot" style="width:28px;height:28px;border-radius:8px"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M12 4v3"/></svg></div>
+            <p style="font-size:11px;line-height:1.7;margin:6px 0 0">清空之后，上一段对话<br/>就没有入口可以回去了</p>
+          </div>
+          <div class="composer"><div class="box"><div class="ph">描述你想做的处理…</div><span class="send"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span></div></div>
+        </div>
+      </div>
+    </div>
+    <p class="state-note"><b>数据层现状</b>　<code>ai_conversations</code> 用固定 <code>session_id</code> 存消息，<code>save_conversation</code> 每次先删后写；没有会话表、没有标题、也没有列表接口。做历史不是加一个侧栏，而是补一层会话数据模型。</p>
+  </section>
+
+  <!-- 02 方案 A -->
+  <section class="frame">
+    <div class="cap"><b>02 · 方案 A（推荐）</b><span>左侧滑出 160px 历史，面板临时加宽到 520px</span><span class="file">history drawer</span></div>
+    <div class="shell">
+      <div class="topbar">
+        <div class="brand">easy-csv<span>0.8.2</span></div>
+        <div class="menubar"><span>文件</span><span>编辑</span><span>视图</span><span>工具</span><span>帮助</span></div>
+        <div class="top-right"><div class="ticon on"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12h8"/></svg></div></div>
+      </div>
+      <div class="tabstrip"><div class="t on">A 销售数据</div><div class="t">B 库存</div><div class="t">C 客户</div></div>
+      <div class="workspace">
+        <div class="canvas">
+          <div class="stage-node table" style="left:26px;top:42px"><div class="n">sales_2026.csv</div><div class="m">5 列 · 12,480 行</div></div>
+          <div class="stage-node step" style="left:236px;top:54px"><div class="n">filter 金额 &gt; 0</div><div class="m">第 1 步</div></div>
+          <div class="stage-node step" style="left:398px;top:54px"><div class="n">groupby 地区</div><div class="m">第 2 步</div></div>
+          <div class="stage-node step" style="left:236px;top:166px"><div class="n">select 地区, 合计</div><div class="m">第 3 步</div></div>
+          <div class="stage-node step" style="left:398px;top:166px"><div class="n">sort 合计 desc</div><div class="m">第 4 步</div></div>
+          <div class="wire" style="left:202px;top:77px;width:30px"></div>
+          <div class="wire" style="left:364px;top:77px;width:30px"></div>
+          <div class="legend"><span><kbd>左键</kbd> 框选</span><span><kbd>右键</kbd> 菜单</span><span><kbd>滚轮</kbd> 缩放</span></div>
+        </div>
+
+        <div class="ai-wrap" style="width:520px">
+          <div class="history">
+            <div class="hist-head">
+              <span class="h-title">会话</span>
+              <span class="h-count">12</span>
+            </div>
+            <button class="hist-new"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>新建会话</button>
+            <div class="hist-scroll">
+              <div class="hist-group">今天</div>
+              <div class="hist-row on">
+                <span class="rt">按地区汇总金额，数量也一起合计</span>
+                <span class="rm">14:32 · 6 条</span>
+              </div>
+              <div class="hist-row">
+                <span class="rt">清理引号后再拆分坏行</span>
+                <span class="rm">11:08 · 4 条</span>
+              </div>
+              <div class="hist-group">昨天</div>
+              <div class="hist-row">
+                <span class="rt">合并三个月的工作簿，统一列名</span>
+                <span class="rm">18:41 · 9 条</span>
+              </div>
+              <div class="hist-row">
+                <span class="rt">把金额列转成数字并去掉空值</span>
+                <span class="rm">16:05 · 3 条</span>
+              </div>
+              <div class="hist-group">更早</div>
+              <div class="hist-row">
+                <span class="rt">按品类统计数量，取前 10</span>
+                <span class="rm">11-18 · 5 条</span>
+              </div>
+              <div class="hist-row">
+                <span class="rt">这个文件的分隔符是什么</span>
+                <span class="rm">11-17 · 2 条</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="dock">
+            <div class="dock-head">
+              <span class="bot"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M12 4v3M9 13h.01M15 13h.01"/></svg></span>
+              <span class="title">助手</span>
+              <span class="tokens">2,840 tokens</span>
+              <span class="acts">
+                <span class="a on"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
+                <span class="a"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></span>
+                <span class="a"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+              </span>
+            </div>
+            <div class="thread-wrap">
+              <div class="minimap">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot near"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot on"></span>
+                <div class="mpreview" style="bottom:46px">
+                  <div class="mp-t">把金额按地区汇总，数量也一起合计，然后按金额从高到低排</div>
+                  <div class="mp-m">11-18 14:30 · 点击跳回</div>
+                </div>
+              </div>
+              <div class="thread">
+                <div class="msg user"><span class="who">你 · 11-18 14:30</span><div class="bubble">把金额按地区汇总，数量也一起合计，然后按金额从高到低排。</div></div>
+                <div class="msg ai">
+                  <span class="who">助手 · 基于当前 4 步管道</span>
+                  <div class="bubble">
+                    <p>先过滤掉金额为 0 的行，再按地区汇总两个数值列，最后降序排列。</p>
+                    <div class="cmd">
+                      <div class="c-head"><span class="dot"></span>groupby · 建议步骤</div>
+                      <div class="c-body">columns  地区
+expression  sum(金额) as 金额合计,
+            sum(数量) as 数量合计</div>
+                      <div class="c-foot">
+                        <span class="why">与第 2 步的分组键一致</span>
+                        <span class="mini-btn">复制</span>
+                        <span class="mini-btn primary">添加到画布</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="composer">
+              <div class="box"><div class="ph">描述你想做的处理，或问当前管道…</div><span class="send"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span></div>
+              <div class="keys"><kbd>Ctrl</kbd><kbd>Enter</kbd> 发送 <span style="margin-left:auto">会话只保留在这台电脑</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="state-note"><b>为什么是滑出而不是常驻</b>　360px 的对话正文再切走 160px，剩下的 200px 放不下一张命令块。平时历史收起，只有点头部列表按钮时才展开：面板加宽到 520px，正文保持 360px 不变；再点一次收起，画布恢复。</p>
+  </section>
+
+  <!-- 03 消息时间线 -->
+  <section class="frame">
+    <div class="cap"><b>03 · 消息时间线（截图功能）</b><span>对话正文左侧一列圆点：悬停预览，点击跳回</span><span class="file">thread minimap</span></div>
+    <div style="display:flex;gap:26px;align-items:flex-start">
+      <div class="dock" style="width:360px;height:452px;border:1px solid var(--border);border-radius:9px;overflow:hidden;box-shadow:var(--shadow-card)">
+        <div class="dock-head">
+          <span class="bot"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M12 4v3M9 13h.01M15 13h.01"/></svg></span>
+          <span class="title">助手</span>
+          <span class="tokens">3,120 tokens</span>
+          <span class="acts">
+            <span class="a"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
+            <span class="a"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+          </span>
+        </div>
+        <div class="thread-wrap">
+          <div class="minimap" style="height:330px">
+            <span class="dot near"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot near"></span>
+            <span class="dot"></span>
+            <span class="dot on"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <div class="mpreview" style="bottom:64px">
+              <div class="mp-t">删除能折叠的状态，不要使用 title 提示，使用 tooltip 提示</div>
+              <div class="mp-m">11-21 09:41 · 点击跳回</div>
+            </div>
+          </div>
+          <div class="thread" style="gap:10px">
+            <div class="msg user"><span class="who">你</span><div class="bubble">把金额按地区汇总，数量也一起合计。</div></div>
+            <div class="msg ai"><div class="bubble"><p>先过滤金额为 0 的行，再按地区汇总两个数值列。</p></div></div>
+            <div class="msg user"><span class="who">你</span><div class="bubble">删除能折叠的状态，不要使用 title 提示，使用 tooltip 提示</div></div>
+            <div class="msg ai"><div class="bubble"><p>已改成固定 360px 右侧停靠，提示统一走 Tooltip。</p></div></div>
+          </div>
+        </div>
+        <div class="composer">
+          <div class="box"><div class="ph">描述你想做的处理…</div><span class="send"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span></div>
+        </div>
+      </div>
+
+      <div style="flex:1;display:flex;flex-direction:column;gap:10px">
+        <div class="callout"><span class="mk">i</span><span><b>只占 14px</b>　时间线贴在对话正文左侧，圆点 4px；当前可视区最近的一条是 6px 主题色实心点，其余为 hairline 灰点。</span></div>
+        <div class="callout"><span class="mk">i</span><span><b>悬停预览</b>　显示该条提问的前两行与时间，宽度 196px，靠右展开；不遮住正在读的回答，鼠标移出即消失。</span></div>
+        <div class="callout"><span class="mk">i</span><span><b>点击跳转</b>　平滑滚动到该条提问的顶部，并把焦点交给该消息；滚动正文时圆点随之更新，不需要手动同步。</span></div>
+        <div class="callout"><span class="mk w">!</span><span><b>出现条件</b>　只统计用户提问；少于 3 条时隐藏时间线。历史列表展开或收起都不影响它，两套导航互不替代。</span></div>
+        <div class="callout"><span class="mk">i</span><span><b>与会话历史的区别</b>　左侧 160px 是「会话级」的过去对话，时间线是「消息级」的当前对话定位；前者切换上下文，后者只在当前这段里跳。</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 方案 B -->
+  <section class="frame">
+    <div class="cap"><b>04 · 方案 B / C</b><span>替换式列表，或只做当前对话目录</span><span class="file">overlay · in-thread TOC</span></div>
+    <div class="options">
+      <div>
+        <div class="bshell">
+          <div class="bcanvas">
+            <div class="stage-node table" style="left:14px;top:30px;width:130px"><div class="n">sales_2026.csv</div><div class="m">5 列</div></div>
+            <div class="stage-node step" style="left:170px;top:38px;width:118px"><div class="n">filter 金额 &gt; 0</div><div class="m">第 1 步</div></div>
+            <div class="stage-node step" style="left:14px;top:132px;width:118px"><div class="n">groupby 地区</div><div class="m">第 2 步</div></div>
+          </div>
+          <div class="bdock">
+            <div class="bh">
+              <span class="bot" style="width:18px;height:18px;border-radius:5px"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M12 4v3"/></svg></span>
+              <span class="bt">助手</span>
+              <span class="ba"><span class="on"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span><span><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span></span>
+            </div>
+            <div class="overlay" style="position:static;inset:auto">
+              <div class="ohead"><span class="back"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></span><span class="otitle">会话</span><span class="h-count" style="margin-left:auto;font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-3)">12</span></div>
+              <div class="olist">
+                <div class="hist-group">今天</div>
+                <div class="hist-row on" style="padding:5px 6px"><span class="rt" style="font-size:10px">按地区汇总金额，数量也一起合计</span><span class="rm">14:32</span></div>
+                <div class="hist-row" style="padding:5px 6px"><span class="rt" style="font-size:10px">清理引号后再拆分坏行</span><span class="rm">11:08</span></div>
+                <div class="hist-group">昨天</div>
+                <div class="hist-row" style="padding:5px 6px"><span class="rt" style="font-size:10px">合并三个月的工作簿</span><span class="rm">18:41</span></div>
+                <div class="hist-row" style="padding:5px 6px"><span class="rt" style="font-size:10px">把金额列转成数字</span><span class="rm">16:05</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="state-note" style="padding-top:8px"><b>B · 覆盖对话</b>　不占额外宽度，点历史后整块替换正文；缺点是从列表回到对话是两个视图来回切，抄命令时无法边看历史边看回答。</p>
+      </div>
+
+      <div>
+        <div class="bshell">
+          <div class="bcanvas" style="inset:0 0 0 0">
+            <div class="stage-node table" style="left:16px;top:34px;width:132px"><div class="n">sales_2026.csv</div><div class="m">5 列</div></div>
+            <div class="stage-node step" style="left:178px;top:44px;width:118px"><div class="n">filter 金额 &gt; 0</div><div class="m">第 1 步</div></div>
+            <div class="stage-node step" style="left:178px;top:136px;width:118px"><div class="n">groupby 地区</div><div class="m">第 2 步</div></div>
+          </div>
+          <div class="bdock" style="width:300px;right:12px;top:16px;bottom:16px;border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-fly);overflow:visible">
+            <div class="bh">
+              <span class="bot" style="width:18px;height:18px;border-radius:5px"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M12 4v3"/></svg></span>
+              <span class="bt">助手</span>
+              <span class="ba"><span><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span><span><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span></span>
+            </div>
+            <div class="bthread">
+              <div class="bb" style="align-self:flex-end">把金额按地区汇总…</div>
+              <div class="bb" style="background:var(--card);border:1px solid var(--border-soft);max-height:74px;overflow:hidden">
+                先过滤金额为 0 的行，再按地区汇总两个数值列…
+              </div>
+            </div>
+            <div class="bi">描述你想做的处理…</div>
+            <div class="toc">
+              <div class="th">本对话 · 4 个提问</div>
+              <div class="ti"><span class="num">1</span>按地区汇总金额</div>
+              <div class="ti"><span class="num">2</span>数量也要合计</div>
+              <div class="ti"><span class="num">3</span>按金额降序</div>
+              <div class="ti"><span class="num">4</span>只保留前 10 行</div>
+            </div>
+          </div>
+        </div>
+        <p class="state-note" style="padding-top:8px"><b>C · 对话内目录</b>　不引入多会话，只在当前对话里跳到某次提问；实现最轻，但解决不了「清空后找回上一段」。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 结论 -->
+  <section class="frame">
+    <div class="cap"><b>05 · 选哪个</b><span>先补数据模型，再做 A；C 可作为后续小增量</span><span class="file">decision</span></div>
+    <div class="verdict">
+      <div class="vcard rec">
+        <div class="vt">A · 左侧滑出历史（推荐）</div>
+        <div class="vl">真正解决「找回上一段」。点开才占宽度，正文宽度不变；标题取第一条需求，足够辨认。</div>
+        <div class="score">成本：中 · 会话表 + 列表/切换接口</div>
+      </div>
+      <div class="vcard">
+        <div class="vt">B · 覆盖式列表</div>
+        <div class="vl">宽度最省，但切换是整块替换；边看历史边抄命令的场景不合适。</div>
+        <div class="score">成本：中 · 同样要会话表</div>
+      </div>
+      <div class="vcard">
+        <div class="vt">C · 对话内目录</div>
+        <div class="vl">最轻，但它只是滚动定位，不是历史；当前「清空即丢」的问题仍然存在。</div>
+        <div class="score">成本：低 · 只改前端</div>
+      </div>
+    </div>
+    <div class="two-col" style="margin-top:14px">
+      <div class="callout">
+        <span class="mk">i</span>
+        <span><b>建议边界</b>　会话只在本机保存；最多保留 50 条，超出后删最旧；标题不调用 AI 生成，直接取第一条用户消息截断到 24 字，避免额外请求与不确定性。</span>
+      </div>
+      <div class="callout">
+        <span class="mk w">!</span>
+        <span><b>切换时的规则</b>　正在生成时点历史先停止当前流；空会话不写入列表；删除当前会话后落到下一条，列表为空则回到欢迎态。</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 实现 -->
+  <section class="frame">
+    <div class="cap"><b>06 · 实现约定</b><span>当前数据层是单会话，需要补齐会话表与接口</span><span class="file">design 066</span></div>
+    <table class="spec">
+      <thead><tr><th>项</th><th>约定</th></tr></thead>
+      <tbody>
+        <tr><td>数据表</td><td>新增 <code>ai_sessions(id TEXT PK, title TEXT, created_at, updated_at)</code>；<code>ai_conversations</code> 增加 <code>session_id</code> 外键与 <code>created_time</code>，现有固定会话迁移为第一条记录。</td></tr>
+        <tr><td>命令</td><td><code>list_ai_sessions(limit)</code>、<code>create_ai_session()</code>、<code>load_ai_session(session_id)</code>、<code>save_ai_session(session_id, messages)</code>、<code>rename_ai_session</code>、<code>delete_ai_session</code>。</td></tr>
+        <tr><td>标题</td><td>第一条用户消息去掉换行后截断 24 字；空会话不落库。重命名走行内编辑或行菜单，不弹窗。</td></tr>
+        <tr><td>分组</td><td>今天 / 昨天 / 更早，按 <code>updated_at</code> 倒序；行高 36px，标题最多两行，时间戳等宽右对齐。</td></tr>
+        <tr><td>展开</td><td>头部列表按钮切换历史：面板 360 → 520px，历史 160px；再点收起。快捷键 <code>Ctrl+Shift+H</code>，与「新建会话」分开。</td></tr>
+        <tr><td>窄窗口</td><td>&lt; 1100px 时历史改为覆盖式（方案 B），不把画布再压窄；切回宽窗口恢复并排。</td></tr>
+        <tr><td>消息时间线</td><td>对话正文左侧 24px 窄栏；每条用户提问一个等距圆点（间距 8px，整列垂直居中），当前可视消息为 6px 主题色实心点；悬停显示 196px 两行预览与时间；点击平滑滚动并聚焦该消息；少于 3 条提问时隐藏。纯前端，不改数据表。</td></tr>
+        <tr><td>清空语义</td><td>原「清空」改为「删除当前会话」，需确认；不再静默删除唯一一段对话。</td></tr>
+        <tr><td>上下文</td><td>会话保存的是消息；当前标签页的列名与管道步数仍按发送时实时读取，不随历史固化。</td></tr>
+      </tbody>
+    </table>
+    <p class="state-note" style="padding-top:14px"><b>不做的部分</b>　不做跨设备同步、不做 AI 自动命名与摘要、不做全局搜索。先把「找回上一段」做好，再考虑这些。</p>
+  </section>
+
+</div>
+
+<script>
+  const toggle = document.getElementById('themeToggle');
+  toggle.addEventListener('click', () => {
+    const dark = document.documentElement.classList.toggle('dark');
+    toggle.textContent = dark ? 'LIGHT' : 'DARK';
+  });
+</script>
+</body>
+</html>

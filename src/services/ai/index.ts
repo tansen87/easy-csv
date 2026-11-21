@@ -116,6 +116,69 @@ export async function loadConversationHistory(): Promise<AIMessage[]> {
   }
 }
 
+/** One row in the AI conversation list. */
+export interface AISessionSummary {
+  id: string;
+  title: string;
+  updated_at: string;
+  message_count: number;
+}
+
+export async function listAISessions(): Promise<AISessionSummary[]> {
+  try {
+    const raw = await invoke<string>("list_ai_sessions", { limit: 50 });
+    return JSON.parse(raw) || [];
+  } catch (error) {
+    console.warn("Failed to list AI sessions:", error);
+    return [];
+  }
+}
+
+export async function loadAISession(sessionId: string): Promise<AIMessage[]> {
+  try {
+    const raw = await invoke<string>("load_ai_session", { sessionId });
+    return JSON.parse(raw) || [];
+  } catch (error) {
+    console.warn("Failed to load AI session:", error);
+    return [];
+  }
+}
+
+export async function saveAISession(
+  sessionId: string,
+  title: string,
+  messages: AIMessage[],
+): Promise<void> {
+  try {
+    await invoke("save_ai_session", {
+      sessionId,
+      title,
+      messages: JSON.stringify(messages),
+    });
+  } catch (error) {
+    console.warn("Failed to save AI session:", error);
+  }
+}
+
+export async function renameAISession(
+  sessionId: string,
+  title: string,
+): Promise<void> {
+  try {
+    await invoke("rename_ai_session", { sessionId, title });
+  } catch (error) {
+    console.warn("Failed to rename AI session:", error);
+  }
+}
+
+export async function deleteAISession(sessionId: string): Promise<void> {
+  try {
+    await invoke("delete_ai_session", { sessionId });
+  } catch (error) {
+    console.warn("Failed to delete AI session:", error);
+  }
+}
+
 export async function saveConversationHistory(
   messages: AIMessage[],
 ): Promise<void> {

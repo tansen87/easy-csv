@@ -560,6 +560,16 @@ export interface Translations {
   aiAddToPipeline: string;
   aiCommandPreview: string;
   aiClear: string;
+  aiSessions: string;
+  aiNewSession: string;
+  aiRenameSession: string;
+  aiHistoryToday: string;
+  aiHistoryYesterday: string;
+  aiHistoryEarlier: string;
+  aiHistoryEmpty: string;
+  aiDeleteSession: string;
+  aiDeleteSessionConfirm: string;
+  aiTimeline: string;
   aiTokenUsed: string;
   aiConfigureApiKey: string;
   aiFeedbackPositive: string;

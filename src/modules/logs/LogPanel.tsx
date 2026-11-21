@@ -35,8 +35,6 @@ interface LogPanelProps {
   dockState?: PanelDockState;
   /** Report position changes for persistence. */
   onDockChange?: (patch: Partial<PanelDockState>) => void;
-  /** Raise the docked bottom edge to avoid the expanded AI panel. */
-  bottomOffset?: number | string;
   /** Current tab, for the 「仅当前标签页」 log scope. */
   selectedTabId?: string;
   /** Tab id → name, used for the per-line badge. */
@@ -92,7 +90,6 @@ export const LogPanel = React.memo(function LogPanel({
   onShowHistory,
   dockState,
   onDockChange,
-  bottomOffset = 0,
   selectedTabId,
   tabs,
 }: LogPanelProps) {
@@ -276,15 +273,14 @@ export const LogPanel = React.memo(function LogPanel({
     // panel parked below the viewport.
     if (!isVisible || isMaximized || !panelRef.current) return;
     panelRef.current.style.top = "";
-    panelRef.current.style.bottom =
-      typeof bottomOffset === "number" ? `${bottomOffset}px` : bottomOffset;
+    panelRef.current.style.bottom = "0";
     const panelWidth = panelRef.current.offsetWidth || 600;
     const newX =
       dockState?.x !== undefined
         ? clampDockX(dockState.x, panelWidth)
         : Math.max(0, window.innerWidth - panelWidth);
     setPanelLeft(newX);
-  }, [isVisible, isMaximized, bottomOffset, dockState?.x]);
+  }, [isVisible, isMaximized, dockState?.x]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -321,7 +317,7 @@ export const LogPanel = React.memo(function LogPanel({
             }
           : {
               left: panelLeft,
-              bottom: bottomOffset,
+              bottom: 0,
               height: 300,
             }
       }

@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 065 · AI 面板位置</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --edge:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+
+    --success:oklch(0.5 0.1 145);
+    --danger:oklch(0.55 0.17 27);
+    --warning:oklch(0.55 0.1 72);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.94 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --canvas-ink:oklch(0.3 0.006 80);
+    --canvas-ink-soft:oklch(0.2 0.01 80 / 7%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-fly:0 12px 28px -14px oklch(0.2 0.02 80 / 26%);
+    --shadow-shell:0 18px 46px -24px oklch(0.2 0.02 80 / 30%);
+  }
+  .dark{
+    color-scheme:dark;
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --edge:oklch(1 0 0 / 24%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 18%,transparent);
+    --success:oklch(0.72 0.1 145);
+    --danger:oklch(0.7 0.14 27);
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.12 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --canvas-ink:oklch(0.92 0.005 85);
+    --canvas-ink-soft:oklch(1 0 0 / 8%);
+    --shadow-card:none;
+    --shadow-fly:0 12px 28px -14px oklch(0 0 0 / 75%);
+    --shadow-shell:0 18px 46px -24px oklch(0 0 0 / 70%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased;transition:background-color .18s ease,color .18s ease}
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme-toggle{position:absolute;right:0;top:2px;height:26px;padding:0 10px;border-radius:6px;
+                border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+                font-family:var(--mono);font-size:10.5px;cursor:pointer}
+  .theme-toggle:hover{color:var(--fg)}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+  .lede{font-size:11.5px;line-height:1.75;color:var(--muted-fg);margin:0 0 14px;max-width:1000px}
+  .lede b{font-weight:500;color:var(--fg)}
+  .state-note{font-size:10.5px;color:var(--muted-fg);line-height:1.7;padding:10px 2px 0}
+  .state-note b{color:var(--fg);font-weight:500}
+
+  /* ── 应用外壳 ─────────────────────────────────────────────── */
+  .shell{position:relative;width:1200px;height:604px;border:1px solid var(--border);border-radius:10px;
+         background:var(--canvas);overflow:hidden;box-shadow:var(--shadow-shell)}
+  .shell.short{height:520px}
+  .topbar{position:absolute;inset:0 0 auto 0;height:36px;display:flex;align-items:center;gap:16px;
+          padding:0 12px;border-bottom:1px solid var(--border);background:var(--card);z-index:6}
+  .brand{font-size:12px;font-weight:500;letter-spacing:-.01em}
+  .brand span{font-family:var(--mono);font-size:9.5px;font-weight:400;color:var(--muted-fg-3);margin-left:6px}
+  .menubar{display:flex;gap:2px}
+  .menubar span{padding:4px 8px;border-radius:5px;font-size:11px;color:var(--muted-fg)}
+  .menubar span.on{background:var(--brand-12);color:var(--brand);font-weight:500}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:4px}
+  .ticon{width:24px;height:24px;border-radius:5px;display:grid;place-items:center;color:var(--muted-fg);
+         border:1px solid transparent}
+  .ticon.on{background:var(--brand-soft);color:var(--brand);border-color:color-mix(in oklab,var(--brand) 24%,transparent)}
+  .ticon svg{width:13px;height:13px;stroke-width:1.6;fill:none;stroke:currentColor}
+  .tabstrip{position:absolute;left:0;right:0;top:36px;height:26px;display:flex;align-items:center;gap:6px;
+            padding:0 10px;border-bottom:1px solid var(--border-soft);background:var(--card);z-index:5}
+  .tabstrip .t{height:19px;padding:0 8px;border-radius:4px;font-size:10.5px;display:flex;align-items:center;
+               color:var(--muted-fg);border:1px solid transparent}
+  .tabstrip .t.on{border-color:var(--border);background:var(--bg);color:var(--fg);font-weight:500}
+
+  .workspace{position:absolute;top:62px;left:0;right:0;bottom:0;display:flex}
+  .canvas{position:relative;flex:1;min-width:0;overflow:hidden;background-color:var(--canvas);
+          background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px}
+  .legend{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;
+          padding:5px 10px;border:1px solid var(--border);border-radius:7px;background:var(--card);
+          font-size:9.5px;color:var(--muted-fg);white-space:nowrap}
+  .legend kbd{font-family:var(--mono);font-size:9px;border:1px solid var(--border);border-radius:3px;padding:0 3px;color:var(--fg)}
+  .stage-node{position:absolute;border:1px solid var(--border);border-radius:7px;background:var(--paper);
+              box-shadow:var(--shadow-card);padding:9px 10px}
+  .stage-node .n{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stage-node .m{margin-top:4px;font-family:var(--mono);font-size:9px;color:var(--muted-fg)}
+  .stage-node.table{width:196px}
+  .stage-node.step{width:150px}
+  .wire{position:absolute;height:1px;background:var(--edge);transform-origin:0 0}
+
+  /* ── 右侧 AI 停靠 ─────────────────────────────────────────── */
+  .dock{width:360px;flex:none;display:flex;flex-direction:column;border-left:1px solid var(--border);
+        background:var(--card)}
+  .dock-head{height:42px;display:flex;align-items:center;gap:8px;padding:0 12px;
+             border-bottom:1px solid var(--border-soft);flex:none}
+  .bot{width:22px;height:22px;border-radius:6px;background:var(--brand-soft);color:var(--brand);
+       display:grid;place-items:center;flex:none}
+  .bot svg{width:13px;height:13px;stroke-width:1.6;fill:none;stroke:currentColor}
+  .dock-head .title{font-size:12px;font-weight:500}
+  .dock-head .tokens{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);
+                     font-variant-numeric:tabular-nums;white-space:nowrap}
+  .dock-head .acts{display:flex;gap:2px;margin-left:4px}
+  .dock-head .acts .a{width:22px;height:22px;border-radius:5px;display:grid;place-items:center;color:var(--muted-fg)}
+  .dock-head .acts .a:hover{background:var(--muted);color:var(--fg)}
+  .dock-head .acts svg{width:12.5px;height:12.5px;stroke-width:1.6;fill:none;stroke:currentColor}
+
+  .thread{flex:1;min-height:0;overflow:hidden;padding:12px 14px;display:flex;flex-direction:column;gap:14px}
+  .msg{display:flex;flex-direction:column;gap:5px;max-width:100%}
+  .msg .who{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);letter-spacing:.02em}
+  .msg.user{align-items:flex-end}
+  .msg.user .bubble{background:var(--muted);border-radius:9px 9px 3px 9px;padding:7px 10px;
+                    font-size:11.5px;line-height:1.6;max-width:86%}
+  .msg.ai .bubble{font-size:11.5px;line-height:1.7;color:var(--fg);max-width:96%}
+  .msg.ai .bubble p{margin:0 0 6px}
+  .msg.ai .bubble p:last-child{margin-bottom:0}
+
+  .cmd{border:1px solid var(--border);border-radius:7px;background:var(--bg);overflow:hidden;margin-top:2px}
+  .cmd .c-head{display:flex;align-items:center;gap:6px;padding:6px 9px;border-bottom:1px solid var(--border-soft);
+               font-size:9.5px;color:var(--muted-fg-2)}
+  .cmd .c-head .dot{width:5px;height:5px;border-radius:50%;background:var(--brand);flex:none}
+  .cmd .c-body{padding:8px 9px;font-family:var(--mono);font-size:10.5px;line-height:1.7;color:var(--fg);
+               white-space:pre-wrap;word-break:break-all}
+  .cmd .c-foot{display:flex;align-items:center;gap:6px;padding:6px 8px;border-top:1px solid var(--border-soft)}
+  .cmd .c-foot .why{font-size:9.5px;color:var(--muted-fg-3);margin-right:auto;white-space:nowrap;
+                    overflow:hidden;text-overflow:ellipsis}
+  .mini-btn{height:22px;padding:0 8px;border-radius:5px;font-size:10px;display:inline-flex;align-items:center;gap:4px;
+            border:1px solid var(--border);color:var(--muted-fg);background:var(--card);white-space:nowrap}
+  .mini-btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-fg)}
+  .mini-btn svg{width:11px;height:11px;stroke-width:1.6;fill:none;stroke:currentColor}
+
+  .composer{border-top:1px solid var(--border-soft);padding:10px 12px 8px;flex:none}
+  .composer .box{border:1px solid var(--border);border-radius:8px;background:var(--bg);
+                 padding:8px 34px 8px 9px;position:relative;min-height:56px}
+  .composer .ph{font-size:11.5px;color:var(--muted-fg-3);line-height:1.5}
+  .composer .send{position:absolute;right:6px;bottom:6px;width:22px;height:22px;border-radius:5px;
+                  background:var(--brand);display:grid;place-items:center}
+  .composer .send svg{width:11px;height:11px;stroke-width:1.8;fill:none;stroke:var(--brand-fg)}
+  .composer .keys{display:flex;align-items:center;gap:8px;margin-top:7px;font-size:9px;color:var(--muted-fg-3)}
+  .composer .keys kbd{font-family:var(--mono);font-size:8.5px;border:1px solid var(--border);border-radius:3px;
+                      padding:0 3px;color:var(--muted-fg-2)}
+
+  /* ── 底部方案 B ───────────────────────────────────────────── */
+  .bshell{position:relative;width:592px;height:420px;border:1px solid var(--border);border-radius:9px;
+          background:var(--canvas);overflow:hidden;box-shadow:var(--shadow-card)}
+  .bshell .bcanvas{position:absolute;inset:0 0 150px 0;background-color:var(--canvas);
+                   background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px}
+  .bdock{position:absolute;left:0;right:0;bottom:0;height:150px;border-top:1px solid var(--border);
+         background:var(--card);display:flex;flex-direction:column}
+  .bdock .bhead{height:32px;display:flex;align-items:center;gap:7px;padding:0 10px;border-bottom:1px solid var(--border-soft);
+                font-size:10.5px;color:var(--muted-fg)}
+  .bdock .bhead b{font-size:11px;font-weight:500;color:var(--fg)}
+  .bdock .brow{flex:1;display:flex;gap:10px;padding:9px 10px}
+  .bdock .bmsg{flex:1;border:1px solid var(--border-soft);border-radius:6px;padding:7px 8px;font-size:10px;
+               color:var(--muted-fg);line-height:1.6}
+  .bdock .binput{width:190px;border:1px solid var(--border);border-radius:6px;padding:7px 8px;font-size:10px;
+                 color:var(--muted-fg-3);align-self:flex-end;height:44px}
+
+  /* ── 浮动方案 C ───────────────────────────────────────────── */
+  .cshell{position:relative;width:592px;height:420px;border:1px solid var(--border);border-radius:9px;
+          background-color:var(--canvas);background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+          background-size:16px 16px;overflow:hidden;box-shadow:var(--shadow-card)}
+  .float-card{position:absolute;right:14px;bottom:14px;width:258px;height:250px;border:1px solid var(--border);
+              border-radius:9px;background:var(--card);box-shadow:var(--shadow-fly);display:flex;flex-direction:column;overflow:hidden}
+  .float-card .fhead{height:30px;display:flex;align-items:center;gap:6px;padding:0 9px;border-bottom:1px solid var(--border-soft);
+                     font-size:10px;color:var(--muted-fg)}
+  .float-card .fbody{flex:1;padding:8px 9px;font-size:10px;line-height:1.6;color:var(--muted-fg)}
+  .float-card .finput{margin:0 8px 8px;height:32px;border:1px solid var(--border);border-radius:6px;font-size:10px;
+                      color:var(--muted-fg-3);padding:8px;background:var(--bg)}
+
+  /* ── 对照与规范 ───────────────────────────────────────────── */
+  .options{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start}
+  .opt .tagline{display:flex;align-items:baseline;gap:8px;padding:8px 2px 0;font-size:11px;color:var(--muted-fg)}
+  .opt .tagline b{font-size:12px;font-weight:500;color:var(--fg)}
+  .opt .verdict{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+
+  .rail{width:38px;flex:none;border-left:1px solid var(--border);background:var(--card);
+        display:flex;flex-direction:column;align-items:center;padding-top:12px;gap:10px}
+  .rail .rbtn{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--brand);
+              background:var(--brand-soft);border:1px solid color-mix(in oklab,var(--brand) 22%,transparent)}
+  .rail .rbtn svg{width:14px;height:14px;stroke-width:1.6;fill:none;stroke:currentColor}
+  .rail .rlabel{writing-mode:vertical-rl;font-size:9px;letter-spacing:.08em;color:var(--muted-fg-3)}
+
+  table.spec{width:100%;border-collapse:collapse;background:var(--card);
+             border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:11px}
+  table.spec th{text-align:left;font-weight:500;color:var(--muted-fg);font-size:10px;
+                padding:8px 12px;border-bottom:1px solid var(--border);background:color-mix(in oklab,var(--muted) 45%,transparent)}
+  table.spec td{padding:8px 12px;border-bottom:1px solid var(--border-soft);color:var(--muted-fg);line-height:1.6;vertical-align:top}
+  table.spec tr:last-child td{border-bottom:0}
+  table.spec td:first-child{color:var(--fg);font-weight:500;white-space:nowrap}
+  table.spec code{font-size:10.5px}
+  .callout{display:flex;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;
+           background:var(--card);font-size:11px;line-height:1.7;color:var(--muted-fg)}
+  .callout b{color:var(--fg);font-weight:500}
+  .callout .mk{width:18px;height:18px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
+               font-family:var(--mono);font-size:9.5px;display:grid;place-items:center;flex:none;margin-top:1px}
+  .callout .mk.w{background:color-mix(in oklab,var(--warning) 14%,transparent);color:var(--warning)}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">PROTOTYPE 065 · AI PANEL PLACEMENT</div>
+    <h1>AI 面板放在哪里</h1>
+    <p>当前 AI 是底部居中的浮层（700px），展开后向上盖住画布底部：节点、连线、手势提示和结果卡都在它下面。AI 的输入是“让管道做什么”，属于<b>写</b>的动作，应该停在画布旁边，而不是压在画布上。下面给出三种位置，推荐右侧停靠。</p>
+    <button class="theme-toggle" id="themeToggle" type="button">DARK</button>
+  </div>
+
+  <dl class="direction">
+    <div><dt>PRODUCT</dt><dd>用自然语言编排 CSV 处理管道的桌面工具</dd></div>
+    <div><dt>CHARACTER</dt><dd>安静、可核对、像一张工作台</dd></div>
+    <div><dt>WORLD</dt><dd>制图台：画布是图纸，助手是摊在一旁的便签本</dd></div>
+    <div><dt>MOMENTS</dt><dd>AI 把一句话变成一张可添加到画布的步骤卡</dd></div>
+    <div><dt>SIGNATURE</dt><dd>助手回答里的命令块与画布步骤卡同一副骨架</dd></div>
+  </dl>
+
+  <!-- 01 现状 -->
+  <section class="frame">
+    <div class="cap"><b>01 · 现状</b><span>底部居中浮层，展开即遮挡画布</span><span class="file">AIPanel.tsx · fixed bottom-2</span></div>
+    <div class="shell short">
+      <div class="topbar">
+        <div class="brand">easy-csv<span>0.8.2</span></div>
+        <div class="menubar"><span>文件</span><span>编辑</span><span>视图</span><span>工具</span><span>帮助</span></div>
+        <div class="top-right">
+          <div class="ticon" title="AI"></div>
+          <div class="ticon on"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12h8"/></svg></div>
+        </div>
+      </div>
+      <div class="tabstrip"><div class="t on">A 销售数据</div><div class="t">B 库存</div></div>
+      <div class="workspace">
+        <div class="canvas">
+          <div class="stage-node table" style="left:34px;top:52px">
+            <div class="n">sales_2026.csv</div>
+            <div class="m">日期 · 地区 · 品类 · 金额 · 数量</div>
+          </div>
+          <div class="stage-node step" style="left:286px;top:64px"><div class="n">filter 金额 &gt; 0</div><div class="m">第 1 步</div></div>
+          <div class="stage-node step" style="left:474px;top:64px"><div class="n">groupby 地区</div><div class="m">第 2 步</div></div>
+          <div class="stage-node step" style="left:286px;top:196px"><div class="n">select 地区, 合计</div><div class="m">第 3 步</div></div>
+          <div class="stage-node step" style="left:474px;top:196px"><div class="n">sort 合计 desc</div><div class="m">第 4 步</div></div>
+          <div class="wire" style="left:230px;top:89px;width:56px"></div>
+          <div class="wire" style="left:436px;top:89px;width:38px"></div>
+
+          <div style="position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:min(700px,calc(100%-32px));
+                      border:1px solid var(--border);border-radius:9px;background:var(--card);box-shadow:var(--shadow-fly)">
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px">
+              <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border-radius:5px;
+                           background:var(--brand);color:var(--brand-fg);font-size:10px;font-weight:500">助手</span>
+              <span style="margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)">2,840 tokens</span>
+            </div>
+            <div style="height:128px;border-top:1px solid var(--border-soft);padding:10px;font-size:10.5px;color:var(--muted-fg);
+                        display:flex;align-items:center;justify-content:center">
+              展开后 36vh 的消息区从这里向上长，盖住下面的节点与连线
+            </div>
+            <div style="padding:0 10px 8px">
+              <div style="border:1px solid var(--border);border-radius:7px;padding:8px 32px 8px 9px;font-size:11px;color:var(--muted-fg-3)">
+                描述你想做的处理…
+              </div>
+            </div>
+          </div>
+          <div class="legend"><span><kbd>左键</kbd> 框选</span><span><kbd>右键</kbd> 菜单</span><span><kbd>滚轮</kbd> 缩放</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="state-note"><b>问题</b>　画布是横向的，AI 消息是纵向的；把纵向内容横放在画布底部，既挡内容，又挤掉了本就不多的画布高度。底部还同时住着日志面板，两者需要互相让位（代码里的 <code>aiBottomOffset</code>）。</p>
+  </section>
+
+  <!-- 02 方案 A -->
+  <section class="frame">
+    <div class="cap"><b>02 · 方案 A（推荐）</b><span>右侧停靠，和版本 / 血缘面板同一种抽屉语言</span><span class="file">360px · full height</span></div>
+    <div class="shell">
+      <div class="topbar">
+        <div class="brand">easy-csv<span>0.8.2</span></div>
+        <div class="menubar"><span>文件</span><span>编辑</span><span>视图</span><span>工具</span><span>帮助</span></div>
+        <div class="top-right">
+          <div class="ticon"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div>
+          <div class="ticon"><svg viewBox="0 0 24 24"><path d="M4 5h16v10H4zM8 19h8"/></svg></div>
+          <div class="ticon on"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12h8"/></svg></div>
+        </div>
+      </div>
+      <div class="tabstrip"><div class="t on">A 销售数据</div><div class="t">B 库存</div><div class="t">C 客户</div></div>
+      <div class="workspace">
+        <div class="canvas">
+          <div class="stage-node table" style="left:30px;top:46px">
+            <div class="n">sales_2026.csv</div>
+            <div class="m">5 列 · 12,480 行</div>
+          </div>
+          <div class="stage-node step" style="left:266px;top:58px"><div class="n">filter 金额 &gt; 0</div><div class="m">第 1 步</div></div>
+          <div class="stage-node step" style="left:446px;top:58px"><div class="n">groupby 地区</div><div class="m">第 2 步</div></div>
+          <div class="stage-node step" style="left:266px;top:176px"><div class="n">select 地区, 合计</div><div class="m">第 3 步</div></div>
+          <div class="stage-node step" style="left:446px;top:176px"><div class="n">sort 合计 desc</div><div class="m">第 4 步</div></div>
+          <div class="stage-node step" style="left:626px;top:117px"><div class="n">highlight 合计</div><div class="m">第 5 步</div></div>
+          <div class="wire" style="left:226px;top:81px;width:40px"></div>
+          <div class="wire" style="left:416px;top:81px;width:30px"></div>
+          <div class="wire" style="left:596px;top:81px;width:30px"></div>
+          <div class="legend"><span><kbd>左键</kbd> 框选</span><span><kbd>右键</kbd> 菜单</span><span><kbd>滚轮</kbd> 缩放</span></div>
+        </div>
+
+        <aside class="dock">
+          <div class="dock-head">
+            <span class="bot"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M12 4v3M9 13h.01M15 13h.01"/></svg></span>
+            <span class="title">助手</span>
+            <span class="tokens">2,840 tokens</span>
+            <span class="acts">
+              <span class="a" title="清空"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></span>
+              <span class="a" title="收起"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span>
+              <span class="a" title="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+            </span>
+          </div>
+
+          <div class="thread">
+            <div class="msg user">
+              <span class="who">你</span>
+              <div class="bubble">把金额按地区汇总，数量也一起合计，然后按金额从高到低排。</div>
+            </div>
+            <div class="msg ai">
+              <span class="who">助手 · 基于当前 4 步管道</span>
+              <div class="bubble">
+                <p>先过滤掉金额为 0 的行，再按地区汇总两个数值列，最后降序排列。</p>
+                <div class="cmd">
+                  <div class="c-head"><span class="dot"></span>groupby · 建议步骤</div>
+                  <div class="c-body">columns  地区
+expression  sum(金额) as 金额合计,
+            sum(数量) as 数量合计</div>
+                  <div class="c-foot">
+                    <span class="why">与第 2 步的分组键一致</span>
+                    <span class="mini-btn"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5h10"/></svg>复制</span>
+                    <span class="mini-btn primary"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>添加到画布</span>
+                  </div>
+                </div>
+                <p style="margin-top:8px;color:var(--muted-fg)">排序可以沿用现有 <code>sort</code> 步骤，只需把键改成「金额合计」。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="composer">
+            <div class="box">
+              <div class="ph">描述你想做的处理，或问当前管道…</div>
+              <span class="send"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+            </div>
+            <div class="keys"><kbd>Enter</kbd> 发送 <kbd>Shift</kbd><kbd>Enter</kbd> 换行 <span style="margin-left:auto">Alt A 开合</span></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <p class="state-note"><b>为什么是右侧</b>　画布按横向生长，右侧 360px 正好放下一列对话；与版本、血缘面板共用同一套「从右滑入」的抽屉语言，不新增第二种浮层。消息里的命令块与画布步骤卡同骨架，用户一眼能把回答和步骤对应起来。</p>
+  </section>
+
+  <!-- 03 收起态 -->
+  <section class="frame">
+    <div class="cap"><b>03 · 收起态</b><span>右缘留一条 38px 的窄轨，不占画布</span><span class="file">collapsed rail</span></div>
+    <div class="shell short">
+      <div class="topbar">
+        <div class="brand">easy-csv<span>0.8.2</span></div>
+        <div class="menubar"><span>文件</span><span>编辑</span><span>视图</span><span>工具</span><span>帮助</span></div>
+        <div class="top-right">
+          <div class="ticon on"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12h8"/></svg></div>
+        </div>
+      </div>
+      <div class="tabstrip"><div class="t on">A 销售数据</div><div class="t">B 库存</div></div>
+      <div class="workspace">
+        <div class="canvas">
+          <div class="stage-node table" style="left:30px;top:46px"><div class="n">sales_2026.csv</div><div class="m">5 列 · 12,480 行</div></div>
+          <div class="stage-node step" style="left:266px;top:58px"><div class="n">filter 金额 &gt; 0</div><div class="m">第 1 步</div></div>
+          <div class="stage-node step" style="left:446px;top:58px"><div class="n">groupby 地区</div><div class="m">第 2 步</div></div>
+          <div class="stage-node step" style="left:266px;top:176px"><div class="n">select 地区, 合计</div><div class="m">第 3 步</div></div>
+          <div class="stage-node step" style="left:446px;top:176px"><div class="n">sort 合计 desc</div><div class="m">第 4 步</div></div>
+          <div class="wire" style="left:226px;top:81px;width:40px"></div>
+          <div class="wire" style="left:416px;top:81px;width:30px"></div>
+          <div class="legend"><span><kbd>左键</kbd> 框选</span><span><kbd>右键</kbd> 菜单</span><span><kbd>滚轮</kbd> 缩放</span></div>
+        </div>
+        <div class="rail">
+          <span class="rbtn"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M12 4v3M9 13h.01M15 13h.01"/></svg></span>
+          <span class="rlabel">助手</span>
+          <span style="width:5px;height:5px;border-radius:50%;background:var(--brand);margin-top:2px"></span>
+        </div>
+      </div>
+    </div>
+    <div class="two-col" style="margin-top:14px">
+      <div class="callout">
+        <span class="mk">i</span>
+        <span><b>窄轨而不是悬浮球</b>　画布四角已经住着手势提示、缩放和结果卡；右缘窄轨是唯一不会被节点遮住的位置，也和右侧面板的出现方向一致。</span>
+      </div>
+      <div class="callout">
+        <span class="mk">i</span>
+        <span><b>状态点</b>　收起时若 AI 正在生成，窄轨上亮一个 5px 圆点；回到面板自动消失，不做循环动画。</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 方案对照 -->
+  <section class="frame">
+    <div class="cap"><b>04 · 另外两个位置</b><span>都能用，但各自让画布付出代价</span><span class="file">B · C</span></div>
+    <div class="options">
+      <div class="opt">
+        <div class="bshell">
+          <div class="bcanvas">
+            <div class="stage-node table" style="left:22px;top:34px;width:150px"><div class="n">sales_2026.csv</div><div class="m">5 列 · 12,480 行</div></div>
+            <div class="stage-node step" style="left:206px;top:44px;width:120px"><div class="n">filter 金额 &gt; 0</div><div class="m">第 1 步</div></div>
+            <div class="stage-node step" style="left:350px;top:44px;width:120px"><div class="n">groupby 地区</div><div class="m">第 2 步</div></div>
+            <div class="stage-node step" style="left:206px;top:138px;width:120px"><div class="n">select 地区, 合计</div><div class="m">第 3 步</div></div>
+          </div>
+          <div class="bdock">
+            <div class="bhead"><b>助手</b><span>· 全宽底部停靠</span><span style="margin-left:auto;font-family:var(--mono);font-size:9px">2,840 tokens</span></div>
+            <div class="brow">
+              <div class="bmsg">按地区汇总金额与数量，沿用现有分组键…</div>
+              <div class="binput">描述你想做的处理…</div>
+            </div>
+          </div>
+        </div>
+        <div class="tagline"><b>B · 底部整宽停靠</b><span class="verdict">占高度</span></div>
+        <p class="state-note" style="padding-top:4px">像日志面板一样占满底部，消息一行能写很长，但对话其实不需要宽；会把画布压矮，并与日志面板争同一个位置。</p>
+      </div>
+
+      <div class="opt">
+        <div class="cshell">
+          <div class="stage-node table" style="left:22px;top:34px;width:150px"><div class="n">sales_2026.csv</div><div class="m">5 列 · 12,480 行</div></div>
+          <div class="stage-node step" style="left:206px;top:44px;width:120px"><div class="n">filter 金额 &gt; 0</div><div class="m">第 1 步</div></div>
+          <div class="stage-node step" style="left:350px;top:44px;width:120px"><div class="n">groupby 地区</div><div class="m">第 2 步</div></div>
+          <div class="stage-node step" style="left:206px;top:138px;width:120px"><div class="n">select 地区, 合计</div><div class="m">第 3 步</div></div>
+          <div class="stage-node step" style="left:350px;top:138px;width:120px"><div class="n">sort 合计 desc</div><div class="m">第 4 步</div></div>
+          <div class="float-card">
+            <div class="fhead"><span class="bot" style="width:18px;height:18px;border-radius:5px"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M12 4v3"/></svg></span>助手<span style="margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)">2,840</span></div>
+            <div class="fbody">按地区汇总金额与数量，沿用现有分组键…</div>
+            <div class="finput">描述你想做的处理…</div>
+          </div>
+        </div>
+        <div class="tagline"><b>C · 右下浮动卡</b><span class="verdict">盖内容</span></div>
+        <p class="state-note" style="padding-top:4px">改动最小，但会盖住画布右下的结果节点与缩放控件；拖动或记住位置只会把问题挪个地方。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 规范 -->
+  <section class="frame">
+    <div class="cap"><b>05 · 实现约定</b><span>复用现有抽屉语言，不新增浮层体系</span><span class="file">design 065</span></div>
+    <table class="spec">
+      <thead><tr><th>项</th><th>约定</th></tr></thead>
+      <tbody>
+        <tr><td>位置</td><td>右侧停靠，宽 <code>360px</code>，从应用标题栏下方（<code>top-9</code>）铺到底；与版本 / 血缘面板同为 <code>absolute right-0</code> 抽屉，边框 <code>border-l</code>，无阴影。</td></tr>
+        <tr><td>共存</td><td>AI 是右抽屉栈里最内侧的一列：打开时版本 / 血缘整体左移 360px；窄窗口（&lt; 1100px）改为覆盖式抽屉，不压缩画布。</td></tr>
+        <tr><td>收起</td><td>右缘 38px 窄轨：Bot 图标 + 竖排「助手」；生成中显示 5px 状态点；快捷键 <code>Alt A</code> 开合。</td></tr>
+        <tr><td>头部</td><td>40px：图标 + 「助手」+ 等宽 token 读数；右侧清空 / 收起 / 关闭三个 22px 图标按钮。</td></tr>
+        <tr><td>正文</td><td>消息列宽自然收窄，用户消息右对齐；命令块复用步骤卡的圆角、hairline 与等宽正文；「添加到画布」为主操作。</td></tr>
+        <tr><td>输入</td><td>固定在底部，最小 56px、最大 96px 自适应；Enter 发送、Shift+Enter 换行；底部键帽提示。</td></tr>
+        <tr><td>与日志</td><td>删除 <code>aiBottomOffset</code>，日志面板不再为 AI 让位；两者互不影响。</td></tr>
+        <tr><td>持久化</td><td>沿用 <code>panelStates.aiPanel.collapsed</code>；新增宽度不开放拖拽，先固定 360px，避免和现有 320px 面板产生第二套栅格。</td></tr>
+      </tbody>
+    </table>
+    <div class="two-col" style="margin-top:14px">
+      <div class="callout">
+        <span class="mk">i</span>
+        <span><b>为什么不是左侧</b>　左侧是画布工具条与输入表节点，抽屉会盖住流程起点；右侧已经有成熟的抽屉栈，AI 放这里不需要新规则。</span>
+      </div>
+      <div class="callout">
+        <span class="mk w">!</span>
+        <span><b>不做的部分</b>　不把 AI 做成顶部命令条，也不合并进版本 / 血缘的标签页——那会改动已有面板的开关与心智模型，收益不如右侧停靠直接。</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const toggle = document.getElementById('themeToggle');
+  toggle.addEventListener('click', () => {
+    const dark = document.documentElement.classList.toggle('dark');
+    toggle.textContent = dark ? 'LIGHT' : 'DARK';
+  });
+</script>
+</body>
+</html>

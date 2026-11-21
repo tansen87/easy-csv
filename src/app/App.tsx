@@ -260,17 +260,9 @@ function AppContent() {
     beforeInstall: () => session.flushSession(),
   });
 
-  // AI panel expanded state is derived from the persisted panel state
-  // (default: collapsed strip), and drives the LogPanel avoidance offset.
-  const aiPanelExpanded =
-    session.panelStates.aiPanel?.collapsed === undefined
-      ? false
-      : !session.panelStates.aiPanel.collapsed;
-  const aiBottomOffset: number | string = useMemo(() => {
-    if (!ui.showAIPanel || !aiPanelExpanded) return 0;
-    // 36vh message area + header + input strip.
-    return "calc(36vh + 96px)";
-  }, [ui.showAIPanel, aiPanelExpanded]);
+  /** Space the right-side panels and floating pieces must leave for the AI dock. */
+  const [aiHistoryOpen, setAiHistoryOpen] = useState(false);
+  const aiDockWidth = ui.showAIPanel ? (aiHistoryOpen ? 520 : 360) : 0;
 
   // Collapsed capsules stack in a fixed order at the top-right corner,
   // below the app header (36px), one slot per collapsed panel.
@@ -2062,6 +2054,7 @@ function AppContent() {
                 sourceTable={tabsHook.getCurrentTab()?.sourceTable}
                 onDelimiterChange={onDelimiterModeChange}
                 showOnboardingGuide={showOnboardingGuide}
+                aiDockWidth={aiDockWidth}
                 commandCount={xanCommands.length}
                 onOpenCommandPanel={() => ui.setShowCommandPanel(true)}
                 onOpenAIPanel={() => ui.setShowAIPanel(true)}
@@ -2110,7 +2103,6 @@ function AppContent() {
             onDockChange={(patch) =>
               session.updatePanelState("logPanel", patch)
             }
-            bottomOffset={aiBottomOffset}
             selectedTabId={tabsHook.selectedTabId}
             tabs={tabsHook.tabs}
           />
@@ -2133,6 +2125,7 @@ function AppContent() {
               session.updatePanelState("chartPanel", patch)
             }
             capsuleY={collapsedStack.chartPanel}
+            capsuleRight={8 + aiDockWidth}
             chartState={ui.chartsByTab[tabsHook.selectedTabId] ?? null}
           />
 
@@ -2339,9 +2332,8 @@ function AppContent() {
 
           {/* Data Profile Panel */}
           <div
-            className={`absolute top-9 right-0 bottom-0 z-20 transition-all duration-300 ${
-              ui.showDataProfile ? "w-80" : "w-0"
-            }`}
+            className="absolute top-9 bottom-0 z-20 transition-all duration-300"
+            style={{ right: aiDockWidth, width: ui.showDataProfile ? 320 : 0 }}
           >
             {ui.showDataProfile && (
               <div className="h-full bg-card border-l border-border/50 shadow-lg">
@@ -2357,7 +2349,12 @@ function AppContent() {
 
           <AIPanel
             isVisible={ui.showAIPanel}
-            onClose={() => ui.setShowAIPanel(false)}
+            onClose={() => {
+              ui.setShowAIPanel(false);
+              setAiHistoryOpen(false);
+            }}
+            historyOpen={aiHistoryOpen}
+            onHistoryOpenChange={setAiHistoryOpen}
             context={{
               headers: tabsHook.getCurrentTab()?.headers || [],
               pipelineSteps: tabsHook.getCurrentPipeline().length,
@@ -2365,10 +2362,6 @@ function AppContent() {
             }}
             onAddCommand={handleCommandClick}
             onAddCommands={handleCommandsClick}
-            expanded={aiPanelExpanded}
-            onExpandedChange={(v) =>
-              session.updatePanelState("aiPanel", { collapsed: !v })
-            }
           />
 
           {variablePrompt && (

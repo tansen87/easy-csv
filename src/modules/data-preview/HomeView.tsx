@@ -31,6 +31,9 @@ import { EmptyState, RecentFile } from "@/modules/data-preview/EmptyState";
 import { VersionControlPanel } from "@/modules/pipeline/panels/VersionControlPanel";
 import { DataLineagePanel } from "@/modules/pipeline/panels/DataLineagePanel";
 
+/** Width of the version / lineage panels (w-80). */
+const SIDE_PANEL_WIDTH = 320;
+
 interface HomeViewProps {
   tabs: PipelineTab[];
   selectedTabId: string;
@@ -95,6 +98,8 @@ interface HomeViewProps {
   onSaveLineage?: () => void;
   showVersionPanel?: boolean;
   showLineagePanel?: boolean;
+  /** Right-docked AI width; right-side panels shift to make room. */
+  aiDockWidth?: number;
   onToggleVersionPanel?: () => void;
   onToggleLineagePanel?: () => void;
   doubleClickFitView?: boolean;
@@ -172,6 +177,7 @@ export const HomeView = React.memo(function HomeView({
   onSaveLineage,
   showVersionPanel = false,
   showLineagePanel = false,
+  aiDockWidth = 0,
   onToggleVersionPanel,
   onToggleLineagePanel,
   isExecuting = false,
@@ -302,7 +308,10 @@ export const HomeView = React.memo(function HomeView({
 
   return (
     <div className="h-full relative">
-      <div className="absolute inset-0 overflow-hidden">
+      <div
+        className="absolute inset-0 overflow-hidden"
+        style={{ paddingRight: aiDockWidth }}
+      >
         <FlowPanel
           steps={pipeline}
           headers={displayHeaders}
@@ -377,9 +386,10 @@ export const HomeView = React.memo(function HomeView({
 
       {/* Version Control Panel */}
       <div
-        className={`absolute top-9 right-0 bottom-0 z-20 transition-all duration-300 ${
+        className={`absolute top-9 bottom-0 z-20 transition-all duration-300 ${
           showVersionPanel ? "w-80" : "w-0"
         }`}
+        style={{ right: aiDockWidth }}
       >
         {showVersionPanel && (
           <div className="h-full bg-card border-l border-border/50 shadow-lg">
@@ -403,9 +413,13 @@ export const HomeView = React.memo(function HomeView({
 
       {/* Data Lineage Panel */}
       <div
-        className={`absolute top-9 right-0 bottom-0 z-20 transition-all duration-300 ${
+        className={`absolute top-9 bottom-0 z-20 transition-all duration-300 ${
           showLineagePanel ? "w-80" : "w-0"
-        } ${showVersionPanel ? "right-80" : ""}`}
+        }`}
+        style={{
+          right:
+            aiDockWidth + (showVersionPanel ? SIDE_PANEL_WIDTH : 0),
+        }}
       >
         {showLineagePanel && (
           <div className="h-full bg-card border-l border-border/50 shadow-lg">

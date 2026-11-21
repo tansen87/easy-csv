@@ -440,6 +440,8 @@ interface ChartPanelProps {
   onDockChange?: (patch: Partial<PanelDockState>) => void;
   /** Top-right stack offset for the collapsed capsule. */
   capsuleY?: number;
+  /** Right offset, leaving room for the AI dock. */
+  capsuleRight?: number;
   /** Diagnostics from the chart branch: rows, drop count, issue, truncation. */
   chartState?: TabChartState | null;
 }
@@ -452,6 +454,7 @@ export const ChartPanel = React.memo(function ChartPanel({
   dockState,
   onDockChange,
   capsuleY,
+  capsuleRight = 8,
   chartState,
 }: ChartPanelProps) {
   const { t } = useLanguage();
@@ -671,7 +674,7 @@ export const ChartPanel = React.memo(function ChartPanel({
     return (
       <div
         className="fixed z-floating flex items-center gap-1.5 px-3 py-2 bg-background border border-border/50 rounded-full shadow-xl cursor-pointer select-none"
-        style={{ top: capsuleY ?? 56, right: 8 }}
+        style={{ top: capsuleY ?? 56, right: capsuleRight }}
         role="button"
         onContextMenu={(e) => e.preventDefault()}
         onClick={() => {
