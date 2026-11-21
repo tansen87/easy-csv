@@ -500,6 +500,11 @@ pub async fn execute_xan_pipeline(
         let mut stderr_threads = Vec::new();
         let mut pipe_threads = Vec::new();
         let mut output_handles = Vec::new();
+        // Only commands that actually exited non-zero own their stderr: a
+        // successful command may still print a warning, and victims killed
+        // after another step failed must not get a red node.
+        let mut failed_ids: std::collections::HashSet<String> =
+          std::collections::HashSet::new();
 
         // Read first child's stderr in background thread
         let first_stderr = first_child
@@ -679,6 +684,9 @@ pub async fn execute_xan_pipeline(
         // If any middle command fails, kill the last child to break deadlock
         let mut final_status = None;
         let mut try_wait_error = None;
+        // Set when the last child was killed because an earlier step failed:
+        // its non-zero exit is a symptom, not an independent error.
+        let mut last_is_victim = false;
 
         while final_status.is_none() && try_wait_error.is_none() {
           if exec_flag.load(Ordering::Relaxed) {
@@ -702,11 +710,16 @@ pub async fn execute_xan_pipeline(
             }
             Ok(None) => {
               let mut any_failed = false;
-              for child in &mut children {
+              for (index, child) in children.iter_mut().enumerate() {
                 match child.try_wait() {
                   Ok(Some(child_status)) => {
                     if !child_status.success() {
                       any_failed = true;
+                      if let Some(id) = children_ids.get(index) {
+                        if !id.is_empty() {
+                          failed_ids.insert(id.clone());
+                        }
+                      }
                       if final_status.is_none() {
                         final_status = Some(child_status);
                       }
@@ -724,6 +737,7 @@ pub async fn execute_xan_pipeline(
                 for child in &mut children {
                   let _ = child.wait();
                 }
+                last_is_victim = true;
                 let _ = last_child.kill();
                 if let Ok(status) = last_child.wait() {
                   if final_status.is_none() {
@@ -756,6 +770,30 @@ pub async fn execute_xan_pipeline(
         // Get stdout from thread
         let stdout = stdout_thread.join().unwrap_or_default();
 
+        // Record middle commands that already exited non-zero before the
+        // cleanup below kills the rest.
+        for (index, child) in children.iter_mut().enumerate() {
+          if let Ok(Some(child_status)) = child.try_wait() {
+            if !child_status.success() {
+              if let Some(id) = children_ids.get(index) {
+                if !id.is_empty() {
+                  failed_ids.insert(id.clone());
+                }
+              }
+            }
+          }
+        }
+
+        // The last child owns its status unless an earlier step failed and we
+        // killed it to break the deadlock.
+        if !last_is_victim && !final_status.success() {
+          if let Some(id) = children_ids.last() {
+            if !id.is_empty() {
+              failed_ids.insert(id.clone());
+            }
+          }
+        }
+
         // Clean up remaining children
         for mut child in children {
           let _ = child.kill();
@@ -781,7 +819,7 @@ pub async fn execute_xan_pipeline(
               combined_stderr.extend_from_slice(&b"\n"[..]);
             }
             combined_stderr.extend_from_slice(buf);
-            if !id.is_empty() {
+            if !id.is_empty() && failed_ids.contains(id) {
               let text = String::from_utf8_lossy(buf).trim().to_string();
               if !text.is_empty() {
                 step_errors
@@ -802,7 +840,7 @@ pub async fn execute_xan_pipeline(
               combined_stderr.extend_from_slice(&b"\n"[..]);
             }
             combined_stderr.extend_from_slice(msg.as_bytes());
-            if !id.is_empty() {
+            if !id.is_empty() && failed_ids.contains(id) {
               step_errors
                 .entry(id.clone())
                 .and_modify(|e| e.push('\n'))
@@ -1240,7 +1278,7 @@ fn pipeline_seq(
       wait_with_cancel(child, cancel)?
     };
 
-    if !output.stderr.is_empty() {
+    if !output.status.success() && !output.stderr.is_empty() {
       let text = String::from_utf8_lossy(&output.stderr).trim().to_string();
       if !text.is_empty() {
         step_errors
@@ -1253,6 +1291,12 @@ fn pipeline_seq(
     }
 
     final_status = Some(output.status);
+    if !output.status.success() {
+      // A failed step leaves every downstream step with empty or partial
+      // input; stop here so the error stays on the step that actually broke
+      // instead of cascading onto its consumers.
+      break;
+    }
     if let Some(t) = &next_temp {
       current_input = if duckdb && next_is_duckdb {
         SourceRef::Parquet(t.clone())
@@ -1273,7 +1317,9 @@ fn pipeline_seq(
   // When that final step is duckdb, write its captured CSV stdout to the target
   // path here, so `[duckdb] -> [output]` works without an intermediate xan step.
   if let Some(last) = commands.last() {
-    if is_duckdb(&last.name) {
+    // Only export when the chain actually reached and completed its last
+    // step; after an upstream failure `final_stdout` is empty.
+    if final_status.map(|s| s.success()).unwrap_or(false) && is_duckdb(&last.name) {
       if let Some(path) = last
         .parameters
         .iter()
@@ -1492,6 +1538,59 @@ async fn run_duckdb_chain(
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn error_attribution_uses_step_ids() {
+    let dir = std::env::temp_dir().join("easycsv-attr-test");
+    std::fs::create_dir_all(&dir).unwrap();
+    let csv = dir.join("in.csv");
+    std::fs::write(&csv, "a,b\n1,2\n3,4\n").unwrap();
+
+    let plugin = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+      .join("resources")
+      .join("plugins")
+      .join("windows-x86_64");
+    let plugin_src = plugin.join("xan.exe");
+    if !plugin_src.is_file() {
+      return;
+    }
+    let plugin_dst = crate::plugins::get_plugin_dir().join("xan.exe");
+    if !plugin_dst.is_file() {
+      std::fs::create_dir_all(plugin_dst.parent().unwrap()).unwrap();
+      std::fs::copy(&plugin_src, &plugin_dst).unwrap();
+    }
+    assert!(plugin_dst.is_file());
+
+    let cmd = |id: &str, selection: &str| PipelineCommand {
+      name: "select".to_string(),
+      id: Some(id.to_string()),
+      parameters: vec![CommandParameter {
+        name: "selection".to_string(),
+        value: selection.to_string(),
+        is_positional: Some(true),
+      }],
+    };
+    let commands = vec![
+      cmd("first", "a"),
+      cmd("second", "nope"),
+      cmd("third", "a"),
+    ];
+    let flag = AtomicBool::new(false);
+    let (output, errors) = pipeline_seq(
+      &commands,
+      csv.to_str().unwrap(),
+      None,
+      ",",
+      false,
+      &flag,
+    )
+    .unwrap();
+    println!("stderr={:?}", String::from_utf8_lossy(&output.stderr));
+    println!("errors={:?}", errors);
+    assert!(errors.contains_key("second"));
+    assert!(!errors.contains_key("first"));
+    assert!(!errors.contains_key("third"));
+  }
 
   /// Design 028 §9.2 T1: cancelling one run must never touch another's flag —
   /// this is what makes concurrent tabs interfere-free.

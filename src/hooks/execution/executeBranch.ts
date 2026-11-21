@@ -252,9 +252,37 @@ export async function executeSingleBranch({
     success: result.success,
     output: result.output,
     error: result.error,
-    stepErrors: result.step_errors,
+    stepErrors: firstStepError(branchSteps, result.step_errors),
     branchStepNames,
   };
+}
+
+/**
+ * A failed command makes every downstream command fail on empty or partial
+ * input, so stderr arrives for several steps at once. Keep only the earliest
+ * error in this branch: that is the command that actually broke, and the one
+ * whose node should turn red.
+ */
+function firstStepError(
+  branchSteps: PipelineStep[],
+  stepErrors: Record<string, string> | undefined,
+): Record<string, string> | undefined {
+  if (!stepErrors) return undefined;
+  const ids = Object.keys(stepErrors);
+  if (ids.length <= 1) return stepErrors;
+
+  const order = new Map(branchSteps.map((step, index) => [step.id, index]));
+  let earliestId: string | null = null;
+  let earliestIndex = Number.POSITIVE_INFINITY;
+  for (const id of ids) {
+    const index = order.get(id);
+    if (index !== undefined && index < earliestIndex) {
+      earliestIndex = index;
+      earliestId = id;
+    }
+  }
+  if (!earliestId) return stepErrors;
+  return { [earliestId]: stepErrors[earliestId] };
 }
 
 interface ChartBranchArgs {
