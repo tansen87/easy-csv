@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 068 · 上沿进度线 + tab 行读数</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --edge:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --canvas-ink:oklch(0.3 0.006 80);
+    --canvas-ink-soft:oklch(0.2 0.01 80 / 7%);
+
+    --info:oklch(0.5 0.1 245);
+    --info-soft:color-mix(in oklab,var(--info) 11%,transparent);
+    --success:oklch(0.52 0.11 152);
+    --success-soft:color-mix(in oklab,var(--success) 12%,transparent);
+    --danger:oklch(0.55 0.17 27);
+    --danger-soft:color-mix(in oklab,var(--danger) 11%,transparent);
+    --warning:oklch(0.58 0.12 75);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-fly:0 12px 28px -14px oklch(0.2 0.02 80 / 26%);
+    --mark:oklch(0.56 0.17 27);
+  }
+  .dark{
+    color-scheme:dark;
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --edge:oklch(1 0 0 / 24%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --info:oklch(0.76 0.08 245);
+    --info-soft:color-mix(in oklab,var(--info) 16%,transparent);
+    --success:oklch(0.76 0.1 152);
+    --success-soft:color-mix(in oklab,var(--success) 16%,transparent);
+    --danger:oklch(0.72 0.14 27);
+    --danger-soft:color-mix(in oklab,var(--danger) 16%,transparent);
+    --warning:oklch(0.78 0.11 75);
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.12 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-card:none;
+    --shadow-fly:0 12px 28px -14px oklch(0 0 0 / 75%);
+    --mark:oklch(0.68 0.17 27);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased;transition:background-color .18s ease,color .18s ease}
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme-toggle{position:absolute;right:0;top:2px;height:26px;padding:0 10px;border-radius:6px;
+                border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+                font-family:var(--mono);font-size:10.5px;cursor:pointer}
+  .theme-toggle:hover{color:var(--fg)}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+  .state-note{font-size:10.5px;color:var(--muted-fg);line-height:1.7;padding:10px 2px 0}
+  .state-note b{color:var(--fg);font-weight:500}
+
+  /* 画布 */
+  .stage{position:relative;width:1200px;overflow:hidden;border:1px solid var(--border);
+         border-radius:8px;background-color:var(--canvas);
+         background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+         background-size:22px 22px;background-position:11px 11px}
+  .node{position:absolute;width:186px;padding:11px;border:1px solid var(--border);border-radius:8px;
+        background:var(--paper);box-shadow:var(--shadow-card)}
+  .node .t{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .node .c{margin-top:5px;font-family:var(--mono);font-size:9px;color:var(--muted-fg);
+           background:var(--muted);border:1px solid var(--border-soft);border-radius:3px;
+           padding:1px 4px;display:inline-block}
+  .link{position:absolute;height:1px;background:var(--border)}
+  .node.hot{border-color:color-mix(in oklab,var(--mark) 45%,var(--border))}
+
+  /* 上沿进度线 */
+  .progress{position:absolute;left:0;right:0;top:0;height:2px;z-index:6;
+            background:color-mix(in oklab,var(--fg) 7%,transparent)}
+  .progress .fill{height:100%;width:100%;transform-origin:left center;
+                  background:var(--info);transition:transform .2s ease}
+  .progress .fill.ok{background:var(--success)}
+  .progress .fill.err{background:var(--danger)}
+  .progress .fill.warn{background:var(--warning)}
+
+  /* tab 行 */
+  .tabrow{position:absolute;left:14px;right:14px;top:8px;height:26px;display:flex;align-items:center;gap:4px;z-index:3}
+  .tab{height:24px;display:flex;align-items:center;gap:6px;padding:0 9px;border-radius:4px;
+       font-size:11px;color:var(--muted-fg);white-space:nowrap}
+  .tab.on{color:var(--brand);font-weight:500;border:1px solid color-mix(in oklab,var(--brand) 22%,transparent);
+          background:var(--brand-soft)}
+  .tab .badge{height:15px;display:inline-flex;align-items:center;gap:4px;padding:0 5px;border-radius:999px;
+              font-size:9px;font-weight:500;background:var(--info-soft);color:var(--info)}
+  .tab .badge .sp{width:7px;height:7px;border-radius:50%;border:1.5px solid currentColor;border-top-color:transparent}
+
+  /* 读数 */
+  .readout{margin-left:auto;display:flex;align-items:center;gap:7px;height:24px;
+           font-size:10.5px;color:var(--muted-fg);white-space:nowrap;flex:none}
+  .readout .bnum{font-family:var(--mono);font-size:10px;font-variant-numeric:tabular-nums}
+  .chip{display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 6px;border-radius:4px;
+        font-size:10px;font-weight:500;max-width:186px;overflow:hidden}
+  .chip span.nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chip.run{background:var(--info-soft);color:var(--info)}
+  .chip.ok{background:var(--success-soft);color:var(--success)}
+  .chip.err{background:var(--danger-soft);color:var(--danger)}
+  .readout .sp{width:1px;height:11px;background:var(--border);flex:none}
+  .time{font-family:var(--mono);font-size:10.5px;color:var(--fg);font-variant-numeric:tabular-nums}
+  .unit{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);margin-left:-4px}
+  .stop{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 5px;border-radius:4px;
+        color:var(--danger);font-size:10px;font-weight:500}
+  .stop svg{width:9px;height:9px;fill:currentColor;stroke:none}
+  .stop.quiet{color:var(--muted-fg)}
+  .readout .other{font-size:9.5px;color:var(--muted-fg-3)}
+  .spin{width:8px;height:8px;border-radius:50%;border:1.5px solid currentColor;border-top-color:transparent;flex:none}
+  .chk{width:9px;height:9px;fill:none;stroke:currentColor;stroke-width:3;flex:none}
+  .xmark{width:9px;height:9px;fill:none;stroke:currentColor;stroke-width:3;flex:none}
+
+  /* 左栏与底部 */
+  .rail{position:absolute;left:12px;top:50%;transform:translateY(-50%);z-index:5;
+        display:flex;flex-direction:column;gap:2px;padding:3px;border:1px solid var(--border);
+        border-radius:9px;background:var(--card);box-shadow:var(--shadow-card)}
+  .rail .b{position:relative;width:26px;height:26px;display:grid;place-items:center;border:0;border-radius:5px;
+           background:transparent;color:var(--muted-fg)}
+  .rail .b svg{width:14px;height:14px;stroke-width:1.5;fill:none;stroke:currentColor}
+  .rail .b.on{background:var(--canvas-ink-soft);color:var(--canvas-ink)}
+  .rail .sep{height:1px;width:18px;margin:2px auto;background:var(--border)}
+
+  .savebar{position:absolute;left:14px;bottom:9px;display:flex;align-items:center;gap:9px;
+           font-size:10.5px;color:var(--muted-fg);z-index:4;white-space:nowrap}
+  .savebar .dot{width:5px;height:5px;border-radius:50%;background:var(--warning)}
+  .savebar .dot.ok{background:var(--success)}
+  .savebar .sp{width:1px;height:11px;background:var(--border)}
+  .legend{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);display:flex;align-items:center;
+          gap:9px;height:28px;padding:0 9px;border:1px solid var(--border);border-radius:8px;
+          background:var(--card);font-size:10px;color:var(--muted-fg);z-index:4;white-space:nowrap}
+  .legend kbd{display:inline-flex;align-items:center;height:17px;padding:0 5px;border:1px solid var(--border);
+              border-radius:3px;background:var(--bg);font-family:var(--mono);font-size:9px;color:var(--fg)}
+  .legend .sp{width:1px;height:11px;background:var(--border)}
+  .legend .it{display:inline-flex;align-items:center;gap:4px}
+
+  /* 旧浮层 */
+  .toppill{position:absolute;left:50%;top:92px;transform:translate(-50%,-50%);z-index:6;
+           display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;
+           border:1px solid var(--border);border-radius:8px;background:var(--card);
+           font-size:11px;color:var(--muted-fg);white-space:nowrap}
+
+  /* 右栏 */
+  .dock{position:absolute;top:0;right:0;bottom:0;width:340px;border-left:1px solid var(--border);
+        background:var(--card);z-index:4;padding:12px 14px}
+  .dock .dh{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:500;padding-bottom:10px;
+            border-bottom:1px solid var(--border-soft)}
+  .dock .dh .ic{width:15px;height:15px;color:var(--brand)}
+  .dock .dh .ic svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.5}
+  .dock .line{height:7px;border-radius:3px;background:var(--muted);margin-top:11px}
+  .dock .line.s{width:62%}
+  .dock .line.m{width:84%}
+  .dock .box{margin-top:12px;height:74px;border:1px solid var(--border-soft);border-radius:6px;
+             background:var(--paper)}
+  .dock .cap2{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);margin-top:12px}
+
+  /* 说明 */
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  .callout{display:flex;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;
+           background:var(--card);font-size:11px;line-height:1.75;color:var(--muted-fg)}
+  .callout b{color:var(--fg);font-weight:500}
+  .callout .mk{width:18px;height:18px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
+               font-family:var(--mono);font-size:9.5px;display:grid;place-items:center;flex:none;margin-top:1px}
+  .callout.bad .mk{background:var(--danger-soft);color:var(--danger)}
+
+  /* 四状态 */
+  .states{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .state{border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .state .h{display:flex;align-items:baseline;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border-soft);
+            font-size:10.5px;color:var(--muted-fg)}
+  .state .h .code{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)}
+  .state .h .r{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)}
+  .mini{position:relative;height:158px;overflow:hidden;background-color:var(--canvas);
+        background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:18px 18px}
+  .mini .tabrow{left:9px;right:9px;top:7px;height:20px;gap:3px}
+  .mini .tab{height:19px;font-size:9px;padding:0 6px;gap:4px}
+  .mini .tab .badge{height:12px;font-size:7.5px;padding:0 3px}
+  .mini .tab .badge .sp{width:5px;height:5px;border-width:1px}
+  .mini .readout{gap:5px;height:19px;font-size:9px}
+  .mini .readout .bnum{font-size:8.5px}
+  .mini .chip{height:15px;font-size:8.5px;padding:0 4px;max-width:118px;border-radius:3px}
+  .mini .time{font-size:9px}
+  .mini .unit{font-size:8px;margin-left:-3px}
+  .mini .stop{font-size:8.5px;height:16px;padding:0 3px;gap:3px}
+  .mini .stop svg{width:7px;height:7px}
+  .mini .readout .other{font-size:8px}
+  .mini .sp{width:1px;height:9px}
+  .mini .node{width:118px;padding:7px 8px;border-radius:6px}
+  .mini .node .t{font-size:10px}
+  .mini .node .c{font-size:8px;margin-top:3px;padding:0 3px}
+  .mini .link{height:1px}
+  .mini .legend{height:22px;bottom:5px;gap:5px;padding:0 6px;font-size:8.5px;border-radius:5px}
+  .mini .legend kbd{height:14px;font-size:7.5px}
+  .mini .savebar{left:9px;bottom:6px;font-size:8.5px;gap:5px}
+  .mini .savebar .sp{height:8px}
+  .mini .progress{height:2px}
+  .mini .spin{width:6px;height:6px;border-width:1px}
+  .mini .chk,.mini .xmark{width:7px;height:7px}
+
+  /* 对比 */
+  table.spec{width:100%;border-collapse:collapse;background:var(--card);
+             border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:11px}
+  table.spec th{text-align:left;font-weight:500;color:var(--muted-fg);font-size:10px;
+                padding:8px 12px;border-bottom:1px solid var(--border);background:color-mix(in oklab,var(--muted) 45%,transparent)}
+  table.spec td{padding:8px 12px;border-bottom:1px solid var(--border-soft);color:var(--muted-fg);line-height:1.6;vertical-align:top}
+  table.spec tr:last-child td{border-bottom:0}
+  table.spec td:first-child{color:var(--fg);font-weight:500;white-space:nowrap;width:120px}
+  table.spec td:nth-child(2),table.spec td:nth-child(3){width:300px}
+  table.spec code{font-size:10.5px}
+  .promote{color:var(--brand);font-weight:500}
+  .dim{color:var(--muted-fg-3)}
+
+  .mark{position:absolute;width:16px;height:16px;border-radius:50%;background:var(--mark);color:#fff;
+        font-family:var(--mono);font-size:9.5px;line-height:16px;text-align:center;font-weight:500;z-index:7}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">PROTOTYPE 068 · RUN STATUS: TOP RAIL + TAB READOUT</div>
+    <h1>执行提示：上沿进度线 + tab 行读数</h1>
+    <p>把 C 的「tab 行右端」和 D 的「画布上沿细线」合成一件事：<b>进度用 2px 线画在画布上沿</b>，<b>读数贴在 tab 行右端</b>。两者都按侧栏宽度右偏移，不再悬浮、不再覆盖节点，也不新增长驻的卡片。</p>
+    <button class="theme-toggle" id="themeToggle" type="button">DARK</button>
+  </div>
+
+  <dl class="direction">
+    <div><dt>PRODUCT</dt><dd>在无限画布上搭建并执行 CSV 管道的桌面工具</dd></div>
+    <div><dt>CHARACTER</dt><dd>安静、可核对、像仪器读数</dd></div>
+    <div><dt>WORLD</dt><dd>画布与仪表盘</dd></div>
+    <div><dt>MOMENTS</dt><dd>上沿的一条 2px 进度线，tab 右端的一行读数</dd></div>
+    <div><dt>SIGNATURE</dt><dd>运行信息与 tab 同一条基线，进度只用线表达</dd></div>
+  </dl>
+
+  <!-- 01 现状 -->
+  <section class="frame">
+    <div class="cap"><b>01 · 现状</b><span>顶部居中浮层：压节点、与 tab 徽章重复、完成后不退出</span><span class="file">HomeView · top-24</span></div>
+    <div class="stage" style="height:300px">
+      <div class="tabrow" style="top:10px">
+        <span class="tab on">orders_2026</span>
+        <span class="tab">渠道汇总</span>
+        <span class="tab">清洗草稿</span>
+        <span class="tab" style="padding-left:4px"><span class="badge"><span class="sp"></span>执行中</span></span>
+      </div>
+      <div class="rail" style="top:56%">
+        <button class="b on" type="button"><svg viewBox="0 0 24 24"><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M21 19a2 2 0 0 1-2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h1"/><path d="M14 3h1"/><path d="M14 21h1"/><path d="M3 9v1"/><path d="M21 9v1"/><path d="M3 14v1"/><path d="M21 14v1"/></svg></button>
+        <button class="b" type="button"><svg viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></button>
+        <span class="sep"></span>
+        <button class="b on" type="button"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg></button>
+        <button class="b" type="button"><svg viewBox="0 0 24 24"><path d="M9 9l5 12 1.8-5.2L21 14z"/><path d="M7.2 2.2v3M2.2 7.2h3M4 4l2 2"/></svg></button>
+      </div>
+
+      <div class="node hot" style="left:250px;top:48px"><div class="t">读取 orders_2026.csv</div><div class="c">csv · 250,000 行</div></div>
+      <div class="node hot" style="left:530px;top:48px"><div class="t">去掉金额为空的行</div><div class="c">drop-empty</div></div>
+      <div class="node hot" style="left:810px;top:48px"><div class="t">去除重复行</div><div class="c">dedup</div></div>
+      <div class="link" style="left:438px;top:90px;width:88px"></div>
+      <div class="link" style="left:718px;top:90px;width:88px"></div>
+
+      <div class="node" style="left:250px;top:174px"><div class="t">按地区汇总</div><div class="c">groupby</div></div>
+      <div class="node" style="left:530px;top:174px"><div class="t">转为 Excel</div><div class="c">to</div></div>
+      <div class="link" style="left:438px;top:216px;width:88px"></div>
+
+      <div class="toppill">
+        <span class="bnum">分支 1/1</span>
+        <span class="chip run"><span class="spin"></span><span class="nm">1 去掉金额为空的行 -&gt; 2 去除重复行 -&gt; 3…</span></span>
+        <span class="sp" style="width:1px;height:11px;background:var(--border)"></span>
+        <span class="time">0.1</span><span class="unit">s</span>
+        <span class="stop"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>取消执行</span>
+      </div>
+      <span class="mark" style="left:600px;top:106px">1</span>
+      <span class="mark" style="left:1010px;top:144px">2</span>
+
+      <div class="legend">
+        <span class="it"><kbd>左键</kbd>框选</span><span class="sp"></span>
+        <span class="it"><kbd>右键</kbd>划线</span><span class="sp"></span>
+        <span class="it"><kbd>Space</kbd>+<kbd>左键</kbd>平移</span><span class="sp"></span>
+        <span class="it"><kbd>滚轮</kbd>缩放</span>
+      </div>
+      <div class="savebar"><span>5 steps</span><span class="sp"></span><span class="dot"></span><span>未保存</span><span class="sp"></span><span>刚刚</span></div>
+    </div>
+    <div class="notes">
+      <div class="callout bad"><span class="mk">1</span><span><b>压住画布上沿</b>：浮层固定在 <code>top-24</code>，第一条分支的节点和连线正好在它下面。</span></div>
+      <div class="callout bad"><span class="mk">2</span><span><b>语义重复且不退出</b>：tab 已报「执行中」，顶部再报一次；完成后计时冻结、浮层仍停留。</span></div>
+    </div>
+  </section>
+
+  <!-- 02 合并方案 -->
+  <section class="frame">
+    <div class="cap"><b>02 · 合并方案</b><span>上沿 2px 进度线 + tab 行右端读数</span><span class="file">HomeView · 顶部</span></div>
+    <div class="stage" style="height:400px">
+      <div class="progress"><span class="fill" style="transform:scaleX(.62)"></span></div>
+      <div class="tabrow">
+        <span class="tab on">orders_2026</span>
+        <span class="tab">渠道汇总</span>
+        <span class="tab">清洗草稿</span>
+        <div class="readout">
+          <span class="bnum">分支 1/1</span>
+          <span class="chip run"><span class="spin"></span><span class="nm">去掉金额为空的行</span></span>
+          <span class="sp"></span>
+          <span class="time">0.1</span><span class="unit">s</span>
+          <span class="sp"></span>
+          <span class="stop"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>取消执行</span>
+        </div>
+      </div>
+
+      <div class="rail" style="top:52%">
+        <button class="b on" type="button"><svg viewBox="0 0 24 24"><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M21 19a2 2 0 0 1-2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h1"/><path d="M14 3h1"/><path d="M14 21h1"/><path d="M3 9v1"/><path d="M21 9v1"/><path d="M3 14v1"/><path d="M21 14v1"/></svg></button>
+        <button class="b" type="button"><svg viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></button>
+        <span class="sep"></span>
+        <button class="b on" type="button"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg></button>
+        <button class="b" type="button"><svg viewBox="0 0 24 24"><path d="M9 9l5 12 1.8-5.2L21 14z"/><path d="M7.2 2.2v3M2.2 7.2h3M4 4l2 2"/></svg></button>
+        <span class="sep"></span>
+        <button class="b" type="button"><svg viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><line x1="3" y1="12" x2="21" y2="12"/></svg></button>
+      </div>
+
+      <div class="node" style="left:250px;top:96px"><div class="t">读取 orders_2026.csv</div><div class="c">csv · 250,000 行</div></div>
+      <div class="node" style="left:530px;top:96px"><div class="t">去掉金额为空的行</div><div class="c">drop-empty</div></div>
+      <div class="node" style="left:810px;top:96px"><div class="t">去除重复行</div><div class="c">dedup</div></div>
+      <div class="node" style="left:530px;top:222px"><div class="t">按地区汇总</div><div class="c">groupby</div></div>
+      <div class="link" style="left:438px;top:138px;width:88px"></div>
+      <div class="link" style="left:718px;top:138px;width:88px"></div>
+      <div class="link" style="left:586px;top:170px;width:1px;height:48px"></div>
+
+      <div class="savebar"><span>5 steps</span><span class="sp"></span><span class="dot"></span><span>未保存</span><span class="sp"></span><span>刚刚</span></div>
+      <div class="legend">
+        <span class="it"><kbd>左键</kbd>框选</span><span class="sp"></span>
+        <span class="it"><kbd>右键</kbd>划线</span><span class="sp"></span>
+        <span class="it"><kbd>Space</kbd>+<kbd>左键</kbd>平移</span><span class="sp"></span>
+        <span class="it"><kbd>滚轮</kbd>缩放</span>
+      </div>
+
+      <span class="mark" style="left:1130px;top:14px">1</span>
+      <span class="mark" style="left:860px;top:44px">2</span>
+      <span class="mark" style="left:620px;top:76px">3</span>
+    </div>
+    <div class="notes">
+      <div class="callout"><span class="mk">1</span><span><b>上沿 2px 进度线</b>：贴住画布上沿，按分支推进；用 <code>transform:scaleX</code> 更新，不动画宽度，也不做无限流动。</span></div>
+      <div class="callout"><span class="mk">2</span><span><b>tab 行右端读数</b>：与 tab 同高 24px，无边框卡片、无阴影；步骤名 186px 省略，取消按钮跟在末尾。</span></div>
+      <div class="callout"><span class="mk">3</span><span><b>节点完全不遮挡</b>：线只占 2px chrome 层，节点默认从 96px 起；读数在 tab 行内，不进入画布内容。</span></div>
+      <div class="callout"><span class="mk">4</span><span><b>与现有 tab 徽章分工</b>：tab 徽章只说「这个标签页在跑」，读数回答「跑到哪一步、用了多久、要不要停」。</span></div>
+    </div>
+  </section>
+
+  <!-- 03 侧栏避让 -->
+  <section class="frame">
+    <div class="cap"><b>03 · 侧栏打开时</b><span>线右端和读数一起左移，永不被面板压住</span><span class="file">侧栏偏移</span></div>
+    <div class="stage" style="height:330px">
+      <div class="progress" style="right:340px"><span class="fill" style="transform:scaleX(.62)"></span></div>
+      <div class="tabrow" style="right:354px">
+        <span class="tab on">orders_2026</span>
+        <span class="tab">渠道汇总</span>
+        <div class="readout">
+          <span class="bnum">分支 1/1</span>
+          <span class="chip run"><span class="spin"></span><span class="nm">去掉金额为空的行</span></span>
+          <span class="sp"></span>
+          <span class="time">0.1</span><span class="unit">s</span>
+          <span class="stop"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg></span>
+        </div>
+      </div>
+
+      <div class="node" style="left:250px;top:96px"><div class="t">读取 orders_2026.csv</div><div class="c">csv · 250,000 行</div></div>
+      <div class="node" style="left:480px;top:96px"><div class="t">去掉金额为空的行</div><div class="c">drop-empty</div></div>
+      <div class="link" style="left:438px;top:138px;width:40px"></div>
+
+      <div class="dock">
+        <div class="dh">
+          <span class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg></span>
+          AI 助手
+          <span style="margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)">360 px</span>
+        </div>
+        <div class="line m"></div>
+        <div class="line s"></div>
+        <div class="box"></div>
+        <div class="line m"></div>
+        <div class="line s"></div>
+        <div class="cap2">侧栏展开时，进度线右端 = 侧栏左边；读数 right = 侧栏宽度 + 14</div>
+      </div>
+
+      <div class="savebar"><span>5 steps</span><span class="sp"></span><span class="dot"></span><span>未保存</span></div>
+      <div class="legend" style="left:43%">
+        <span class="it"><kbd>左键</kbd>框选</span><span class="sp"></span>
+        <span class="it"><kbd>右键</kbd>划线</span>
+      </div>
+      <span class="mark" style="left:840px;top:16px">1</span>
+    </div>
+    <p class="state-note"><b>1</b> 版本 / 血缘 / AI 三个侧栏都从 <code>top-9</code> 铺下来，所以顶部读数必须跟着侧栏宽度偏移；历史展开到 520 时同样适用。收起侧栏后回到 <code>right:14</code>。</p>
+  </section>
+
+  <!-- 04 四状态 -->
+  <section class="frame">
+    <div class="cap"><b>04 · 四个状态</b><span>运行中 · 完成停留 · 失败 · 多标签页</span><span class="file">上沿 + 读数</span></div>
+    <div class="states">
+      <div class="state">
+        <div class="h"><span class="code">RUNNING</span>运行中<span class="r">fill 62% · info</span></div>
+        <div class="mini">
+          <div class="progress"><span class="fill" style="transform:scaleX(.62)"></span></div>
+          <div class="tabrow">
+            <span class="tab on">orders_2026</span>
+            <span class="tab">渠道汇总</span>
+            <div class="readout">
+              <span class="bnum">分支 1/1</span>
+              <span class="chip run"><span class="spin"></span><span class="nm">去掉金额为空的行</span></span>
+              <span class="sp"></span>
+              <span class="time">0.1</span><span class="unit">s</span>
+              <span class="stop"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg></span>
+            </div>
+          </div>
+          <div class="node" style="left:26px;top:62px"><div class="t">读取 orders_2026.csv</div><div class="c">csv · 250,000 行</div></div>
+          <div class="node" style="left:228px;top:62px"><div class="t">去掉空行</div><div class="c">drop-empty</div></div>
+          <div class="link" style="left:146px;top:88px;width:80px"></div>
+          <div class="savebar"><span>5 steps</span><span class="sp"></span><span class="dot"></span><span>未保存</span></div>
+        </div>
+      </div>
+
+      <div class="state">
+        <div class="h"><span class="code">DONE · 2.5s</span>完成后停留，随后淡出<span class="r">fill 100% · success</span></div>
+        <div class="mini">
+          <div class="progress"><span class="fill ok"></span></div>
+          <div class="tabrow">
+            <span class="tab on">orders_2026</span>
+            <span class="tab">渠道汇总</span>
+            <div class="readout">
+              <span class="bnum">分支 1/1</span>
+              <span class="chip ok"><svg class="chk" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg><span class="nm">去除重复行</span></span>
+              <span class="sp"></span>
+              <span class="time">0.1</span><span class="unit">s</span>
+            </div>
+          </div>
+          <div class="node" style="left:26px;top:62px"><div class="t">读取 orders_2026.csv</div><div class="c">csv · 250,000 行</div></div>
+          <div class="node" style="left:228px;top:62px"><div class="t">去除重复行</div><div class="c">dedup</div></div>
+          <div class="link" style="left:146px;top:88px;width:80px"></div>
+          <div class="savebar"><span>5 steps</span><span class="sp"></span><span class="dot ok"></span><span>已保存</span></div>
+        </div>
+      </div>
+
+      <div class="state">
+        <div class="h"><span class="code">ERROR</span>失败常驻，可查看日志<span class="r">fill 34% · danger</span></div>
+        <div class="mini">
+          <div class="progress"><span class="fill err" style="transform:scaleX(.34)"></span></div>
+          <div class="tabrow">
+            <span class="tab on">orders_2026</span>
+            <div class="readout">
+              <span class="bnum">分支 1/1</span>
+              <span class="chip err"><svg class="xmark" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg><span class="nm">第 14 行字段数不匹配</span></span>
+              <span class="sp"></span>
+              <span class="time">0.3</span><span class="unit">s</span>
+              <span class="stop quiet">查看日志</span>
+            </div>
+          </div>
+          <div class="node" style="left:26px;top:62px"><div class="t">读取 orders_2026.csv</div><div class="c">csv · 250,000 行</div></div>
+          <div class="node" style="left:228px;top:62px;border-color:var(--danger)"><div class="t">按地区汇总</div><div class="c">groupby · 失败</div></div>
+          <div class="link" style="left:146px;top:88px;width:80px"></div>
+          <div class="savebar"><span>5 steps</span><span class="sp"></span><span class="dot"></span><span>未保存</span></div>
+        </div>
+      </div>
+
+      <div class="state">
+        <div class="h"><span class="code">MULTI</span>其他标签页在运行<span class="r">尾部静默文字</span></div>
+        <div class="mini">
+          <div class="progress"><span class="fill" style="transform:scaleX(1)"></span></div>
+          <div class="tabrow">
+            <span class="tab on">orders_2026</span>
+            <span class="tab" style="padding-right:4px">渠道汇总<span class="badge"><span class="sp"></span></span></span>
+            <div class="readout">
+              <span class="bnum">分支 2/2</span>
+              <span class="chip run"><span class="spin"></span><span class="nm">按渠道拆分</span></span>
+              <span class="sp"></span>
+              <span class="time">1.4</span><span class="unit">s</span>
+              <span class="stop"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg></span>
+              <span class="other">另有 1 个在运行</span>
+            </div>
+          </div>
+          <div class="node" style="left:26px;top:62px"><div class="t">读取 orders_2026.csv</div><div class="c">csv · 250,000 行</div></div>
+          <div class="node" style="left:228px;top:62px"><div class="t">按渠道拆分</div><div class="c">split</div></div>
+          <div class="link" style="left:146px;top:88px;width:80px"></div>
+          <div class="savebar"><span>5 steps</span><span class="sp"></span><span class="dot"></span><span>未保存</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="state-note"><b>规则</b>：线的填充只跟当前标签页的分支进度；成功 100% 后连同读数一起 2.5s 淡出；失败保持 danger 常驻直到下一次运行；其他标签页只做尾部静默文字，不可点击。</p>
+  </section>
+
+  <!-- 05 对比 -->
+  <section class="frame">
+    <div class="cap"><b>05 · 与底部方案对比</b><span>上沿方案解决 C 被面板遮挡、D 没地方放取消</span><span class="file">取舍</span></div>
+    <table class="spec">
+      <thead>
+        <tr><th>项</th><th>底部状态线右端（067 A）</th><th>上沿线 + tab 读数（068）</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>位置</td><td>画布右下，<code>right:14 bottom:6</code></td><td><span class="promote">画布上沿 + tab 行右端</span>，<code>top:0 / top:8</code></td></tr>
+        <tr><td>遮挡画布</td><td>不遮挡</td><td><span class="promote">不遮挡，线只占 2px chrome 层</span></td></tr>
+        <tr><td>与侧栏</td><td>跟随 <code>right</code> 偏移</td><td>跟随 <code>right</code> 偏移，线和读数一起让位</td></tr>
+        <tr><td>与 tab 徽章</td><td>分离在底部，需要一次视线移动</td><td><span class="promote">同一行，tab 报状态、读数报进度</span></td></tr>
+        <tr><td>取消入口</td><td>右下角，安全但偏远</td><td>右上角，紧邻运行对象，热区 20px</td></tr>
+        <tr><td>实现成本</td><td>低，单条读数</td><td>中，需同步侧栏偏移与进度线</td></tr>
+        <tr><td>风险</td><td>与手势图例争宽度</td><td><span class="dim">tab 很多时读数会挤压 tab 滚动区，需限制读数宽 186px</span></td></tr>
+      </tbody>
+    </table>
+    <div class="notes">
+      <div class="callout"><span class="mk">C</span><span><b>单独用 C 的问题</b>：读数在 tab 行右端，但右侧面板一开就被盖住；把读数改成跟随面板偏移即可解决，这正是合并方案的做法。</span></div>
+      <div class="callout"><span class="mk">D</span><span><b>单独用 D 的问题</b>：2px 线说不清步骤名和耗时，也没地方放取消；线只负责「进度」，文字交给 tab 行右端。</span></div>
+    </div>
+  </section>
+
+  <!-- 06 规范 -->
+  <section class="frame">
+    <div class="cap"><b>06 · 规范</b><span>尺寸、颜色、显隐与避让</span><span class="file">RunStatus</span></div>
+    <table class="spec">
+      <thead><tr><th>项</th><th>值</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>进度线</td><td><code>height:2</code> · 贴画布上沿</td><td>轨道 <code>fg 7%</code>；填充 info / success / danger</td></tr>
+        <tr><td>进度更新</td><td><code>transform:scaleX</code> · 200ms</td><td>不改 <code>width</code>；无循环动画</td></tr>
+        <tr><td>读数位置</td><td>tab 行右端 · <code>right:14</code></td><td>侧栏打开时 <code>right = 侧栏宽 + 14</code></td></tr>
+        <tr><td>读数尺寸</td><td>高 24 · 步骤名上限 186</td><td>与 tab 同高；超出省略，不换行</td></tr>
+        <tr><td>结构</td><td>分支 · 徽章 · 计时 · 取消</td><td>失败态尾部换成「查看日志」</td></tr>
+        <tr><td>字体</td><td>正文 10.5 · 徽章 10/500 · 计时 10.5 mono</td><td>数字 <code>tabular-nums</code></td></tr>
+        <tr><td>显隐</td><td>完成 2.5s 淡出；失败常驻</td><td>新运行直接替换，不堆叠</td></tr>
+        <tr><td>动效</td><td><code>opacity 120ms</code></td><td>读数淡入淡出；线只在状态变化时换色</td></tr>
+        <tr><td>窄窗口</td><td>分支缩为 <code>1/1</code></td><td>取消只留图标；其他标签页文字隐藏</td></tr>
+        <tr><td>废弃</td><td>删除 <code>top-24</code> 居中浮层</td><td>顶部只留 tab 行、读数与 2px 线</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('themeToggle');
+    if (!btn) return;
+    var root = document.documentElement;
+    var apply = function (dark) {
+      root.classList.toggle('dark', dark);
+      btn.textContent = dark ? 'LIGHT' : 'DARK';
+    };
+    apply(false);
+    btn.addEventListener('click', function () {
+      apply(!root.classList.contains('dark'));
+    });
+  })();
+</script>
+</body>
+</html>

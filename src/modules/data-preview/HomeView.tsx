@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/ScrollArea";
 import { X, Square } from "lucide-react";
 import {
@@ -228,6 +228,31 @@ export const HomeView = React.memo(function HomeView({
     !!branchProgress &&
     (branchProgress.status === "executing" ||
       currentRun?.durationMs !== undefined);
+  /** Right side reserved by the docked panels; the top rail and readout stop there. */
+  const panelRightInset =
+    aiDockWidth +
+    (showVersionPanel ? SIDE_PANEL_WIDTH : 0) +
+    (showLineagePanel ? SIDE_PANEL_WIDTH : 0);
+  /** Success lingers for 2.5s, then the readout and rail fade away; errors stay. */
+  const [runReadoutDismissed, setRunReadoutDismissed] = useState(false);
+  useEffect(() => {
+    if (branchProgress?.status !== "completed") {
+      setRunReadoutDismissed(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setRunReadoutDismissed(true), 2500);
+    return () => window.clearTimeout(timer);
+  }, [branchProgress?.status, selectedTabId]);
+  const showRunReadout =
+    !!showProgressBar &&
+    !!branchProgress &&
+    !(branchProgress.status === "completed" && runReadoutDismissed);
+  const runFillRatio = branchProgress
+    ? Math.min(
+        1,
+        Math.max(0, branchProgress.current / Math.max(1, branchProgress.total)),
+      )
+    : 0;
   const data = currentTab?.data || [];
   const headers = currentTab?.headers || [];
   const displayHeaders = headers.map((header, index) =>
@@ -432,12 +457,31 @@ export const HomeView = React.memo(function HomeView({
         )}
       </div>
 
+      {showRunReadout && branchProgress && (
+        <div
+          className="pointer-events-none absolute left-0 top-9 z-10 h-[2px] overflow-hidden bg-border/40"
+          style={{ right: panelRightInset }}
+        >
+          <div
+            className={`h-full origin-left transition-transform duration-200 ${
+              branchProgress.status === "completed"
+                ? "bg-success"
+                : branchProgress.status === "error"
+                  ? "bg-danger"
+                  : "bg-info"
+            }`}
+            style={{ transform: `scaleX(${runFillRatio})` }}
+          />
+        </div>
+      )}
+
       <div
-        className="absolute top-9 ml-2 z-10"
+        className="absolute left-2 top-9 z-10"
+        style={{ right: panelRightInset }}
         onContextMenu={(e) => e.preventDefault()}
       >
         <div className="flex h-9 items-start px-3 pt-1">
-          <ScrollArea className="h-full flex-1">
+          <ScrollArea className="h-full min-w-0 flex-1">
             <div className="flex items-center gap-1 pr-4">
               {tabs.map((tab) => (
                 <div
@@ -544,94 +588,95 @@ export const HomeView = React.memo(function HomeView({
             </div>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
-        </div>
-      </div>
 
-      {((showProgressBar && branchProgress) || otherRunningCount > 0) && (
-        <div className="absolute left-1/2 top-24 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 flex items-center gap-2">
-          {showProgressBar && branchProgress && (
-            <div className="flex h-[34px] items-center gap-2.5 rounded-lg border border-border bg-card px-2.5 pointer-events-auto">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t.branchProgress} {branchProgress.current}/
-                {branchProgress.total}
-              </span>
-              <div
-                className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                  branchProgress.status === "completed"
-                    ? "bg-success-soft text-success"
-                    : branchProgress.status === "executing"
-                      ? "bg-info-soft text-info"
-                      : "bg-danger-soft text-danger"
-                }`}
-              >
-                {branchProgress.status === "executing" && (
-                  <div className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                )}
-                {branchProgress.status === "completed" && (
-                  <svg
-                    className="h-2.5 w-2.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={3}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                )}
-                {branchProgress.status === "error" && (
-                  <svg
-                    className="h-2.5 w-2.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={3}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                )}
-                <span className="max-w-[240px] truncate">
-                  {branchProgress.name}
-                </span>
-              </div>
-              {showPillTimer && (
+          {((showRunReadout && branchProgress) || otherRunningCount > 0) && (
+            <div className="ml-2 flex h-6 flex-none items-center gap-2 whitespace-nowrap pl-3 text-[10.5px] text-muted-foreground">
+              {showRunReadout && branchProgress && (
                 <>
-                  <span className="h-3.5 w-px flex-none bg-border" />
-                  <RunTimer
-                    running={branchProgress.status === "executing"}
-                    startedAt={currentRun?.executingStartedAt}
-                    frozenMs={currentRun?.durationMs}
-                  />
+                  <span className="font-mono text-[10px] tabular-nums">
+                    {t.branchProgress} {branchProgress.current}/
+                    {branchProgress.total}
+                  </span>
+                  <span
+                    className={`flex h-[18px] max-w-[186px] items-center gap-1 rounded px-1.5 text-[10px] font-medium ${
+                      branchProgress.status === "completed"
+                        ? "bg-success-soft text-success"
+                        : branchProgress.status === "executing"
+                          ? "bg-info-soft text-info"
+                          : "bg-danger-soft text-danger"
+                    }`}
+                  >
+                    {branchProgress.status === "executing" && (
+                      <span className="h-2 w-2 flex-none animate-spin rounded-full border-[1.5px] border-current border-t-transparent" />
+                    )}
+                    {branchProgress.status === "completed" && (
+                      <svg
+                        className="h-2.5 w-2.5 flex-none"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={3}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    )}
+                    {branchProgress.status === "error" && (
+                      <svg
+                        className="h-2.5 w-2.5 flex-none"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={3}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    )}
+                    <span className="truncate">{branchProgress.name}</span>
+                  </span>
+                  {showPillTimer && (
+                    <>
+                      <span className="h-3 w-px flex-none bg-border" />
+                      <RunTimer
+                        running={branchProgress.status === "executing"}
+                        startedAt={currentRun?.executingStartedAt}
+                        frozenMs={currentRun?.durationMs}
+                      />
+                    </>
+                  )}
+                  {isExecuting && onCancelExecution && (
+                    <>
+                      <span className="h-3 w-px flex-none bg-border" />
+                      <button
+                        onClick={onCancelExecution}
+                        className="flex h-5 items-center gap-1 rounded px-1.5 text-[10px] font-medium text-danger transition-colors hover:bg-danger-soft"
+                      >
+                        <Square className="h-2.5 w-2.5" />
+                        {t.cancelExecution}
+                      </button>
+                    </>
+                  )}
                 </>
               )}
-              {showPillTimer && isExecuting && onCancelExecution && (
-                <span className="h-3.5 w-px flex-none bg-border" />
-              )}
-              {isExecuting && onCancelExecution && (
-                <button
-                  onClick={onCancelExecution}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-danger hover:bg-danger-soft transition-colors"
-                >
-                  <Square className="h-2.5 w-2.5" />
-                  {t.cancelExecution}
-                </button>
+              {otherRunningCount > 0 && (
+                <span className="text-[9.5px] text-muted-foreground/60">
+                  {t.otherTabsRunning.replace(
+                    "{count}",
+                    String(otherRunningCount),
+                  )}
+                </span>
               )}
             </div>
           )}
-          {otherRunningCount > 0 && (
-            <span className="text-[11px] text-muted-foreground/70 whitespace-nowrap">
-              {t.otherTabsRunning.replace("{count}", String(otherRunningCount))}
-            </span>
-          )}
         </div>
-      )}
+      </div>
 
       {quickAction && (
         <QuickActionDialog
