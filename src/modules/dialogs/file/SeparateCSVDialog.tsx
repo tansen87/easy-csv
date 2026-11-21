@@ -550,11 +550,11 @@ export function SeparateCSVDialog({
 
             {/* Analysis and Judgment */}
             <StepSection index={2} title={t.separateStepRule}>
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-muted-foreground shrink-0 w-16">
+              <div className="grid grid-cols-[auto_10rem_minmax(0,1fr)] items-center gap-x-2 gap-y-2.5">
+                <label className="text-xs font-medium text-muted-foreground">
                   {t.delimiter}
                 </label>
-                <div className="w-40 shrink-0">
+                <div className="w-full">
                   <Select
                     value={delimiterMode}
                     onChange={(value) => {
@@ -569,27 +569,26 @@ export function SeparateCSVDialog({
                 </div>
                 <button
                   type="button"
-                  className="ml-auto text-[11px] text-primary hover:underline shrink-0 disabled:text-muted-foreground/40 disabled:no-underline"
+                  className="justify-self-end text-[11px] text-primary hover:underline shrink-0 disabled:text-muted-foreground/40 disabled:no-underline"
                   onClick={handleSaveAsDefault}
                   disabled={effectiveDelimiter === appDefaultDelimiter}
                 >
                   {t.setAsDefaultDelimiter}
                 </button>
-              </div>
-              <p
-                className={`text-[11px] ${
-                  isDelimiterLowConfidence
-                    ? "text-warning"
-                    : "text-muted-foreground/80"
-                }`}
-              >
-                {delimiterHint}
-              </p>
 
-              <div className="flex items-center gap-2">
+                <p
+                  className={`col-span-3 text-[11px] ${
+                    isDelimiterLowConfidence
+                      ? "text-warning"
+                      : "text-muted-foreground/80"
+                  }`}
+                >
+                  {delimiterHint}
+                </p>
+
                 <label
                   htmlFor="separate-expected-columns"
-                  className="text-xs font-medium text-muted-foreground shrink-0"
+                  className="text-xs font-medium text-muted-foreground"
                 >
                   {t.expectedColumns}
                 </label>
@@ -606,33 +605,36 @@ export function SeparateCSVDialog({
                       ? `${t.expectedColumnsHint} · ${probe.columns}`
                       : t.expectedColumnsHint
                   }
-                  className="flex-1 min-w-0 h-8 px-2 text-xs border rounded-md bg-background"
+                  className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                 />
+                <div className="flex items-center justify-self-end gap-2">
+                  <label
+                    htmlFor="separate-skiprows"
+                    className="text-xs font-medium text-muted-foreground shrink-0"
+                  >
+                    {t.skiprows}
+                  </label>
+                  <input
+                    id="separate-skiprows"
+                    type="number"
+                    min={0}
+                    value={skiprows}
+                    onChange={(e) => {
+                      clearFeedback();
+                      setSkiprows(e.target.value);
+                    }}
+                    className="w-40 h-8 px-2 text-xs border rounded-md bg-background"
+                  />
+                </div>
+
                 {columnsMismatch && (
-                  <span
-                    className="text-[11px] text-warning shrink-0"
+                  <p
+                    className="col-span-3 text-[11px] text-warning"
                     title={t.expectedColumnsHint}
                   >
                     {t.expectedColumns} {expectedColumns} ≠ {probe?.columns}
-                  </span>
+                  </p>
                 )}
-                <label
-                  htmlFor="separate-skiprows"
-                  className="text-xs font-medium text-muted-foreground shrink-0 ml-2"
-                >
-                  {t.skiprows}
-                </label>
-                <input
-                  id="separate-skiprows"
-                  type="number"
-                  min={0}
-                  value={skiprows}
-                  onChange={(e) => {
-                    clearFeedback();
-                    setSkiprows(e.target.value);
-                  }}
-                  className="w-20 h-8 px-2 text-xs border rounded-md bg-background"
-                />
               </div>
             </StepSection>
 

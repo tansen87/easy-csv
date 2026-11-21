@@ -677,6 +677,14 @@ export function CsvDiffDialog({
           </div>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 pb-6">
+            <div className="max-w-[540px] text-center">
+              <p className="text-[13px] font-medium text-foreground">
+                {t.csvDiffEmptyTitle}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                {fileA && fileB ? t.csvDiffEmptyBody : t.csvDiffNoResult}
+              </p>
+            </div>
             <div className="w-[560px] max-w-full rounded-lg border border-border/70 bg-background px-4">
               {legend.map((item) => (
                 <div
@@ -699,14 +707,6 @@ export function CsvDiffDialog({
                   </span>
                 </div>
               ))}
-            </div>
-            <div className="max-w-[540px] text-center">
-              <p className="text-[13px] font-medium text-foreground">
-                {t.csvDiffEmptyTitle}
-              </p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                {fileA && fileB ? t.csvDiffEmptyBody : t.csvDiffNoResult}
-              </p>
             </div>
           </div>
         )}
