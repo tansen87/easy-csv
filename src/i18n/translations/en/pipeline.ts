@@ -14,7 +14,7 @@ export const enPipeline = {
   undo: "Undo",
   redo: "Redo",
   execute: "Run",
-  executing: "Executing",
+  executing: "Runing",
   cancelExecution: "Cancel Execution",
   executionCancelled: "Execution cancelled",
   maxConcurrentRuns: "Concurrent executions",

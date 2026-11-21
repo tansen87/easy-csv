@@ -53,7 +53,7 @@ export function GestureLegend({
       role="status"
       aria-live="off"
       className={cn(
-        "pointer-events-none absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[10.5px] text-muted-foreground",
+        "pointer-events-none absolute bottom-1 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[10.5px] text-muted-foreground",
         className,
       )}
     >

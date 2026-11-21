@@ -12,7 +12,7 @@ export const zhPipeline = {
   undo: "撤销",
   redo: "重做",
   execute: "运行",
-  executing: "执行中",
+  executing: "运行中",
   cancelExecution: "取消执行",
   executionCancelled: "执行已取消",
   maxConcurrentRuns: "同时执行的标签页数上限",
