@@ -61,10 +61,13 @@ export function useCutTool({
     y: number;
   } | null>(null);
   // Animation status of elements to be cut
-  const [cutNodes, setCutNodes] = useState<Set<string>>(new Set());
   const [cutEdges, setCutEdges] = useState<Set<string>>(new Set());
-  // Cut part information (used for free fall animation)
+  // Cut part information (used for the split animation)
   const [cutParts, setCutParts] = useState<CutPartInfo[]>([]);
+  // Segment of the pending cut inside each node, in node-local coordinates.
+  const [pendingSeams, setPendingSeams] = useState<
+    Record<string, { x1: number; y1: number; x2: number; y2: number }>
+  >({});
   // Real-time highlight status - display elements to be deleted
   const [pendingDeleteNodes, setPendingDeleteNodes] = useState<Set<string>>(
     new Set(),
@@ -190,10 +193,6 @@ export function useCutTool({
         edgeIdsToDelete.forEach((id) => newCutEdges.add(id));
         setCutEdges(newCutEdges);
 
-        const newCutNodes = new Set(cutNodes);
-        nodesToDelete.forEach((id) => newCutNodes.add(id));
-        setCutNodes(newCutNodes);
-
         // Edges not connected to the cutting nodes → delete them with extra parameter;
         // Edges connected to the cutting nodes are automatically cleaned up.
         const nodeIdSet = new Set(nodesToDelete);
@@ -201,7 +200,8 @@ export function useCutTool({
           .filter((e) => !nodeIdSet.has(e.source) && !nodeIdSet.has(e.target))
           .map((e) => e.id);
 
-        // Calculate cutting parts for the cutting nodes (free fall animation)
+        // Restore the original falling-halves animation: gravity plus a little
+        // of the cut direction, with a small rotation.
         const fallVec = calculateFallVector(path);
         const newCutParts: CutPartInfo[] = [];
 
@@ -258,10 +258,8 @@ export function useCutTool({
 
         setCutParts(newCutParts);
 
-        // Delete elements: Edge animation fast (200ms), node fall animation slow (400ms), each independent trigger.
-        // Each callback uses current state (edgesRef.current / App latest tabs) to calculate,
-        // to avoid old snapshots. When cutting nodes, edges are deleted with 200ms,
-        // Nodes continue to fall for 400ms.
+        // Original rhythm: edges go first (200ms), the two halves fall and
+        // rotate for the full 700ms before the step leaves the canvas.
         setTimeout(() => {
           if (edgeIdSet.size > 0) {
             setEdges((prev) => prev.filter((e) => !edgeIdSet.has(e.id)));
@@ -282,9 +280,8 @@ export function useCutTool({
           if (nodesToDelete.length > 0) {
             onStepRemove(nodesToDelete, extraEdgeIds);
           }
-          setCutNodes(new Set());
           setCutParts([]);
-        }, 400);
+        }, 740);
       }
     },
     [
@@ -297,7 +294,6 @@ export function useCutTool({
       onStepRemove,
       onEdgesChange,
       cutEdges,
-      cutNodes,
     ],
   );
 
@@ -424,8 +420,44 @@ export function useCutTool({
           }
         });
 
+        // Segment of the straight cut inside each pending node, used for the
+        // 1px seam preview drawn on the card.
+        const seams: Record<
+          string,
+          { x1: number; y1: number; x2: number; y2: number }
+        > = {};
+        const flowStart = flowPath[0];
+        const flowEnd = flowPath[flowPath.length - 1];
+        pendingNodes.forEach((id) => {
+          const nodePos = nodePositions.get(id);
+          if (!nodePos) return;
+          const localStart = {
+            x: flowStart.x - nodePos.x,
+            y: flowStart.y - nodePos.y,
+          };
+          const localEnd = {
+            x: flowEnd.x - nodePos.x,
+            y: flowEnd.y - nodePos.y,
+          };
+          const hit = getCutIntersectionPoints(localStart, localEnd, {
+            x: 0,
+            y: 0,
+            width: nodePos.width,
+            height: nodePos.height,
+          });
+          if (hit) {
+            seams[id] = {
+              x1: hit.p1.x,
+              y1: hit.p1.y,
+              x2: hit.p2.x,
+              y2: hit.p2.y,
+            };
+          }
+        });
+
         setPendingDeleteEdges(pendingEdges);
         setPendingDeleteNodes(pendingNodes);
+        setPendingSeams(seams);
       }
     },
     [
@@ -457,23 +489,24 @@ export function useCutTool({
       setCutStartPoint(null);
       setPendingDeleteNodes(new Set());
       setPendingDeleteEdges(new Set());
-    }, 150);
+      setPendingSeams({});
+    }, 220);
   }, [cutPath, detectAndDeleteElements]);
 
-  // Update node's isCutting attribute, pending delete highlight, and cut parts
+  // Update node's pending-delete highlight, seam preview and cut parts
   useEffect(() => {
     setNodes((prevNodes) =>
       prevNodes.map((node) => ({
         ...node,
         data: {
           ...node.data,
-          isCutting: cutNodes.has(node.id),
           isPendingDelete: pendingDeleteNodes.has(node.id),
+          pendingSeam: pendingSeams[node.id] ?? null,
           cutParts: cutParts.filter((p) => p.nodeId === node.id),
         },
       })),
     );
-  }, [cutNodes, pendingDeleteNodes, cutParts, setNodes]);
+  }, [pendingDeleteNodes, pendingSeams, cutParts, setNodes]);
 
   // Update edge's cut effect and pending delete highlight
   useEffect(() => {
@@ -486,15 +519,12 @@ export function useCutTool({
             ...edge,
             style: {
               ...edge.style,
-              strokeDasharray: isCut ? "10" : undefined,
+              strokeDasharray: isCut ? "10" : isPending ? "3 4" : undefined,
               animation: isCut
-                ? "cut-edge-animation 0.2s ease-out forwards"
+                ? "cut-edge-retract 0.2s cubic-bezier(0.2, 0, 0, 1) forwards"
                 : undefined,
-              stroke: isPending && !isCut ? "#9a9aa6" : edge.style?.stroke,
-              filter:
-                isPending && !isCut
-                  ? "drop-shadow(0 0 6px rgba(154, 154, 166, 0.7))"
-                  : undefined,
+              stroke: isPending && !isCut ? "var(--danger)" : edge.style?.stroke,
+              strokeOpacity: isPending && !isCut ? 0.55 : undefined,
             },
           };
         }),
@@ -507,7 +537,6 @@ export function useCutTool({
     cutPath,
     isCutting,
     isClosingCut,
-    cutNodes,
     cutEdges,
     cutParts,
     pendingDeleteNodes,

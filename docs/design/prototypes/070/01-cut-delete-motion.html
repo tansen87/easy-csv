@@ -1,0 +1,1059 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 070 · 切刀与删除动画</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --canvas-ink:var(--brand);
+    --success:oklch(0.52 0.09 150);
+    --danger:oklch(0.577 0.245 27.325);
+    --danger-soft:color-mix(in oklab,var(--danger) 9%,transparent);
+    --warning:oklch(0.55 0.1 72);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --flow:oklch(0.76 0.0045 16);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-fly:0 12px 28px -14px oklch(0.2 0.02 80 / 26%);
+  }
+  .dark{
+    color-scheme:dark;
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+
+    --brand:oklch(0.78 0.045 245);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --canvas-ink:var(--brand);
+    --success:oklch(0.76 0.1 152);
+    --danger:oklch(0.704 0.191 22.216);
+    --danger-soft:color-mix(in oklab,var(--danger) 14%,transparent);
+    --warning:oklch(0.78 0.11 75);
+
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.12 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --flow:oklch(0.62 0.006 250);
+    --shadow-card:none;
+    --shadow-fly:0 12px 28px -14px oklch(0 0 0 / 75%);
+  }
+
+  /* 主题色预设：与设置里的 6 个色块一致，刀光跟着 --brand 走 */
+  :root[data-accent="ink"]{ --brand:oklch(0.42 0.055 250) }
+  :root[data-accent="teal"]{ --brand:oklch(0.43 0.06 200) }
+  :root[data-accent="clay"]{ --brand:oklch(0.47 0.075 50) }
+  :root[data-accent="graphite"]{ --brand:oklch(0.30 0.006 80) }
+  :root[data-accent="pink"]{ --brand:oklch(0.47 0.09 355) }
+  :root[data-accent="purple"]{ --brand:oklch(0.46 0.085 305) }
+  .dark[data-accent="ink"]{ --brand:oklch(0.78 0.045 245) }
+  .dark[data-accent="teal"]{ --brand:oklch(0.78 0.05 200) }
+  .dark[data-accent="clay"]{ --brand:oklch(0.79 0.06 55) }
+  .dark[data-accent="graphite"]{ --brand:oklch(0.80 0.004 85) }
+  .dark[data-accent="pink"]{ --brand:oklch(0.79 0.06 352) }
+  .dark[data-accent="purple"]{ --brand:oklch(0.78 0.055 305) }
+
+  [data-swatch="ink"]{ --swatch:oklch(0.42 0.055 250) }
+  [data-swatch="teal"]{ --swatch:oklch(0.43 0.06 200) }
+  [data-swatch="clay"]{ --swatch:oklch(0.47 0.075 50) }
+  [data-swatch="graphite"]{ --swatch:oklch(0.30 0.006 80) }
+  [data-swatch="pink"]{ --swatch:oklch(0.47 0.09 355) }
+  [data-swatch="purple"]{ --swatch:oklch(0.46 0.085 305) }
+  .dark [data-swatch="ink"]{ --swatch:oklch(0.78 0.045 245) }
+  .dark [data-swatch="teal"]{ --swatch:oklch(0.78 0.05 200) }
+  .dark [data-swatch="clay"]{ --swatch:oklch(0.79 0.06 55) }
+  .dark [data-swatch="graphite"]{ --swatch:oklch(0.80 0.004 85) }
+  .dark [data-swatch="pink"]{ --swatch:oklch(0.79 0.06 352) }
+  .dark [data-swatch="purple"]{ --swatch:oklch(0.78 0.055 305) }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased;transition:background-color .18s ease,color .18s ease}
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1000px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme-toggle{position:absolute;right:0;top:2px;height:26px;padding:0 10px;border-radius:6px;
+                border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+                font-family:var(--mono);font-size:10.5px;cursor:pointer}
+  .theme-toggle:hover{color:var(--fg)}
+  .accent-bar{position:absolute;right:76px;top:2px;height:26px;display:flex;align-items:center;gap:7px}
+  .sw{width:13px;height:13px;padding:0;border-radius:50%;border:1px solid var(--border-soft);
+      background:var(--swatch);cursor:pointer;outline:none}
+  .sw[aria-pressed="true"]{box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--swatch)}
+  .sw:focus-visible{box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--canvas-ink)}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:26px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  /* 审计 */
+  .audit{border:1px solid var(--border);border-radius:10px;background:var(--card);
+         padding:14px 18px 8px;margin-bottom:44px}
+  .audit h2{margin:0 0 10px;font-size:11px;font-weight:500;color:var(--muted-fg)}
+  .audit ol{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:0 26px}
+  .audit li{display:flex;gap:9px;padding:8px 0;border-top:1px solid var(--border-soft);font-size:11px;line-height:1.7;color:var(--muted-fg)}
+  .audit li:nth-child(1),.audit li:nth-child(2){border-top:0}
+  .audit li b{color:var(--fg);font-weight:500}
+  .audit .sev{flex:none;height:16px;padding:0 5px;border-radius:3px;font-family:var(--mono);font-size:9px;
+              display:grid;place-items:center;margin-top:2px;background:var(--muted);color:var(--muted-fg)}
+  .audit .sev.hi{background:var(--danger-soft);color:var(--danger)}
+  .audit .sev.mid{background:color-mix(in oklab,var(--warning) 12%,transparent);color:var(--warning)}
+
+  .frame + .frame{margin-top:46px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+
+  .stage{position:relative;height:470px;overflow:hidden;border:1px solid var(--border);
+         border-radius:8px;background-color:var(--canvas);
+         background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+         background-size:22px 22px;background-position:11px 11px;user-select:none;touch-action:none}
+  .stage.dragging{cursor:none}
+  .hud{position:absolute;left:14px;top:12px;display:flex;align-items:center;gap:8px;z-index:5;pointer-events:none}
+  .hud-chip{height:22px;padding:0 8px;border-radius:4px;border:1px solid var(--border);
+            background:var(--card);font-size:10px;color:var(--fg);display:grid;place-items:center}
+  .hud-hint{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .play{position:absolute;right:12px;top:11px;z-index:6;height:24px;padding:0 10px;border-radius:5px;
+        border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+        font-family:var(--mono);font-size:10px;cursor:pointer;transition:color .12s ease,border-color .12s ease}
+  .play:hover{color:var(--fg);border-color:var(--muted-fg-3)}
+  .play:disabled{opacity:.5;cursor:default}
+
+  .canvas{position:absolute;inset:0}
+  .links{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+  .nodes-layer{position:absolute;inset:0}
+
+  .arrow-fill{fill:var(--flow)}
+  .edge{fill:none;stroke:var(--flow);stroke-width:1.5}
+  .edge.pending-old{stroke:#9a9aa6;marker-end:none;filter:drop-shadow(0 0 6px rgba(154,154,166,.7))}
+  .edge.pending-new{stroke:var(--danger);stroke-opacity:.55;stroke-dasharray:3 4;marker-end:none}
+  .edge.cut-old{stroke-dasharray:10;animation:edge-old .2s ease-out forwards}
+  .edge.cut-new{transform-box:fill-box;transform-origin:center;animation:edge-new .2s cubic-bezier(.2,0,0,1) forwards}
+
+  @keyframes edge-old{to{stroke-dashoffset:60;opacity:0}}
+  @keyframes edge-new{to{opacity:0;transform:scale(.96)}}
+
+  .node{position:absolute;border:1px solid var(--border);border-radius:10px;background:var(--card);
+        box-shadow:var(--shadow-card);padding:11px 13px;width:220px;pointer-events:none}
+  .node.input{width:200px;background:var(--paper)}
+  .node .nt{font-size:12px;font-weight:500;letter-spacing:-.01em;display:flex;align-items:center;gap:6px}
+  .node .nt .tag{font-family:var(--mono);font-size:8.5px;font-weight:400;color:var(--muted-fg-3);
+                 border:1px solid var(--border-soft);border-radius:3px;padding:0 4px}
+  .node .nm{margin-top:4px;font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);
+            font-variant-numeric:tabular-nums}
+  .node .np{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+  .node .np span{font-family:var(--mono);font-size:8.5px;color:var(--muted-fg);
+                 background:var(--muted);border:1px solid var(--border-soft);border-radius:3px;padding:1px 4px}
+  .node.pending-old{border-color:var(--warning);box-shadow:0 0 12px rgba(154,154,166,.6)}
+  .node.pending-new{border-color:color-mix(in oklab,var(--danger) 32%,var(--border));
+                    outline:1px solid color-mix(in oklab,var(--danger) 55%,transparent);outline-offset:2px}
+
+  .part{position:absolute;pointer-events:none;will-change:transform,opacity}
+  .part .node{left:0!important;top:0!important;width:100%!important;height:100%!important;visibility:visible!important}
+  .part.old{animation:part-old .7s cubic-bezier(.45,0,.85,.4) forwards}
+  .part.new{animation:part-old .7s cubic-bezier(.45,0,.85,.4) forwards}
+  @keyframes part-old{
+    0%,12%{transform:translate(0,0) rotate(0);opacity:1}
+    100%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot));opacity:0}
+  }
+
+  .cut-el{display:none}
+  .cut-el.show{display:block}
+  .trail-glow{fill:none;stroke:rgba(200,200,212,.22);stroke-width:10;stroke-linecap:round;filter:url(#softGlow)}
+  .trail-mid{fill:none;stroke:rgba(190,190,200,.35);stroke-width:4;stroke-linecap:round}
+  .trail-main{fill:none;stroke:url(#metalGrad);stroke-width:2;stroke-linecap:round;filter:url(#softGlow)}
+  .nib-old{fill:url(#metalGrad);stroke:rgba(140,140,155,.9);stroke-width:1;filter:url(#bladeGlow)}
+  .tip-old{fill:rgba(240,240,250,.9)}
+  .blade-body{fill:var(--canvas-ink);fill-opacity:.62}
+  .blade-core{fill:var(--canvas-ink);fill-opacity:.98}
+  .blade-glint{fill:color-mix(in oklab,var(--brand) 38%,#fff);fill-opacity:.8}
+  .blade-tip{fill:var(--canvas-ink)}
+  .seams line{stroke:var(--danger);stroke-width:1;stroke-opacity:.9}
+  .seam-flash{fill:none;stroke:var(--danger);stroke-width:1;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+  .seam-flash.flash{animation:seam-flash .2s ease-out forwards}
+  @keyframes seam-flash{0%{opacity:.85}100%{opacity:0}}
+  .trail-fade{animation:trail-fade .2s ease-out forwards}
+  @keyframes trail-fade{to{opacity:0}}
+
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  .callout{display:flex;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;
+           background:var(--card);font-size:11px;line-height:1.75;color:var(--muted-fg)}
+  .callout b{color:var(--fg);font-weight:500}
+  .callout .mk{width:18px;height:18px;border-radius:50%;background:var(--brand-soft);color:var(--canvas-ink);
+               font-family:var(--mono);font-size:9.5px;display:grid;place-items:center;flex:none;margin-top:1px}
+  .callout.bad .mk{background:var(--danger-soft);color:var(--danger)}
+
+  .timeline{margin-top:14px;border:1px solid var(--border);border-radius:8px;background:var(--card);padding:11px 16px}
+  .timeline .stops{display:flex;align-items:center}
+  .timeline .stop{display:flex;align-items:center;gap:8px;flex:none}
+  .timeline .dot{width:6px;height:6px;border-radius:50%;background:var(--canvas-ink)}
+  .timeline .dot.hollow{background:transparent;border:1px solid var(--muted-fg-3)}
+  .timeline .t{font-family:var(--mono);font-size:10px;color:var(--fg);font-variant-numeric:tabular-nums}
+  .timeline .lbl{font-size:10.5px;color:var(--muted-fg)}
+  .timeline .bar{flex:1;min-width:24px;height:1px;background:var(--border);margin:0 12px}
+  .timeline .curve{margin-top:9px;padding-top:9px;border-top:1px solid var(--border-soft);
+                   font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+
+  /* 规格 */
+  .spec{border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .spec table{width:100%;border-collapse:collapse}
+  .spec th,.spec td{text-align:left;font-size:11px;line-height:1.65;padding:10px 14px;
+                    border-top:1px solid var(--border-soft);vertical-align:top}
+  .spec thead th{border-top:0;font-family:var(--mono);font-size:9.5px;font-weight:400;
+                 color:var(--muted-fg-3);padding-bottom:8px}
+  .spec td:first-child{width:132px;color:var(--muted-fg);white-space:nowrap}
+  .spec td:nth-child(2){width:340px;color:var(--muted-fg)}
+  .spec td:last-child{color:var(--fg)}
+  .spec .k{font-family:var(--mono);font-size:10px;color:var(--canvas-ink)}
+  .spec .dim{color:var(--muted-fg-3)}
+
+  /* 键盘删除 */
+  .mini-stage{position:relative;height:190px;border:1px solid var(--border);border-radius:8px;
+              background-color:var(--canvas);background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+              background-size:22px 22px;overflow:hidden}
+  .mini-hud{position:absolute;left:12px;top:10px;display:flex;gap:8px;align-items:center}
+  .mini-stage .play{right:10px;top:9px}
+  .knode{position:absolute;left:180px;top:62px;width:190px;border:1px solid var(--border);border-radius:9px;
+         background:var(--card);padding:10px 12px;box-shadow:var(--shadow-card);font-size:11px}
+  .knode + .knode{left:520px}
+  .knode .nt{font-weight:500;font-size:11.5px}
+  .knode .np{margin-top:5px;font-family:var(--mono);font-size:8.5px;color:var(--muted-fg)}
+  .knode.deleting{animation:kdel .2s cubic-bezier(.2,0,0,1) forwards}
+  @keyframes kdel{to{opacity:0;transform:scale(.985)}}
+  .kedges{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+  .kedges path{fill:none;stroke:var(--flow);stroke-width:1.5}
+  .kedges path.cut{transform-box:fill-box;transform-origin:center;animation:edge-new .2s cubic-bezier(.2,0,0,1) forwards}
+  .mini-note{position:absolute;left:12px;bottom:10px;font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)}
+
+  .foot{margin-top:34px;padding:14px 16px;border:1px dashed var(--border);border-radius:8px;
+        font-size:11px;line-height:1.8;color:var(--muted-fg)}
+  .foot b{color:var(--fg);font-weight:500}
+
+  @media (prefers-reduced-motion: reduce){
+    .part.old,.part.new,.edge.cut-old,.edge.cut-new,.knode.deleting,.seam-flash.flash{animation-duration:.06s!important;animation-delay:0s!important}
+  }
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">PROTOTYPE 070 · CANVAS MOTION</div>
+    <h1>切刀与删除动画</h1>
+    <p>右键切刀的手感由两件事决定：<b>刀光的形状</b>和<b>删除的方式</b>。现在这两处都偏离了画布既有的语汇——刀刃是白色金属加三层辉光，节点则旋转坠落 200px，而且坠落动画还没播完，节点就已经被移除。下面是同一动作的现状与重做。</p>
+    <div class="accent-bar" role="group" aria-label="主题色">
+      <button class="sw" type="button" data-accent="ink" data-swatch="ink" aria-label="墨蓝" aria-pressed="true"></button>
+      <button class="sw" type="button" data-accent="teal" data-swatch="teal" aria-label="青碧" aria-pressed="false"></button>
+      <button class="sw" type="button" data-accent="clay" data-swatch="clay" aria-label="赭石" aria-pressed="false"></button>
+      <button class="sw" type="button" data-accent="graphite" data-swatch="graphite" aria-label="石墨" aria-pressed="false"></button>
+      <button class="sw" type="button" data-accent="pink" data-swatch="pink" aria-label="胭脂" aria-pressed="false"></button>
+      <button class="sw" type="button" data-accent="purple" data-swatch="purple" aria-label="青莲" aria-pressed="false"></button>
+    </div>
+    <button class="theme-toggle" id="themeToggle" type="button">dark</button>
+  </div>
+
+  <dl class="direction">
+    <div><dt>产品</dt><dd>在画布上直接切断步骤与连线的数据管道编辑器</dd></div>
+    <div><dt>性格</dt><dd>精确、安静、带一点物理感</dd></div>
+    <div><dt>世界</dt><dd>制图台与墨线：纸面、细线、刀口，不是金属高光</dd></div>
+    <div><dt>时刻</dt><dd>尾细前宽的刀光扫过卡片，留下一道 1px 切缝</dd></div>
+    <div><dt>签名</dt><dd>切缝在悬停时出现，松手后 220ms 消失，像纸面留下的刀痕</dd></div>
+  </dl>
+
+  <section class="audit">
+    <h2>审计：现状里的 6 个问题</h2>
+    <ol>
+      <li><span class="sev hi">高</span><span><b>刀刃是一块带辉光的金属。</b>10 / 4 / 2px 三层线、两个 Gaussian blur、金属渐变与高光三角；亮色画布上几乎看不见，暗色下过曝。</span></li>
+      <li><span class="sev mid">中</span><span><b>直线没有刀锋感。</b>整条轨迹等宽 1.5px，尾部与前端一样粗；高光固定在刀尖，看不出刀在推进。</span></li>
+      <li><span class="sev mid">中</span><span><b>删除预览语义漂移。</b>节点用 <code>warning</code> 琥珀边框加灰色 <code>drop-shadow</code>，边线还硬编码 <code>#9a9aa6</code>，换主题不跟随。</span></li>
+      <li><span class="sev hi">高</span><span><b>坠落 700ms，移除 400ms。</b>节点在动画播到 57% 时被移除；旋转 ±30°、位移 200px+，两半各复制一份卡片 DOM。</span></li>
+      <li><span class="sev mid">中</span><span><b>键盘与多选删除没有过渡。</b>按 Delete 节点直接消失，和切刀删除是两套体验。</span></li>
+      <li><span class="sev mid">低</span><span><b>死代码。</b><code>.cut-glow-line</code> 与 <code>.cutting-animation</code> 没有任何生效路径；<code>.cut-node</code> 只在拿不到切缝交点时兜底。</span></li>
+    </ol>
+  </section>
+
+  <!-- ① 现状 -->
+  <section class="frame">
+    <div class="cap"><b>① 现状</b><span>白色金属刀刃 · 等宽直线 · 旋转坠落</span><span class="file">CutVisualization.tsx / index.css</span></div>
+    <div class="stage" data-variant="before">
+      <div class="hud"><span class="hud-chip">切刀</span><span class="hud-hint">按住鼠标划过画布（原型内左键 / 右键都可）</span></div>
+      <button class="play" type="button">播放切一刀</button>
+      <div class="canvas">
+        <svg class="links">
+          <defs>
+            <linearGradient id="metalGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="rgba(180,180,190,0)"/>
+              <stop offset="25%" stop-color="rgba(160,160,170,.6)"/>
+              <stop offset="60%" stop-color="rgba(200,200,210,.9)"/>
+              <stop offset="100%" stop-color="rgba(220,220,230,0)"/>
+            </linearGradient>
+            <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="bladeGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <marker id="arrow-before" viewBox="0 0 8 8" refX="7.2" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+              <path class="arrow-fill" d="M0 .8 L7.4 4 L0 7.2 Z"/>
+            </marker>
+          </defs>
+          <g class="edge-layer"></g>
+          <g class="cut-layer"></g>
+        </svg>
+        <div class="nodes-layer"></div>
+      </div>
+    </div>
+    <div class="notes">
+      <div class="callout bad"><span class="mk">1</span><span><b>刀刃像道具，不像工具。</b>三层辉光加高斯模糊，每帧 <code>mousemove</code> 都在重绘 SVG filter；亮色主题里只剩一团白雾，暗色主题里过曝。</span></div>
+      <div class="callout bad"><span class="mk">2</span><span><b>动画永远播不完。</b>坠落设计 700ms，但 <code>setTimeout(400)</code> 就把节点移除了。上面最后一帧会突然消失，这不是掉帧，是时间轴错位。</span></div>
+    </div>
+  </section>
+
+  <!-- ② 优化后 -->
+  <section class="frame">
+    <div class="cap"><b>② 优化后</b><span>直线刀光 · 尾细前宽 · 跟随主题色</span><span class="file">同一画布，同一手势</span></div>
+    <div class="stage" data-variant="after">
+      <div class="hud"><span class="hud-chip">切刀</span><span class="hud-hint">按住鼠标划过画布（原型内左键 / 右键都可）</span></div>
+      <button class="play" type="button">播放切一刀</button>
+      <div class="canvas">
+        <svg class="links">
+          <defs>
+            <marker id="arrow-after" viewBox="0 0 8 8" refX="7.2" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+              <path class="arrow-fill" d="M0 .8 L7.4 4 L0 7.2 Z"/>
+            </marker>
+          </defs>
+          <g class="edge-layer"></g>
+          <g class="cut-layer"></g>
+        </svg>
+        <div class="nodes-layer"></div>
+      </div>
+    </div>
+    <div class="timeline">
+      <div class="stops">
+        <div class="stop"><span class="dot"></span><span class="t">0ms</span><span class="lbl">切缝亮起</span></div>
+        <div class="bar"></div>
+        <div class="stop"><span class="dot"></span><span class="t">84ms</span><span class="lbl">保持后坠落</span></div>
+        <div class="bar"></div>
+        <div class="stop"><span class="dot"></span><span class="t">500ms</span><span class="lbl">坠落中</span></div>
+        <div class="bar"></div>
+        <div class="stop"><span class="dot hollow"></span><span class="t">740ms</span><span class="lbl">移除</span></div>
+      </div>
+      <div class="curve">单条曲线 cubic-bezier(.2, 0, 0, 1) · 只动 transform / opacity / stroke-dashoffset</div>
+    </div>
+    <div class="notes">
+      <div class="callout"><span class="mk">1</span><span><b>直线不变，换的是刀光。</b>仍是起点→当前点的一条直线，命中与切缝几何都不动；等宽线换成尾 1px、前端 9px、最前 18px 收成弯锋的锥形刀光，颜色直接取当前主题色（试右上角六个色块），没有 blur、没有渐变。</span></div>
+      <div class="callout"><span class="mk">2</span><span><b>刀光从尾部扫向刀尖。</b>一道 56px 长的高光沿直线推进，380ms 从尾扫到刀尖，每次按住只扫一次；松手后随刀光淡出，再完整播完最初的 700ms 坠落。</span></div>
+    </div>
+  </section>
+
+  <!-- ③ 键盘删除 -->
+  <section class="frame">
+    <div class="cap"><b>③ 键盘 / 多选删除</b><span>和切刀同一节奏，只是没有分身</span><span class="file">handleDeleteSelected</span></div>
+    <div class="mini-stage" id="miniDelete">
+      <div class="mini-hud"><span class="hud-chip">已选 2 个步骤</span><span class="hud-hint">Delete</span></div>
+      <button class="play" type="button" id="delBtn">模拟 Delete</button>
+      <svg class="kedges"><g class="kedge-layer"></g></svg>
+      <div class="knode" data-k="1"><div class="nt">fill</div><div class="np">select=region</div></div>
+      <div class="knode" data-k="2"><div class="nt">dedup</div><div class="np">select=email</div></div>
+      <span class="mini-note">200ms · opacity + scale(.985)，相连连线同步收回</span>
+    </div>
+    <div class="notes">
+      <div class="callout"><span class="mk">3</span><span><b>两条删除路径统一。</b>现在只有切刀有动画，键盘删除是瞬移。改成 200ms 的淡出 + 0.985 缩放，连线同步收回；这是删除的<b>默认节奏</b>，切刀只是在它前面加了「切开」。</span></div>
+      <div class="callout"><span class="mk">4</span><span><b>降级路径。</b><code>prefers-reduced-motion</code> 下三类动画统一降到 60ms 纯透明度，不位移、不缩放、不分离。</span></div>
+    </div>
+  </section>
+
+  <!-- ④ 规格 -->
+  <section class="frame">
+    <div class="cap"><b>④ 规格</b><span>颜色、时长与性能</span><span class="file">实现时按此表</span></div>
+    <div class="spec">
+      <table>
+        <thead><tr><th>项目</th><th>现在</th><th>改为</th></tr></thead>
+        <tbody>
+          <tr><td>刀刃 / 轨迹</td><td>三层辉光 + 2 个高斯模糊 + 金属渐变 + 高光三角</td><td>起点→当前点的直线；尾部 <span class="k">1px</span> → 前端 <span class="k">9px</span> 的锥形刀光，最前 <span class="k">18px</span> 收成弯锋；不描边、不加 filter</td></tr>
+          <tr><td>刀光颜色</td><td>白色金属渐变，与主题色无关</td><td>全部取 <code>--brand</code>：主体 <span class="k">62%</span>、核心 <span class="k">98%</span>、高光为 <span class="k">38%</span> 主题色 + 白；切换设置里的主题色，刀光同步变化，不另设颜色</td></tr>
+          <tr><td>路径</td><td><code>[起点, 当前点]</code> 两点直线</td><td>保持直线，不做折线简化；命中、切缝与碎片几何都按这条直线计算；rAF 合并，每帧最多一次 setState</td></tr>
+          <tr><td>刀光推进</td><td>等宽直线，高光固定在刀尖</td><td><span class="k">56px</span> 长的高光从尾部扫向刀尖，<span class="k">380ms</span> 一次，每次按住只扫一次；松手后随刀光淡出</td></tr>
+          <tr><td>删除预览</td><td><code>warning</code> 边框 + 灰色 <code>drop-shadow</code>；边线硬编码 <code>#9a9aa6</code></td><td>节点 <span class="k">1px</span> <code>--danger</code> 55% 外描边（offset 2px）；边线 <code>--danger</code> 45% + <code>3 4</code> 虚线；穿过节点的切缝同色</td></tr>
+          <tr><td>节点提交</td><td>700ms 旋转坠落，400ms 被移除</td><td>保留最初的坠落：保持 12%（约 84ms）后，按重力 + 切割方向下落、旋转 ±30°，700ms 淡出；<b>完整播完再移除</b></td></tr>
+          <tr><td>连线提交</td><td>200ms 虚线跑动后瞬间消失</td><td>200ms 内淡出；与节点坠落并行</td></tr>
+          <tr><td>移除时机</td><td>固定 <code>400ms</code>，700ms 动画只播到 57%</td><td>坠落 700ms 播完后，740ms 移除</td></tr>
+          <tr><td>键盘删除</td><td>无过渡</td><td>200ms <code>opacity</code> + <code>scale(.985)</code>，连线同步收回</td></tr>
+          <tr><td>性能</td><td>SVG filter、box-shadow 动画、每帧全量碰撞扫描</td><td>只动 <code>transform / opacity / stroke-dashoffset</code>；轨迹包围盒预筛节点；清掉 <code>.cut-glow-line</code> / <code>.cutting-animation</code> 死代码</td></tr>
+          <tr><td>可达性</td><td>未处理</td><td><code>prefers-reduced-motion</code> → 60ms 纯淡出；切刀仅按住时 <code>cursor:none</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="foot"><b>不改交互。</b>仍然是按住右键划过；切刀 / 菜单双模态、20px 连线命中阈值、输入节点不可切、Esc 与松手结束都保持不变。这一版只换轨迹的画法、预览的颜色和删除的时间轴。</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const NS = "http://www.w3.org/2000/svg";
+
+  /* ---------- theme ---------- */
+  const themeBtn = document.getElementById("themeToggle");
+  themeBtn.addEventListener("click", () => {
+    const dark = document.documentElement.classList.toggle("dark");
+    themeBtn.textContent = dark ? "light" : "dark";
+  });
+  document.querySelectorAll(".sw").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.documentElement.dataset.accent = btn.dataset.accent;
+      document.querySelectorAll(".sw").forEach(b =>
+        b.setAttribute("aria-pressed", String(b === btn)));
+    });
+  });
+
+  /* ---------- geometry ---------- */
+  const NODES = [
+    { id:"src", x:48,  y:170, w:200, kind:"input", title:"orders.csv", meta:"12,480 rows · 8 cols" },
+    { id:"n1",  x:320, y:78,  w:220, title:"search", tags:["select=email","empty"] },
+    { id:"n2",  x:320, y:252, w:220, title:"fill",   tags:["select=region","value=—"] },
+    { id:"n3",  x:614, y:165, w:220, title:"dedup",  tags:["select=email"] },
+    { id:"n4",  x:900, y:165, w:220, title:"sort",   tags:["email","numeric"] }
+  ];
+  const LINKS = [["src","n1"],["src","n2"],["n1","n3"],["n2","n3"],["n3","n4"]];
+  const AUTO = [{x:250,y:356},{x:980,y:180}];
+
+  const ce = (tag, attrs) => {
+    const el = document.createElementNS(NS, tag);
+    if (attrs) for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  };
+  const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+
+  function segSeg(x1,y1,x2,y2,x3,y3,x4,y4){
+    const d = (y4-y3)*(x2-x1) - (x4-x3)*(y2-y1);
+    if (Math.abs(d) < 1e-9) return false;
+    const ua = ((x4-x3)*(y1-y3) - (y4-y3)*(x1-x3)) / d;
+    const ub = ((x2-x1)*(y1-y3) - (y2-y1)*(x1-x3)) / d;
+    return ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1;
+  }
+  function segPoint(x1,y1,x2,y2,x3,y3,x4,y4){
+    const d = (y4-y3)*(x2-x1) - (x4-x3)*(y2-y1);
+    if (Math.abs(d) < 1e-9) return null;
+    const t = ((x4-x3)*(y1-y3) - (y4-y3)*(x1-x3)) / d;
+    return { x: x1 + t*(x2-x1), y: y1 + t*(y2-y1) };
+  }
+  function pointSegDist(px,py,x1,y1,x2,y2){
+    const A = px-x1, B = py-y1, C = x2-x1, D = y2-y1;
+    const lenSq = C*C + D*D;
+    let t = lenSq ? (A*C + B*D)/lenSq : -1;
+    t = clamp(t, 0, 1);
+    return Math.hypot(px - (x1+t*C), py - (y1+t*D));
+  }
+  function rectEdges(r){
+    return [
+      [r.x, r.y, r.x+r.w, r.y],
+      [r.x+r.w, r.y, r.x+r.w, r.y+r.h],
+      [r.x+r.w, r.y+r.h, r.x, r.y+r.h],
+      [r.x, r.y+r.h, r.x, r.y]
+    ];
+  }
+  function polyHitsRect(pts, r){
+    if (!pts.length) return false;
+    for (const p of pts) if (p.x >= r.x && p.x <= r.x+r.w && p.y >= r.y && p.y <= r.y+r.h) return true;
+    const edges = rectEdges(r);
+    for (let i=0;i<pts.length-1;i++){
+      const a=pts[i], b=pts[i+1];
+      for (const e of edges) if (segSeg(a.x,a.y,b.x,b.y,e[0],e[1],e[2],e[3])) return true;
+    }
+    return false;
+  }
+  function polyHitsLine(pts, x1,y1,x2,y2){
+    for (let i=0;i<pts.length-1;i++){
+      const a=pts[i], b=pts[i+1];
+      if (segSeg(a.x,a.y,b.x,b.y,x1,y1,x2,y2)) return true;
+      if (pointSegDist(a.x,a.y,x1,y1,x2,y2) < 20 || pointSegDist(b.x,b.y,x1,y1,x2,y2) < 20) return true;
+    }
+    return false;
+  }
+  function lerp(a,b,t){
+    return { x: a.x + (b.x-a.x)*t, y: a.y + (b.y-a.y)*t };
+  }
+  // tapered band: thin at a, wide at b
+  function ribbon(a, b, wTail, wHead){
+    const dx = b.x-a.x, dy = b.y-a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy/len, ny = dx/len;
+    const t1 = { x: a.x + nx*wTail/2, y: a.y + ny*wTail/2 };
+    const t2 = { x: a.x - nx*wTail/2, y: a.y - ny*wTail/2 };
+    const h1 = { x: b.x + nx*wHead/2, y: b.y + ny*wHead/2 };
+    const h2 = { x: b.x - nx*wHead/2, y: b.y - ny*wHead/2 };
+    return [t1, h1, h2, t2].map(p => p.x.toFixed(1)+","+p.y.toFixed(1)).join(" ");
+  }
+  // the part of a straight line that sits inside a rect
+  function lineClip(a, b, r){
+    const pts = [];
+    for (const e of rectEdges(r)){
+      if (segSeg(a.x,a.y,b.x,b.y,e[0],e[1],e[2],e[3])){
+        const p = segPoint(a.x,a.y,b.x,b.y,e[0],e[1],e[2],e[3]);
+        if (p) pts.push(p);
+      }
+    }
+    for (const p of [a,b]){
+      if (p.x >= r.x && p.x <= r.x+r.w && p.y >= r.y && p.y <= r.y+r.h) pts.push(p);
+    }
+    if (pts.length < 2) return null;
+    const dx = b.x-a.x, dy = b.y-a.y;
+    const proj = p => (p.x-a.x)*dx + (p.y-a.y)*dy;
+    const sorted = pts.sort((p,q) => proj(p) - proj(q));
+    const first = sorted[0], last = sorted[sorted.length-1];
+    if (Math.hypot(last.x-first.x, last.y-first.y) < 1) return null;
+    return [first, last];
+  }
+  function clipPaths(p1, p2, w, h){
+    const cross = (ax,ay,bx,by) => ax*by - ay*bx;
+    const dx = p2.x-p1.x, dy = p2.y-p1.y;
+    const corners = [{x:0,y:0},{x:w,y:0},{x:w,y:h},{x:0,y:h}];
+    const A = [], B = [];
+    for (const c of corners){
+      const v = cross(dx,dy,c.x-p1.x,c.y-p1.y);
+      (v >= 0 ? A : B).push(c);
+    }
+    const poly = (side) => {
+      if (!side.length) return "";
+      const sorted = [...side].sort((a,b) =>
+        Math.atan2(a.y-p1.y,a.x-p1.x) - Math.atan2(b.y-p1.y,b.x-p1.x));
+      return "polygon(" + [p1, ...sorted, p2].map(p => p.x.toFixed(1)+"px "+p.y.toFixed(1)+"px").join(", ") + ")";
+    };
+    return { a: poly(A), b: poly(B) };
+  }
+
+  function pathD(pts){
+    return pts.length ? "M " + pts.map(p => p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" L ") : "";
+  }
+  function pointAt(path, t){
+    const lens = [];
+    let total = 0;
+    for (let i=1;i<path.length;i++){ const d = dist(path[i-1],path[i]); lens.push(d); total += d; }
+    if (!total) return [path[0]];
+    let target = t*total;
+    const out = [path[0]];
+    for (let i=1;i<path.length;i++){
+      const d = lens[i-1];
+      if (target <= d){
+        const k = target/d;
+        out.push({ x: path[i-1].x + (path[i].x-path[i-1].x)*k,
+                   y: path[i-1].y + (path[i].y-path[i-1].y)*k });
+        return out;
+      }
+      out.push(path[i]);
+      target -= d;
+    }
+    return out;
+  }
+
+  /* ---------- stage ---------- */
+  function mountStage(stage){
+    const variant = stage.dataset.variant;
+    const canvas = stage.querySelector(".canvas");
+    const nodesLayer = stage.querySelector(".nodes-layer");
+    const edgeLayer = stage.querySelector(".edge-layer");
+    const cutLayer = stage.querySelector(".cut-layer");
+    const svg = stage.querySelector("svg");
+    const playBtn = stage.querySelector(".play");
+
+    let rects = {};
+    let edgeMeta = [];
+    let parts = [];
+    let drawing = false;
+    let busy = false;
+    let points = [];
+    let rafId = 0;
+    let resetTimer = 0;
+    let token = 0;
+    let glintPhase = 0;
+    let glintStart = 0;
+    let glintRaf = 0;
+
+    // overlay nodes
+    let trailGlow, trailMid, trailMain, nib, tip, seams, flash;
+    let bladeBody, bladeCore, bladeGlint, bladeTip;
+    if (variant === "before"){
+      trailGlow = ce("path", { class:"cut-el trail-glow" });
+      trailMid  = ce("path", { class:"cut-el trail-mid" });
+      trailMain = ce("path", { class:"cut-el trail-main" });
+      nib       = ce("polygon", { class:"cut-el nib-old" });
+      tip       = ce("circle", { class:"cut-el tip-old", r:2 });
+      [trailGlow, trailMid, trailMain, nib, tip].forEach(el => cutLayer.appendChild(el));
+    } else {
+      bladeBody  = ce("polygon", { class:"cut-el blade-body" });
+      bladeCore  = ce("polygon", { class:"cut-el blade-core" });
+      bladeGlint = ce("polygon", { class:"cut-el blade-glint" });
+      bladeTip   = ce("path", { class:"cut-el blade-tip" });
+      seams      = ce("g", { class:"cut-el seams" });
+      flash      = ce("path", { class:"cut-el seam-flash" });
+      [bladeBody, bladeCore, bladeGlint, bladeTip, seams, flash].forEach(el => cutLayer.appendChild(el));
+    }
+
+    function buildNodes(){
+      nodesLayer.replaceChildren();
+      NODES.forEach(n => {
+        const el = document.createElement("div");
+        el.className = "node" + (n.kind === "input" ? " input" : "");
+        el.dataset.id = n.id;
+        el.style.left = n.x + "px";
+        el.style.top = n.y + "px";
+        el.style.width = n.w + "px";
+        if (n.kind === "input"){
+          el.innerHTML = '<div class="nt">' + n.title + '</div><div class="nm">' + n.meta + '</div>';
+        } else {
+          el.innerHTML = '<div class="nt">' + n.title + ' <span class="tag">step</span></div>' +
+            '<div class="np">' + n.tags.map(t => "<span>" + t + "</span>").join("") + '</div>';
+        }
+        nodesLayer.appendChild(el);
+      });
+      const base = canvas.getBoundingClientRect();
+      rects = {};
+      nodesLayer.querySelectorAll(":scope > .node").forEach(el => {
+        const r = el.getBoundingClientRect();
+        rects[el.dataset.id] = {
+          x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height
+        };
+      });
+    }
+
+    function buildEdges(){
+      edgeLayer.replaceChildren();
+      edgeMeta = LINKS.map(([a,b], i) => {
+        const A = rects[a], B = rects[b];
+        const x1 = A.x + A.w, y1 = A.y + A.h/2;
+        const x2 = B.x, y2 = B.y + B.h/2;
+        const p = ce("path", {
+          class: "edge",
+          d: "M " + x1 + " " + y1 + " C " + (x1+44) + " " + y1 + ", " + (x2-44) + " " + y2 + ", " + x2 + " " + y2
+        });
+        p.style.markerEnd = "url(#arrow-" + variant + ")";
+        p.dataset.id = "e" + i;
+        edgeLayer.appendChild(p);
+        return { id: "e" + i, el: p, x1, y1, x2, y2, source: a, target: b };
+      });
+    }
+
+    function hideTrail(){
+      [trailGlow, trailMid, trailMain, nib, tip, seams, flash,
+       bladeBody, bladeCore, bladeGlint, bladeTip].forEach(el => {
+        if (!el) return;
+        el.classList.remove("show", "trail-fade", "flash");
+      });
+      if (flash) flash.removeAttribute("d");
+      if (seams) seams.replaceChildren();
+    }
+
+    function reset(){
+      if (drawing) return;
+      token++;
+      busy = false;
+      points = [];
+      hideTrail();
+      nodesLayer.querySelectorAll(".part").forEach(el => el.remove());
+      buildNodes();
+      buildEdges();
+    }
+
+    function hitTest(pts){
+      const hitNodes = [], hitEdges = [];
+      for (const id in rects){
+        if (polyHitsRect(pts, rects[id])) hitNodes.push(id);
+      }
+      for (const e of edgeMeta){
+        if (polyHitsLine(pts, e.x1, e.y1, e.x2, e.y2)) hitEdges.push(e);
+      }
+      return { hitNodes, hitEdges };
+    }
+
+    function paintPending(hit, line){
+      nodesLayer.querySelectorAll(":scope > .node").forEach(el => {
+        el.classList.toggle("pending-old", variant === "before" && hit.hitNodes.includes(el.dataset.id));
+        el.classList.toggle("pending-new", variant === "after" && hit.hitNodes.includes(el.dataset.id));
+      });
+      edgeMeta.forEach(e => {
+        e.el.classList.toggle("pending-old", variant === "before" && hit.hitEdges.includes(e));
+        e.el.classList.toggle("pending-new", variant === "after" && hit.hitEdges.includes(e));
+      });
+      if (seams){
+        seams.replaceChildren();
+        hit.hitNodes.forEach(id => {
+          const seg = lineClip(line[0], line[line.length-1], rects[id]);
+          if (!seg) return;
+          seams.appendChild(ce("line", {
+            x1: seg[0].x.toFixed(1), y1: seg[0].y.toFixed(1),
+            x2: seg[1].x.toFixed(1), y2: seg[1].y.toFixed(1)
+          }));
+        });
+        seams.classList.add("show");
+      }
+    }
+
+    function render(pts){
+      if (!pts.length) return;
+      // The cut is always a straight stroke: start → current point.
+      const line = pts.length > 1 ? [pts[0], pts[pts.length-1]] : pts;
+      if (line.length < 2 || dist(line[0], line[1]) < 2){
+        if (seams) seams.replaceChildren();
+        nodesLayer.querySelectorAll(":scope > .node").forEach(el =>
+          el.classList.remove("pending-old", "pending-new"));
+        edgeMeta.forEach(e => e.el.classList.remove("pending-old", "pending-new"));
+        return;
+      }
+
+      if (variant === "before"){
+        if (trailGlow){ setD(trailGlow, line); trailGlow.classList.add("show"); }
+        if (trailMid){ setD(trailMid, line); trailMid.classList.add("show"); }
+        setD(trailMain, line);
+        trailMain.classList.add("show");
+
+        const last = line[line.length-1];
+        const prev = line[line.length-2] || last;
+        const ang = Math.atan2(last.y-prev.y, last.x-prev.x) * 180/Math.PI;
+        nib.setAttribute("points", "0,-3.2 9,0 0,3.2 -2.4,0");
+        nib.setAttribute("transform", "translate(" + last.x.toFixed(1) + " " + last.y.toFixed(1) + ") rotate(" + ang.toFixed(1) + ")");
+        nib.classList.add("show");
+        tip.setAttribute("cx", (last.x + Math.cos(ang*Math.PI/180)*14).toFixed(1));
+        tip.setAttribute("cy", (last.y + Math.sin(ang*Math.PI/180)*14).toFixed(1));
+        tip.classList.add("show");
+      } else {
+        const a = line[0], b = line[line.length-1];
+        const len = dist(a, b);
+        if (len > 2){
+          const dx = (b.x-a.x)/len, dy = (b.y-a.y)/len;
+          const nx = -dy, ny = dx;
+          const tipLen = Math.min(18, len * .45);
+          const hb = { x: b.x - dx*tipLen, y: b.y - dy*tipLen };
+          bladeBody.setAttribute("points", ribbon(a, hb, 1, 9));
+          bladeCore.setAttribute("points", ribbon(lerp(a, b, .52), hb, .4, 3.6));
+          const seg = Math.min(64, len * .45);
+          const tailT = clamp(glintPhase * (1 + seg/len), seg/len, 1);
+          const head = lerp(a, b, tailT);
+          const tail = lerp(a, b, tailT - seg/len);
+          bladeGlint.setAttribute("points", ribbon(tail, head, 0, 3));
+          const belly = { x: b.x - dx*6 + nx*7.2, y: b.y - dy*6 + ny*7.2 };
+          bladeTip.setAttribute("d",
+            "M " + (hb.x + nx*4.5).toFixed(1) + " " + (hb.y + ny*4.5).toFixed(1) +
+            " Q " + belly.x.toFixed(1) + " " + belly.y.toFixed(1) +
+            " " + b.x.toFixed(1) + " " + b.y.toFixed(1) +
+            " L " + (hb.x - nx*4.5).toFixed(1) + " " + (hb.y - ny*4.5).toFixed(1) + " Z");
+          [bladeBody, bladeCore, bladeGlint, bladeTip].forEach(el => el.classList.add("show"));
+        } else {
+          [bladeBody, bladeCore, bladeGlint, bladeTip].forEach(el => el.classList.remove("show"));
+        }
+      }
+      paintPending(hitTest(line), line);
+    }
+    function setD(el, pts){ el.setAttribute("d", pathD(pts)); }
+
+    function makeParts(id, pts, kind){
+      const r = rects[id];
+      const local = { x:0, y:0, w:r.w, h:r.h };
+      const localPts = pts.map(p => ({ x: p.x - r.x, y: p.y - r.y }));
+      const crosses = [];
+      for (let i=0;i<localPts.length-1;i++){
+        const a = localPts[i], b = localPts[i+1];
+        for (const e of rectEdges(local)){
+          if (segSeg(a.x,a.y,b.x,b.y,e[0],e[1],e[2],e[3])){
+            const p = segPoint(a.x,a.y,b.x,b.y,e[0],e[1],e[2],e[3]);
+            if (p && !crosses.some(q => Math.abs(q.x-p.x) < 2 && Math.abs(q.y-p.y) < 2)) crosses.push(p);
+          }
+        }
+      }
+      if (crosses.length < 2) return null;
+      const p1 = crosses[0], p2 = crosses[crosses.length-1];
+      if (Math.hypot(p2.x-p1.x, p2.y-p1.y) < 2) return null;
+      const clips = clipPaths(p1, p2, r.w, r.h);
+      if (!clips.a || !clips.b) return null;
+
+      const dx = p2.x - p1.x, dy = p2.y - p1.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const original = nodesLayer.querySelector(':scope > .node[data-id="' + id + '"]');
+      if (!original) return null;
+      original.style.visibility = "hidden";
+
+      const specs = [
+        { clip: clips.a, sign: 1 },
+        { clip: clips.b, sign: -1 }
+      ];
+      specs.forEach(spec => {
+        const wrap = document.createElement("div");
+        wrap.className = "part " + kind;
+        wrap.style.left = r.x + "px";
+        wrap.style.top = r.y + "px";
+        wrap.style.width = r.w + "px";
+        wrap.style.height = r.h + "px";
+        wrap.style.clipPath = spec.clip;
+        const dirX = (dx/len)*0.3*120;
+        const dirY = (0.7 + (dy/len)*0.3)*200;
+        wrap.style.setProperty("--dx", (dirX*spec.sign).toFixed(2) + "px");
+        wrap.style.setProperty("--dy", (dirY*spec.sign).toFixed(2) + "px");
+        const rot = clamp(Math.atan2(dx, 1)*180/Math.PI*0.5, -30, 30);
+        wrap.style.setProperty("--rot", (rot*spec.sign).toFixed(1) + "deg");
+        const clone = original.cloneNode(true);
+        clone.removeAttribute("data-id");
+        clone.style.visibility = "visible";
+        wrap.appendChild(clone);
+        nodesLayer.appendChild(wrap);
+        parts.push(wrap);
+      });
+      return {
+        p1: { x: p1.x + r.x, y: p1.y + r.y },
+        p2: { x: p2.x + r.x, y: p2.y + r.y }
+      };
+    }
+
+    function commit(pts){
+      if (!pts.length) return;
+      const effective = pts.length > 1 ? [pts[0], pts[pts.length-1]] : pts;
+      const hit = hitTest(effective);
+      const myToken = ++token;
+      busy = true;
+      playBtn.disabled = true;
+
+      nodesLayer.querySelectorAll(":scope > .node").forEach(el => {
+        el.classList.remove("pending-old", "pending-new");
+      });
+      edgeMeta.forEach(e => e.el.classList.remove("pending-old", "pending-new"));
+
+      const removedNodes = new Set(hit.hitNodes);
+      const cutEls = new Set(hit.hitEdges.map(e => e.el));
+      edgeMeta.forEach(e => {
+        if (removedNodes.has(e.source) || removedNodes.has(e.target)) cutEls.add(e.el);
+      });
+      cutEls.forEach(el => {
+        el.classList.add(variant === "before" ? "cut-old" : "cut-new");
+        setTimeout(() => { if (el.parentNode) el.remove(); },
+                   variant === "before" ? 200 : 220);
+      });
+
+      if (variant === "before"){
+        hit.hitNodes.forEach(id => makeParts(id, effective, "old"));
+        setTimeout(() => {
+          if (myToken !== token) return;
+          hit.hitNodes.forEach(id => {
+            const el = nodesLayer.querySelector(':scope > .node[data-id="' + id + '"]');
+            if (el) el.remove();
+          });
+          parts.forEach(p => p.remove());
+          parts = [];
+          hideTrail();
+        }, 400);
+      } else {
+        // seam stays only inside the cut material (the signature)
+        let seamD = "";
+        hit.hitNodes.forEach(id => {
+          const seg = makeParts(id, effective, "new");
+          if (seg) seamD += "M " + seg.p1.x.toFixed(1) + " " + seg.p1.y.toFixed(1) +
+                              " L " + seg.p2.x.toFixed(1) + " " + seg.p2.y.toFixed(1) + " ";
+        });
+        if (seamD){
+          flash.setAttribute("d", seamD.trim());
+          flash.classList.add("show", "flash");
+        }
+        setTimeout(() => {
+          if (myToken !== token) return;
+          hit.hitNodes.forEach(id => {
+            const el = nodesLayer.querySelector(':scope > .node[data-id="' + id + '"]');
+            if (el) el.remove();
+          });
+          parts.forEach(p => p.remove());
+          parts = [];
+          hideTrail();
+        }, 740);
+      }
+
+      if (variant === "before"){
+        trailMain.classList.add("trail-fade");
+        if (trailGlow) trailGlow.classList.add("trail-fade");
+        if (trailMid) trailMid.classList.add("trail-fade");
+        nib.style.opacity = "0";
+      } else {
+        [bladeBody, bladeCore, bladeGlint, bladeTip].forEach(el => el.classList.add("trail-fade"));
+      }
+
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => {
+        if (myToken !== token) return;
+        busy = false;
+        playBtn.disabled = false;
+        reset();
+      }, 1500);
+    }
+
+    /* pointer */
+    let moveRaf = 0;
+    function toLocal(e){
+      const r = canvas.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+    function schedule(){
+      if (moveRaf) return;
+      moveRaf = requestAnimationFrame(() => {
+        moveRaf = 0;
+        if (!drawing) return;
+        render(points);
+      });
+    }
+    // the travelling highlight only needs to run while the cut is held
+    function glintLoop(now){
+      if (!drawing) return;
+      glintPhase = Math.min(1, (now - glintStart) / 380);
+      if (points.length > 1) render(points);
+      if (glintPhase < 1) glintRaf = requestAnimationFrame(glintLoop);
+    }
+
+    stage.addEventListener("contextmenu", e => e.preventDefault());
+    stage.addEventListener("pointerdown", e => {
+      if (busy || e.button > 2) return;
+      if (e.button === 1) return;
+      if (e.target.closest(".play")) return;
+      e.preventDefault();
+      drawing = true;
+      points = [toLocal(e)];
+      stage.classList.add("dragging");
+      render(points);
+      if (variant === "after"){
+        glintStart = performance.now();
+        glintRaf = requestAnimationFrame(glintLoop);
+      }
+    });
+    window.addEventListener("pointermove", e => {
+      if (!drawing) return;
+      const p = toLocal(e);
+      const last = points[points.length-1];
+      if (!last || dist(last, p) > 1.2){
+        points.push(p);
+        schedule();
+      }
+    });
+    window.addEventListener("pointerup", () => {
+      if (!drawing) return;
+      drawing = false;
+      stage.classList.remove("dragging");
+      if (moveRaf){ cancelAnimationFrame(moveRaf); moveRaf = 0; }
+      if (glintRaf){ cancelAnimationFrame(glintRaf); glintRaf = 0; }
+      if (points.length > 1) commit(points);
+      else hideTrail();
+    });
+    window.addEventListener("pointercancel", () => {
+      if (!drawing) return;
+      drawing = false;
+      stage.classList.remove("dragging");
+      if (glintRaf){ cancelAnimationFrame(glintRaf); glintRaf = 0; }
+      hideTrail();
+    });
+
+    /* auto play */
+    playBtn.addEventListener("click", () => {
+      if (busy || drawing) return;
+      reset();
+      busy = true;
+      playBtn.disabled = true;
+      const t0 = performance.now();
+      const dur = 760;
+      function step(now){
+        const t = Math.min(1, (now - t0) / dur);
+        const eased = t < .5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
+        const pts = pointAt(AUTO, eased);
+        points = pts;
+        glintPhase = Math.min(1, (now - t0) / 380);
+        render(pts);
+        if (t < 1) requestAnimationFrame(step);
+        else {
+          commit(pts);
+          setTimeout(() => { playBtn.disabled = false; }, 1500);
+        }
+      }
+      requestAnimationFrame(step);
+    });
+
+    buildNodes();
+    buildEdges();
+  }
+
+  document.querySelectorAll(".stage[data-variant]").forEach(mountStage);
+
+  /* ---------- mini keyboard delete ---------- */
+  (function(){
+    const stage = document.getElementById("miniDelete");
+    const btn = document.getElementById("delBtn");
+    const layer = stage.querySelector(".kedge-layer");
+    const nodes = [...stage.querySelectorAll(".knode")];
+
+    function drawEdges(){
+      layer.replaceChildren();
+      const r = stage.getBoundingClientRect();
+      const a = nodes[0].getBoundingClientRect();
+      const b = nodes[1].getBoundingClientRect();
+      const x1 = a.right - r.left, y1 = a.top + a.height/2 - r.top;
+      const x2 = b.left - r.left, y2 = b.top + b.height/2 - r.top;
+      const p = document.createElementNS(NS, "path");
+      p.setAttribute("d", "M "+x1+" "+y1+" C "+(x1+50)+" "+y1+", "+(x2-50)+" "+y2+", "+x2+" "+y2);
+      layer.appendChild(p);
+    }
+    drawEdges();
+
+    btn.addEventListener("click", () => {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      layer.querySelectorAll("path").forEach(p => p.classList.add("cut"));
+      nodes.forEach((n, i) => {
+        n.style.animationDelay = (i * 20) + "ms";
+        n.classList.add("deleting");
+      });
+      setTimeout(() => {
+        nodes.forEach(n => { n.classList.remove("deleting"); n.style.animationDelay = ""; });
+        layer.querySelectorAll("path").forEach(p => p.classList.remove("cut"));
+        drawEdges();
+        btn.disabled = false;
+      }, 1100);
+    });
+  })();
+
+})();
+</script>
+</body>
+</html>

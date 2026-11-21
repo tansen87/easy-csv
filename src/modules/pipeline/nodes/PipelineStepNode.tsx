@@ -15,12 +15,40 @@ export interface PipelineStepNodeData {
   onContextMenu: (stepId: string, x: number, y: number) => void;
   isSelected: boolean;
   index: number;
-  isCutting?: boolean;
+  isDeleting?: boolean;
   isPendingDelete?: boolean;
+  /** Segment of the pending cut inside the card, in card-local px. */
+  pendingSeam?: { x1: number; y1: number; x2: number; y2: number } | null;
   cutParts?: CutPartInfo[];
   isHighlighted?: boolean;
   /** Canvas lock: hides the hover action strip and rename input. */
   locked?: boolean;
+}
+
+/** 1px cut seam, clipped with the card (or its split halves). */
+function SeamLine({
+  seam,
+}: {
+  seam: NonNullable<PipelineStepNodeData["pendingSeam"]>;
+}) {
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 z-10 overflow-visible"
+      width="100%"
+      height="100%"
+      aria-hidden="true"
+    >
+      <line
+        x1={seam.x1}
+        y1={seam.y1}
+        x2={seam.x2}
+        y2={seam.y2}
+        stroke="var(--danger)"
+        strokeWidth={1}
+        strokeOpacity={0.9}
+      />
+    </svg>
+  );
 }
 
 export function PipelineStepNode({
@@ -304,7 +332,7 @@ export function PipelineStepNode({
         ? "bg-paper border-danger/70 shadow-md ring-2 ring-danger/30"
         : "bg-paper border-[var(--canvas-ink)] shadow-sm ring-2 ring-[var(--canvas-ink-soft)]"
       : "bg-card/95 hover:bg-accent/30 border-border/60 hover:border-primary/30"
-  } ${data.step.error ? "border-danger/70 shadow-md ring-2 ring-danger/30" : ""} ${data.isPendingDelete ? "border-warning" : ""} ${data.isHighlighted ? "ring-2 ring-primary ring-offset-2 animate-pulse-once" : ""}`;
+  } ${data.step.error ? "border-danger/70 shadow-md ring-2 ring-danger/30" : ""} ${data.isHighlighted ? "ring-2 ring-primary ring-offset-2 animate-pulse-once" : ""}`;
 
   // If there is a cutting section, render two cutting fragments
   if (data.cutParts && data.cutParts.length > 0) {
@@ -340,14 +368,18 @@ export function PipelineStepNode({
   }
 
   return (
-    <div className={`relative ${data.isCutting ? "cutting-animation" : ""}`}>
+    <div className={`relative ${data.isDeleting ? "node-deleting" : ""}`}>
       <Card
-        className={`${cardClass} ${data.isCutting ? "cut-node" : ""}`}
-        style={{
-          boxShadow: data.isPendingDelete
-            ? "0 0 12px rgba(154, 154, 166, 0.6)"
-            : undefined,
-        }}
+        className={cardClass}
+        style={
+          data.isPendingDelete
+            ? {
+                outline:
+                  "1px solid color-mix(in oklab, var(--danger) 55%, transparent)",
+                outlineOffset: "2px",
+              }
+            : undefined
+        }
         onContextMenu={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -356,6 +388,9 @@ export function PipelineStepNode({
       >
         {renderCardContent()}
       </Card>
+      {data.isPendingDelete && data.pendingSeam && (
+        <SeamLine seam={data.pendingSeam} />
+      )}
     </div>
   );
 }

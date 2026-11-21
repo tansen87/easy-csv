@@ -245,6 +245,11 @@ export function FlowPanel({
   const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(
     new Set(),
   );
+  // Steps fading out before they are removed from the pipeline (200ms).
+  const [deletingNodeIds, setDeletingNodeIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -994,7 +999,7 @@ export function FlowPanel({
   );
 
   const handleDeleteSelected = useCallback(() => {
-    if (locked || selectedNodeIds.size === 0) return;
+    if (locked || selectedNodeIds.size === 0 || deleteTimerRef.current) return;
     const ids = [...selectedNodeIds];
     const extraEdgeIds = edges
       .filter(
@@ -1005,9 +1010,41 @@ export function FlowPanel({
           !ids.includes(e.target),
       )
       .map((e) => e.id);
-    onStepRemove(ids, extraEdgeIds);
     setSelectedNodeIds(new Set());
+    setDeletingNodeIds(new Set(ids));
+    // Let the 200ms fade play before the step leaves the pipeline.
+    deleteTimerRef.current = setTimeout(() => {
+      deleteTimerRef.current = null;
+      onStepRemove(ids, extraEdgeIds);
+      setDeletingNodeIds(new Set());
+    }, 220);
   }, [selectedNodeIds, edges, onStepRemove, locked]);
+
+  // Fade the nodes and the edges attached to them while the timer runs.
+  useEffect(() => {
+    if (deletingNodeIds.size === 0) return;
+    setNodes((prev) =>
+      prev.map((node) =>
+        deletingNodeIds.has(node.id)
+          ? { ...node, data: { ...node.data, isDeleting: true } }
+          : node,
+      ),
+    );
+    setEdges((prev) =>
+      prev.map((edge) =>
+        deletingNodeIds.has(edge.source) || deletingNodeIds.has(edge.target)
+          ? { ...edge, className: "edge-deleting" }
+          : edge,
+      ),
+    );
+  }, [deletingNodeIds, setNodes, setEdges]);
+
+  useEffect(
+    () => () => {
+      if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
+    },
+    [],
+  );
 
   // Delete / Backspace / Ctrl+C / Ctrl+V keyboard handling
   useEffect(() => {
@@ -1106,7 +1143,7 @@ export function FlowPanel({
   return (
     <div
       ref={reactFlowWrapper}
-      className={`relative h-full w-full ${leftTool === "pan" ? "canvas-pan-tool" : ""}`}
+      className={`relative h-full w-full ${leftTool === "pan" ? "canvas-pan-tool" : ""} ${isCutting ? "canvas-cutting" : ""}`}
       onMouseDownCapture={handleSwapMouseDownCapture}
       onMouseDown={handleCutStart}
       onMouseMove={handleCutMove}

@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 070 · 刀尖方案</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --canvas-ink:var(--brand);
+    --danger:oklch(0.577 0.245 27.325);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --flow:oklch(0.76 0.0045 16);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+  }
+  .dark{
+    color-scheme:dark;
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+
+    --brand:oklch(0.78 0.045 245);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --canvas-ink:var(--brand);
+    --danger:oklch(0.704 0.191 22.216);
+
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.12 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --flow:oklch(0.62 0.006 250);
+    --shadow-card:none;
+  }
+
+  :root[data-accent="ink"]{ --brand:oklch(0.42 0.055 250) }
+  :root[data-accent="teal"]{ --brand:oklch(0.43 0.06 200) }
+  :root[data-accent="clay"]{ --brand:oklch(0.47 0.075 50) }
+  :root[data-accent="graphite"]{ --brand:oklch(0.30 0.006 80) }
+  :root[data-accent="pink"]{ --brand:oklch(0.47 0.09 355) }
+  :root[data-accent="purple"]{ --brand:oklch(0.46 0.085 305) }
+  .dark[data-accent="ink"]{ --brand:oklch(0.78 0.045 245) }
+  .dark[data-accent="teal"]{ --brand:oklch(0.78 0.05 200) }
+  .dark[data-accent="clay"]{ --brand:oklch(0.79 0.06 55) }
+  .dark[data-accent="graphite"]{ --brand:oklch(0.80 0.004 85) }
+  .dark[data-accent="pink"]{ --brand:oklch(0.79 0.06 352) }
+  .dark[data-accent="purple"]{ --brand:oklch(0.78 0.055 305) }
+
+  [data-swatch="ink"]{ --swatch:oklch(0.42 0.055 250) }
+  [data-swatch="teal"]{ --swatch:oklch(0.43 0.06 200) }
+  [data-swatch="clay"]{ --swatch:oklch(0.47 0.075 50) }
+  [data-swatch="graphite"]{ --swatch:oklch(0.30 0.006 80) }
+  [data-swatch="pink"]{ --swatch:oklch(0.47 0.09 355) }
+  [data-swatch="purple"]{ --swatch:oklch(0.46 0.085 305) }
+  .dark [data-swatch="ink"]{ --swatch:oklch(0.78 0.045 245) }
+  .dark [data-swatch="teal"]{ --swatch:oklch(0.78 0.05 200) }
+  .dark [data-swatch="clay"]{ --swatch:oklch(0.79 0.06 55) }
+  .dark [data-swatch="graphite"]{ --swatch:oklch(0.80 0.004 85) }
+  .dark [data-swatch="pink"]{ --swatch:oklch(0.79 0.06 352) }
+  .dark [data-swatch="purple"]{ --swatch:oklch(0.78 0.055 305) }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased;transition:background-color .18s ease,color .18s ease}
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1000px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme-toggle{position:absolute;right:0;top:2px;height:26px;padding:0 10px;border-radius:6px;
+                border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+                font-family:var(--mono);font-size:10.5px;cursor:pointer}
+  .theme-toggle:hover{color:var(--fg)}
+  .accent-bar{position:absolute;right:76px;top:2px;height:26px;display:flex;align-items:center;gap:7px}
+  .sw{width:13px;height:13px;padding:0;border-radius:50%;border:1px solid var(--border-soft);
+      background:var(--swatch);cursor:pointer;outline:none}
+  .sw[aria-pressed="true"]{box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--swatch)}
+  .sw:focus-visible{box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--canvas-ink)}
+
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+
+  /* 刀尖方案卡 */
+  .opts{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:40px}
+  .opt{border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden;
+       text-align:left;padding:0;cursor:pointer;font-family:var(--font);color:var(--fg);
+       transition:border-color .12s ease,box-shadow .12s ease}
+  .opt:hover{border-color:var(--border-soft);box-shadow:0 2px 8px -6px oklch(0.2 0.02 80 / 30%)}
+  .opt[aria-pressed="true"]{border-color:var(--canvas-ink);box-shadow:inset 0 0 0 1px var(--canvas-ink)}
+  .opt .zoom{position:relative;height:150px;border-bottom:1px solid var(--border-soft);
+             background-color:var(--canvas);background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+             background-size:18px 18px}
+  .opt .idx{position:absolute;left:9px;top:9px;height:17px;min-width:17px;padding:0 5px;border-radius:4px;
+            border:1px solid var(--border);background:var(--card);display:grid;place-items:center;
+            font-family:var(--mono);font-size:9px;color:var(--muted-fg);z-index:2}
+  .opt[aria-pressed="true"] .idx{background:var(--canvas-ink);border-color:var(--canvas-ink);color:var(--bg)}
+  .opt .rec{position:absolute;right:9px;top:9px;font-family:var(--mono);font-size:8.5px;
+            color:var(--canvas-ink);border:1px solid color-mix(in oklab,var(--canvas-ink) 35%,transparent);
+            border-radius:3px;padding:1px 4px;background:var(--card);z-index:2}
+  .opt .meta{padding:10px 12px 12px}
+  .opt .meta h3{margin:0;font-size:11.5px;font-weight:500;display:flex;align-items:baseline;gap:6px}
+  .opt .meta h3 span{font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-3);font-weight:400}
+  .opt .meta p{margin:6px 0 0;font-size:10.5px;line-height:1.65;color:var(--muted-fg)}
+  .opt[aria-pressed="true"] .meta h3{color:var(--canvas-ink)}
+
+  /* 整条刀光 */
+  .tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
+  .tab{height:26px;padding:0 9px;border-radius:5px;border:1px solid var(--border);background:var(--card);
+       color:var(--muted-fg);font-family:var(--mono);font-size:10px;cursor:pointer;
+       transition:color .12s ease,border-color .12s ease,background-color .12s ease}
+  .tab:hover{color:var(--fg)}
+  .tab[aria-pressed="true"]{background:var(--brand-soft);border-color:color-mix(in oklab,var(--canvas-ink) 40%,transparent);
+                            color:var(--canvas-ink)}
+  .stage{position:relative;height:380px;overflow:hidden;border:1px solid var(--border);border-radius:8px;
+         background-color:var(--canvas);background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+         background-size:22px 22px;background-position:11px 11px}
+  .edge-layer{position:absolute;inset:0;width:100%;height:100%}
+  .edge{fill:none;stroke:var(--flow);stroke-width:1.5}
+  .node{position:absolute;border:1px solid var(--border);border-radius:10px;background:var(--card);
+        box-shadow:var(--shadow-card);padding:10px 12px}
+  .node .nt{font-size:11.5px;font-weight:500}
+  .node .nm{margin-top:4px;font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)}
+  .node .np{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+  .node .np span{font-family:var(--mono);font-size:8.5px;color:var(--muted-fg);
+                 background:var(--muted);border:1px solid var(--border-soft);border-radius:3px;padding:1px 4px}
+  .blade-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
+
+  .blade-body{fill:var(--canvas-ink);fill-opacity:.62}
+  .blade-core{fill:var(--canvas-ink)}
+  .blade-glint{fill:color-mix(in oklab,var(--brand) 38%,#fff);fill-opacity:.8}
+  .blade-tip{fill:var(--canvas-ink)}
+
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  .callout{display:flex;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;
+           background:var(--card);font-size:11px;line-height:1.75;color:var(--muted-fg)}
+  .callout b{color:var(--fg);font-weight:500}
+  .callout .mk{width:18px;height:18px;border-radius:50%;background:var(--brand-soft);color:var(--canvas-ink);
+               font-family:var(--mono);font-size:9.5px;display:grid;place-items:center;flex:none;margin-top:1px}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">PROTOTYPE 070 · BLADE HEAD</div>
+    <h1>刀尖方案</h1>
+    <p>刀身保持不变：直线、尾 1px → 前端 10px、颜色跟随主题色。只换最前端的收锋方式。下面四种新方案都按同一把刀身绘制，左侧附当前方案作对照；先放大 4 倍看形状，再在整条刀光里看真实尺寸。</p>
+    <div class="accent-bar" role="group" aria-label="主题色">
+      <button class="sw" type="button" data-accent="ink" data-swatch="ink" aria-label="墨蓝" aria-pressed="true"></button>
+      <button class="sw" type="button" data-accent="teal" data-swatch="teal" aria-label="青碧" aria-pressed="false"></button>
+      <button class="sw" type="button" data-accent="clay" data-swatch="clay" aria-label="赭石" aria-pressed="false"></button>
+      <button class="sw" type="button" data-accent="graphite" data-swatch="graphite" aria-label="石墨" aria-pressed="false"></button>
+      <button class="sw" type="button" data-accent="pink" data-swatch="pink" aria-label="胭脂" aria-pressed="false"></button>
+      <button class="sw" type="button" data-accent="purple" data-swatch="purple" aria-label="青莲" aria-pressed="false"></button>
+    </div>
+    <button class="theme-toggle" id="themeToggle" type="button">dark</button>
+  </div>
+
+  <div class="cap"><b>① 放大 4×</b><span>同一刀身，只换收锋</span><span class="file">点击卡片切换</span></div>
+  <div class="opts" id="opts"></div>
+
+  <div class="cap"><b>② 在整条刀光里</b><span>真实尺寸 · 最后一张卡被切开 · 双击画布再扫一次高光</span><span class="file" id="stageLabel">B 弯锋</span></div>
+  <div class="tabs" id="tabs" role="group" aria-label="刀尖方案"></div>
+  <div class="stage" id="stage">
+    <svg class="edge-layer"><g class="edges"></g></svg>
+    <div class="nodes"></div>
+    <svg class="blade-layer"><g class="blade"></g></svg>
+  </div>
+
+  <div class="notes">
+    <div class="callout"><span class="mk">B</span><span><b>推荐 B 弯锋。</b>一侧是弧线、一侧是直背，放大或缩到真实尺寸都能读成刀；A 更利落，C 更硬朗，D 更轻但刀感弱。</span></div>
+    <div class="callout"><span class="mk">⌘</span><span><b>改动很小。</b>刀身、光扫、预览和删除动画都不动；B / D 用 <code>&lt;path&gt;</code> 画弧线，A / C 仍是 <code>&lt;polygon&gt;</code>，只换刀尖那一小段。</span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const NS = "http://www.w3.org/2000/svg";
+
+  /* ---------- theme ---------- */
+  const themeBtn = document.getElementById("themeToggle");
+  themeBtn.addEventListener("click", () => {
+    const dark = document.documentElement.classList.toggle("dark");
+    themeBtn.textContent = dark ? "light" : "dark";
+  });
+  document.querySelectorAll(".sw").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.documentElement.dataset.accent = btn.dataset.accent;
+      document.querySelectorAll(".sw").forEach(b =>
+        b.setAttribute("aria-pressed", String(b === btn)));
+    });
+  });
+
+  /* ---------- geometry ---------- */
+  const OPTIONS = [
+    { id:"now", key:"当前", name:"对称三角", tag:"现状", tip:12, base:10, shape:"tri",
+      desc:"最短的收锋，指哪切哪；但太对称，像箭头或笔头。" },
+    { id:"chisel", key:"A", name:"斜锋", tag:"chisel", tip:12, base:10, shape:"chisel",
+      desc:"斜切一刀，一侧长一侧短，像厨刀的刀尖，利落。" },
+    { id:"curve", key:"B", name:"弯锋", tag:"katana", tip:18, base:9, shape:"curve", rec:true,
+      desc:"一侧弧线、一侧直背，像柳叶刀；最像“刀”的一版。" },
+    { id:"facet", key:"C", name:"折锋", tag:"tanto", tip:16, base:10, shape:"facet",
+      desc:"两段折线收尖，像战术刀，硬朗、机械。" },
+    { id:"long", key:"D", name:"长锋", tag:"foil", tip:30, base:7, shape:"long",
+      desc:"更长的收束，像刺剑或毛笔；轻，但刀感弱。" }
+  ];
+  let selected = "curve";
+
+  const dist = (a,b) => Math.hypot(b.x-a.x, b.y-a.y);
+  const lerp = (a,b,t) => ({ x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t });
+  const fmt = (p) => p.x.toFixed(2) + "," + p.y.toFixed(2);
+
+  function ribbon(a, b, wA, wB){
+    const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy)||1;
+    const nx=-dy/len, ny=dx/len;
+    const at=(p,w)=>p.x+nx*w/2+","+(p.y+ny*w/2);
+    const other=(p,w)=>p.x-nx*w/2+","+(p.y-ny*w/2);
+    return [at(a,wA), at(b,wB), other(b,wB), other(a,wA)].join(" ");
+  }
+
+  function headMarkup(opt, a, b){
+    const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy)||1;
+    const d={x:dx/len,y:dy/len};
+    const n={x:-d.y,y:d.x};
+    const half=opt.base/2;
+    const hb={x:b.x-d.x*opt.tip, y:b.y-d.y*opt.tip};
+    const L={x:hb.x+n.x*half, y:hb.y+n.y*half};
+    const R={x:hb.x-n.x*half, y:hb.y-n.y*half};
+
+    if (opt.shape === "tri"){
+      return '<polygon class="blade-tip" points="'+[fmt(L),fmt(b),fmt(R)].join(" ")+'"/>';
+    }
+    if (opt.shape === "chisel"){
+      const tip={x:b.x+n.x*3, y:b.y+n.y*3};
+      return '<polygon class="blade-tip" points="'+[fmt(L),fmt(tip),fmt(R)].join(" ")+'"/>';
+    }
+    if (opt.shape === "facet"){
+      const knee={x:hb.x+d.x*opt.tip*0.55, y:hb.y+d.y*opt.tip*0.55};
+      const p1={x:knee.x+n.x*half*0.85, y:knee.y+n.y*half*0.85};
+      const p2={x:knee.x-n.x*half*0.85, y:knee.y-n.y*half*0.85};
+      return '<polygon class="blade-tip" points="'+[fmt(L),fmt(p1),fmt(b),fmt(p2),fmt(R)].join(" ")+'"/>';
+    }
+    const curve = opt.shape === "long"
+      ? { x:b.x-d.x*16+n.x*6, y:b.y-d.y*16+n.y*6 }
+      : { x:b.x-d.x*6+n.x*7.2, y:b.y-d.y*6+n.y*7.2 };
+    return '<path class="blade-tip" d="M '+fmt(L)+' Q '+fmt(curve)+' '+fmt(b)+' L '+fmt(R)+' Z"/>';
+  }
+
+  function bladeMarkup(opt, a, b, glint){
+    const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy)||1;
+    const d={x:dx/len,y:dy/len};
+    const hb={x:b.x-d.x*opt.tip, y:b.y-d.y*opt.tip};
+    const coreStart=lerp(a,b,0.52);
+    let out = '<polygon class="blade-body" points="'+ribbon(a,hb,1,opt.base)+'"/>';
+    out += '<polygon class="blade-core" points="'+ribbon(coreStart,hb,0.4,3.6)+'"/>';
+    if (typeof glint === "number"){
+      const glintLen=Math.min(56,len*0.45);
+      const t=Math.max(glintLen/len, Math.min(1, glint*(1+glintLen/len)));
+      const gh=lerp(a,b,t), gt=lerp(a,b,t-glintLen/len);
+      out += '<polygon class="blade-glint" points="'+ribbon(gt,gh,0,3)+'"/>';
+    }
+    out += headMarkup(opt,a,b);
+    return out;
+  }
+
+  /* ---------- option cards ---------- */
+  const optsEl = document.getElementById("opts");
+  OPTIONS.forEach(opt => {
+    const btn=document.createElement("button");
+    btn.type="button";
+    btn.className="opt";
+    btn.dataset.id=opt.id;
+    btn.setAttribute("aria-pressed", String(opt.id===selected));
+    btn.innerHTML =
+      '<div class="zoom"><span class="idx">'+opt.key+'</span>'+
+      (opt.rec ? '<span class="rec">推荐</span>' : '')+
+      '<svg width="100%" height="100%" viewBox="0 0 222 150">'+
+        '<g transform="translate(180 76) scale(4)">'+
+          '<g class="zoom-blade"></g>'+
+        '</g>'+
+      '</svg></div>'+
+      '<div class="meta"><h3>'+opt.name+' <span>'+opt.tag+'</span></h3><p>'+opt.desc+'</p></div>';
+    btn.addEventListener("click", () => select(opt.id));
+    optsEl.appendChild(btn);
+    btn.querySelector(".zoom-blade").innerHTML = bladeMarkup(opt, {x:-32,y:0}, {x:0,y:0});
+  });
+
+  /* ---------- tabs ---------- */
+  const tabsEl = document.getElementById("tabs");
+  OPTIONS.forEach(opt => {
+    const tab=document.createElement("button");
+    tab.type="button";
+    tab.className="tab";
+    tab.dataset.id=opt.id;
+    tab.textContent = opt.key==="当前" ? "当前" : opt.key+" "+opt.name;
+    tab.setAttribute("aria-pressed", String(opt.id===selected));
+    tab.addEventListener("click", () => select(opt.id));
+    tabsEl.appendChild(tab);
+  });
+
+  /* ---------- stage ---------- */
+  const NODES = [
+    { id:"src", x:60,  y:140, w:190, h:74, title:"orders.csv", meta:"12,480 rows · 8 cols" },
+    { id:"s1",  x:380, y:70,  w:210, h:84, title:"search", tags:["select=email"] },
+    { id:"s2",  x:380, y:230, w:210, h:84, title:"fill",   tags:["select=region"] },
+    { id:"s3",  x:760, y:150, w:210, h:84, title:"dedup",  tags:["select=email"] }
+  ];
+  const EDGES = [
+    [250,177,380,112],[250,177,380,272],[590,112,760,192],[590,272,760,192]
+  ];
+  const BLADE_A={x:240,y:330}, BLADE_B={x:1040,y:140};
+
+  const stage = document.getElementById("stage");
+  const nodesLayer = stage.querySelector(".nodes");
+  NODES.forEach(n => {
+    const el=document.createElement("div");
+    el.className="node";
+    el.style.cssText="left:"+n.x+"px;top:"+n.y+"px;width:"+n.w+"px;height:"+n.h+"px";
+    el.innerHTML = '<div class="nt">'+n.title+'</div>'+
+      (n.meta ? '<div class="nm">'+n.meta+'</div>' : '')+
+      (n.tags ? '<div class="np">'+n.tags.map(t=>"<span>"+t+"</span>").join("")+'</div>' : '');
+    nodesLayer.appendChild(el);
+  });
+  const edgesG = stage.querySelector(".edges");
+  EDGES.forEach(e => {
+    const p=document.createElementNS(NS,"path");
+    p.setAttribute("class","edge");
+    p.setAttribute("d","M "+e[0]+" "+e[1]+" C "+(e[0]+40)+" "+e[1]+", "+(e[2]-40)+" "+e[3]+", "+e[2]+" "+e[3]);
+    edgesG.appendChild(p);
+  });
+
+  const bladeG = stage.querySelector(".blade");
+  const stageLabel = document.getElementById("stageLabel");
+  let sweepRaf=0;
+  let sweep=0;
+
+  function currentOption(){ return OPTIONS.find(o=>o.id===selected); }
+  function renderStage(){
+    const opt=currentOption();
+    bladeG.innerHTML = bladeMarkup(opt, BLADE_A, BLADE_B, sweep);
+    stageLabel.textContent = opt.key==="当前" ? "当前" : opt.key+" "+opt.name;
+  }
+  function select(id){
+    selected=id;
+    document.querySelectorAll(".opt").forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.id===id)));
+    document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.id===id)));
+    playSweep();
+  }
+  renderStage();
+
+  /* Let the highlight sweep once when the shape changes, so the head is seen
+     with the moving glint rather than as a frozen graphic. */
+  function playSweep(){
+    if (sweepRaf) cancelAnimationFrame(sweepRaf);
+    const reduce = typeof window.matchMedia==="function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce){ sweep=1; renderStage(); return; }
+    const t0=performance.now();
+    const step=(now)=>{
+      sweep=Math.min(1,(now-t0)/380);
+      renderStage();
+      if (sweep<1) sweepRaf=requestAnimationFrame(step);
+    };
+    sweep=0;
+    renderStage();
+    sweepRaf=requestAnimationFrame(step);
+  }
+  stage.addEventListener("dblclick", playSweep);
+})();
+</script>
+</body>
+</html>
