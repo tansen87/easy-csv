@@ -758,7 +758,6 @@ export interface Translations {
   separateStepFile: string;
   separateStepRule: string;
   separateStepOutput: string;
-  separateRuleHint: string;
   separateAdvanced: string;
   separateAdvancedHint: string;
   separateQuotingHint: string;
@@ -1038,6 +1037,30 @@ export interface Translations {
   filterAction: string;
   batchFilterAction: string;
   replaceAction: string;
+  emptyValuesAction: string;
+  onlyEmptyAction: string;
+  excludeEmptyAction: string;
+  fillAction: string;
+  fillModeLabel: string;
+  fillPreviousValue: string;
+  fillFixedValue: string;
+  fillValueLabel: string;
+  dedupByColumnAction: string;
+  blankDownAction: string;
+  analyzeActions: string;
+  groupAggregateAction: string;
+  groupAggregateLabel: string;
+  groupTargetLabel: string;
+  topRowsAction: string;
+  topLimitLabel: string;
+  topReverseLabel: string;
+  columnActions: string;
+  copyColumnNameAction: string;
+  copyColumnAction: string;
+  renameColumnAction: string;
+  renameNewNameLabel: string;
+  deleteColumnAction: string;
+  keepOnlyColumnAction: string;
 
   // FilterDialog
   pattern: string;

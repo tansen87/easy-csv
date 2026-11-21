@@ -101,8 +101,6 @@ export const enDialog = {
   separateStepFile: "Pick the CSV to check",
   separateStepRule: "Parsing and rule",
   separateStepOutput: "Output location",
-  separateRuleHint:
-    "Leave Expected columns blank to use the first row's count; skipped rows apply to both the preview and the split",
   separateAdvanced: "Advanced options",
   separateAdvancedHint: "Quoting · no headers · streaming",
   separateQuotingHint: "Parse quoted fields per CSV rules",

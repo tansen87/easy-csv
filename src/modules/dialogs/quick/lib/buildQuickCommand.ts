@@ -362,6 +362,83 @@ function buildWindow(
   };
 }
 
+function buildFill(
+  draft: Extract<QuickDraft, { kind: "fill" }>,
+  labels: QuickAliasLabels,
+): QuickBuildResult | null {
+  if (!draft.column) return null;
+  const params: Record<string, any> = {
+    select: draft.column,
+    output: "",
+  };
+  if (draft.mode === "value") {
+    if (!draft.value) return null;
+    params.value = draft.value;
+  }
+  return {
+    type: "fill",
+    params,
+    alias: `${labels.fill} · ${draft.column}`,
+  };
+}
+
+function buildGroupAggregate(
+  draft: Extract<QuickDraft, { kind: "groupby" }>,
+  labels: QuickAliasLabels,
+): QuickBuildResult | null {
+  if (!draft.column) return null;
+  if (draft.aggregate !== "count" && !draft.target) return null;
+  const expression =
+    draft.aggregate === "count"
+      ? `count() as "count"`
+      : `${draft.aggregate}(col("${draft.target}")) as "${draft.target}"`;
+  return {
+    type: "groupby",
+    params: {
+      columns: `"${draft.column}"`,
+      expression,
+      output: "",
+    },
+    alias: `${labels.groupAggregate} · ${draft.column}`,
+  };
+}
+
+function buildTopRows(
+  draft: Extract<QuickDraft, { kind: "top" }>,
+  labels: QuickAliasLabels,
+): QuickBuildResult | null {
+  if (!draft.column) return null;
+  const limit = parseInt(draft.limit, 10);
+  if (!Number.isFinite(limit) || limit <= 0) return null;
+  return {
+    type: "top",
+    params: {
+      column: draft.column,
+      limit,
+      reverse: draft.reverse,
+      output: "",
+    },
+    alias: `${labels.topRows} · ${draft.column}`,
+  };
+}
+
+function buildRenameColumn(
+  draft: Extract<QuickDraft, { kind: "rename-column" }>,
+  labels: QuickAliasLabels,
+): QuickBuildResult | null {
+  const newName = draft.newName.trim();
+  if (!draft.column || !newName || newName === draft.column) return null;
+  return {
+    type: "rename",
+    params: {
+      columns: draft.headers
+        .map((header) => (header === draft.column ? newName : header))
+        .join(","),
+    },
+    alias: `${labels.renameColumn} · ${draft.column}`,
+  };
+}
+
 export function buildQuickCommand(
   draft: QuickDraft,
   labels: QuickAliasLabels,
@@ -397,6 +474,14 @@ export function buildQuickCommand(
       return buildPad(draft, labels);
     case "window":
       return buildWindow(draft, labels);
+    case "fill":
+      return buildFill(draft, labels);
+    case "groupby":
+      return buildGroupAggregate(draft, labels);
+    case "top":
+      return buildTopRows(draft, labels);
+    case "rename-column":
+      return buildRenameColumn(draft, labels);
     case "batch-search":
       return {
         type: "batch-search",

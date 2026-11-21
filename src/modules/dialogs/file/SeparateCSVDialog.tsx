@@ -634,17 +634,11 @@ export function SeparateCSVDialog({
                   className="w-20 h-8 px-2 text-xs border rounded-md bg-background"
                 />
               </div>
-              <p className="text-[11px] text-muted-foreground/80">
-                {t.separateRuleHint}
-              </p>
             </StepSection>
 
             {/* Output location */}
             <StepSection index={3} title={t.separateStepOutput}>
               <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-muted-foreground shrink-0">
-                  {t.outputDir}
-                </label>
                 <input
                   type="text"
                   value={outputDir}

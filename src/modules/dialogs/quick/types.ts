@@ -146,6 +146,36 @@ export interface BatchFilterDraft {
   params: Record<string, any>;
 }
 
+export interface FillDraft {
+  kind: "fill";
+  column: string;
+  mode: "previous" | "value";
+  value: string;
+}
+
+export type GroupAggregateKind = "count" | "sum" | "avg" | "min" | "max";
+
+export interface GroupAggregateDraft {
+  kind: "groupby";
+  column: string;
+  aggregate: GroupAggregateKind;
+  target: string;
+}
+
+export interface TopRowsDraft {
+  kind: "top";
+  column: string;
+  limit: string;
+  reverse: boolean;
+}
+
+export interface RenameColumnDraft {
+  kind: "rename-column";
+  column: string;
+  newName: string;
+  headers: string[];
+}
+
 export type QuickDraft =
   | FilterDraft
   | SortDraft
@@ -157,7 +187,11 @@ export type QuickDraft =
   | SliceDraft
   | PadDraft
   | WindowDraft
-  | BatchFilterDraft;
+  | BatchFilterDraft
+  | FillDraft
+  | GroupAggregateDraft
+  | TopRowsDraft
+  | RenameColumnDraft;
 
 export interface QuickBuildResult {
   type: CommandDialogType;
@@ -180,6 +214,10 @@ export interface QuickAliasLabels {
   pivotAgg: string;
   pivotGroupby: string;
   pivot: string;
+  fill: string;
+  groupAggregate: string;
+  topRows: string;
+  renameColumn: string;
 }
 
 /** Props shared by every quick form. */

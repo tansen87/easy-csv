@@ -99,8 +99,6 @@ export const zhDialog = {
   separateStepFile: "选择要检查的 CSV",
   separateStepRule: "解析与判定",
   separateStepOutput: "输出位置",
-  separateRuleHint:
-    "期望列数留空时用第一行列数判定; 跳过行数对预览与拆分同时生效",
   separateAdvanced: "高级选项",
   separateAdvancedHint: "引号 · 无表头 · 流式",
   separateQuotingHint: "按 CSV 规则解析被引号包裹的字段",

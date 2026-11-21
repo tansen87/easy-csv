@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 069 · 列右键菜单（补动词版）</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --canvas-ink:oklch(0.3 0.006 80);
+    --canvas-ink-soft:oklch(0.2 0.01 80 / 7%);
+    --success:oklch(0.52 0.11 152);
+    --danger:oklch(0.55 0.17 27);
+    --danger-soft:color-mix(in oklab,var(--danger) 11%,transparent);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-fly:0 12px 28px -14px oklch(0.2 0.02 80 / 26%);
+    --mark:oklch(0.56 0.17 27);
+  }
+  .dark{
+    color-scheme:dark;
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --canvas-ink:oklch(0.92 0.005 85);
+    --canvas-ink-soft:oklch(1 0 0 / 8%);
+    --success:oklch(0.76 0.1 152);
+    --danger:oklch(0.72 0.14 27);
+    --danger-soft:color-mix(in oklab,var(--danger) 16%,transparent);
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.12 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-card:none;
+    --shadow-fly:0 12px 28px -14px oklch(0 0 0 / 75%);
+    --mark:oklch(0.68 0.17 27);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased;transition:background-color .18s ease,color .18s ease}
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme-toggle{position:absolute;right:0;top:2px;height:26px;padding:0 10px;border-radius:6px;
+                border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+                font-family:var(--mono);font-size:10.5px;cursor:pointer}
+  .theme-toggle:hover{color:var(--fg)}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+  .state-note{font-size:10.5px;color:var(--muted-fg);line-height:1.7;padding:10px 2px 0}
+  .state-note b{color:var(--fg);font-weight:500}
+
+  .stage{position:relative;width:1200px;overflow:hidden;border:1px solid var(--border);
+         border-radius:8px;background-color:var(--canvas);
+         background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+         background-size:22px 22px;background-position:11px 11px}
+
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  .callout{display:flex;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;
+           background:var(--card);font-size:11px;line-height:1.75;color:var(--muted-fg)}
+  .callout b{color:var(--fg);font-weight:500}
+  .callout .mk{width:18px;height:18px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
+               font-family:var(--mono);font-size:9.5px;display:grid;place-items:center;flex:none;margin-top:1px}
+  .callout.bad .mk{background:var(--danger-soft);color:var(--danger)}
+
+  /* 表格背景 */
+  .sheet-table{position:absolute;border:1px solid var(--border);border-radius:8px;background:var(--paper);
+               box-shadow:var(--shadow-card);overflow:hidden}
+  .sheet-table .th{display:flex;background:color-mix(in oklab,var(--muted) 45%,transparent);
+                   border-bottom:1px solid var(--border-soft);font-size:10px;font-weight:600;color:var(--fg)}
+  .sheet-table .th div{width:118px;padding:6px 8px;border-right:1px solid var(--border-soft);
+                       white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sheet-table .th div:last-child{border-right:0}
+  .sheet-table .tr{display:flex;font-size:10px;color:var(--muted-fg);border-bottom:1px solid var(--border-soft)}
+  .sheet-table .tr:last-child{border-bottom:0}
+  .sheet-table .tr div{width:118px;padding:5px 8px;border-right:1px solid var(--border-soft);
+                       white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sheet-table .tr div:last-child{border-right:0}
+  .sheet-table .cursor{position:absolute;left:0;top:0;width:118px;height:100%;
+                       background:var(--brand-soft);pointer-events:none}
+
+  /* 菜单 */
+  .menu{width:208px;padding:5px;border:1px solid var(--border);border-radius:10px;
+        background:var(--card);box-shadow:var(--shadow-fly)}
+  .mhead{padding:2px 8px 6px;font-size:10px;font-weight:600;color:var(--muted-fg);
+         border-bottom:1px solid var(--border-soft);margin-bottom:4px}
+  .mi{display:flex;align-items:center;gap:9px;height:30px;padding:0 8px;border-radius:6px;
+      font-size:12px;color:var(--fg);position:relative;white-space:nowrap}
+  .mi:hover{background:color-mix(in oklab,var(--fg) 6%,transparent)}
+  .mi .ic{width:14px;height:14px;flex:none;color:var(--muted-fg)}
+  .mi .ic svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5;
+              stroke-linecap:round;stroke-linejoin:round}
+  .mi .chev{width:12px;height:12px;margin-left:auto;color:var(--muted-fg-3)}
+  .mi .chev svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.5}
+  .mi .cnt{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);
+           font-variant-numeric:tabular-nums}
+  .mi.danger{color:var(--danger)}
+  .mi.danger .ic{color:var(--danger)}
+  .sep{height:1px;margin:4px 6px;background:var(--border-soft)}
+  .flyout{width:184px;padding:5px;border:1px solid var(--border);border-radius:10px;
+          background:var(--card);box-shadow:var(--shadow-fly);position:absolute;z-index:6}
+  .flyout .mi{height:29px}
+  .mgroup{font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-3);
+          padding:5px 8px 3px;letter-spacing:.02em}
+
+  /* 卡片 */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .cand{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:13px 15px}
+  .cand .top{display:flex;align-items:baseline;gap:8px;margin-bottom:9px}
+  .cand h3{margin:0;font-size:12px;font-weight:500}
+  .cand .note{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)}
+  .cand p{margin:9px 0 0;font-size:10.5px;line-height:1.7;color:var(--muted-fg)}
+  .cand p b{color:var(--fg);font-weight:500}
+
+  /* 排序浮窗 */
+  .sortdialog{width:320px;border:1px solid var(--border);border-radius:10px;background:var(--paper);
+              box-shadow:var(--shadow-fly);overflow:hidden}
+  .sd-head{height:40px;display:flex;align-items:center;gap:8px;padding:0 8px 0 14px;
+           border-bottom:1px solid var(--border-soft)}
+  .sd-head .t{font-size:13px;font-weight:500}
+  .sd-head .scope{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+  .sd-head .x{width:22px;height:22px;display:grid;place-items:center;border-radius:5px;color:var(--muted-fg-3)}
+  .sd-head .x svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.5}
+  .sd-body{padding:12px 14px 8px;display:flex;flex-direction:column;gap:11px}
+  .sd-label{font-size:10px;color:var(--muted-fg);margin-bottom:5px}
+  .pick{border:1px solid var(--border);border-radius:6px;background:var(--card);padding:6px}
+  .pick .search{height:24px;border:1px solid var(--border-soft);border-radius:4px;background:var(--paper);
+                color:var(--muted-fg-3);font-size:10px;display:flex;align-items:center;padding:0 7px;margin-bottom:5px}
+  .pick .row{display:flex;align-items:center;gap:6px;height:24px;padding:0 5px;border-radius:4px;
+             font-size:11px;color:var(--fg)}
+  .pick .row .cb{width:12px;height:12px;border:1px solid var(--border);border-radius:3px;flex:none;
+                 display:grid;place-items:center;background:var(--card)}
+  .pick .row.on .cb{background:var(--brand);border-color:var(--brand)}
+  .pick .row.on .cb svg{width:8px;height:8px;fill:none;stroke:var(--brand-fg);stroke-width:3}
+  .pick .row .meta{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)}
+  .seg{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;width:max-content}
+  .seg span{height:24px;padding:0 12px;display:flex;align-items:center;font-size:10.5px;color:var(--muted-fg)}
+  .seg span.on{background:var(--brand-soft);color:var(--brand);font-weight:500}
+  .check{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--muted-fg)}
+  .check .cb{width:12px;height:12px;border:1px solid var(--border);border-radius:3px;background:var(--card)}
+  .sd-foot{border-top:1px solid var(--border-soft);padding:9px 14px 11px}
+  .sd-sum{font-size:10.5px;color:var(--muted-fg);display:flex;align-items:center;gap:5px;margin-bottom:8px}
+  .sd-sum code{font-size:10px}
+  .sd-actions{display:flex;align-items:center;gap:8px}
+  .sd-actions .adv{font-size:11px;color:var(--muted-fg)}
+  .sd-actions .right{margin-left:auto;display:flex;gap:7px}
+  .sd-actions .ghost{height:26px;padding:0 8px;border-radius:5px;display:flex;align-items:center;
+                     font-size:11px;color:var(--muted-fg)}
+  .sd-actions .primary{height:26px;padding:0 11px;border-radius:5px;display:flex;align-items:center;
+                       font-size:11px;font-weight:500;background:var(--brand);color:var(--brand-fg)}
+
+  /* 表格 */
+  table.spec{width:100%;border-collapse:collapse;background:var(--card);
+             border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:11px}
+  table.spec th{text-align:left;font-weight:500;color:var(--muted-fg);font-size:10px;
+                padding:8px 12px;border-bottom:1px solid var(--border);background:color-mix(in oklab,var(--muted) 45%,transparent)}
+  table.spec td{padding:8px 12px;border-bottom:1px solid var(--border-soft);color:var(--muted-fg);line-height:1.6;vertical-align:top}
+  table.spec tr:last-child td{border-bottom:0}
+  table.spec td:first-child{color:var(--fg);font-weight:500;white-space:nowrap;width:150px}
+  table.spec td:nth-child(2){width:210px}
+  table.spec td:nth-child(3){width:96px}
+  table.spec code{font-size:10.5px}
+  .new{color:var(--brand)}
+
+  .mark{position:absolute;width:16px;height:16px;border-radius:50%;background:var(--mark);color:#fff;
+        font-family:var(--mono);font-size:9.5px;line-height:16px;text-align:center;font-weight:500;z-index:7}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">PROTOTYPE 069 · COLUMN MENU, REVISED</div>
+    <h1>列右键菜单：补动词，不猜数据</h1>
+    <p>排序保留为一个入口：现有浮窗里已经能选升序 / 降序、多列和数值比较。菜单不读列统计，也不放「文本列 / 数值列」摘要；只做四段分组，补上空值、去重、连续重复、分析与列操作。</p>
+    <button class="theme-toggle" id="themeToggle" type="button">DARK</button>
+  </div>
+
+  <dl class="direction">
+    <div><dt>PRODUCT</dt><dd>在无限画布上搭 CSV 管道、从表头右键加步骤</dd></div>
+    <div><dt>CHARACTER</dt><dd>安静、动词明确、每一步都能撤销</dd></div>
+    <div><dt>WORLD</dt><dd>表格与浮动工具</dd></div>
+    <div><dt>MOMENTS</dt><dd>排序浮窗里的多列选择与方向切换</dd></div>
+    <div><dt>SIGNATURE</dt><dd>高频动词留在首层；多参数动作继续交给浮窗</dd></div>
+  </dl>
+
+  <!-- 01 审计 -->
+  <section class="frame">
+    <div class="cap"><b>01 · 现状</b><span>9 个入口平铺；排序已经是正确的浮窗形态</span><span class="file">ContextMenu</span></div>
+    <div class="stage" style="height:430px">
+      <div class="sheet-table" style="left:520px;top:34px;width:592px">
+        <div class="th"><div>手机号</div><div>姓名</div><div>城市</div><div>金额</div><div>下单日期</div></div>
+        <div class="tr"><div>138****2210</div><div>林一</div><div>杭州</div><div>1,280</div><div>2026-11-02</div></div>
+        <div class="tr"><div>139****8831</div><div>周珂</div><div>上海</div><div></div><div>2026-11-03</div></div>
+        <div class="tr"><div>138****2210</div><div>林一</div><div>杭州</div><div>640</div><div>2026-11-05</div></div>
+        <div class="tr"><div>137****0092</div><div>陈述</div><div>北京</div><div>2,050</div><div></div></div>
+        <div class="tr"><div>136****4417</div><div>许安</div><div>杭州</div><div>390</div><div>2026-11-08</div></div>
+        <div class="cursor" style="left:0"></div>
+      </div>
+
+      <div class="menu" style="position:absolute;left:70px;top:34px">
+        <div class="mhead">快捷操作</div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg></span>搜索</div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M13.5 3H2l8 9.46V19l4 2v-8.54l-1.5-1.77"/><path d="M19 8v6M22 11h-6"/></svg></span>批量搜索</div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M14 4h4a2 2 0 0 1 2 2v4"/><path d="M10 20H6a2 2 0 0 1-2-2v-4"/><path d="M7 8l-3 3 3 3"/><path d="M17 16l3-3-3-3"/></svg></span>替换</div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg></span>透视</div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></span>日期</div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg></span>窗口</div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span>文本转换<span class="chev"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span></div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/></svg></span>数字转换<span class="chev"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span></div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M21 16l-4 4-4-4"/><path d="M17 20V4"/><path d="M3 8l4-4 4 4"/><path d="M7 4v16"/></svg></span>排序</div>
+      </div>
+      <span class="mark" style="left:252px;top:124px">1</span>
+      <span class="mark" style="left:252px;top:304px">2</span>
+    </div>
+    <div class="notes">
+      <div class="callout bad"><span class="mk">1</span><span><b>缺清洗动词</b>：空值（看 / 排除 / 填充）、按列去重、连续重复置空都不在菜单里。</span></div>
+      <div class="callout bad"><span class="mk">2</span><span><b>9 项平铺，没有分段</b>：变换、聚合、列操作混在一起；再加新入口会太长。</span></div>
+      <div class="callout"><span class="mk">3</span><span><b>排序保持现状</b>：浮窗已经支持升序 / 降序、多列选择和数值比较，不再拆子菜单，也不拆成一键动作。</span></div>
+      <div class="callout"><span class="mk">4</span><span><b>不做列摘要</b>：菜单不显示类型、行数、空值统计，避免把「猜数据」的责任放进菜单。</span></div>
+    </div>
+  </section>
+
+  <!-- 02 新菜单 -->
+  <section class="frame">
+    <div class="cap"><b>02 · 新菜单</b><span>4 段 + 3 个子菜单；首层 11 行</span><span class="file">ContextMenu</span></div>
+    <div class="stage" style="height:500px">
+      <div class="sheet-table" style="left:520px;top:34px;width:592px">
+        <div class="th"><div>手机号</div><div>姓名</div><div>城市</div><div>金额</div><div>下单日期</div></div>
+        <div class="tr"><div>138****2210</div><div>林一</div><div>杭州</div><div>1,280</div><div>2026-11-02</div></div>
+        <div class="tr"><div>139****8831</div><div>周珂</div><div>上海</div><div></div><div>2026-11-03</div></div>
+        <div class="tr"><div>138****2210</div><div>林一</div><div>杭州</div><div>640</div><div>2026-11-05</div></div>
+        <div class="tr"><div>137****0092</div><div>陈述</div><div>北京</div><div>2,050</div><div></div></div>
+        <div class="tr"><div>136****4417</div><div>许安</div><div>杭州</div><div>390</div><div>2026-11-08</div></div>
+        <div class="cursor" style="left:0"></div>
+      </div>
+
+      <div class="menu" style="position:absolute;left:70px;top:24px">
+        <div class="mhead">快捷操作</div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg></span>搜索</div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M13.5 3H2l8 9.46V19l4 2v-8.54l-1.5-1.77"/><path d="M19 8v6M22 11h-6"/></svg></span>批量搜索</div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M21 16l-4 4-4-4"/><path d="M17 20V4"/><path d="M3 8l4-4 4 4"/><path d="M7 4v16"/></svg></span>排序</div>
+        <div class="sep"></div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M19 11l-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11z"/><path d="M5 2l5 5"/><path d="M2 13h15"/></svg></span>空值<span class="chev"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span></div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 6h10"/><path d="M3 12h10"/><path d="M3 18h10"/><path d="m16 9 5 5"/><path d="m21 9-5 5"/></svg></span>按此列去重</div>
+        <div class="sep"></div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span>文本转换<span class="chev"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span></div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/></svg></span>数字转换<span class="chev"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span></div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M14 4h4a2 2 0 0 1 2 2v4"/><path d="M10 20H6a2 2 0 0 1-2-2v-4"/><path d="M7 8l-3 3 3 3"/><path d="M17 16l3-3-3-3"/></svg></span>替换</div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></span>日期</div>
+        <div class="sep"></div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg></span>分析<span class="chev"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span></div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/></svg></span>列操作<span class="chev"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span></div>
+      </div>
+
+      <div class="flyout" style="left:288px;top:150px">
+        <div class="mgroup">空值</div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></span>只看空值</div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></span>排除空值</div>
+        <div class="sep"></div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M19 11l-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11z"/><path d="M5 2l5 5"/><path d="M2 13h15"/></svg></span>填充空值…</div>
+        <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v6M12 15v6"/><path d="M8 6l4-3 4 3M8 18l4 3 4-3"/></svg></span>连续重复置空</div>
+      </div>
+
+      <span class="mark" style="left:286px;top:160px">1</span>
+      <span class="mark" style="left:252px;top:362px">2</span>
+      <span class="mark" style="left:252px;top:392px">3</span>
+    </div>
+    <div class="notes">
+      <div class="callout"><span class="mk">1</span><span><b>空值子菜单</b>：只看 / 排除 / 填充 / 连续重复置空。前两项是一键搜索，填充走浮窗，置空一键落步；不再显示空值计数。</span></div>
+      <div class="callout"><span class="mk">2</span><span><b>分析 ▸</b>：分组统计 / 取前 N 行 / 透视 / 窗口。透视与窗口从首层迁入。</span></div>
+      <div class="callout"><span class="mk">3</span><span><b>列操作 ▸</b>：复制列名 / 复制整列 / 重命名 / 删除 / 只保留。破坏性动作固定在分隔线之后。</span></div>
+      <div class="callout"><span class="mk">4</span><span><b>首层 11 行</b>：比现状多 2 行，仍不需要滚动；排序保持一个入口，不拆子菜单。</span></div>
+    </div>
+  </section>
+
+  <!-- 03 子菜单 -->
+  <section class="frame">
+    <div class="cap"><b>03 · 三个子菜单</b><span>空值 / 分析 / 列操作，最多一层</span><span class="file">submenus</span></div>
+    <div class="grid2">
+      <div class="cand" style="padding:12px 14px">
+        <div class="top"><h3>空值 ▸</h3><span class="note">4 项</span></div>
+        <div class="flyout" style="position:relative;left:auto;top:auto;width:100%">
+          <div class="mgroup">空值</div>
+          <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></span>只看空值</div>
+          <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></span>排除空值</div>
+          <div class="sep"></div>
+          <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M19 11l-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11z"/><path d="M5 2l5 5"/><path d="M2 13h15"/></svg></span>填充空值…</div>
+          <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v6M12 15v6"/><path d="M8 6l4-3 4 3M8 18l4 3 4-3"/></svg></span>连续重复置空</div>
+        </div>
+        <p>「只看 / 排除」直接生成 <code>search</code> 步骤；填充走浮窗，置空一键落步。</p>
+      </div>
+
+      <div class="cand" style="padding:12px 14px">
+        <div class="top"><h3>分析 ▸</h3><span class="note">4 项</span></div>
+        <div class="flyout" style="position:relative;left:auto;top:auto;width:100%">
+          <div class="mgroup">分析</div>
+          <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>分组统计</div>
+          <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 4h18M8 10h10M8 16h10"/><path d="M4 10h.01M4 16h.01"/></svg></span>取前 N 行</div>
+          <div class="sep"></div>
+          <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg></span>透视</div>
+          <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg></span>窗口</div>
+        </div>
+        <p>分组统计与取前 N 行走浮窗；透视 / 窗口原样迁入。</p>
+      </div>
+
+      <div class="cand" style="padding:12px 14px;grid-column:1 / -1">
+        <div class="top"><h3>列操作 ▸</h3><span class="note">5 项</span></div>
+        <div class="flyout" style="position:relative;left:auto;top:auto;width:100%;max-width:360px">
+          <div class="mgroup">列操作</div>
+          <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>复制列名</div>
+          <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>复制整列</div>
+          <div class="mi"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span>重命名…</div>
+          <div class="sep"></div>
+          <div class="mi danger"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg></span>删除此列</div>
+          <div class="mi danger"><span class="ic"><svg viewBox="0 0 24 24"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg></span>只保留此列</div>
+        </div>
+        <p>复制与重命名在前，分隔线后才是删除与只保留；不做二次确认，靠 <code>Ctrl+Z</code> 回退。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 排序浮窗 -->
+  <section class="frame">
+    <div class="cap"><b>04 · 排序不拆子菜单</b><span>现有浮窗已覆盖方向、多列与数值比较</span><span class="file">SortQuickForm</span></div>
+    <div class="stage" style="height:420px;display:flex;align-items:center;justify-content:center">
+      <div class="sortdialog">
+        <div class="sd-head">
+          <span class="t">排序</span>
+          <span class="scope">01 · 手机号</span>
+          <span class="x"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+        </div>
+        <div class="sd-body">
+          <div>
+            <div class="sd-label">排序列 · 已选 1</div>
+            <div class="pick">
+              <div class="search">搜索列</div>
+              <div class="row on">
+                <span class="cb"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
+                手机号
+                <span class="meta">text</span>
+              </div>
+              <div class="row">
+                <span class="cb"></span>
+                城市
+                <span class="meta">text</span>
+              </div>
+              <div class="row">
+                <span class="cb"></span>
+                金额
+                <span class="meta">float</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="sd-label">顺序</div>
+            <div class="seg"><span class="on">升序</span><span>降序</span></div>
+          </div>
+          <div class="check"><span class="cb"></span>按数值比较</div>
+        </div>
+        <div class="sd-foot">
+          <div class="sd-sum">将新增 <code>sort</code> · 手机号 · 升序</div>
+          <div class="sd-actions">
+            <span class="adv">高级参数</span>
+            <span class="right">
+              <span class="ghost">取消</span>
+              <span class="primary">应用</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="notes">
+      <div class="callout"><span class="mk">1</span><span><b>当前列已预选</b>：右键哪一列，浮窗里就勾上哪一列；再点多列即可组合排序。</span></div>
+      <div class="callout"><span class="mk">2</span><span><b>方向在一次操作里完成</b>：升序 / 降序是分段控件，不需要先选「升序」再进下一层。</span></div>
+      <div class="callout"><span class="mk">3</span><span><b>数值比较是显式选项</b>：文本列默认字典序，需要按数字排时勾选，不由菜单替你猜。</span></div>
+      <div class="callout"><span class="mk">4</span><span><b>菜单只留一个入口</b>：首层的「排序」直接打开这个浮窗，不再有「排序 ▸」子菜单。</span></div>
+    </div>
+  </section>
+
+  <!-- 05 清单 -->
+  <section class="frame">
+    <div class="cap"><b>05 · 动作清单</b><span>新增 / 迁移 / 保留</span><span class="file">commands</span></div>
+    <table class="spec">
+      <thead><tr><th>动作</th><th>命令</th><th>来源</th><th>交互与预填</th></tr></thead>
+      <tbody>
+        <tr><td>只看空值</td><td><code>search --empty</code></td><td class="new">新增</td><td>一键；预填当前列 + 空值</td></tr>
+        <tr><td>排除空值</td><td><code>search --non-empty</code></td><td class="new">新增</td><td>一键；预填当前列 + 非空</td></tr>
+        <tr><td>填充空值…</td><td><code>fill</code></td><td class="new">新增</td><td>浮窗；上一个非空值 / 固定值</td></tr>
+        <tr><td>按此列去重</td><td><code>dedup</code></td><td class="new">新增</td><td>一键；<code>select=当前列</code></td></tr>
+        <tr><td>连续重复置空</td><td><code>blank</code></td><td class="new">新增</td><td>一键；<code>select=当前列</code></td></tr>
+        <tr><td>排序</td><td><code>sort</code></td><td>保留</td><td>原浮窗：当前列预选、升 / 降序、多列、数值比较</td></tr>
+        <tr><td>文本转换 ▸</td><td><code>map</code></td><td>保留</td><td>原 12 个子项不拆</td></tr>
+        <tr><td>数字转换 ▸</td><td><code>map</code></td><td>保留</td><td>原 7 个子项不拆</td></tr>
+        <tr><td>替换</td><td><code>map</code></td><td>保留</td><td>原浮窗</td></tr>
+        <tr><td>日期</td><td><code>map</code></td><td>保留</td><td>原浮窗</td></tr>
+        <tr><td>分组统计…</td><td><code>groupby</code></td><td class="new">新增</td><td>浮窗；聚合方式 + 目标列</td></tr>
+        <tr><td>取前 N 行…</td><td><code>top</code></td><td class="new">新增</td><td>浮窗；N 默认 10，可反转</td></tr>
+        <tr><td>透视 / 窗口</td><td><code>pivot</code> / <code>window</code></td><td>迁移</td><td>原浮窗，位置移到「分析」</td></tr>
+        <tr><td>复制列名 / 复制整列</td><td>—</td><td class="new">新增</td><td>一键剪贴板；整列只复制已加载行</td></tr>
+        <tr><td>重命名…</td><td><code>rename</code></td><td class="new">新增</td><td>小浮窗：新列名 → 重建完整列名列表</td></tr>
+        <tr><td>删除此列 / 只保留此列</td><td><code>drop</code> / <code>select</code></td><td class="new">新增</td><td>一键；可撤销，danger 文本</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 06 规范 -->
+  <section class="frame">
+    <div class="cap"><b>06 · 规范</b><span>尺寸、分区与边界</span><span class="file">spec</span></div>
+    <table class="spec">
+      <thead><tr><th>项</th><th>值</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>菜单宽度</td><td>208 · 行高 30 · 内边距 5</td><td>与现状一致</td></tr>
+        <tr><td>头部</td><td>只保留「快捷操作」</td><td>不加列摘要、类型、行数与空值统计</td></tr>
+        <tr><td>分区</td><td>4 段 · 分隔线上下 4px</td><td>过滤排序 / 清洗 / 变换 / 分析与列操作</td></tr>
+        <tr><td>首层行数</td><td>11 行（含 3 个子菜单）</td><td>约 385px；不触发滚动</td></tr>
+        <tr><td>排序</td><td>单入口 · 现有浮窗</td><td>不拆子菜单，不做一键升 / 降序</td></tr>
+        <tr><td>图标</td><td>lucide · 14px · stroke 1.5</td><td>颜色用 muted</td></tr>
+        <tr><td>一键动作</td><td>直接新增步骤 · 可撤销</td><td>复制只写剪贴板，不建步骤</td></tr>
+        <tr><td>破坏性</td><td>「列操作」分隔线后 · danger</td><td>不做二次确认，依赖 <code>Ctrl+Z</code></td></tr>
+        <tr><td>子菜单</td><td>最多一层 · 宽 184</td><td>右侧不足时翻到左边</td></tr>
+        <tr><td>高度</td><td>视口不足时内部滚动</td><td>头部固定</td></tr>
+        <tr><td>动效</td><td>只淡入 · 80ms</td><td>不位移、不缩放</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('themeToggle');
+    if (!btn) return;
+    var root = document.documentElement;
+    var apply = function (dark) {
+      root.classList.toggle('dark', dark);
+      btn.textContent = dark ? 'LIGHT' : 'DARK';
+    };
+    apply(false);
+    btn.addEventListener('click', function () {
+      apply(!root.classList.contains('dark'));
+    });
+  })();
+</script>
+</body>
+</html>

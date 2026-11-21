@@ -9,6 +9,10 @@ import { SliceQuickForm } from "@/modules/dialogs/quick/forms/SliceQuickForm";
 import { PadQuickForm } from "@/modules/dialogs/quick/forms/PadQuickForm";
 import { WindowQuickForm } from "@/modules/dialogs/quick/forms/WindowQuickForm";
 import { BatchFilterQuickForm } from "@/modules/dialogs/quick/forms/BatchFilterQuickForm";
+import { FillQuickForm } from "@/modules/dialogs/quick/forms/FillQuickForm";
+import { GroupAggregateQuickForm } from "@/modules/dialogs/quick/forms/GroupAggregateQuickForm";
+import { TopRowsQuickForm } from "@/modules/dialogs/quick/forms/TopRowsQuickForm";
+import { RenameColumnQuickForm } from "@/modules/dialogs/quick/forms/RenameColumnQuickForm";
 import type { QuickFormProps } from "@/modules/dialogs/quick/types";
 
 /** Chooses the guided form for the context menu entry the user clicked. */
@@ -36,6 +40,14 @@ export function QuickActionDialog(props: QuickFormProps) {
       return <WindowQuickForm {...props} />;
     case "batch-search":
       return <BatchFilterQuickForm {...props} />;
+    case "fill":
+      return <FillQuickForm {...props} />;
+    case "groupby":
+      return <GroupAggregateQuickForm {...props} />;
+    case "top":
+      return <TopRowsQuickForm {...props} />;
+    case "rename-column":
+      return <RenameColumnQuickForm {...props} />;
     default:
       return null;
   }

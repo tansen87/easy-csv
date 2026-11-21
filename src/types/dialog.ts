@@ -206,7 +206,19 @@ export type QuickActionKind =
   | "slice"
   | "pad"
   | "window"
-  | "batch-search";
+  | "batch-search"
+  | "fill"
+  | "groupby"
+  | "top"
+  | "rename-column"
+  | "search-empty"
+  | "search-non-empty"
+  | "dedup-column"
+  | "blank-column"
+  | "drop-column"
+  | "keep-column"
+  | "copy-column-name"
+  | "copy-column";
 
 /** Everything the table context menu knows when a quick action is opened. */
 export interface QuickActionRequest {

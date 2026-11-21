@@ -20,6 +20,11 @@ import {
   CommandDialogState,
 } from "@/modules/dialogs/command/CommandDialog";
 import { QuickActionDialog } from "@/modules/dialogs/quick/QuickActionDialog";
+import {
+  buildInstantColumnAction,
+  isInstantColumnAction,
+  type InstantColumnActionKind,
+} from "@/modules/dialogs/quick/lib/instantColumnAction";
 import type {
   QuickActionRequest,
   QuickBuildResult,
@@ -268,11 +273,52 @@ export const HomeView = React.memo(function HomeView({
 
   /**
    * Right-click quick actions: FlowPanel reports the clicked column, transform
-   * kind and pointer position; the guided dialog anchors itself there.
+   * kind and pointer position. Column actions that need no guided form run here
+   * immediately; everything else opens the floating dialog.
    */
-  const handleQuickAction = useCallback((request: QuickActionRequest) => {
-    setQuickAction(request);
-  }, []);
+  const handleQuickAction = useCallback(
+    (request: QuickActionRequest) => {
+      const col = request.col;
+      const column = col !== undefined ? request.headers[col] : undefined;
+
+      if (col !== undefined && column) {
+        if (request.kind === "copy-column-name") {
+          void navigator.clipboard?.writeText(column).catch(() => {});
+          return;
+        }
+        if (request.kind === "copy-column") {
+          const text = data.map((row) => row[col] ?? "").join("\n");
+          void navigator.clipboard?.writeText(text).catch(() => {});
+          return;
+        }
+        if (isInstantColumnAction(request.kind)) {
+          const built = buildInstantColumnAction(request.kind, column);
+          const command = built
+            ? xanCommands.find((cmd) => cmd.id === built.type)
+            : undefined;
+          if (built && command) {
+            const labels: Record<InstantColumnActionKind, string> = {
+              "search-empty": t.onlyEmptyAction,
+              "search-non-empty": t.excludeEmptyAction,
+              "dedup-column": t.dedupByColumnAction,
+              "blank-column": t.blankDownAction,
+              "drop-column": t.deleteColumnAction,
+              "keep-column": t.keepOnlyColumnAction,
+            };
+            onAddCommand(
+              command,
+              built.params,
+              `${labels[request.kind]} · ${column}`,
+            );
+          }
+          return;
+        }
+      }
+
+      setQuickAction(request);
+    },
+    [data, onAddCommand, t],
+  );
 
   const handleQuickApply = useCallback(
     (result: QuickBuildResult) => {

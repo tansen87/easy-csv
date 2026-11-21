@@ -37,6 +37,10 @@ const LABELS: QuickAliasLabels = {
   pivotAgg: "Agg",
   pivotGroupby: "Groupby",
   pivot: "Pivot",
+  fill: "Fill",
+  groupAggregate: "Group",
+  topRows: "Top",
+  renameColumn: "Rename",
 };
 
 const filterBase: FilterDraft = {
@@ -381,5 +385,122 @@ describe("buildQuickCommand · pivot / window / batch-search", () => {
       params: { column: "name" },
       alias: "Batch Filter",
     });
+  });
+});
+
+describe("buildQuickCommand · column actions", () => {
+  it("fills with the previous value or a fixed value", () => {
+    expect(
+      buildQuickCommand(
+        { kind: "fill", column: "phone", mode: "previous", value: "" },
+        LABELS,
+      ),
+    ).toEqual({
+      type: "fill",
+      params: { select: "phone", output: "" },
+      alias: "Fill · phone",
+    });
+
+    expect(
+      buildQuickCommand(
+        { kind: "fill", column: "phone", mode: "value", value: "未知" },
+        LABELS,
+      ),
+    ).toMatchObject({ params: { select: "phone", value: "未知" } });
+
+    expect(
+      buildQuickCommand(
+        { kind: "fill", column: "phone", mode: "value", value: "" },
+        LABELS,
+      ),
+    ).toBeNull();
+  });
+
+  it("builds groupby expressions for count and aggregates", () => {
+    expect(
+      buildQuickCommand(
+        { kind: "groupby", column: "city", aggregate: "count", target: "" },
+        LABELS,
+      ),
+    ).toEqual({
+      type: "groupby",
+      params: {
+        columns: '"city"',
+        expression: 'count() as "count"',
+        output: "",
+      },
+      alias: "Group · city",
+    });
+
+    expect(
+      buildQuickCommand(
+        {
+          kind: "groupby",
+          column: "city",
+          aggregate: "sum",
+          target: "amount",
+        },
+        LABELS,
+      ),
+    ).toMatchObject({
+      params: { expression: 'sum(col("amount")) as "amount"' },
+    });
+
+    expect(
+      buildQuickCommand(
+        { kind: "groupby", column: "city", aggregate: "sum", target: "" },
+        LABELS,
+      ),
+    ).toBeNull();
+  });
+
+  it("builds top rows with a positive limit", () => {
+    expect(
+      buildQuickCommand(
+        { kind: "top", column: "amount", limit: "10", reverse: true },
+        LABELS,
+      ),
+    ).toEqual({
+      type: "top",
+      params: { column: "amount", limit: 10, reverse: true, output: "" },
+      alias: "Top · amount",
+    });
+
+    expect(
+      buildQuickCommand(
+        { kind: "top", column: "amount", limit: "0", reverse: false },
+        LABELS,
+      ),
+    ).toBeNull();
+  });
+
+  it("renames one column by rebuilding the header list", () => {
+    expect(
+      buildQuickCommand(
+        {
+          kind: "rename-column",
+          column: "city",
+          newName: "区域",
+          headers: ["phone", "city", "amount"],
+        },
+        LABELS,
+      ),
+    ).toEqual({
+      type: "rename",
+      params: { columns: "phone,区域,amount" },
+      alias: "Rename · city",
+    });
+
+    expect(
+      buildQuickCommand(
+        {
+          kind: "rename-column",
+          column: "city",
+          newName: "city",
+          headers: ["phone", "city"],
+        },
+        LABELS,
+      ),
+    ).toBeNull();
   });
 });

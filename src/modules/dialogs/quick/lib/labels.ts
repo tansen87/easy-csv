@@ -46,5 +46,9 @@ export function useQuickAliasLabels(): QuickAliasLabels {
     pivotAgg: t.pivotAliasAgg,
     pivotGroupby: t.pivotAliasGroupby,
     pivot: t.pivotAliasPivot,
+    fill: t.fillAction,
+    groupAggregate: t.groupAggregateAction,
+    topRows: t.topRowsAction,
+    renameColumn: t.renameColumnAction,
   };
 }
