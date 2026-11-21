@@ -474,11 +474,11 @@ export function CsvToExcelDialog({
 
             {/* Conversion settings */}
             <StepSection index={2} title={t.excelStepSettings}>
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-[auto_11rem_minmax(0,1fr)] items-center gap-x-2 gap-y-2.5">
                 <label className="text-xs font-medium text-muted-foreground shrink-0">
                   {t.excelMode}
                 </label>
-                <div className="w-44 shrink-0">
+                <div className="w-full">
                   <Select
                     value={multi ? "multi" : "single"}
                     onChange={(value) => {
@@ -492,11 +492,11 @@ export function CsvToExcelDialog({
                     ariaLabel={t.excelMode}
                   />
                 </div>
-                {multi && (
-                  <>
+                {multi ? (
+                  <div className="flex items-center justify-self-end gap-2">
                     <label
                       htmlFor="csv-to-excel-chunk"
-                      className="text-xs font-medium text-muted-foreground shrink-0 ml-auto"
+                      className="text-xs font-medium text-muted-foreground shrink-0"
                     >
                       {t.excelChunkSize}
                     </label>
@@ -511,19 +511,19 @@ export function CsvToExcelDialog({
                       }}
                       className="w-36 h-8 px-2 text-xs border rounded-md bg-background"
                     />
-                  </>
+                  </div>
+                ) : (
+                  <span />
                 )}
-              </div>
-              {multi && (
-                <p className="text-[11px] text-muted-foreground/70">
-                  {t.excelChunkSizeHint}
-                </p>
-              )}
-              <div className="flex items-center gap-2">
+                {multi && (
+                  <p className="col-span-3 text-[11px] text-muted-foreground/70">
+                    {t.excelChunkSizeHint}
+                  </p>
+                )}
                 <label className="text-xs font-medium text-muted-foreground shrink-0">
                   {t.delimiter}
                 </label>
-                <div className="w-44 shrink-0">
+                <div className="w-full">
                   <Select
                     value={delimiterMode}
                     onChange={(value) => {
@@ -537,23 +537,25 @@ export function CsvToExcelDialog({
                     ariaLabel={t.delimiter}
                   />
                 </div>
-                <label
-                  htmlFor="csv-to-excel-skiprows"
-                  className="text-xs font-medium text-muted-foreground shrink-0 ml-auto"
-                >
-                  {t.skiprows}
-                </label>
-                <input
-                  id="csv-to-excel-skiprows"
-                  type="number"
-                  min={0}
-                  value={skiprows}
-                  onChange={(e) => {
-                    clearFeedback();
-                    setSkiprows(e.target.value);
-                  }}
-                  className="w-36 h-8 px-2 text-xs border rounded-md bg-background"
-                />
+                <div className="flex items-center justify-self-end gap-2">
+                  <label
+                    htmlFor="csv-to-excel-skiprows"
+                    className="text-xs font-medium text-muted-foreground shrink-0"
+                  >
+                    {t.skiprows}
+                  </label>
+                  <input
+                    id="csv-to-excel-skiprows"
+                    type="number"
+                    min={0}
+                    value={skiprows}
+                    onChange={(e) => {
+                      clearFeedback();
+                      setSkiprows(e.target.value);
+                    }}
+                    className="w-36 h-8 px-2 text-xs border rounded-md bg-background"
+                  />
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <label className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
