@@ -1,0 +1,35 @@
+# Changelog
+
+## [0.8.3] - 2026-11-22
+
+28 commits since v0.8.2.
+
+### Added
+
+- **The right-click panels are now step slips instead of stacked forms** (design `055`). Every quick action — sort, text transform, window, map, the column-level shortcuts — used to lay each setting out over three lines (label above, control below, hint below that), so a six-option panel was taller than the canvas and every one of them looked different. They now share one set of controls on a 4px grid: 28px controls, 26px list rows, and a labelled setting is a **single row** (72px label + control) rather than a stack. One `Field`, one checkbox, one input and one section header are reused everywhere, which is why the slip can show six options without scrolling. The panels also pick up the step's own wording, so a slip opened from a column reads like the step it is about to create.
+- **Expression editor rebuilt around a shared, caret-anchored popover** (design `056`). The `map` form's expression box, the SQL editor and the new checkbox row now draw from the same component, so the completion list opens at the caret, flips above the word when the editor's bottom is close, and stays inside the dialog's scroll viewport — the behaviour design `051` established for DuckDB SQL, now shared rather than reimplemented. Column and function insertion no longer depends on which editor you happen to be in.
+- **Canvas tooling: a tools menu, a left-button select/pan tool, and swap mouse buttons** (prototypes `058` / `059`). The canvas gains a `≡` menu with **tidy layout, snap-to-grid, lock canvas** and the gesture legend, and the left rail now carries the left-button tool (box-select or pan) above the right-click mode (cut or menu). If your mouse is left-handed, `Swap mouse buttons` exchanges the two and keeps every hint, cursor and tooltip consistent with what the buttons actually do. A `GestureLegend` overlay spells out select / pan / cut / menu / zoom / wheel, dismissible and remembered.
+- **Clean invalid characters tool** (`清除符号`). Removes stray quotes, control characters and other leftovers **per physical line, without parsing CSV** — so a file with unbalanced quotes can still be cleaned, which is exactly the case where a CSV parser would refuse the file. Rules are ticked individually, the run is previewed before writing, and the last settings are remembered.
+- **AI chat sessions**. Conversations are now listed and can be reopened, renamed and deleted instead of living only in the current panel; the panel also became dock-aware, so opening it no longer changes what the canvas is doing underneath.
+- **Run timer**. A running pipeline shows live elapsed time in the canvas pill and in the tool dialogs, and the finished run keeps its recorded duration next to the result — so "why is this slow" has an answer after the run, not just during it.
+
+### Changed
+
+- **The command catalog is a docked column instead of a floating card box** (design `072`). The 61 operations used to be a 280×500 draggable window with a `Hand` handle, one card per operation (66px each, ~8000px of scroll) and uppercase English category labels. It is now a **260px column that runs from below the title bar to 4px above the window bottom**, one 40px row per operation with the monospace name on the first line and its description on the second, a sticky group header carrying the `01`–`14` index and a count, and a search that matches the name, the Chinese description **and** the category. Typing a category name shows the whole group; typing two words narrows instead of widening. The help `?` stays visible on every row (a hover-only entry is not an entry) without competing with the row, the footer states how many operations there are, and the panel no longer remembers a position — it is docked, not dragged. The canvas tool rail slides out of its way to sit beside it.
+- **The log panel is a bottom drawer, and logs survive a restart** (design `071`). Runs are grouped instead of interleaved, level filters are chips, the drawer can be dragged taller, and entries are also written to `data/logs/easy-csv-YYYY-MM-DD.log` as JSONL — one file per day, 8 KB per line, rolled at 5 MB, pruned after the retention period (7 days by default, `0` turns the file off, memory keeps working either way). Clearing the drawer clears what you can see; the files stay under the retention setting. A new setting decides whether the drawer opens on its own when a run starts or fails — off by default.
+- **The column context menu is grouped, and its shortcuts run immediately.** Column actions now sit under headings (transform / filter / clean / inspect) with the destructive ones last, and the actions that need no options (dedupe, sort, drop, fill, reorder) apply on click instead of opening a dialog to confirm what you already said.
+- **Run status moved into the tab rail**, next to the tab it belongs to, with a progress line, instead of a readout in the toolbar that was easy to miss while watching the canvas.
+- **Step node buttons rebuilt** with tooltips and translated labels; **shortcut chips** are now one space-separated chord (`Ctrl Shift K`) instead of boxed keys that read as separate chords.
+- **`batch-filter` is now `batch-search`**, matching what it does; saved pipelines and templates are migrated.
+- **The Help dialog is wider**, and several dialogs got grid alignment: the split-rules dialog puts each rule's fields on one line, and the CSV→Excel settings are two columns instead of a ladder.
+- **Copy trimmed**: the encoding dialog's repeated hints, the delimiter sample column hint and a few running labels lost the sentences that explained what the control already said.
+
+### Fixed
+
+- **Rounded corners no longer flash a square frame on startup**, and maximising then restoring a window no longer lands on a stretched rectangle. The title bar was being re-added by Windows after the frame was stripped (window flags are applied asynchronously), the CSS radius waited for an `isMaximized()` round-trip that arrives after the first frame, and clamping a maximised window rewrote its restore rectangle. All three are fixed at the source: frame strip after the flag changes, `data-window-maximized` written before the first paint, and the restore rect snapshotted through `WINDOWPLACEMENT` before any resize.
+- **A failed step is now attributed to the command that actually failed.** The error used to be reported against the step that happened to be running when the pipeline aborted; it now points at the first failing command, so the red node is the one you have to edit.
+
+### Docs
+
+- Designs `055`, `056`, `071` and `072` added with implementation notes, prototypes `057`–`072` added alongside them, and `docs/QA/borderless-window.md` extended with the startup and maximise cases found while fixing the frame.
+- `README` feature list and screenshots re-synced, and `docs/AI/INDEX.md` refreshed for the new modules (log drawer and its pure grouping layer, the command catalog and its search, the quick-action slips, the canvas tools) plus the test conventions that came with them.
