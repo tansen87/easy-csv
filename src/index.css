@@ -920,6 +920,12 @@ html[data-window-maximized="true"] .window-resize-handle {
   display: none;
 }
 
+/* unslop 071-02: one stroke weight for every icon in the log drawer, so the
+   lucide set reads as one set instead of a mix of defaults. */
+[data-testid="log-panel"] svg {
+  stroke-width: 1.5;
+}
+
 /* --- File tabs ---
    The selected tab is a raised accent paper: an accent-tinted card with no
    border, lifted by a 1px shadow in light mode. Dark drops the shadow (it

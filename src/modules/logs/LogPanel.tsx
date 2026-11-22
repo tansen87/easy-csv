@@ -9,7 +9,6 @@ import {
   History,
   Maximize2,
   Minimize2,
-  RotateCcw,
   Search,
   Trash2,
   X,
@@ -69,12 +68,12 @@ const LOG_DOT_CLASS: Record<LogEntry["type"], string> = {
   error: "bg-danger",
 };
 
-/** Group status dot: worst severity; app-level groups stay neutral. */
-const GROUP_DOT_CLASS: Record<LogRunGroup["status"], string> = {
-  info: "bg-muted-foreground/50",
-  success: "bg-success",
-  warning: "bg-warning",
-  error: "bg-danger",
+/** Rail node: worst severity of the run — stroke (and fill) carry the colour. */
+const RAIL_NODE_CLASS: Record<LogRunGroup["status"], string> = {
+  info: "border-muted-foreground/60",
+  success: "border-success bg-success/20",
+  warning: "border-warning bg-warning/20",
+  error: "border-danger bg-danger/20",
 };
 
 const DEFAULT_HEIGHT = 260;
@@ -132,6 +131,8 @@ export const LogPanel = React.memo(function LogPanel({
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [atBottom, setAtBottom] = useState(true);
+  /** 1-based position shown in the search box (unslop 071-02: "1/3"). */
+  const [hitIndex, setHitIndex] = useState(0);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const copyTimerRef = useRef<number | null>(null);
   const groupCopyTimerRef = useRef<number | null>(null);
@@ -147,10 +148,29 @@ export const LogPanel = React.memo(function LogPanel({
 
   const totals = useMemo(() => levelTotals(logs), [logs]);
 
+  useEffect(() => {
+    hitIndexRef.current = 0;
+    setHitIndex(0);
+  }, [query]);
+
   const filtered = useMemo(
     () => filterLogs(logs, activeFilter, tabScope, selectedTabId, query),
     [logs, activeFilter, tabScope, selectedTabId, query],
   );
+
+  /** Lines with at least one search hit — drives the "1/3" box indicator. */
+  const hitTotal = useMemo(() => {
+    const terms = query
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((term) => term.length > 0);
+    if (terms.length === 0) return 0;
+    return filtered.filter((log) => {
+      const message = log.message.toLowerCase();
+      return terms.every((term) => message.includes(term));
+    }).length;
+  }, [filtered, query]);
 
   const groups = useMemo(
     () => buildLogGroups(filtered, tabNameById, t.logGroupApp),
@@ -307,8 +327,10 @@ export const LogPanel = React.memo(function LogPanel({
       if (!viewport) return;
       const hits = viewport.querySelectorAll<HTMLElement>("[data-log-hit]");
       if (hits.length === 0) return;
-      hitIndexRef.current = (hitIndexRef.current + 1) % hits.length;
-      hits[hitIndexRef.current].scrollIntoView({ block: "center" });
+      const next = (hitIndexRef.current + 1) % hits.length;
+      hitIndexRef.current = next;
+      setHitIndex(next);
+      hits[next].scrollIntoView({ block: "center" });
     }
   };
 
@@ -432,7 +454,7 @@ export const LogPanel = React.memo(function LogPanel({
                 onClick={() => setTabScope("current")}
                 className={`h-full px-2 text-[10.5px] transition-colors ${
                   tabScope === "current"
-                    ? "bg-primary/10 font-medium text-primary"
+                    ? "bg-muted font-medium text-foreground shadow-[inset_0_0_0_1px_var(--border-soft)]"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -444,7 +466,7 @@ export const LogPanel = React.memo(function LogPanel({
                 onClick={() => setTabScope("all")}
                 className={`h-full px-2 text-[10.5px] transition-colors ${
                   tabScope === "all"
-                    ? "bg-primary/10 font-medium text-primary"
+                    ? "bg-muted font-medium text-foreground shadow-[inset_0_0_0_1px_var(--border-soft)]"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -468,6 +490,11 @@ export const LogPanel = React.memo(function LogPanel({
             aria-label={t.logSearchPlaceholder}
             className="w-full border-0 bg-transparent text-[11px] text-foreground outline-none placeholder:text-muted-foreground/70"
           />
+          {query.trim() && hitTotal > 0 && (
+            <span className="shrink-0 font-mono text-[9.5px] tabular-nums text-muted-foreground/70">
+              {Math.min(hitIndex + 1, hitTotal)}/{hitTotal}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-0.5">
@@ -565,7 +592,13 @@ export const LogPanel = React.memo(function LogPanel({
             )}
           </div>
         ) : (
-          <div>
+          <div className="relative pb-2 pl-7">
+            {/* Timeline rail — the drawer's signature (071-02): one run = one
+                stop; the node carries the run's worst severity. */}
+            <div
+              className="absolute bottom-4 top-2 w-px bg-border-soft"
+              style={{ left: 15 }}
+            />
             {groups.map((group) => {
               const isCollapsed = collapsed.has(group.key);
               const day = dayLabel(group.startedAt);
@@ -574,25 +607,24 @@ export const LogPanel = React.memo(function LogPanel({
               return (
                 <React.Fragment key={group.key}>
                   {showDaySep && (
-                    <div className="flex items-center gap-2.5 px-3 pb-1.5 pt-2.5">
-                      <span className="font-mono text-[9.5px] text-muted-foreground/80">
-                        {day}
-                      </span>
-                      {group.hasDisk && (
-                        <span className="rounded-full bg-primary/10 px-1.5 py-px text-[9.5px] text-primary">
-                          {t.logFromDisk}
-                        </span>
-                      )}
+                    <div className="flex items-center gap-2.5 py-2.5 pr-3 font-mono text-[9.5px] tabular-nums text-muted-foreground/80">
+                      <span>{day}</span>
+                      {group.hasDisk && <span>· {t.logFromDisk}</span>}
                       <span className="h-px flex-1 bg-border-soft" />
                     </div>
                   )}
                   <div
-                    className="border-b border-border-soft last:border-b-0"
+                    className="relative border-b border-border-soft last:border-b-0"
                     data-log-group={group.key}
                   >
+                    <span
+                      className={`absolute left-[-17px] top-[11px] h-[9px] w-[9px] rounded-full border-[1.5px] bg-card ${
+                        RAIL_NODE_CLASS[group.status]
+                      }`}
+                    />
                     <button
                       type="button"
-                      className="flex h-8 w-full items-center gap-2 px-3 text-left transition-colors hover:bg-muted/40"
+                      className="group/head flex h-8 w-full items-center gap-2 pr-3 text-left transition-colors hover:bg-muted/40"
                       onClick={() =>
                         setCollapsed((prev) => {
                           const next = new Set(prev);
@@ -603,13 +635,10 @@ export const LogPanel = React.memo(function LogPanel({
                       }
                     >
                       {isCollapsed ? (
-                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" strokeWidth={1.5} />
                       ) : (
-                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" strokeWidth={1.5} />
                       )}
-                      <span
-                        className={`h-[7px] w-[7px] shrink-0 rounded-full ${GROUP_DOT_CLASS[group.status]}`}
-                      />
                       <span className="min-w-0 max-w-[220px] truncate text-[11.5px] font-medium text-foreground">
                         {group.key === APP_GROUP_KEY
                           ? t.logGroupApp
@@ -620,29 +649,34 @@ export const LogPanel = React.memo(function LogPanel({
                         {group.entries.length}
                         {t.logCountUnit ? ` ${t.logCountUnit}` : ""}
                       </span>
-                      <span className="flex shrink-0 gap-1">
+                      {/* Level summary as quiet mono text — colour only on
+                          the words, never a pill (unslop 071-02). */}
+                      <span className="shrink-0 font-mono text-[10px] tabular-nums">
                         {group.counts.error > 0 && (
-                          <span className="rounded-full bg-danger/10 px-1.5 text-[9.5px] text-danger">
-                            {levelLabel.error} ×{group.counts.error}
+                          <span className="text-danger">
+                            {group.counts.error} {levelLabel.error}
                           </span>
                         )}
                         {group.counts.warning > 0 && (
-                          <span className="rounded-full bg-warning/15 px-1.5 text-[9.5px] text-warning">
-                            {levelLabel.warning} ×{group.counts.warning}
-                          </span>
+                          <>
+                            {group.counts.error > 0 && " · "}
+                            <span className="text-warning">
+                              {group.counts.warning} {levelLabel.warning}
+                            </span>
+                          </>
                         )}
                         {group.status === "success" && (
-                          <span className="rounded-full bg-success/10 px-1.5 text-[9.5px] text-success">
+                          <span className="text-muted-foreground/70">
                             {levelLabel.success}
                           </span>
                         )}
                       </span>
-                      <span className="ml-auto flex shrink-0 items-center gap-2 pr-1">
+                      <span className="ml-auto flex shrink-0 items-center gap-3 pr-1 text-[10.5px] text-muted-foreground/70 opacity-0 transition-opacity duration-150 pointer-events-none group-hover/head:pointer-events-auto group-hover/head:opacity-100">
                         <span
                           role="button"
                           tabIndex={0}
                           aria-label={t.logCopyAll}
-                          className="text-[10.5px] text-muted-foreground/70 hover:text-foreground"
+                          className="hover:text-foreground"
                           onClick={(e) => {
                             e.stopPropagation();
                             copyGroup(group);
@@ -665,7 +699,7 @@ export const LogPanel = React.memo(function LogPanel({
                             role="button"
                             tabIndex={0}
                             aria-label={t.logRerun}
-                            className="flex items-center gap-1 text-[10.5px] text-muted-foreground/70 hover:text-foreground"
+                            className="flex items-center gap-1 hover:text-foreground"
                             onClick={(e) => {
                               e.stopPropagation();
                               onRerun(rerunTabId);
@@ -677,7 +711,6 @@ export const LogPanel = React.memo(function LogPanel({
                               }
                             }}
                           >
-                            <RotateCcw className="h-3 w-3" />
                             {t.logRerun}
                           </span>
                           );
@@ -698,7 +731,7 @@ export const LogPanel = React.memo(function LogPanel({
                           return (
                             <div
                               key={log.id}
-                              className="group flex items-start gap-2 py-1 pl-[38px] pr-3 hover:bg-muted/30"
+                              className="group/row flex items-start gap-2 py-1 pr-3 hover:bg-muted/30"
                             >
                               <span
                                 className="w-[56px] shrink-0 pt-px font-mono text-[10px] tabular-nums text-muted-foreground/70"
@@ -721,7 +754,7 @@ export const LogPanel = React.memo(function LogPanel({
                                     // yellow `mark` (071 feedback).
                                     <mark
                                       key={i}
-                                      className="rounded-[2px] bg-primary/15 px-0.5 font-semibold text-primary"
+                                      className="rounded-[2px] bg-primary/15 px-0.5 font-medium text-primary"
                                     >
                                       {seg.text}
                                     </mark>
@@ -747,7 +780,7 @@ export const LogPanel = React.memo(function LogPanel({
                                     onClick={() =>
                                       void copyText(log.message, log.id)
                                     }
-                                    className="h-4 w-4 opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+                                    className="h-4 w-4 opacity-0 pointer-events-none group-hover/row:pointer-events-auto group-hover/row:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
                                   >
                                     {copiedLogId === log.id ? (
                                       <Check className="h-3 w-3 text-muted-foreground" />
@@ -763,7 +796,7 @@ export const LogPanel = React.memo(function LogPanel({
                                       size="icon-sm"
                                       aria-label={t.remove}
                                       onClick={() => onRemoveLog(log.id)}
-                                      className="h-4 w-4 text-muted-foreground opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 hover:text-destructive focus-visible:pointer-events-auto focus-visible:opacity-100"
+                                      className="h-4 w-4 text-muted-foreground opacity-0 pointer-events-none group-hover/row:pointer-events-auto group-hover/row:opacity-100 hover:text-destructive focus-visible:pointer-events-auto focus-visible:opacity-100"
                                     >
                                       <Trash2 className="h-3 w-3" />
                                     </Button>

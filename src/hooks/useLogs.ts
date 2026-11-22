@@ -114,9 +114,13 @@ export function useLogs(getTabName?: (tabId: string) => string | undefined) {
     setLogs((prev) => prev.filter((log) => log.id !== id));
   }, []);
 
-  /** Clears the in-memory list only; disk files are handled by retention. */
+  /**
+   * Clears everything the drawer shows. Backfilled disk lines are included —
+   * keeping them made the button read as dead after a restart (every visible
+   * line came from disk). The files themselves stay; retention manages them.
+   */
   const clearLogs = useCallback(() => {
-    setLogs((prev) => prev.filter((log) => log.fromDisk));
+    setLogs([]);
   }, []);
 
   /** Re-read the retention setting after the user changed it in Settings. */

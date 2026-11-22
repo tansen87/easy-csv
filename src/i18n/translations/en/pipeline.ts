@@ -257,7 +257,7 @@ export const enPipeline = {
   logGroupApp: "App",
   logCopyAll: "Copy all",
   logRerun: "Re-run",
-  logFromDisk: "from disk",
+  logFromDisk: "from disk, read-only",
   logDayToday: "Today",
   logDayYesterday: "Yesterday",
   logResizeHint: "Drag to resize",

@@ -249,7 +249,7 @@ export const zhPipeline = {
   logGroupApp: "应用",
   logCopyAll: "复制全部",
   logRerun: "重跑",
-  logFromDisk: "来自磁盘",
+  logFromDisk: "来自磁盘, 只读",
   logDayToday: "今天",
   logDayYesterday: "昨天",
   logResizeHint: "拖拽调整高度",

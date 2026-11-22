@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 071-02 · 日志抽屉 unslop 打磨版</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-ink:oklch(0.35 0.05 250);
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-fly:0 12px 28px -14px oklch(0.2 0.02 80 / 26%);
+
+    /* 语义色:toned down,只在有意义处出现 */
+    --ok:oklch(0.52 0.11 152);
+    --warn:oklch(0.58 0.11 75);
+    --err:oklch(0.55 0.17 27);
+    --info:oklch(0.5 0.09 230);
+    --mark:oklch(0.4 0.05 250);
+  }
+  .dark{
+    color-scheme:dark;
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-ink:oklch(0.82 0.04 245);
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.12 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-card:none;
+    --shadow-fly:0 12px 28px -14px oklch(0 0 0 / 75%);
+    --ok:oklch(0.74 0.1 152);
+    --warn:oklch(0.76 0.11 75);
+    --err:oklch(0.7 0.14 27);
+    --info:oklch(0.72 0.08 230);
+    --mark:oklch(0.82 0.04 245);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased;transition:background-color .18s ease,color .18s ease}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme-toggle{position:absolute;right:0;top:2px;height:26px;padding:0 10px;border-radius:6px;
+                border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+                font-family:var(--mono);font-size:10.5px;cursor:pointer}
+  .theme-toggle:hover{color:var(--fg)}
+
+  .audit{border:1px solid var(--border);border-radius:10px;background:var(--card);
+         padding:14px 16px;margin-bottom:36px;font-size:11.5px;line-height:1.9;color:var(--muted-fg)}
+  .audit b{color:var(--fg);font-weight:500}
+  .audit .t{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:6px}
+  .audit ol{margin:0;padding-left:18px}
+
+  .frame + .frame{margin-top:44px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+  .state-note{font-size:10.5px;color:var(--muted-fg);line-height:1.7;padding:10px 2px 0}
+  .state-note b{color:var(--fg);font-weight:500}
+
+  .stage{position:relative;width:1200px;overflow:hidden;border:1px solid var(--border);
+         border-radius:8px;background-color:var(--canvas);
+         background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+         background-size:22px 22px;background-position:11px 11px}
+
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  .callout{display:flex;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;
+           background:var(--card);font-size:11px;line-height:1.75;color:var(--muted-fg)}
+  .callout b{color:var(--fg);font-weight:500}
+  .callout .mk{width:18px;height:18px;border-radius:50%;border:1px solid var(--border);
+               color:var(--fg);font-family:var(--mono);font-size:9.5px;display:grid;place-items:center;
+               flex:none;margin-top:1px;background:var(--card)}
+
+  /* ===== 应用窗口 mock ===== */
+  .app{position:relative;width:1120px;height:600px;margin:34px auto 0;border:1px solid var(--border);
+       border-radius:10px;background:var(--bg);box-shadow:var(--shadow-fly);overflow:hidden;
+       display:flex;flex-direction:column}
+  .titlebar{height:44px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px;
+            border-bottom:1px solid var(--border-soft);background:var(--card)}
+  .titlebar .logo{width:16px;height:16px;border-radius:4px;background:var(--brand);opacity:.85}
+  .titlebar .menus{display:flex;gap:2px;font-size:11.5px;color:var(--muted-fg)}
+  .titlebar .menus span{padding:4px 8px;border-radius:5px}
+  .titlebar .menus span.on{background:var(--muted);color:var(--fg)}
+  .titlebar .tabs{display:flex;gap:4px;margin-left:18px}
+  .titlebar .tab{height:26px;padding:0 12px;border-radius:6px;font-size:11.5px;color:var(--muted-fg);
+                 display:flex;align-items:center;gap:6px}
+  .titlebar .tab.sel{background:var(--muted);color:var(--fg);font-weight:500}
+  .titlebar .tab .dot{width:5px;height:5px;border-radius:50%}
+  .titlebar .winbtns{margin-left:auto;display:flex;gap:8px}
+  .titlebar .winbtns i{width:10px;height:10px;border-radius:50%;background:var(--border);display:block}
+  .canvas{flex:1;min-height:0;position:relative;
+          background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:22px 22px}
+  .node{position:absolute;border:1px solid var(--border);border-radius:8px;background:var(--card);
+        box-shadow:var(--shadow-card);padding:8px 12px;font-size:11px}
+  .node .nk{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);margin-bottom:2px}
+  .node .nt{font-weight:500}
+
+  /* ===== 日志抽屉(打磨版) ===== */
+  .drawer{flex:none;height:236px;border-top:1px solid var(--border);background:var(--card);
+          display:flex;flex-direction:column}
+  .dhead{height:44px;flex:none;display:flex;align-items:center;gap:8px;padding:0 12px;
+         border-bottom:1px solid var(--border-soft)}
+  .dhead .ttl{font-size:12.5px;font-weight:500}
+  .dhead .cnt{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+
+  .seg{display:flex;align-items:center;height:26px;border:1px solid var(--border);
+       border-radius:8px;overflow:hidden;margin-left:4px}
+  .seg span{display:flex;align-items:center;gap:5px;height:100%;padding:0 9px;font-size:10.5px;
+            color:var(--muted-fg);cursor:pointer}
+  .seg span:hover{color:var(--fg);background:color-mix(in oklab,var(--muted) 60%,transparent)}
+  .seg span.on{background:var(--muted);color:var(--fg);font-weight:500;
+               box-shadow:inset 0 0 0 1px var(--border-soft)}
+  .seg .sd{width:6px;height:6px;border-radius:50%;flex:none}
+  .seg .sn{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);font-variant-numeric:tabular-nums}
+  .seg span.on .sn{color:var(--muted-fg-2)}
+
+  .dsearch{margin-left:auto;display:flex;align-items:center;gap:6px;height:26px;width:180px;
+           border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:0 8px}
+  .dsearch:focus-within{border-color:var(--brand-ink)}
+  .dsearch input{border:0;outline:0;background:transparent;font-size:11px;color:var(--fg);width:100%}
+  .dsearch input::placeholder{color:var(--muted-fg-3)}
+  .dsearch .hits{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);white-space:nowrap;
+                 font-variant-numeric:tabular-nums}
+  .dicons{display:flex;gap:2px}
+  .ib{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--muted-fg);cursor:pointer}
+  .ib:hover{background:var(--muted);color:var(--fg)}
+  .ib svg{width:14px;height:14px;stroke-width:1.5}
+
+  .dbody{flex:1;min-height:0;overflow-y:auto;position:relative;padding:4px 0 8px}
+  .dbody::-webkit-scrollbar{width:8px}
+  .dbody::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+  /* 时间轨:1px 墨线贯穿,节点 = 运行状态点 */
+  .railwrap{position:relative;padding-left:28px}
+  .rail{position:absolute;left:15px;top:14px;bottom:10px;width:1px;background:var(--border-soft)}
+  .railwrap::before{content:"";position:absolute;left:15px;top:0;height:14px;width:1px;background:var(--border-soft)}
+
+  .rgroup{position:relative}
+  .rnode{position:absolute;left:-17px;top:11px;width:9px;height:9px;border-radius:50%;
+         background:var(--card);border:1.5px solid var(--muted-fg-2);z-index:1}
+  .rnode.err{border-color:var(--err);background:color-mix(in oklab,var(--err) 22%,var(--card))}
+  .rnode.warn{border-color:var(--warn);background:color-mix(in oklab,var(--warn) 22%,var(--card))}
+  .rnode.ok{border-color:var(--ok);background:color-mix(in oklab,var(--ok) 22%,var(--card))}
+
+  .rhead{display:flex;align-items:center;gap:8px;height:32px;padding:0 12px 0 0;cursor:pointer;
+         font-size:11.5px;color:var(--muted-fg)}
+  .rhead:hover{background:color-mix(in oklab,var(--muted) 45%,transparent)}
+  .rhead .chev{color:var(--muted-fg-3);display:grid;place-items:center;width:14px}
+  .rhead .chev svg{width:12px;height:12px;stroke-width:1.5}
+  .rhead .rname{font-weight:500;color:var(--fg);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rhead .rmeta{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .rhead .rsum{font-family:var(--mono);font-size:10px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .rhead .rsum .e{color:var(--err)}
+  .rhead .rsum .w{color:var(--warn)}
+  .rhead .rgo{margin-left:auto;display:flex;gap:10px;padding-right:2px;
+              font-size:10.5px;color:var(--muted-fg-3);opacity:0;transition:opacity .15s ease}
+  .rhead:hover .rgo{opacity:1}
+  .rgo span{cursor:pointer}
+  .rgo span:hover{color:var(--fg)}
+
+  .lrow{display:flex;align-items:flex-start;gap:8px;padding:3px 12px 3px 0;font-size:11.5px;line-height:1.5}
+  .lrow:hover{background:color-mix(in oklab,var(--muted) 40%,transparent)}
+  .lrow .lt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);width:52px;flex:none;
+            font-variant-numeric:tabular-nums;padding-top:1px}
+  .lrow .ld{width:5px;height:5px;border-radius:50%;flex:none;margin-top:5.5px}
+  .lrow .lmsg{font-family:var(--mono);font-size:11px;flex:1;min-width:0;word-break:break-all;color:var(--fg)}
+  .lrow .lcopy{flex:none;color:var(--muted-fg-3);opacity:0;cursor:pointer;transition:opacity .15s ease;
+               display:grid;place-items:center;width:16px}
+  .lrow:hover .lcopy{opacity:1}
+  .lcopy svg{width:12px;height:12px;stroke-width:1.5}
+  mark{background:color-mix(in oklab,var(--brand) 12%,transparent);color:var(--brand-ink);
+       padding:0 1px;border-radius:2px;font-weight:500}
+
+  .daysep{display:flex;align-items:center;gap:10px;padding:10px 12px 6px 0;font-family:var(--mono);
+          font-size:9.5px;color:var(--muted-fg-3);font-variant-numeric:tabular-nums}
+  .daysep::after{content:"";flex:1;height:1px;background:var(--border-soft)}
+
+  .jump{position:absolute;right:14px;bottom:12px;height:26px;padding:0 10px;border-radius:6px;
+        border:1px solid var(--border);background:var(--card);color:var(--muted-fg);font-size:10.5px;
+        display:flex;align-items:center;gap:6px;box-shadow:var(--shadow-card);cursor:pointer}
+  .jump:hover{color:var(--fg)}
+  .jump svg{width:12px;height:12px;stroke-width:1.5}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">原型 071-02 · UNSLOP PASS</div>
+    <h1>日志抽屉 · unslop 打磨版</h1>
+    <p>功能、内容与结构<b>原样保留</b>(运行分组 / chips / scope / 搜索 / 落盘出口)。这一轮只动刻度:图标统一为 lucide 14px/1.5;
+       级别小计从彩色药丸改为 mono 文本;「来自磁盘」从品牌 pill 改为分隔行上的弱化文本;选中态从品牌染色改为表面抬升;
+       新增<b>左侧时间轨</b>作为该面板的签名细节——多次执行串成一条账目线。</p>
+    <button class="theme-toggle" onclick="document.documentElement.classList.toggle('dark')">◐ 主题</button>
+  </div>
+
+  <div class="audit">
+    <div class="t">AUDIT · 上一版(01 号稿)的 unslop 信号</div>
+    <ol>
+      <li><b>Unicode 字形混当图标</b> —— ⠿ ⌕ ⭳ 🗑 ⛶ ◱ 大小与笔画粗细不一 → 全部换 lucide,14px / 1.5 stroke / 单一颜色</li>
+      <li><b>彩色药丸计数</b> —— 组头「错误 ×1」「警告 ×2」标签色块铺在 chrome 上 → 降为 mono 文本,语义色只染文字</li>
+      <li><b>品牌色 pill「来自磁盘」</b> → 移到日期分隔行,弱化为 mono 灰字</li>
+      <li><b>选中态品牌染色</b>(bg-primary/10)→ 表面抬升 + 内描边 hairline,色彩留给语义</li>
+      <li><b>五个级别 chips 全程彩色圆点</b> → 圆点保留(语义),计数降为 mono 弱化,选中态降噪</li>
+      <li><b>时间感缺失</b> → 新增签名细节:左侧 1px 时间轨 + 运行状态节点</li>
+    </ol>
+  </div>
+
+  <!-- ============ FRAME 01 ============ -->
+  <div class="frame">
+    <div class="cap">FRAME 01 <b>停靠抽屉 · 时间轨 · 运行分组</b> <span class="file">02-log-drawer-unslop.html</span></div>
+    <div class="stage">
+      <div class="app">
+        <div class="titlebar">
+          <div class="logo"></div>
+          <div class="menus"><span>文件</span><span>编辑</span><span class="on">执行</span><span>工具</span><span>帮助</span></div>
+          <div class="tabs">
+            <div class="tab sel"><span class="dot" style="background:var(--ok)"></span>销售数据-2024</div>
+            <div class="tab"><span class="dot" style="background:var(--err)"></span>库存清洗</div>
+          </div>
+          <div class="winbtns"><i></i><i></i><i></i></div>
+        </div>
+        <div class="canvas">
+          <div class="node" style="left:80px;top:44px;width:140px"><div class="nk">输入</div><div class="nt">sales_2024.csv</div></div>
+          <div class="node" style="left:300px;top:70px;width:120px"><div class="nk">变换</div><div class="nt">groupby</div></div>
+        </div>
+
+        <div class="drawer">
+          <div class="dhead">
+            <span class="ttl">日志</span>
+            <span class="cnt">23 条</span>
+            <div class="seg">
+              <span class="on">全部 <span class="sn">23</span></span>
+              <span><span class="sd" style="background:var(--info)"></span>信息 <span class="sn">9</span></span>
+              <span><span class="sd" style="background:var(--ok)"></span>成功 <span class="sn">8</span></span>
+              <span><span class="sd" style="background:var(--warn)"></span>警告 <span class="sn">4</span></span>
+              <span><span class="sd" style="background:var(--err)"></span>错误 <span class="sn">2</span></span>
+            </div>
+            <div class="seg">
+              <span class="on">当前标签页</span><span>全部</span>
+            </div>
+            <div class="dsearch">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="sico" style="width:12px;height:12px;stroke-width:1.5;color:var(--muted-fg-3)"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input placeholder="搜索日志" />
+            </div>
+            <div class="dicons">
+              <div class="ib" title="导出日志"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg></div>
+              <div class="ib" title="打开日志目录"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></div>
+              <div class="ib" title="执行历史"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></div>
+              <div class="ib" title="清空"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7"/></svg></div>
+              <div class="ib" title="最大化"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 4h4M4 8V4m12 0h4M20 8V4M8 20H4m0-4v4m12 0h4m0-4v4" transform="scale(0.9) translate(1.3,1.3)"/></svg></div>
+              <div class="ib" title="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 6l12 12M18 6 6 18"/></svg></div>
+            </div>
+          </div>
+
+          <div class="dbody">
+            <div class="railwrap">
+              <div class="rail"></div>
+
+              <div class="rgroup">
+                <span class="rnode err"></span>
+                <div class="rhead">
+                  <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 9 6 6 6-6"/></svg></span>
+                  <span class="rname">库存清洗</span>
+                  <span class="rmeta">14:37:12 · 0.4 s · 7 条</span>
+                  <span class="rsum"><span class="e">1 错误</span> · <span class="w">2 警告</span></span>
+                  <span class="rgo"><span>复制全部</span><span>重跑</span></span>
+                </div>
+                <div class="lrow">
+                  <span class="lt">14:37:12</span><span class="ld" style="background:var(--info)"></span>
+                  <span class="lmsg">开始执行: xan filter 'stock &lt; 50' | xan groupby region --agg sum(金额) as 合计</span>
+                  <span class="lcopy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+                </div>
+                <div class="lrow">
+                  <span class="lt">14:37:12</span><span class="ld" style="background:var(--warn)"></span>
+                  <span class="lmsg">第 2 步 groupby: 12 行金额为空值,已按空值聚合(非 N/A)</span>
+                  <span class="lcopy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+                </div>
+                <div class="lrow">
+                  <span class="lt">14:37:13</span><span class="ld" style="background:var(--err)"></span>
+                  <span class="lmsg">xan groupby: cannot safely cast Bytes("N/A") —— 第 1 步输出的「金额」列含字符串 N/A</span>
+                  <span class="lcopy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+                </div>
+              </div>
+
+              <div class="rgroup">
+                <span class="rnode ok"></span>
+                <div class="rhead">
+                  <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 9 6 6 6-6"/></svg></span>
+                  <span class="rname">销售数据-2024</span>
+                  <span class="rmeta">14:32:08 · 1.2 s · 9 条</span>
+                  <span class="rsum" style="color:var(--muted-fg-3)">成功</span>
+                  <span class="rgo"><span>复制全部</span><span>重跑</span></span>
+                </div>
+                <div class="lrow">
+                  <span class="lt">14:32:09</span><span class="ld" style="background:var(--ok)"></span>
+                  <span class="lmsg">执行完成: 输出 24.6 MB,完成于 14:32:09,耗时 1.2 s</span>
+                  <span class="lcopy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+                </div>
+              </div>
+
+              <div class="rgroup">
+                <span class="rnode"></span>
+                <div class="rhead">
+                  <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m9 6 6 6-6 6"/></svg></span>
+                  <span class="rname" style="color:var(--muted-fg)">应用</span>
+                  <span class="rmeta">14:20:31 · 3 条</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="state-note"><b>状态:</b> 时间轨从抽屉顶部贯穿到最后一个运行组;节点 = 该次执行的最终状态(空心圆 + 语义色描边/填充)。「复制全部 / 重跑」hover 才出现。所有计数、时间、耗时都是 <b>tabular-nums mono</b>,按列对齐。</div>
+    </div>
+    <div class="notes">
+      <div class="callout"><span class="mk">色</span><div><b>颜色只留给语义。</b>级别圆点(6px)、错误/警告文本、搜索命中,这三处是全部的彩色;chrome(标题栏、chips、分隔线)回到纸灰中性阶。选中态 = 表面抬升 + 内描边,不再是品牌染色 pill。</div></div>
+      <div class="callout"><span class="mk">标</span><div><b>签名细节:时间轨。</b>1px hairline 贯穿,每个运行组一枚空心节点——账本式地把「哪几次执行、结果如何」读成一条线。节点状态 = 组内最重级别,与组头文本一致,不新增颜色。</div></div>
+      <div class="callout"><span class="mk">计</span><div><b>计数不再发光。</b>组头级别合计从药丸降为 mono 文本(1 错误 · 2 警告),成功态只写一个灰字「成功」;数字统一 tabular-nums、同一字号,时间/耗时/条数按列对齐。</div></div>
+      <div class="callout"><span class="mk">动</span><div><b>动效只有两种:</b>hover 的颜色/表面过渡与「复制全部/重跑」的 150ms opacity 淡入;命名 transition,不做循环动画、不做弹跳。搜索命中用品牌墨色轻底 + 深墨文字(替代浏览器默认 mark 黄底)。</div></div>
+    </div>
+  </div>
+
+  <!-- ============ FRAME 02 ============ -->
+  <div class="frame">
+    <div class="cap">FRAME 02 <b>检索态 · 错误级别 + 搜索「分隔符」</b></div>
+    <div class="stage">
+      <div class="app" style="height:500px">
+        <div class="titlebar">
+          <div class="logo"></div>
+          <div class="menus"><span>文件</span><span>编辑</span><span class="on">执行</span><span>工具</span><span>帮助</span></div>
+          <div class="tabs">
+            <div class="tab sel"><span class="dot" style="background:var(--ok)"></span>销售数据-2024</div>
+          </div>
+          <div class="winbtns"><i></i><i></i><i></i></div>
+        </div>
+        <div class="canvas" style="background:var(--muted)"></div>
+        <div class="drawer" style="height:288px">
+          <div class="dhead">
+            <span class="ttl">日志</span>
+            <span class="cnt">命中 3 / 23</span>
+            <div class="seg">
+              <span>全部 <span class="sn">23</span></span>
+              <span><span class="sd" style="background:var(--info)"></span>信息 <span class="sn">9</span></span>
+              <span><span class="sd" style="background:var(--ok)"></span>成功 <span class="sn">8</span></span>
+              <span><span class="sd" style="background:var(--warn)"></span>警告 <span class="sn">4</span></span>
+              <span class="on"><span class="sd" style="background:var(--err)"></span>错误 <span class="sn">2</span></span>
+            </div>
+            <div class="seg">
+              <span class="on">当前标签页</span><span>全部</span>
+            </div>
+            <div class="dsearch" style="width:200px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:12px;height:12px;stroke-width:1.5;color:var(--muted-fg-3)"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input value="分隔符" />
+              <span class="hits">1/3</span>
+            </div>
+            <div class="dicons">
+              <div class="ib" title="导出日志"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg></div>
+              <div class="ib" title="打开日志目录"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></div>
+              <div class="ib" title="清空"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7"/></svg></div>
+              <div class="ib" title="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 6l12 12M18 6 6 18"/></svg></div>
+            </div>
+          </div>
+          <div class="dbody">
+            <div class="railwrap">
+              <div class="rail"></div>
+              <div class="daysep">今天 · 11-22</div>
+              <div class="rgroup">
+                <span class="rnode err"></span>
+                <div class="rhead">
+                  <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 9 6 6 6-6"/></svg></span>
+                  <span class="rname">库存清洗</span>
+                  <span class="rmeta">14:37:13 · 0.4 s</span>
+                  <span class="rgo"><span>复制全部</span><span>重跑</span></span>
+                </div>
+                <div class="lrow">
+                  <span class="lt">14:37:13</span><span class="ld" style="background:var(--err)"></span>
+                  <span class="lmsg">第 1 步 filter: <mark>分隔符</mark>检测为制表符(\t),与扩展名 .csv 不一致,已按检测值解析</span>
+                  <span class="lcopy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+                </div>
+              </div>
+              <div class="daysep">昨天 · 11-21 · 来自磁盘,只读</div>
+              <div class="rgroup">
+                <span class="rnode err"></span>
+                <div class="rhead">
+                  <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 9 6 6 6-6"/></svg></span>
+                  <span class="rname">销售数据-2024</span>
+                  <span class="rmeta">09:14:02 · 0.2 s</span>
+                  <span class="rgo"><span>复制全部</span></span>
+                </div>
+                <div class="lrow">
+                  <span class="lt">09:14:02</span><span class="ld" style="background:var(--err)"></span>
+                  <span class="lmsg">"'金额' does not exist as a named header" —— <mark>分隔符</mark>错把整行表头解析成一个字段</span>
+                  <span class="lcopy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+                </div>
+              </div>
+            </div>
+            <div class="jump"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v12"/><path d="m7 12 5 5 5-5"/></svg>跳到最新</div>
+          </div>
+        </div>
+      </div>
+      <div class="state-note"><b>状态:</b> 级别 × 标签页 × 搜索三重 AND;命中计数进搜索框内右侧的 mono 弱化位,标题栏不再出现「命中 n / total」彩字。「来自磁盘,只读」并入日期分隔行,不再占一枚 pill。</div>
+    </div>
+    <div class="notes" style="grid-template-columns:1fr">
+      <div class="callout"><span class="mk">空</span><div><b>间距节奏:</b>标题栏 44、组头 32、日志行 22,组间靠 4px 网格;组内行与组头的间距小于组与组之间(分隔靠日期行/轨节点,不靠加空行)。图标列对齐:每行消息起点都在同一条 x 线上。</div></div>
+      <div class="callout"><span class="mk">字</span><div><b>排版:</b>界面 Inter 400/500;一切数字与元信息用 JetBrains mono + tabular-nums;无大写宽字距标签、无斜体、无 700+;层级靠字号与灰度,不靠加粗。</div></div>
+    </div>
+  </div>
+
+</div>
+<script>
+  document.querySelectorAll('.seg').forEach(s=>s.querySelectorAll('span').forEach(x=>x.addEventListener('click',()=>{
+    s.querySelectorAll('span').forEach(y=>y.classList.remove('on'));x.classList.add('on');
+  })));
+  document.querySelectorAll('.rhead').forEach(h=>h.addEventListener('click',e=>{
+    if(e.target.closest('.rgo'))return;
+    const body=h.parentElement,chev=h.querySelector('.chev svg');
+    const open=chev.getAttribute('d').startsWith('m6');
+    chev.setAttribute('d',open?'m9 6 6 6-6 6':'m6 9 6 6 6-6');
+    body.querySelectorAll('.lrow').forEach(r=>r.style.display=open?'none':'');
+  }));
+</script>
+</body>
+</html>

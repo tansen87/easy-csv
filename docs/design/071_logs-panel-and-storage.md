@@ -98,3 +98,16 @@
 | 重跑通过 `runTab(tabId)` | 会切换到该标签页再执行(复用现有执行入口的校验/变量提示/并发排队),与原型「组头重跑」语义一致 |
 
 新增文件: `src-tauri/src/logs.rs`(append_log / read_recent_logs / prune_log_files / reveal_logs_dir + 5 个单测)、`src/modules/logs/lib/logGroups.ts`、`src/__tests__/LogPanel.test.tsx`(重写,8 个用例)。`log_retention_days` 设置走 `config.rs` 的 AppConfig + `get_/set_log_retention_days`。INDEX.md 已登记(§文件职责 + §修改映射)。
+
+## 10. unslop 打磨轮(2026-11-22,原型 `prototypes/071/02-log-drawer-unslop.html`)
+
+功能与结构不动,只动刻度(打磨模式,六条审计信号全消除):
+
+| 工序 | 落地 |
+|---|---|
+| 图标 | 全部 lucide;`[data-testid="log-panel"] svg { stroke-width: 1.5 }` 统一笔画(index.css) |
+| 颜色 | 组头级别小计:彩色药丸 → mono 文本(`1 错误 · 2 警告`,语义色只染文字;成功态只写灰字);「来自磁盘」pill → 日期分隔行弱化文本(`来自磁盘, 只读`) |
+| 选中态 | scope 的 `bg-primary/10 text-primary` → `bg-muted` + 内描边 hairline;级别 chips 保持表面抬升 |
+| 签名细节 | **时间轨**:抽屉主体 `pl-7` + 左侧 1px hairline(`bottom-4 top-2`),每个运行组一枚 9px 空心节点(`RAIL_NODE_CLASS`,描边/填充 = 最重级别);组内原有的独立状态圆点删除(节点即是) |
+| 动效 | 「复制全部 / 重跑」默认 `opacity-0`,hover 150ms 淡入(命名 group `group/head`);行内复制/删除改 `group/row`;mark 字重 600 → 500 |
+| 检索 | 搜索框右侧新增 mono 命中位置指示 `1/3`(Enter 循环,`hitIndex` 状态 + `hitTotal` memo) |

@@ -208,4 +208,27 @@ describe("LogPanel run groups (design 071)", () => {
     fireEvent.click(groupHeader);
     expect(container.textContent).toContain("line from A");
   });
+
+  it("清空 clears everything directly, disk lines included (071)", () => {
+    const onClear = vi.fn();
+    const { container } = render(
+      <LanguageProvider>
+        <LogPanel
+          logs={[
+            makeLog("disk-1", "from disk", { tabId: "a", fromDisk: true }),
+            makeLog("live-1", "live line", { tabId: "a" }),
+          ]}
+          onClear={onClear}
+          onRemoveLog={vi.fn()}
+          isVisible
+          onClose={vi.fn()}
+          tabs={[{ id: "a", name: "Tab A" }]}
+        />
+      </LanguageProvider>,
+    );
+    // One click, no dialog: the button clears every visible line.
+    fireEvent.click(container.querySelector('button[aria-label="Clear"]')!);
+    expect(onClear).toHaveBeenCalledTimes(1);
+    expect(container.textContent).not.toContain("Clear logs");
+  });
 });
