@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { BookOpen, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { COMMAND_FORMS } from "@/modules/dialogs/command";
 import { COMMAND_LABELS, type CommandDialogState } from "@/types/dialog";
@@ -25,13 +25,15 @@ interface CommandDialogProps {
   headers?: string[];
   /** Chosen table when the input is a `.duckdb` file. */
   sourceTable?: string;
+  /** Open this command's docs (design 074); the old dock row `?` moved here. */
+  onShowHelp?: (commandName: string) => void;
 }
 
 /**
  * Unified entry point for every command parameter form.
  *
  * Split in two so the hooks in `CommandDialogShell` are never called
- * conditionally — the previous single-component version returned early on a
+ * conditionally - the previous single-component version returned early on a
  * null dialog *before* its hooks, which broke the rules of hooks
  * (`react-hooks/rules-of-hooks`).
  */
@@ -47,6 +49,7 @@ function CommandDialogShell({
   setCommandDialog,
   headers = [],
   sourceTable,
+  onShowHelp,
 }: CommandDialogProps & { commandDialog: CommandDialogState }) {
   const { t } = useLanguage();
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -153,16 +156,30 @@ function CommandDialogShell({
               {commandDialog.type}
             </span>
           </div>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="ml-auto cursor-pointer"
-            aria-label={t.close}
-            onClick={() => setCommandDialog(null)}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="ml-auto flex items-center gap-1">
+            {onShowHelp && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 cursor-pointer gap-1.5 px-2 text-[11.5px] font-normal text-muted-foreground"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => onShowHelp(commandDialog.type)}
+              >
+                <BookOpen className="h-3.5 w-3.5" />
+                {t.commandDocs}
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="cursor-pointer"
+              aria-label={t.close}
+              onClick={() => setCommandDialog(null)}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="flex min-h-0 flex-col">

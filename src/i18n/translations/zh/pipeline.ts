@@ -1,6 +1,6 @@
 import type { Translations } from "@/i18n/translations/types";
 
-/** MainMenu · Variables · VersionControl · CommandList · FlowPanel · LogPanel · Execution history · ContextMenu · Pipeline Templates */
+/** MainMenu · Variables · VersionControl · FlowPanel · LogPanel · Execution history · ContextMenu · Pipeline Templates */
 export const zhPipeline = {
   file: "文件",
   edit: "编辑",
@@ -17,7 +17,6 @@ export const zhPipeline = {
   executionCancelled: "执行已取消",
   maxConcurrentRuns: "同时执行的标签页数上限",
   maxConcurrentRunsDesc: "超出上限的执行会排队等待, 有空位时自动开始(1~16)",
-  commandPanel: "命令",
   logPanel: "日志",
   view: "查看",
   search: "搜索",
@@ -175,19 +174,9 @@ export const zhPipeline = {
   versionTimeYesterday: "昨天 {time}",
   versionTimeMonthDay: "{month}月{day}日",
   versionTimeFull: "{year}年{month}月{day}日",
-  cmds: "命令",
-  searchCommand: "搜索命令",
+  commandDocs: "文档",
   stepActionParams: "参数",
   stepActionRename: "重命名",
-  commandSearchPlaceholder: "搜索操作名或描述",
-  commandCount: "共 {count} 个操作",
-  commandHits: "命中 {n} / {total}",
-  commandEmptyTitle: "没有匹配的操作",
-  commandEmptyHint: "「{query}」不在这个目录里",
-  commandExampleDedup: "去重",
-  commandExampleAmount: "金额",
-  commandExamplePivot: "pivot",
-  commandHelpFor: "查看 {name} 的帮助",
   executePipelinesHint: "执行工作流后将在此显示",
   newTab: "新标签页打开",
   searchFlow: "在工作流中搜索",

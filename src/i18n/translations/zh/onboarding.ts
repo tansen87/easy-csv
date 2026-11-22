@@ -7,7 +7,7 @@ export const zhOnboarding = {
   onboardingStartDesc:
     "数据已经就位. 选一个操作就能开始, 走完再决定要不要串成一条链",
   onboardingAddStep: "添加一个操作",
-  onboardingAddStepDesc: "打开命令面板, 浏览全部 {count} 个操作",
+  onboardingAddStepDesc: "在顶部输入框里浏览全部 {count} 个操作",
   onboardingAskAi: "直接描述需求",
   onboardingAskAiDesc: "「按地区汇总金额」",
   onboardingSeeExample: "先看看示例",
@@ -17,14 +17,10 @@ export const zhOnboarding = {
   onboardingDismiss: "我知道了",
   onboardingDismissHint: "关闭后不再自动出现, 可在设置里找回",
 
-  // 命令面板内的就地提示
-  onboardingPanelHint:
-    "选中第一个操作后, 它会直接对输入数据生效(自成一条分支) - 不需要先连线",
-
   // 示例数据
   onboardingSampleFailed: "示例数据准备失败：{error}",
   // 示例逐步骤回放: 每一步都写明「这一步是怎么加进来的」
-  onboardingDemoRevealAction1: "打开命令(Alt+C), 点 search → 去掉金额为空的行",
+  onboardingDemoRevealAction1: "按 Ctrl F, 点 search → 去掉金额为空的行",
   onboardingDemoRevealAction2: "再点 dedup → 去掉完全重复的行",
   onboardingDemoRevealAction3: "最后点 groupby → 按地区汇总金额",
   onboardingDemoRevealRunning: "三步装好了, 正在跑一遍…",

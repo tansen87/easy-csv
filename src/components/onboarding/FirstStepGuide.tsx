@@ -21,7 +21,7 @@ export interface FirstStepGuideProps {
     isComplete?: boolean;
   } | null;
   /**
-   * Advance the reveal — one more step, or run the pipeline once every step is
+   * Advance the reveal - one more step, or run the pipeline once every step is
    * on the canvas. **The reveal is entirely click-driven**: no timer decides
    * the pace, the user does (design 027 §11.2, second iteration).
    */
@@ -43,7 +43,7 @@ export interface FirstStepGuideProps {
  * right-drag gestures keep working everywhere except on the card itself.
  *
  * There is deliberately no ghost/mock node: adding an operation has exactly one
- * entry point (the command panel, `Alt+C` / `Ctrl+K`), and inventing a
+ * entry point (the menu-bar command field, `Ctrl F`), and inventing a
  * node-shaped second one both misleads about where the new node lands and opens
  * something else when clicked.
  */
@@ -81,7 +81,7 @@ export const FirstStepGuide = React.memo(function FirstStepGuide({
             </span>
             {/* The reveal is click-driven: the button installs the next step
                 and, once *all* of them are on the canvas, runs the pipeline.
-                The label keys off `isComplete` — the progress counter alone
+                The label keys off `isComplete` - the progress counter alone
                 was off by one and showed "Run it" one click too early. */}
             {onAdvanceReveal && reveal.progress && (
               <button
@@ -142,7 +142,7 @@ export const FirstStepGuide = React.memo(function FirstStepGuide({
                   </span>
                 </span>
                 <kbd className="shrink-0 rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                  Alt+C
+                  Ctrl F
                 </kbd>
               </button>
 

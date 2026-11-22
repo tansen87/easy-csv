@@ -1,6 +1,6 @@
 import React from "react";
 import { createPortal } from "react-dom";
-import { Command, ScrollText, Bot, Settings, Check, Search } from "lucide-react";
+import { ScrollText, Bot, Settings, Check, Search } from "lucide-react";
 
 import { PipelineStep } from "@/types/xan";
 import type { RunSession } from "@/types/execution";
@@ -97,8 +97,6 @@ interface MainMenuProps {
   currentVersion?: string;
   showLogErrorBadge: boolean;
   currentPipelineLength: number;
-  showCommandPanel: boolean;
-  onToggleCommandPanel: () => void;
   showLogPanel: boolean;
   onToggleLogPanel: () => void;
   showDataProfile: boolean;
@@ -126,12 +124,6 @@ interface MainMenuProps {
    * `commandButtonClass(active)` state.
    */
   showSettingsDialog: boolean;
-  /**
-   * Briefly highlight the command-panel entry while the first-run guide is up,
-   * so the card's button and the real entry point
-   * become associated. Visual only — no click behaviour changes.
-   */
-  highlightCommandEntry?: boolean;
 }
 
 export const MainMenu = React.memo(function MainMenu({
@@ -178,8 +170,6 @@ export const MainMenu = React.memo(function MainMenu({
   currentVersion,
   showLogErrorBadge,
   currentPipelineLength,
-  showCommandPanel,
-  onToggleCommandPanel,
   showLogPanel,
   onToggleLogPanel,
   showDataProfile,
@@ -195,7 +185,6 @@ export const MainMenu = React.memo(function MainMenu({
   onToggleVariablePanel,
   pendingVariables = 0,
   showSettingsDialog,
-  highlightCommandEntry = false,
 }: MainMenuProps) {
   const { t } = useLanguage();
   /** The version the Help menu advertises: the offered one, else the installed one. */
@@ -475,7 +464,7 @@ export const MainMenu = React.memo(function MainMenu({
    * Keyboard for the open dropdown (design 054 §4). Items are read from the DOM
    * because the five panels are separate trees and only one is ever open.
    * Focus stays on the trigger until the user presses an arrow key, and Escape
-   * hands it back — a menu that steals focus on open also steals it from the
+   * hands it back - a menu that steals focus on open also steals it from the
    * click that opened it.
    */
   React.useEffect(() => {
@@ -637,7 +626,7 @@ export const MainMenu = React.memo(function MainMenu({
           )}
         </div>
 
-        {/* Edit menu — undo/redo */}
+        {/* Edit menu - undo/redo */}
         <div className="relative">
           <button
             onClick={() => toggleMenu("edit")}
@@ -692,7 +681,7 @@ export const MainMenu = React.memo(function MainMenu({
           )}
         </div>
 
-        {/* View menu — renamed from "More panels"; command palette sits first */}
+        {/* View menu - renamed from "More panels"; command palette sits first */}
         <div className="relative">
           <button
             onClick={() => toggleMenu("view")}
@@ -826,7 +815,7 @@ export const MainMenu = React.memo(function MainMenu({
           )}
         </div>
 
-        {/* Tools menu — one-shot file utilities that never touch the pipeline:
+        {/* Tools menu - one-shot file utilities that never touch the pipeline:
             diff / encoding conversion / separate good-bad rows / split by line
             count / number rows by group / merge Excel workbooks. They open a
             dialog and call one backend command; unlike the File menu they do
@@ -952,14 +941,14 @@ export const MainMenu = React.memo(function MainMenu({
           )}
         </div>
 
-        {/* Help menu — help dialog + check update. The entry stays clickable in
+        {/* Help menu - help dialog + check update. The entry stays clickable in
             every state: a slow check must not lock away the Help Center. The
             "update found" dot inherited from the former standalone button lives
             on this button's top-right. The check itself gets the same 2px
             indeterminate bottom line as the "Execute" button: a
             manual check otherwise looks like a click that did nothing until the
             dialog finally opens. The marker is `data-checking`, deliberately not
-            `data-busy` — the execute button is the only `data-busy` menu trigger
+            `data-busy` - the execute button is the only `data-busy` menu trigger
             (ExecuteMenu.test.tsx). */}
         <div className="relative">
           <button
@@ -972,7 +961,7 @@ export const MainMenu = React.memo(function MainMenu({
             className={cn(
               "relative flex items-center gap-1.5 overflow-hidden rounded-md px-3 py-1.5 text-xs font-medium text-primary transition-colors",
               activeMenu === "help" ? "bg-primary/12" : "hover:bg-primary/10",
-              // The in-flight line is purely additive — no dimming, no
+              // The in-flight line is purely additive - no dimming, no
               // `cursor-not-allowed`, no `disabled`.
               isCheckingUpdate && "update-busy",
             )}
@@ -1070,14 +1059,14 @@ export const MainMenu = React.memo(function MainMenu({
         </div>
 
         {/* "Execute" became a per-tab menu. The button itself keeps
-            its label and size in every state — while a run is in flight only a
+            its label and size in every state - while a run is in flight only a
             2px indeterminate line appears along its bottom edge (`.exec-busy`),
             no icon is added. The menu lists the current tab first, a thin divider,
             then the other tabs.
 
             It stays a peer of the other menu items: click opens it, and while
             another menu-bar menu is open a hover switches to it. Hovering with
-            nothing open must do nothing — the old guard used the sticky
+            nothing open must do nothing - the old guard used the sticky
             `isMenuActivated` flag, so after the first menu click of the session
             a bare hover expanded it ("sometimes you must click, sometimes not"). */}
         <div className="relative" ref={execMenuRef}>
@@ -1148,7 +1137,7 @@ export const MainMenu = React.memo(function MainMenu({
             )}
         </div>
 
-        {/* Spacer — doubles as the window drag area under the custom title bar */}
+        {/* Spacer - doubles as the window drag area under the custom title bar */}
         <div
           className="flex-1"
           {...(usesCustomTitleBar ? { "data-tauri-drag-region": "deep" } : {})}
@@ -1167,22 +1156,6 @@ export const MainMenu = React.memo(function MainMenu({
             </button>
           </Tooltip>
           {/* High-frequency panel toggles */}
-          <Tooltip content={t.commandPanel}>
-            <button
-              onClick={onToggleCommandPanel}
-              className={cn(
-                commandButtonClass(showCommandPanel),
-                highlightCommandEntry &&
-                  !showCommandPanel &&
-                  "bg-info-soft text-info ring-2 ring-info/70",
-              )}
-            >
-              <Command className="h-4 w-4" />
-              {showCommandPanel && (
-                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 w-3 rounded-full bg-current" />
-              )}
-            </button>
-          </Tooltip>
           <Tooltip content={t.logPanel}>
             <button
               onClick={onToggleLogPanel}
@@ -1211,7 +1184,7 @@ export const MainMenu = React.memo(function MainMenu({
           {/* Settings sits last, right of AI, and is icon-only with a tooltip so
               the widest label in the bar stops pushing "Execute" around. Its
               highlight tracks the open dialog, matching the panel toggles it
-              sits beside — including the 12px underline that marks them as
+              sits beside - including the 12px underline that marks them as
               "open" rather than merely hovered. */}
           <Tooltip content={t.settings}>
             <button

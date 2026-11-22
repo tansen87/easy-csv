@@ -1,6 +1,6 @@
 import type { Translations } from "@/i18n/translations/types";
 
-/** MainMenu · Variables · VersionControl · CommandList · FlowPanel ·
+/** MainMenu · Variables · VersionControl · FlowPanel ·
  * LogPanel · Execution history · ContextMenu · Pipeline Templates
  */
 export const enPipeline = {
@@ -20,7 +20,6 @@ export const enPipeline = {
   maxConcurrentRuns: "Concurrent executions",
   maxConcurrentRunsDesc:
     "Runs beyond this limit wait in line and start as soon as a slot frees up (1-16)",
-  commandPanel: "Command",
   logPanel: "Logs",
   view: "View",
   search: "Search",
@@ -183,19 +182,9 @@ export const enPipeline = {
   versionTimeYesterday: "Yesterday {time}",
   versionTimeMonthDay: "{month}/{day}",
   versionTimeFull: "{month}/{day}/{year}",
-  cmds: "Cmd",
-  searchCommand: "Search command",
+  commandDocs: "Docs",
   stepActionParams: "Parameters",
   stepActionRename: "Rename",
-  commandSearchPlaceholder: "Search name or description",
-  commandCount: "{count} operations",
-  commandHits: "{n} of {total}",
-  commandEmptyTitle: "No matching operation",
-  commandEmptyHint: "“{query}” is not in this catalog",
-  commandExampleDedup: "dedupe",
-  commandExampleAmount: "amount",
-  commandExamplePivot: "pivot",
-  commandHelpFor: "Help for {name}",
   executePipelinesHint: "Execute pipelines to see them here",
   newTab: "New Tab",
   searchFlow: "Search in the workflow",

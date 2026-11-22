@@ -40,7 +40,6 @@ export interface Translations {
   /** Parallel run limit shown in settings. */
   maxConcurrentRuns: string;
   maxConcurrentRunsDesc: string;
-  commandPanel: string;
   logPanel: string;
   view: string;
   search: string;
@@ -270,18 +269,9 @@ export interface Translations {
   aiClearCorrectionsDesc: string;
   aiCustomProviderSettingsDesc: string;
 
-  // CommandList
-  cmds: string;
-  searchCommand: string;
-  commandSearchPlaceholder: string;
-  commandCount: string;
-  commandHits: string;
-  commandEmptyTitle: string;
-  commandEmptyHint: string;
-  commandExampleDedup: string;
-  commandExampleAmount: string;
-  commandExamplePivot: string;
-  commandHelpFor: string;
+  // Command palette
+  /** Label of the per-command docs entry (form header + Shift+Enter hint). */
+  commandDocs: string;
   stepActionParams: string;
   stepActionRename: string;
   executePipelinesHint: string;
@@ -1299,7 +1289,6 @@ export interface Translations {
   onboardingBranchNote: string;
   onboardingDismiss: string;
   onboardingDismissHint: string;
-  onboardingPanelHint: string;
   onboardingSampleFailed: string;
   onboardingDemoRevealAction1: string;
   onboardingDemoRevealAction2: string;

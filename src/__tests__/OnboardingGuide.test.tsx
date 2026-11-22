@@ -2,8 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import { render, fireEvent, screen } from "@testing-library/react";
 import { LanguageProvider } from "@/i18n";
 import { FirstStepGuide } from "@/components/onboarding/FirstStepGuide";
-import { CommandList } from "@/modules/logs/CommandList";
-import { xanCommands } from "@/data/commands";
 
 function renderGuide(overrides: Partial<Parameters<typeof FirstStepGuide>[0]> = {}) {
   const props = {
@@ -37,7 +35,7 @@ describe("FirstStepGuide (design 027 §4.2)", () => {
   /**
    * Every route in the card must lead into a real action. There is deliberately
    * no mock/ghost node: "add an operation" has exactly one entry point (the
-   * command panel), and the card's button opens that.
+   * entry point (the menu-bar command field), and the card's button opens that.
    */
   it("routes each option to its own action", () => {
     const { props } = renderGuide();
@@ -115,7 +113,7 @@ describe("sample-pipeline reveal caption (design 027 §11.2)", () => {
     });
 
     // Clicking it runs the pipeline (the handler switches on the index), so the
-    // button stays — only its label changes.
+    // button stays - only its label changes.
     expect(screen.getByTestId("onboarding-reveal-next")).toBeInTheDocument();
     expect(screen.getByTestId("onboarding-reveal-next").textContent).toBe(
       "Run it",
@@ -126,7 +124,7 @@ describe("sample-pipeline reveal caption (design 027 §11.2)", () => {
   it("renders without a counter when the progress is omitted", () => {
     renderGuide({
       showGuide: false,
-      reveal: { caption: "Three steps built — running it…" },
+      reveal: { caption: "Three steps built - running it…" },
     });
 
     const pill = screen.getByTestId("onboarding-reveal");
@@ -136,34 +134,5 @@ describe("sample-pipeline reveal caption (design 027 §11.2)", () => {
   it("renders no pill when there is nothing being revealed", () => {
     renderGuide({ showGuide: false, reveal: null });
     expect(screen.queryByTestId("onboarding-reveal")).toBeNull();
-  });
-});
-
-describe("CommandList first-step hint (design 027 §4.2 item 2)", () => {
-  const renderList = (showFirstStepHint: boolean) =>
-    render(
-      <LanguageProvider>
-        <CommandList
-          commands={xanCommands}
-          onCommandClick={vi.fn()}
-          searchQuery=""
-          onSearchChange={vi.fn()}
-          isVisible
-          onClose={vi.fn()}
-          showFirstStepHint={showFirstStepHint}
-        />
-      </LanguageProvider>,
-    );
-
-  it("shows the hint while the pipeline is still empty", () => {
-    renderList(true);
-    expect(
-      screen.queryByTestId("command-list-first-step-hint"),
-    ).not.toBeNull();
-  });
-
-  it("hides the hint once there is at least one step", () => {
-    renderList(false);
-    expect(screen.queryByTestId("command-list-first-step-hint")).toBeNull();
   });
 });

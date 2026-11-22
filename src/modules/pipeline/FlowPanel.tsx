@@ -144,11 +144,6 @@ interface FlowPanelProps {
   onInputPositionChange?: (position: { x: number; y: number }) => void;
   savedEdges?: PipelineEdge[];
   savedInputPosition?: { x: number; y: number };
-  /**
-   * Width the open command panel occupies on the left (0 when closed). Keeps
-   * the canvas tool rail visible by sliding it to the panel's right edge.
-   */
-  commandPanelInset?: number;
   reactFlowInstanceRef?: React.RefObject<any>;
   pipelineSavedAt?: number;
   doubleClickFitView?: boolean;
@@ -187,7 +182,6 @@ export function FlowPanel({
   onInputPositionChange,
   savedEdges,
   savedInputPosition,
-  commandPanelInset = 0,
   reactFlowInstanceRef,
   pipelineSavedAt,
   doubleClickFitView = true,
@@ -419,7 +413,7 @@ export function FlowPanel({
   // "focus this step" and flashes the highlight.
   const { highlightedNodeId } = useStepFocus({ nodes, reactFlowInstance });
 
-  // Cutting function status — owned by useCutTool
+  // Cutting function status - owned by useCutTool
   const cut = useCutTool({
     nodes,
     edges,
@@ -435,7 +429,7 @@ export function FlowPanel({
   const { cutPath, isCutting, isClosingCut, startCut, moveCut, finishCut } =
     cut;
 
-  // Right-click connect gesture — owned by useConnectGesture
+  // Right-click connect gesture - owned by useConnectGesture
   const connect = useConnectGesture({
     nodes,
     setEdges,
@@ -456,7 +450,7 @@ export function FlowPanel({
     finishConnect,
   } = connect;
 
-  // Copy/paste clipboard — owned by useStepClipboard
+  // Copy/paste clipboard - owned by useStepClipboard
   const { clipboardRef, handleCopySelected, handlePasteClipboard } =
     useStepClipboard({
       steps,
@@ -467,7 +461,7 @@ export function FlowPanel({
       onEdgesChange,
     });
 
-  // Layout reconciliation + result-preview injection — owned by usePipelineLayout
+  // Layout reconciliation + result-preview injection - owned by usePipelineLayout
   usePipelineLayout({
     hasTable,
     steps,
@@ -1246,10 +1240,7 @@ export function FlowPanel({
           pan) above the right-click mode (cut / menu). Keeping both visible
           makes each mode discoverable without hiding it behind a dot. */}
       <div
-        className="absolute left-3 top-1/2 z-30 flex flex-col gap-0.5 rounded-[9px] border border-border bg-card p-[3px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-transform duration-[120ms] ease-[cubic-bezier(0.2,0,0,1)] dark:shadow-none"
-        // `translate` rather than `left` so the slide is composited, and it keeps
-        // the vertical centring the old `-translate-y-1/2` class provided.
-        style={{ transform: `translate(${commandPanelInset}px, -50%)` }}
+        className="absolute left-3 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-0.5 rounded-[9px] border border-border bg-card p-[3px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-none"
         onMouseDown={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.stopPropagation()}
       >

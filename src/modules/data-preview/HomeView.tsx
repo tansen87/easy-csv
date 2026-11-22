@@ -76,7 +76,7 @@ interface HomeViewProps {
   isExecuting?: boolean;
   /** Per-tab run state, used for the tab-strip badges (design 028 §5.4). */
   tabRuns?: Record<string, import("@/types/execution").RunSession>;
-  /** Tabs other than the current one still running — shown as a weak hint. */
+  /** Tabs other than the current one still running - shown as a weak hint. */
   otherRunningCount?: number;
   onCancelExecution?: () => void;
   recentFiles?: RecentFile[];
@@ -125,10 +125,10 @@ interface HomeViewProps {
   showOnboardingGuide?: boolean;
   /** xan command count, shown in the guide card's add-step line. */
   commandCount?: number;
-  /** Open the floating command panel — the single "add an operation" entry. */
-  onOpenCommandPanel?: () => void;
-  /** Width the open command panel takes on the left; the tool rail slides right. */
-  commandPanelInset?: number;
+  /** Open the menu-bar command field - the single "add an operation" entry. */
+  onOpenCommandSearch?: () => void;
+  /** Per-command docs from the command form header (design 074). */
+  onShowCommandHelp?: (commandName: string) => void;
   onOpenAIPanel?: () => void;
   /** Load the built-in sample data + demo pipeline. */
   onLoadDemo?: () => void;
@@ -203,8 +203,8 @@ export const HomeView = React.memo(function HomeView({
   onDelimiterChange,
   showOnboardingGuide = false,
   commandCount = 0,
-  commandPanelInset = 0,
-  onOpenCommandPanel,
+  onOpenCommandSearch,
+  onShowCommandHelp,
   onOpenAIPanel,
   onLoadDemo,
   onDismissOnboardingGuide,
@@ -390,7 +390,6 @@ export const HomeView = React.memo(function HomeView({
           rows={data}
           columnWidths={columnWidths}
           inputFileName={inputFileName}
-          commandPanelInset={commandPanelInset}
           resultPreview={resultPreview}
           onStepsChange={(newPipeline) => {
             if (onPipelineReorder && selectedTabId) {
@@ -450,7 +449,7 @@ export const HomeView = React.memo(function HomeView({
         reveal={demoReveal}
         onAdvanceReveal={onAdvanceDemoReveal}
         onSkipReveal={onSkipDemoReveal}
-        onAddStep={() => onOpenCommandPanel?.()}
+        onAddStep={() => onOpenCommandSearch?.()}
         onAskAi={() => onOpenAIPanel?.()}
         onSeeExample={() => onLoadDemo?.()}
         onDismissGuide={() => onDismissOnboardingGuide?.()}
@@ -742,6 +741,7 @@ export const HomeView = React.memo(function HomeView({
           setCommandDialog={setCommandDialog}
           headers={headers}
           sourceTable={sourceTable}
+          onShowHelp={onShowCommandHelp}
         />
       )}
     </div>

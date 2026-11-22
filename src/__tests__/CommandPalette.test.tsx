@@ -36,6 +36,7 @@ function makeItems(): PaletteItem[] {
       category: "Add, transform, drop and move columns",
       source: "command",
       keywords: "Add, transform, drop and move columns",
+      onHelp: vi.fn(),
       onSelect: vi.fn(),
     },
     {
@@ -352,6 +353,20 @@ describe("CommandPalette", () => {
     const { container } = renderPalette(makeItems(), { withInput: false });
     expect(container.querySelector("input")).toBeNull();
     expect(container.textContent).toContain("Open");
+  });
+
+  it("opens the selected command's docs with Shift+Enter", () => {
+    const items = makeItems();
+    const onClose = vi.fn();
+    renderPalette(items, { onClose });
+
+    fireEvent.keyDown(window, { key: "ArrowDown" });
+    fireEvent.keyDown(window, { key: "ArrowDown" });
+    fireEvent.keyDown(window, { key: "Enter", shiftKey: true });
+
+    expect(items[2].onHelp).toHaveBeenCalledTimes(1);
+    expect(items[2].onSelect).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("returns null when closed", () => {

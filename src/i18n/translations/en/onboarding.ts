@@ -8,7 +8,7 @@ export const enOnboarding = {
     "Your data is ready. Add one operation to get going - chain them up later if you want.",
   onboardingAddStep: "Add an operation",
   onboardingAddStepDesc:
-    "Open the command panel and browse all {count} operations",
+    "Browse all {count} operations in the field above the canvas",
   onboardingAskAi: "Describe what you need",
   onboardingAskAiDesc: '"Total the amount by region"',
   onboardingSeeExample: "See an example",
@@ -19,15 +19,11 @@ export const enOnboarding = {
   onboardingDismissHint:
     "Won't appear again; you can bring it back in Settings",
 
-  // Hint inside the command panel
-  onboardingPanelHint:
-    "Your first operation applies straight to the input data (its own branch) - no need to connect anything first.",
-
   // Sample data
   onboardingSampleFailed: "Could not prepare the sample data: {error}",
   // Step-by-step replay: each caption names the action that added the step.
   onboardingDemoRevealAction1:
-    "Open the command (Alt+C), click search → drop empty amounts",
+    "Press Ctrl F, click search → drop empty amounts",
   onboardingDemoRevealAction2: "Click dedup → drop exactly duplicated rows",
   onboardingDemoRevealAction3: "Click groupby → total the amount by region",
   onboardingDemoRevealRunning: "Three steps built - running it…",

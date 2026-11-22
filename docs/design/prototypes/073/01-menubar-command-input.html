@@ -411,7 +411,7 @@
   <div class="sheet-hd">
     <div class="eyebrow">原型 073-01 · 2026-11-22</div>
     <h1>菜单栏命令输入框 —— 把「命令面板」和「搜索」收进同一个开口</h1>
-    <p>菜单栏中部加一个常驻输入框（<b>› 搜索命令、步骤或文件</b>），点击/聚焦即在它下方展开面板：空查询是编号目录，<b>一打字就跨来源检索</b>（操作 / 命令 / 步骤 / 文件 / 标签页 / 模板）。现 <code>Ctrl K</code> 的居中模态与画布 <code>Ctrl F</code> 浮层都并进这里；<code>查看</code> 菜单里的两项随之删除。</p>
+    <p>菜单栏中部加一个常驻输入框（<b>› 搜索命令、步骤或文件</b>），点击/聚焦即在它下方展开面板：空查询是编号目录，<b>一打字就跨来源检索</b>（操作 / 命令 / 步骤 / 文件 / 标签页 / 模板）。原 <code>Ctrl K</code> 的居中模态与画布 <code>Ctrl F</code> 浮层都并进这里；<code>查看</code> 菜单里的两项随之删除。</p>
     <button class="theme-toggle" id="theme">暗色</button>
   </div>
 
@@ -434,14 +434,14 @@
     <dt>性格</dt><dd>准确、安静、有点命令行的干脆。</dd>
     <dt>世界</dt><dd>账本与索引卡（033 / 040 / 072 已定）。输入框是账本扉页上的索引行，展开的列表是目录页。</dd>
     <dt>时刻</dt><dd>展开后的那一条结果列表：等宽命令名、<code>01–14</code> 序号、命中只换墨色——整屏唯一有色彩的地方。</dd>
-    <dt>签名</dt><dd><code>›</code> 提示符 + <code>Ctrl K</code> 键帽 + 分组等宽序号，与画布步骤卡 <code>01/02</code>、设置页分组序号同一套编号。</dd>
+    <dt>签名</dt><dd><code>›</code> 提示符 + <code>Ctrl F</code> 键帽 + 分组等宽序号，与画布步骤卡 <code>01/02</code>、设置页分组序号同一套编号。</dd>
   </dl>
 
   <!-- ============ 01 现状 ============ -->
   <section class="sec">
     <div class="sec-hd"><span class="num">01</span><h2>现状：入口在二级菜单，打开是盖住画布的模态</h2><span class="tag">before</span></div>
     <p class="sec-note">三条红线：入口不可见、模态打断、面板输入行与菜单栏分离。<b>菜单栏中部那段空白</b>正是最该放东西的地方。</p>
-    <div style="position:relative;margin-top:30px">
+    <div style="position:relative;padding-top:30px">
     <div class="win win-before">
       <div class="bar">
         <div class="brand">Easy Csv</div>
@@ -543,7 +543,7 @@
             <div class="field">
               <span class="prompt">›</span>
               <span class="ph">搜索命令、步骤或文件</span>
-              <kbd>Ctrl K</kbd>
+              <kbd>Ctrl F</kbd>
             </div>
           </div>
           <div class="icons">
@@ -586,7 +586,7 @@
       <span class="pin" style="left:calc(50% + 228px);top:9px">1</span>
     </div>
     <div class="legend">
-      <span><i>1</i><b>常驻输入框</b>：26px 高，与窗口同轴；`›` 是唯一提示符，右侧 `Ctrl K` 键帽是快捷键的唯一广告位</span>
+      <span><i>1</i><b>常驻输入框</b>：26px 高，与窗口同轴；`›` 是唯一提示符，右侧 `Ctrl F` 键帽是快捷键的唯一广告位</span>
     </div>
   </section>
 
@@ -611,7 +611,7 @@
             <div class="field focused">
               <span class="prompt">›</span>
               <input id="live-input" type="text" placeholder="搜索命令、步骤或文件" autocomplete="off" spellcheck="false" />
-              <kbd>Ctrl K</kbd>
+              <kbd>Ctrl F</kbd>
             </div>
           </div>
           <div class="icons">
@@ -739,7 +739,7 @@
             <div class="field focused">
               <span class="prompt">›</span>
               <span style="font-size:12px;color:var(--fg)">合并</span>
-              <kbd>Ctrl K</kbd>
+              <kbd>Ctrl F</kbd>
             </div>
           </div>
           <div class="icons">
@@ -824,11 +824,11 @@
         <div class="cap"><b>输入框三态</b><span>26px · 半径 7</span></div>
         <div class="body">
           <div class="mini-lab">静息</div>
-          <div class="mini-field"><span class="prompt">›</span><span>搜索命令、步骤或文件</span><kbd>Ctrl K</kbd></div>
+          <div class="mini-field"><span class="prompt">›</span><span>搜索命令、步骤或文件</span><kbd>Ctrl F</kbd></div>
           <div class="mini-lab" style="margin-top:14px">悬停</div>
-          <div class="mini-field hov"><span class="prompt">›</span><span>搜索命令、步骤或文件</span><kbd>Ctrl K</kbd></div>
+          <div class="mini-field hov"><span class="prompt">›</span><span>搜索命令、步骤或文件</span><kbd>Ctrl F</kbd></div>
           <div class="mini-lab" style="margin-top:14px">焦点 / 展开</div>
-          <div class="mini-field foc"><span class="prompt">›</span><span style="color:var(--fg)">合并</span><kbd>Ctrl K</kbd></div>
+          <div class="mini-field foc"><span class="prompt">›</span><span style="color:var(--fg)">合并</span><kbd>Ctrl F</kbd></div>
           <p style="margin:12px 0 0;font-size:10.5px;line-height:1.7;color:var(--muted-fg)">
             边框 30% → 墨 18% → 墨蓝 40%；焦点外加 2px 的 12% 墨蓝环。只有键盘焦点才出环，鼠标点击不出。
           </p>
@@ -879,7 +879,7 @@
         <div class="cap"><b>键盘路径</b><span>不离开输入框</span></div>
         <div class="body">
           <table style="width:100%;border-collapse:collapse;font-size:11px">
-            <tr><td style="padding:4px 0;color:var(--fg);width:104px"><kbd>Ctrl K</kbd> / <kbd>Ctrl F</kbd></td><td style="color:var(--muted-fg)">聚焦并展开（再按一次关闭）</td></tr>
+            <tr><td style="padding:4px 0;color:var(--fg);width:104px"><kbd>Ctrl F</kbd></td><td style="color:var(--muted-fg)">聚焦并展开（再按一次关闭）；Ctrl K 已移除</td></tr>
             <tr><td style="padding:4px 0"><kbd>↑</kbd><kbd>↓</kbd></td><td style="color:var(--muted-fg)">跨分组回环移动，列表跟随滚动</td></tr>
             <tr><td style="padding:4px 0"><kbd>↵</kbd></td><td style="color:var(--muted-fg)">执行；输入法组字中的 ↵ 不执行</td></tr>
             <tr><td style="padding:4px 0"><kbd>esc</kbd></td><td style="color:var(--muted-fg)">先清空查询，再按一次关闭并回焦画布</td></tr>
@@ -901,7 +901,7 @@
           <button class="mbtn">文件</button><button class="mbtn">编辑</button><button class="mbtn">查看</button><button class="mbtn">工具</button><button class="mbtn">帮助</button><button class="mbtn exec">执行</button>
         </div>
         <div class="field-wrap">
-          <div class="field focused"><span class="prompt">›</span><span style="font-size:12px;color:var(--fg)">filter</span><kbd>Ctrl K</kbd></div>
+          <div class="field focused"><span class="prompt">›</span><span style="font-size:12px;color:var(--fg)">filter</span><kbd>Ctrl F</kbd></div>
         </div>
         <div class="icons">
           <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M9 9h6v6H9z"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg></button>
@@ -997,7 +997,7 @@
         <h3>合并映射（旧 → 新）</h3>
         <table>
           <tr><th>今天</th><th>之后</th></tr>
-          <tr><td><code>查看 → 命令面板</code>（Ctrl K 模态）</td><td>删除菜单项；入口 = 中部输入框；<code>Ctrl K</code> 仍打开它</td></tr>
+          <tr><td><code>查看 → 命令面板</code>（原 Ctrl K 模态）</td><td>删除菜单项；入口 = 中部输入框；<code>Ctrl F</code> 打开它（074 已删 Ctrl K）</td></tr>
           <tr><td><code>查看 → 搜索</code>（Ctrl F 浮层）</td><td>删除菜单项与 <code>SearchOverlay</code>；步骤成为面板的一类来源</td></tr>
           <tr><td>菜单栏 ⌘ 图标（072 停靠目录）</td><td>保留：浏览用（「61 个操作长什么样」），检索用输入框（「我知道它叫什么」）</td></tr>
           <tr><td>053 面板的分组与评分</td><td>复用：空查询走 072 分类显示表（<code>01–14</code>），打字后走 <code>scoreItem</code> 单列排序</td></tr>
@@ -1027,7 +1027,7 @@
         <tr><td>1</td><td>「最近」分组要不要做（需新持久化 <code>easy-csv-recent-commands</code>，≤5 条）</td><td><b>不做</b>（2026-11-22 拍板）。目录从「操作」直接开始</td></tr>
         <tr><td>2</td><td>折叠阈值 960 是否接受（1024 窗口仍显示 264px 输入框）</td><td><b>接受</b>；&lt; 960 折成一枚图标，面板自带查询行</td></tr>
         <tr><td>3</td><td>072 的 ⌘ 停靠目录是否保留</td><td><b>保留</b>。目录回答「有哪些操作」，输入框回答「我要的那个在哪」</td></tr>
-        <tr><td>4</td><td><code>Ctrl F</code> 完全并入，还是只做别名？</td><td><b>完全并入</b>：同一面板、同一评分，画布浮层已删除</td></tr>
+        <tr><td>4</td><td><code>Ctrl F</code> 与 <code>Ctrl K</code> 合并后只留一个？</td><td><b>只留 Ctrl F</b>：同一面板、同一评分，画布浮层与 Ctrl K 都已删除</td></tr>
       </table>
     </div>
   </section>

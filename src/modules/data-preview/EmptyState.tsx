@@ -115,7 +115,7 @@ export function EmptyState({
                 <span className="h-3 w-px bg-border" />
                 <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <kbd className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded border border-border bg-muted px-1.5 font-mono text-[11px]">
-                    Alt C
+                    Ctrl F
                   </kbd>
                   {t.emptyAddStepShort}
                   <kbd className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded border border-border bg-muted px-1.5 font-mono text-[11px]">
@@ -202,7 +202,7 @@ export function EmptyState({
                           flagged ? "text-muted-foreground" : "text-foreground"
                         }`}
                       >
-                        {row.amount ?? "—"}
+                        {row.amount ?? "-"}
                       </span>
                     </div>
                   );

@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 074-01 · 命令面板退役:两扇门推开是同一个房间</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:#fff;
+    --fg:oklch(0.145 0 0);
+    --card:#fff;
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-ink:oklch(0.35 0.05 250);
+    --brand-fg:oklch(0.985 0 0);
+    --chrome:color-mix(in oklab, oklch(0.42 0.055 250) 12%, #fff);
+    --chrome-border:color-mix(in oklab, oklch(0.42 0.055 250) 30%, transparent);
+    --brand-6:color-mix(in oklab, var(--brand) 6%, transparent);
+    --brand-9:color-mix(in oklab, var(--brand) 9%, transparent);
+    --brand-12:color-mix(in oklab, var(--brand) 12%, transparent);
+    --brand-22:color-mix(in oklab, var(--brand) 22%, transparent);
+    --brand-40:color-mix(in oklab, var(--brand) 40%, transparent);
+
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --canvas-dot:oklch(0.2 0.01 80 / 11%);
+    --canvas-line:oklch(0.2 0.01 80 / 30%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-win:0 24px 64px -34px oklch(0.2 0.02 80 / 34%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-fly:0 16px 40px -20px oklch(0.2 0.02 80 / 28%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --redline:oklch(0.55 0.21 27);
+    --warning:oklch(0.62 0.13 70);
+  }
+  .dark{
+    color-scheme:dark;
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-ink:oklch(0.82 0.04 245);
+    --brand-fg:oklch(0.205 0 0);
+    --chrome:color-mix(in oklab, oklch(0.78 0.045 245) 16%, oklch(0.145 0 0));
+    --chrome-border:color-mix(in oklab, oklch(0.78 0.045 245) 34%, transparent);
+    --brand-6:color-mix(in oklab, var(--brand) 8%, transparent);
+    --brand-9:color-mix(in oklab, var(--brand) 12%, transparent);
+    --brand-12:color-mix(in oklab, var(--brand) 16%, transparent);
+    --brand-22:color-mix(in oklab, var(--brand) 26%, transparent);
+    --brand-40:color-mix(in oklab, var(--brand) 46%, transparent);
+    --stage:oklch(0.12 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --canvas-dot:oklch(1 0 0 / 9%);
+    --canvas-line:oklch(0.96 0.005 85 / 30%);
+    --shadow-card:none;
+    --shadow-win:0 24px 64px -34px oklch(0 0 0 / 80%);
+    --shadow-fly:0 16px 40px -20px oklch(0 0 0 / 78%);
+    --redline:oklch(0.68 0.19 27);
+    --warning:oklch(0.76 0.12 75);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+    -webkit-font-smoothing:antialiased;transition:background-color .18s ease,color .18s ease;
+  }
+  kbd{
+    display:inline-flex;align-items:center;justify-content:center;height:18px;min-width:18px;padding:0 4px;
+    border:1px solid var(--border);border-radius:4px;background:transparent;
+    font-family:var(--mono);font-size:10px;line-height:1;color:var(--muted-fg-2);
+  }
+  .ic{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;display:block}
+
+  #sheet{width:1240px;margin:0 auto;padding:28px 0 96px}
+
+  .sheet-hd{position:relative;padding-bottom:22px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .sheet-hd h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .sheet-hd p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1000px;line-height:1.85}
+  .sheet-hd p b{color:var(--fg);font-weight:500}
+  .theme-toggle{position:absolute;right:0;top:2px;height:26px;padding:0 10px;border-radius:6px;
+                border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+                font-family:var(--mono);font-size:10.5px;cursor:pointer}
+  .theme-toggle:hover{color:var(--fg)}
+
+  .audit{border:1px solid var(--border);border-radius:10px;background:var(--card);
+         padding:16px 18px 14px;margin-bottom:16px;font-size:11.5px;line-height:1.95;color:var(--muted-fg)}
+  .audit .hd{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .audit .hd b{color:var(--fg);font-weight:500;font-size:12.5px}
+  .audit .hd span{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+  .audit ol{margin:0;padding-left:20px;max-width:1000px}
+  .audit li+li{margin-top:2px}
+  .audit b{color:var(--fg);font-weight:500}
+  .audit code,.direct code,.spec code{font-family:var(--mono);font-size:10.5px;color:var(--brand-ink);
+              background:var(--brand-6);padding:1px 4px;border-radius:4px}
+
+  .direct{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:14px 18px;
+          margin-bottom:34px;display:grid;grid-template-columns:64px 1fr;gap:6px 14px;font-size:11.5px;line-height:1.7}
+  .direct dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);padding-top:2px}
+  .direct dd{margin:0;color:var(--muted-fg);max-width:980px}
+  .direct dd b{color:var(--fg);font-weight:500}
+
+  .sec{margin-bottom:44px}
+  .sec-hd{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+  .sec-hd .num{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-3)}
+  .sec-hd h2{margin:0;font-size:13.5px;font-weight:500}
+  .sec-hd .tag{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);border:1px solid var(--border);
+               border-radius:4px;padding:1px 5px}
+  .sec-note{margin:0 0 14px;font-size:11.5px;line-height:1.8;color:var(--muted-fg);max-width:1050px}
+  .sec-note b{color:var(--fg);font-weight:500}
+
+  /* ================= window ================= */
+  .win{
+    --winw:1240px;
+    position:relative;width:var(--winw);height:720px;display:flex;flex-direction:column;
+    background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden;
+    box-shadow:var(--shadow-win);
+  }
+  .bar{
+    position:relative;flex:none;display:flex;align-items:center;height:36px;padding-left:16px;
+    background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-border);
+  }
+  .brand{flex:none;padding-right:12px;font-size:12.5px;font-weight:500;line-height:1;color:var(--fg)}
+  .menus{display:flex;align-items:center;flex:none}
+  .mbtn{
+    height:26px;padding:0 12px;border:0;border-radius:6px;background:transparent;
+    font-family:var(--font);font-size:12px;font-weight:500;line-height:1;color:var(--brand-ink);
+    cursor:default;white-space:nowrap;
+  }
+  .mbtn.exec{margin-left:2px}
+  .mbtn .dot{display:inline-block;width:5px;height:5px;margin-left:6px;border-radius:50%;background:var(--brand)}
+
+  .field-wrap{
+    position:absolute;left:50%;top:5px;transform:translateX(-50%);
+    width:clamp(180px,calc(var(--winw) - 760px),440px);
+  }
+  .field{
+    display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:8px;
+    height:26px;padding:0 6px 0 10px;border:1px solid var(--border);border-radius:7px;
+    background:var(--bg);color:var(--muted-fg-2);
+  }
+  .field.focused{border-color:var(--brand-40);box-shadow:0 0 0 2px var(--brand-12)}
+  .field .prompt{font-family:var(--mono);font-size:13px;line-height:1;color:var(--brand);text-align:center;transform:translateY(-1px)}
+  .field .ph{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .field .val{font-size:12px;color:var(--fg)}
+  .field kbd{height:16px;min-width:16px;font-size:9.5px;padding:0 3px;color:var(--muted-fg-3)}
+
+  .icons{margin-left:auto;display:flex;align-items:center;gap:2px;flex:none}
+  .icon-btn{position:relative;display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;
+            background:transparent;color:var(--brand-ink);cursor:default}
+  .icon-btn.on{background:var(--brand-12)}
+  .icon-btn.on::after{content:"";position:absolute;bottom:3px;left:50%;transform:translateX(-50%);
+                      width:12px;height:2px;border-radius:99px;background:currentColor}
+  .wctl{display:flex;flex:none;margin-left:10px}
+  .wbtn{display:grid;place-items:center;width:46px;height:36px;border:0;background:transparent;
+        color:var(--muted-fg);cursor:default}
+
+  .tabstrip{flex:none;display:flex;align-items:center;gap:4px;height:34px;padding:0 8px;
+            border-bottom:1px solid var(--border-soft);background:var(--bg)}
+  .tab{display:flex;align-items:center;gap:7px;height:26px;padding:0 8px 0 10px;border-radius:6px;
+       font-size:11.5px;color:var(--muted-fg);cursor:default}
+  .tab.on{background:var(--muted);color:var(--fg);font-weight:500}
+  .tab .x{font-size:12px;color:var(--muted-fg-3);padding:0 1px}
+  .tab-add{display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:5px;
+           background:transparent;color:var(--muted-fg-3);cursor:default}
+
+  .canvas{position:relative;flex:1;overflow:hidden;background-color:var(--bg);
+          background-image:radial-gradient(var(--canvas-dot) 1px,transparent 1px);background-size:22px 22px}
+  .edges{position:absolute;inset:0;width:100%;height:100%}
+  .edges path{fill:none;stroke:var(--canvas-line);stroke-width:1.25}
+
+  .rail{position:absolute;left:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;
+        gap:2px;padding:3px;border:1px solid var(--border);border-radius:7px;background:var(--card);
+        box-shadow:var(--shadow-card)}
+  .rail b{display:grid;place-items:center;width:24px;height:24px;border-radius:5px;color:var(--muted-fg-2)}
+  .rail b.on{background:var(--brand-9);color:var(--brand-ink)}
+
+  .tnode{position:absolute;top:72px;background:var(--card);border:1px solid var(--border);border-radius:8px;
+         box-shadow:var(--shadow-card);overflow:hidden}
+  .tnode .hd{display:flex;align-items:center;justify-content:space-between;gap:10px;height:26px;
+             padding:0 9px;border-bottom:1px solid var(--border-soft)}
+  .tnode .hd .fn{font-size:10.5px;font-weight:500;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tnode .hd .dm{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);white-space:nowrap}
+  .tnode table{width:100%;border-collapse:collapse;table-layout:fixed}
+  .tnode th,.tnode td{padding:0 8px;height:21px;text-align:left;font-size:9.5px;
+                      border-bottom:1px solid var(--border-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tnode th{font-family:var(--mono);font-size:8.5px;font-weight:400;color:var(--muted-fg-3)}
+  .tnode td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;color:var(--muted-fg)}
+  .tnode .gutter{width:20px;text-align:right;font-family:var(--mono);font-size:8px;color:var(--muted-fg-3);
+                 border-right:1px solid var(--border-soft);padding-right:6px}
+  .tnode .ft{display:flex;align-items:center;justify-content:space-between;gap:8px;height:22px;
+             padding:0 9px;border-top:1px solid var(--border-soft);
+             font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-3)}
+
+  .stepnode{position:absolute;top:72px;display:grid;grid-template-columns:22px minmax(0,1fr);
+          background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-card)}
+  .stepnode .idx{display:grid;place-items:center;border-right:1px solid var(--border-soft);
+                 font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)}
+  .stepnode .body{padding:8px 9px 9px;min-width:0}
+  .stepnode .cn{font-family:var(--mono);font-size:11px;color:var(--fg);white-space:nowrap}
+  .stepnode .cp{margin-top:5px;font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-2);
+                white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* ================= docked command panel (the thing under review) ================= */
+  .dock{
+    position:absolute;left:8px;top:0;width:260px;height:584px;z-index:6;
+    display:flex;flex-direction:column;overflow:hidden;
+    background:var(--card);border:1px solid var(--border);border-radius:12px;
+    box-shadow:var(--shadow-fly);
+  }
+  .dock-hd{display:flex;align-items:center;gap:10px;height:44px;padding:0 8px 0 14px;
+           border-bottom:1px solid var(--border-soft);flex:none}
+  .dock-hd .ttl{font-size:13px;font-weight:500}
+  .dock-search{display:flex;align-items:center;gap:6px;min-width:0;flex:1;height:28px;padding:0 8px;
+               border:1px solid transparent;border-radius:6px;background:color-mix(in oklab,var(--fg) 4%,transparent);
+               color:var(--muted-fg-3)}
+  .dock-search span{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dock-hd .x{display:grid;place-items:center;width:24px;height:24px;border-radius:5px;color:var(--muted-fg-3);flex:none}
+  .dock-body{min-height:0;flex:1;overflow:hidden;padding:0 12px 0 6px}
+  .dock-grp{display:flex;align-items:center;gap:6px;height:26px;padding:4px 7px 0;
+            font-size:10.5px;font-weight:500;color:var(--muted-fg)}
+  .dock-grp .gnum{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)}
+  .dock-grp .gcount{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .dock-row{display:grid;grid-template-columns:minmax(0,1fr) 16px;align-items:center;gap:4px;
+            height:40px;padding:0 7px;border-radius:6px}
+  .dock-row.on{background:var(--brand-9)}
+  .dock-row .nm{font-family:var(--mono);font-size:11.5px;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dock-row .ds{font-size:11px;color:var(--muted-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  .dock-row .q{font-family:var(--mono);font-size:11px;color:var(--muted-fg-3);text-align:center}
+  .dock-ft{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;flex:none;
+           border-top:1px solid var(--border-soft);font-size:10.5px;color:var(--muted-fg)}
+  .dock-ft .sp{flex:1}
+
+  /* ================= palette (074 after) ================= */
+  .palette{
+    position:absolute;left:50%;top:42px;transform:translateX(-50%);width:620px;
+    display:flex;flex-direction:column;z-index:6;
+    background:var(--card);border:1px solid var(--border);border-radius:12px;
+    box-shadow:var(--shadow-fly);overflow:hidden;
+  }
+  .pal-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;
+            height:34px;padding:1px 12px 0;border-bottom:1px solid var(--border-soft)}
+  .pal-meta .scope{font-size:10.5px;color:var(--muted-fg)}
+  .pal-meta .scope b{color:var(--fg);font-weight:500}
+  .pal-meta .count{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);font-variant-numeric:tabular-nums}
+  .pal-list{padding:6px}
+  .grp{display:flex;align-items:baseline;gap:7px;height:26px;padding:4px 10px 0}
+  .grp .gnum{width:20px;flex:none;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .grp .gname{font-size:10.5px;font-weight:500;color:var(--muted-fg)}
+  .grp .gcount{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .row{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,214px) auto;
+       align-items:center;gap:12px;width:100%;height:34px;padding:0 10px;border:0;border-radius:6px;
+       background:transparent;text-align:left}
+  .row .src{display:none;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .palette.searching .row{grid-template-columns:minmax(0,1fr) minmax(0,170px) auto auto}
+  .palette.searching .row .src{display:block}
+  .row.active{background:var(--brand-9)}
+  .row.active::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:99px;background:var(--brand)}
+  .row .rl{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;font-weight:500;color:var(--fg)}
+  .row.mono .rl{font-family:var(--mono);font-size:11.5px;font-weight:400}
+  .row .rd{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--muted-fg)}
+  .row .keys{display:flex;gap:3px;justify-content:flex-end}
+  .pal-ft{display:flex;align-items:center;gap:14px;height:34px;padding:0 12px;
+          border-top:1px solid var(--border-soft);font-size:10.5px;color:var(--muted-fg)}
+  .pal-ft .hint{display:flex;align-items:center;gap:5px}
+  .pal-ft .hint .ks{display:flex;gap:2px}
+  .pal-ft .sp{flex:1}
+  .pal-ft .note{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+
+  /* ================= first-step guide ================= */
+  .guide{position:absolute;left:50%;top:64px;transform:translateX(-50%);width:344px;z-index:5;
+         background:var(--card);border:1px solid var(--border);border-radius:16px;
+         box-shadow:0 12px 28px -16px rgba(0,0,0,.18);padding:16px}
+  .guide .gh{display:flex;align-items:center;gap:8px}
+  .guide .gh svg{color:var(--brand)}
+  .guide .gh h3{margin:0;font-size:13px;font-weight:500}
+  .guide .gd{margin:8px 0 0;font-size:11.5px;line-height:1.7;color:var(--muted-fg)}
+  .guide .grows{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+  .grow{display:grid;grid-template-columns:26px minmax(0,1fr);align-items:center;gap:10px;
+        padding:8px 10px;border:1px solid var(--border);border-radius:10px}
+  .grow.main{border-color:var(--brand-40);background:var(--brand-6)}
+  .grow .gi{display:grid;place-items:center;width:26px;height:26px;border-radius:7px;
+            background:var(--brand-12);color:var(--brand-ink)}
+  .grow .gt{font-size:11.5px;font-weight:500;color:var(--fg)}
+  .grow .gs{font-size:10.5px;color:var(--muted-fg);margin-top:1px}
+  .guide .gf{display:flex;align-items:center;justify-content:space-between;margin-top:12px;font-size:10.5px;color:var(--muted-fg)}
+
+  /* ================= command form mock (help placement) ================= */
+  .formmock{width:100%;max-width:520px;margin:0 auto;background:var(--card);border:1px solid var(--border);
+            border-radius:10px;overflow:hidden;box-shadow:var(--shadow-card)}
+  .fm-hd{display:flex;align-items:center;gap:10px;height:48px;padding:0 10px 0 16px;border-bottom:1px solid var(--border-soft)}
+  .fm-title{font-size:13.5px;font-weight:500;color:var(--fg)}
+  .fm-title span{margin-left:8px;font-family:var(--mono);font-size:10.5px;font-weight:400;color:var(--muted-fg)}
+  .fm-actions{margin-left:auto;display:flex;align-items:center;gap:4px}
+  .fm-doc{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 8px;border:0;border-radius:6px;
+          background:transparent;font-family:var(--font);font-size:11.5px;color:var(--muted-fg)}
+  .fm-doc:hover{background:color-mix(in oklab,var(--fg) 6%,transparent);color:var(--fg)}
+  .fm-doc.on{background:var(--brand-9);color:var(--brand-ink)}
+  .fm-x{display:grid;place-items:center;width:26px;height:26px;border-radius:6px;color:var(--muted-fg)}
+  .fm-body{padding:10px 16px 14px;display:flex;flex-direction:column;gap:8px}
+  .fm-row{display:grid;grid-template-columns:70px minmax(0,1fr);align-items:center;gap:10px}
+  .fm-lab{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .fm-input{height:28px;display:flex;align-items:center;padding:0 9px;border:1px solid var(--border);
+            border-radius:6px;background:var(--bg);font-family:var(--mono);font-size:10.5px;color:var(--fg)}
+  .fm-ft{display:flex;align-items:center;justify-content:flex-end;gap:8px;height:48px;padding:0 12px;
+         border-top:1px solid var(--border-soft)}
+  .fm-cancel{height:28px;display:inline-flex;align-items:center;padding:0 10px;border-radius:6px;
+             font-size:11.5px;color:var(--muted-fg)}
+  .fm-add{height:28px;display:inline-flex;align-items:center;padding:0 12px;border-radius:6px;
+          background:var(--brand);color:var(--brand-fg);font-size:11.5px;font-weight:500}
+
+  /* annotations */
+  .pins{position:absolute;inset:0;z-index:8;pointer-events:none}
+  .pin{position:absolute;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;
+       background:var(--brand);color:var(--brand-fg);font-family:var(--mono);font-size:9.5px;
+       box-shadow:0 0 0 3px var(--card)}
+  .redline{position:absolute;z-index:7;border:1px solid var(--redline);border-radius:4px;pointer-events:none}
+  .rnum{position:absolute;z-index:8;display:grid;place-items:center;width:16px;height:16px;border-radius:50%;
+        background:var(--redline);color:#fff;font-family:var(--mono);font-size:9px}
+  .legend{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:14px;font-size:11px;color:var(--muted-fg)}
+  .legend span{display:flex;gap:7px;align-items:baseline}
+  .legend i{flex:none;display:grid;place-items:center;width:16px;height:16px;border-radius:50%;
+            background:var(--brand);color:var(--brand-fg);font-family:var(--mono);font-size:8.5px;
+            font-style:normal;transform:translateY(2px)}
+  .legend b{color:var(--fg);font-weight:500}
+
+  /* metrics + spec */
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:18px 0 0}
+  .metric{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:14px 16px}
+  .metric .k{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .metric .v{margin-top:6px;font-family:var(--mono);font-size:20px;letter-spacing:-.02em;color:var(--fg);
+             font-variant-numeric:tabular-nums}
+  .metric .d{margin-top:5px;font-size:11px;color:var(--muted-fg);line-height:1.6}
+
+  .spec{border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden;margin-bottom:18px}
+  .spec h3{margin:0;padding:11px 14px;border-bottom:1px solid var(--border-soft);font-size:11.5px;font-weight:500}
+  .spec table{width:100%;border-collapse:collapse;font-size:11px}
+  .spec th,.spec td{text-align:left;vertical-align:top;padding:7px 14px;border-bottom:1px solid var(--border-soft);
+                    line-height:1.65;color:var(--muted-fg)}
+  .spec tr:last-child td{border-bottom:0}
+  .spec th{font-family:var(--mono);font-size:9.5px;font-weight:400;color:var(--muted-fg-3);
+           background:color-mix(in oklab,var(--fg) 2%,transparent)}
+  .spec td:first-child{color:var(--fg);white-space:nowrap}
+  .spec .yes{color:var(--fg);font-weight:500}
+  .spec .no{color:var(--redline)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .foot{margin-top:34px;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);line-height:1.9}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="sheet-hd">
+    <div class="eyebrow">原型 074-01 · 2026-11-22</div>
+    <h1>命令面板退役:两扇门推开是同一个房间</h1>
+    <p>菜单栏有了常驻命令输入框（073）之后，右端的 ⌘ 停靠面板已经<b>不提供任何新东西</b>：同一份 61 条命令、同一个分类序、同一个搜索。已按本稿<b>删除停靠面板与 ⌘ 图标</b>，把唯一入口留给输入框，并让首步引导改指它。<b>2026-11-22 已实现</b>。</p>
+    <button class="theme-toggle" id="theme">暗色</button>
+  </div>
+
+  <div class="audit">
+    <div class="hd"><b>审计:它为什么多余</b><span>9 条 · 代码可核对</span></div>
+    <ol>
+      <li><b>数据完全重合。</b>停靠面板读的是 <code>CommandList.tsx</code> + <code>commandSearch.ts</code>；输入框面板读的是 <code>CommandPalette.tsx</code> + 同一份 <code>xanCommands</code>、同一张 <code>COMMAND_CATEGORY_VIEW</code>。两处都是「61 条命令 / 14 类」。</li>
+      <li><b>072 的分工论证失效。</b>072 §3 说「目录 = 被看见，搜索 = 被找到」，所以保留停靠；073 把输入框的空查询直接做成了目录（操作 + 01–14 + 当前管道）。现在两者都在回答「有哪些操作」。</li>
+      <li><b>菜单栏出现两扇门。</b>中间是可见的输入框，右端还留着一枚 ⌘ 图标（<code>MainMenu.tsx</code> 右端图标组）；点它们做的是同一件事。</li>
+      <li><b>三个输入框。</b>输入框、停靠面板顶部的搜索（<code>CommandList.tsx:203-212</code>）、帮助里的搜索。前两个搜的是同一批命令。</li>
+      <li><b>画布被迫让位。</b>面板 260px 常驻左缘，打开时工具轨要右移 <code>268px</code>（<code>FlowPanel.tsx:1252</code> 的 <code>commandPanelInset</code>）；开关一次画布横向跳一次。</li>
+      <li><b>同一条命令两种长相。</b>停靠 40px 两行（名 + 描述），输入框面板 34px 单行；<code>filter</code> 在两处不是同一个东西的样子。</li>
+      <li><b>引导指错了门。</b>首步引导给 ⌘ 图标加高亮（<code>highlightCommandEntry</code>），而更显眼、更可发现的输入框就在头顶；引导卡「添加一个操作」打开的也是停靠面板（<code>FirstStepGuide</code> → <code>onOpenCommandPanel</code>）。</li>
+      <li><b>两套快捷键。</b><code>Alt C</code> 开关停靠面板，<code>Ctrl K</code> 开输入框；命令面板里还列着一条「命令」动作（<code>useKeyboardShortcuts.ts</code>）在切换同一个东西。</li>
+      <li><b>它违背已经定下的形态。</b>日志是抽屉（071）、设置是对话框（040）、检索是输入框（073）——只剩它还是「浮在画布上的常驻目录箱」，也是唯一一个不请自来占 260px 的窗口。</li>
+    </ol>
+  </div>
+
+  <dl class="direct">
+    <dt>产品</dt><dd>桌面上的 CSV 管道工具；加一步、找一条命令、跳到一个步骤——<b>都从顶部那一个输入框开始</b>。</dd>
+    <dt>性格</dt><dd>准确、安静、不绕路。</dd>
+    <dt>世界</dt><dd>账本与索引卡（033 / 040 / 072 / 073）。目录页只需要一本：输入框展开的那一列就是目录。</dd>
+    <dt>时刻</dt><dd>输入框下方那列结果：<code>01–14</code> 序号、等宽命令名、命中只换墨色。它是整套应用唯一的「选东西」画面。</dd>
+    <dt>签名</dt><dd><code>›</code> 提示符 + 键帽 + 等宽序号。⌘ 图标退休之后，不再有第二个「命令」符号。</dd>
+  </dl>
+
+  <!-- ============ 01 before ============ -->
+  <section class="sec">
+    <div class="sec-hd"><span class="num">01</span><h2>现状:输入框 + ⌘ 面板 + 面板内搜索，三个入口同一批命令</h2><span class="tag">before</span></div>
+    <p class="sec-note">面板本身做得不差（072 的编号行、吸顶组头、行尾 <code>?</code> 都对），问题是<b>它和输入框装的是同一份东西</b>，还额外占了 260px 画布与一个搜索框。</p>
+    <div style="position:relative;padding-top:30px">
+      <div class="win">
+        <div class="bar">
+          <div class="brand">Easy Csv</div>
+          <div class="menus">
+            <button class="mbtn">文件</button><button class="mbtn">编辑</button><button class="mbtn">查看</button>
+            <button class="mbtn">工具</button><button class="mbtn">帮助</button><button class="mbtn exec">执行<span class="dot"></span></button>
+          </div>
+          <div class="field-wrap"><div class="field"><span class="prompt">›</span><span class="ph">搜索命令、步骤或文件</span><kbd>Ctrl K</kbd></div></div>
+          <div class="icons">
+            <button class="icon-btn on"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M9 9h6v6H9z"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg></button>
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3z"/><path d="M8 12h8M8 16h6"/></svg></button>
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4M9 14h.01M15 14h.01"/></svg></button>
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></button>
+          </div>
+          <div class="wctl">
+            <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg></button>
+            <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9"/></svg></button>
+            <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M.5.5l9 9M9.5.5l-9 9"/></svg></button>
+          </div>
+        </div>
+        <div class="tabstrip"><div class="tab on">销售明细.csv <span class="x">×</span></div><div class="tab">merge_2026 <span class="x">×</span></div></div>
+        <div class="canvas">
+          <div class="rail" style="left:280px"><b class="on">▣</b><b>✥</b><b>✂</b><b>⇄</b></div>
+          <svg class="edges" viewBox="0 0 1240 400" preserveAspectRatio="none"><path d="M724 85H752M952 85H992"/></svg>
+          <div class="tnode" style="left:320px;width:400px">
+            <div class="hd"><span class="fn">sales_2026.csv</span><span class="dm">1,204 行 × 5 列</span></div>
+            <table><colgroup><col style="width:20px"><col><col><col><col style="width:64px"></colgroup>
+              <tr><td class="gutter"></td><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td class="gutter">1</td><td>2026-09-02</td><td>华东</td><td>办公</td><td class="n">1,280</td></tr>
+              <tr><td class="gutter">2</td><td>2026-09-02</td><td>华南</td><td>耗材</td><td class="n">348</td></tr>
+              <tr><td class="gutter">3</td><td>2026-09-03</td><td>华北</td><td>办公</td><td class="n">2,410</td></tr>
+              <tr><td class="gutter">4</td><td>2026-09-03</td><td>华东</td><td>设备</td><td class="n">9,050</td></tr>
+              <tr><td class="gutter">5</td><td>2026-09-04</td><td>西南</td><td>耗材</td><td class="n">620</td></tr>
+            </table>
+            <div class="ft"><span>sales_2026.csv</span><span>1,204 行 × 5 列</span></div>
+          </div>
+          <div class="stepnode" style="left:752px;width:200px"><div class="idx">01</div><div class="body"><div class="cn">filter</div><div class="cp">amount &gt; 500</div></div></div>
+          <div class="stepnode" style="left:992px;width:200px"><div class="idx">02</div><div class="body"><div class="cn">groupby 地区</div><div class="cp">sum(金额) as 总额</div></div></div>
+
+          <div class="dock">
+            <div class="dock-hd">
+              <span class="ttl">命令</span>
+              <div class="dock-search">
+                <svg class="ic" width="13" height="13" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L21 21"/></svg>
+                <span>搜索操作</span>
+              </div>
+              <span class="x">✕</span>
+            </div>
+            <div class="dock-body">
+              <div class="dock-grp"><span class="gnum">01</span><span>探查</span><span class="gcount">7</span></div>
+              <div class="dock-row on"><div><div class="nm">view</div><div class="ds">查看 CSV 前几行</div></div><span class="q">?</span></div>
+              <div class="dock-row"><div><div class="nm">stats</div><div class="ds">每列的描述性统计</div></div><span class="q">?</span></div>
+              <div class="dock-row"><div><div class="nm">count</div><div class="ds">统计行数</div></div><span class="q">?</span></div>
+              <div class="dock-row"><div><div class="nm">frequency</div><div class="ds">按列统计取值频次</div></div><span class="q">?</span></div>
+              <div class="dock-grp"><span class="gnum">02</span><span>筛选</span><span class="gcount">8</span></div>
+              <div class="dock-row"><div><div class="nm">filter</div><div class="ds">按表达式筛选行</div></div><span class="q">?</span></div>
+              <div class="dock-row"><div><div class="nm">search</div><div class="ds">按关键词或正则搜索行</div></div><span class="q">?</span></div>
+              <div class="dock-row"><div><div class="nm">slice</div><div class="ds">按区间取行</div></div><span class="q">?</span></div>
+              <div class="dock-grp"><span class="gnum">03</span><span>排序去重</span><span class="gcount">3</span></div>
+              <div class="dock-row"><div><div class="nm">sort</div><div class="ds">按一列或多列排序</div></div><span class="q">?</span></div>
+              <div class="dock-row"><div><div class="nm">dedup</div><div class="ds">去掉重复行</div></div><span class="q">?</span></div>
+            </div>
+            <div class="dock-ft"><span>共 61 个操作</span><span class="sp"></span><kbd>↑</kbd><kbd>↓</kbd><kbd>⏎</kbd><kbd>esc</kbd></div>
+          </div>
+        </div>
+      </div>
+      <div class="rnum" style="left:400px;top:6px">1</div>
+      <div class="redline" style="left:396px;top:33px;width:448px;height:32px"></div>
+      <div class="rnum" style="left:973px;top:6px">2</div>
+      <div class="redline" style="left:969px;top:32px;width:36px;height:34px"></div>
+      <div class="rnum" style="left:8px;top:6px">3</div>
+      <div class="redline" style="left:8px;top:100px;width:262px;height:586px"></div>
+      <div class="rnum" style="left:60px;top:6px">4</div>
+      <div class="redline" style="left:57px;top:107px;width:172px;height:34px"></div>
+    </div>
+    <p class="sec-note" style="margin-top:12px">
+      <span style="color:var(--redline)">① 可见的输入框</span> ·
+      <span style="color:var(--redline)">② 同一件事的第二个入口(⌘)</span> ·
+      <span style="color:var(--redline)">③ 260px 常驻目录，画布让位</span> ·
+      <span style="color:var(--redline)">④ 面板里第三个搜索框</span>
+    </p>
+  </section>
+
+  <!-- ============ 02 after ============ -->
+  <section class="sec">
+    <div class="sec-hd"><span class="num">02</span><h2>改后:删掉停靠面板与 ⌘，一个入口、一份目录</h2><span class="tag">adopted</span></div>
+    <p class="sec-note">命令、步骤、文件、标签页仍然全在，只是不再有第二个门。画布从 <b>x=268</b> 回到 <b>x=12</b>，开关检索不再让整块画布横跳；输入框的空查询就是那本目录，一个词打进去就收成结果。</p>
+    <div style="position:relative">
+      <div class="win">
+        <div class="bar">
+          <div class="brand">Easy Csv</div>
+          <div class="menus">
+            <button class="mbtn">文件</button><button class="mbtn">编辑</button><button class="mbtn">查看</button>
+            <button class="mbtn">工具</button><button class="mbtn">帮助</button><button class="mbtn exec">执行<span class="dot"></span></button>
+          </div>
+          <div class="field-wrap"><div class="field focused"><span class="prompt">›</span><span class="val">filter</span><kbd>Ctrl F</kbd></div></div>
+          <div class="icons">
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3z"/><path d="M8 12h8M8 16h6"/></svg></button>
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4M9 14h.01M15 14h.01"/></svg></button>
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></button>
+          </div>
+          <div class="wctl">
+            <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg></button>
+            <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9"/></svg></button>
+            <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M.5.5l9 9M9.5.5l-9 9"/></svg></button>
+          </div>
+        </div>
+        <div class="tabstrip"><div class="tab on">销售明细.csv <span class="x">×</span></div><div class="tab">merge_2026 <span class="x">×</span></div></div>
+        <div class="canvas">
+          <div class="rail"><b class="on">▣</b><b>✥</b><b>✂</b><b>⇄</b></div>
+          <svg class="edges" viewBox="0 0 1240 400" preserveAspectRatio="none"><path d="M464 85H512M712 85H752"/></svg>
+          <div class="tnode" style="left:64px;width:400px">
+            <div class="hd"><span class="fn">sales_2026.csv</span><span class="dm">1,204 行 × 5 列</span></div>
+            <table><colgroup><col style="width:20px"><col><col><col><col style="width:64px"></colgroup>
+              <tr><td class="gutter"></td><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td class="gutter">1</td><td>2026-09-02</td><td>华东</td><td>办公</td><td class="n">1,280</td></tr>
+              <tr><td class="gutter">2</td><td>2026-09-02</td><td>华南</td><td>耗材</td><td class="n">348</td></tr>
+              <tr><td class="gutter">3</td><td>2026-09-03</td><td>华北</td><td>办公</td><td class="n">2,410</td></tr>
+              <tr><td class="gutter">4</td><td>2026-09-03</td><td>华东</td><td>设备</td><td class="n">9,050</td></tr>
+              <tr><td class="gutter">5</td><td>2026-09-04</td><td>西南</td><td>耗材</td><td class="n">620</td></tr>
+            </table>
+            <div class="ft"><span>sales_2026.csv</span><span>1,204 行 × 5 列</span></div>
+          </div>
+          <div class="stepnode" style="left:512px;width:200px"><div class="idx">01</div><div class="body"><div class="cn">filter</div><div class="cp">amount &gt; 500</div></div></div>
+          <div class="stepnode" style="left:752px;width:200px"><div class="idx">02</div><div class="body"><div class="cn">groupby 地区</div><div class="cp">sum(金额) as 总额</div></div></div>
+
+          <div class="palette searching">
+            <div class="pal-meta"><span class="scope"><b>搜索</b> · filter</span><span class="count">2 / 61</span></div>
+            <div class="pal-list">
+              <button class="row mono active"><span class="rl">filter</span><span class="rd">按表达式筛选行</span><span class="src">命令</span><span class="keys"></span></button>
+              <button class="row mono"><span class="rl">01&nbsp;&nbsp;filter</span><span class="rd">amount &gt; 500 · 步骤</span><span class="src">步骤</span><span class="keys"></span></button>
+            </div>
+            <div class="pal-ft">
+              <span class="hint"><span class="ks"><kbd>↑</kbd><kbd>↓</kbd></span>选择</span>
+              <span class="hint"><kbd>⏎</kbd>打开</span>
+              <span class="hint"><kbd>⇧⏎</kbd>文档</span>
+              <span class="hint"><kbd>esc</kbd>关闭</span>
+              <span class="sp"></span>
+              <span class="note">输入即搜全部来源</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pins">
+        <span class="pin" style="left:calc(50% + 318px);top:12px">1</span>
+        <span class="pin" style="left:calc(50% + 318px);top:170px">2</span>
+        <span class="pin" style="left:58px;top:330px">3</span>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i>1</i><b>唯一入口</b>：输入框仍是这一条；⌘ 图标与右端缩成一排 3 个面板开关</span>
+      <span><i>2</i><b>目录即面板</b>：61 条命令、14 个分类、当前管道与文件，都在这 620px 里</span>
+      <span><i>3</i><b>画布归位</b>：工具轨回到 <code>x=12</code>，开关检索不再横向位移</span>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="k">入口</div><div class="v">3 → 1</div><div class="d">输入框 / ⌘ 图标 / 「查看 → 命令面板」三处收敛为输入框</div></div>
+      <div class="metric"><div class="k">搜索框</div><div class="v">3 → 2</div><div class="d">去掉停靠面板里那个；剩下的两个职责不同（命令 / 帮助）</div></div>
+      <div class="metric"><div class="k">画布让位</div><div class="v">260px → 0</div><div class="d">工具轨与输入表不再随面板开合左右跳</div></div>
+    </div>
+  </section>
+
+  <!-- ============ 03 onboarding ============ -->
+  <section class="sec">
+    <div class="sec-hd"><span class="num">03</span><h2>首步引导:同一个动作，改指输入框</h2><span class="tag">retarget</span></div>
+    <p class="sec-note">引导卡不重做（027 定的三选一仍然成立），只把「添加一个操作」的落点从停靠面板换成<b>聚焦顶部输入框</b>；面板里那条首步提示（「选中第一个操作后直接生效」）跟着搬到输入框面板顶部，或用底部一行说明替代。</p>
+    <div style="position:relative">
+      <div class="win" style="height:560px">
+        <div class="bar">
+          <div class="brand">Easy Csv</div>
+          <div class="menus">
+            <button class="mbtn">文件</button><button class="mbtn">编辑</button><button class="mbtn">查看</button>
+            <button class="mbtn">工具</button><button class="mbtn">帮助</button><button class="mbtn exec">执行</button>
+          </div>
+          <div class="field-wrap"><div class="field" style="border-color:var(--brand-40);box-shadow:0 0 0 2px var(--brand-12)"><span class="prompt">›</span><span class="ph">搜索命令、步骤或文件</span><kbd>Ctrl F</kbd></div></div>
+          <div class="icons">
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3z"/><path d="M8 12h8M8 16h6"/></svg></button>
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4M9 14h.01M15 14h.01"/></svg></button>
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></button>
+          </div>
+          <div class="wctl">
+            <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg></button>
+            <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9"/></svg></button>
+            <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M.5.5l9 9M9.5.5l-9 9"/></svg></button>
+          </div>
+        </div>
+        <div class="tabstrip"><div class="tab on">销售明细.csv <span class="x">×</span></div></div>
+        <div class="canvas">
+          <div class="rail"><b class="on">▣</b><b>✥</b><b>✂</b><b>⇄</b></div>
+          <div class="tnode" style="left:64px;width:400px">
+            <div class="hd"><span class="fn">sales_2026.csv</span><span class="dm">1,204 行 × 5 列</span></div>
+            <table><colgroup><col style="width:20px"><col><col><col><col style="width:64px"></colgroup>
+              <tr><td class="gutter"></td><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td class="gutter">1</td><td>2026-09-02</td><td>华东</td><td>办公</td><td class="n">1,280</td></tr>
+              <tr><td class="gutter">2</td><td>2026-09-02</td><td>华南</td><td>耗材</td><td class="n">348</td></tr>
+              <tr><td class="gutter">3</td><td>2026-09-03</td><td>华北</td><td>办公</td><td class="n">2,410</td></tr>
+            </table>
+            <div class="ft"><span>sales_2026.csv</span><span>1,204 行 × 5 列</span></div>
+          </div>
+
+          <div class="guide">
+            <div class="gh">
+              <svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4"/><path d="M12 2a6 6 0 0 1 3.6 10.8c-.6.5-.6 1.2-.6 2.2h-6c0-1 0-1.7-.6-2.2A6 6 0 0 1 12 2z"/></svg>
+              <h3>从这里开始</h3>
+            </div>
+            <p class="gd">数据已经就位. 选一个操作就能开始, 走完再决定要不要串成一条链</p>
+            <div class="grows">
+              <div class="grow main">
+                <span class="gi"><svg class="ic" width="14" height="14" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+                <div><div class="gt">添加一个操作</div><div class="gs">在顶部输入框里浏览全部 61 个操作</div></div>
+              </div>
+              <div class="grow">
+                <span class="gi"><svg class="ic" width="14" height="14" viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9l-4.7 1.8L12 15.5l-1.8-4.7L5.5 9l4.7-1.3z"/></svg></span>
+                <div><div class="gt">直接描述需求</div><div class="gs">「按地区汇总金额」</div></div>
+              </div>
+              <div class="grow">
+                <span class="gi"><svg class="ic" width="14" height="14" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+                <div><div class="gt">先看看示例</div><div class="gs">加载一份示例数据 + 一条现成管道</div></div>
+              </div>
+            </div>
+            <div class="gf"><span>我知道了</span><span>关闭后不再自动出现</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="pins">
+        <span class="pin" style="left:calc(50% + 226px);top:12px">1</span>
+        <span class="pin" style="left:calc(50% + 176px);top:236px">2</span>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i>1</i><b>输入框获得首步引导的高亮</b>（原先是 ⌘ 图标）</span>
+      <span><i>2</i><b>「添加一个操作」改为聚焦输入框</b>；文案从「打开命令面板」改成「在顶部输入框里浏览」</span>
+    </div>
+  </section>
+
+  <!-- ============ 04 help ============ -->
+  <section class="sec">
+    <div class="sec-hd"><span class="num">04</span><h2>帮助去哪:跟着命令走,不再单留一个入口</h2><span class="tag">proposal</span></div>
+    <p class="sec-note">停靠面板行尾的 <code>?</code> 是删除后唯一会丢失的入口（<code>handleHelpClick</code> → 帮助对话框）。它应该<b>跟着「这条命令」走</b>：打开命令表单时，标题行右侧给一个「文档」；输入框面板里保留 <code>Shift+Enter</code> 作为快捷入口。帮助菜单与帮助中心都不动。</p>
+
+    <div class="two">
+      <div class="spec">
+        <h3>落点 A · 命令表单标题行（主入口）</h3>
+        <div style="padding:14px;background:var(--bg)">
+          <div class="formmock">
+            <div class="fm-hd">
+              <div class="fm-title">筛选行 <span>filter</span></div>
+              <div class="fm-actions">
+                <button class="fm-doc on">
+                  <svg class="ic" width="13" height="13" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v18H6.5A2.5 2.5 0 0 1 4 18.5z"/><path d="M8 3v18M12 8h4M12 12h4"/></svg>
+                  文档
+                </button>
+                <span class="fm-x">✕</span>
+              </div>
+            </div>
+            <div class="fm-body">
+              <div class="fm-row"><span class="fm-lab">表达式</span><span class="fm-input">amount &gt; 500</span></div>
+              <div class="fm-row"><span class="fm-lab">保留表头</span><span class="fm-input">是</span></div>
+              <div class="fm-row"><span class="fm-lab">输出列</span><span class="fm-input">全部列</span></div>
+            </div>
+            <div class="fm-ft"><span class="fm-cancel">取消</span><span class="fm-add">添加步骤</span></div>
+          </div>
+        </div>
+        <p class="sec-note" style="margin:10px 0 0;font-size:11px">「我需要弄明白这条命令」正好发生在填参数的时候；新增步骤与编辑已有步骤都能看到它。</p>
+      </div>
+
+      <div class="spec">
+        <h3>落点 B · 输入框面板 <span style="font-family:var(--mono);font-weight:400">Shift+Enter</span>（快捷）</h3>
+        <div style="padding:14px;background:var(--bg)">
+          <div class="palette" style="position:static;transform:none;width:100%;box-shadow:none">
+            <div class="pal-meta"><span class="scope"><b>搜索</b> · filter</span><span class="count">2 / 61</span></div>
+            <div class="pal-list">
+              <button class="row mono active"><span class="rl">filter</span><span class="rd">按表达式筛选行</span><span class="keys"></span></button>
+              <button class="row mono"><span class="rl">01&nbsp;&nbsp;filter</span><span class="rd">amount &gt; 500 · 步骤</span><span class="keys"></span></button>
+            </div>
+            <div class="pal-ft">
+              <span class="hint"><span class="ks"><kbd>↑</kbd><kbd>↓</kbd></span>选择</span>
+              <span class="hint"><kbd>⏎</kbd>打开</span>
+              <span class="hint"><kbd>⇧⏎</kbd>文档</span>
+              <span class="hint"><kbd>esc</kbd>关闭</span>
+              <span class="sp"></span>
+              <span class="note">仅命令有文档</span>
+            </div>
+          </div>
+        </div>
+        <p class="sec-note" style="margin:10px 0 0;font-size:11px">保留 072 的心智：选中一行按 <code>Shift+Enter</code> 看文档，不改管道；没有文档的行（文件 / 标签页）不响应。</p>
+      </div>
+    </div>
+
+    <div class="spec" style="margin-top:18px">
+      <h3>为什么不放别处</h3>
+      <table>
+        <tr><th>位置</th><th>判断</th><th>理由</th></tr>
+        <tr><td>输入框面板每行加 <code>?</code></td><td class="no">否</td><td>34px 行里已经有名称、描述、来源、键帽；再加一个图标是噪声。hover 才出现等于没有入口（072 已否过一次）。</td></tr>
+        <tr><td>只放在帮助中心</td><td class="no">否</td><td>要离开当前操作去翻文档，帮不了「这条命令这个参数怎么填」。</td></tr>
+        <tr><td>命令表单标题行（采纳）</td><td class="yes">采纳</td><td>就在需要它的位置；加/改步骤共用同一个表单，只改一处。</td></tr>
+        <tr><td>面板 <code>Shift+Enter</code>（采纳）</td><td class="yes">采纳</td><td>不占视觉空间，恢复 072 的键盘路径；底栏一行键帽即可教。</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 05 options ============ -->
+  <section class="sec">
+    <div class="sec-hd"><span class="num">05</span><h2>四个选项</h2></div>
+    <div class="spec">
+      <table>
+        <tr><th>方案</th><th>判断</th><th>理由</th></tr>
+        <tr><td class="yes">A 删除停靠面板与 ⌘（采纳）</td><td class="yes">采纳</td><td>内容与输入框完全重合；删掉 260px 常驻遮挡、第二个搜索框、第二套行语法。入口从 3 个收敛到 1 个。</td></tr>
+        <tr><td>B 保留，但只在空管道时自动出现一次</td><td class="no">否</td><td>第一眼仍会看到两个入口；「一次性首屏」本身就是 027 已经否掉的引导屏思路。首步引导卡已经承担这件事。</td></tr>
+        <tr><td>C ⌘ 改成把目录弹层锚在按钮下</td><td class="no">否</td><td>只是把重复内容换个位置；还会出现「输入框面板」和「按钮弹层」两种同内容浮层。</td></tr>
+        <tr><td>D 把停靠面板改成「当前管道步骤目录」</td><td class="no">否</td><td>改成了另一件产品功能：步骤已在画布、标签页、血缘里可见；新增一个常驻目录解决不了真实需求。</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 06 migration ============ -->
+  <section class="sec">
+    <div class="sec-hd"><span class="num">06</span><h2>迁移清单与风险</h2><span class="tag">已实现</span></div>
+    <div class="two">
+      <div class="spec">
+        <h3>要动的地方</h3>
+        <table>
+          <tr><th>文件 / 项</th><th>改动</th></tr>
+          <tr><td><code>CommandList.tsx</code></td><td>删除（面板、首步提示条、底部计数一并移除）</td></tr>
+          <tr><td><code>CommandRow.tsx</code> / <code>commandSearch.ts</code></td><td>随面板退役；<code>CommandPalette</code> 已有等价的行与评分</td></tr>
+          <tr><td><code>MainMenu.tsx</code></td><td>删 ⌘ 图标入口与 <code>highlightCommandEntry</code>；右端剩 3 枚面板开关</td></tr>
+          <tr><td><code>App.tsx</code></td><td>删 <code>showCommandPanel</code> 与面板挂载、<code>commandPanelInset</code> 计算；命令栏接收「首步高亮」</td></tr>
+          <tr><td><code>FlowPanel.tsx</code></td><td>删 <code>commandPanelInset</code>，工具轨固定 <code>x=12</code></td></tr>
+          <tr><td><code>FirstStepGuide</code></td><td><code>onAddStep</code> 改为聚焦输入框；文案改「在顶部输入框里浏览」</td></tr>
+          <tr><td><code>CommandDialog.tsx</code></td><td>标题行在关闭按钮左侧加「文档」按钮（<code>BookOpen</code> + 文案）；带命令名的 <code>onShowHelp</code> 复用现有 <code>handleHelpClick</code>；<code>onMouseDown</code> 阻止标题栏拖拽</td></tr>
+          <tr><td><code>CommandPalette.tsx</code> / <code>PaletteItem</code></td><td>条目增加可选 <code>onHelp</code>（命令项接 <code>handleHelpClick</code>）；<code>Shift+Enter</code> 触发；底栏加 <code>⇧⏎ 文档</code></td></tr>
+          <tr><td>快捷键</td><td>删除 <code>Alt C</code> 与 <code>Ctrl K</code>；<code>Ctrl F</code> 唯一；删命令面板里的「命令」动作</td></tr>
+          <tr><td>i18n</td><td>删 <code>cmds</code> / <code>commandSearchPlaceholder</code> / <code>onboardingPanelHint</code>；加「文档」；改两条引导文案</td></tr>
+          <tr><td>测试</td><td>删 11 例 <code>CommandList</code> 与 2 例首步提示；<code>ExecuteMenu</code> 右端按钮数 4 → 3；补「引导聚焦输入框」「<code>Shift+Enter</code> 打开文档」「表单标题行有文档按钮」</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="spec">
+          <h3>代价与风险</h3>
+          <table>
+            <tr><th>项</th><th>说明</th></tr>
+            <tr><td>连续加步</td><td>停靠面板可以一直开着连续挑；改用输入框后每加一步要再按一次 <code>Ctrl F</code>。命令表单本身是模态，选完面板本来也会被挡住。</td></tr>
+            <tr><td><code>Alt C</code> 用户</td><td>已按拍板彻底删除；帮助文档与引导卡上的旧快捷键一并改成 <code>Ctrl F</code>。</td></tr>
+            <tr><td>首屏学习</td><td>引导卡改指输入框，比指一枚无字图标更容易被看见。</td></tr>
+            <tr><td>072 的工作</td><td>分类显示序、编号、行语法全部保留在输入框面板里，不是推倒重来。</td></tr>
+          </table>
+        </div>
+        <div class="spec">
+          <h3>待拍板</h3>
+          <table>
+            <tr><th>#</th><th>问题</th><th>建议</th></tr>
+            <tr><td>1</td><td><code>Alt C</code> 保留为输入框别名，还是彻底删除</td><td><b>删除</b>；<code>Ctrl K</code> 同时删除，<code>Ctrl F</code> 唯一</td></tr>
+            <tr><td>2</td><td>首步提示条（「选中后直接生效」）是否搬到输入框面板</td><td><b>不搬，直接删除</b></td></tr>
+            <tr><td>3</td><td><code>CommandRow</code> 是否有别处复用</td><td>无；随面板一起删</td></tr>
+            <tr><td>4</td><td>「文档」按钮用图标 + 文案，还是只留一个 <code>?</code></td><td>两处都做：表单「文档」+ 面板 <code>Shift+Enter</code></td></tr>
+            <tr><td>5</td><td>面板 <code>Shift+Enter</code> 是否保留</td><td>保留；只对命令行生效，底栏常显键帽</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    原型 074-01 · 静态 HTML，令牌与 <code>src/index.css</code> 同源 · 依赖 073 的输入框形态<br>
+    关联：072（被审的停靠目录）、073（取代它的输入框）、027（首步引导）、071 / 040（抽屉 / 对话框的形态基线）
+  </div>
+</div>
+
+<script>
+  const themeBtn = document.getElementById('theme');
+  themeBtn.addEventListener('click', () => {
+    const dark = document.documentElement.classList.toggle('dark');
+    themeBtn.textContent = dark ? '亮色' : '暗色';
+  });
+</script>
+</body>
+</html>

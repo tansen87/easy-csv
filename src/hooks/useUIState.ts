@@ -6,8 +6,6 @@ export function useUIState() {
   const [helpContent, setHelpContent] = useState("");
   const [helpCommandName, setHelpCommandName] = useState("");
   const [showLogPanel, setShowLogPanel] = useState(false);
-  const [showCommandPanel, setShowCommandPanel] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [activeMenu, setActiveMenu] = useState<
     "file" | "edit" | "view" | "tools" | "help" | null
   >(null);
@@ -85,10 +83,6 @@ export function useUIState() {
     setHelpCommandName,
     showLogPanel,
     setShowLogPanel,
-    showCommandPanel,
-    setShowCommandPanel,
-    searchQuery,
-    setSearchQuery,
     activeMenu,
     setActiveMenu,
     isMenuActivated,

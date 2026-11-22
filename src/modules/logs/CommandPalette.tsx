@@ -62,7 +62,7 @@ function Key({ children }: { children: React.ReactNode }) {
 
 /**
  * Highlight the matched runs of a string. Only colour and weight change: no
- * background, no underline, no colour on the whole row — the query is the one
+ * background, no underline, no colour on the whole row - the query is the one
  * coloured thing in the palette (design 053 §4).
  */
 function Highlighted({
@@ -206,8 +206,8 @@ export const CommandPalette = React.memo(function CommandPalette({
     activeItemRef.current?.scrollIntoView({ block: "nearest" });
   }, [activeIndex, flat.length]);
 
-  // A popover has no overlay: clicks outside the panel — and outside the
-  // menu-bar field — dismiss it. Clicking the field keeps it open.
+  // A popover has no overlay: clicks outside the panel - and outside the
+  // menu-bar field - dismiss it. Clicking the field keeps it open.
   useEffect(() => {
     if (!isOpen) return;
     const onDocMouseDown = (event: MouseEvent) => {
@@ -248,6 +248,15 @@ export const CommandPalette = React.memo(function CommandPalette({
         e.preventDefault();
         setKeyboardNav(true);
         setActiveIndex((prev) => (prev <= 0 ? last : prev - 1));
+      } else if (e.key === "Enter" && e.shiftKey) {
+        // Design 074: Shift+Enter opens the row's docs without adding it.
+        const row = flat[activeIndex];
+        if (row?.item.onHelp) {
+          e.preventDefault();
+          setKeyboardNav(true);
+          row.item.onHelp();
+          onClose();
+        }
       } else if (e.key === "Enter") {
         e.preventDefault();
         setKeyboardNav(true);
@@ -272,6 +281,7 @@ export const CommandPalette = React.memo(function CommandPalette({
         .replace("{shown}", String(results.length))
         .replace("{total}", String(availableCount))
     : t.paletteTotal.replace("{count}", String(availableCount));
+  const activeRow = flat[activeIndex];
 
   const sourceLabel = (source?: PaletteSource): string => {
     switch (source) {
@@ -305,7 +315,7 @@ export const CommandPalette = React.memo(function CommandPalette({
         // Keep the caret in the field: rows are click targets, not focus stops.
         onMouseDown={(e) => e.preventDefault()}
         onMouseEnter={() => {
-          // A still pointer must not steal the selection — `scrollIntoView`
+          // A still pointer must not steal the selection - `scrollIntoView`
           // drags rows under it while the user is arrowing.
           if (!keyboardNav) setActiveIndex(index);
         }}
@@ -441,7 +451,7 @@ export const CommandPalette = React.memo(function CommandPalette({
               <div key={group.key}>
                 <div className="sticky top-0 z-[1] flex items-baseline gap-1.5 bg-card px-2.5 pb-1 pt-2.5">
                   <span className="w-5 shrink-0 font-mono text-[9.5px] tabular-nums text-muted-foreground/50">
-                    {group.index ?? "—"}
+                    {group.index ?? "-"}
                   </span>
                   <span className="text-[11px] font-medium text-muted-foreground">
                     {group.name}
@@ -472,6 +482,17 @@ export const CommandPalette = React.memo(function CommandPalette({
             <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <Key>↵</Key>
               {t.paletteSelectHint}
+            </span>
+            <span
+              className={cn(
+                "flex items-center gap-1.5 text-[11px]",
+                activeRow?.item.onHelp
+                  ? "text-muted-foreground"
+                  : "text-muted-foreground/35",
+              )}
+            >
+              <Key>⇧↵</Key>
+              {t.commandDocs}
             </span>
           </>
         )}

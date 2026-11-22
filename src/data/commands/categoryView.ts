@@ -1,7 +1,7 @@
 /**
  * Display layer for `commandCategories`.
  *
- * The raw English strings stay the data key - grouping, the Ctrl+K palette and
+ * The raw English strings stay the data key - grouping, the command field and
  * the existing tests all read `XanCommand.category` - so nothing here touches
  * the data. Two things live here instead:
  *
@@ -11,8 +11,8 @@
  * 2. **Short labels.** `Add, transform, drop and move columns` is 41 characters
  *    and will not fit a 140px rail or a sticky header.
  *
- * Keep this list in sync with `commandCategories`; `commandSearch.test.ts`
- * asserts both cover the same keys.
+ * Keep this list in sync with `commandCategories`; the command palette's
+ * directory groups read it directly (design 074).
  */
 export interface CommandCategoryView {
   /** Raw `XanCommand.category` value. */

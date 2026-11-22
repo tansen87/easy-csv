@@ -3,7 +3,7 @@ import type { LucideIcon } from "lucide-react";
 /**
  * Where a palette entry comes from. The palette uses it for two things: the
  * compact source tag on the right of a row while searching, and the tie-break
- * when two entries score the same (commands beat files — see `SOURCE_ORDER`).
+ * when two entries score the same (commands beat files - see `SOURCE_ORDER`).
  *
  * Kept in its own module so `lib/scoreItem.ts` can depend on it without a cycle
  * back into the component.
@@ -39,5 +39,7 @@ export interface PaletteItem {
   source?: PaletteSource;
   shortcut?: string;
   disabled?: boolean;
+  /** Per-item docs, opened with Shift+Enter (design 074). Commands only. */
+  onHelp?: () => void;
   onSelect: () => void;
 }

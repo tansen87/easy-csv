@@ -9,7 +9,6 @@ interface KeyboardShortcutCallbacks {
   onUndo: () => void;
   onRedo: () => void;
   onExecute: () => void;
-  onCommands: () => void;
   onLogs: () => void;
   onAI: () => void;
   onCommandPalette: () => void;
@@ -39,15 +38,8 @@ export function useKeyboardShortcuts(
       const alt = e.altKey;
       const key = e.key.toLowerCase();
 
-      // Command palette works even while typing in inputs
-      if (ctrl && key === "k") {
-        e.preventDefault();
-        callbacksRef.current.onCommandPalette();
-        return;
-      }
-
-      // Design 073: canvas search merged into the same field. Dialogs keep
-      // their own Ctrl+F (help search, etc.), so only step in when none is open.
+      // Design 074: Ctrl F is the only command-search shortcut. It works while
+      // typing, but dialogs keep their own Ctrl+F (help search, etc.).
       if (ctrl && key === "f") {
         if (document.querySelector('[role="dialog"]')) return;
         e.preventDefault();
@@ -95,9 +87,6 @@ export function useKeyboardShortcuts(
       } else if (ctrl && key === "t") {
         e.preventDefault();
         callbacksRef.current.onOpenTemplates();
-      } else if (alt && key === "c") {
-        e.preventDefault();
-        callbacksRef.current.onCommands();
       } else if (alt && key === "q") {
         e.preventDefault();
         callbacksRef.current.onLogs();

@@ -16,18 +16,25 @@ interface CommandBarProps {
   items: PaletteItem[];
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Ring the field while the first-run guide points at it (design 074). */
+  highlight?: boolean;
 }
 
 /**
  * Design 073: one field in the middle of the menu bar is the app's single
- * opening — click or type to get a panel anchored right under it. The panel is
+ * opening - click or type to get a panel anchored right under it. The panel is
  * portalled out of the title bar so its empty areas do not become window drag
  * handles (same reason the execute menu portals).
  *
  * Below 960px the field collapses into an icon button (`MainMenu`), and the
  * panel grows its own query row.
  */
-export function CommandBar({ items, isOpen, onOpenChange }: CommandBarProps) {
+export function CommandBar({
+  items,
+  isOpen,
+  onOpenChange,
+  highlight = false,
+}: CommandBarProps) {
   const { t } = useLanguage();
   const [query, setQuery] = useState("");
   const [narrow, setNarrow] = useState(false);
@@ -44,7 +51,7 @@ export function CommandBar({ items, isOpen, onOpenChange }: CommandBarProps) {
     return () => media.removeEventListener("change", sync);
   }, []);
 
-  // Open and close both start from a clean query, so `Ctrl K` never resumes an
+  // Open and close both start from a clean query, so `Ctrl F` never resumes an
   // old one and the field never keeps the last search after the panel closes.
   useEffect(() => {
     setQuery("");
@@ -102,7 +109,9 @@ export function CommandBar({ items, isOpen, onOpenChange }: CommandBarProps) {
             "flex h-[26px] items-center gap-2 rounded-[7px] border bg-background pl-2.5 pr-1.5 transition-colors",
             isOpen
               ? "border-primary/40 shadow-[0_0_0_2px_var(--brand-soft)]"
-              : "border-border hover:border-foreground/20",
+              : highlight
+                ? "border-primary/50 shadow-[0_0_0_3px_var(--brand-12)]"
+                : "border-border hover:border-foreground/20",
           )}
         >
           <span
@@ -131,7 +140,7 @@ export function CommandBar({ items, isOpen, onOpenChange }: CommandBarProps) {
             className="h-full min-w-0 flex-1 bg-transparent text-[12px] text-foreground outline-none placeholder:text-muted-foreground/70"
           />
           <kbd className="inline-flex h-4 min-w-[16px] shrink-0 items-center justify-center rounded border border-border px-1 font-mono text-[9.5px] leading-none text-muted-foreground/70">
-            {modKeySymbol()} K
+            {modKeySymbol()} F
           </kbd>
         </div>
       </div>

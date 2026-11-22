@@ -13,8 +13,8 @@ const copy = translations.en;
  * Run panel.
  *
  * "执行" stays a menu-bar item (click opens, hover switches only while another
- * menu is open). Its panel groups tabs by run state — running / queued /
- * preparing / idle — with the current tab first inside its group. Clicking an
+ * menu is open). Its panel groups tabs by run state - running / queued /
+ * preparing / idle - with the current tab first inside its group. Clicking an
  * idle row runs that tab (a run already in flight only switches); running,
  * stopping and reviewing also live in the trailing button. The trigger itself
  * must stay structurally identical while busy.
@@ -88,8 +88,6 @@ function baseProps(overrides: Record<string, unknown> = {}) {
     showLogErrorBadge: false,
     currentPipelineLength: 2,
     maxConcurrentRuns: 4,
-    showCommandPanel: false,
-    onToggleCommandPanel: vi.fn(),
     showLogPanel: false,
     onToggleLogPanel: vi.fn(),
     showDataProfile: false,
@@ -145,7 +143,7 @@ describe("run panel (design 052)", () => {
       runs: { a: makeRun("a", {}) },
     });
 
-    // No icon node is added and the label is untouched — only `data-busy`
+    // No icon node is added and the label is untouched - only `data-busy`
     // flips, which drives the 2px pseudo-element underline.
     expect(busy.button.children.length).toBe(idleChildCount);
     expect(busy.button.children.length).toBe(0);
@@ -353,7 +351,7 @@ describe("run panel (design 052)", () => {
   it("does not open on hover when no menu is open, even after a menu was activated", () => {
     // Regression: `isMenuActivated` is sticky (never reset), so using it as the
     // hover guard expanded the run menu on a bare hover after the first click
-    // of the session — "sometimes you must click, sometimes you don't".
+    // of the session - "sometimes you must click, sometimes you don't".
     const { button } = renderMenu({
       activeMenu: null,
       isMenuActivated: true,
@@ -433,7 +431,7 @@ describe("update check feedback on the Help button (design 022 §5.4)", () => {
   it("keeps the check marker off the execute button, which stays `data-busy`", () => {
     const { container } = renderMenu({ isCheckingUpdate: true });
 
-    // The execute button is still the only `data-busy` trigger — the update
+    // The execute button is still the only `data-busy` trigger - the update
     // check must not be mistaken for a pipeline run.
     const busy = container.querySelectorAll("[data-busy]");
     expect(busy.length).toBe(1);
@@ -458,7 +456,7 @@ describe("settings entry in the toolbar", () => {
     const settings = settingsButton(container);
 
     expect(settings).toBeTruthy();
-    // No visible text — the label lives on the icon's `aria-label`/tooltip.
+    // No visible text - the label lives on the icon's `aria-label`/tooltip.
     expect(settings!.textContent).toBe("");
     expect(settings!.querySelector("svg")).toBeTruthy();
   });
@@ -469,7 +467,7 @@ describe("settings entry in the toolbar", () => {
       .parentElement!.parentElement!;
     const groupButtons = Array.from(group.querySelectorAll("button"));
 
-    // Order: command panel, log panel, AI, settings.
+    // Order: search (narrow only), log panel, AI, settings.
     expect(groupButtons[groupButtons.length - 1]).toBe(
       settingsButton(container),
     );
@@ -507,7 +505,6 @@ describe("settings entry in the toolbar", () => {
     // All four right-hand buttons must agree: one 12px bar, same classes.
     const { container } = renderMenu({
       showSettingsDialog: true,
-      showCommandPanel: true,
       showLogPanel: true,
       showAIPanel: true,
     });
@@ -518,7 +515,7 @@ describe("settings entry in the toolbar", () => {
       // Design 073 adds a narrow-window search icon; it is not a panel toggle.
       (button) => !button.className.includes("command-field-compact"),
     );
-    expect(buttons.length).toBe(4);
+    expect(buttons.length).toBe(3);
 
     const shapes = buttons.map((button) => {
       const bar = underline(button);

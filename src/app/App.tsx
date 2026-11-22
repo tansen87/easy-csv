@@ -41,7 +41,6 @@ import { MergeExcelDialog } from "@/modules/dialogs/file/MergeExcelDialog";
 import { DataProfilePanel } from "@/modules/data-preview/DataProfilePanel";
 import { AIPanel } from "@/modules/ai/AIPanel";
 import { ToastContainer } from "@/components/setting/Toast";
-import { CommandList } from "@/modules/logs/CommandList";
 import { useOnboarding, useAutoDismissOnboarding } from "@/hooks/useOnboarding";
 import {
   demoRevealCaptions,
@@ -55,10 +54,6 @@ import { helpDocs, helpDocsZh } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
 import { CommandBar } from "@/modules/logs/CommandBar";
 import { FOCUS_STEP_EVENT } from "@/modules/pipeline/hooks/useStepFocus";
-import {
-  COMMAND_PANEL_INSET,
-  COMMAND_PANEL_WIDTH,
-} from "@/modules/logs/CommandList";
 import {
   TitleBarBrand,
   useTitleBarDoubleClick,
@@ -349,7 +344,7 @@ function AppContent() {
 
   // Silent update check shortly after launch. Delayed so it
   // never competes with session restore or the first paint, and it only ever
-  // flags availability — installing stays a user action.
+  // flags availability - installing stays a user action.
   const checkForUpdatesRef = useRef(checkForUpdates);
   checkForUpdatesRef.current = checkForUpdates;
   const autoCheckStartedRef = useRef(false);
@@ -481,19 +476,17 @@ function AppContent() {
     [tabsHook, pipeline],
   );
 
-  // Help click
-  const handleHelpClick = useCallback(
-    (command: XanCommand) => {
+  // Per-command docs. Design 074: the old dock's row `?` moved to the command
+  // form header and the palette's Shift+Enter, so this takes a command name.
+  const showCommandHelp = useCallback(
+    (commandName: string) => {
       ui.setShowHelp(true);
       const docs = effectiveLanguage === "zh" ? helpDocsZh : helpDocs;
-      const helpText = docs[command.name];
-      if (helpText) {
-        ui.setHelpContent(helpText);
-        ui.setHelpCommandName(command.name);
-      } else {
-        ui.setHelpContent(`Help not found for command: ${command.name}`);
-        ui.setHelpCommandName(command.name);
-      }
+      const helpText = docs[commandName];
+      ui.setHelpContent(
+        helpText || `Help not found for command: ${commandName}`,
+      );
+      ui.setHelpCommandName(commandName);
     },
     [effectiveLanguage, ui],
   );
@@ -663,7 +656,7 @@ function AppContent() {
     [showToastRef],
   );
 
-  // App bootstrap & global listeners — owned by useAppBootstrap
+  // App bootstrap & global listeners - owned by useAppBootstrap
   const initializeApp = useCallback(async () => {
     // The result is deliberately not awaited for its value: the guide is shown
     // by `useRequiredPluginCheck` so that a slow probe never delays bootstrap.
@@ -885,7 +878,7 @@ function AppContent() {
    * Deliberately *state set after `loadCsvData` resolves*, not a flag flipped
    * when the tab is created. A demo tab's snapshot already carries an
    * `inputFile` and a pipeline, so gating on those ran the pipeline before the
-   * file had been read — at which point `resolveRunDelimiter()` falls back to
+   * file had been read - at which point `resolveRunDelimiter()` falls back to
    * the global default delimiter instead of the tab's own detected one, and
    * every step dies with "… does not exist as a named header in the given CSV
    * data" (2026-09-30).
@@ -1002,7 +995,7 @@ function AppContent() {
   }, [openSampleTemplate, t]);
 
   /**
-   * Install one more demo step — or, once every step is on the canvas, run the
+   * Install one more demo step - or, once every step is on the canvas, run the
    * pipeline. Driven entirely by the reveal pill's button ("下一步" for the
    * steps, "跑一遍" for the last one): a fixed pace cannot fit every reader, so
    * the user sets it.
@@ -1088,7 +1081,7 @@ function AppContent() {
         return;
       }
       // The sample-shipping demo carries a placeholder path until the sample
-      // has been written, so it must go through the sample loader — otherwise
+      // has been written, so it must go through the sample loader - otherwise
       // `loadCsvData` is handed "{{easy-csv-sample}}" and the tab comes up
       // empty (2026-09-30). A user's copy of the demo keeps that placeholder,
       // so this is detected on the placeholder rather than on the template id.
@@ -1244,7 +1237,6 @@ function AppContent() {
         setSelectedStep(null);
       },
       onExecute: handleExecuteAndMarkSaved,
-      onCommands: () => ui.setShowCommandPanel(!ui.showCommandPanel),
       onLogs: () => ui.setShowLogPanel(!ui.showLogPanel),
       onAI: () => ui.setShowAIPanel(!ui.showAIPanel),
       onCommandPalette: () => ui.setShowCommandPalette(!ui.showCommandPalette),
@@ -1377,10 +1369,6 @@ function AppContent() {
     ui.setShowHelp(true);
   }, [effectiveLanguage, t.helpCenter, ui]);
 
-  const onToggleCommandPanel = useCallback(
-    () => ui.setShowCommandPanel(!ui.showCommandPanel),
-    [ui.showCommandPanel],
-  );
   const onToggleLogPanel = useCallback(
     () => ui.setShowLogPanel(!ui.showLogPanel),
     [ui.showLogPanel],
@@ -1480,7 +1468,7 @@ function AppContent() {
 
   /**
    * Caption pill for the sample pipeline's step-by-step reveal. **Always
-   * visible while the reveal is on** — including before the first step, which
+   * visible while the reveal is on** - including before the first step, which
    * is where the user learns that the pill's button is how the pipeline gets
    * built. The counter is the step the *next* click will add.
    */
@@ -1612,14 +1600,6 @@ function AppContent() {
         groupIcon: Zap,
         shortcut: "F5",
         onSelect: () => ui.setShowRefreshDialog(true),
-      },
-      {
-        id: "toggle-command-panel",
-        label: t.commandPanel,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        shortcut: "Alt+C",
-        onSelect: onToggleCommandPanel,
       },
       {
         id: "toggle-log-panel",
@@ -1788,7 +1768,6 @@ function AppContent() {
       "check-update": "checkUpdate",
       help: "help",
       refresh: "refreshTitle",
-      "toggle-command-panel": "commandPanel",
       "toggle-log-panel": "logPanel",
       "toggle-data-profile": "dataProfile",
       "toggle-version-panel": "versionHistory",
@@ -1856,6 +1835,7 @@ function AppContent() {
         category: cmd.category,
         group: t.paletteCommands,
         onSelect: () => handleCommandClick(cmd),
+        onHelp: () => showCommandHelp(cmd.name),
       };
     });
 
@@ -1918,11 +1898,11 @@ function AppContent() {
     handleExportPipeline,
     handleExecute,
     handleCommandClick,
+    showCommandHelp,
     onOpenRecentFile,
     onShowSettings,
     checkForUpdates,
     onHelp,
-    onToggleCommandPanel,
     onToggleLogPanel,
     onToggleDataProfile,
     pipeline,
@@ -1956,6 +1936,7 @@ function AppContent() {
               items={paletteItems}
               isOpen={ui.showCommandPalette}
               onOpenChange={ui.setShowCommandPalette}
+              highlight={showOnboardingGuide}
             />
             <div className="flex min-w-0 flex-1 items-center">
               <MainMenu
@@ -2057,8 +2038,6 @@ function AppContent() {
                   !ui.showLogPanel && logs.some((l) => l.type === "error")
                 }
                 currentPipelineLength={tabsHook.getCurrentPipeline().length}
-                showCommandPanel={ui.showCommandPanel}
-                onToggleCommandPanel={onToggleCommandPanel}
                 showLogPanel={ui.showLogPanel}
                 onToggleLogPanel={onToggleLogPanel}
                 showDataProfile={ui.showDataProfile}
@@ -2077,7 +2056,6 @@ function AppContent() {
                 showVariablePanel={showVariablePanel}
                 onToggleVariablePanel={onToggleVariablePanel}
                 pendingVariables={pendingVariableCount}
-                highlightCommandEntry={showOnboardingGuide}
               />
             </div>
             {usesCustomTitleBar && <WindowControls />}
@@ -2147,13 +2125,9 @@ function AppContent() {
                 onDelimiterChange={onDelimiterModeChange}
                 showOnboardingGuide={showOnboardingGuide}
                 aiDockWidth={aiDockWidth}
-                commandPanelInset={
-                  ui.showCommandPanel
-                    ? COMMAND_PANEL_WIDTH + COMMAND_PANEL_INSET
-                    : 0
-                }
                 commandCount={xanCommands.length}
-                onOpenCommandPanel={() => ui.setShowCommandPanel(true)}
+                onOpenCommandSearch={() => ui.setShowCommandPalette(true)}
+                onShowCommandHelp={showCommandHelp}
                 onOpenAIPanel={() => ui.setShowAIPanel(true)}
                 onLoadDemo={handleLoadDemo}
                 onDismissOnboardingGuide={onboarding.markSeen}
@@ -2163,19 +2137,6 @@ function AppContent() {
               />
             </div>
           </main>
-
-          <CommandList
-            commands={xanCommands}
-            onCommandClick={handleCommandClick}
-            onHelpClick={handleHelpClick}
-            selectedCommandId={selectedStep?.command.id}
-            searchQuery={ui.searchQuery}
-            onSearchChange={ui.setSearchQuery}
-            isVisible={ui.showCommandPanel}
-            onClose={() => ui.setShowCommandPanel(false)}
-            showFirstStepHint={currentPipelineLength === 0}
-          />
-
 
           <LogPanel
             logs={logs}
@@ -2292,7 +2253,7 @@ function AppContent() {
             onCancel={() => ui.setShowRefreshDialog(false)}
           />
 
-          {/* Several branches — or another tab — overwriting the same output file */}
+          {/* Several branches - or another tab - overwriting the same output file */}
           <ConfirmDialog
             isOpen={overwriteConfirm !== null}
             title={
