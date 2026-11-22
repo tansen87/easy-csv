@@ -74,7 +74,6 @@ function baseProps(overrides: Record<string, unknown> = {}) {
     onShowAbout: vi.fn(),
     onShowSettings: vi.fn(),
     onOpenPalette: vi.fn(),
-    onOpenSearch: vi.fn(),
     onOpenCsvDiff: vi.fn(),
     onOpenCsvEncoding: vi.fn(),
     onOpenSeparateCsv: vi.fn(),
@@ -515,7 +514,10 @@ describe("settings entry in the toolbar", () => {
 
     const group = container.querySelector("button[aria-label='Settings']")!
       .parentElement!.parentElement!;
-    const buttons = Array.from(group.querySelectorAll("button"));
+    const buttons = Array.from(group.querySelectorAll("button")).filter(
+      // Design 073 adds a narrow-window search icon; it is not a panel toggle.
+      (button) => !button.className.includes("command-field-compact"),
+    );
     expect(buttons.length).toBe(4);
 
     const shapes = buttons.map((button) => {

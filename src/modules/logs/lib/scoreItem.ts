@@ -52,9 +52,10 @@ export const SCORE = {
 export const SOURCE_ORDER: Record<PaletteSource, number> = {
   action: 0,
   command: 1,
-  tab: 2,
-  file: 3,
-  template: 4,
+  step: 2,
+  tab: 3,
+  file: 4,
+  template: 5,
 };
 
 /** Longest query we bother scoring; longer input is treated as "no match". */

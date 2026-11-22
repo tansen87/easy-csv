@@ -844,6 +844,21 @@ input[type="radio"] {
   background-color: var(--chrome);
   box-shadow: inset 0 -1px 0 var(--chrome-border);
 }
+
+/* Design 073: the menu-bar command field collapses below 960px so it never
+   fights the menus or the window buttons. Mirrored by CommandBar's matchMedia. */
+.command-field-compact {
+  display: none;
+  place-items: center;
+}
+@media (max-width: 959px) {
+  .command-field-wide {
+    display: none;
+  }
+  .command-field-compact {
+    display: grid;
+  }
+}
 .app-titlebar {
   transition: background-color 0.12s cubic-bezier(0.2, 0, 0, 1);
 }

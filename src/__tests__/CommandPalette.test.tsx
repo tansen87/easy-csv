@@ -1,10 +1,9 @@
+import { useState } from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, fireEvent } from "@testing-library/react";
 import { LanguageProvider } from "@/i18n";
-import {
-  CommandPalette,
-  type PaletteItem,
-} from "@/modules/logs/CommandPalette";
+import { CommandPalette } from "@/modules/logs/CommandPalette";
+import type { PaletteItem } from "@/modules/logs/lib/paletteTypes";
 import { FileText, FolderOpen, Play } from "lucide-react";
 
 function makeItems(): PaletteItem[] {
@@ -34,6 +33,7 @@ function makeItems(): PaletteItem[] {
       description: "Select columns from a CSV file",
       icon: FileText,
       group: "Commands",
+      category: "Add, transform, drop and move columns",
       source: "command",
       keywords: "Add, transform, drop and move columns",
       onSelect: vi.fn(),
@@ -91,15 +91,42 @@ const rowTexts = (container: HTMLElement): string[] =>
     (b) => b.textContent ?? "",
   );
 
+/**
+ * Design 073 moved the query out of the panel (it lives in the menu bar), so
+ * the tests drive it through a tiny controlled wrapper. `withInput` renders the
+ * narrow-window query row, which is the only place an input exists.
+ */
+function Harness({
+  items,
+  isOpen = true,
+  onClose = vi.fn(),
+  withInput = true,
+}: {
+  items: PaletteItem[];
+  isOpen?: boolean;
+  onClose?: () => void;
+  withInput?: boolean;
+}) {
+  const [query, setQuery] = useState("");
+  return (
+    <LanguageProvider>
+      <CommandPalette
+        isOpen={isOpen}
+        onClose={onClose}
+        items={items}
+        query={query}
+        onQueryChange={setQuery}
+        withInput={withInput}
+        position={{ top: 42, left: 12, width: 620 }}
+      />
+    </LanguageProvider>
+  );
+}
+
 const renderPalette = (
   items: PaletteItem[],
-  overrides: Partial<React.ComponentProps<typeof CommandPalette>> = {},
-) =>
-  render(
-    <LanguageProvider>
-      <CommandPalette isOpen onClose={vi.fn()} items={items} {...overrides} />
-    </LanguageProvider>,
-  );
+  overrides: Partial<React.ComponentProps<typeof Harness>> = {},
+) => render(<Harness items={items} {...overrides} />);
 
 const typeQuery = (container: HTMLElement, value: string) => {
   const input = container.querySelector("input") as HTMLInputElement;
@@ -115,9 +142,16 @@ describe("CommandPalette", () => {
   it("renders groups and items when open", () => {
     const { container } = renderPalette(makeItems());
     expect(container.textContent).toContain("Actions");
-    expect(container.textContent).toContain("Commands");
+    expect(container.textContent).toContain("Columns");
     expect(container.textContent).toContain("Open");
     expect(container.textContent).toContain("select");
+  });
+
+  it("prints the ledger index on command category headers", () => {
+    const { container } = renderPalette(makeItems());
+    // "Add, transform, drop and move columns" is category 04 in the view table.
+    expect(container.textContent).toContain("04");
+    expect(container.textContent).toContain("Columns");
   });
 
   it("hides disabled items", () => {
@@ -286,6 +320,18 @@ describe("CommandPalette", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("clears the query before closing on Escape", () => {
+    const onClose = vi.fn();
+    const { container } = renderPalette(makeItems(), { onClose });
+    typeQuery(container, "zzz");
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("closes and selects on click", () => {
     const items = makeItems();
     const onClose = vi.fn();
@@ -302,8 +348,14 @@ describe("CommandPalette", () => {
     expect(container.textContent).toContain("zzz");
   });
 
+  it("has no query row in the wide (menu-bar) layout", () => {
+    const { container } = renderPalette(makeItems(), { withInput: false });
+    expect(container.querySelector("input")).toBeNull();
+    expect(container.textContent).toContain("Open");
+  });
+
   it("returns null when closed", () => {
     const { container } = renderPalette(makeItems(), { isOpen: false });
-    expect(container.querySelector("input")).toBeNull();
+    expect(container.firstChild).toBeNull();
   });
 });

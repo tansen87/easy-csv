@@ -17,14 +17,13 @@ import { nodeTypes } from "@/modules/pipeline/nodes";
 import { CoordinateGrid } from "@/modules/pipeline/CoordinateGrid";
 import { useCanvasKeyboardPan } from "@/modules/pipeline/hooks/useCanvasKeyboardPan";
 import { useCanvasPointerHud } from "@/modules/pipeline/hooks/useCanvasPointerHud";
-import { useCanvasSearch } from "@/modules/pipeline/hooks/useCanvasSearch";
+import { useStepFocus } from "@/modules/pipeline/hooks/useStepFocus";
 import { useStepClipboard } from "@/modules/pipeline/hooks/useStepClipboard";
 import { useNodeHitTest } from "@/modules/pipeline/hooks/useNodeHitTest";
 import { useCutTool } from "@/modules/pipeline/hooks/useCutTool";
 import { useConnectGesture } from "@/modules/pipeline/hooks/useConnectGesture";
 import { usePipelineLayout } from "@/modules/pipeline/hooks/usePipelineLayout";
 import { createEdgeConfig } from "@/modules/pipeline/lib/layout";
-import { SearchOverlay } from "@/modules/pipeline/overlays/SearchOverlay";
 import { CutVisualization } from "@/modules/pipeline/overlays/CutVisualization";
 import { ConnectionVisualization } from "@/modules/pipeline/overlays/ConnectionVisualization";
 import { KeyIndicatorOverlay } from "@/modules/pipeline/overlays/KeyIndicatorOverlay";
@@ -154,7 +153,6 @@ interface FlowPanelProps {
   pipelineSavedAt?: number;
   doubleClickFitView?: boolean;
   onSavePipeline?: () => void;
-  onOpenCommandPalette?: () => void;
   onSaveIntermediate?: (stepId: string) => void;
   /** Delimiter the input file was read with, plus how it was resolved. */
   delimiter?: string;
@@ -193,7 +191,6 @@ export function FlowPanel({
   reactFlowInstanceRef,
   pipelineSavedAt,
   doubleClickFitView = true,
-  onOpenCommandPalette,
   onSaveIntermediate,
   delimiter,
   delimiterMode,
@@ -418,17 +415,9 @@ export function FlowPanel({
     reactFlowInstance,
   });
 
-  // Canvas Ctrl+F search (state, matching, jump-to-node)
-  const {
-    isSearchOpen,
-    searchQuery,
-    setSearchQuery,
-    highlightedNodeId,
-    searchInputRef,
-    searchResults,
-    handleSearchResultClick,
-    closeSearch,
-  } = useCanvasSearch({ steps, resultPreview, nodes, reactFlowInstance });
+  // Design 073: the command field owns step search; the canvas only listens for
+  // "focus this step" and flashes the highlight.
+  const { highlightedNodeId } = useStepFocus({ nodes, reactFlowInstance });
 
   // Cutting function status — owned by useCutTool
   const cut = useCutTool({
@@ -1210,24 +1199,6 @@ export function FlowPanel({
         <CoordinateGrid />
       </ReactFlow>
 
-      {/* Search overlay on canvas */}
-      <SearchOverlay
-        isOpen={isSearchOpen}
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
-        onClose={closeSearch}
-        onEnter={(index) => {
-          if (searchResults.length > 0) {
-            const r = searchResults[Math.min(index, searchResults.length - 1)];
-            handleSearchResultClick(r.step, r.isTableNode, r.resultId);
-          }
-        }}
-        searchResults={searchResults}
-        onResultClick={handleSearchResultClick}
-        onOpenCommandPalette={onOpenCommandPalette || (() => {})}
-        searchInputRef={searchInputRef as React.RefObject<HTMLInputElement>}
-      />
-
       {/* Cut visualization line */}
       <CutVisualization
         isCutting={isCutting}
@@ -1523,7 +1494,7 @@ export function FlowPanel({
 
       {/* Multi-select floating action bar (hidden while the search overlay is
           open so the two top-centre surfaces never stack). */}
-      {selectedNodeIds.size > 0 && !isSearchOpen && (
+      {selectedNodeIds.size > 0 && (
         <div className="absolute left-1/2 top-10 z-20 flex h-[34px] -translate-x-1/2 items-center rounded-[9px] border border-border bg-card px-1 shadow-[0_4px_12px_rgba(0,0,0,0.07)] dark:shadow-none">
           <span className="px-2 font-mono text-[11px] font-medium tabular-nums text-muted-foreground">
             {selectedNodeIds.size}

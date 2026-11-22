@@ -1,0 +1,1094 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 073-01 · 菜单栏命令输入框（命令面板 + 搜索合并）</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:#fff;
+    --fg:oklch(0.145 0 0);
+    --card:#fff;
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-ink:oklch(0.35 0.05 250);
+    --brand-fg:oklch(0.985 0 0);
+    --chrome:color-mix(in oklab, oklch(0.42 0.055 250) 12%, #fff);
+    --chrome-border:color-mix(in oklab, oklch(0.42 0.055 250) 30%, transparent);
+    --brand-6:color-mix(in oklab, var(--brand) 6%, transparent);
+    --brand-9:color-mix(in oklab, var(--brand) 9%, transparent);
+    --brand-12:color-mix(in oklab, var(--brand) 12%, transparent);
+    --brand-22:color-mix(in oklab, var(--brand) 22%, transparent);
+    --brand-40:color-mix(in oklab, var(--brand) 40%, transparent);
+
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --canvas-dot:oklch(0.2 0.01 80 / 11%);
+    --canvas-line:oklch(0.2 0.01 80 / 30%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-win:0 24px 64px -34px oklch(0.2 0.02 80 / 34%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-fly:0 16px 40px -20px oklch(0.2 0.02 80 / 28%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+
+    --danger:oklch(0.55 0.17 27);
+    --redline:oklch(0.55 0.21 27);
+    --warning:oklch(0.62 0.13 70);
+  }
+  .dark{
+    color-scheme:dark;
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-ink:oklch(0.82 0.04 245);
+    --brand-fg:oklch(0.205 0 0);
+    --chrome:color-mix(in oklab, oklch(0.78 0.045 245) 16%, oklch(0.145 0 0));
+    --chrome-border:color-mix(in oklab, oklch(0.78 0.045 245) 34%, transparent);
+    --brand-6:color-mix(in oklab, var(--brand) 8%, transparent);
+    --brand-9:color-mix(in oklab, var(--brand) 12%, transparent);
+    --brand-12:color-mix(in oklab, var(--brand) 16%, transparent);
+    --brand-22:color-mix(in oklab, var(--brand) 26%, transparent);
+    --brand-40:color-mix(in oklab, var(--brand) 46%, transparent);
+    --stage:oklch(0.12 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --canvas-dot:oklch(1 0 0 / 9%);
+    --canvas-line:oklch(0.96 0.005 85 / 30%);
+    --shadow-card:none;
+    --shadow-win:0 24px 64px -34px oklch(0 0 0 / 80%);
+    --shadow-fly:0 16px 40px -20px oklch(0 0 0 / 78%);
+    --danger:oklch(0.7 0.14 27);
+    --redline:oklch(0.68 0.19 27);
+    --warning:oklch(0.76 0.12 75);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);color:var(--fg);background-color:var(--stage);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+    -webkit-font-smoothing:antialiased;
+    transition:background-color .18s ease,color .18s ease;
+  }
+  .ic{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;display:block}
+  kbd{
+    display:inline-flex;align-items:center;justify-content:center;height:18px;min-width:18px;padding:0 4px;
+    border:1px solid var(--border);border-radius:4px;background:transparent;
+    font-family:var(--mono);font-size:10px;line-height:1;color:var(--muted-fg-2);
+  }
+
+  #sheet{width:1240px;margin:0 auto;padding:28px 0 96px}
+
+  /* ---- sheet header ---- */
+  .sheet-hd{position:relative;padding-bottom:22px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .sheet-hd h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .sheet-hd p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1000px;line-height:1.85}
+  .sheet-hd p b{color:var(--fg);font-weight:500}
+  .theme-toggle{position:absolute;right:0;top:2px;height:26px;padding:0 10px;border-radius:6px;
+                border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+                font-family:var(--mono);font-size:10.5px;cursor:pointer}
+  .theme-toggle:hover{color:var(--fg)}
+
+  /* ---- generic cards ---- */
+  .audit{border:1px solid var(--border);border-radius:10px;background:var(--card);
+         padding:16px 18px 14px;margin-bottom:16px;font-size:11.5px;line-height:1.95;color:var(--muted-fg)}
+  .audit .hd{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .audit .hd b{color:var(--fg);font-weight:500;font-size:12.5px}
+  .audit .hd span{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+  .audit ol{margin:0;padding-left:20px;max-width:1000px}
+  .audit li+li{margin-top:2px}
+  .audit b{color:var(--fg);font-weight:500}
+  .audit code,.direct code{font-family:var(--mono);font-size:10.5px;color:var(--brand-ink);
+              background:var(--brand-6);padding:1px 4px;border-radius:4px}
+
+  .direct{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:14px 18px;
+          margin-bottom:34px;display:grid;grid-template-columns:64px 1fr;gap:6px 14px;font-size:11.5px;line-height:1.7}
+  .direct dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);padding-top:2px}
+  .direct dd{margin:0;color:var(--muted-fg);max-width:980px}
+  .direct dd b{color:var(--fg);font-weight:500}
+
+  .sec{margin-bottom:44px}
+  .sec-hd{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+  .sec-hd .num{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-3)}
+  .sec-hd h2{margin:0;font-size:13.5px;font-weight:500}
+  .sec-hd .tag{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);border:1px solid var(--border);
+               border-radius:4px;padding:1px 5px}
+  .sec-note{margin:0 0 14px;font-size:11.5px;line-height:1.8;color:var(--muted-fg);max-width:1050px}
+  .sec-note b{color:var(--fg);font-weight:500}
+
+  /* ================= app window mock ================= */
+  .win{
+    --winw:1240px;
+    position:relative;width:var(--winw);height:720px;display:flex;flex-direction:column;
+    background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden;
+    box-shadow:var(--shadow-win);
+  }
+  .win-before{height:470px}
+  .win-narrow{--winw:800px;height:330px}
+  .narrow-scale{overflow:hidden}
+  .narrow-scale .win-narrow{transform:scale(.75);transform-origin:top left;border:0;border-radius:0;box-shadow:none}
+  .win-mid{--winw:1100px;height:620px}
+
+  /* menu bar */
+  .bar{
+    position:relative;flex:none;display:flex;align-items:center;height:36px;padding-left:16px;
+    background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-border);
+  }
+  .brand{flex:none;padding-right:12px;font-size:12.5px;font-weight:500;line-height:1;color:var(--fg)}
+  .menus{display:flex;align-items:center;flex:none}
+  .mbtn{
+    height:26px;padding:0 12px;border:0;border-radius:6px;background:transparent;
+    font-family:var(--font);font-size:12px;font-weight:500;line-height:1;color:var(--brand-ink);
+    cursor:default;white-space:nowrap;
+  }
+  .mbtn.open{background:var(--brand-12)}
+  .mbtn.exec{margin-left:2px}
+  .mbtn .dot{display:inline-block;width:5px;height:5px;margin-left:6px;border-radius:50%;background:var(--brand)}
+
+  /* the new centred field */
+  .field-wrap{
+    position:absolute;left:50%;top:5px;transform:translateX(-50%);
+    width:clamp(180px,calc(var(--winw) - 760px),440px);
+  }
+  .field{
+    display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:8px;
+    height:26px;padding:0 6px 0 10px;border:1px solid var(--border);border-radius:7px;
+    background:var(--bg);color:var(--muted-fg-2);cursor:text;
+    transition:border-color .12s cubic-bezier(.2,0,0,1),background-color .12s cubic-bezier(.2,0,0,1);
+  }
+  .field:hover{border-color:color-mix(in oklab,var(--fg) 18%,transparent)}
+  .field.focused,.field:focus-within{
+    border-color:var(--brand-40);
+    box-shadow:0 0 0 2px var(--brand-12);
+  }
+  .field .prompt{font-family:var(--mono);font-size:13px;line-height:1;color:var(--brand);text-align:center;
+                 transform:translateY(-1px)}
+  .field input{
+    min-width:0;height:100%;border:0;background:transparent;outline:none;
+    font-family:var(--font);font-size:12px;color:var(--fg);
+  }
+  .field input::placeholder{color:var(--muted-fg-2)}
+  .field .ph{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .field kbd{height:16px;min-width:16px;font-size:9.5px;padding:0 3px;color:var(--muted-fg-3)}
+
+  /* collapsed field on narrow windows */
+  .field-compact{display:none;width:28px;height:28px;border:0;border-radius:6px;background:transparent;
+                 color:var(--brand-ink);place-items:center;cursor:pointer}
+  .win.win-narrow .field-wrap{display:none}
+  .win.win-narrow .field-compact{display:grid}
+  /* right icon group */
+  .icons{margin-left:auto;display:flex;align-items:center;gap:2px;flex:none}
+  .icon-btn{position:relative;display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;
+            background:transparent;color:var(--brand-ink);cursor:default}
+  .icon-btn.on{background:var(--brand-12)}
+  .icon-btn.on::after{content:"";position:absolute;bottom:3px;left:50%;transform:translateX(-50%);
+                      width:12px;height:2px;border-radius:99px;background:currentColor}
+  .wctl{display:flex;flex:none;margin-left:10px}
+  .wbtn{display:grid;place-items:center;width:46px;height:36px;border:0;background:transparent;
+        color:var(--muted-fg);cursor:default}
+  .wbtn.close:hover{background:#c42b1c;color:#fff}
+
+  /* tab strip */
+  .tabstrip{flex:none;display:flex;align-items:center;gap:4px;height:34px;padding:0 8px;
+            border-bottom:1px solid var(--border-soft);background:var(--bg)}
+  .tab{display:flex;align-items:center;gap:7px;height:26px;padding:0 8px 0 10px;border-radius:6px;
+       font-size:11.5px;color:var(--muted-fg);cursor:default}
+  .tab.on{background:var(--muted);color:var(--fg);font-weight:500}
+  .tab .x{font-size:12px;color:var(--muted-fg-3);padding:0 1px}
+  .tab-add{display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:5px;
+           background:transparent;color:var(--muted-fg-3);cursor:default}
+
+  /* canvas */
+  .canvas{position:relative;flex:1;overflow:hidden;background-color:var(--bg);
+          background-image:radial-gradient(var(--canvas-dot) 1px,transparent 1px);background-size:22px 22px}
+  .edges{position:absolute;inset:0;width:100%;height:100%}
+  .edges path{fill:none;stroke:var(--canvas-line);stroke-width:1.25}
+  .edges circle{fill:var(--canvas-line)}
+
+  .rail{position:absolute;left:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;
+        gap:2px;padding:3px;border:1px solid var(--border);border-radius:7px;background:var(--card);
+        box-shadow:var(--shadow-card)}
+  .rail b{display:grid;place-items:center;width:24px;height:24px;border-radius:5px;color:var(--muted-fg-2)}
+  .rail b.on{background:var(--brand-9);color:var(--brand-ink)}
+
+  .tnode{position:absolute;top:72px;background:var(--card);border:1px solid var(--border);border-radius:8px;
+         box-shadow:var(--shadow-card);overflow:hidden}
+  .tnode .hd{display:flex;align-items:center;justify-content:space-between;gap:10px;height:26px;
+             padding:0 9px;border-bottom:1px solid var(--border-soft)}
+  .tnode .hd .fn{font-size:10.5px;font-weight:500;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tnode .hd .dm{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);white-space:nowrap}
+  .tnode table{width:100%;border-collapse:collapse;table-layout:fixed}
+  .tnode th,.tnode td{padding:0 8px;height:21px;text-align:left;font-size:9.5px;
+                      border-bottom:1px solid var(--border-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tnode th{font-family:var(--mono);font-size:8.5px;font-weight:400;color:var(--muted-fg-3)}
+  .tnode td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;color:var(--muted-fg)}
+  .tnode .gutter{width:20px;text-align:right;font-family:var(--mono);font-size:8px;color:var(--muted-fg-3);
+                 border-right:1px solid var(--border-soft);padding-right:6px}
+  .tnode .ft{display:flex;align-items:center;justify-content:space-between;gap:8px;height:22px;
+             padding:0 9px;border-top:1px solid var(--border-soft);
+             font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-3)}
+
+  .stepnode{position:absolute;top:72px;display:grid;grid-template-columns:22px minmax(0,1fr);
+          background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-card);
+          overflow:hidden}
+  .stepnode .idx{display:grid;place-items:center;border-right:1px solid var(--border-soft);
+                 font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)}
+  .stepnode .body{padding:8px 9px 9px;min-width:0}
+  .stepnode .cn{font-family:var(--mono);font-size:11px;color:var(--fg);white-space:nowrap}
+  .stepnode .cp{margin-top:5px;font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-2);
+                white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stepnode.sel .idx{color:var(--brand-ink);background:var(--brand-6)}
+
+  .win.win-narrow .canvas{background-size:20px 20px}
+
+  /* ================= palette ================= */
+  .palette{
+    position:absolute;left:50%;top:42px;transform:translateX(-50%);
+    width:620px;max-width:calc(var(--winw) - 24px);
+    display:flex;flex-direction:column;
+    background:var(--card);border:1px solid var(--border);border-radius:12px;
+    box-shadow:var(--shadow-fly);overflow:hidden;z-index:5;
+  }
+  .pal-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;
+            height:34px;padding:1px 12px 0;border-bottom:1px solid var(--border-soft)}
+  .pal-meta .scope{font-size:10.5px;color:var(--muted-fg);letter-spacing:.01em}
+  .pal-meta .scope b{color:var(--fg);font-weight:500}
+  .pal-meta .count{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);font-variant-numeric:tabular-nums}
+  .pal-list{max-height:352px;overflow-y:auto;padding:6px}
+  .pal-list::-webkit-scrollbar{width:10px}
+  .pal-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;border:3px solid var(--card)}
+
+  .grp{display:flex;align-items:baseline;gap:7px;height:26px;padding:4px 10px 0}
+  .grp .gnum{width:20px;flex:none;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);
+             font-variant-numeric:tabular-nums}
+  .grp .gname{font-size:10.5px;font-weight:500;color:var(--muted-fg)}
+  .grp .gcount{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);
+               font-variant-numeric:tabular-nums}
+  .grp.recent .gname{color:var(--muted-fg-2)}
+
+  .row{
+    position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,214px) auto;
+    align-items:center;gap:12px;width:100%;height:34px;padding:0 10px;border:0;border-radius:6px;
+    background:transparent;text-align:left;cursor:pointer;
+    transition:background-color .1s cubic-bezier(.2,0,0,1);
+  }
+  .row:hover{background:color-mix(in oklab,var(--fg) 4%,transparent)}
+  .row.active{background:var(--brand-9)}
+  .row.active::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:99px;
+                      background:var(--brand)}
+  .row .rl{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+           font-size:12.5px;font-weight:500;color:var(--fg)}
+  .row.mono .rl{font-family:var(--mono);font-size:11.5px;font-weight:400}
+  .row .rl b{color:var(--brand-ink);font-weight:600}
+  .row .rd{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+           font-size:11px;color:var(--muted-fg)}
+  .row .rd b{color:var(--fg);font-weight:600}
+  .row .src{display:none;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);white-space:nowrap}
+  .row .keys{display:flex;gap:3px;justify-content:flex-end}
+  .palette.searching .row{grid-template-columns:minmax(0,1fr) minmax(0,170px) auto auto}
+  .palette.searching .row .src{display:block}
+
+  .pal-ft{display:flex;align-items:center;gap:14px;height:34px;padding:0 12px;
+          border-top:1px solid var(--border-soft);font-size:10.5px;color:var(--muted-fg)}
+  .pal-ft .hint{display:flex;align-items:center;gap:5px}
+  .pal-ft .hint .ks{display:flex;gap:2px}
+  .pal-ft .sp{flex:1}
+  .pal-ft .note{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+
+  .pal-empty{padding:18px 12px 22px}
+  .pal-empty p{margin:0;font-size:12.5px;color:var(--fg)}
+  .pal-empty p span{color:var(--brand-ink);font-weight:500}
+  .pal-empty ul{margin:8px 0 0;padding:0;list-style:none;display:flex;gap:6px;flex-wrap:wrap}
+  .pal-empty li{font-family:var(--mono);font-size:10px;color:var(--muted-fg);
+                border:1px solid var(--border);border-radius:4px;padding:2px 6px}
+
+  /* before-state overlay */
+  .veil{position:absolute;inset:0;background:oklch(0 0 0 / 30%);z-index:4}
+  .before-modal{position:absolute;left:50%;top:48px;transform:translateX(-50%);width:560px;z-index:5;
+                background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-fly);
+                overflow:hidden}
+  .bm-in{display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:10px;height:52px;
+         padding:0 14px 0 16px;box-shadow:inset 0 -1px 0 var(--border-soft)}
+  .bm-in .prompt{font-family:var(--mono);font-size:14px;color:var(--brand);text-align:center}
+  .bm-in .txt{font-family:var(--mono);font-size:13px;color:var(--muted-fg-3)}
+  .bm-in .cnt{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-3)}
+  .bm-row{display:flex;align-items:center;gap:10px;height:34px;padding:0 12px;font-size:12.5px;color:var(--fg)}
+  .bm-row.act{background:var(--brand-9)}
+  .bm-row .d{margin-left:auto;font-size:11px;color:var(--muted-fg)}
+  .bm-grp{height:24px;padding:6px 12px 0;font-size:10.5px;color:var(--muted-fg)}
+
+  .menu-drop{position:absolute;z-index:4;width:228px;padding:6px;border:1px solid var(--border);
+             border-radius:10px;background:var(--card);box-shadow:var(--shadow-fly)}
+  .menu-drop .mi{display:flex;align-items:center;gap:8px;height:30px;padding:0 8px;border-radius:6px;
+                 font-size:12px;color:var(--muted-fg)}
+  .menu-drop .mi.hl{background:color-mix(in oklab,var(--fg) 8%,transparent);color:var(--fg)}
+  .menu-drop .mi .sp{flex:1}
+  .menu-drop .sep{height:1px;margin:5px 8px;background:var(--border)}
+
+  /* redline callouts */
+  .redline{position:absolute;z-index:6;border:1px solid var(--redline);border-radius:4px;pointer-events:none}
+  .redtag{position:absolute;z-index:7;transform:translateY(-100%);margin-top:-4px;
+          font-family:var(--mono);font-size:9.5px;line-height:1;color:#fff;background:var(--redline);
+          padding:3px 6px;border-radius:3px;white-space:nowrap}
+  .rnum{position:absolute;z-index:7;display:grid;place-items:center;width:16px;height:16px;border-radius:50%;
+        background:var(--redline);color:#fff;font-family:var(--mono);font-size:9px}
+  .pins{position:absolute;inset:0;z-index:8;pointer-events:none}
+  .pins[hidden]{display:none}
+  .pin{position:absolute;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;
+       background:var(--brand);color:var(--brand-fg);font-family:var(--mono);font-size:9.5px;
+       box-shadow:0 0 0 3px var(--card)}
+  .legend{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:14px;font-size:11px;color:var(--muted-fg)}
+  .legend span{display:flex;gap:7px;align-items:baseline}
+  .legend i{flex:none;display:grid;place-items:center;width:16px;height:16px;border-radius:50%;
+            background:var(--brand);color:var(--brand-fg);font-family:var(--mono);font-size:8.5px;
+            font-style:normal;transform:translateY(2px)}
+  .legend b{color:var(--fg);font-weight:500}
+
+  /* state grid */
+  .states{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .state{border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden;position:relative}
+  .state .cap{display:flex;align-items:baseline;gap:9px;padding:11px 14px;border-bottom:1px solid var(--border-soft)}
+  .state .cap b{font-size:11.5px;font-weight:500;color:var(--fg)}
+  .state .cap span{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .state .body{padding:14px;background:var(--bg)}
+  .state .body.dots{background-image:radial-gradient(var(--canvas-dot) 1px,transparent 1px);background-size:18px 18px}
+
+  .mini-field{display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:8px;
+              height:26px;padding:0 6px 0 10px;border:1px solid var(--border);border-radius:7px;
+              background:var(--bg);font-size:12px;color:var(--muted-fg-2)}
+  .mini-field .prompt{font-family:var(--mono);font-size:13px;color:var(--brand);text-align:center}
+  .mini-field.hov{border-color:color-mix(in oklab,var(--fg) 18%,transparent)}
+  .mini-field.foc{border-color:var(--brand-40);box-shadow:0 0 0 2px var(--brand-12)}
+  .mini-field + .mini-field{margin-top:12px}
+  .mini-lab{display:flex;gap:8px;align-items:baseline;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+
+  .mini-pal{border:1px solid var(--border);border-radius:9px;background:var(--card);overflow:hidden;
+            box-shadow:var(--shadow-card)}
+  .mini-pal .mh{display:flex;justify-content:space-between;height:26px;align-items:center;padding:0 10px;
+                border-bottom:1px solid var(--border-soft);font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .mini-pal .mr{height:30px;display:flex;align-items:center;gap:8px;padding:0 10px;font-size:11.5px;color:var(--muted-fg)}
+  .mini-pal .mr b{font-weight:500;color:var(--fg)}
+  .mini-pal .mr .r{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+
+  /* spec tables */
+  .spec{border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden;margin-bottom:18px}
+  .spec h3{margin:0;padding:11px 14px;border-bottom:1px solid var(--border-soft);font-size:11.5px;font-weight:500}
+  .spec table{width:100%;border-collapse:collapse;font-size:11px}
+  .spec th,.spec td{text-align:left;vertical-align:top;padding:7px 14px;border-bottom:1px solid var(--border-soft);
+                    line-height:1.65;color:var(--muted-fg)}
+  .spec tr:last-child td{border-bottom:0}
+  .spec th{font-family:var(--mono);font-size:9.5px;font-weight:400;color:var(--muted-fg-3);
+           background:color-mix(in oklab,var(--fg) 2%,transparent)}
+  .spec td:first-child{color:var(--fg);white-space:nowrap}
+  .spec code{font-family:var(--mono);font-size:10px;color:var(--brand-ink)}
+  .spec .no{color:var(--danger)}
+  .spec .yes{color:var(--fg);font-weight:500}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .note-list{margin:0;padding-left:18px;font-size:11px;line-height:1.9;color:var(--muted-fg)}
+  .note-list b{color:var(--fg);font-weight:500}
+  .note-list code{font-family:var(--mono);font-size:10px;color:var(--brand-ink)}
+  .foot{margin-top:34px;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);line-height:1.9}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="sheet-hd">
+    <div class="eyebrow">原型 073-01 · 2026-11-22</div>
+    <h1>菜单栏命令输入框 —— 把「命令面板」和「搜索」收进同一个开口</h1>
+    <p>菜单栏中部加一个常驻输入框（<b>› 搜索命令、步骤或文件</b>），点击/聚焦即在它下方展开面板：空查询是编号目录，<b>一打字就跨来源检索</b>（操作 / 命令 / 步骤 / 文件 / 标签页 / 模板）。现 <code>Ctrl K</code> 的居中模态与画布 <code>Ctrl F</code> 浮层都并进这里；<code>查看</code> 菜单里的两项随之删除。</p>
+    <button class="theme-toggle" id="theme">暗色</button>
+  </div>
+
+  <div class="audit">
+    <div class="hd"><b>现状审计</b><span>8 条 · 代码位置可核对</span></div>
+    <ol>
+      <li>唯一入口藏在 <code>查看</code> 二级菜单第一项（<code>MainMenu.tsx:719-734</code>），画布上没有任何可见的命令入口；只有记住 <code>Ctrl K</code> 才找得到。</li>
+      <li>打开后是 560px 的<b>居中模态</b>（<code>CommandPalette.tsx:285-296</code>）：<code>pt-12</code> + 30% 遮罩，整块画布被压暗，选完又消失——每次都是一次「离开画布 / 回到画布」。</li>
+      <li>面板自己还带一条 52px 输入行，与菜单栏隔着遮罩；视线和手要一起从顶部移到屏幕中上，而菜单栏中部那条约 500px 的空白（<code>MainMenu.tsx:1187-1191</code> 的拖拽带）什么也不做。</li>
+      <li>97 项混在一个列表里：空查询按「常用操作 → 命令 → 标签页 → 文件 → 模板」平铺，第一屏永远是操作，不是「我刚才想做的那件事」。</li>
+      <li>画布搜索（<code>Ctrl F</code>）是<b>另一个</b>浮层（<code>SearchOverlay.tsx</code>），只搜步骤名；命令与步骤各搜各的，同一个词要试两个地方。</li>
+      <li>同一件事目前有三个入口：<code>Ctrl K</code>（操作/命令/文件/标签页/模板）、<code>Ctrl F</code>（步骤）、命令停靠面板（072，61 个操作）。</li>
+      <li>菜单栏右端 ⌘ 按钮打开的是<b>另一个</b>命令面板（072 的 260px 目录），与 <code>Ctrl K</code> 是同一份 61 条数据的两种呈现。</li>
+      <li>同一条 <code>filter</code> 在两处行语法不同：072 目录 40px 两行（命令名 + 中文描述），<code>Ctrl K</code> 34px 单行（名称 + 描述在右），同一个东西长得不一样。</li>
+    </ol>
+  </div>
+
+  <dl class="direct">
+    <dt>产品</dt><dd>桌面上的 CSV 管道工具；这个输入框是整套应用的<b>唯一开口</b>——找命令、找步骤、找文件、找标签页都在这里。</dd>
+    <dt>性格</dt><dd>准确、安静、有点命令行的干脆。</dd>
+    <dt>世界</dt><dd>账本与索引卡（033 / 040 / 072 已定）。输入框是账本扉页上的索引行，展开的列表是目录页。</dd>
+    <dt>时刻</dt><dd>展开后的那一条结果列表：等宽命令名、<code>01–14</code> 序号、命中只换墨色——整屏唯一有色彩的地方。</dd>
+    <dt>签名</dt><dd><code>›</code> 提示符 + <code>Ctrl K</code> 键帽 + 分组等宽序号，与画布步骤卡 <code>01/02</code>、设置页分组序号同一套编号。</dd>
+  </dl>
+
+  <!-- ============ 01 现状 ============ -->
+  <section class="sec">
+    <div class="sec-hd"><span class="num">01</span><h2>现状：入口在二级菜单，打开是盖住画布的模态</h2><span class="tag">before</span></div>
+    <p class="sec-note">三条红线：入口不可见、模态打断、面板输入行与菜单栏分离。<b>菜单栏中部那段空白</b>正是最该放东西的地方。</p>
+    <div style="position:relative;margin-top:30px">
+    <div class="win win-before">
+      <div class="bar">
+        <div class="brand">Easy Csv</div>
+        <div class="menus">
+          <button class="mbtn">文件</button>
+          <button class="mbtn">编辑</button>
+          <button class="mbtn open">查看</button>
+          <button class="mbtn">工具</button>
+          <button class="mbtn">帮助</button>
+          <button class="mbtn exec">执行</button>
+        </div>
+        <div class="icons">
+          <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M9 9h6v6H9z"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg></button>
+          <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3z"/><path d="M8 12h8M8 16h6"/></svg></button>
+          <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4M9 14h.01M15 14h.01"/></svg></button>
+          <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></button>
+        </div>
+        <div class="wctl">
+          <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg></button>
+          <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9"/></svg></button>
+          <button class="wbtn close"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M.5.5l9 9M9.5.5l-9 9"/></svg></button>
+        </div>
+      </div>
+      <div class="tabstrip"><div class="tab on">销售明细.csv <span class="x">×</span></div><button class="tab-add">+</button></div>
+      <div class="canvas">
+        <div class="rail"><b class="on">▣</b><b>✥</b><b>✂</b><b>⇄</b></div>
+        <svg class="edges" viewBox="0 0 1240 400" preserveAspectRatio="none"><path d="M464 85H512M712 85H752M952 85H992"/></svg>
+        <div class="tnode" style="left:64px;width:400px">
+          <div class="hd"><span class="fn">sales_2026.csv</span><span class="dm">1,204 行 × 5 列</span></div>
+          <table><colgroup><col style="width:20px"><col><col><col><col style="width:64px"></colgroup>
+            <tr><td class="gutter"></td><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+            <tr><td class="gutter">1</td><td>2026-09-02</td><td>华东</td><td>办公</td><td class="n">1,280</td></tr>
+            <tr><td class="gutter">2</td><td>2026-09-02</td><td>华南</td><td>耗材</td><td class="n">348</td></tr>
+            <tr><td class="gutter">3</td><td>2026-09-03</td><td>华北</td><td>办公</td><td class="n">2,410</td></tr>
+            <tr><td class="gutter">4</td><td>2026-09-03</td><td>华东</td><td>设备</td><td class="n">9,050</td></tr>
+            <tr><td class="gutter">5</td><td>2026-09-04</td><td>西南</td><td>耗材</td><td class="n">620</td></tr>
+          </table>
+          <div class="ft"><span>sales_2026.csv</span><span>1,204 行 × 5 列</span></div>
+        </div>
+        <div class="stepnode sel" style="left:512px;width:200px"><div class="idx">01</div><div class="body"><div class="cn">filter</div><div class="cp">amount &gt; 500</div></div></div>
+        <div class="stepnode" style="left:752px;width:200px"><div class="idx">02</div><div class="body"><div class="cn">groupby 地区</div><div class="cp">sum(金额) as 总额</div></div></div>
+      </div>
+
+      <div class="veil"></div>
+      <div class="menu-drop" style="left:180px;top:40px">
+        <div class="mi hl"><span>命令面板</span><span class="sp"></span><kbd>Ctrl K</kbd></div>
+        <div class="sep"></div>
+        <div class="mi"><span>数据概况</span></div>
+        <div class="mi"><span>版本历史</span></div>
+        <div class="mi"><span>数据血缘</span></div>
+        <div class="mi"><span>管道变量</span></div>
+        <div class="sep"></div>
+        <div class="mi"><span>搜索</span><span class="sp"></span><kbd>Ctrl F</kbd></div>
+      </div>
+      <div class="before-modal">
+        <div class="bm-in"><span class="prompt">›</span><span class="txt">输入命令、文件名或标签页</span><span class="cnt">97 项</span></div>
+        <div style="padding:6px 6px 10px">
+          <div class="bm-grp">常用操作</div>
+          <div class="bm-row act">打开文件<span class="d">CSV、Parquet、DuckDB</span><kbd>Ctrl O</kbd></div>
+          <div class="bm-row">执行管道<kbd>Ctrl R</kbd></div>
+          <div class="bm-row">保存管道<kbd>Ctrl S</kbd></div>
+          <div class="bm-grp">命令</div>
+          <div class="bm-row"><span style="font-family:var(--mono);font-size:12px">filter</span><span class="d">按表达式筛选行</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="rnum" style="left:176px;top:6px">1</div>
+    <div class="rnum" style="left:340px;top:6px">2</div>
+    <div class="rnum" style="left:600px;top:6px">3</div>
+    <div class="redline" style="left:176px;top:33px;width:48px;height:30px"></div>
+    <div class="redline" style="left:340px;top:74px;width:560px;height:220px"></div>
+    <div class="redline" style="left:600px;top:33px;width:440px;height:30px"></div>
+    </div>
+    <p class="sec-note" style="margin-top:12px">
+      <span style="color:var(--redline)">① 入口在二级菜单</span> ·
+      <span style="color:var(--redline)">② 30% 遮罩 + 屏幕中央模态</span> ·
+      <span style="color:var(--redline)">③ 中部约 500px 空白拖拽带</span>
+    </p>
+  </section>
+
+  <!-- ============ 02 关闭态 ============ -->
+  <section class="sec">
+    <div class="sec-hd"><span class="num">02</span><h2>改造后 · 关闭态：菜单栏中部一条索引行</h2><span class="tag">adopted</span></div>
+    <p class="sec-note">输入框 <b>26px 高、绝对居中</b>，宽度 <code>clamp(180px, 窗口 − 760px, 440px)</code>：1240 宽时 440，1024 时 264，小于 960 折成一枚 28px 图标按钮。静息是一枚安静的细线白片，不与「执行」抢色。</p>
+
+    <div style="position:relative">
+      <div class="win" id="win-closed">
+        <div class="bar">
+          <div class="brand">Easy Csv</div>
+          <div class="menus">
+            <button class="mbtn">文件</button>
+            <button class="mbtn">编辑</button>
+            <button class="mbtn">查看</button>
+            <button class="mbtn">工具</button>
+            <button class="mbtn">帮助</button>
+            <button class="mbtn exec">执行<span class="dot"></span></button>
+          </div>
+          <div class="field-wrap">
+            <div class="field">
+              <span class="prompt">›</span>
+              <span class="ph">搜索命令、步骤或文件</span>
+              <kbd>Ctrl K</kbd>
+            </div>
+          </div>
+          <div class="icons">
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M9 9h6v6H9z"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg></button>
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3z"/><path d="M8 12h8M8 16h6"/></svg></button>
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4M9 14h.01M15 14h.01"/></svg></button>
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></button>
+          </div>
+          <div class="wctl">
+            <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg></button>
+            <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9"/></svg></button>
+            <button class="wbtn close"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M.5.5l9 9M9.5.5l-9 9"/></svg></button>
+          </div>
+        </div>
+        <div class="tabstrip">
+          <div class="tab on">销售明细.csv <span class="x">×</span></div>
+          <div class="tab">merge_2026 <span class="x">×</span></div>
+          <button class="tab-add">+</button>
+        </div>
+        <div class="canvas">
+          <div class="rail"><b class="on">▣</b><b>✥</b><b>✂</b><b>⇄</b></div>
+          <svg class="edges" viewBox="0 0 1240 400" preserveAspectRatio="none"><path d="M464 85H512M712 85H752M952 85H992"/></svg>
+          <div class="tnode" style="left:64px;width:400px">
+            <div class="hd"><span class="fn">sales_2026.csv</span><span class="dm">1,204 行 × 5 列</span></div>
+            <table><colgroup><col style="width:20px"><col><col><col><col style="width:64px"></colgroup>
+              <tr><td class="gutter"></td><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td class="gutter">1</td><td>2026-09-02</td><td>华东</td><td>办公</td><td class="n">1,280</td></tr>
+              <tr><td class="gutter">2</td><td>2026-09-02</td><td>华南</td><td>耗材</td><td class="n">348</td></tr>
+              <tr><td class="gutter">3</td><td>2026-09-03</td><td>华北</td><td>办公</td><td class="n">2,410</td></tr>
+              <tr><td class="gutter">4</td><td>2026-09-03</td><td>华东</td><td>设备</td><td class="n">9,050</td></tr>
+              <tr><td class="gutter">5</td><td>2026-09-04</td><td>西南</td><td>耗材</td><td class="n">620</td></tr>
+            </table>
+            <div class="ft"><span>sales_2026.csv</span><span>1,204 行 × 5 列</span></div>
+          </div>
+          <div class="stepnode" style="left:512px;width:200px"><div class="idx">01</div><div class="body"><div class="cn">filter</div><div class="cp">amount &gt; 500</div></div></div>
+          <div class="stepnode" style="left:752px;width:200px"><div class="idx">02</div><div class="body"><div class="cn">groupby 地区</div><div class="cp">sum(金额) as 总额</div></div></div>
+          <div class="stepnode" style="left:992px;width:200px"><div class="idx">03</div><div class="body"><div class="cn">sort -N 总额</div><div class="cp">降序 · 稳定排序</div></div></div>
+        </div>
+      </div>
+      <span class="pin" style="left:calc(50% + 228px);top:9px">1</span>
+    </div>
+    <div class="legend">
+      <span><i>1</i><b>常驻输入框</b>：26px 高，与窗口同轴；`›` 是唯一提示符，右侧 `Ctrl K` 键帽是快捷键的唯一广告位</span>
+    </div>
+  </section>
+
+  <!-- ============ 03 打开态 ============ -->
+  <section class="sec">
+    <div class="sec-hd"><span class="num">03</span><h2>改造后 · 打开态：面板从输入框下方展开（空查询 = 目录）</h2><span class="tag">可输入 · 试一下</span></div>
+    <p class="sec-note">不遮罩、不居中：面板与输入框同轴、顶距标题栏 6px。空查询是<b>操作 + 01–14 目录 + 当前管道</b>，组头吸顶；<b>直接在顶部输入框打字</b>，列表就地收成相关度单列，来源标签出现在右侧。试试 <code>合并</code>、<code>sort</code>、<code>filter</code>。</p>
+
+    <div style="position:relative">
+      <div class="win" id="win-open">
+        <div class="bar">
+          <div class="brand">Easy Csv</div>
+          <div class="menus">
+            <button class="mbtn">文件</button>
+            <button class="mbtn">编辑</button>
+            <button class="mbtn">查看</button>
+            <button class="mbtn">工具</button>
+            <button class="mbtn">帮助</button>
+            <button class="mbtn exec">执行<span class="dot"></span></button>
+          </div>
+          <div class="field-wrap">
+            <div class="field focused">
+              <span class="prompt">›</span>
+              <input id="live-input" type="text" placeholder="搜索命令、步骤或文件" autocomplete="off" spellcheck="false" />
+              <kbd>Ctrl K</kbd>
+            </div>
+          </div>
+          <div class="icons">
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M9 9h6v6H9z"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg></button>
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3z"/><path d="M8 12h8M8 16h6"/></svg></button>
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4M9 14h.01M15 14h.01"/></svg></button>
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></button>
+          </div>
+          <div class="wctl">
+            <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg></button>
+            <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9"/></svg></button>
+            <button class="wbtn close"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M.5.5l9 9M9.5.5l-9 9"/></svg></button>
+          </div>
+        </div>
+        <div class="tabstrip">
+          <div class="tab on">销售明细.csv <span class="x">×</span></div>
+          <div class="tab">merge_2026 <span class="x">×</span></div>
+          <button class="tab-add">+</button>
+        </div>
+        <div class="canvas">
+          <div class="rail"><b class="on">▣</b><b>✥</b><b>✂</b><b>⇄</b></div>
+          <svg class="edges" viewBox="0 0 1240 400" preserveAspectRatio="none"><path d="M464 85H512M712 85H752M952 85H992"/></svg>
+          <div class="tnode" style="left:64px;width:400px">
+            <div class="hd"><span class="fn">sales_2026.csv</span><span class="dm">1,204 行 × 5 列</span></div>
+            <table><colgroup><col style="width:20px"><col><col><col><col style="width:64px"></colgroup>
+              <tr><td class="gutter"></td><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td class="gutter">1</td><td>2026-09-02</td><td>华东</td><td>办公</td><td class="n">1,280</td></tr>
+              <tr><td class="gutter">2</td><td>2026-09-02</td><td>华南</td><td>耗材</td><td class="n">348</td></tr>
+              <tr><td class="gutter">3</td><td>2026-09-03</td><td>华北</td><td>办公</td><td class="n">2,410</td></tr>
+              <tr><td class="gutter">4</td><td>2026-09-03</td><td>华东</td><td>设备</td><td class="n">9,050</td></tr>
+              <tr><td class="gutter">5</td><td>2026-09-04</td><td>西南</td><td>耗材</td><td class="n">620</td></tr>
+            </table>
+            <div class="ft"><span>sales_2026.csv</span><span>1,204 行 × 5 列</span></div>
+          </div>
+          <div class="stepnode" style="left:512px;width:200px"><div class="idx">01</div><div class="body"><div class="cn">filter</div><div class="cp">amount &gt; 500</div></div></div>
+          <div class="stepnode" style="left:752px;width:200px"><div class="idx">02</div><div class="body"><div class="cn">groupby 地区</div><div class="cp">sum(金额) as 总额</div></div></div>
+          <div class="stepnode" style="left:992px;width:200px"><div class="idx">03</div><div class="body"><div class="cn">sort -N 总额</div><div class="cp">降序 · 稳定排序</div></div></div>
+        </div>
+
+        <div class="palette" id="live-palette">
+          <div class="pal-meta">
+            <span class="scope" id="live-scope"><b>目录</b> · 按分类</span>
+            <span class="count" id="live-count">97 项</span>
+          </div>
+          <div class="pal-list" id="live-list">
+
+            <div class="grp" data-group><span class="gnum">—</span><span class="gname">操作</span><span class="gcount">3</span></div>
+            <button class="row active" data-group data-text="合并 excel 文件 多工作簿 sheet 合并"><span class="rl">合并 Excel 文件</span><span class="rd">多工作簿按 sheet 合并</span><span class="src">操作</span><span class="keys"><kbd>Ctrl M</kbd></span></button>
+            <button class="row" data-group data-text="csv 对比 差异 diff"><span class="rl">CSV 对比</span><span class="rd">对比两个 CSV 的差异</span><span class="src">操作</span><span class="keys"></span></button>
+            <button class="row" data-group data-text="编码转换 gbk utf8"><span class="rl">编码转换</span><span class="rd">GBK ↔ UTF-8 批量转换</span><span class="src">操作</span><span class="keys"></span></button>
+
+            <div class="grp" data-group><span class="gnum">01</span><span class="gname">探查</span><span class="gcount">7</span></div>
+            <button class="row mono" data-group data-text="view 查看 csv 前几行 预览"><span class="rl">view</span><span class="rd">查看 CSV 前几行</span><span class="src">命令</span><span class="keys"></span></button>
+            <button class="row mono" data-group data-text="stats 列统计 描述性"><span class="rl">stats</span><span class="rd">每列的描述性统计</span><span class="src">命令</span><span class="keys"></span></button>
+            <button class="row mono" data-group data-text="count 行数 统计行"><span class="rl">count</span><span class="rd">统计行数</span><span class="src">命令</span><span class="keys"></span></button>
+            <button class="row mono" data-group data-text="frequency 频次 去重计数"><span class="rl">frequency</span><span class="rd">按列统计取值频次</span><span class="src">命令</span><span class="keys"></span></button>
+
+            <div class="grp" data-group><span class="gnum">02</span><span class="gname">筛选</span><span class="gcount">8</span></div>
+            <button class="row mono" data-group data-text="filter 按表达式筛选行 过滤"><span class="rl">filter</span><span class="rd">按表达式筛选行</span><span class="src">命令</span><span class="keys"></span></button>
+            <button class="row mono" data-group data-text="search 关键词 搜索行 正则"><span class="rl">search</span><span class="rd">按关键词或正则搜索行</span><span class="src">命令</span><span class="keys"></span></button>
+            <button class="row mono" data-group data-text="slice 切片 取区间行"><span class="rl">slice</span><span class="rd">按区间取行</span><span class="src">命令</span><span class="keys"></span></button>
+            <button class="row mono" data-group data-text="sample 抽样 随机"><span class="rl">sample</span><span class="rd">随机抽样 N 行</span><span class="src">命令</span><span class="keys"></span></button>
+
+            <div class="grp" data-group><span class="gnum">03</span><span class="gname">排序去重</span><span class="gcount">3</span></div>
+            <button class="row mono" data-group data-text="sort 排序 多列 升降序"><span class="rl">sort</span><span class="rd">按一列或多列排序</span><span class="src">命令</span><span class="keys"></span></button>
+            <button class="row mono" data-group data-text="dedup 去重 重复行"><span class="rl">dedup</span><span class="rd">去掉重复行</span><span class="src">命令</span><span class="keys"></span></button>
+            <button class="row mono" data-group data-text="unique 唯一 分组"><span class="rl">unique</span><span class="rd">按列保留首个唯一值</span><span class="src">命令</span><span class="keys"></span></button>
+
+            <div class="grp" data-group><span class="gnum">07</span><span class="gname">合并文件</span><span class="gcount">3</span></div>
+            <button class="row mono" data-group data-text="cat rows 合并 多个 csv 按列名"><span class="rl">cat rows</span><span class="rd">按列名合并多个 CSV</span><span class="src">命令</span><span class="keys"></span></button>
+            <button class="row mono" data-group data-text="join 键 合并 连接 两个 csv"><span class="rl">join</span><span class="rd">按键合并两个 CSV（内/左/外）</span><span class="src">命令</span><span class="keys"></span></button>
+
+            <div class="grp" data-group><span class="gnum">—</span><span class="gname">当前管道</span><span class="gcount">3</span></div>
+            <button class="row mono" data-group data-text="01 filter amount 步骤"><span class="rl">01&nbsp;&nbsp;filter</span><span class="rd">amount &gt; 500 · 步骤</span><span class="src">步骤</span><span class="keys"></span></button>
+            <button class="row mono" data-group data-text="02 groupby 地区 步骤"><span class="rl">02&nbsp;&nbsp;groupby 地区</span><span class="rd">sum(金额) as 总额 · 步骤</span><span class="src">步骤</span><span class="keys"></span></button>
+            <button class="row mono" data-group data-text="03 sort 总额 步骤"><span class="rl">03&nbsp;&nbsp;sort -N 总额</span><span class="rd">降序 · 步骤</span><span class="src">步骤</span><span class="keys"></span></button>
+
+            <div class="pal-empty" id="live-empty" style="display:none">
+              <p>没有 <span id="live-q"></span> 的匹配</p>
+              <ul><li>filter</li><li>groupby</li><li>join</li><li>打开文件</li></ul>
+            </div>
+          </div>
+          <div class="pal-ft">
+            <span class="hint"><span class="ks"><kbd>↑</kbd><kbd>↓</kbd></span>选择</span>
+            <span class="hint"><kbd>↵</kbd>打开</span>
+            <span class="hint"><kbd>esc</kbd>关闭</span>
+            <span class="sp"></span>
+            <span class="note">输入即搜全部来源</span>
+          </div>
+        </div>
+      </div>
+      <div class="pins" id="live-pins">
+        <span class="pin" style="left:calc(50% + 318px);top:46px">2</span>
+        <span class="pin" style="left:calc(50% - 336px);top:116px">3</span>
+        <span class="pin" style="left:calc(50% - 336px);top:216px">4</span>
+        <span class="pin" style="left:calc(50% + 318px);top:442px">5</span>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i>2</i><b>面板同轴</b>：顶部 +6、宽 620，比输入框宽 —— 行里同时放得下描述、来源与键帽</span>
+      <span><i>3</i><b>唯一强调</b>：键盘选中 = 9% 墨底 + 2px 墨条，悬停只有 4% 墨底</span>
+      <span><i>4</i><b>目录页</b>：`01–14` 等宽序号 + 短名 + 计数，组头吸顶</span>
+      <span><i>5</i><b>底栏</b>：左侧键帽，右侧一句「输入即搜全部来源」</span>
+    </div>
+  </section>
+
+  <!-- ============ 04 搜索态 ============ -->
+  <section class="sec">
+    <div class="sec-hd"><span class="num">04</span><h2>改造后 · 搜索态：一个词跨六类来源</h2><span class="tag">merged</span></div>
+    <p class="sec-note">原来是三处各搜各的：<code>Ctrl K</code> 搜操作/命令/文件/标签页/模板，<code>Ctrl F</code> 只搜步骤。合并后「合并」一词同时给出<b>操作、命令、当前管道里的步骤、磁盘文件</b>，来源压成右列 10px 等宽标签；命中只换墨色 + 600 重，不加底色。</p>
+
+    <div style="position:relative">
+      <div class="win win-mid">
+        <div class="bar">
+          <div class="brand">Easy Csv</div>
+          <div class="menus">
+            <button class="mbtn">文件</button>
+            <button class="mbtn">编辑</button>
+            <button class="mbtn">查看</button>
+            <button class="mbtn">工具</button>
+            <button class="mbtn">帮助</button>
+            <button class="mbtn exec">执行<span class="dot"></span></button>
+          </div>
+          <div class="field-wrap">
+            <div class="field focused">
+              <span class="prompt">›</span>
+              <span style="font-size:12px;color:var(--fg)">合并</span>
+              <kbd>Ctrl K</kbd>
+            </div>
+          </div>
+          <div class="icons">
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M9 9h6v6H9z"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg></button>
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3z"/><path d="M8 12h8M8 16h6"/></svg></button>
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4M9 14h.01M15 14h.01"/></svg></button>
+            <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></button>
+          </div>
+          <div class="wctl">
+            <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg></button>
+            <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9"/></svg></button>
+            <button class="wbtn close"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M.5.5l9 9M9.5.5l-9 9"/></svg></button>
+          </div>
+        </div>
+        <div class="tabstrip">
+          <div class="tab on">销售明细.csv <span class="x">×</span></div>
+          <div class="tab">merge_2026 <span class="x">×</span></div>
+        </div>
+        <div class="canvas">
+          <svg class="edges" viewBox="0 0 1100 400" preserveAspectRatio="none"><path d="M420 85H468M668 85H708"/></svg>
+          <div class="tnode" style="left:20px;width:400px;top:72px">
+            <div class="hd"><span class="fn">sales_2026.csv</span><span class="dm">1,204 行 × 5 列</span></div>
+            <table><colgroup><col style="width:20px"><col><col><col style="width:64px"></colgroup>
+              <tr><td class="gutter"></td><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td class="gutter">1</td><td>2026-09-02</td><td>华东</td><td>办公</td><td class="n">1,280</td></tr>
+              <tr><td class="gutter">2</td><td>2026-09-02</td><td>华南</td><td>耗材</td><td class="n">348</td></tr>
+              <tr><td class="gutter">3</td><td>2026-09-03</td><td>华北</td><td>办公</td><td class="n">2,410</td></tr>
+            </table>
+            <div class="ft"><span>sales_2026.csv</span><span>1,204 行 × 5 列</span></div>
+          </div>
+          <div class="stepnode" style="left:468px;width:200px;top:72px"><div class="idx">01</div><div class="body"><div class="cn">cat rows</div><div class="cp">--union 按列名合并</div></div></div>
+        </div>
+
+        <div class="palette searching" style="left:50%;transform:translateX(-50%)">
+          <div class="pal-meta">
+            <span class="scope"><b>搜索</b> · 合并</span>
+            <span class="count">6 / 97</span>
+          </div>
+          <div class="pal-list">
+            <button class="row active"><span class="rl"><b>合并</b> Excel 文件</span><span class="rd">多工作簿按 sheet 合并</span><span class="src">操作</span><span class="keys"><kbd>Ctrl M</kbd></span></button>
+            <button class="row mono"><span class="rl">cat rows</span><span class="rd">按列名<b>合并</b>多个 CSV</span><span class="src">命令</span><span class="keys"></span></button>
+            <button class="row mono"><span class="rl">join</span><span class="rd">按键连接两个 CSV（内/左/外）</span><span class="src">命令</span><span class="keys"></span></button>
+            <button class="row mono"><span class="rl">03 &nbsp;cat rows</span><span class="rd">合并表 · --union · 步骤</span><span class="src">步骤</span><span class="keys"></span></button>
+            <button class="row"><span class="rl">2026-Q3-销售明细.xlsx</span><span class="rd">D:\data\2026\Q3\</span><span class="src">文件</span><span class="keys"></span></button>
+            <button class="row"><span class="rl">merge_2026</span><span class="rd">当前打开的标签页</span><span class="src">标签页</span><span class="keys"></span></button>
+          </div>
+          <div class="pal-ft">
+            <span class="hint"><span class="ks"><kbd>↑</kbd><kbd>↓</kbd></span>选择</span>
+            <span class="hint"><kbd>↵</kbd>打开</span>
+            <span class="hint"><kbd>esc</kbd>关闭</span>
+            <span class="sp"></span>
+            <span class="note">6 命中 · 命令优先于文件</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 05 状态细节 ============ -->
+  <section class="sec">
+    <div class="sec-hd"><span class="num">05</span><h2>状态细节</h2></div>
+    <div class="states">
+      <div class="state">
+        <div class="cap"><b>无结果</b><span>不提「换个词试试」</span></div>
+        <div class="body">
+          <div class="mini-pal">
+            <div class="mh"><span>搜索 · xyz</span><span>0 / 97</span></div>
+            <div style="padding:14px 12px 16px">
+              <p style="margin:0;font-size:12.5px;color:var(--fg)">没有 <span style="color:var(--brand-ink);font-weight:500">xyz</span> 的匹配</p>
+              <p style="margin:6px 0 0;font-size:11px;color:var(--muted-fg)">可以试命令名（filter / groupby）、列名，或中文操作名（拆分、合并）</p>
+              <div style="display:flex;gap:6px;margin-top:9px">
+                <span style="font-family:var(--mono);font-size:10px;color:var(--muted-fg);border:1px solid var(--border);border-radius:4px;padding:2px 6px">filter</span>
+                <span style="font-family:var(--mono);font-size:10px;color:var(--muted-fg);border:1px solid var(--border);border-radius:4px;padding:2px 6px">groupby</span>
+                <span style="font-family:var(--mono);font-size:10px;color:var(--muted-fg);border:1px solid var(--border);border-radius:4px;padding:2px 6px">join</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="state">
+        <div class="cap"><b>输入框三态</b><span>26px · 半径 7</span></div>
+        <div class="body">
+          <div class="mini-lab">静息</div>
+          <div class="mini-field"><span class="prompt">›</span><span>搜索命令、步骤或文件</span><kbd>Ctrl K</kbd></div>
+          <div class="mini-lab" style="margin-top:14px">悬停</div>
+          <div class="mini-field hov"><span class="prompt">›</span><span>搜索命令、步骤或文件</span><kbd>Ctrl K</kbd></div>
+          <div class="mini-lab" style="margin-top:14px">焦点 / 展开</div>
+          <div class="mini-field foc"><span class="prompt">›</span><span style="color:var(--fg)">合并</span><kbd>Ctrl K</kbd></div>
+          <p style="margin:12px 0 0;font-size:10.5px;line-height:1.7;color:var(--muted-fg)">
+            边框 30% → 墨 18% → 墨蓝 40%；焦点外加 2px 的 12% 墨蓝环。只有键盘焦点才出环，鼠标点击不出。
+          </p>
+        </div>
+      </div>
+
+      <div class="state">
+        <div class="cap"><b>窄窗（&lt; 960px）</b><span>折叠成一枚图标</span></div>
+        <div class="body dots" style="padding:0">
+          <div class="narrow-scale">
+          <div class="win win-narrow" style="border:0;border-radius:0;box-shadow:none">
+            <div class="bar">
+              <div class="brand">Easy Csv</div>
+              <div class="menus">
+                <button class="mbtn">文件</button>
+                <button class="mbtn">编辑</button>
+                <button class="mbtn">查看</button>
+                <button class="mbtn exec">执行</button>
+              </div>
+              <div class="field-wrap"><div class="field"></div></div>
+              <div class="icons">
+                <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M9 9h6v6H9z"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg></button>
+                <button class="field-compact" title="搜索"><svg class="ic" width="15" height="15" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L21 21"/></svg></button>
+                <button class="icon-btn on"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3z"/></svg></button>
+              </div>
+              <div class="wctl">
+                <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg></button>
+                <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9"/></svg></button>
+              </div>
+            </div>
+            <div class="tabstrip"><div class="tab on">销售明细.csv</div></div>
+            <div class="canvas" style="background-size:18px 18px"></div>
+              <div class="palette" style="top:42px;width:420px;max-width:calc(100% - 24px)">
+                <div class="pal-meta"><span class="scope"><b>目录</b></span><span class="count">97 项</span></div>
+                <div class="pal-list" style="max-height:140px">
+                  <div class="grp"><span class="gnum">01</span><span class="gname">探查</span><span class="gcount">7</span></div>
+                  <div class="row mono active"><span class="rl">view</span><span class="rd">查看 CSV 前几行</span><span class="keys"></span></div>
+                  <div class="grp"><span class="gnum">02</span><span class="gname">筛选</span><span class="gcount">8</span></div>
+                  <div class="row mono"><span class="rl">filter</span><span class="rd">按表达式筛选行</span><span class="keys"></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="state">
+        <div class="cap"><b>键盘路径</b><span>不离开输入框</span></div>
+        <div class="body">
+          <table style="width:100%;border-collapse:collapse;font-size:11px">
+            <tr><td style="padding:4px 0;color:var(--fg);width:104px"><kbd>Ctrl K</kbd> / <kbd>Ctrl F</kbd></td><td style="color:var(--muted-fg)">聚焦并展开（再按一次关闭）</td></tr>
+            <tr><td style="padding:4px 0"><kbd>↑</kbd><kbd>↓</kbd></td><td style="color:var(--muted-fg)">跨分组回环移动，列表跟随滚动</td></tr>
+            <tr><td style="padding:4px 0"><kbd>↵</kbd></td><td style="color:var(--muted-fg)">执行；输入法组字中的 ↵ 不执行</td></tr>
+            <tr><td style="padding:4px 0"><kbd>esc</kbd></td><td style="color:var(--muted-fg)">先清空查询，再按一次关闭并回焦画布</td></tr>
+            <tr><td style="padding:4px 0"><kbd>点击外部</kbd></td><td style="color:var(--muted-fg)">关闭，但焦点留在输入框（下次直接打字）</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 06 暗色 ============ -->
+  <section class="sec">
+    <div class="sec-hd"><span class="num">06</span><h2>暗色</h2><span class="tag">同一套 token</span></div>
+    <p class="sec-note">暗色下输入框不吃表面色，靠 <b>10% 细线 + 面阶</b>分层；展开面板比正文低一阶，命中与选中仍只用一个墨蓝色（暗色下为 <code>oklch(0.78 0.045 245)</code>）。</p>
+    <div class="win dark" style="--winw:1100px;height:560px">
+      <div class="bar">
+        <div class="brand">Easy Csv</div>
+        <div class="menus">
+          <button class="mbtn">文件</button><button class="mbtn">编辑</button><button class="mbtn">查看</button><button class="mbtn">工具</button><button class="mbtn">帮助</button><button class="mbtn exec">执行</button>
+        </div>
+        <div class="field-wrap">
+          <div class="field focused"><span class="prompt">›</span><span style="font-size:12px;color:var(--fg)">filter</span><kbd>Ctrl K</kbd></div>
+        </div>
+        <div class="icons">
+          <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M9 9h6v6H9z"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg></button>
+          <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3z"/><path d="M8 12h8M8 16h6"/></svg></button>
+          <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4M9 14h.01M15 14h.01"/></svg></button>
+          <button class="icon-btn"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></button>
+        </div>
+        <div class="wctl">
+          <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg></button>
+          <button class="wbtn"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9"/></svg></button>
+          <button class="wbtn close"><svg class="ic" width="10" height="10" viewBox="0 0 10 10"><path d="M.5.5l9 9M9.5.5l-9 9"/></svg></button>
+        </div>
+      </div>
+      <div class="tabstrip"><div class="tab on">销售明细.csv <span class="x">×</span></div><button class="tab-add">+</button></div>
+      <div class="canvas">
+        <svg class="edges" viewBox="0 0 1100 400" preserveAspectRatio="none"><path d="M420 85H468"/></svg>
+        <div class="tnode" style="left:20px;width:400px">
+          <div class="hd"><span class="fn">sales_2026.csv</span><span class="dm">1,204 行 × 5 列</span></div>
+          <table><colgroup><col style="width:20px"><col><col><col style="width:64px"></colgroup>
+            <tr><td class="gutter"></td><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+            <tr><td class="gutter">1</td><td>2026-09-02</td><td>华东</td><td>办公</td><td class="n">1,280</td></tr>
+            <tr><td class="gutter">2</td><td>2026-09-02</td><td>华南</td><td>耗材</td><td class="n">348</td></tr>
+          </table>
+        </div>
+        <div class="palette searching" style="top:42px">
+          <div class="pal-meta"><span class="scope"><b>搜索</b> · filter</span><span class="count">3 / 97</span></div>
+          <div class="pal-list" style="max-height:200px">
+            <button class="row mono active"><span class="rl">filter</span><span class="rd">按表达式筛选行</span><span class="src">命令</span><span class="keys"></span></button>
+            <button class="row"><span class="rl">筛选行</span><span class="rd">在命令面板中打开 filter</span><span class="src">操作</span><span class="keys"></span></button>
+            <button class="row mono"><span class="rl">01 &nbsp;filter</span><span class="rd">amount &gt; 500 · 步骤</span><span class="src">步骤</span><span class="keys"></span></button>
+          </div>
+          <div class="pal-ft">
+            <span class="hint"><span class="ks"><kbd>↑</kbd><kbd>↓</kbd></span>选择</span>
+            <span class="hint"><kbd>↵</kbd>打开</span>
+            <span class="hint"><kbd>esc</kbd>关闭</span>
+            <span class="sp"></span><span class="note">3 命中</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 07 规格 ============ -->
+  <section class="sec">
+    <div class="sec-hd"><span class="num">07</span><h2>规格与落地</h2></div>
+
+    <div class="two">
+      <div class="spec">
+        <h3>几何</h3>
+        <table>
+          <tr><th>对象</th><th>值</th></tr>
+          <tr><td>标题栏</td><td>36 高（现状不变）</td></tr>
+          <tr><td>输入框</td><td>高 26 · 半径 7 · 距顶 5 · 左内距 10 · 右内距 6</td></tr>
+          <tr><td>输入框宽度</td><td><code>clamp(180px, 窗口宽 − 760px, 440px)</code>；1240 → 440，1024 → 264</td></tr>
+          <tr><td>输入框位置</td><td>绝对居中于窗口（<code>left:50%</code>），不是剩余空档居中</td></tr>
+          <tr><td>面板</td><td>宽 620（<code>≤ 窗口 − 24</code>）· 顶距标题栏 6 · 半径 12 · 最大高 440</td></tr>
+          <tr><td>面板对齐</td><td>与输入框同轴；左右各溢出 90–150，视觉轴仍是输入框</td></tr>
+          <tr><td>行 / 组头 / 底栏</td><td>34 · 26 · 34；列表内边距 6；行内水平间距 12</td></tr>
+          <tr><td>折叠阈值</td><td>&lt; 960 → 输入框换成 28×28 图标按钮（执行右侧）</td></tr>
+        </table>
+      </div>
+
+      <div class="spec">
+        <h3>颜色、状态与动效</h3>
+        <table>
+          <tr><th>状态</th><th>写法</th></tr>
+          <tr><td>输入框静息</td><td>白底 + <code>--border</code> 细线；文字/提示 <code>--muted-fg-2</code></td></tr>
+          <tr><td>悬停</td><td>边框 → 墨 18%；不变尺寸、不加阴影</td></tr>
+          <tr><td>焦点/展开</td><td>边框墨蓝 40% + 2px 12% 环（仅 <code>:focus-visible</code>）</td></tr>
+          <tr><td>行悬停</td><td>4% 墨底</td></tr>
+          <tr><td>行键盘选中</td><td>9% 墨底 + 2px 墨条（左侧，上下各缩 6）</td></tr>
+          <tr><td>命中</td><td>墨蓝色 + 600 重，不加底色、不加下划线</td></tr>
+          <tr><td>来源标签</td><td>10px 等宽 <code>--muted-fg-3</code>，仅搜索态出现</td></tr>
+          <tr><td>动效</td><td>120ms <code>cubic-bezier(.2,0,0,1)</code>，只动 <code>opacity</code> + <code>translateY(4px→0)</code></td></tr>
+          <tr><td>暗色</td><td>无阴影、无发光；分层靠面阶 + 10% 细线</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="spec">
+      <h3>形态对比：为什么不是居中模态</h3>
+      <table>
+        <tr><th>选项</th><th>判断</th><th>理由</th></tr>
+        <tr><td class="yes">A 菜单栏输入框 + 下方面板（采纳）</td><td class="yes">采纳</td><td>点在哪、打在哪；面板不盖画布中心；输入框常驻 = 入口本身可被发现；窗口变窄时宽度自己收。</td></tr>
+        <tr><td>B 居中模态（现状 053）</td><td class="no">弃用</td><td>遮罩压暗整块画布，选完消失；输入行与菜单栏分离，手要在屏幕中上重新找位置。</td></tr>
+        <tr><td>C 只在面板里检索、菜单栏放静态提示</td><td class="no">弃用</td><td>点击后还得再点一次输入框；两次定位。</td></tr>
+        <tr><td>D 输入框放右端、靠近图标组</td><td class="no">弃用</td><td>与 AI / 数据预览停靠带争抢；且右侧已有 4 枚图标，再加会挤成工具条。</td></tr>
+      </table>
+    </div>
+
+    <div class="two">
+      <div class="spec">
+        <h3>合并映射（旧 → 新）</h3>
+        <table>
+          <tr><th>今天</th><th>之后</th></tr>
+          <tr><td><code>查看 → 命令面板</code>（Ctrl K 模态）</td><td>删除菜单项；入口 = 中部输入框；<code>Ctrl K</code> 仍打开它</td></tr>
+          <tr><td><code>查看 → 搜索</code>（Ctrl F 浮层）</td><td>删除菜单项与 <code>SearchOverlay</code>；步骤成为面板的一类来源</td></tr>
+          <tr><td>菜单栏 ⌘ 图标（072 停靠目录）</td><td>保留：浏览用（「61 个操作长什么样」），检索用输入框（「我知道它叫什么」）</td></tr>
+          <tr><td>053 面板的分组与评分</td><td>复用：空查询走 072 分类显示表（<code>01–14</code>），打字后走 <code>scoreItem</code> 单列排序</td></tr>
+          <tr><td>072 行语法（40px 两行）</td><td>停靠目录不变；本面板用 34px 单行（等宽命令名 + 右侧描述），同一命令在检索里更紧凑</td></tr>
+        </table>
+      </div>
+
+      <div class="spec">
+        <h3>实施记录（2026-11-22，已实现）</h3>
+        <table>
+          <tr><th>文件</th><th>改动</th></tr>
+          <tr><td><code>modules/logs/CommandBar.tsx</code></td><td>新增：中部输入框 + 用 field rect 定位面板（+11）、<code>matchMedia</code> 窄窗判定、开关时清空查询</td></tr>
+          <tr><td><code>modules/logs/CommandPalette.tsx</code></td><td>去掉遮罩与自有输入（窄窗才渲染查询行）；目录按「操作 / 01–14 / 当前管道 / 文件 / 标签页 / 模板」分组，组头吸顶 + 序号 + 计数；来源标签补「当前管道」</td></tr>
+          <tr><td><code>MainMenu.tsx</code></td><td>查看菜单删「命令面板」「搜索」两项；右端图标组加 <code>&lt; 960px</code> 才显示的搜索图标</td></tr>
+          <tr><td><code>App.tsx</code></td><td>头部接入 <code>CommandBar</code>；<code>paletteItems</code> 增 <code>category</code> 与步骤来源；删除底部模态渲染与 <code>CANVAS_SEARCH_EVENT</code></td></tr>
+          <tr><td><code>useCanvasSearch.ts</code> / <code>SearchOverlay.tsx</code></td><td>删除；改为 <code>hooks/useStepFocus.ts</code>（监听 <code>easy-csv:focus-step</code>，居中 + 1.5s 高亮）</td></tr>
+          <tr><td><code>useKeyboardShortcuts.ts</code></td><td><code>Ctrl F</code> 并入 <code>onCommandPalette</code>（有其它 <code>role="dialog"</code> 时让给对话框）</td></tr>
+          <tr><td>测试</td><td><code>CommandPalette.test.tsx</code> 改为受控 query 包装；新增「分类序号」「宽窗无查询行」；ExecuteMenu 断言排除窄窗图标。832 例全绿</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="spec">
+      <h3>已拍板（2026-11-22）</h3>
+      <table>
+        <tr><th>#</th><th>问题</th><th>建议</th></tr>
+        <tr><td>1</td><td>「最近」分组要不要做（需新持久化 <code>easy-csv-recent-commands</code>，≤5 条）</td><td><b>不做</b>（2026-11-22 拍板）。目录从「操作」直接开始</td></tr>
+        <tr><td>2</td><td>折叠阈值 960 是否接受（1024 窗口仍显示 264px 输入框）</td><td><b>接受</b>；&lt; 960 折成一枚图标，面板自带查询行</td></tr>
+        <tr><td>3</td><td>072 的 ⌘ 停靠目录是否保留</td><td><b>保留</b>。目录回答「有哪些操作」，输入框回答「我要的那个在哪」</td></tr>
+        <tr><td>4</td><td><code>Ctrl F</code> 完全并入，还是只做别名？</td><td><b>完全并入</b>：同一面板、同一评分，画布浮层已删除</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <div class="foot">
+    原型 073-01 · 静态 HTML，令牌与 <code>src/index.css</code> 同源 · 字数、行高、间距均为最终值，可直接交给实现<br>
+    关联：053（命令面板检索）、072（命令目录 + 分类显示序）、033 / 040（账本 + 编号系统）
+  </div>
+</div>
+
+<script>
+  // theme
+  const themeBtn = document.getElementById('theme');
+  themeBtn.addEventListener('click', () => {
+    const dark = document.documentElement.classList.toggle('dark');
+    themeBtn.textContent = dark ? '亮色' : '暗色';
+  });
+
+  // live filter on the open-state mock only
+  const input = document.getElementById('live-input');
+  const pal = document.getElementById('live-palette');
+  const list = document.getElementById('live-list');
+  const scope = document.getElementById('live-scope');
+  const count = document.getElementById('live-count');
+  const empty = document.getElementById('live-empty');
+  const pins = document.getElementById('live-pins');
+  const qLabel = document.getElementById('live-q');
+  const rows = Array.from(list.querySelectorAll('.row'));
+  const groups = Array.from(list.querySelectorAll('.grp'));
+  const TOTAL = 97;
+
+  function apply() {
+    const q = input.value.trim().toLowerCase();
+    const searching = q.length > 0;
+    pal.classList.toggle('searching', searching);
+    pins.hidden = searching;
+    let shown = 0;
+    rows.forEach((row) => {
+      const hit = !searching || (row.dataset.text || '').toLowerCase().includes(q);
+      row.style.display = hit ? '' : 'none';
+      if (hit) shown++;
+    });
+    // searching collapses the directory into one ranked list (no group heads)
+    groups.forEach((grp) => {
+      if (searching) { grp.style.display = 'none'; return; }
+      let n = grp.nextElementSibling, any = false;
+      while (n && !n.classList.contains('grp') && !n.classList.contains('pal-empty')) {
+        if (n.classList.contains('row') && n.style.display !== 'none') any = true;
+        n = n.nextElementSibling;
+      }
+      grp.style.display = any ? '' : 'none';
+    });
+    empty.style.display = shown === 0 ? '' : 'none';
+    qLabel.textContent = input.value.trim();
+    scope.innerHTML = searching
+      ? '<b>搜索</b> · ' + input.value.trim().replace(/</g, '&lt;')
+      : '<b>目录</b> · 按分类';
+    count.textContent = searching ? shown + ' / ' + TOTAL : TOTAL + ' 项';
+  }
+  input.addEventListener('input', apply);
+  input.focus();
+</script>
+</body>
+</html>

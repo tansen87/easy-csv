@@ -680,6 +680,13 @@ export interface Translations {
   paletteActions: string;
   paletteCommands: string;
   paletteTabs: string;
+  /** Steps of the current pipeline (design 073: merged canvas search). */
+  paletteSteps: string;
+  /** Directory scope label shown above the grouped list. */
+  paletteDirectory: string;
+  paletteDirectoryHint: string;
+  /** Search scope label, paired with the live query. */
+  paletteSearchScope: string;
   paletteCount: string;
   paletteTotal: string;
   paletteEmptyTitle: string;

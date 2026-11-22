@@ -1,6 +1,6 @@
 import React from "react";
 import { createPortal } from "react-dom";
-import { Command, ScrollText, Bot, Settings, Check } from "lucide-react";
+import { Command, ScrollText, Bot, Settings, Check, Search } from "lucide-react";
 
 import { PipelineStep } from "@/types/xan";
 import type { RunSession } from "@/types/execution";
@@ -71,7 +71,6 @@ interface MainMenuProps {
   onShowAbout: () => void;
   onShowSettings: () => void;
   onOpenPalette: () => void;
-  onOpenSearch: () => void;
   onOpenCsvDiff: () => void;
   onOpenCsvEncoding: () => void;
   onOpenSeparateCsv: () => void;
@@ -163,7 +162,6 @@ export const MainMenu = React.memo(function MainMenu({
   onShowAbout,
   onShowSettings,
   onOpenPalette,
-  onOpenSearch,
   onOpenCsvDiff,
   onOpenCsvEncoding,
   onOpenSeparateCsv,
@@ -716,23 +714,6 @@ export const MainMenu = React.memo(function MainMenu({
           </button>
           {activeMenu === "view" && (
             <div role="menu" className={MENU_PANEL}>
-              <button
-                role="menuitem"
-                onClick={() => {
-                  onOpenPalette();
-                  setActiveMenu(null);
-                }}
-                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
-              >
-                <span className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
-                <span className="flex-1 text-left whitespace-nowrap">
-                  {t.commandPalette}
-                </span>
-                <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
-                  Ctrl K
-                </kbd>
-              </button>
-              <div className="mx-2.5 my-1.5 border-t border-foreground/15" />
               <div
                 role="menuitemcheckbox"
                 aria-checked={showDataProfile}
@@ -840,23 +821,6 @@ export const MainMenu = React.memo(function MainMenu({
                     {pendingVariables}
                   </span>
                 )}
-              </button>
-              <div className="mx-2.5 my-1.5 border-t border-foreground/15" />
-              <button
-                role="menuitem"
-                onClick={() => {
-                  onOpenSearch();
-                  setActiveMenu(null);
-                }}
-                className="group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-foreground/8"
-              >
-                <span className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
-                <span className="flex-1 text-left whitespace-nowrap">
-                  {t.search}
-                </span>
-                <kbd className="text-[10px] text-muted-foreground/70 border border-border rounded px-1 leading-4 group-disabled:opacity-50">
-                  Ctrl F
-                </kbd>
               </button>
             </div>
           )}
@@ -1192,6 +1156,16 @@ export const MainMenu = React.memo(function MainMenu({
 
         {/* Right side buttons */}
         <div className="flex items-center rounded-md gap-0.5">
+          {/* Below 960px the menu-bar field collapses into this icon (design 073). */}
+          <Tooltip content={t.commandPalette}>
+            <button
+              onClick={onOpenPalette}
+              aria-label={t.commandPalette}
+              className="command-field-compact h-7 w-7 rounded-md text-primary hover:bg-primary/10"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+          </Tooltip>
           {/* High-frequency panel toggles */}
           <Tooltip content={t.commandPanel}>
             <button

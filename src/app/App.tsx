@@ -18,7 +18,6 @@ import { LogPanel } from "@/modules/logs/LogPanel";
 import { ChartPanel } from "@/modules/data-preview/charts/ChartPanel";
 import { SettingsDialog } from "@/components/setting/SettingsDialog";
 import { HomeView } from "@/modules/data-preview/HomeView";
-import { CANVAS_SEARCH_EVENT } from "@/modules/pipeline/hooks/useCanvasSearch";
 import { HelpDialog } from "@/components/help/HelpDialog";
 import { getHelpContent } from "@/components/help/HelpContent";
 import { UpdateDialog } from "@/modules/dialogs/app/UpdateDialog";
@@ -50,13 +49,12 @@ import {
   needsSampleData,
   resolveBuiltinSnapshot,
 } from "@/data/templates/builtin";
-import {
-  CommandPalette,
-  type PaletteItem,
-} from "@/modules/logs/CommandPalette";
+import { type PaletteItem } from "@/modules/logs/lib/paletteTypes";
 import { xanCommands } from "@/data/commands";
 import { helpDocs, helpDocsZh } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
+import { CommandBar } from "@/modules/logs/CommandBar";
+import { FOCUS_STEP_EVENT } from "@/modules/pipeline/hooks/useStepFocus";
 import {
   COMMAND_PANEL_INSET,
   COMMAND_PANEL_WIDTH,
@@ -1339,11 +1337,6 @@ function AppContent() {
     [ui.showLineagePanel],
   );
 
-  const onOpenCommandPalette = useCallback(
-    () => ui.setShowCommandPalette(true),
-    [ui],
-  );
-
   const currentTab = tabsHook.getCurrentTab();
 
   const currentSnapshot = useMemo(
@@ -1860,13 +1853,49 @@ function AppContent() {
         keywords: `${cmd.name} ${cmd.category} ${cmd.description}`,
         groupIcon: Command,
         source: "command" as const,
+        category: cmd.category,
         group: t.paletteCommands,
         onSelect: () => handleCommandClick(cmd),
       };
     });
 
+    // Design 073: steps of the current tab are searchable from the same field
+    // (the old Ctrl+F overlay only did this). Selecting one centres the node.
+    const steps: PaletteItem[] = tabsHook.getCurrentPipeline().map((step) => {
+      const params = Object.entries(step.parameters)
+        .filter(
+          ([, value]) =>
+            value !== undefined &&
+            value !== "" &&
+            value !== false &&
+            (!Array.isArray(value) || value.length > 0),
+        )
+        .slice(0, 3)
+        .map(([key, value]) => {
+          const text = Array.isArray(value) ? value.join(", ") : String(value);
+          return `${key} ${text}`;
+        })
+        .join(" · ");
+      const commandName = step.command.name;
+      return {
+        id: `step-${step.id}`,
+        label: step.alias || commandName,
+        description: params ? `${commandName} · ${params}` : commandName,
+        keywords: `${commandName} ${step.alias ?? ""} ${params}`,
+        group: t.paletteSteps,
+        source: "step" as const,
+        onSelect: () => {
+          setSelectedStep(step);
+          window.dispatchEvent(
+            new CustomEvent(FOCUS_STEP_EVENT, { detail: step.id }),
+          );
+        },
+      };
+    });
+
     return [
       ...actionsWithSearch,
+      ...steps,
       ...tabs,
       ...recent,
       ...commands,
@@ -1881,6 +1910,7 @@ function AppContent() {
     hasInputFile,
     tabsHook.tabs,
     tabsHook.recentFiles,
+    tabsHook.getCurrentPipeline,
     handleOpenFile,
     handleOpenNewTabWithFile,
     handleSavePipeline,
@@ -1922,6 +1952,11 @@ function AppContent() {
             data-tauri-drag-region={usesCustomTitleBar ? "deep" : undefined}
           >
             {usesCustomTitleBar && <TitleBarBrand />}
+            <CommandBar
+              items={paletteItems}
+              isOpen={ui.showCommandPalette}
+              onOpenChange={ui.setShowCommandPalette}
+            />
             <div className="flex min-w-0 flex-1 items-center">
               <MainMenu
                 activeMenu={ui.activeMenu}
@@ -1961,9 +1996,6 @@ function AppContent() {
                 onShowAbout={() => setShowAbout(true)}
                 onShowSettings={onShowSettings}
                 onOpenPalette={() => ui.setShowCommandPalette(true)}
-                onOpenSearch={() =>
-                  window.dispatchEvent(new CustomEvent(CANVAS_SEARCH_EVENT))
-                }
                 onOpenCsvDiff={() => {
                   ui.setCsvDiffInitialFileA(
                     tabsHook.getCurrentTab()?.inputFile || undefined,
@@ -2103,7 +2135,6 @@ function AppContent() {
                 pipelineSavedAt={pipelineSavedAt}
                 doubleClickFitView={settings.doubleClickFitView}
                 onSavePipeline={handleSavePipelineAndMarkSaved}
-                onOpenCommandPalette={onOpenCommandPalette}
                 onSaveIntermediate={handleSaveIntermediateAsInput}
                 delimiter={tabsHook.getCurrentTab()?.defaultDelimiter}
                 delimiterMode={delimiterMode}
@@ -2145,11 +2176,6 @@ function AppContent() {
             showFirstStepHint={currentPipelineLength === 0}
           />
 
-          <CommandPalette
-            isOpen={ui.showCommandPalette}
-            onClose={() => ui.setShowCommandPalette(false)}
-            items={paletteItems}
-          />
 
           <LogPanel
             logs={logs}

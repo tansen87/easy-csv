@@ -109,7 +109,6 @@ interface HomeViewProps {
   onToggleLineagePanel?: () => void;
   doubleClickFitView?: boolean;
   onSavePipeline?: () => void;
-  onOpenCommandPalette?: () => void;
   onSaveIntermediate?: (stepId: string) => void;
   pipelineSavedAt?: number;
   /** Delimiter the selected tab's input file. */
@@ -193,7 +192,6 @@ export const HomeView = React.memo(function HomeView({
   onCancelExecution,
   doubleClickFitView = true,
   onSavePipeline,
-  onOpenCommandPalette,
   onSaveIntermediate,
   pipelineSavedAt,
   delimiter,
@@ -433,7 +431,6 @@ export const HomeView = React.memo(function HomeView({
           pipelineSavedAt={pipelineSavedAt}
           doubleClickFitView={doubleClickFitView}
           onSavePipeline={onSavePipeline}
-          onOpenCommandPalette={onOpenCommandPalette}
           onSaveIntermediate={onSaveIntermediate}
           delimiter={delimiter}
           delimiterMode={delimiterMode}

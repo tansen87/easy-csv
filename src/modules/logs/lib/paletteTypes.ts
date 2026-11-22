@@ -8,7 +8,13 @@ import type { LucideIcon } from "lucide-react";
  * Kept in its own module so `lib/scoreItem.ts` can depend on it without a cycle
  * back into the component.
  */
-export type PaletteSource = "action" | "command" | "tab" | "file" | "template";
+export type PaletteSource =
+  | "action"
+  | "command"
+  | "step"
+  | "tab"
+  | "file"
+  | "template";
 
 export interface PaletteItem {
   id: string;
@@ -22,7 +28,14 @@ export interface PaletteItem {
   groupIcon?: LucideIcon;
   /** Suppress icons entirely for this item's group (no header, no per-item). */
   noIcon?: boolean;
+  /** Group label for the directory (sources other than commands). */
   group: string;
+  /**
+   * Raw `XanCommand.category` for command entries (design 073). The directory
+   * groups commands by it and prints the `01`–`14` index from
+   * `COMMAND_CATEGORY_VIEW`.
+   */
+  category?: string;
   source?: PaletteSource;
   shortcut?: string;
   disabled?: boolean;

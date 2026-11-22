@@ -46,6 +46,15 @@ export function useKeyboardShortcuts(
         return;
       }
 
+      // Design 073: canvas search merged into the same field. Dialogs keep
+      // their own Ctrl+F (help search, etc.), so only step in when none is open.
+      if (ctrl && key === "f") {
+        if (document.querySelector('[role="dialog"]')) return;
+        e.preventDefault();
+        callbacksRef.current.onCommandPalette();
+        return;
+      }
+
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement
