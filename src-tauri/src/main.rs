@@ -169,6 +169,13 @@ fn hide_system_frame(hwnd: isize) {
 /// treats any window spanning the whole monitor as a fullscreen app and stops
 /// routing clicks to the taskbar, which is what makes it dead under a
 /// maximised EasyCsv. Pull the maximised window back onto the work area.
+///
+/// The pull-back must preserve the *restore rectangle*: `SetWindowPos` on a
+/// zoomed window silently rewrites the rect Windows will un-maximise to, so a
+/// double-click on the title bar would land the window on a mangled geometry
+/// (full width × a fragment of the height — first observed with a
+/// created-maximized first run, `tauri.conf.json` `"maximized": true`). Read
+/// `WINDOWPLACEMENT` before the resize and re-assert it afterwards.
 #[cfg(target_os = "windows")]
 fn clamp_maximized_to_work_area(hwnd: isize) {
   #[repr(C)]
@@ -178,6 +185,23 @@ fn clamp_maximized_to_work_area(hwnd: isize) {
     top: i32,
     right: i32,
     bottom: i32,
+  }
+
+  #[repr(C)]
+  #[derive(Default, Clone, Copy)]
+  struct Point {
+    x: i32,
+    y: i32,
+  }
+
+  #[repr(C)]
+  struct WindowPlacement {
+    length: u32,
+    flags: u32,
+    show_cmd: u32,
+    pt_min_position: Point,
+    pt_max_position: Point,
+    rc_normal_position: Rect,
   }
 
   #[repr(C)]
@@ -203,15 +227,35 @@ fn clamp_maximized_to_work_area(hwnd: isize) {
       cy: i32,
       flags: u32,
     ) -> i32;
+    fn GetWindowPlacement(hwnd: isize, placement: *mut WindowPlacement) -> i32;
+    fn SetWindowPlacement(hwnd: isize, placement: *const WindowPlacement) -> i32;
   }
 
   const MONITOR_DEFAULTTONEAREST: u32 = 2;
   // SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED
   const SWP_FLAGS: u32 = 0x0004 | 0x0010 | 0x0020;
+  // Asynchronous placement so `SetWindowPlacement` cannot deadlock against
+  // our own caller if the event thread is busy.
+  const WPF_ASYNCWINDOWPLACEMENT: u32 = 0x0004;
 
   // SAFETY: `hwnd` is a live window handle; `Rect`/`MonitorInfo` are plain
   // structs and both are fully initialised before the calls touch them.
   if unsafe { IsZoomed(hwnd) } == 0 {
+    return;
+  }
+  // Snapshot the placement BEFORE touching geometry: `rc_normal_position` is
+  // the rect the next un-maximise will land on, and `show_cmd` is still
+  // SW_SHOWMAXIMIZED here, so re-asserting the snapshot keeps the window
+  // maximised with its original restore rect.
+  let mut placement = WindowPlacement {
+    length: std::mem::size_of::<WindowPlacement>() as u32,
+    flags: 0,
+    show_cmd: 0,
+    pt_min_position: Point::default(),
+    pt_max_position: Point::default(),
+    rc_normal_position: Rect::default(),
+  };
+  if unsafe { GetWindowPlacement(hwnd, &mut placement) } == 0 {
     return;
   }
   let mut info = MonitorInfo {
@@ -248,6 +292,59 @@ fn clamp_maximized_to_work_area(hwnd: isize) {
       work.bottom - work.top,
       SWP_FLAGS,
     );
+    // Undo the restore-rect rewrite the `SetWindowPos` above just caused.
+    // `show_cmd` is unchanged, so the window stays maximised.
+    placement.flags |= WPF_ASYNCWINDOWPLACEMENT;
+    let _ = SetWindowPlacement(hwnd, &placement);
+  }
+}
+
+/// WebView2 composites lazily: a static page does not redraw, so a background
+/// colour applied *after* the first composition stays cached until something
+/// forces a repaint — which used to be the user's next maximize/restore, and
+/// read as "white squares in the rounded corners on first launch" (the white
+/// was the controller's default background showing through the CSS radius
+/// cut-outs). Nudging the window by 1px and back sends two real `WM_SIZE`s,
+/// which make wry re-send the webview bounds and recomposite with the (now
+/// transparent) default background.
+#[cfg(target_os = "windows")]
+fn force_webview_recomposition(hwnd: isize) {
+  #[repr(C)]
+  #[derive(Default, Clone, Copy)]
+  struct Rect {
+    left: i32,
+    top: i32,
+    right: i32,
+    bottom: i32,
+  }
+
+  #[link(name = "user32")]
+  unsafe extern "system" {
+    fn GetWindowRect(hwnd: isize, rect: *mut Rect) -> i32;
+    fn SetWindowPos(
+      hwnd: isize,
+      insert_after: isize,
+      x: i32,
+      y: i32,
+      cx: i32,
+      cy: i32,
+      flags: u32,
+    ) -> i32;
+  }
+
+  // SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE
+  const SWP_MOVE_FLAGS: u32 = 0x0002 | 0x0004 | 0x0010;
+
+  // SAFETY: `hwnd` is a live window handle; `Rect` is fully initialised.
+  let mut rect = Rect::default();
+  if unsafe { GetWindowRect(hwnd, &mut rect) } == 0 {
+    return;
+  }
+  let width = rect.right - rect.left;
+  let height = rect.bottom - rect.top;
+  unsafe {
+    SetWindowPos(hwnd, 0, rect.left, rect.top, width, height + 1, SWP_MOVE_FLAGS);
+    SetWindowPos(hwnd, 0, rect.left, rect.top, width, height, SWP_MOVE_FLAGS);
   }
 }
 
@@ -297,6 +394,17 @@ fn main() {
           // No DWM shadow either: tao would inset the client area to make
           // room for it, leaving a transparent band along the right and
           // bottom edges that reads as an extra ring around the window.
+          //
+          // ORDER MATTERS (QA §2.9): `set_shadow` / `set_resizable` are tao
+          // flag changes, and every flag change recomputes the window style
+          // with `WS_CAPTION` back on. Stripping the frame must therefore
+          // happen *after* those calls and *before* `show()` — otherwise the
+          // window is revealed for a frame or two wearing the caption it was
+          // just given, which is the "native title bar at startup" flash.
+          // `set_decorations(false)` is deliberately NOT called again: the
+          // config already created the window without decorations, and the
+          // call is posted to tao's event thread — it can execute after the
+          // strip below and re-add the caption until the next replay.
           #[cfg(target_os = "windows")]
           let _ = window.set_shadow(false);
           // Windows-only: while `RESIZABLE` is set, tao's hit-test claims the
@@ -305,16 +413,11 @@ fn main() {
           // macOS/Linux keep the native frame and native resizing.
           #[cfg(target_os = "windows")]
           let _ = window.set_resizable(false);
-          #[cfg(target_os = "windows")]
-          let _ = window.set_decorations(false);
 
-          let _ = window.show();
-
-          // Applied after `show`: Windows repaints the frame when the window
-          // is first shown. tao also applies `set_decorations` from its event
-          // thread, which can put the caption bits back after this pass, so
-          // one delayed retry runs on a plain thread where a few hundred
-          // milliseconds of drift do not matter.
+          // Applied while still hidden (and again after `show`, since Windows
+          // repaints the frame on first show; tao also applies styles from its
+          // event thread). One delayed retry runs on a plain thread where a
+          // few hundred milliseconds of drift do not matter.
           #[cfg(target_os = "windows")]
           if let Ok(hwnd) = window.hwnd() {
             let raw = hwnd.0 as isize;
@@ -325,12 +428,27 @@ fn main() {
             // layer gets a transparent colour here. It stops a white frame
             // from flashing before the first paint.
             let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
+            // The colour lands via an event-loop message that is processed
+            // after the first composition; without this nudge the cached
+            // white background survives until the next real resize (QA §2.11).
+            force_webview_recomposition(raw);
             let window_for_retry = window.clone();
             std::thread::spawn(move || {
               std::thread::sleep(std::time::Duration::from_millis(150));
               hide_system_frame(raw);
               let _ = window_for_retry.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
+              force_webview_recomposition(raw);
             });
+          }
+
+          let _ = window.show();
+
+          // Frame replay after the reveal: first-show repaints and tao's
+          // async style application can bring the caption back for a frame;
+          // the strip is idempotent so this only costs one syscall.
+          #[cfg(target_os = "windows")]
+          if let Ok(hwnd) = window.hwnd() {
+            hide_system_frame(hwnd.0 as isize);
           }
         }
         None => eprintln!("[EasyCsv] main window not found; nothing to reveal"),

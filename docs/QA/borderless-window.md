@@ -68,8 +68,12 @@ html[data-custom-chrome="true"][data-window-maximized="false"] .app-window {
 | 最大化后任务栏看得见但点不动 | 窗口铺满显示器，Windows 判定为全屏应用 | 最大化钳制到 work area，见 2.4 |
 | 四个角上有浅色 L 形线 | 保留 `WS_THICKFRAME` 时 DWM 仍画边框，直边被内容盖住、只有圆角处露出来 | 全剥 frame 位，见 2.5 |
 | 四角有白色小弧，改背景色无效 | 见 2.6 —— 多半是 2.5 的误判 | 先按 2.5 处理 |
-| 拖四边/四角改不了窗口大小 | tao 把外圈判成非客户区 + 无 `WS_THICKFRAME` 时系统不 resize | 前端手柄自己设几何，见 2.7 |
-| 双击标题栏不最大化 | 只有品牌区是拖拽区；且第一次按下已被 `start_dragging` 吃掉 | 整条 header 标 `deep` + 时间戳双击，见 2.8 |
+| 拖四边/四角改不了窗口大小 | tao 把外圈判成非客户区 + 无 `WS_THICKFRAME` 时系统不 resize | 前端手柄自己设几何,见 2.7 |
+| 双击标题栏不最大化 | 只有品牌区是拖拽区;且第一次按下已被 `start_dragging` 吃掉 | 整条 header 标 `deep` + 时间戳双击,见 2.8 |
+| 启动仍闪一条原生标题栏(做了 2.3 之后) | setup 里 `set_shadow`/`set_resizable` 是 flag 变更,tao 重算 style 时把 `WS_CAPTION` 加回来,而剥 frame 的 `hide_system_frame` 在 `show()` 之后才跑 | 顺序修正:flag 变更 → 剥 frame → `show()`,见 2.9 |
+| 首帧/刷新后顶部一度不是圆角 | CSS 圆角只认 `[data-window-maximized="false"]`,而该属性由 `WindowControls` 异步 `isMaximized()` 写入,写入前整窗直角 | 渲染前同步写默认值 `"false"`,见 2.9 |
+| 双击标题栏后窗口变成「全宽 × 残高」的怪形状(首运/上次最大化时必现) | 对最大化窗口 `SetWindowPos` 钳制工作区时,Windows 记住的**还原矩形**被改写;双击走的是「取消最大化」,落到畸形矩形 | 钳制时快照并回写 `WINDOWPLACEMENT`,见 2.10 |
+| 首次打开,四角的圆角缺口里有**白色小块**(最大化→还原后才变圆) | WebView2 惰性合成:webview 层默认白底在首帧后被缓存,静态页面不重绘,`set_background_color` 事后才生效 | config 补 `backgroundColor` + 强制重合成(±1px 微调),见 2.11 |
 
 ---
 
@@ -205,6 +209,67 @@ SetWindowPos(hwnd, 0, work.left, work.top, work.right - work.left,
 
 **已知小瑕疵**：双击的第一次按下仍会进一次系统拖动循环，鼠标若有 1~2px 抖动窗口会轻微偏移。真实双击手是稳的，基本看不到。
 
+### 2.9 两个「修好了还犯」的回潮：启动闪标题栏 / 首帧直角
+
+**症状 A**：按 2.3 在配置里写了 `decorations: false`，启动仍闪一条原生标题栏。
+**症状 B**：圆角规则按最大化属性挂了，但首帧（以及 webview 刷新后的头几帧）顶部是直角，过一会儿才圆。
+
+**根因 A（调用顺序）**：2.3 的结论只对「创建那一刻」成立。`setup()` 里在 `show()` 之前还调了 `set_shadow(false)` 和 `set_resizable(false)` —— 这两个都是 tao 的 **flag 变更**，按 2.1 的实测，`set_window_flags` → `to_window_styles()` 会无条件把 `WS_CAPTION` 加回来。原顺序是：
+
+```
+set_shadow(false)      ← caption 加回
+set_resizable(false)   ← caption 又加回
+set_decorations(false) ← 异步投递到事件线程,可能还没执行
+show()                 ← 窗口带着 caption 显示 ≥1 帧(闪标题栏)
+hide_system_frame()    ← 这时才剥掉
+```
+
+更糟的是 `set_decorations(false)` 是异步投递：如果它在我们剥完 frame **之后**才执行，caption 又被加回来，要等下一次 `Focused/Resized` 重放才被剥掉——「有时候」三个字就是这两条竞态给的。
+
+**处理**：
+
+1. 顺序改为 **flag 变更 → `hide_system_frame()` → `show()`**（剥 frame 在窗口仍隐藏时同步完成，hwnd 在创建后即有效）；
+2. **删掉 setup 里补调的 `set_decorations(false)`**——配置里已经 `false`，运行时再调一遍纯属多余，还引入上面的异步回潮；`show()` 之后保留一次幂等重放 + 150ms 补调兜底。
+
+**根因 B（属性晚于首帧）**：`index.css` 的圆角规则是
+`html[data-custom-chrome="true"][data-window-maximized="false"] .app-window { border-radius: 8px }`，
+而 `data-window-maximized` 由 `WindowControls` 挂载后异步调 `isMaximized()` 才写进 `<html>`。**属性缺失时选择器不匹配 → 直角**；promise resolve 之后才变圆。启动慢、webview 刷新、最大化还原竞态都会让「窗口期」肉眼可见。
+
+**处理**：`main.tsx` 在 **React 渲染之前**同步写默认值
+`document.documentElement.dataset.windowMaximized = "false"`（与 `customChrome` 同一处的兜底）。默认圆角先行；若这次启动就是最大化（`tauri.conf.json` 的 `"maximized": true` / window-state 恢复），`WindowControls` 的首次 `isMaximized()` 会把它翻成 `"true"`，多圆几帧无害。
+
+**实测要点**：启动连开三次，任何一帧都不应出现强调色标题栏；DevTools 里 `document.documentElement.dataset` 应在首帧前就有 `windowMaximized="false"`。
+
+### 2.10 双击标题栏后窗口变成「全宽 × 残高」
+
+**现象**：首次运行（或上次退出时是最大化），双击自定义标题栏想最大化——结果应用**取消**了最大化，落在一个奇怪的矩形：宽度铺满屏幕、高度只剩一块，客户区下面直接透出桌面（窗口透明，未绘制区 = 透）。
+
+**根因（两步叠加）**：
+
+1. `tauri.conf.json` 曾带 `"maximized": true` —— 首次运行窗口**创建即最大化**；`tauri-plugin-window-state` 恢复上次会话的最大化状态时同理。窗口一显示，`clamp_maximized_to_work_area()`（2.4）用 `SetWindowPos` 把这个**处于最大化状态的窗口**直接改尺寸到工作区。
+2. **对 zoomed 窗口 `SetWindowPos` 会改写 Windows 内部保存的还原矩形**。正常还原矩形是创建尺寸 1200×800，被改写后变成「钳制矩形的某个碎片」（实测呈现为全宽 × ~700px）。用户双击标题栏 → `toggleMaximize()` → `isMaximized() == true` → 走**取消最大化** → 窗口"还原"到这个畸形矩形。截图证据：标题栏在 (0,0)、窗口按钮在屏幕右上角（宽 = 1920），内容在 ~700px 处截断。
+
+**处理**：
+
+1. `tauri.conf.json` 去掉 `"maximized": true` —— 首运以 1200×800 常规窗口启动（顺带解决了「启动即最大化所以没圆角」）；用户的偏好由 window-state 插件跨会话记住。
+2. `clamp_maximized_to_work_area()` 在 `SetWindowPos` **之前**快照 `WINDOWPLACEMENT`（此时 `show_cmd` 仍是 `SW_SHOWMAXIMIZED`、`rc_normal_position` 还是原值），钳制后用 `SetWindowPlacement`（带 `WPF_ASYNCWINDOWPLACEMENT`）回写快照——窗口保持最大化、还原矩形回到原值。这条同时救了 window-state 恢复最大化的场景。
+
+**实测要点**：把窗口最大化 → `GetWindowPlacement` 记下 `rc_normal_position` → 触发一次钳制（比如切全屏显示器）→ 双击标题栏取消最大化 → 窗口应精确回到记录的矩形，而不是任何「全宽 × 残高」。
+
+### 2.11 首次打开四角有白色小块，最大化→还原才变圆
+
+**现象**：首次打开应用，顶部左上/右上（以及底部两角）的圆角缺口里有白色背景小块；最大化再还原之后缺口才透出桌面、圆角正常。
+
+**根因（惰性合成）**：缺口处看到的是 **WebView2 控制器的默认背景**——tauri 从 config 创建窗口时，`WebviewBuilder::from_config` 并不把 `backgroundColor` 传进 webview 属性（tauri 2.12.6 源码确认），所以 webview 层从创建起就是 WebView2 默认的白。运行时 `set_background_color(透明)` 走事件循环消息，**首帧合成之后**才被处理；WebView2 按需合成，静态页面不再重绘 → 缓存的白底一直挂在四角，直到下一次真正的 resize（最大化→还原）触发重合成。
+
+**处理（三层）**：
+
+1. `tauri.conf.json` 窗口补 `"backgroundColor": "#00000000"` —— config 的这个字段只到**窗口层**（2.6 的结论依然成立），先把窗口层钉住；
+2. `setup()` 与 150ms 补调里 `set_background_color(透明)` 保留（webview 层，事后生效）；
+3. **新增 `force_webview_recomposition()`**：每次设置背景色后，`SetWindowPos` 把窗口高度 +1px 再复原——两个真实的 `WM_SIZE` 迫使 wry 重新下发 webview bounds 并重合成。setup 里的那次发生在窗口仍隐藏时，零闪烁。
+
+**实测要点**：冷启动，四角立即透出桌面（放大 10 倍看缺口，无白色实心块）；不需要任何最大化/还原操作。
+
 ---
 
 ## 3. 排查手法
@@ -272,11 +337,11 @@ print("ours on top:", root == hwnd)   # 必须为 True 才继续
 | 文件 | 做了什么 |
 |---|---|
 | `src-tauri/tauri.conf.json` | `decorations: false`、`transparent: true`、`shadow: false`、`visible: false` |
-| `src-tauri/src/main.rs` | `hide_system_frame()`（DWM 尝试 + 剥 frame 位）、`clamp_maximized_to_work_area()`、`setup()` 里的调用时序与 150ms 补调 |
+| `src-tauri/src/main.rs` | `hide_system_frame()`（DWM 尝试 + 剥 frame 位）、`clamp_maximized_to_work_area()`、setup 时序(**flag 变更 → 剥 frame → show**,不再补调 `set_decorations`)、150ms 补调 |
+| `src/main.tsx` / `src/lib/platform.ts` | Windows 上给 `<html>` 打 `data-custom-chrome="true"`;**渲染前同步写 `data-window-maximized="false"`** 保证首帧圆角 |
 | `src/components/titlebar/WindowResizeHandles.tsx` | 8 个缩放手柄，自己算 `setSize`/`setPosition`；最大化时卸载 |
 | `src-tauri/capabilities/default.json` | `set-size` / `set-position` / `outer-position` / `outer-size` / `scale-factor` |
 | `src/index.css` | `html[data-custom-chrome]` 透明、`.app-window` 背景与圆角、最大化时去圆角、最大化时隐藏手柄 |
-| `src/main.tsx` / `src/lib/platform.ts` | Windows 上给 `<html>` 打 `data-custom-chrome="true"` |
 
 ## 7. 验证清单（改完照这个跑一遍）
 
