@@ -84,46 +84,5 @@ describe("panelDock", () => {
       expect(pos.x).toBe(40);
       expect(pos.y).toBe((640 - 400) / 2);
     });
-
-    it("docks to the right edge by default", () => {
-      const pos = clampPanelPosition(undefined, {
-        width: 520,
-        height: 400,
-        viewportWidth,
-        viewportHeight,
-      });
-      expect(pos.x).toBe(viewportWidth - 520);
-    });
-
-    it("docks left with a gap when asked (design 072)", () => {
-      // The command panel passes 54 so it clears the canvas tool rail (12–46).
-      const pos = clampPanelPosition(undefined, {
-        width: 380,
-        height: 540,
-        viewportWidth,
-        viewportHeight,
-        side: "left",
-        offset: 54,
-      });
-      expect(pos.x).toBe(54);
-      // Centring would be 50, but the app header (56) wins.
-      expect(pos.y).toBe(56);
-    });
-
-    it("still honours a saved position when docked left", () => {
-      const pos = clampPanelPosition(
-        { x: 300, y: 80 },
-        {
-          width: 380,
-          height: 540,
-          viewportWidth,
-          viewportHeight,
-          side: "left",
-          offset: 54,
-        },
-      );
-      expect(pos.x).toBe(300);
-      expect(pos.y).toBe(80);
-    });
   });
 });

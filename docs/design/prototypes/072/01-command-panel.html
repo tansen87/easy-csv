@@ -151,7 +151,7 @@
   .panel{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:12px;
          background:var(--card);box-shadow:var(--shadow-fly);overflow:hidden;color:var(--fg);font-family:var(--font)}
   .panel.old{width:280px;height:500px}
-  .panel.new{width:300px;height:540px}
+  .panel.new{width:260px;height:616px}
 
   /* 旧头部：把手 + 标题 + 搜索 + 关闭 挤在 40px */
   .o-head{height:39px;flex:none;display:flex;align-items:center;gap:6px;padding:6px 9px;
@@ -268,11 +268,11 @@
                 padding:1px 3px;border-radius:3px}
 
   /* 状态卡 */
-  .states{display:grid;grid-template-columns:302px 302px;gap:18px 34px;align-items:start}
+  .states{display:grid;grid-template-columns:262px 262px;gap:18px 34px;align-items:start}
   .sbox{border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
   .sbox .hd{padding:9px 12px 1px;font-size:10.5px;font-weight:500}
   .sbox .sub{padding:2px 12px 9px;font-size:10px;color:var(--muted-fg);line-height:1.6}
-  .sbox .crop{width:300px;height:200px;border:0;border-top:1px solid var(--border-soft);border-radius:0;align-items:flex-start}
+  .sbox .crop{width:260px;height:200px;border:0;border-top:1px solid var(--border-soft);border-radius:0;align-items:flex-start}
   .sbox .crop .panel{border-radius:0;border:0;box-shadow:none}
 
   /* ---------- 位置示意 ---------- */
@@ -308,7 +308,7 @@
         background:color-mix(in oklab,var(--fg) 3%,var(--bg));
         font-family:var(--mono);font-size:5.5px;color:var(--muted-fg-3);
         display:flex;align-items:center;padding-left:5px;z-index:2}
-  .dp{position:absolute;width:126px;height:227px;border-radius:5px;
+  .dp{position:absolute;width:109px;height:258px;border-radius:5px;
       border:1px solid color-mix(in oklab,var(--brand) 45%,transparent);background:var(--card);
       box-shadow:0 8px 20px -10px rgba(0,0,0,.42);padding:5px 6px;
       display:flex;flex-direction:column;z-index:4;overflow:hidden}
@@ -474,7 +474,7 @@
 
   <!-- ============ 02 方案 A ============ -->
   <div class="frame">
-    <div class="cap"><span>02</span><b>方案 A（推荐）· 单列 · 分组头吸顶</b><span>· 1x 实际尺寸</span><span class="file">300×540 · 首屏 11 行</span></div>
+    <div class="cap"><span>02</span><b>方案 A（推荐）· 单列 · 顶贴标题栏 · 底贴窗口</b><span>· 1x 实际尺寸</span><span class="file">260×616 · 首屏 16 行</span></div>
     <div class="app">
       <div class="tbar">
         <span class="brand">Easy Csv</span>
@@ -490,7 +490,7 @@
       </div>
       <div class="canvas">
         <svg class="wire"><path d="M288 125C460 125 520 125 620 125"/><path d="M806 125C840 125 846 125 880 125"/></svg>
-        <div class="trail" style="left:320px"></div>
+        <div class="trail" style="left:280px"></div>
         <div class="fcard" style="left:24px;top:60px;width:264px">
           <div class="hd"><span class="fn">销售明细-2024.csv</span><span class="fm">1 240 × 5</span></div>
           <div class="frow h"><span class="no">#</span><span>日期</span><span>品类</span><span class="num">金额</span></div>
@@ -514,7 +514,7 @@
       <div class="callout"><span class="mk ink">5</span><div><b>底栏只留两样：</b>左边「共 61 个操作」（搜索时「命中 8 / 61」），右边四枚键帽 <kbd class="k">↑</kbd><kbd class="k">↓</kbd><kbd class="k">⏎</kbd><kbd class="k">esc</kbd>。窄了之后键帽不再配文字，靠位置和常识读。</div></div>
       <div class="callout"><span class="mk ink">6</span><div><b>顺序按"加一步时先想到什么"排：</b>探查 → 筛选 → 排序去重 → 列操作 → 聚合 → … → 输出（第 11）。xan 文档序把「把结果写文件」放在第一位，是给读文档的人排的，不是给搭管道的人排的。</div></div>
     </div>
-    <div class="state-note"><b>尺寸账：</b>280×500 → <b>300×540</b>，默认位 <b>x=8</b>（贴左；画布工具轨随之从 12 移到 320，仍垂直居中）。宽度 520 → 380 → <b>300</b>（删左栏再收 80）：首屏仍是 <b>11 行</b>，描述列 242px、61 条描述一条都不截断。1200 宽窗口里面板只占 25%。</div>
+    <div class="state-note"><b>尺寸账：</b>280×500 → <b>260 × (窗口高 − 44)</b>，x=8（贴左；画布工具轨随之从 12 移到 280）。宽度 520 → 380 → 300 → <b>260</b>：**高度一次拿满整条窗口**，首屏从 11 行涨到 <b>16 行</b>；描述列 202px，61 条描述一条都不截断。1200 宽窗口里面板只占 22%。</div>
   </div>
 
   <!-- ============ 03 位置 ============ -->
@@ -523,19 +523,19 @@
     <div class="place">
 
       <div class="pcard">
-        <div class="ph"><b>A 左缘 · 垂直居中</b><span class="tag">推荐</span></div>
-        <div class="ps">面板贴左（x=8）；那条 34px 的工具轨跟着让到面板右侧（x=320），仍垂直居中。盖住输入表与第一步；右侧 AI 与数据预览完全不碰。</div>
+        <div class="ph"><b>A 左缘 · 顶贴标题栏 · 底贴窗口</b><span class="tag">推荐</span></div>
+        <div class="ps">面板贴左（x=8）、顶在标题栏下方、底距窗口 4；那条 34px 的工具轨跟着让到面板右侧（x=280），仍垂直居中。盖住输入表与第一步；右侧 AI 与数据预览完全不碰。</div>
         <div class="diag">
           <div class="zone" style="left:218px;top:15px;width:286px;height:280px">AI 360 · 预览 320<br>打开时 680</div>
-          <div class="dn" style="left:134px;top:118px;width:14px;height:76px;border-radius:3px;background-image:repeating-linear-gradient(to bottom, color-mix(in oklab,var(--fg) 28%,transparent) 0 3px, transparent 3px 17px);background-size:6px 100%;background-repeat:no-repeat;background-position:center 6px"></div>
+          <div class="dn" style="left:117px;top:118px;width:14px;height:76px;border-radius:3px;background-image:repeating-linear-gradient(to bottom, color-mix(in oklab,var(--fg) 28%,transparent) 0 3px, transparent 3px 17px);background-size:6px 100%;background-repeat:no-repeat;background-position:center 6px"></div>
           <div class="dn" style="left:10px;top:25px;width:111px;height:55px">输入表<br>1 240 × 5</div>
           <div class="dn" style="left:151px;top:38px;width:80px;height:27px">01 filter</div>
           <div class="dn" style="left:244px;top:38px;width:80px;height:27px">02 groupby</div>
           <div class="dn" style="left:336px;top:25px;width:126px;height:63px">结果表<br>520×400</div>
           <div class="dlog">日志（折叠 48 / 打开 260）</div>
-          <div class="dp" style="left:3px;top:44px">
+          <div class="dp" style="left:3px;top:17px">
             <span class="t">命令</span>
-            <span class="l">300 × 540</span>
+            <span class="l">260 × 616</span>
             <div class="rows"></div>
           </div>
           <div class="dg-head"><span class="b">Easy Csv</span><span class="m"><span>文件</span><span>编辑</span><span>查看</span><span>工具</span><span>运行</span></span><span class="i"><i></i><i></i><i></i><i></i></span></div>
@@ -547,15 +547,15 @@
         <div class="ps">面板顶边贴按钮（y=42），来源最明确；但它正好落在右侧停靠带与管道尾部上，两个浮层叠在一起。</div>
         <div class="diag">
           <div class="zone" style="left:218px;top:15px;width:286px;height:280px">AI 360 · 数据预览 320<br>（打开时占 680px）</div>
-          <div class="dn" style="left:134px;top:118px;width:14px;height:76px;border-radius:3px;background-image:repeating-linear-gradient(to bottom, color-mix(in oklab,var(--fg) 28%,transparent) 0 3px, transparent 3px 17px);background-size:6px 100%;background-repeat:no-repeat;background-position:center 6px"></div>
+          <div class="dn" style="left:117px;top:118px;width:14px;height:76px;border-radius:3px;background-image:repeating-linear-gradient(to bottom, color-mix(in oklab,var(--fg) 28%,transparent) 0 3px, transparent 3px 17px);background-size:6px 100%;background-repeat:no-repeat;background-position:center 6px"></div>
           <div class="dn" style="left:10px;top:25px;width:111px;height:55px">输入表<br>1 240 × 5</div>
           <div class="dn" style="left:151px;top:38px;width:80px;height:27px">01 filter</div>
           <div class="dn" style="left:244px;top:38px;width:80px;height:27px">02 groupby</div>
           <div class="dn" style="left:336px;top:25px;width:126px;height:63px">结果表<br>520×400</div>
           <div class="dlog">日志（折叠 48 / 打开 260）</div>
-          <div class="dp" style="left:352px;top:18px">
+          <div class="dp" style="left:390px;top:17px">
             <span class="t">命令</span>
-            <span class="l">300 × 540</span>
+            <span class="l">260 × 616</span>
             <div class="rows"></div>
           </div>
           <div class="dg-head"><span class="b">Easy Csv</span><span class="m"><span>文件</span><span>编辑</span><span>查看</span><span>工具</span><span>运行</span></span><span class="i"><i></i><i></i><i></i><i></i></span></div>
@@ -567,15 +567,15 @@
         <div class="ps">零改动（<code>clampPanelPosition</code> 的 <code>defaultX = vw - width</code>）。但整块压在 AI 面板上，读起来像 bug。</div>
         <div class="diag">
           <div class="zone" style="left:218px;top:15px;width:286px;height:280px">AI 360 · 数据预览 320<br>（打开时占 680px）</div>
-          <div class="dn" style="left:134px;top:118px;width:14px;height:76px;border-radius:3px;background-image:repeating-linear-gradient(to bottom, color-mix(in oklab,var(--fg) 28%,transparent) 0 3px, transparent 3px 17px);background-size:6px 100%;background-repeat:no-repeat;background-position:center 6px"></div>
+          <div class="dn" style="left:117px;top:118px;width:14px;height:76px;border-radius:3px;background-image:repeating-linear-gradient(to bottom, color-mix(in oklab,var(--fg) 28%,transparent) 0 3px, transparent 3px 17px);background-size:6px 100%;background-repeat:no-repeat;background-position:center 6px"></div>
           <div class="dn" style="left:10px;top:25px;width:111px;height:55px">输入表<br>1 240 × 5</div>
           <div class="dn" style="left:151px;top:38px;width:80px;height:27px">01 filter</div>
           <div class="dn" style="left:244px;top:38px;width:80px;height:27px">02 groupby</div>
           <div class="dn" style="left:336px;top:25px;width:126px;height:63px">结果表<br>520×400</div>
           <div class="dlog">日志（折叠 48 / 打开 260）</div>
-          <div class="dp" style="left:357px;top:44px">
+          <div class="dp" style="left:395px;top:17px">
             <span class="t">命令</span>
-            <span class="l">300 × 540</span>
+            <span class="l">260 × 616</span>
             <div class="rows"></div>
           </div>
           <div class="dg-head"><span class="b">Easy Csv</span><span class="m"><span>文件</span><span>编辑</span><span>查看</span><span>工具</span><span>运行</span></span><span class="i"><i></i><i></i><i></i><i></i></span></div>
@@ -587,15 +587,15 @@
         <div class="ps">居中 y=80，视线最正；正好遮住管道中段的三步——加步骤时最该看的地方。也与 Ctrl K 的模态形态混淆。</div>
         <div class="diag">
           <div class="zone" style="left:218px;top:15px;width:286px;height:280px">AI 360 · 数据预览 320<br>（打开时占 680px）</div>
-          <div class="dn" style="left:134px;top:118px;width:14px;height:76px;border-radius:3px;background-image:repeating-linear-gradient(to bottom, color-mix(in oklab,var(--fg) 28%,transparent) 0 3px, transparent 3px 17px);background-size:6px 100%;background-repeat:no-repeat;background-position:center 6px"></div>
+          <div class="dn" style="left:117px;top:118px;width:14px;height:76px;border-radius:3px;background-image:repeating-linear-gradient(to bottom, color-mix(in oklab,var(--fg) 28%,transparent) 0 3px, transparent 3px 17px);background-size:6px 100%;background-repeat:no-repeat;background-position:center 6px"></div>
           <div class="dn" style="left:10px;top:25px;width:111px;height:55px">输入表<br>1 240 × 5</div>
           <div class="dn" style="left:151px;top:38px;width:80px;height:27px">01 filter</div>
           <div class="dn" style="left:244px;top:38px;width:80px;height:27px">02 groupby</div>
           <div class="dn" style="left:336px;top:25px;width:126px;height:63px">结果表<br>520×400</div>
           <div class="dlog">日志（折叠 48 / 打开 260）</div>
-          <div class="dp" style="left:189px;top:34px">
+          <div class="dp" style="left:197px;top:17px">
             <span class="t">命令</span>
-            <span class="l">300 × 540</span>
+            <span class="l">260 × 616</span>
             <div class="rows"></div>
           </div>
           <div class="dg-head"><span class="b">Easy Csv</span><span class="m"><span>文件</span><span>编辑</span><span>查看</span><span>工具</span><span>运行</span></span><span class="i"><i></i><i></i><i></i><i></i></span></div>
@@ -607,7 +607,7 @@
     <table class="cmp">
       <thead><tr><th>位置</th><th>盖住什么</th><th>与 AI / 数据预览停靠</th><th>来源连续性</th><th>1024 窄窗</th><th>改动量</th></tr></thead>
       <tbody>
-        <tr><td>A 左缘居中</td><td>输入表 + 01 步</td><td class="pick">不冲突（右侧 680 全空）</td><td>弱：按钮在右上</td><td>8–308，占 26%；轨移到 320</td><td>小：<code>clamp</code> 加 <code>side</code></td></tr>
+        <tr><td>A 左缘居中</td><td>输入表 + 01 步</td><td class="pick">不冲突（右侧 680 全空）</td><td>弱：按钮在右上</td><td>8–268，占 22%；轨移到 280</td><td>小：<code>clamp</code> 加 <code>side</code></td></tr>
         <tr><td>B 按钮下方</td><td>管道尾 + 结果表</td><td>完全重叠</td><td class="pick">强：就在按钮下</td><td>808–1188，贴边</td><td>中：要写锚点定位</td></tr>
         <tr><td>C 右缘居中</td><td>管道尾 + 结果表</td><td>完全重叠</td><td>中</td><td>贴右缘，像停靠</td><td>0</td></tr>
         <tr><td>D 居中偏上</td><td>中段三步（01/02/结果左半）</td><td class="pick">不冲突</td><td>弱</td><td>252–772</td><td>小：改 <code>defaultX</code></td></tr>
@@ -682,7 +682,7 @@
       <div class="box">
         <h4>尺寸</h4>
         <dl>
-          <dt>面板</dt><dd>300×540 · 圆角 12 · 内边距 0</dd>
+          <dt>面板</dt><dd>260 宽 · 高 = 窗口高 − 44（顶 40、底 4）· 圆角 12</dd>
           <dt>头部</dt><dd>44 高 · 内边距 0/8/0/14 · 间隔 10</dd>
           <dt>搜索框</dt><dd>28 高 · 圆角 6 · 4% 墨底 · 无边框</dd>
           <dt>行</dt><dd>40 高 · 列 1fr/20（名在上、描述在下，间距 1）· 圆角 5</dd>
@@ -704,7 +704,7 @@
       <div class="box">
         <h4>行为</h4>
         <dl>
-          <dt>位置</dt><dd><b>固定</b>：左缘 8、垂直居中，<code>resize</code> 时重算；<b>不拖、不记忆</b>（无 dockState、无 grab 光标）</dd>
+          <dt>位置</dt><dd><b>固定</b>：x=8、y=42、高 = <code>innerHeight − 50</code>（<code>MIN 280</code> 兜底），<code>resize</code> 重算；<b>不拖、不记忆</b></dd>
           <dt>点行</dt><dd>添加该操作 → 打开命令表单（行为不变）</dd>
           <dt>点 ?</dt><dd>打开该命令帮助（行为不变，只在悬停/选中时出现）</dd>
           <dt>键盘</dt><dd>↑↓ 走、⏎ 添加、Esc 关闭并归还焦点（现状保留）</dd>

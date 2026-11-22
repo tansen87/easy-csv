@@ -5,29 +5,42 @@ import { ScrollArea } from "@/components/ui/ScrollArea";
 
 import type { XanCommand } from "@/types/xan";
 import { useLanguage } from "@/i18n";
-import { clampPanelPosition } from "@/utils/panelDock";
 import { CommandRow } from "./CommandRow";
 import { searchCommands } from "./lib/commandSearch";
 
-/** Panel size. Exported because the canvas tool rail slides clear of it. */
-export const COMMAND_PANEL_WIDTH = 300;
-export const COMMAND_PANEL_HEIGHT = 540;
+/** Panel width. Exported because the canvas tool rail slides clear of it. */
+export const COMMAND_PANEL_WIDTH = 260;
 /** Gap between the window edge and the panel. */
-export const COMMAND_PANEL_INSET = 8;
+export const COMMAND_PANEL_INSET = 2;
+/** Title bar height — the panel starts right below it. */
+const CHROME_HEIGHT = 36;
 /**
- * The panel sits flush left; the canvas tool rail moves to its right instead
- * the catalog is the primary surface while it is open.
+ * Air below the title bar and above the window bottom. These two numbers are
+ * the only thing to touch when the panel should hug the edges tighter — the
+ * left gap is `COMMAND_PANEL_INSET` above.
  */
-const DOCK_OFFSET = COMMAND_PANEL_INSET;
+const TOP_GAP = 32;
+const BOTTOM_GAP = 66;
+/** Never collapse to something unusable on a very short window. */
+const MIN_HEIGHT = 280;
 /** Debounce before the filter runs, in ms. */
 const SEARCH_DEBOUNCE_MS = 150;
-/** Docked left, so the panel clears the AI dock and the data profile. */
-const DOCK_OPTIONS = {
-  width: COMMAND_PANEL_WIDTH,
-  height: COMMAND_PANEL_HEIGHT,
-  side: "left" as const,
-  offset: DOCK_OFFSET,
-};
+
+interface PanelBox {
+  x: number;
+  y: number;
+  height: number;
+}
+
+/** Left edge, right under the title bar, down to just above the window bottom. */
+function panelBox(): PanelBox {
+  const y = CHROME_HEIGHT + TOP_GAP;
+  const height = Math.max(
+    MIN_HEIGHT,
+    (window.innerHeight || 800) - y - BOTTOM_GAP,
+  );
+  return { x: COMMAND_PANEL_INSET, y, height };
+}
 
 interface CommandListProps {
   commands: XanCommand[];
@@ -95,17 +108,15 @@ export const CommandList = React.memo(function CommandList({
     [flat],
   );
 
-  const [pos, setPos] = useState(() =>
-    clampPanelPosition(undefined, DOCK_OPTIONS),
-  );
+  const [box, setBox] = useState<PanelBox>(panelBox);
   const [activeIndex, setActiveIndex] = useState(0);
   const [keyboardNav, setKeyboardNav] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Docked, not draggable: re-centre when the window changes shape.
+  // Fixed box, not draggable: refit to the window when it changes shape.
   useEffect(() => {
-    const onResize = () => setPos(clampPanelPosition(undefined, DOCK_OPTIONS));
+    const onResize = () => setBox(panelBox());
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
@@ -179,10 +190,10 @@ export const CommandList = React.memo(function CommandList({
       ref={panelRef}
       data-testid="command-list"
       style={{
-        left: pos.x,
-        top: pos.y,
+        left: box.x,
+        top: box.y,
         width: COMMAND_PANEL_WIDTH,
-        height: COMMAND_PANEL_HEIGHT,
+        height: box.height,
       }}
       className="fixed z-floating flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-[0_12px_28px_-14px_rgba(0,0,0,0.22),0_1px_3px_rgba(0,0,0,0.05)] animate-in fade-in-0 slide-in-from-left-2 duration-[120ms] ease-[cubic-bezier(0.2,0,0,1)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]"
       onContextMenu={(e) => e.preventDefault()}
