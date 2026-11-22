@@ -226,7 +226,7 @@ export function PipelineTemplateDialog({
           >
             {t.templateApply}
           </Button>
-          <Tooltip content={t.templateRename}>
+          <Tooltip content={t.templateRename} side="right">
             <Button
               variant="ghost"
               size="icon-sm"
@@ -241,7 +241,7 @@ export function PipelineTemplateDialog({
               <Pencil className="h-3.5 w-3.5" />
             </Button>
           </Tooltip>
-          <Tooltip content={t.templateExport}>
+          <Tooltip content={t.templateExport} side="right">
             <Button
               variant="ghost"
               size="icon-sm"
@@ -252,7 +252,7 @@ export function PipelineTemplateDialog({
               <Download className="h-3.5 w-3.5" />
             </Button>
           </Tooltip>
-          <Tooltip content={t.templateDelete}>
+          <Tooltip content={t.templateDelete} side="right">
             <Button
               variant="ghost"
               size="icon-sm"

@@ -11,6 +11,7 @@ pub mod plugins;
 pub mod samples;
 pub mod session;
 pub mod storage;
+pub mod logs;
 pub mod tabular;
 pub mod update;
 pub mod xan;
@@ -100,6 +101,14 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     samples::ensure_sample_data,
     storage::load_execution_history,
     storage::clear_execution_history,
+    logs::append_log,
+    logs::read_recent_logs,
+    logs::prune_log_files,
+    logs::reveal_logs_dir,
+    config::get_log_retention_days,
+    config::set_log_retention_days,
+    config::get_auto_show_log_panel,
+    config::set_auto_show_log_panel,
     update::get_install_form
   ])
 }

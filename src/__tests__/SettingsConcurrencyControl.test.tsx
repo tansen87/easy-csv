@@ -56,6 +56,11 @@ function renderSettings(maxConcurrentRuns: number) {
         onAutoCheckUpdateChange={vi.fn()}
         maxConcurrentRuns={maxConcurrentRuns}
         onMaxConcurrentRunsChange={onMaxConcurrentRunsChange}
+        logRetentionDays={7}
+        onLogRetentionDaysChange={vi.fn()}
+        autoShowLogPanel={false}
+        onAutoShowLogPanelChange={vi.fn()}
+        onOpenLogsDir={vi.fn()}
         aiConfig={aiConfig}
         onAIConfigChange={vi.fn()}
         showToast={vi.fn()}

@@ -53,6 +53,14 @@ interface SettingsDialogProps {
   /** Parallel run limit. */
   maxConcurrentRuns: number;
   onMaxConcurrentRunsChange: (value: number) => void;
+  /** Log file retention in days; backend clamps to 0..=90. */
+  logRetentionDays: number;
+  onLogRetentionDaysChange: (value: number) => void;
+  /** Auto-open the log drawer when a run starts (071); default off. */
+  autoShowLogPanel: boolean;
+  onAutoShowLogPanelChange: (value: boolean) => void;
+  /** Open `data/logs/` in the system file manager. */
+  onOpenLogsDir: () => void;
   /** Clear the "intro seen" flag so the canvas guide shows again. */
   onResetOnboarding?: () => void;
   onSave: () => void;
@@ -94,6 +102,11 @@ export function SettingsDialog({
   onAutoCheckUpdateChange,
   maxConcurrentRuns,
   onMaxConcurrentRunsChange,
+  logRetentionDays,
+  onLogRetentionDaysChange,
+  autoShowLogPanel,
+  onAutoShowLogPanelChange,
+  onOpenLogsDir,
   onResetOnboarding,
   onSave,
   aiConfig,
@@ -294,6 +307,11 @@ export function SettingsDialog({
               onAutoCheckUpdateChange={onAutoCheckUpdateChange}
               maxConcurrentRuns={maxConcurrentRuns}
               onMaxConcurrentRunsChange={onMaxConcurrentRunsChange}
+              logRetentionDays={logRetentionDays}
+              onLogRetentionDaysChange={onLogRetentionDaysChange}
+              autoShowLogPanel={autoShowLogPanel}
+              onAutoShowLogPanelChange={onAutoShowLogPanelChange}
+              onOpenLogsDir={onOpenLogsDir}
               onResetOnboarding={onResetOnboarding}
               aiConfig={aiConfig}
               onAIConfigChange={onAIConfigChange}

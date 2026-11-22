@@ -19,6 +19,8 @@ export interface ToastProps {
    * (design 027 §4.3). Clicking it also dismisses the toast.
    */
   action?: ToastAction;
+  /** Multiple action buttons (071: 查看日志 / 打开目录). Rendered after `action`. */
+  actions?: ToastAction[];
 }
 
 const iconMap = {
@@ -48,6 +50,7 @@ export function Toast({
   onClose,
   duration = 5000,
   action,
+  actions,
 }: ToastProps) {
   const { t } = useLanguage();
   const [isVisible, setIsVisible] = useState(false);
@@ -84,6 +87,18 @@ export function Toast({
           {action.label}
         </button>
       )}
+      {actions?.map((extra) => (
+        <button
+          key={extra.label}
+          onClick={() => {
+            extra.onClick();
+            onClose();
+          }}
+          className="shrink-0 rounded-md border border-border/60 bg-background/80 px-2 py-0.5 text-xs font-semibold text-foreground transition-colors hover:bg-background"
+        >
+          {extra.label}
+        </button>
+      ))}
       <button
         onClick={onClose}
         aria-label={t.close}
@@ -101,6 +116,7 @@ export interface ToastContainerProps {
     message: string;
     type: ToastType;
     action?: ToastAction;
+    actions?: ToastAction[];
     duration?: number;
   }[];
   onRemove: (id: string) => void;
@@ -115,6 +131,7 @@ export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
           message={toast.message}
           type={toast.type}
           action={toast.action}
+          actions={toast.actions}
           duration={toast.duration}
           onClose={() => onRemove(toast.id)}
         />

@@ -467,11 +467,11 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `useExecutionHistory.ts` | 执行历史(F6) |
 | `useUpdater.ts` | 自动更新状态机: 静默/交互检查、下载进度、安装交接(`beforeInstall` 先落盘会话)、错误态;对话框可见性留在调用方(静默检查不得自己弹窗)。设计: `docs/design/022_github-auto-update-and-admin-free-install.md` |
 | `usePluginCatalog.ts` | 插件清单状态: 加载/强制刷新、按插件名路由的安装进度、失败回读权威清单;另导出 `useRequiredPluginCheck`(启动延迟 1.2s 探测 xan,只对"确定缺失"返回 true)。设计: `docs/design/023_plugin-repository-and-in-app-install.md` |
-| `useAppSettings.ts` | 应用配置: 分隔符、无表头、通知、历史上限、托盘设置 |
+| `useAppSettings.ts` | 应用配置: 分隔符、无表头、通知、历史上限、托盘设置、日志保留天数/自动弹出日志(design 071) |
 | `useCsvProbe.ts` | 拆分对话框的文件探测(防抖 + 过期响应丢弃) |
 | `useOnboarding.ts` | 首次使用引导状态(027): localStorage `easy-csv-onboarding-v1` 单个标记 + 复位;读写均 try/catch 降级(存储不可用时视为「已看过」,避免每次打开都弹)。另导出 `useAutoDismissOnboarding`(用户自己加了第一个步骤即标记已看过) |
 | `useToast.ts` | Toast 通知;`showToast(msg, type, { action, duration })` 支持可选的**动作按钮**(027 §4.3 完成提示的「查看结果」) |
-| `useLogs.ts` | 执行日志(design 028): `addLog(type, message, tabId?)` —— 每行标记来源标签页,供日志面板按标签页过滤 |
+| `useLogs.ts` | 执行日志(design 028/071): `addLog(type, message, tabId?, runId?)` —— 内存上限 500 行、逐行异步落盘(`append_log`,失败静默降级)、启动回填昨天+今天(`fromDisk` 只读)、`refreshRetention` 在保存设置后重读保留天数 |
 | `useUIState.ts` | UI 状态: 对话框/面板开关(含命令面板、CSV 对比、编码转换) |
 | `useBatchFilter.ts` | Batch Filter 执行逻辑(原 `BatchFilterHooks.ts`,019 §5.1 改名): 文件名清理、正则构建、批量筛选执行。**「从列取值」必须走 `xan frequency --all --no-extra`** —— 默认 `--limit 10` 只会拿到最常见的 10 个值;输出是 `field,value,count` 三列且**沿用输入分隔符**,解析交给 `utils/batchFilterValues.ts` |
 | `useBatchConvert.ts` | 批量格式转换(原 `BatchConvertHooks.ts`): globToRegex、getBaseName、CSV↔XLSX↔JSON 转换 invoke 调用 |
@@ -531,8 +531,9 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `ai/AIPanel.tsx` | **AI 助手面板**: 聊天 UI、命令生成、一键插入管道、👍/👎反馈、意图澄清对话框、对话历史加载 |
 | `variables/VariablePanel.tsx` | 变量管理面板(**设计 046 改版**):卡片表单 → 变量台账 —— 按「待填写 → 已就绪 → 仅管道引用」分组(48px 两行行:`{{名}}` + 引用数/箭头 + 第二行「默认」+ 值);空默认值置顶并带 2px 琥珀标记;点值行就地改默认值(⏎ 保存/esc 取消),点名称行原地展开引用清单;**只写 defaultValue、不再被 `inferVariableType` 覆盖手选类型**(原 `setDefault` 每次输入都重推断);类型(共享 `ui/Select`)/复制 `{{名}}`/删除收进行内 `⋯` 菜单(点击外部关闭);「全部清除」改为头部 `⋯` + 行内确认;新增变量就地展开表单,**名称按 `params.ts` 的 `[A-Za-z_][A-Za-z0-9_]*` 实时校验**(修掉「中文名加得进去但 `{{}}` 永不匹配」的死变量);空状态承载 `{{名}}` 语法说明;底部 36px 计数条 |
 | `variables/VariableRow.tsx` | 台账行组件(设计 046):行内编辑(Enter/Escape/失焦提交,`cancelledRef` 防 Esc 后 blur 误提交)、引用清单展开、行菜单(复制/类型三选/删除);`TYPE_OPTIONS` 与 `typeLabel` 由它导出 |
-| `logs/LogPanel.tsx` | 浮动日志面板,显示执行结果,支持拖拽和复制;**按标签页过滤**(design 028 §5.4):「仅当前标签页 / 全部」切换 + 每行标签页徽标(与按级别的 chips 叠加) |
+| `logs/LogPanel.tsx` | **底部停靠日志抽屉**(design 071): 一次执行 = 一个可折叠运行组(组头状态点/标签名/开始时间/行数/级别小计/复制全部/重跑);级别 chips + 「仅当前标签页 / 全部」+ 全文搜索三者 AND,命中 `<mark>` 与回车跳转;顶部拖拽调高(高度持久化)、最大化;磁盘回填行只读、按天分隔;导出当前过滤行 / 打开日志目录 / 清空(仅内存)。design 028 §5.4 的标签页 scope 语义保留 |
 | `logs/CommandList.tsx` | **命令面板**,可拖拽浮动面板,按分类展示命令,支持搜索和历史记录 |
+| `logs/lib/logGroups.ts` | 日志抽屉的纯逻辑层(design 071): `buildLogGroups`(runId → 运行组,无 run 按标签页,无 tab 归「应用」组,新组在上,状态 = 最重级别)、`filterLogs`(级别 × 标签页 × 逐词 AND 搜索)、`levelTotals`、`highlightMessage`(复用 settingsSearch 的字面高亮) |
 | `logs/CommandPalette.tsx` | **全局命令面板**(Ctrl/Cmd+K): `›` 提示符 + 等宽查询 + 命中/可用计数;空查询分组浏览(组名 + 计数),有查询跨组按分数单列排序并把来源压成右列 10px 标签;命中片段上色、`↑↓` 回环、IME 组字不执行;尺寸 680×(≤480) |
 | `logs/lib/scoreItem.ts` | 命令面板的排序与高亮区间(设计 053,纯函数): `matchItem`(整词 100 / 前缀 80 / 任意位置 60 / 拼音首字母 55 / 描述·关键词·快捷键 30)+ `searchItems`(丢 disabled、同分按来源 操作→命令→标签页→最近→模板) |
 | `logs/lib/paletteTypes.ts` | `PaletteItem` / `PaletteSource` 类型(从组件里搬出来,避免 `scoreItem.ts` 反向依赖组件造成循环) |
@@ -665,6 +666,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | 修改执行完成提示(027 §4.3, **P1 已实现**) | `src/components/setting/Toast.tsx`(`ToastProps.action` + 关闭按钮 + `pointer-events-auto`)+ `src/hooks/useToast.ts`(透传 action/duration)+ `src/hooks/execution/runPipeline.ts`(`finally` 里按 `pipelineFailed`/`wasCancelled` 发成功/失败 Toast;**不改**既有的 `setShowLogPanel(true)` 与进度条行为)+ `src/hooks/execution/runPipelineDeps.ts`(labels)。**不做**结果节点高亮/fitView 定位/每步成功标记(失败红框是现状 `PipelineStepNode.tsx:265-280`) |
 | 修改菜单栏 / 子菜单 | `src/components/menu/MainMenu.tsx`(`MENU_PANEL` 外壳、`OPEN_UNDERLINE`、五个下拉的键盘 effect、`data-menu-trigger`)。设计与诊断: `docs/design/prototypes/054/01-menu-submenus.html` |
 | 修改命令面板 | `src/modules/logs/CommandPalette.tsx` + `src/modules/logs/lib/scoreItem.ts`(排序/高亮区间)+ `src/modules/logs/lib/paletteTypes.ts` + `src/utils/pinyinInitials.ts`(生成物)+ `src/hooks/useUIState.ts` + `src/hooks/useKeyboardShortcuts.ts`(Ctrl+K)。设计: `docs/design/053_command-palette.md` |
+| 修改日志面板/日志落盘 | `src/modules/logs/LogPanel.tsx`(停靠抽屉)+ `src/modules/logs/lib/logGroups.ts`(分组/过滤纯函数)+ `src/hooks/useLogs.ts`(内存/落盘/回填)+ `src-tauri/src/logs.rs`(append_log / read_recent_logs / prune_log_files / reveal_logs_dir)+ `src-tauri/src/config.rs`(`log_retention_days` 设置)。设计: `docs/design/071_logs-panel-and-storage.md` |
 | 修改管道可视化布局 | `src/modules/pipeline/FlowPanel.tsx`(主逻辑) + `pipeline/lib/layout.ts`(布局) + `pipeline/nodes/`(节点样式) |
 | 修改连线方向/锚点(上下/左右连接点) | `src/modules/pipeline/lib/layout.ts`(`resolveHandles`/`handleAnchor`) + `pipeline/nodes/`(Handle 定义) |
 | 修改右键连线交互/预览 | `src/modules/pipeline/FlowPanel.tsx`(`handleCutStart`/`handleCutMove`/`handleCutEnd`) + `pipeline/overlays/ConnectionVisualization.tsx`(贝塞尔渲染) + `layout.ts`(`pickStartHandle`/`buildConnectPreviewPath`/`transformBezierPath`) |

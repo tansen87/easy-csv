@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 071 · 日志面板与存放位置重设计</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-fg:oklch(0.985 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --canvas-ink:oklch(0.3 0.006 80);
+    --canvas-ink-soft:oklch(0.2 0.01 80 / 7%);
+    --success:oklch(0.52 0.11 152);
+    --success-soft:color-mix(in oklab,var(--success) 11%,transparent);
+    --warning:oklch(0.62 0.13 75);
+    --warning-soft:color-mix(in oklab,var(--warning) 14%,transparent);
+    --danger:oklch(0.55 0.17 27);
+    --danger-soft:color-mix(in oklab,var(--danger) 11%,transparent);
+    --info:oklch(0.5 0.1 230);
+    --info-soft:color-mix(in oklab,var(--info) 10%,transparent);
+
+    --canvas:oklch(1 0 0);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-fly:0 12px 28px -14px oklch(0.2 0.02 80 / 26%);
+    --mark:oklch(0.56 0.17 27);
+  }
+  .dark{
+    color-scheme:dark;
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-fg:oklch(0.205 0 0);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --canvas-ink:oklch(0.92 0.005 85);
+    --canvas-ink-soft:oklch(1 0 0 / 8%);
+    --success:oklch(0.76 0.1 152);
+    --success-soft:color-mix(in oklab,var(--success) 15%,transparent);
+    --warning:oklch(0.78 0.12 75);
+    --warning-soft:color-mix(in oklab,var(--warning) 16%,transparent);
+    --danger:oklch(0.72 0.14 27);
+    --danger-soft:color-mix(in oklab,var(--danger) 16%,transparent);
+    --info:oklch(0.74 0.08 230);
+    --info-soft:color-mix(in oklab,var(--info) 14%,transparent);
+    --canvas:oklch(0.145 0 0);
+    --stage:oklch(0.12 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-card:none;
+    --shadow-fly:0 12px 28px -14px oklch(0 0 0 / 75%);
+    --mark:oklch(0.68 0.17 27);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased;transition:background-color .18s ease,color .18s ease}
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme-toggle{position:absolute;right:0;top:2px;height:26px;padding:0 10px;border-radius:6px;
+                border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+                font-family:var(--mono);font-size:10.5px;cursor:pointer}
+  .theme-toggle:hover{color:var(--fg)}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+  .state-note{font-size:10.5px;color:var(--muted-fg);line-height:1.7;padding:10px 2px 0}
+  .state-note b{color:var(--fg);font-weight:500}
+
+  .stage{position:relative;width:1200px;overflow:hidden;border:1px solid var(--border);
+         border-radius:8px;background-color:var(--canvas);
+         background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+         background-size:22px 22px;background-position:11px 11px}
+
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  .callout{display:flex;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;
+           background:var(--card);font-size:11px;line-height:1.75;color:var(--muted-fg)}
+  .callout b{color:var(--fg);font-weight:500}
+  .callout .mk{width:18px;height:18px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
+               font-family:var(--mono);font-size:9.5px;display:grid;place-items:center;flex:none;margin-top:1px}
+  .callout.bad .mk{background:var(--danger-soft);color:var(--danger)}
+
+  /* ===== 应用窗口 mock ===== */
+  .app{position:relative;width:1120px;height:620px;margin:34px auto 0;border:1px solid var(--border);
+       border-radius:10px;background:var(--bg);box-shadow:var(--shadow-fly);overflow:hidden;
+       display:flex;flex-direction:column}
+  .titlebar{height:44px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px;
+            border-bottom:1px solid var(--border-soft);background:var(--card)}
+  .titlebar .logo{width:16px;height:16px;border-radius:4px;background:var(--brand);opacity:.85}
+  .titlebar .menus{display:flex;gap:2px;font-size:11.5px;color:var(--muted-fg)}
+  .titlebar .menus span{padding:4px 8px;border-radius:5px}
+  .titlebar .menus span.on{background:var(--muted);color:var(--fg)}
+  .titlebar .tabs{display:flex;gap:4px;margin-left:18px}
+  .titlebar .tab{height:26px;padding:0 12px;border-radius:6px;font-size:11.5px;color:var(--muted-fg);
+                 display:flex;align-items:center;gap:6px}
+  .titlebar .tab.sel{background:var(--muted);color:var(--fg);font-weight:500}
+  .titlebar .tab .dot{width:5px;height:5px;border-radius:50%}
+  .titlebar .winbtns{margin-left:auto;display:flex;gap:8px}
+  .titlebar .winbtns i{width:10px;height:10px;border-radius:50%;background:var(--border);display:block}
+  .canvas{flex:1;min-height:0;position:relative;background-image:radial-gradient(var(--canvas-ink-soft) 1px,transparent 1px);
+          background-size:22px 22px}
+  .node{position:absolute;border:1px solid var(--border);border-radius:8px;background:var(--card);
+        box-shadow:var(--shadow-card);padding:9px 12px;font-size:11px}
+  .node .nk{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);margin-bottom:2px}
+  .node .nt{font-weight:500}
+  .node.sel{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand-soft)}
+  .edge{position:absolute;height:1.5px;background:var(--canvas-ink-soft);transform-origin:0 50%}
+  .edge::after{content:"";position:absolute;right:-1px;top:-2.5px;border:3px solid transparent;border-left-color:var(--canvas-ink-soft)}
+
+  /* ===== 日志抽屉(停靠底部) ===== */
+  .drawer{flex:none;height:252px;border-top:1px solid var(--border);background:var(--card);
+          display:flex;flex-direction:column}
+  .drawer.resize{height:3px;flex:none;cursor:row-resize;background:transparent;position:relative}
+  .drawer.resize::after{content:"";position:absolute;inset:0;top:-2px;bottom:-2px;
+        background:transparent}
+  .drawer.resize:hover{background:var(--brand-soft)}
+  .dhead{height:42px;flex:none;display:flex;align-items:center;gap:8px;padding:0 12px;
+         border-bottom:1px solid var(--border-soft)}
+  .dhead .grip{font-size:11px;color:var(--muted-fg-3);letter-spacing:1px;font-family:var(--mono)}
+  .dhead .ttl{font-size:12.5px;font-weight:500}
+  .dhead .cnt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .chips{display:flex;gap:3px;margin-left:10px}
+  .chip{height:22px;padding:0 9px;border-radius:11px;font-size:10.5px;color:var(--muted-fg);
+        border:1px solid transparent;display:flex;align-items:center;gap:5px;cursor:pointer}
+  .chip:hover{background:var(--muted)}
+  .chip.on{background:var(--muted);color:var(--fg);font-weight:500;border-color:var(--border-soft)}
+  .chip .cd{width:6px;height:6px;border-radius:50%}
+  .chip .cn{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .scope{display:flex;align-items:center;height:22px;border:1px solid var(--border);border-radius:11px;
+         overflow:hidden;margin-left:6px}
+  .scope span{padding:0 9px;font-size:10.5px;color:var(--muted-fg);cursor:pointer}
+  .scope span.on{background:var(--brand-soft);color:var(--brand);font-weight:500}
+  .dsearch{margin-left:auto;display:flex;align-items:center;gap:6px;height:26px;width:190px;
+           border:1px solid var(--border);border-radius:6px;background:var(--bg);padding:0 8px}
+  .dsearch:focus-within{border-color:var(--brand)}
+  .dsearch .ico{font-size:11px;color:var(--muted-fg-3)}
+  .dsearch input{border:0;outline:0;background:transparent;font-size:11px;color:var(--fg);width:100%;
+                 font-family:var(--font)}
+  .dsearch input::placeholder{color:var(--muted-fg-3)}
+  .dicons{display:flex;gap:2px}
+  .dicons .ib{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--muted-fg);
+              font-size:12px;cursor:pointer}
+  .dicons .ib:hover{background:var(--muted);color:var(--fg)}
+
+  .dbody{flex:1;min-height:0;overflow-y:auto;position:relative}
+  .dbody::-webkit-scrollbar{width:8px}
+  .dbody::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+  /* 运行分组 */
+  .rgroup{border-bottom:1px solid var(--border-soft)}
+  .rhead{height:30px;display:flex;align-items:center;gap:8px;padding:0 12px 0 10px;cursor:pointer;
+         background:color-mix(in oklab,var(--muted) 40%,transparent);font-size:11px;color:var(--muted-fg)}
+  .rhead:hover{background:var(--muted)}
+  .rhead .chev{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);width:10px}
+  .rhead .st{width:7px;height:7px;border-radius:50%;flex:none}
+  .rhead .rname{font-weight:500;color:var(--fg)}
+  .rhead .rmeta{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .rhead .rlv{display:flex;gap:4px;margin-left:8px}
+  .rhead .rlv i{font-style:normal;font-family:var(--mono);font-size:9.5px;padding:1px 6px;border-radius:8px}
+  .rhead .rgo{margin-left:auto;font-size:10.5px;color:var(--muted-fg-3);display:flex;gap:10px}
+  .rhead .rgo span:hover{color:var(--fg)}
+
+  .lrow{display:flex;align-items:flex-start;gap:8px;padding:4px 12px 4px 30px;font-size:11.5px;line-height:1.55}
+  .lrow:hover{background:color-mix(in oklab,var(--muted) 45%,transparent)}
+  .lrow .lt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);width:56px;flex:none;
+            font-variant-numeric:tabular-nums;padding-top:1px}
+  .lrow .ld{width:6px;height:6px;border-radius:50%;flex:none;margin-top:6px}
+  .lrow .lmsg{font-family:var(--mono);font-size:11px;flex:1;min-width:0;word-break:break-all}
+  .lrow .lcopy{flex:none;font-size:10px;color:var(--muted-fg-3);opacity:0;padding:1px 5px;cursor:pointer}
+  .lrow:hover .lcopy{opacity:1}
+  .lrow .lcopy:hover{color:var(--fg)}
+  mark{background:none;color:var(--mark);font-weight:600;text-decoration:underline;
+       text-decoration-color:color-mix(in oklab,var(--mark) 45%,transparent);text-underline-offset:2px}
+  .collapsed-lines{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);padding:3px 12px 5px 30px}
+
+  /* 日间分隔(磁盘恢复) */
+  .daysep{display:flex;align-items:center;gap:10px;padding:10px 12px 6px;font-family:var(--mono);
+          font-size:9.5px;color:var(--muted-fg-3)}
+  .daysep::after{content:"";flex:1;height:1px;background:var(--border-soft)}
+  .daysep .src{padding:1px 7px;border-radius:8px;background:var(--brand-soft);color:var(--brand);font-size:9.5px}
+
+  .jump{position:absolute;right:14px;bottom:12px;height:26px;padding:0 10px;border-radius:6px;
+        border:1px solid var(--border);background:var(--card);color:var(--muted-fg);font-size:10.5px;
+        display:flex;align-items:center;gap:6px;box-shadow:var(--shadow-card);cursor:pointer}
+  .jump:hover{color:var(--fg)}
+
+  .toast{position:absolute;right:16px;bottom:16px;padding:9px 14px;border-radius:8px;background:var(--card);
+         border:1px solid var(--border);box-shadow:var(--shadow-fly);font-size:11.5px;display:flex;
+         align-items:center;gap:10px}
+  .toast .ok{color:var(--success);font-weight:600}
+  .toast .act{color:var(--brand);font-weight:500;cursor:pointer}
+
+  /* ===== 存放位置 frame ===== */
+  .store{display:grid;grid-template-columns:430px 1fr;gap:16px;padding:26px}
+  .tree{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:16px 18px;
+        font-family:var(--mono);font-size:11.5px;line-height:2.05;box-shadow:var(--shadow-card)}
+  .tree .root{color:var(--muted-fg);font-size:11px;margin-bottom:6px;font-family:var(--font)}
+  .tree .row{display:flex;align-items:baseline;gap:8px;white-space:pre}
+  .tree .row .dep{color:var(--muted-fg-3)}
+  .tree .row .nm{color:var(--fg)}
+  .tree .row .cmt{font-family:var(--font);font-size:10.5px;color:var(--muted-fg);margin-left:auto;white-space:nowrap}
+  .tree .row.hl{background:var(--brand-soft);border-radius:6px;padding:0 6px;margin:0 -6px}
+  .tree .row.hl .nm{font-weight:600}
+
+  .jsonl{border:1px solid var(--border);border-radius:10px;background:var(--paper);overflow:hidden;
+         box-shadow:var(--shadow-card);display:flex;flex-direction:column}
+  .jsonl .jh{padding:10px 14px;border-bottom:1px solid var(--border-soft);font-size:11px;font-weight:500;
+             display:flex;gap:10px;align-items:center;background:var(--card)}
+  .jsonl .jh .pill{font-family:var(--mono);font-size:9.5px;font-weight:400;color:var(--muted-fg);
+                   border:1px solid var(--border);padding:1px 7px;border-radius:8px}
+  .jsonl pre{margin:0;padding:12px 14px;font-family:var(--mono);font-size:10.5px;line-height:1.9;
+             color:var(--fg);overflow-x:auto;white-space:pre}
+  .jsonl .jk{color:var(--brand)}
+  .jsonl .js{color:var(--success)}
+  .jsonl .jn{color:var(--muted-fg)}
+
+  .setrow{margin-top:16px;border:1px solid var(--border);border-radius:10px;background:var(--card);
+          box-shadow:var(--shadow-card);overflow:hidden}
+  .setrow .sh{padding:9px 14px;border-bottom:1px solid var(--border-soft);font-size:11px;font-weight:500;
+              color:var(--muted-fg);display:flex;gap:8px;align-items:center}
+  .setrow .sh .nm{color:var(--fg)}
+  .srow{display:flex;align-items:center;gap:14px;padding:12px 14px;border-bottom:1px solid var(--border-soft)}
+  .srow:last-child{border-bottom:0}
+  .srow .st1{font-size:12px;font-weight:500}
+  .srow .st2{font-size:10.5px;color:var(--muted-fg);margin-top:2px;line-height:1.6}
+  .srow .ctl{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .selbox{height:28px;min-width:130px;border:1px solid var(--border);border-radius:7px;background:var(--bg);
+          font-size:11.5px;padding:0 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--fg)}
+  .selbox::after{content:"▾";color:var(--muted-fg-3);font-size:10px}
+  .btn{height:28px;padding:0 12px;border-radius:7px;border:1px solid var(--border);background:var(--card);
+       font-size:11.5px;color:var(--fg);display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+  .btn:hover{background:var(--muted)}
+  .btn.pri{background:var(--brand);border-color:var(--brand);color:var(--brand-fg);font-weight:500}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">原型 071 · PROTOTYPE</div>
+    <h1>日志面板与存放位置重设计</h1>
+    <p>把<b>运行日志</b>从「内存浮窗」升级为「<b>底部停靠抽屉 + 按运行分组 + 落盘 JSONL</b>」。当前日志只存在 <code>useLogs</code> 的
+       <code>useState</code> 里,重启即丢;本版四件事:① 面板停靠画布底部,不再与画布/数据预览抢位置;② 日志按<b>执行运行</b>分组,
+       并发多标签不再交错;③ 新增搜索与级别 chips;④ 日志落盘到 <code>data/logs/</code> 按天滚动的 JSONL,重启回填、按保留天数清理。</p>
+    <button class="theme-toggle" onclick="document.documentElement.classList.toggle('dark')">◐ 主题</button>
+  </div>
+
+  <dl class="direction">
+    <div><dt>01 · 停靠</dt><dd>日志抽屉占内容区底部,拖拽调高、可最大化;不再浮动遮挡</dd></div>
+    <div><dt>02 · 分组</dt><dd>一次执行 = 一个运行组;组头带状态/耗时/行数,组内不再逐行挂标签页徽标</dd></div>
+    <div><dt>03 · 检索</dt><dd>级别过滤从下拉改 chips(带计数),新增全文搜索与命中高亮</dd></div>
+    <div><dt>04 · 持久化</dt><dd>落盘 JSONL 按天滚动,重启回填近两天;保留天数可设,0 = 不落盘</dd></div>
+    <div><dt>05 · 出口</dt><dd>导出 .log / 打开日志目录;执行历史(摘要)与日志(全文)分工不变</dd></div>
+  </dl>
+
+  <!-- ============ FRAME 1 ============ -->
+  <div class="frame">
+    <div class="cap">FRAME 01 <b>停靠抽屉 · 按运行分组</b> <span class="file">01-log-panel-storage.html</span></div>
+    <div class="stage">
+      <div class="app">
+        <div class="titlebar">
+          <div class="logo"></div>
+          <div class="menus"><span>文件</span><span class="on">编辑</span><span>执行</span><span>工具</span><span>帮助</span></div>
+          <div class="tabs">
+            <div class="tab sel"><span class="dot" style="background:var(--success)"></span>销售数据-2024</div>
+            <div class="tab"><span class="dot" style="background:var(--danger)"></span>库存清洗</div>
+          </div>
+          <div class="winbtns"><i></i><i></i><i></i></div>
+        </div>
+        <div class="canvas">
+          <div class="edge" style="left:210px;top:96px;width:90px;transform:rotate(14deg)"></div>
+          <div class="edge" style="left:420px;top:126px;width:80px;transform:rotate(-6deg)"></div>
+          <div class="node" style="left:70px;top:60px;width:140px"><div class="nk">输入</div><div class="nt">sales_2024.csv</div></div>
+          <div class="node sel" style="left:300px;top:100px;width:120px"><div class="nk">变换</div><div class="nt">groupby</div></div>
+          <div class="node" style="left:500px;top:92px;width:110px"><div class="nk">变换</div><div class="nt">sort</div></div>
+        </div>
+
+        <div class="drawer resize"></div>
+        <div class="drawer">
+          <div class="dhead">
+            <span class="grip">⠿</span>
+            <span class="ttl">日志</span>
+            <span class="cnt">23 条</span>
+            <div class="chips">
+              <div class="chip on">全部 <span class="cn">23</span></div>
+              <div class="chip"><span class="cd" style="background:var(--info)"></span>信息 <span class="cn">9</span></div>
+              <div class="chip"><span class="cd" style="background:var(--success)"></span>成功 <span class="cn">8</span></div>
+              <div class="chip"><span class="cd" style="background:var(--warning)"></span>警告 <span class="cn">4</span></div>
+              <div class="chip"><span class="cd" style="background:var(--danger)"></span>错误 <span class="cn">2</span></div>
+            </div>
+            <div class="scope"><span class="on">当前标签页</span><span>全部</span></div>
+            <div class="dsearch">
+              <span class="ico">⌕</span>
+              <input placeholder="搜索日志…" value="" />
+            </div>
+            <div class="dicons">
+              <div class="ib" title="导出日志">⭳</div>
+              <div class="ib" title="打开日志目录">▸</div>
+              <div class="ib" title="执行历史">◷</div>
+              <div class="ib" title="清空">🗑</div>
+              <div class="ib" title="最大化">⛶</div>
+              <div class="ib" title="关闭">✕</div>
+            </div>
+          </div>
+          <div class="dbody">
+
+            <div class="rgroup">
+              <div class="rhead">
+                <span class="chev">▾</span>
+                <span class="st" style="background:var(--danger)"></span>
+                <span class="rname">库存清洗</span>
+                <span class="rmeta">14:37:12 · 0.4 s · 7 行</span>
+                <span class="rlv"><i style="background:var(--danger-soft);color:var(--danger)">错误 ×1</i>
+                                    <i style="background:var(--warning-soft);color:var(--warning)">警告 ×2</i></span>
+                <span class="rgo"><span>复制全部</span><span>重跑</span></span>
+              </div>
+              <div class="lrow">
+                <span class="lt">14:37:12</span><span class="ld" style="background:var(--info)"></span>
+                <span class="lmsg">开始执行: xan filter 'stock &lt; 50' | xan groupby region --agg sum(金额) as 合计</span>
+                <span class="lcopy">复制</span>
+              </div>
+              <div class="lrow">
+                <span class="lt">14:37:12</span><span class="ld" style="background:var(--warning)"></span>
+                <span class="lmsg">第 2 步 groupby: 12 行金额为空值,已按空值聚合(非 N/A)</span>
+                <span class="lcopy">复制</span>
+              </div>
+              <div class="lrow">
+                <span class="lt">14:37:12</span><span class="ld" style="background:var(--warning)"></span>
+                <span class="lmsg">第 2 步 groupby: 3 行 region 为空,归入 &lt;empty&gt;</span>
+                <span class="lcopy">复制</span>
+              </div>
+              <div class="lrow">
+                <span class="lt">14:37:13</span><span class="ld" style="background:var(--danger)"></span>
+                <span class="lmsg">xan groupby: cannot safely cast Bytes("N/A") —— 第 1 步输出的「金额」列含字符串 N/A</span>
+                <span class="lcopy">复制</span>
+              </div>
+              <div class="lrow">
+                <span class="lt">14:37:13</span><span class="ld" style="background:var(--info)"></span>
+                <span class="lmsg">执行中止,耗时 0.4 s;完整报错可在执行历史中查看</span>
+                <span class="lcopy">复制</span>
+              </div>
+            </div>
+
+            <div class="rgroup">
+              <div class="rhead">
+                <span class="chev">▾</span>
+                <span class="st" style="background:var(--success)"></span>
+                <span class="rname">销售数据-2024</span>
+                <span class="rmeta">14:32:08 · 1.2 s · 9 行</span>
+                <span class="rlv"><i style="background:var(--success-soft);color:var(--success)">成功</i></span>
+                <span class="rgo"><span>复制全部</span><span>重跑</span></span>
+              </div>
+              <div class="lrow">
+                <span class="lt">14:32:08</span><span class="ld" style="background:var(--info)"></span>
+                <span class="lmsg">开始执行: 3 个步骤,输入 sales_2024.csv(131 MB)</span>
+                <span class="lcopy">复制</span>
+              </div>
+              <div class="collapsed-lines">… 5 行(第 1 步 filter、第 2 步 eval 已折叠) …</div>
+              <div class="lrow">
+                <span class="lt">14:32:09</span><span class="ld" style="background:var(--success)"></span>
+                <span class="lmsg">执行完成: 输出 24.6 MB,完成于 14:32:09,耗时 1.2 s</span>
+                <span class="lcopy">复制</span>
+              </div>
+            </div>
+
+            <div class="rgroup">
+              <div class="rhead">
+                <span class="chev">▸</span>
+                <span class="st" style="background:var(--muted-fg-3)"></span>
+                <span class="rname" style="color:var(--muted-fg)">应用</span>
+                <span class="rmeta">14:20:31 · 3 行</span>
+                <span class="rgo"></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+      <div class="state-note"><b>状态:</b> 抽屉停靠内容区底部(标题栏之下),拖上边缘调高、⛶ 最大化覆盖画布;组头右侧给「复制全部 / 重跑」,组内行 hover 才出现「复制」。两个标签页并发执行(设计 028)各自成组,不再交错。</div>
+    </div>
+    <div class="notes">
+      <div class="callout"><span class="mk">1</span><div><b>运行组是日志的主结构。</b>组头回答「哪次执行、结果如何、贵不贵」(状态点 + 标签名 + 时间 + 耗时 + 行数 + 级别小计);组内行只留时间 + 级别点 + 消息,标签页徽标上移到组头,<b>少一半重复信息</b>。</div></div>
+      <div class="callout"><span class="mk">2</span><div><b>执行中的组置顶并显示旋转指示</b>(原型未演示),完成的组按开始时间倒序;「应用」组收纳无标签页的 app 级日志(启动、更新检查、插件),可折叠。</div></div>
+      <div class="callout"><span class="mk">3</span><div><b>级别过滤改 chips。</b>原 Select 折叠了四个级别还挤占标题栏;chips 与执行历史的语义一致,且计数常驻,点空级别不会「看起来没反应」。</div></div>
+      <div class="callout bad"><span class="mk">!</span><div><b>明确的红线:</b> 不改画布连线手势,不给未连线节点加任何日志提示(设计 027 红线);日志抽屉只覆盖内容区,不动标题栏与标签页。</div></div>
+    </div>
+  </div>
+
+  <!-- ============ FRAME 2 ============ -->
+  <div class="frame">
+    <div class="cap">FRAME 02 <b>检索态 · 级别=错误 + 搜索「分隔符」</b></div>
+    <div class="stage">
+      <div class="app" style="height:520px">
+        <div class="titlebar">
+          <div class="logo"></div>
+          <div class="menus"><span>文件</span><span>编辑</span><span class="on">执行</span><span>工具</span><span>帮助</span></div>
+          <div class="tabs">
+            <div class="tab sel"><span class="dot" style="background:var(--success)"></span>销售数据-2024</div>
+          </div>
+          <div class="winbtns"><i></i><i></i><i></i></div>
+        </div>
+        <div class="canvas" style="background:var(--muted)"></div>
+        <div class="drawer resize"></div>
+        <div class="drawer" style="height:300px">
+          <div class="dhead">
+            <span class="grip">⠿</span>
+            <span class="ttl">日志</span>
+            <span class="cnt">命中 3 / 23</span>
+            <div class="chips">
+              <div class="chip">全部 <span class="cn">23</span></div>
+              <div class="chip"><span class="cd" style="background:var(--info)"></span>信息 <span class="cn">9</span></div>
+              <div class="chip"><span class="cd" style="background:var(--success)"></span>成功 <span class="cn">8</span></div>
+              <div class="chip"><span class="cd" style="background:var(--warning)"></span>警告 <span class="cn">4</span></div>
+              <div class="chip on"><span class="cd" style="background:var(--danger)"></span>错误 <span class="cn">2</span></div>
+            </div>
+            <div class="scope"><span class="on">当前标签页</span><span>全部</span></div>
+            <div class="dsearch" style="width:220px">
+              <span class="ico">⌕</span>
+              <input value="分隔符" />
+              <span style="font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);white-space:nowrap">1/3 ↵</span>
+            </div>
+            <div class="dicons">
+              <div class="ib" title="导出日志">⭳</div>
+              <div class="ib" title="打开日志目录">▸</div>
+              <div class="ib" title="执行历史">◷</div>
+              <div class="ib" title="清空">🗑</div>
+              <div class="ib" title="最大化">⛶</div>
+              <div class="ib" title="关闭">✕</div>
+            </div>
+          </div>
+          <div class="dbody">
+            <div class="daysep">今天 · 11-22</div>
+            <div class="rgroup" style="border-top:0">
+              <div class="rhead">
+                <span class="chev">▾</span>
+                <span class="st" style="background:var(--danger)"></span>
+                <span class="rname">库存清洗</span>
+                <span class="rmeta">14:37:13 · 0.4 s · 命中 1</span>
+                <span class="rgo"><span>复制全部</span></span>
+              </div>
+              <div class="lrow">
+                <span class="lt">14:37:13</span><span class="ld" style="background:var(--danger)"></span>
+                <span class="lmsg">第 1 步 filter: <mark>分隔符</mark>检测为制表符(\t),与文件扩展名 .csv 不一致,已按检测值解析</span>
+                <span class="lcopy">复制</span>
+              </div>
+            </div>
+            <div class="daysep">昨天 · 11-21 <span class="src">来自磁盘</span></div>
+            <div class="rgroup">
+              <div class="rhead">
+                <span class="chev">▾</span>
+                <span class="st" style="background:var(--danger)"></span>
+                <span class="rname">销售数据-2024</span>
+                <span class="rmeta">09:14:02 · 0.2 s · 命中 2</span>
+                <span class="rgo"><span>复制全部</span></span>
+              </div>
+              <div class="lrow">
+                <span class="lt">09:14:02</span><span class="ld" style="background:var(--danger)"></span>
+                <span class="lmsg">"'金额' does not exist as a named header" —— <mark>分隔符</mark>错把整行表头解析成一个字段</span>
+                <span class="lcopy">复制</span>
+              </div>
+              <div class="lrow">
+                <span class="lt">09:14:02</span><span class="ld" style="background:var(--danger)"></span>
+                <span class="lmsg">执行中止: 未指定 -d,全局默认<mark>分隔符</mark>(,)与实际(; )不符,请在输入节点钉 defaultDelimiter</span>
+                <span class="lcopy">复制</span>
+              </div>
+            </div>
+            <div class="jump"><span>↓</span> 跳到最新</div>
+          </div>
+        </div>
+      </div>
+      <div class="state-note"><b>状态:</b> 级别 chips + 搜索是 <b>AND</b> 关系,命中数显示「命中 3 / 23」;搜索框内 ↑/↓ 在命中间跳转,不执行 IME 组字中的回车。命中词加下划线着色(不用底色,避免和级别点抢颜色)。</div>
+    </div>
+    <div class="notes">
+      <div class="callout"><span class="mk">4</span><div><b>跨会话恢复是「回填」不是「接管」。</b>重启后从磁盘读昨天+今天日志回填到列表,加「来自磁盘」徽标与日期分隔线;磁盘里的行<b>只读</b>(不能单行删除),清空按钮只清内存并问是否连文件一起清。</div></div>
+      <div class="callout"><span class="mk">5</span><div><b>搜索也吃执行记忆:</b>报错文案可以反查输入形态(如 header 错 → 分隔符不对),所以日志全文必须可搜,这是落盘的直接收益之一。</div></div>
+    </div>
+  </div>
+
+  <!-- ============ FRAME 3 ============ -->
+  <div class="frame">
+    <div class="cap">FRAME 03 <b>存放位置 · 目录结构与 JSONL · 设置项</b></div>
+    <div class="stage">
+      <div class="store">
+        <div>
+          <div class="tree">
+            <div class="root">数据目录(遵循设计 022)= exe 所在目录 /data</div>
+            <div class="row"><span class="dep">data/</span><span class="nm"></span><span class="cmt">现有</span></div>
+            <div class="row"><span class="dep">├─ </span><span class="nm">execution_history.db</span><span class="cmt">执行历史 · SQLite 摘要(不变)</span></div>
+            <div class="row"><span class="dep">├─ </span><span class="nm">settings.json</span><span class="cmt">应用配置(不变)</span></div>
+            <div class="row hl"><span class="dep">└─ </span><span class="nm">logs/</span><span class="cmt">← 新增 · 运行日志(JSONL)</span></div>
+            <div class="row hl"><span class="dep">&nbsp;&nbsp;&nbsp;&nbsp;├─ </span><span class="nm">easy-csv-2026-11-22.log</span><span class="cmt">今天 · 追加写</span></div>
+            <div class="row"><span class="dep">&nbsp;&nbsp;&nbsp;&nbsp;├─ </span><span class="nm">easy-csv-2026-11-21.log</span></div>
+            <div class="row"><span class="dep">&nbsp;&nbsp;&nbsp;&nbsp;└─ </span><span class="nm">easy-csv-2026-11-15.log</span><span class="cmt">超保留期,启动时清理</span></div>
+          </div>
+          <div class="setrow">
+            <div class="sh">设置 · <span class="nm">日志</span> 组(设计 040 的目录结构)</div>
+            <div class="srow">
+              <div>
+                <div class="st1">日志保留天数</div>
+                <div class="st2">每天一个 .log 文件,超过保留天数在启动时清理;0 = 只存内存,不写文件</div>
+              </div>
+              <div class="ctl"><div class="selbox">7 天</div></div>
+            </div>
+            <div class="srow">
+              <div>
+                <div class="st1">日志文件</div>
+                <div class="st2">easy-csv-2026-11-22.log · 84 KB</div>
+              </div>
+              <div class="ctl"><button class="btn">打开日志目录</button></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="jsonl">
+            <div class="jh">一行一条 JSON,UTF-8,无 BOM <span class="pill">JSONL</span><span class="pill">追加写</span></div>
+            <pre><span class="jn">{"</span><span class="jk">ts</span><span class="jn">":</span>"2026-11-22T14:37:13.482+08:00"<span class="jn">,"</span><span class="jk">level</span><span class="jn">":</span>"error"<span class="jn">,</span>
+ <span class="jn">"</span><span class="jk">tabId</span><span class="jn">":</span>"t_a3f1"<span class="jn">,"</span><span class="jk">tabName</span><span class="jn">":</span>"库存清洗"<span class="jn">,"</span><span class="jk">runId</span><span class="jn">":</span>"r_9c2e"<span class="jn">,</span>
+ <span class="jn">"</span><span class="jk">message</span><span class="jn">":</span><span class="js">"xan groupby: cannot safely cast Bytes(\"N/A\")"</span><span class="jn">}</span>
+
+<span class="jn">{"</span><span class="jk">ts</span><span class="jn">":</span>"2026-11-22T14:37:13.490+08:00"<span class="jn">,"</span><span class="jk">level</span><span class="jn">":</span>"info"<span class="jn">,</span>
+ <span class="jn">"</span><span class="jk">tabId</span><span class="jn">":</span>"t_a3f1"<span class="jn">,"</span><span class="jk">tabName</span><span class="jn">":</span>"库存清洗"<span class="jn">,"</span><span class="jk">runId</span><span class="jn">":</span>"r_9c2e"<span class="jn">,</span>
+ <span class="jn">"</span><span class="jk">message</span><span class="jn">":</span><span class="js">"执行中止,耗时 0.4 s"</span><span class="jn">}</span></pre>
+          </div>
+          <div class="notes" style="grid-template-columns:1fr;margin-top:16px">
+            <div class="callout"><span class="mk">6</span><div><b>为什么 JSONL 而不是塞进 SQLite:</b>执行历史是<b>结构化记录</b>(要按状态/时间查询、要裁剪到 100 条),日志是<b>审计流水</b>(要 grep、要整文件带走、坏了丢一段不影响其它天)。按天一文件,清理 = 删旧文件,单文件损坏不牵连历史;与 SQLite 基建互不依赖。</div></div>
+            <div class="callout"><span class="mk">7</span><div><b>写入纪律:</b>前端 <code>addLog</code> 同步内存 + 异步 <code>append_log</code> invoke 落盘;<b>落盘失败静默降级为纯内存</b>(日志系统永远不反打断业务);单行上限 8 KB,超出截断加省略标记;消息里的换行原样转义保留。</div></div>
+            <div class="callout"><span class="mk">8</span><div><b>容量三道闸:</b>内存列表上限 500 行(旧的移出内存但文件仍在);单文件超过 5 MB 滚动为 <code>.old</code>(同日最多一份);保留天数默认 7,设置可调 0–90。导出走现有另存对话框,导出<b>当前过滤后的可见行</b>或整文件二选一。</div></div>
+            <div class="callout"><span class="mk">9</span><div><b>与执行历史的分工:</b>历史(◱ 入口)给「哪次跑、几行、几字节、快照哈希」;日志抽屉给「当时逐条发生了什么」。两者通过 <code>runId</code> 关联但不互写,打开历史不读日志文件。</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FRAME 4 ============ -->
+  <div class="frame">
+    <div class="cap">FRAME 04 <b>执行完成 Toast · 带动作按钮</b>(复用 027 §4.3 的 Toast 能力)</div>
+    <div class="stage" style="padding:0">
+      <div class="app" style="height:180px">
+        <div class="canvas" style="background:var(--muted)"></div>
+        <div class="toast"><span class="ok">✓</span> 执行完成 14:32:09 · 1.2 s<span class="act">查看日志</span><span class="act">打开目录</span></div>
+      </div>
+      <div class="state-note"><b>状态:</b> Toast 停留期间抽屉若关闭,「查看日志」重新打开抽屉并<b>滚到该运行组</b>;「打开目录」直达 <code>data/logs/</code>(复用 <code>reveal_paths</code>)。</div>
+    </div>
+  </div>
+
+</div>
+<script>
+  /* chips / scope / 组头 仅演示点击态 */
+  document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+    c.parentElement.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');
+  }));
+  document.querySelectorAll('.scope').forEach(s=>s.querySelectorAll('span').forEach(x=>x.addEventListener('click',()=>{
+    s.querySelectorAll('span').forEach(y=>y.classList.remove('on'));x.classList.add('on');
+  })));
+  document.querySelectorAll('.rhead').forEach(h=>h.addEventListener('click',e=>{
+    if(e.target.tagName==='SPAN'&&e.target.parentElement.className==='rgo')return;
+    const body=h.parentElement,chev=h.querySelector('.chev');
+    const open=chev.textContent==='▾';chev.textContent=open?'▸':'▾';
+    body.querySelectorAll('.lrow,.collapsed-lines').forEach(r=>r.style.display=open?'none':'');
+  }));
+</script>
+</body>
+</html>

@@ -32,6 +32,12 @@ pub struct AppConfig {
   /// Maximum number of pipelines that may execute at the same time; the extra
   /// ones wait in FIFO order. `None` → app default (4).
   pub max_concurrent_runs: Option<u32>,
+  /// Log file retention in days; 0 disables on-disk persistence entirely
+  /// `None` → app default (7).
+  pub log_retention_days: Option<u32>,
+  /// Auto-open the log drawer when a run starts (071 feedback). `None` →
+  /// app default (false): the completion toast owns opening.
+  pub auto_show_log_panel: Option<bool>,
 }
 
 impl Default for AppConfig {
@@ -46,6 +52,8 @@ impl Default for AppConfig {
       auto_check_update: Some(true),
       plugin_download_prefix: None,
       max_concurrent_runs: None,
+      log_retention_days: None,
+      auto_show_log_panel: None,
     }
   }
 }
@@ -521,6 +529,8 @@ pub fn load_config() -> Result<AppConfig, String> {
   let auto_check_update = get_config_string("auto_check_update").and_then(|v| v.parse().ok());
   let plugin_download_prefix = get_config_string("plugin_download_prefix");
   let max_concurrent_runs = get_config_string("max_concurrent_runs").and_then(|v| v.parse().ok());
+  let log_retention_days = get_config_string("log_retention_days").and_then(|v| v.parse().ok());
+  let auto_show_log_panel = get_config_string("auto_show_log_panel").and_then(|v| v.parse().ok());
 
   Ok(AppConfig {
     default_delimiter: default_delimiter.or(default.default_delimiter),
@@ -533,6 +543,8 @@ pub fn load_config() -> Result<AppConfig, String> {
     auto_check_update: auto_check_update.or(default.auto_check_update),
     plugin_download_prefix: plugin_download_prefix.or(default.plugin_download_prefix),
     max_concurrent_runs: max_concurrent_runs.or(default.max_concurrent_runs),
+    log_retention_days: log_retention_days.or(default.log_retention_days),
+    auto_show_log_panel: auto_show_log_panel.or(default.auto_show_log_panel),
   })
 }
 
@@ -568,6 +580,12 @@ pub fn save_config(config: &AppConfig) -> Result<(), String> {
   }
   if let Some(v) = config.max_concurrent_runs {
     set_config_string("max_concurrent_runs", &v.to_string())?;
+  }
+  if let Some(v) = config.log_retention_days {
+    set_config_string("log_retention_days", &v.to_string())?;
+  }
+  if let Some(v) = config.auto_show_log_panel {
+    set_config_string("auto_show_log_panel", &v.to_string())?;
   }
   Ok(())
 }
@@ -739,6 +757,36 @@ pub async fn get_max_concurrent_runs() -> Option<u32> {
 pub async fn set_max_concurrent_runs(value: u32) -> Result<(), String> {
   let mut config = load_config()?;
   config.max_concurrent_runs = Some(value.clamp(1, 16));
+  save_config(&config)
+}
+
+#[tauri::command]
+pub async fn get_log_retention_days() -> Option<u32> {
+  load_config().unwrap_or_default().log_retention_days
+}
+
+/// Persist the log file retention in days (design 071).
+///
+/// Clamped to 0..=90: `0` means logs live in memory only, and beyond three
+/// months the files stop earning their space on disk.
+#[tauri::command]
+pub async fn set_log_retention_days(value: u32) -> Result<(), String> {
+  let mut config = load_config()?;
+  config.log_retention_days = Some(value.clamp(0, 90));
+  save_config(&config)
+}
+
+#[tauri::command]
+pub async fn get_auto_show_log_panel() -> Option<bool> {
+  load_config().unwrap_or_default().auto_show_log_panel
+}
+
+/// Auto-open the log drawer when a run starts (design 071 feedback); the
+/// default is off — the completion toast owns opening.
+#[tauri::command]
+pub async fn set_auto_show_log_panel(enabled: bool) -> Result<(), String> {
+  let mut config = load_config()?;
+  config.auto_show_log_panel = Some(enabled);
   save_config(&config)
 }
 

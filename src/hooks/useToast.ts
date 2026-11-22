@@ -6,12 +6,15 @@ export interface Toast {
   message: string;
   type: ToastType;
   action?: ToastAction;
+  actions?: ToastAction[];
   duration?: number;
 }
 
 export interface ToastOptions {
   /** Optional button, e.g. the pipeline-completion toast's "View result". */
   action?: ToastAction;
+  /** Multiple buttons (071: 查看日志 / 打开目录). */
+  actions?: ToastAction[];
   /** Milliseconds before auto-dismiss (Toast's own default is 5000). */
   duration?: number;
 }
@@ -29,6 +32,7 @@ export function useToast() {
           message,
           type,
           action: options?.action,
+          actions: options?.actions,
           duration: options?.duration,
         },
       ]);

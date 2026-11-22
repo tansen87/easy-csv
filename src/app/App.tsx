@@ -126,8 +126,17 @@ function AppContent() {
   // Toast
   const { toasts, showToast, showToastRef, removeToastRef } = useToast();
 
-  // Logs
-  const { logs, addLog, removeLog, clearLogs } = useLogs();
+  // Logs. The tab-name lookup is filled in once tabs exist; the ref indirection
+  // keeps the callback identity stable for useLogs' internal effects.
+  const tabNameLookupRef = useRef<(tabId: string) => string | undefined>(
+    () => undefined,
+  );
+  const lookupTabName = useCallback(
+    (tabId: string) => tabNameLookupRef.current(tabId),
+    [],
+  );
+  const { logs, addLog, removeLog, clearLogs, refreshRetention } =
+    useLogs(lookupTabName);
 
   // UI visibility state
   const ui = useUIState();
@@ -185,6 +194,13 @@ function AppContent() {
     requestDuckdbTableSelection,
     handleTabularOpenError,
   );
+
+  // Fill in the tab-name lookup once tabs exist (re-assigned every render;
+  // the assignment itself is idempotent).
+  useEffect(() => {
+    tabNameLookupRef.current = (tabId: string) =>
+      tabsHook.tabs.find((tab) => tab.id === tabId)?.name;
+  });
 
   /**
    * The app-wide delimiter mode, edited from two places that are mirrors of each
@@ -727,6 +743,7 @@ function AppContent() {
     getTabById: tabsCtl.getTabById,
     setSelectedTabId: tabsHook.setSelectedTabId,
     maxConcurrentRuns: settings.maxConcurrentRuns,
+    autoShowLogPanel: settings.autoShowLogPanel,
     showToast,
     addLog,
     setTabs: tabsHook.setTabs,
@@ -741,6 +758,7 @@ function AppContent() {
 
   const {
     handleExecute,
+    runTab,
     resultPreview,
     overwriteConfirm,
     confirmOverwriteExecution,
@@ -1376,6 +1394,38 @@ function AppContent() {
   );
   const onShowSettings = useCallback(() => ui.setShowSettingsDialog(true), []);
 
+  /** Export the filtered log lines the drawer shows (design 071 §2.5). */
+  const handleExportLogs = useCallback(
+    async (text: string) => {
+      if (!text.trim()) return;
+      try {
+        const path = await saveDialog({
+          title: t.logExport,
+          defaultPath: "easy-csv-logs.log",
+          filters: [{ name: "Log", extensions: ["log"] }],
+        });
+        if (!path) return;
+        await writeFile(path, new TextEncoder().encode(text));
+        showToastRef.current(t.logExportSuccess, "success");
+      } catch (error) {
+        showToastRef.current(`Failed to export logs: ${error}`, "error");
+      }
+    },
+    [showToastRef, t],
+  );
+
+  const handleOpenLogsDir = useCallback(() => {
+    invoke("reveal_logs_dir").catch((error) =>
+      showToastRef.current(`Failed to open log folder: ${error}`, "error"),
+    );
+  }, [showToastRef]);
+
+  /** Re-run the pipeline that produced a log run group. */
+  const handleRerunFromLog = useCallback(
+    (tabId: string) => void runTab(tabId),
+    [runTab],
+  );
+
   // Settings save
   const handleSaveSettings = useCallback(async () => {
     try {
@@ -1401,10 +1451,17 @@ function AppContent() {
       await invoke("set_max_concurrent_runs", {
         value: settings.maxConcurrentRuns,
       });
+      await invoke("set_log_retention_days", {
+        value: settings.logRetentionDays,
+      });
+      await invoke("set_auto_show_log_panel", {
+        enabled: settings.autoShowLogPanel,
+      });
+      await refreshRetention();
     } catch (error) {
       showToastRef.current(`Failed to save settings: ${error}`, "error");
     }
-  }, [settings, showToastRef]);
+  }, [settings, showToastRef, refreshRetention]);
 
   const hasInputFile = !!tabsHook.getCurrentTab()?.inputFile;
 
@@ -2099,6 +2156,9 @@ function AppContent() {
               dialogs.open("history");
               executionHistory.loadHistory();
             }}
+            onExport={(text) => void handleExportLogs(text)}
+            onOpenLogsDir={handleOpenLogsDir}
+            onRerun={handleRerunFromLog}
             dockState={session.panelStates.logPanel}
             onDockChange={(patch) =>
               session.updatePanelState("logPanel", patch)
@@ -2157,6 +2217,11 @@ function AppContent() {
             onAutoCheckUpdateChange={settings.setAutoCheckUpdate}
             maxConcurrentRuns={settings.maxConcurrentRuns}
             onMaxConcurrentRunsChange={settings.setMaxConcurrentRuns}
+            logRetentionDays={settings.logRetentionDays}
+            onLogRetentionDaysChange={settings.setLogRetentionDays}
+            autoShowLogPanel={settings.autoShowLogPanel}
+            onAutoShowLogPanelChange={settings.setAutoShowLogPanel}
+            onOpenLogsDir={handleOpenLogsDir}
             onResetOnboarding={onboarding.reset}
             onSave={handleSaveSettings}
             aiConfig={aiConfig}

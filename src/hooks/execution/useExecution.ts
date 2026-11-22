@@ -50,11 +50,18 @@ interface UseExecutionProps {
   setSelectedTabId: (tabId: string) => void;
   /** Parallel run limit from settings. */
   maxConcurrentRuns?: number;
+  /** Auto-open the log drawer when a run starts (071); default off. */
+  autoShowLogPanel?: boolean;
   showToast: (
     message: string,
     type?: "info" | "success" | "warning" | "error",
   ) => void;
-  addLog: (type: LogEntry["type"], message: string, tabId?: string) => void;
+  addLog: (
+    type: LogEntry["type"],
+    message: string,
+    tabId?: string,
+    runId?: string,
+  ) => void;
   setTabs: Dispatch<SetStateAction<PipelineTab[]>>;
   setShowLogPanel: (value: boolean) => void;
   setShowChartPanel: (value: boolean) => void;
@@ -93,6 +100,7 @@ export function useExecution({
   getTabById,
   setSelectedTabId,
   maxConcurrentRuns = DEFAULT_MAX_CONCURRENT_RUNS,
+  autoShowLogPanel = false,
   showToast,
   addLog,
   setTabs,
@@ -256,8 +264,10 @@ export function useExecution({
       isCancelled: () =>
         runFlagsRef.current.get(session.runId)?.cancelled ?? false,
       onProgress: (value) => updateRun(session.runId, { branch: value }),
-      // Every line this run produces is tagged with its tab.
-      log: (type, message) => addLog(type, message, session.tabId),
+      // Every line this run produces is tagged with its tab and run (design
+      // 071 run groups).
+      log: (type, message) =>
+        addLog(type, message, session.tabId, session.runId),
     }),
     [addLog, updateRun],
   );
@@ -269,8 +279,15 @@ export function useExecution({
       releaseRun: releaseRunSlot,
       updateTab,
       showToast,
-      labels: { cycleDetected: t.cycleDetected },
+      labels: {
+        cycleDetected: t.cycleDetected,
+        runCompleteToast: t.runCompleteToast,
+        runFailedToast: t.runFailedToast,
+        viewLogs: t.toastViewLogs,
+        openLogsDir: t.logOpenDir,
+      },
       setShowLogPanel,
+      autoShowLogPanel,
       requestOverwritePrompt: (runId, data) =>
         enqueuePrompt({ kind: "overwrite", runId, data }),
       stashPendingRunValues: (runId, values) =>
@@ -295,6 +312,7 @@ export function useExecution({
       formatDateTime,
       releaseRunSlot,
       saveExecutionHistory,
+      autoShowLogPanel,
       saveVersion,
       setShowChartPanel,
       setShowLogPanel,

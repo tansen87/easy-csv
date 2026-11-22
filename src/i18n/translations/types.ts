@@ -417,6 +417,28 @@ export interface Translations {
   logLevelError: string;
   logCountUnit: string;
   logJumpToLatest: string;
+  settingsGroupLogs: string;
+  logRetentionDays: string;
+  logRetentionDaysDesc: string;
+  logOpenDirAction: string;
+  logOpenDirDesc: string;
+  autoShowLogPanel: string;
+  autoShowLogPanelDesc: string;
+  logSearchPlaceholder: string;
+  logHits: string;
+  logExport: string;
+  logExportSuccess: string;
+  logOpenDir: string;
+  logGroupApp: string;
+  logCopyAll: string;
+  logRerun: string;
+  logFromDisk: string;
+  logDayToday: string;
+  logDayYesterday: string;
+  logResizeHint: string;
+  runCompleteToast: string;
+  runFailedToast: string;
+  toastViewLogs: string;
 
   // Floating panel docking
   collapsePanel: string;

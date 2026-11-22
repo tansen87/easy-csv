@@ -1,28 +1,42 @@
 import {
-  Trash2,
-  Copy,
+  ArrowDown,
   Check,
-  X,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Download,
+  FolderOpen,
+  History,
   Maximize2,
   Minimize2,
-  ArrowDown,
-  History,
-  Hand,
+  RotateCcw,
+  Search,
+  Trash2,
+  X,
 } from "lucide-react";
 import React, {
-  useState,
-  useRef,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
-  useCallback,
+  useRef,
+  useState,
 } from "react";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
-import { Select } from "@/components/ui/Select";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { LogEntry, PanelDockState } from "@/types/xan";
 import { useLanguage } from "@/i18n";
+import {
+  APP_GROUP_KEY,
+  LevelFilter,
+  LogRunGroup,
+  TabScope,
+  buildLogGroups,
+  filterLogs,
+  highlightMessage,
+  levelTotals,
+} from "@/modules/logs/lib/logGroups";
 
 interface LogPanelProps {
   logs: LogEntry[];
@@ -31,13 +45,19 @@ interface LogPanelProps {
   isVisible: boolean;
   onClose: () => void;
   onShowHistory?: () => void;
-  /** Persisted docking state. */
+  /** Export the currently visible (filtered) lines; text is prebuilt here. */
+  onExport?: (text: string) => void;
+  /** Open `data/logs/` in the system file manager. */
+  onOpenLogsDir?: () => void;
+  /** Re-run the pipeline that produced a run group. */
+  onRerun?: (tabId: string) => void;
+  /** Persisted drawer height (docked drawer). */
   dockState?: PanelDockState;
-  /** Report position changes for persistence. */
+  /** Report height changes for persistence. */
   onDockChange?: (patch: Partial<PanelDockState>) => void;
   /** Current tab, for the 「仅当前标签页」 log scope. */
   selectedTabId?: string;
-  /** Tab id → name, used for the per-line badge. */
+  /** Tab id → name, used for the group headers. */
   tabs?: { id: string; name: string }[];
 }
 
@@ -49,38 +69,40 @@ const LOG_DOT_CLASS: Record<LogEntry["type"], string> = {
   error: "bg-danger",
 };
 
-const pad2 = (value: number) => String(value).padStart(2, "0");
-
-/**
- * Keep a docked left inside the viewport. The saved x can come from a wider
- * window (e.g. the app was maximized when the panel was dragged); restoring the
- * window shrank the viewport, and an unclamped x used to place the panel
- * entirely past the right edge — still "open" but invisible.
- */
-const clampDockX = (x: number, panelWidth: number) =>
-  Math.max(0, Math.min(x, Math.max(0, window.innerWidth - panelWidth)));
-
-/** The panel is 300px tall; also clamp a dragged top after a window restore. */
-const clampDraggedTop = (el: HTMLElement) => {
-  const top = Number.parseFloat(el.style.top);
-  if (Number.isNaN(top)) return;
-  const maxTop = Math.max(56, window.innerHeight - 300);
-  el.style.top = `${Math.max(56, Math.min(top, maxTop))}px`;
+/** Group status dot: worst severity; app-level groups stay neutral. */
+const GROUP_DOT_CLASS: Record<LogRunGroup["status"], string> = {
+  info: "bg-muted-foreground/50",
+  success: "bg-success",
+  warning: "bg-warning",
+  error: "bg-danger",
 };
 
-/** `HH:mm:ss` for today, `MM-DD` for older lines; the full value goes in a tooltip. */
-function formatLogTime(ts: Date): { short: string; full: string } {
-  const now = new Date();
-  const sameDay =
-    ts.getFullYear() === now.getFullYear() &&
-    ts.getMonth() === now.getMonth() &&
-    ts.getDate() === now.getDate();
-  const short = sameDay
-    ? `${pad2(ts.getHours())}:${pad2(ts.getMinutes())}:${pad2(ts.getSeconds())}`
-    : `${pad2(ts.getMonth() + 1)}-${pad2(ts.getDate())}`;
-  return { short, full: ts.toLocaleString() };
+const DEFAULT_HEIGHT = 260;
+const MIN_HEIGHT = 160;
+/** The title bar the docked drawer must never grow past. */
+const TITLEBAR_HEIGHT = 56;
+
+const pad2 = (value: number) => String(value).padStart(2, "0");
+
+/** `HH:mm:ss` — full date only matters for the disk backfill separators. */
+function formatLineTime(ts: Date): string {
+  return `${pad2(ts.getHours())}:${pad2(ts.getMinutes())}:${pad2(ts.getSeconds())}`;
 }
 
+function sameDate(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+/**
+ * Docked bottom drawer (design 071): one execution run = one collapsible
+ * group; level chips + tab scope + free-text search all AND-combine. Lines
+ * backfilled from disk are read-only; the files themselves are pruned by the
+ * retention setting, so the drawer never manages files by hand.
+ */
 export const LogPanel = React.memo(function LogPanel({
   logs,
   onClear,
@@ -88,72 +110,76 @@ export const LogPanel = React.memo(function LogPanel({
   isVisible,
   onClose,
   onShowHistory,
+  onExport,
+  onOpenLogsDir,
+  onRerun,
   dockState,
   onDockChange,
   selectedTabId,
   tabs,
 }: LogPanelProps) {
   const { t } = useLanguage();
-  const [isMaximized, setIsMaximized] = useState<boolean>(false);
-  const [copiedLogId, setCopiedLogId] = useState<string | null>(null);
-  const [panelLeft, setPanelLeft] = useState<number>(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<LogEntry["type"] | "all">(
-    "all",
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [height, setHeight] = useState(
+    dockState?.height && dockState.height >= MIN_HEIGHT
+      ? dockState.height
+      : DEFAULT_HEIGHT,
   );
-  /** 「全部」or 「仅当前标签页」. */
-  const [tabScope, setTabScope] = useState<"all" | "current">("all");
+  const [copiedLogId, setCopiedLogId] = useState<string | null>(null);
+  const [copiedGroupKey, setCopiedGroupKey] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<LevelFilter>("all");
+  const [tabScope, setTabScope] = useState<TabScope>("all");
+  const [query, setQuery] = useState("");
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [atBottom, setAtBottom] = useState(true);
-  const dragStateRef = useRef({
-    startX: 0,
-    startY: 0,
-    offsetX: 0,
-    offsetY: 0,
-  });
-  const panelRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef<number | null>(null);
   const copyTimerRef = useRef<number | null>(null);
+  const groupCopyTimerRef = useRef<number | null>(null);
+  const hitIndexRef = useRef(0);
+  const resizeRef = useRef<{ startY: number; startHeight: number } | null>(
+    null,
+  );
 
   const tabNameById = useMemo(
     () => new Map((tabs ?? []).map((tab) => [tab.id, tab.name])),
     [tabs],
   );
 
-  const filteredLogs = useMemo(() => {
-    const byType =
-      activeFilter === "all"
-        ? logs
-        : logs.filter((log) => log.type === activeFilter);
-    // Lines carry their tab id; scope to the selected tab only when asked.
-    if (tabScope === "all" || !selectedTabId) return byType;
-    return byType.filter((log) => log.tabId === selectedTabId);
-  }, [logs, activeFilter, tabScope, selectedTabId]);
+  const totals = useMemo(() => levelTotals(logs), [logs]);
 
-  const typeCounts = useMemo(() => {
-    const counts: Record<LogEntry["type"], number> = {
-      info: 0,
-      success: 0,
-      warning: 0,
-      error: 0,
-    };
-    logs.forEach((log) => {
-      counts[log.type] += 1;
-    });
-    return counts;
-  }, [logs]);
+  const filtered = useMemo(
+    () => filterLogs(logs, activeFilter, tabScope, selectedTabId, query),
+    [logs, activeFilter, tabScope, selectedTabId, query],
+  );
+
+  const groups = useMemo(
+    () => buildLogGroups(filtered, tabNameById, t.logGroupApp),
+    [filtered, tabNameById, t.logGroupApp],
+  );
+
+  /** Plain-text export of exactly what the user sees (design 071 §2.5). */
+  const exportText = useMemo(
+    () =>
+      filtered
+        .map(
+          (log) =>
+            `${log.timestamp.toLocaleString()} [${log.type}] ${log.message}`,
+        )
+        .join("\n"),
+    [filtered],
+  );
 
   const getViewport = () =>
     scrollAreaRef.current?.querySelector<HTMLElement>(
       "[data-radix-scroll-area-viewport]",
     );
 
-  const copyLogMessage = async (log: LogEntry) => {
+  const copyText = useCallback(async (text: string, marker: string) => {
     try {
-      await navigator.clipboard.writeText(log.message);
+      await navigator.clipboard.writeText(text);
     } catch {
       const textarea = document.createElement("textarea");
-      textarea.value = log.message;
+      textarea.value = text;
       textarea.style.position = "fixed";
       textarea.style.opacity = "0";
       document.body.appendChild(textarea);
@@ -165,10 +191,27 @@ export const LogPanel = React.memo(function LogPanel({
       }
       document.body.removeChild(textarea);
     }
-    setCopiedLogId(log.id);
+    setCopiedLogId(marker);
     if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current);
     copyTimerRef.current = window.setTimeout(() => setCopiedLogId(null), 3000);
-  };
+  }, []);
+
+  const copyGroup = useCallback(
+    (group: LogRunGroup) => {
+      const text = group.entries
+        .map((log) => `[${formatLineTime(log.timestamp)}] ${log.message}`)
+        .join("\n");
+      setCopiedGroupKey(group.key);
+      if (groupCopyTimerRef.current)
+        window.clearTimeout(groupCopyTimerRef.current);
+      groupCopyTimerRef.current = window.setTimeout(
+        () => setCopiedGroupKey(null),
+        3000,
+      );
+      void copyText(text, group.key);
+    },
+    [copyText],
+  );
 
   const jumpToBottom = useCallback(() => {
     const viewport = getViewport();
@@ -196,104 +239,78 @@ export const LogPanel = React.memo(function LogPanel({
     if (!isVisible || !atBottom) return;
     const viewport = getViewport();
     if (viewport) viewport.scrollTop = viewport.scrollHeight;
-  }, [isVisible, filteredLogs.length, atBottom]);
+  }, [isVisible, filtered.length, atBottom]);
 
   useEffect(() => {
     return () => {
       if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current);
+      if (groupCopyTimerRef.current)
+        window.clearTimeout(groupCopyTimerRef.current);
     };
   }, []);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // Clamp the persisted height when the window shrinks.
+  useLayoutEffect(() => {
+    if (!isVisible || isMaximized) return;
+    const max = Math.max(MIN_HEIGHT, window.innerHeight - TITLEBAR_HEIGHT);
+    setHeight((h) => Math.min(h, max));
+  }, [isVisible, isMaximized]);
+
+  /** Top-edge drag: up grows, down shrinks. Persisted on release. */
+  const handleResizeStart = (e: React.PointerEvent) => {
     if (isMaximized) return;
     e.preventDefault();
-    setIsDragging(true);
-
-    const rect = panelRef.current?.getBoundingClientRect();
-    if (rect) {
-      dragStateRef.current = {
-        startX: e.clientX,
-        startY: e.clientY,
-        offsetX: rect.left,
-        offsetY: rect.top,
-      };
-    }
-
-    const toolbarHeight = 56;
-    const panelWidth = panelRef.current?.offsetWidth || 600;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!panelRef.current) return;
-
-      const deltaX = e.clientX - dragStateRef.current.startX;
-      const deltaY = e.clientY - dragStateRef.current.startY;
-
-      let newX = dragStateRef.current.offsetX + deltaX;
-      let newY = dragStateRef.current.offsetY + deltaY;
-
-      newX = Math.max(0, Math.min(window.innerWidth - panelWidth, newX));
-      newY = Math.max(toolbarHeight, Math.min(window.innerHeight - 300, newY));
-
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-      }
-      rafRef.current = requestAnimationFrame(() => {
-        panelRef.current!.style.left = `${newX}px`;
-        panelRef.current!.style.top = `${newY}px`;
-        panelRef.current!.style.bottom = "auto";
-      });
+    resizeRef.current = { startY: e.clientY, startHeight: height };
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+    const handleMove = (ev: PointerEvent) => {
+      const start = resizeRef.current;
+      if (!start) return;
+      const max = Math.max(MIN_HEIGHT, window.innerHeight - TITLEBAR_HEIGHT);
+      const next = Math.max(
+        MIN_HEIGHT,
+        Math.min(start.startHeight + (start.startY - ev.clientY), max),
+      );
+      setHeight(next);
     };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      if (panelRef.current) {
-        const left = panelRef.current.getBoundingClientRect().left;
-        setPanelLeft(left);
-        onDockChange?.({ x: left });
-      }
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
+    const handleUp = (ev: PointerEvent) => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
+      const start = resizeRef.current;
+      resizeRef.current = null;
+      if (!start) return;
+      const max = Math.max(MIN_HEIGHT, window.innerHeight - TITLEBAR_HEIGHT);
+      const final = Math.max(
+        MIN_HEIGHT,
+        Math.min(start.startHeight + (start.startY - ev.clientY), max),
+      );
+      onDockChange?.({ height: final });
     };
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    document.body.style.cursor = "move";
-    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
   };
 
-  useLayoutEffect(() => {
-    // Re-dock to the bottom-right on every open. Besides the persisted x this
-    // clears a leftover dragged `top`, so a window restore can never leave the
-    // panel parked below the viewport.
-    if (!isVisible || isMaximized || !panelRef.current) return;
-    panelRef.current.style.top = "";
-    panelRef.current.style.bottom = "0";
-    const panelWidth = panelRef.current.offsetWidth || 600;
-    const newX =
-      dockState?.x !== undefined
-        ? clampDockX(dockState.x, panelWidth)
-        : Math.max(0, window.innerWidth - panelWidth);
-    setPanelLeft(newX);
-  }, [isVisible, isMaximized, dockState?.x]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (panelRef.current && !isMaximized) {
-        const panelWidth = panelRef.current.offsetWidth || 600;
-        setPanelLeft(Math.max(0, window.innerWidth - panelWidth));
-        clampDraggedTop(panelRef.current);
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [isMaximized]);
+  /** Enter cycles the search hits; Esc clears the query before closing. */
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.nativeEvent.isComposing) return;
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      if (query) setQuery("");
+      else onClose();
+      return;
+    }
+    if (e.key === "Enter" || e.key === "ArrowDown") {
+      e.preventDefault();
+      const viewport = getViewport();
+      if (!viewport) return;
+      const hits = viewport.querySelectorAll<HTMLElement>("[data-log-hit]");
+      if (hits.length === 0) return;
+      hitIndexRef.current = (hitIndexRef.current + 1) % hits.length;
+      hits[hitIndexRef.current].scrollIntoView({ block: "center" });
+    }
+  };
 
   if (!isVisible) return null;
 
@@ -304,90 +321,130 @@ export const LogPanel = React.memo(function LogPanel({
     error: t.logLevelError,
   };
 
+  const hitCount = query.trim() ? filtered.length : null;
+
+  const dayLabel = (ts: number): string => {
+    const d = new Date(ts);
+    const now = new Date();
+    const md = `${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    if (sameDate(d, now)) return `${t.logDayToday} · ${md}`;
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    if (sameDate(d, yesterday)) return `${t.logDayYesterday} · ${md}`;
+    return md;
+  };
+
+  let previousDay: string | null = null;
+
   return (
     <div
-      ref={panelRef}
       style={
         isMaximized
-          ? {
-              left: 0,
-              top: 0,
-              width: "100vw",
-              height: "100vh",
-            }
-          : {
-              left: panelLeft,
-              bottom: 0,
-              height: 300,
-            }
+          ? { left: 0, top: 0, width: "100vw", height: "100vh" }
+          : { left: 0, right: 0, bottom: 0, height }
       }
-      className={`fixed z-floating flex flex-col overflow-hidden rounded-lg border border-border/60 bg-card shadow-lg ${isMaximized ? "h-screen w-screen" : "w-[min(600px,calc(100vw-32px))]"} ${isDragging ? "shadow-xl" : ""}`}
+      className={`fixed z-floating flex flex-col overflow-hidden bg-card shadow-lg ${
+        isMaximized
+          ? "h-screen w-screen"
+          : "rounded-t-lg border-x border-t border-border"
+      }`}
       onContextMenu={(e) => e.preventDefault()}
+      data-testid="log-panel"
     >
-      {/* Title bar: drag region on the left, filters next to it, actions on the right */}
-      <div className="flex h-11 shrink-0 items-center gap-2.5 border-b border-border px-3">
+      {/* Top edge: the resize grip (hidden while maximized). */}
+      {!isMaximized && (
         <div
-          className="flex cursor-grab select-none items-center gap-2.5 active:cursor-grabbing"
-          onMouseDown={handleMouseDown}
-        >
-          <Hand className="h-3.5 w-3.5 text-muted-foreground" />
+          onPointerDown={handleResizeStart}
+          className="h-[5px] shrink-0 cursor-row-resize bg-transparent transition-colors hover:bg-primary/15"
+          aria-label={t.logResizeHint}
+          title={t.logResizeHint}
+        />
+      )}
+
+      {/* Title bar: identity, filters, search, actions. */}
+      <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-3">
+        <div className="flex select-none items-center gap-2">
           <span className="text-[13px] font-medium text-foreground">
             {t.logs}
           </span>
-          <span className="font-mono text-[10.5px] text-muted-foreground tabular-nums">
-            {logs.length}
-            {t.logCountUnit ? ` ${t.logCountUnit}` : ""}
+          <span className="font-mono text-[10.5px] tabular-nums text-muted-foreground">
+            {hitCount !== null
+              ? t.logHits
+                  .replace("{n}", String(hitCount))
+                  .replace("{total}", String(logs.length))
+              : `${logs.length}${t.logCountUnit ? ` ${t.logCountUnit}` : ""}`}
           </span>
         </div>
 
         {logs.length > 0 && (
           <>
             <div
-              onMouseDown={(e) => e.stopPropagation()}
-              style={{ width: 112 }}
-            >
-              <Select
-                value={activeFilter}
-                onChange={(value) =>
-                  setActiveFilter(value as LogEntry["type"] | "all")
-                }
-                options={[
-                  { label: `${t.allLogs} (${logs.length})`, value: "all" },
-                  ...(["info", "success", "warning", "error"] as const).map(
-                    (type) => ({
-                      label: `${levelLabel[type]} (${typeCounts[type]})`,
-                      value: type,
-                    }),
-                  ),
-                ]}
-                height="h-7"
-                ariaLabel={t.logLevelFilter}
-              />
-            </div>
-            <div
               className="flex items-center gap-1"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                data-level="all"
+                onClick={() => setActiveFilter("all")}
+                className={`flex h-[22px] items-center gap-1 rounded-full px-2 text-[10.5px] transition-colors ${
+                  activeFilter === "all"
+                    ? "border border-border-soft bg-muted font-medium text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {t.allLogs}
+                <span className="font-mono text-[9.5px] tabular-nums text-muted-foreground">
+                  {logs.length}
+                </span>
+              </button>
+              {(["info", "success", "warning", "error"] as const).map(
+                (type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    data-level={type}
+                    onClick={() => setActiveFilter(type)}
+                    className={`flex h-[22px] items-center gap-1 rounded-full px-2 text-[10.5px] transition-colors ${
+                      activeFilter === type
+                        ? "border border-border-soft bg-muted font-medium text-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${LOG_DOT_CLASS[type]}`}
+                    />
+                    {levelLabel[type]}
+                    <span className="font-mono text-[9.5px] tabular-nums text-muted-foreground">
+                      {totals[type]}
+                    </span>
+                  </button>
+                ),
+              )}
+            </div>
+
+            <div
+              className="ml-1 flex h-[22px] items-center overflow-hidden rounded-full border border-border"
               onMouseDown={(e) => e.stopPropagation()}
             >
               <button
                 type="button"
                 data-scope="current"
                 onClick={() => setTabScope("current")}
-                className={`h-7 rounded-md px-2 text-[11px] transition-colors ${
+                className={`h-full px-2 text-[10.5px] transition-colors ${
                   tabScope === "current"
-                    ? "font-medium text-primary"
+                    ? "bg-primary/10 font-medium text-primary"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {t.logFilterCurrent}
               </button>
-              <span className="h-3 w-px bg-border" />
               <button
                 type="button"
                 data-scope="all"
                 onClick={() => setTabScope("all")}
-                className={`h-7 rounded-md px-2 text-[11px] transition-colors ${
+                className={`h-full px-2 text-[10.5px] transition-colors ${
                   tabScope === "all"
-                    ? "font-medium text-primary"
+                    ? "bg-primary/10 font-medium text-primary"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -397,7 +454,50 @@ export const LogPanel = React.memo(function LogPanel({
           </>
         )}
 
-        <div className="ml-auto flex items-center gap-0.5">
+        <div
+          className="ml-auto flex h-[26px] w-[190px] items-center gap-1.5 rounded-md border border-border bg-background px-2 focus-within:border-primary"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <Search className="h-3 w-3 shrink-0 text-muted-foreground" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            placeholder={t.logSearchPlaceholder}
+            aria-label={t.logSearchPlaceholder}
+            className="w-full border-0 bg-transparent text-[11px] text-foreground outline-none placeholder:text-muted-foreground/70"
+          />
+        </div>
+
+        <div className="flex items-center gap-0.5">
+          {onExport && (
+            <Tooltip content={t.logExport}>
+              <Button
+                variant="ghost"
+                size="xs"
+                aria-label={t.logExport}
+                onClick={() => onExport(exportText)}
+                disabled={filtered.length === 0}
+                className="h-7 w-7 p-0"
+              >
+                <Download className="h-3.5 w-3.5" />
+              </Button>
+            </Tooltip>
+          )}
+          {onOpenLogsDir && (
+            <Tooltip content={t.logOpenDir}>
+              <Button
+                variant="ghost"
+                size="xs"
+                aria-label={t.logOpenDir}
+                onClick={onOpenLogsDir}
+                className="h-7 w-7 p-0"
+              >
+                <FolderOpen className="h-3.5 w-3.5" />
+              </Button>
+            </Tooltip>
+          )}
           {onShowHistory && (
             <Tooltip content={t.historyButton}>
               <Button
@@ -452,8 +552,8 @@ export const LogPanel = React.memo(function LogPanel({
         </div>
       </div>
 
-      <ScrollArea ref={scrollAreaRef} className="flex-1">
-        {filteredLogs.length === 0 ? (
+      <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
+        {filtered.length === 0 ? (
           <div className="px-4 pt-6">
             <p className="text-[12.5px] font-medium text-muted-foreground">
               {logs.length === 0 ? t.noLogsYet : t.noMatchingLogs}
@@ -465,80 +565,225 @@ export const LogPanel = React.memo(function LogPanel({
             )}
           </div>
         ) : (
-          <ul>
-            {filteredLogs.map((log) => {
-              const time = formatLogTime(log.timestamp);
+          <div>
+            {groups.map((group) => {
+              const isCollapsed = collapsed.has(group.key);
+              const day = dayLabel(group.startedAt);
+              const showDaySep = day !== previousDay;
+              previousDay = day;
               return (
-                <li
-                  key={log.id}
-                  className="group border-b border-border px-4 py-2 transition-colors last:border-b-0 hover:bg-muted/30"
-                >
-                  <div className="flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
-                    <span
-                      className="w-14 shrink-0 font-mono text-[10.5px] tabular-nums"
-                      title={time.full}
-                    >
-                      {time.short}
-                    </span>
-                    <span
-                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${LOG_DOT_CLASS[log.type]}`}
-                    />
-                    <span className="w-8 shrink-0 text-[11px] text-muted-foreground">
-                      {levelLabel[log.type]}
-                    </span>
-                    {log.tabId && (
-                      <span className="min-w-0 max-w-[140px] truncate font-mono text-[10.5px]">
-                        {tabNameById.get(log.tabId) ?? log.tabId}
+                <React.Fragment key={group.key}>
+                  {showDaySep && (
+                    <div className="flex items-center gap-2.5 px-3 pb-1.5 pt-2.5">
+                      <span className="font-mono text-[9.5px] text-muted-foreground/80">
+                        {day}
                       </span>
-                    )}
-                    <div className="ml-auto flex shrink-0 items-center gap-2">
-                      <Tooltip
-                        content={copiedLogId === log.id ? t.copied : t.copy}
-                      >
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={t.copy}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyLogMessage(log);
-                          }}
-                          className="h-[16px] w-[16px] opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
-                        >
-                          {copiedLogId === log.id ? (
-                            <Check className="h-3.5 w-3.5 text-muted-foreground" />
-                          ) : (
-                            <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                          )}
-                        </Button>
-                      </Tooltip>
-                      <Tooltip content={t.remove}>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={t.remove}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRemoveLog(log.id);
-                          }}
-                          className="h-[16px] w-[16px] text-muted-foreground opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 hover:text-destructive focus-visible:pointer-events-auto focus-visible:opacity-100"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </Tooltip>
+                      {group.hasDisk && (
+                        <span className="rounded-full bg-primary/10 px-1.5 py-px text-[9.5px] text-primary">
+                          {t.logFromDisk}
+                        </span>
+                      )}
+                      <span className="h-px flex-1 bg-border-soft" />
                     </div>
+                  )}
+                  <div
+                    className="border-b border-border-soft last:border-b-0"
+                    data-log-group={group.key}
+                  >
+                    <button
+                      type="button"
+                      className="flex h-8 w-full items-center gap-2 px-3 text-left transition-colors hover:bg-muted/40"
+                      onClick={() =>
+                        setCollapsed((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(group.key)) next.delete(group.key);
+                          else next.add(group.key);
+                          return next;
+                        })
+                      }
+                    >
+                      {isCollapsed ? (
+                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      )}
+                      <span
+                        className={`h-[7px] w-[7px] shrink-0 rounded-full ${GROUP_DOT_CLASS[group.status]}`}
+                      />
+                      <span className="min-w-0 max-w-[220px] truncate text-[11.5px] font-medium text-foreground">
+                        {group.key === APP_GROUP_KEY
+                          ? t.logGroupApp
+                          : group.label}
+                      </span>
+                      <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground">
+                        {formatLineTime(new Date(group.startedAt))} ·{" "}
+                        {group.entries.length}
+                        {t.logCountUnit ? ` ${t.logCountUnit}` : ""}
+                      </span>
+                      <span className="flex shrink-0 gap-1">
+                        {group.counts.error > 0 && (
+                          <span className="rounded-full bg-danger/10 px-1.5 text-[9.5px] text-danger">
+                            {levelLabel.error} ×{group.counts.error}
+                          </span>
+                        )}
+                        {group.counts.warning > 0 && (
+                          <span className="rounded-full bg-warning/15 px-1.5 text-[9.5px] text-warning">
+                            {levelLabel.warning} ×{group.counts.warning}
+                          </span>
+                        )}
+                        {group.status === "success" && (
+                          <span className="rounded-full bg-success/10 px-1.5 text-[9.5px] text-success">
+                            {levelLabel.success}
+                          </span>
+                        )}
+                      </span>
+                      <span className="ml-auto flex shrink-0 items-center gap-2 pr-1">
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          aria-label={t.logCopyAll}
+                          className="text-[10.5px] text-muted-foreground/70 hover:text-foreground"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyGroup(group);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.stopPropagation();
+                              copyGroup(group);
+                            }
+                          }}
+                        >
+                          {copiedGroupKey === group.key
+                            ? t.copied
+                            : t.logCopyAll}
+                        </span>
+                        {onRerun && group.tabId && (() => {
+                          const rerunTabId = group.tabId;
+                          return (
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            aria-label={t.logRerun}
+                            className="flex items-center gap-1 text-[10.5px] text-muted-foreground/70 hover:text-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRerun(rerunTabId);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.stopPropagation();
+                                onRerun(rerunTabId);
+                              }
+                            }}
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            {t.logRerun}
+                          </span>
+                          );
+                        })()}
+                      </span>
+                    </button>
+
+                    {!isCollapsed && (
+                      <div>
+                        {group.entries.map((log) => {
+                          const segments = highlightMessage(
+                            log.message,
+                            query,
+                          );
+                          const hasHit =
+                            query.trim().length > 0 &&
+                            segments.some((s) => s.hit);
+                          return (
+                            <div
+                              key={log.id}
+                              className="group flex items-start gap-2 py-1 pl-[38px] pr-3 hover:bg-muted/30"
+                            >
+                              <span
+                                className="w-[56px] shrink-0 pt-px font-mono text-[10px] tabular-nums text-muted-foreground/70"
+                                title={log.timestamp.toLocaleString()}
+                              >
+                                {formatLineTime(log.timestamp)}
+                              </span>
+                              <span
+                                className={`mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full ${LOG_DOT_CLASS[log.type]}`}
+                              />
+                              <p
+                                className="min-w-0 flex-1 whitespace-pre-wrap break-all font-mono text-[11px] leading-[17px] text-foreground"
+                                {...(hasHit
+                                  ? { "data-log-hit": true }
+                                  : {})}
+                              >
+                                {segments.map((seg, i) =>
+                                  seg.hit ? (
+                                    // Theme accent, not the browser-default
+                                    // yellow `mark` (071 feedback).
+                                    <mark
+                                      key={i}
+                                      className="rounded-[2px] bg-primary/15 px-0.5 font-semibold text-primary"
+                                    >
+                                      {seg.text}
+                                    </mark>
+                                  ) : (
+                                    <React.Fragment key={i}>
+                                      {seg.text}
+                                    </React.Fragment>
+                                  ),
+                                )}
+                              </p>
+                              <span className="flex shrink-0 items-center gap-1.5">
+                                <Tooltip
+                                  content={
+                                    copiedLogId === log.id
+                                      ? t.copied
+                                      : t.copy
+                                  }
+                                >
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    aria-label={t.copy}
+                                    onClick={() =>
+                                      void copyText(log.message, log.id)
+                                    }
+                                    className="h-4 w-4 opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+                                  >
+                                    {copiedLogId === log.id ? (
+                                      <Check className="h-3 w-3 text-muted-foreground" />
+                                    ) : (
+                                      <Copy className="h-3 w-3 text-muted-foreground" />
+                                    )}
+                                  </Button>
+                                </Tooltip>
+                                {!log.fromDisk && (
+                                  <Tooltip content={t.remove}>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      aria-label={t.remove}
+                                      onClick={() => onRemoveLog(log.id)}
+                                      className="h-4 w-4 text-muted-foreground opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 hover:text-destructive focus-visible:pointer-events-auto focus-visible:opacity-100"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </Tooltip>
+                                )}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                  <p className="ml-[78px] mt-0.5 whitespace-pre-wrap break-words font-mono text-xs leading-[18px] text-foreground">
-                    {log.message}
-                  </p>
-                </li>
+                </React.Fragment>
               );
             })}
-          </ul>
+          </div>
         )}
       </ScrollArea>
 
-      {!atBottom && filteredLogs.length > 0 && (
+      {!atBottom && filtered.length > 0 && (
         <button
           type="button"
           onClick={jumpToBottom}

@@ -48,13 +48,25 @@ export interface RunPipelineDeps {
   showToast: (
     message: string,
     type?: "info" | "success" | "warning" | "error",
-    options?: { action?: { label: string; onClick: () => void }; duration?: number },
+    options?: {
+      action?: { label: string; onClick: () => void };
+      actions?: { label: string; onClick: () => void }[];
+      duration?: number;
+    },
   ) => void;
   /** i18n labels needed inside the runner. */
   labels: {
     cycleDetected: string;
+    /** Completion / failure toast copy (071): the toast replaces the old
+     *  auto-open of the log drawer. */
+    runCompleteToast: string;
+    runFailedToast: string;
+    viewLogs: string;
+    openLogsDir: string;
   };
   setShowLogPanel: (value: boolean) => void;
+  /** Auto-open the drawer when the run starts (071 setting, default off). */
+  autoShowLogPanel: boolean;
   /** Ask for the S6 overwrite confirmation on behalf of one run. */
   requestOverwritePrompt: (runId: RunId, data: OverwriteConfirm) => void;
   /** Persist values at the S6 overwrite gate for the confirmed re-run. */

@@ -3,6 +3,7 @@ import type {
   ExecutionHistoryStatus,
   PipelineStep,
 } from "@/types/xan";
+import { invoke } from "@tauri-apps/api/core";
 import type { PendingRun, ResultPreview, RunContext } from "@/types/execution";
 import type { RunPipelineDeps } from "@/hooks/execution/runPipelineDeps";
 import { buildExecutionBranches } from "@/hooks/execution/buildBranches";
@@ -89,7 +90,12 @@ export async function runPipeline(
     showProgress: true,
     executingStartedAt: runStartedAt,
   });
-  setShowLogPanel(true);
+  // 071 feedback: the log drawer no longer opens by itself — the completion
+  // toast's 「查看日志」 action owns that now. The 「自动弹出日志」 setting
+  // (default off) restores the eager open for users who want it.
+  if (deps.autoShowLogPanel) {
+    setShowLogPanel(true);
+  }
 
   // Hoisted so the finally block can determine the final status.
   let pipelineFailed = false;
@@ -205,9 +211,13 @@ export async function runPipeline(
 
     const successCount = allResults.filter((r) => r.success).length;
     if (successCount === branches.length) {
+      // Completion feedback: no row counts here (071) — the execution
+      // history owns the numbers, the log owns the timeline.
+      const completedAt = new Date().toTimeString().slice(0, 8);
+      const seconds = ((Date.now() - runStartedAt) / 1000).toFixed(1);
       ctx.log(
         "success",
-        `All ${branches.length} branch(es) executed successfully`,
+        `Execution completed at ${completedAt} · ${seconds} s`,
       );
       // Auto-save version on successful execution
       try {
@@ -227,11 +237,47 @@ export async function runPipeline(
         ? "error"
         : "success";
 
-    // Completion feedback is the *system* notification only (see
-    // useAppBootstrap): an in-app toast duplicated it, so the design-027
-    // completion toast — with its "查看结果" action — was removed at the
-    // user's request (2026-09-30). The log panel still opens when a run
-    // starts, and `status` above still feeds the execution history.
+    // Completion feedback (071 feedback, supersedes the 2026-09-30 removal):
+    // an in-app toast — the log drawer no longer auto-opens at run start, so
+    // the toast's 「查看日志」 action is how it comes back. Success carries a
+    // second action (打开目录) straight to data/logs/. Cancelled runs stay
+    // silent: the user pressed the button themselves.
+    if (status !== "cancelled") {
+      const duration = `${(durationMs / 1000).toFixed(1)} s`;
+      const viewLogs = {
+        label: labels.viewLogs,
+        onClick: () => setShowLogPanel(true),
+      };
+      if (status === "success") {
+        const completedAt = new Date().toTimeString().slice(0, 8);
+        showToast(
+          labels.runCompleteToast
+            .replace("{time}", completedAt)
+            .replace("{duration}", duration),
+          "success",
+          {
+            actions: [
+              viewLogs,
+              {
+                label: labels.openLogsDir,
+                onClick: () => {
+                  invoke("reveal_logs_dir").catch(() => {
+                    // Opening a folder must never surface as an error toast.
+                  });
+                },
+              },
+            ],
+            duration: 6000,
+          },
+        );
+      } else {
+        showToast(
+          labels.runFailedToast.replace("{duration}", duration),
+          "error",
+          { actions: [viewLogs], duration: 6000 },
+        );
+      }
+    }
 
     // Persist a compact execution record (summary only, no stdout).
     if (deps.saveExecutionHistory) {

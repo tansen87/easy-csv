@@ -68,6 +68,14 @@ interface SettingsTabContentProps {
   /** Parallel run limit; backend clamps to 1..=16. */
   maxConcurrentRuns: number;
   onMaxConcurrentRunsChange: (value: number) => void;
+  /** Log file retention in days; backend clamps to 0..=90. */
+  logRetentionDays: number;
+  onLogRetentionDaysChange: (value: number) => void;
+  /** Auto-open the log drawer when a run starts (071); default off. */
+  autoShowLogPanel: boolean;
+  onAutoShowLogPanelChange: (value: boolean) => void;
+  /** Open `data/logs/` in the system file manager. */
+  onOpenLogsDir: () => void;
   /** Clear the "intro seen" flag so the canvas guide shows again. */
   onResetOnboarding?: () => void;
   aiConfig: AIConfig;
@@ -231,6 +239,11 @@ export function SettingsTabContent({
   onAutoCheckUpdateChange,
   maxConcurrentRuns,
   onMaxConcurrentRunsChange,
+  logRetentionDays,
+  onLogRetentionDaysChange,
+  autoShowLogPanel,
+  onAutoShowLogPanelChange,
+  onOpenLogsDir,
   onResetOnboarding,
   aiConfig,
   onAIConfigChange,
@@ -345,7 +358,9 @@ export function SettingsTabContent({
                 ? minimizeToTray
                 : row.id === "fit-view"
                   ? doubleClickFitView
-                  : autoCheckUpdate;
+                  : row.id === "auto-open-logs"
+                    ? autoShowLogPanel
+                    : autoCheckUpdate;
         const change =
           row.id === "no-headers"
             ? onNoHeadersChange
@@ -355,7 +370,9 @@ export function SettingsTabContent({
                 ? onMinimizeToTrayChange
                 : row.id === "fit-view"
                   ? onDoubleClickFitViewChange
-                  : onAutoCheckUpdateChange;
+                  : row.id === "auto-open-logs"
+                    ? onAutoShowLogPanelChange
+                    : onAutoCheckUpdateChange;
         return (
           <SettingsSwitch
             ref={(node) => {
@@ -368,16 +385,23 @@ export function SettingsTabContent({
         );
       }
 
-      case "number":
+      case "number": {
+        // One stepper control shared by two numeric rows; bounds come from
+        // the row, not the control (028 §7.1 concurrency, 071 retention).
+        const isRetention = row.id === "log-retention";
+        const value = isRetention ? logRetentionDays : maxConcurrentRuns;
+        const change = isRetention
+          ? onLogRetentionDaysChange
+          : onMaxConcurrentRunsChange;
+        const min = isRetention ? 0 : 1;
+        const max = isRetention ? 90 : 16;
         return (
           <div className="flex h-8 items-center overflow-hidden rounded-lg border border-border bg-card">
             <button
               type="button"
               aria-label={t.settingsDecrease}
-              disabled={maxConcurrentRuns <= 1}
-              onClick={() =>
-                onMaxConcurrentRunsChange(Math.max(1, maxConcurrentRuns - 1))
-              }
+              disabled={value <= min}
+              onClick={() => change(Math.max(min, value - 1))}
               className="flex h-full w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
             >
               <Minus className="h-3 w-3" />
@@ -387,30 +411,29 @@ export function SettingsTabContent({
                 numberRefs.current[row.id] = node;
               }}
               type="number"
-              min={1}
-              max={16}
+              min={min}
+              max={max}
               aria-label={row.title}
-              value={maxConcurrentRuns}
+              value={value}
               onChange={(event) => {
                 const next = Number.parseInt(event.target.value, 10);
                 if (Number.isNaN(next)) return;
-                onMaxConcurrentRunsChange(Math.min(16, Math.max(1, next)));
+                change(Math.min(max, Math.max(min, next)));
               }}
               className="h-full w-9 border-x border-border/60 bg-transparent text-center font-mono text-xs tabular-nums outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
             <button
               type="button"
               aria-label={t.settingsIncrease}
-              disabled={maxConcurrentRuns >= 16}
-              onClick={() =>
-                onMaxConcurrentRunsChange(Math.min(16, maxConcurrentRuns + 1))
-              }
+              disabled={value >= max}
+              onClick={() => change(Math.min(max, value + 1))}
               className="flex h-full w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
             >
               <Plus className="h-3 w-3" />
             </button>
           </div>
         );
+      }
 
       case "language":
         return (
@@ -459,6 +482,13 @@ export function SettingsTabContent({
         );
 
       case "action":
+        if (row.id === "open-logs-dir") {
+          return (
+            <Button variant="secondary" size="sm" onClick={onOpenLogsDir}>
+              {t.logOpenDirAction}
+            </Button>
+          );
+        }
         return (
           <Button variant="secondary" size="sm" onClick={onResetOnboarding}>
             {t.settingsShowAgain}
@@ -661,7 +691,7 @@ export function SettingsTabContent({
       case "model":
         return focusSelect(row.id);
       case "action":
-        return onResetOnboarding;
+        return row.id === "open-logs-dir" ? onOpenLogsDir : onResetOnboarding;
       case "disclosure":
         return () => setCustomExpanded((open) => !open);
       // Danger rows already returned above (`if (row.dangerous)`), but the kind

@@ -15,6 +15,10 @@ export function useAppSettings(
   const [autoCheckUpdate, setAutoCheckUpdate] = useState(true);
   /** Parallel run limit; the backend clamps to 1..=16. */
   const [maxConcurrentRuns, setMaxConcurrentRuns] = useState(4);
+  /** Log file retention in days; 0 = memory only. */
+  const [logRetentionDays, setLogRetentionDays] = useState(7);
+  /** Auto-open the log drawer when a run starts (071); default off. */
+  const [autoShowLogPanel, setAutoShowLogPanel] = useState(false);
 
   const loadDefaultDelimiter = useCallback(async () => {
     try {
@@ -112,6 +116,30 @@ export function useAppSettings(
     }
   }, [showToastRef]);
 
+  const loadLogRetentionDays = useCallback(async () => {
+    try {
+      const saved = await invoke<number | null>("get_log_retention_days");
+      if (saved !== null) setLogRetentionDays(saved);
+    } catch (error) {
+      showToastRef.current(
+        `Failed to load log retention setting: ${error}`,
+        "error",
+      );
+    }
+  }, [showToastRef]);
+
+  const loadAutoShowLogPanel = useCallback(async () => {
+    try {
+      const saved = await invoke<boolean | null>("get_auto_show_log_panel");
+      if (saved !== null) setAutoShowLogPanel(saved);
+    } catch (error) {
+      showToastRef.current(
+        `Failed to load auto-open log setting: ${error}`,
+        "error",
+      );
+    }
+  }, [showToastRef]);
+
   const loadAll = useCallback(async () => {
     await Promise.all([
       loadDefaultDelimiter(),
@@ -122,6 +150,8 @@ export function useAppSettings(
       loadDoubleClickFitView(),
       loadAutoCheckUpdate(),
       loadMaxConcurrentRuns(),
+      loadLogRetentionDays(),
+      loadAutoShowLogPanel(),
     ]);
   }, [
     loadDefaultDelimiter,
@@ -132,6 +162,8 @@ export function useAppSettings(
     loadDoubleClickFitView,
     loadAutoCheckUpdate,
     loadMaxConcurrentRuns,
+    loadLogRetentionDays,
+    loadAutoShowLogPanel,
   ]);
 
   return {
@@ -151,6 +183,10 @@ export function useAppSettings(
     setAutoCheckUpdate,
     maxConcurrentRuns,
     setMaxConcurrentRuns,
+    logRetentionDays,
+    setLogRetentionDays,
+    autoShowLogPanel,
+    setAutoShowLogPanel,
     loadAll,
   };
 }

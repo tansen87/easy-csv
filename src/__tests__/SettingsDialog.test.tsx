@@ -56,6 +56,11 @@ function renderDialog(overrides: Record<string, unknown> = {}) {
     onAutoCheckUpdateChange: vi.fn(),
     maxConcurrentRuns: 4,
     onMaxConcurrentRunsChange: vi.fn(),
+    logRetentionDays: 7,
+    onLogRetentionDaysChange: vi.fn(),
+    autoShowLogPanel: false,
+    onAutoShowLogPanelChange: vi.fn(),
+    onOpenLogsDir: vi.fn(),
     onResetOnboarding: vi.fn(),
     onSave: vi.fn(),
     aiConfig,
@@ -139,9 +144,10 @@ describe("settings dialog — structure contracts (design 030 §0.4)", () => {
     expect(rowIds(container)).not.toContain("plugins");
   });
 
-  // The `01`…`06` beside each group name is decoration rendered from
+  // The `01`…`07` beside each group name is decoration rendered from
   // `data-index` (see `.settings-index` in `index.css`), but the *order* it
-  // encodes is a product decision: plugins sit at 05 and AI at 06.
+  // encodes is a product decision: logs sit between window and update
+  // (071), plugins before AI.
   it("numbers the groups in definition order — plugins before AI", () => {
     const { container } = renderDialog();
 
@@ -151,9 +157,11 @@ describe("settings dialog — structure contracts (design 030 §0.4)", () => {
         ?.getAttribute("data-index");
 
     expect(indexOf("appearance")).toBe("01");
-    expect(indexOf("update")).toBe("04");
-    expect(indexOf("plugins")).toBe("05");
-    expect(indexOf("ai")).toBe("06");
+    expect(indexOf("window")).toBe("03");
+    expect(indexOf("logs")).toBe("04");
+    expect(indexOf("update")).toBe("05");
+    expect(indexOf("plugins")).toBe("06");
+    expect(indexOf("ai")).toBe("07");
   });
 
   it("lists exactly the same groups in the directory as in the content", () => {

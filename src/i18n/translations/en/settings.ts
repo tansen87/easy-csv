@@ -37,6 +37,16 @@ export const enSettings = {
   settingsGroupDataHelp: "Data & help",
   settingsGroupWindow: "Window",
   settingsGroupUpdate: "Updates",
+  settingsGroupLogs: "Logs",
+  logRetentionDays: "Log retention",
+  logRetentionDaysDesc:
+    "One JSONL log file per day; files older than the retention are pruned at startup. 0 keeps logs in memory only.",
+  logOpenDirAction: "Open log folder",
+  logOpenDirDesc:
+    "Logs live under data/logs, one easy-csv-YYYY-MM-DD.log file per day",
+  autoShowLogPanel: "Auto-open logs",
+  autoShowLogPanelDesc:
+    "Open the log drawer automatically when a run starts; when off, open it from the completion toast",
   settingsClear: "Clear",
   settingsExpand: "Expand",
   settingsCollapse: "Collapse",

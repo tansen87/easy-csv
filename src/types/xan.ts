@@ -52,6 +52,8 @@ export type PipelineVariableType = "string" | "number" | "path";
 export interface PanelDockState {
   x?: number;
   y?: number;
+  /** Persisted height, used by docked panels (log drawer). */
+  height?: number;
   collapsed?: boolean;
 }
 
@@ -79,6 +81,10 @@ export interface LogEntry {
   message: string;
   /** Tab this line came from; absent for app-level lines. */
   tabId?: string;
+  /** Execution run this line belongs to; drives the run groups (design 071). */
+  runId?: string;
+  /** Backfilled from the on-disk log files on startup — read-only in the panel. */
+  fromDisk?: boolean;
 }
 
 export type ExecutionHistoryStatus = "success" | "error" | "cancelled";
