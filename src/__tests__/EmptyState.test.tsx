@@ -87,7 +87,7 @@ describe("EmptyState", () => {
     expect(screen.getByText(t.emptyResultRows)).toBeTruthy();
     expect(screen.getByText(t.emptySampleCaption)).toBeTruthy();
     // The row with an empty amount from the sample.
-    expect(screen.getByText("—")).toBeTruthy();
+    expect(screen.getByText("-")).toBeTruthy();
     expect(screen.getByText("2026-07-03")).toBeTruthy();
   });
 
