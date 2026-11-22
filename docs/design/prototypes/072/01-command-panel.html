@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 072-01 · 命令面板（点「命令」后打开的那个窗）重设计</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:#fff;
+    --fg:oklch(0.145 0 0);
+    --card:#fff;
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-ink:oklch(0.35 0.05 250);
+    --chrome:color-mix(in oklab, oklch(0.42 0.055 250) 12%, #fff);
+    --chrome-border:color-mix(in oklab, oklch(0.42 0.055 250) 30%, transparent);
+    --brand-6:color-mix(in oklab, var(--brand) 6%, transparent);
+    --brand-9:color-mix(in oklab, var(--brand) 9%, transparent);
+    --brand-12:color-mix(in oklab, var(--brand) 12%, transparent);
+
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-fly:0 12px 28px -14px oklch(0.2 0.02 80 / 26%),0 1px 3px oklch(0.2 0.02 80 / 6%);
+
+    --danger:oklch(0.55 0.17 27);
+    --redline:oklch(0.55 0.21 27);
+  }
+  .dark{
+    color-scheme:dark;
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-ink:oklch(0.82 0.04 245);
+    --chrome:color-mix(in oklab, oklch(0.78 0.045 245) 16%, oklch(0.145 0 0));
+    --chrome-border:color-mix(in oklab, oklch(0.78 0.045 245) 34%, transparent);
+    --stage:oklch(0.12 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --shadow-card:none;
+    --shadow-fly:0 12px 28px -14px oklch(0 0 0 / 75%);
+    --danger:oklch(0.7 0.14 27);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased;transition:background-color .18s ease,color .18s ease}
+  .ic{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 80px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.85}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme-toggle{position:absolute;right:0;top:2px;height:26px;padding:0 10px;border-radius:6px;
+                border:1px solid var(--border);background:var(--card);color:var(--muted-fg);
+                font-family:var(--mono);font-size:10.5px;cursor:pointer}
+  .theme-toggle:hover{color:var(--fg)}
+
+  .audit{border:1px solid var(--border);border-radius:10px;background:var(--card);
+         padding:16px 18px 14px;margin-bottom:18px;font-size:11.5px;line-height:1.95;color:var(--muted-fg)}
+  .audit .hd{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .audit .hd b{color:var(--fg);font-weight:500;font-size:12.5px}
+  .audit .hd span{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+  .audit ol{margin:0;padding-left:20px}
+  .audit li+li{margin-top:2px}
+  .audit b{color:var(--fg);font-weight:500}
+  .audit code{font-family:var(--mono);font-size:10.5px;color:var(--brand-ink);
+              background:var(--brand-6);padding:1px 4px;border-radius:4px}
+
+  .direct{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:14px 18px;
+          margin-bottom:38px;display:grid;grid-template-columns:64px 1fr;gap:6px 14px;font-size:11.5px;line-height:1.7}
+  .direct .k{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);padding-top:2px}
+  .direct .v{color:var(--muted-fg)}
+  .direct .v b{color:var(--fg);font-weight:500}
+
+  .frame+.frame{margin-top:46px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:12px;
+       font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto}
+  .state-note{font-size:10.5px;color:var(--muted-fg);line-height:1.8;padding:12px 2px 0;max-width:1120px}
+  .state-note b{color:var(--fg);font-weight:500}
+
+  /* ---------- 应用窗口 mock ---------- */
+  .app{position:relative;width:1120px;margin:0 auto;border:1px solid var(--border);border-radius:10px;
+       background:var(--bg);box-shadow:var(--shadow-fly);overflow:hidden;display:flex;flex-direction:column;height:660px}
+  .tbar{height:36px;flex:none;display:flex;align-items:center;background:var(--chrome);
+        box-shadow:inset 0 -1px 0 var(--chrome-border);padding-left:16px}
+  .brand{font-size:12.5px;line-height:16px;font-weight:500;color:var(--fg);padding-right:5px;user-select:none}
+  .menus{display:flex;align-items:center}
+  .menus span{display:flex;align-items:center;height:28px;padding:0 12px;border-radius:6px;font-size:12px;font-weight:500;color:var(--brand-ink)}
+  .grow{flex:1}
+  .rgroup{display:flex;align-items:center;gap:2px}
+  .ibtn{position:relative;display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;
+        border-radius:6px;background:transparent;color:var(--brand)}
+  .ibtn.is-active{background:var(--brand-12)}
+  .ibtn .uline{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:12px;height:2px;border-radius:2px;background:currentColor}
+  .ibtn svg{width:16px;height:16px}
+  .winbtns{display:flex;align-items:center;margin-left:2px}
+  .winbtns i{display:grid;place-items:center;width:46px;height:36px;color:var(--muted-fg)}
+  .winbtns i svg{width:10px;height:10px;stroke-width:1;fill:none;stroke:currentColor}
+
+  .canvas{position:relative;flex:1;min-height:0;
+          background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:22px 22px}
+  .wire{position:absolute;inset:0;pointer-events:none}
+  .wire path{fill:none;stroke:oklch(0.76 0.004 16);stroke-width:1.5}
+  .fcard{position:absolute;border:1px solid var(--border);border-radius:8px;background:var(--card);
+         box-shadow:var(--shadow-card);overflow:hidden}
+  .fcard .hd{display:flex;align-items:center;gap:6px;padding:7px 10px 6px;border-bottom:1px solid var(--border-soft)}
+  .fcard .fn{font-size:10.5px;font-weight:500;white-space:nowrap}
+  .fcard .fm{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)}
+  .frow{display:grid;grid-template-columns:17px 1fr 1fr 1fr;align-items:center;gap:6px;padding:4px 10px;
+        font-size:9.5px;color:var(--muted-fg);border-top:1px solid var(--border-soft)}
+  .frow.h{color:var(--muted-fg-2);border-top:0;font-family:var(--mono);font-size:8.5px}
+  .frow .no{font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-3);text-align:right}
+  .frow .num{text-align:right;font-variant-numeric:tabular-nums}
+  /* 画布左侧工具轨（FlowPanel left-3 / 34px 宽 / 垂直居中） */
+  .trail{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:34px;height:132px;
+         border:1px solid var(--border);border-radius:9px;background-color:var(--card);
+         background-image:repeating-linear-gradient(to bottom,
+           color-mix(in oklab,var(--fg) 22%,transparent) 0 3px,transparent 3px 24px);
+         background-size:8px 100%;background-repeat:no-repeat;background-position:center 12px;
+         box-shadow:var(--shadow-card);z-index:2}
+
+  .scard{position:absolute;width:186px;border:1px solid var(--border);border-radius:8px;background:var(--card);
+         box-shadow:var(--shadow-card);padding:8px 10px 9px;display:grid;grid-template-columns:14px 1fr;gap:0 6px}
+  .scard .idx{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);padding-top:1px}
+  .scard .nm{font-size:11px;font-weight:500}
+  .scard .p{grid-column:2;margin-top:5px;font-family:var(--mono);font-size:9px;color:var(--muted-fg)}
+
+  /* =================== 命令面板（现状 / 方案 A 共用骨架） =================== */
+  .panel{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:12px;
+         background:var(--card);box-shadow:var(--shadow-fly);overflow:hidden;color:var(--fg);font-family:var(--font)}
+  .panel.old{width:280px;height:500px}
+  .panel.new{width:300px;height:540px}
+
+  /* 旧头部：把手 + 标题 + 搜索 + 关闭 挤在 40px */
+  .o-head{height:39px;flex:none;display:flex;align-items:center;gap:6px;padding:6px 9px;
+          border-bottom:1px solid var(--border-soft);background:color-mix(in oklab,var(--fg) 2%,var(--card))}
+  .o-grab{display:flex;align-items:center;gap:5px;color:var(--muted-fg);font-size:12.5px;font-weight:500}
+  .o-grab svg{width:13px;height:13px}
+  .o-search{position:relative;flex:1;min-width:0}
+  .o-search svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:12px;height:12px;color:var(--muted-fg-3)}
+  .o-search input{width:100%;height:26px;padding:0 8px 0 24px;border-radius:6px;border:1px solid var(--border);
+                  background:var(--bg);font-family:inherit;font-size:11px;color:var(--fg);outline:0}
+  .o-x{width:24px;height:24px;display:grid;place-items:center;border:0;border-radius:5px;background:transparent;color:var(--muted-fg)}
+  .o-x svg{width:13px;height:13px}
+  .o-body{flex:1;min-height:0;overflow-y:auto;padding:8px}
+  .o-cat{display:flex;align-items:center;gap:6px;width:100%;height:30px;padding:0 8px;border:0;border-radius:6px;
+         background:transparent;font-family:inherit;text-align:left;margin-bottom:8px}
+  .o-cat h3{margin:0;font-size:11px;font-weight:700;color:var(--muted-fg);text-transform:uppercase;letter-spacing:.06em}
+  .o-cat .ch{margin-left:auto;color:var(--muted-fg-3)}
+  .o-cat .ch svg{width:13px;height:13px}
+  .o-art{border-radius:8px;border:1px solid var(--border-soft);background:color-mix(in oklab,var(--fg) 1.5%,var(--card));
+         padding:9px 10px;margin:0 1px 6px}
+  .o-art .top{display:flex;align-items:flex-start;gap:6px}
+  .o-art .nm{font-size:13.5px;font-weight:600;line-height:1.4}
+  .o-art .ds{margin-top:3px;font-size:11px;line-height:1.55;color:var(--muted-fg);
+             display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .o-art .qh{width:22px;height:22px;flex:none;display:grid;place-items:center;border-radius:50%;
+             background:color-mix(in oklab,var(--fg) 7%,transparent);color:var(--muted-fg-2)}
+  .o-art .qh svg{width:12px;height:12px}
+  .o-art.is-active{background:color-mix(in oklab,var(--brand) 10%,transparent);
+                   box-shadow:inset 0 0 0 2px color-mix(in oklab,var(--brand) 30%,transparent)}
+
+  /* 新头部 */
+  .p-head{height:44px;flex:none;display:flex;align-items:center;gap:10px;padding:0 8px 0 14px;
+          border-bottom:1px solid var(--border-soft)}
+  .p-title{font-size:13px;font-weight:500;letter-spacing:0;flex:none}
+  .p-search{display:flex;align-items:center;gap:6px;flex:1;min-width:0;height:28px;padding:0 8px;
+            border-radius:6px;background:color-mix(in oklab,var(--fg) 4%,var(--card));
+            border:1px solid transparent}
+  .p-search svg{width:13px;height:13px;color:var(--muted-fg-3);flex:none}
+  .p-search input{flex:1;min-width:0;border:0;background:transparent;outline:0;font-family:inherit;
+                  font-size:11.5px;color:var(--fg)}
+  .p-search input::placeholder{color:var(--muted-fg-3)}
+  .p-search .kc{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);border:1px solid var(--border);
+                border-radius:3px;padding:0 3px;line-height:13px;flex:none}
+  .p-x{width:24px;height:24px;flex:none;display:grid;place-items:center;border:0;border-radius:5px;
+       background:transparent;color:var(--muted-fg)}
+  .p-x svg{width:13px;height:13px}
+
+  .p-body{flex:1;min-height:0;display:flex}
+  .p-list{flex:1;min-width:0;overflow-y:auto;padding:0 6px 6px;position:relative}
+  .p-group{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:6px;height:26px;padding:0 7px;
+           background:var(--card);font-size:10.5px;font-weight:500;color:var(--muted-fg);
+           box-shadow:inset 0 -1px 0 var(--border-soft)}
+  .p-group .gi{font-family:var(--mono);font-size:9px;color:var(--muted-fg-3)}
+  .p-group .gc{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .p-row{display:grid;grid-template-columns:minmax(0,1fr) 20px;align-items:center;gap:8px;height:40px;
+         padding:0 7px;border-radius:5px}
+  .p-row .rt{display:grid;gap:1px;min-width:0}
+  .p-row .nm{font-family:var(--mono);font-size:11.5px;line-height:16px;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .p-row .ds{font-size:11px;line-height:15px;color:var(--muted-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .p-row .q{width:16px;height:16px;display:grid;place-items:center;border:0;border-radius:4px;
+            background:transparent;color:var(--muted-fg-3);align-self:start;margin-top:5px}
+  .p-row .q svg{width:12px;height:12px}
+  .p-row.is-hov{background:color-mix(in oklab,var(--fg) 4%,transparent)}
+  .p-row.is-hov .q,.p-row.is-sel .q{color:var(--fg)}
+  .p-row.is-sel{background:var(--brand-9)}
+  .p-row.is-sel .nm{color:var(--brand-ink)}
+  mark{background:color-mix(in oklab,var(--brand) 20%,transparent);color:inherit;border-radius:2px;padding:0 1px}
+
+  .p-fold{display:flex;align-items:center;gap:6px;height:28px;padding:0 7px;border-radius:5px;font-size:10.5px;color:var(--muted-fg)}
+  .p-fold svg{width:11px;height:11px;color:var(--muted-fg-3);flex:none}
+  .p-fold .gc{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .p-hint{display:flex;align-items:center;gap:7px;height:26px;padding:0 7px;margin:0 0 2px;
+          font-size:10.5px;color:var(--muted-fg);border-bottom:1px solid var(--border-soft)}
+  .p-hint .bar{width:2px;height:12px;border-radius:2px;background:var(--brand);flex:none}
+
+  .p-empty{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:22px 8px 8px}
+  .p-empty .t{font-size:12px;font-weight:500;color:var(--fg)}
+  .p-empty .s{font-size:11px;color:var(--muted-fg)}
+  .p-empty .ex{display:flex;gap:6px;margin-top:6px}
+  .p-empty .ex span{font-family:var(--mono);font-size:10px;color:var(--brand-ink);
+                    border:1px solid color-mix(in oklab,var(--brand) 30%,transparent);
+                    border-radius:4px;padding:1px 5px;line-height:15px}
+
+  .p-foot{height:34px;flex:none;display:flex;align-items:center;gap:8px;padding:0 14px;
+          border-top:1px solid var(--border-soft);font-size:10.5px;color:var(--muted-fg);white-space:nowrap}
+  .p-foot .mono{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .p-foot .sp{margin-left:auto;flex:none;display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted-fg-3)}
+  kbd.k{font-family:var(--mono);font-size:9px;color:var(--muted-fg);border:1px solid var(--border);
+        border-radius:3px;padding:0 4px;line-height:14px;background:var(--card)}
+
+  /* 放大检视条 */
+  .crop{position:relative;overflow:hidden;border:1px solid var(--border);border-radius:8px;
+        background:var(--card);display:flex;align-items:center;flex:none}
+  .crop .inner{zoom:2;display:flex;flex:none}
+  .cropwrap{display:flex;gap:18px;align-items:flex-start;margin:16px 0 0}
+  .zoombadge{position:absolute;right:8px;bottom:6px;font-family:var(--mono);font-size:9px;color:var(--muted-fg-3);
+             background:var(--card);border:1px solid var(--border);border-radius:4px;padding:1px 5px;z-index:4}
+
+  .mark{position:absolute;z-index:5;display:grid;place-items:center;width:16px;height:16px;border-radius:50%;
+        color:#fff;font-family:var(--mono);font-size:9.5px;box-shadow:0 0 0 2px var(--card)}
+  .mark.red{background:var(--redline)}
+  .mark.ink{background:var(--brand-ink)}
+  .tgt{position:absolute;border:1px dashed var(--redline);border-radius:6px;z-index:2;pointer-events:none}
+
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-top:14px}
+  .callout{display:flex;gap:9px;padding:11px 13px;border:1px solid var(--border);border-radius:8px;
+           background:var(--card);font-size:11px;line-height:1.75;color:var(--muted-fg)}
+  .callout b{color:var(--fg);font-weight:500}
+  .callout .mk{width:17px;height:17px;border-radius:50%;border:1px solid var(--border);color:var(--fg);
+               font-family:var(--mono);font-size:9px;display:grid;place-items:center;flex:none;margin-top:1px}
+  .callout .mk.red{border-color:var(--redline);color:var(--redline)}
+  .callout .mk.ink{border-color:var(--brand-ink);color:var(--brand-ink)}
+  .callout code{font-family:var(--mono);font-size:10px;color:var(--brand-ink);background:var(--brand-6);
+                padding:1px 3px;border-radius:3px}
+
+  /* 状态卡 */
+  .states{display:grid;grid-template-columns:302px 302px;gap:18px 34px;align-items:start}
+  .sbox{border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .sbox .hd{padding:9px 12px 1px;font-size:10.5px;font-weight:500}
+  .sbox .sub{padding:2px 12px 9px;font-size:10px;color:var(--muted-fg);line-height:1.6}
+  .sbox .crop{width:300px;height:200px;border:0;border-top:1px solid var(--border-soft);border-radius:0;align-items:flex-start}
+  .sbox .crop .panel{border-radius:0;border:0;box-shadow:none}
+
+  /* ---------- 位置示意 ---------- */
+  .place{display:grid;grid-template-columns:552px 552px;gap:16px}
+  .pcard{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:13px 20px 16px}
+  .pcard .ph{display:flex;align-items:center;gap:8px}
+  .pcard .ph b{font-size:11.5px;font-weight:500;color:var(--fg)}
+  .pcard .tag{font-family:var(--mono);font-size:8.5px;color:var(--brand-ink);
+              border:1px solid color-mix(in oklab,var(--brand) 40%,transparent);border-radius:3px;
+              padding:0 4px;line-height:14px}
+  .pcard .ps{font-size:10px;color:var(--muted-fg);line-height:1.65;margin:3px 0 10px}
+
+  .diag{position:relative;width:504px;height:315px;border:1px solid var(--border);border-radius:6px;
+        overflow:hidden;background-color:var(--bg);
+        background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:9px 9px}
+  .dg-head{position:absolute;left:0;top:0;right:0;height:15px;background:var(--chrome);
+           box-shadow:inset 0 -1px 0 var(--chrome-border);display:flex;align-items:center;
+           padding:0 5px;gap:6px;z-index:3}
+  .dg-head .b{font-size:6.5px;font-weight:500;color:var(--fg)}
+  .dg-head .m{display:flex;gap:4px;font-size:5.5px;color:var(--brand-ink)}
+  .dg-head .i{margin-left:auto;display:flex;gap:3px}
+  .dg-head .i i{display:block;width:4px;height:4px;border-radius:1px;
+                background:color-mix(in oklab,var(--brand) 45%,transparent)}
+  .zone{position:absolute;border:1px dashed color-mix(in oklab,var(--brand) 32%,transparent);
+        border-radius:2px;
+        background:repeating-linear-gradient(45deg,transparent 0 6px,color-mix(in oklab,var(--brand) 5%,transparent) 6px 7px);
+        font-family:var(--mono);font-size:6px;color:var(--muted-fg-2);line-height:1.7;
+        padding:5px 6px;text-align:left;z-index:1}
+  .dn{position:absolute;border:1px solid color-mix(in oklab,var(--fg) 16%,transparent);border-radius:2px;
+      background:var(--card);font-size:6px;color:var(--muted-fg);padding:2px 3px;line-height:1.45;z-index:2}
+  .dlog{position:absolute;left:0;top:295px;width:504px;height:20px;
+        border-top:1px dashed color-mix(in oklab,var(--fg) 20%,transparent);
+        background:color-mix(in oklab,var(--fg) 3%,var(--bg));
+        font-family:var(--mono);font-size:5.5px;color:var(--muted-fg-3);
+        display:flex;align-items:center;padding-left:5px;z-index:2}
+  .dp{position:absolute;width:126px;height:227px;border-radius:5px;
+      border:1px solid color-mix(in oklab,var(--brand) 45%,transparent);background:var(--card);
+      box-shadow:0 8px 20px -10px rgba(0,0,0,.42);padding:5px 6px;
+      display:flex;flex-direction:column;z-index:4;overflow:hidden}
+  .dp .t{font-size:6.5px;font-weight:500;color:var(--brand-ink);position:relative}
+  .dp .l{font-family:var(--mono);font-size:5.5px;color:var(--muted-fg-3);margin-top:1px;position:relative}
+  .dp .rows{flex:1;margin:7px 0 0 6px;position:relative;background-image:repeating-linear-gradient(to bottom,
+              color-mix(in oklab,var(--fg) 8%,transparent) 0 1.5px,transparent 1.5px 12.5px)}
+
+  table.cmp{width:100%;border-collapse:collapse;margin-top:16px;font-size:11px;color:var(--muted-fg)}
+  table.cmp th,table.cmp td{text-align:left;padding:8px 10px;border-top:1px solid var(--border);vertical-align:top}
+  table.cmp thead th{border-top:0;font-family:var(--mono);font-size:9.5px;font-weight:400;color:var(--muted-fg-3);padding-bottom:5px}
+  table.cmp td:first-child{color:var(--fg);font-weight:500;white-space:nowrap}
+  table.cmp .pick{color:var(--brand-ink);font-weight:500}
+
+  .spec{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}
+  .spec .box{border:1px solid var(--border);border-radius:9px;background:var(--card);padding:12px 14px}
+  .spec .box h4{margin:0 0 8px;font-size:11px;font-weight:500;font-family:var(--mono);letter-spacing:.02em}
+  .spec dl{margin:0;display:grid;grid-template-columns:96px 1fr;gap:4px 10px;font-size:10.5px;line-height:1.65}
+  .spec dt{color:var(--muted-fg-3);font-family:var(--mono);font-size:9.5px}
+  .spec dd{margin:0;color:var(--muted-fg)}
+  .spec dd b{color:var(--fg);font-weight:500}
+  .spec code{font-family:var(--mono);font-size:9.5px;color:var(--brand-ink)}
+
+  table.map{width:100%;border-collapse:collapse;margin-top:8px;font-size:10.5px;color:var(--muted-fg)}
+  table.map th,table.map td{text-align:left;padding:5px 8px;border-top:1px solid var(--border-soft)}
+  table.map thead th{border-top:0;font-family:var(--mono);font-size:9px;font-weight:400;color:var(--muted-fg-3)}
+  table.map td.n{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);width:34px}
+  table.map td.c{font-family:var(--mono);font-size:10px;color:var(--brand-ink);white-space:nowrap}
+  table.map td.zh{color:var(--fg);white-space:nowrap}
+  table.map td.en{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-2)}
+  table.map td.ct{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  .impl{margin-top:16px;border:1px solid var(--border);border-radius:9px;background:var(--card);
+        padding:14px 16px;display:grid;grid-template-columns:1fr;gap:4px 26px;
+        font-size:10.5px;line-height:1.8;color:var(--muted-fg)}
+  .impl .row{display:flex;gap:8px}
+  .impl .row .f{font-family:var(--mono);font-size:9.5px;color:var(--brand-ink);flex:none;min-width:88px}
+  .impl .hd{grid-column:1/-1;font-size:11px;font-weight:500;color:var(--fg);margin-bottom:4px}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-cmd" viewBox="0 0 24 24"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/></symbol>
+  <symbol id="i-log" viewBox="0 0 24 24"><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></symbol>
+  <symbol id="i-bot" viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-chevr" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-min" viewBox="0 0 10 10"><path d="M0 5.5h10"/></symbol>
+  <symbol id="i-max" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9"/></symbol>
+  <symbol id="i-close" viewBox="0 0 10 10"><path d="M0.5 0.5l9 9M9.5 0.5l-9 9"/></symbol>
+</defs></svg>
+
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">072 · 原型 01 · 2026-11-22</div>
+    <h1>命令面板：把 61 张卡变成一本目录</h1>
+    <p>
+      点菜单栏「命令」（日志左边那枚 ⌘）打开的就是这个窗。<b>它其实是整个应用的入口</b>：61 个 xan 操作、14 个分类，全部只从这里选。
+      但它现在是 280×500 的浮动卡片流——每个操作一张三行卡、分类是可折叠的英文大写小标、要拖着手柄才能挪动。
+      这一稿把它重排成一本<b>单列账本</b>：分组头吸顶、一个操作两行（名在上、描述在下）、行尾常驻帮助、底栏交代计数与键位。左栏那 14 条目录条试过，后来删了——它占 112px，只换来"跳分类"，而搜索本来就在顶上。
+    </p>
+    <button class="theme-toggle" id="tt">暗色</button>
+  </div>
+
+  <section class="audit">
+    <div class="hd"><b>现状诊断</b><span>src/modules/logs/CommandList.tsx · 430 行</span></div>
+    <ol>
+      <li><b>形态是"能拖的浮窗"。</b>280×500、<code>shadow-xl</code>、拖动要靠标题里那只 <code>Hand</code> 图标（<code>:282-295</code>）。日志已经改成抽屉（071）、设置是 1024×680 的对话框（040），只有它还是一只手拖的卡片箱；面板一挪，下次打开还在老地方，没人知道它在哪。</li>
+      <li><b>第一次打开的位置在右边缘。</b><code>clampPanelPosition</code> 的 <code>defaultX = vw - width</code>（<code>utils/panelDock.ts:33</code>），与 <code>CommandList.tsx:203</code> 注释里写的「left-center」不符；右侧正好是 AI 面板与数据预览停靠的位置，一打开就压在上面。</li>
+      <li><b>61 个操作 × 14 个默认全展开的分类。</b>分类是可折叠的 <code>text-xs font-bold uppercase tracking-wider</code> 英文小标（<code>:344</code>）——中文界面里整屏英文，还带 AI 风的宽字距大写；滚到底约 <b>8000px</b>。</li>
+      <li><b>一个操作 = 一张三行卡。</b><code>Card</code> + <code>p-3</code> + 名称 14px semibold + 两行截断描述 + 一枚 24px 圆形 <code>?</code>（<code>:379-408</code>）。61 张同重量的卡，行高 60+，首屏只看得到 6 个。</li>
+      <li><b>键盘选中是"环 + 底色"双信号</b>（<code>ring-2 ring-primary/30 bg-accent/50</code>，<code>:373</code>），悬停又是 <code>hover:shadow-md</code>——鼠标扫过时卡片在跳；两处 <code>transition-all</code>。</li>
+      <li><b>40px 的头部塞了四件东西：</b>拖动把手、标题、搜索框、关闭（<code>:286-318</code>）。搜索框 200px 宽、<code>focus:ring-2 focus:ring-primary/20</code>，是这个窗里唯一需要打字的地方，却最小。</li>
+      <li><b>没有计数、没有"哪些是插件"、不能跳分类。</b><code>Plugins</code> 里的 <code>pinyin</code> / <code>duckdb</code> 与 59 个 xan 原生命令长得一模一样。</li>
+      <li><b>顺序是 xan 文档序。</b>第一条是 <code>Output</code>（把结果写文件），对一个"往管道里加一步"的人，最先要的是探查与筛选。</li>
+      <li><b>空态是居中两行字</b>（<code>:416-425</code>），不给例子——而"没有搜到"恰恰是最需要提示该搜什么的时刻。</li>
+    </ol>
+  </section>
+
+  <section class="direct">
+    <span class="k">产品</span><div class="v">把 xan 的 CSV 操作串成可视化管道；这个窗是<b>从 61 个操作里挑一个</b>的目录，不是在展示功能。</div>
+    <span class="k">性格</span><div class="v">准确、像工具、不冷 —— 一本查得快的目录，不是一排商品卡。</div>
+    <span class="k">世界</span><div class="v">账本与索引卡（设计 033/040 已定）：<b>页签是分组头，条目是行</b>；不另开目录栏。</div>
+    <span class="k">时刻</span><div class="v">真正的"物"是这些命令名本身：<b>等宽的 <code>filter</code>、<code>groupby</code></b> 就是这套界的质感，不需要插画、不需要彩色图标。</div>
+    <span class="k">签名</span><div class="v">分组头上的 <b>01–14</b> 等宽序号，与设置页分组序号（040）、画布步骤卡 <code>01/02/03</code>（033）同一套编号系统。</div>
+  </section>
+
+  <!-- ============ 01 现状 ============ -->
+  <div class="frame">
+    <div class="cap"><span>01</span><b>现状</b><span>· 1x 实际尺寸</span><span class="file">280×500 · 默认位置左中</span></div>
+    <div class="app">
+      <div class="tbar">
+        <span class="brand">Easy Csv</span>
+        <nav class="menus"><span>文件</span><span>编辑</span><span>查看</span><span>工具</span><span>运行</span></nav>
+        <span class="grow"></span>
+        <div class="rgroup">
+          <button class="ibtn is-active"><svg class="ic"><use href="#i-cmd"/></svg><span class="uline"></span></button>
+          <button class="ibtn"><svg class="ic"><use href="#i-log"/></svg></button>
+          <button class="ibtn"><svg class="ic"><use href="#i-bot"/></svg></button>
+          <button class="ibtn"><svg class="ic"><use href="#i-gear"/></svg></button>
+        </div>
+        <div class="winbtns"><i><svg><use href="#i-min"/></svg></i><i><svg><use href="#i-max"/></svg></i><i><svg><use href="#i-close"/></svg></i></div>
+      </div>
+      <div class="canvas">
+        <svg class="wire"><path d="M288 125C460 125 520 125 620 125"/><path d="M806 125C840 125 846 125 880 125"/></svg>
+        <div class="trail"></div>
+        <div class="fcard" style="left:24px;top:60px;width:264px">
+          <div class="hd"><span class="fn">销售明细-2024.csv</span><span class="fm">1 240 × 5</span></div>
+          <div class="frow h"><span class="no">#</span><span>日期</span><span>品类</span><span class="num">金额</span></div>
+          <div class="frow"><span class="no">1</span><span>2024-03-04</span><span>咖啡</span><span class="num">38.00</span></div>
+          <div class="frow"><span class="no">2</span><span>2024-03-04</span><span>茶饮</span><span class="num">22.50</span></div>
+          <div class="frow"><span class="no">3</span><span>2024-03-05</span><span>咖啡</span><span class="num">41.00</span></div>
+          <div class="frow"><span class="no">4</span><span>2024-03-05</span><span>点心</span><span class="num">16.80</span></div>
+        </div>
+        <div class="scard" style="left:620px;top:94px"><span class="idx">01</span><span class="nm">filter</span><span class="p">金额 &gt; 20</span></div>
+        <div class="scard" style="left:880px;top:94px"><span class="idx">02</span><span class="nm">groupby</span><span class="p">品类 · sum(金额)</span></div>
+
+        <!-- 现状面板 -->
+        <div class="panel old" style="position:absolute;left:24px;top:40px;z-index:3">
+          <div class="o-head">
+            <div class="o-grab"><svg class="ic"><use href="#i-hand"/></svg><span style="font-size:13px;font-weight:500">命令</span></div>
+            <div class="o-search"><svg><use href="#i-search"/></svg><input value="" placeholder="搜索命令" /></div>
+            <button class="o-x"><svg class="ic"><use href="#i-x"/></svg></button>
+          </div>
+          <div class="o-body">
+            <button class="o-cat"><h3>Output</h3><span class="ch"><svg class="ic"><use href="#i-chev"/></svg></span></button>
+            <div class="o-art"><div class="top"><div style="flex:1"><div class="nm">output</div></div><span class="qh"><svg class="ic"><use href="#i-help"/></svg></span></div><div class="ds">将输出写入文件而非 stdout</div></div>
+            <button class="o-cat" style="margin-top:12px"><h3>Explore &amp; visualize</h3><span class="ch"><svg class="ic"><use href="#i-chev"/></svg></span></button>
+            <div class="o-art is-active"><div class="top"><div style="flex:1"><div class="nm">view</div></div><span class="qh"><svg class="ic"><use href="#i-help"/></svg></span></div><div class="ds">预览 CSV 文件</div></div>
+            <div class="o-art"><div class="top"><div style="flex:1"><div class="nm">headers</div></div><span class="qh"><svg class="ic"><use href="#i-help"/></svg></span></div><div class="ds">显示列名</div></div>
+            <div class="o-art"><div class="top"><div style="flex:1"><div class="nm">count</div></div><span class="qh"><svg class="ic"><use href="#i-help"/></svg></span></div><div class="ds">统计文件行数</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cropwrap">
+      <div class="crop" style="width:566px;height:162px;padding:8px 0 0 8px;background:var(--card);align-items:flex-start">
+        <div class="inner" style="width:270px;flex-direction:column;align-items:stretch">
+          <div class="o-art is-active" style="margin:0"><div class="top"><div style="flex:1"><div class="nm">view</div></div><span class="qh"><svg class="ic"><use href="#i-help"/></svg></span></div><div class="ds">预览 CSV 文件</div></div>
+        </div>
+        <span class="tgt" style="left:18px;top:14px;width:528px;height:138px;border-radius:18px"></span>
+        <span class="mark red" style="left:40px;top:2px">1</span>
+        <span class="mark red" style="left:482px;top:2px">2</span>
+        <span class="zoombadge">2x</span>
+      </div>
+      <div class="notes" style="margin-top:0;grid-template-columns:1fr">
+        <div class="callout"><span class="mk red">1</span><div><b>一张卡只装一个操作，66px 高。</b>名称 13.5/600 与两行描述<b>占一样的面积</b>——可 61 个操作里，命令名才是你要找的东西，描述只是补充。外面还套着 <code>Card</code> 的边框、内边距与阴影，61 个盒子装在一个盒子里，滚动时像翻一叠名片。</div></div>
+        <div class="callout"><span class="mk red">2</span><div><b><code>?</code> 是一颗 22px 的实心圆，还带 <code>hover:scale-110</code>。</b>帮助入口<b>必须常驻</b>（上一轮做过"悬停才淡入"，等于没有入口，已否），但它现在与「添加这个操作」同权、并且会自己动。改法是降体积与对比，不是藏起来。</div></div>
+        <div class="callout"><span class="mk red">3</span><div><b>分类小标是大写 + 宽字距 + 700 的英文</b>（左侧 1x 里的 <code>EXPLORE &amp; VISUALIZE</code>）：<code>uppercase tracking-wider</code> 是最容易被认成"模板感"的写法，而且 14 个分类一个中文名都没有。</div></div>
+      </div>
+    </div>
+    <div class="state-note"><b>量一下：</b>61 张卡 × 66px + 14 个分类行 × 38px ≈ <b>4560px</b>，加上分类间距与内边距滚动高度约 <b>8000px</b>；280 宽的窗口一次只能显示 6 张卡。</div>
+    <div class="state-note" style="padding-top:6px"><b>还有一处:</b>它落在 x=24,把画布左侧的工具轨(12–46)整块盖住 —— 面板开着时切不了框选/剪切模式。方案 A 因此<b>把工具轨让到面板右边</b>。</div>
+  </div>
+
+  <!-- ============ 02 方案 A ============ -->
+  <div class="frame">
+    <div class="cap"><span>02</span><b>方案 A（推荐）· 单列 · 分组头吸顶</b><span>· 1x 实际尺寸</span><span class="file">300×540 · 首屏 11 行</span></div>
+    <div class="app">
+      <div class="tbar">
+        <span class="brand">Easy Csv</span>
+        <nav class="menus"><span>文件</span><span>编辑</span><span>查看</span><span>工具</span><span>运行</span></nav>
+        <span class="grow"></span>
+        <div class="rgroup">
+          <button class="ibtn is-active"><svg class="ic"><use href="#i-cmd"/></svg><span class="uline"></span></button>
+          <button class="ibtn"><svg class="ic"><use href="#i-log"/></svg></button>
+          <button class="ibtn"><svg class="ic"><use href="#i-bot"/></svg></button>
+          <button class="ibtn"><svg class="ic"><use href="#i-gear"/></svg></button>
+        </div>
+        <div class="winbtns"><i><svg><use href="#i-min"/></svg></i><i><svg><use href="#i-max"/></svg></i><i><svg><use href="#i-close"/></svg></i></div>
+      </div>
+      <div class="canvas">
+        <svg class="wire"><path d="M288 125C460 125 520 125 620 125"/><path d="M806 125C840 125 846 125 880 125"/></svg>
+        <div class="trail" style="left:320px"></div>
+        <div class="fcard" style="left:24px;top:60px;width:264px">
+          <div class="hd"><span class="fn">销售明细-2024.csv</span><span class="fm">1 240 × 5</span></div>
+          <div class="frow h"><span class="no">#</span><span>日期</span><span>品类</span><span class="num">金额</span></div>
+          <div class="frow"><span class="no">1</span><span>2024-03-04</span><span>咖啡</span><span class="num">38.00</span></div>
+          <div class="frow"><span class="no">2</span><span>2024-03-04</span><span>茶饮</span><span class="num">22.50</span></div>
+          <div class="frow"><span class="no">3</span><span>2024-03-05</span><span>咖啡</span><span class="num">41.00</span></div>
+          <div class="frow"><span class="no">4</span><span>2024-03-05</span><span>点心</span><span class="num">16.80</span></div>
+        </div>
+        <div class="scard" style="left:620px;top:94px"><span class="idx">01</span><span class="nm">filter</span><span class="p">金额 &gt; 20</span></div>
+        <div class="scard" style="left:880px;top:94px"><span class="idx">02</span><span class="nm">groupby</span><span class="p">品类 · sum(金额)</span></div>
+
+        <div class="panel new" style="position:absolute;left:8px;top:30px;z-index:3" data-panel='{"active":"02"}'></div>
+      </div>
+    </div>
+
+    <div class="notes" style="grid-template-columns:1fr 1fr;margin-top:16px">
+      <div class="callout"><span class="mk ink">1</span><div><b>头部只剩三件东西：</b>标题「命令」、搜索、关闭，<b>而且不可拖</b>。位置固定（左缘 8、垂直居中），窗口缩放时重新居中、不记忆坐标——目录不需要"会跑"。</div></div>
+      <div class="callout"><span class="mk ink">2</span><div><b>没有左栏。</b>14 个分类只靠<b>吸顶的分组头</b>导航：滚到哪一组，组名就贴在顶上，序号 <code>01</code>–<code>14</code> 与计数都在那儿。省下的 112px 直接还给面板宽度。</div></div>
+      <div class="callout"><span class="mk ink">3</span><div><b>一个操作两行，40px：</b>上面是等宽命令名（你要找的就是它），下面是中文描述。<b>名与描述不再抢同一行的宽度</b>，所以命令名不再需要 100px 固定列；再加上删掉左栏，面板从 520 一路收到 <b>300</b>。卡片、边框、阴影全部去掉，靠 4% 墨底表示悬停、9% 墨底表示选中。</div></div>
+      <div class="callout"><span class="mk ink">4</span><div><b>分类头吸顶</b>，带 <code>01</code> 序号与计数，没有大写、没有字距。滚动时当前分类名一直贴在顶上，不用回头看自己在哪。</div></div>
+      <div class="callout"><span class="mk ink">5</span><div><b>底栏只留两样：</b>左边「共 61 个操作」（搜索时「命中 8 / 61」），右边四枚键帽 <kbd class="k">↑</kbd><kbd class="k">↓</kbd><kbd class="k">⏎</kbd><kbd class="k">esc</kbd>。窄了之后键帽不再配文字，靠位置和常识读。</div></div>
+      <div class="callout"><span class="mk ink">6</span><div><b>顺序按"加一步时先想到什么"排：</b>探查 → 筛选 → 排序去重 → 列操作 → 聚合 → … → 输出（第 11）。xan 文档序把「把结果写文件」放在第一位，是给读文档的人排的，不是给搭管道的人排的。</div></div>
+    </div>
+    <div class="state-note"><b>尺寸账：</b>280×500 → <b>300×540</b>，默认位 <b>x=8</b>（贴左；画布工具轨随之从 12 移到 320，仍垂直居中）。宽度 520 → 380 → <b>300</b>（删左栏再收 80）：首屏仍是 <b>11 行</b>，描述列 242px、61 条描述一条都不截断。1200 宽窗口里面板只占 25%。</div>
+  </div>
+
+  <!-- ============ 03 位置 ============ -->
+  <div class="frame">
+    <div class="cap"><span>03</span><b>位置：放在哪</b><span>· 四个候选，同一套 1200×750 示意图</span><span class="file">面板 300×540 按真实比例叠上去</span></div>
+    <div class="place">
+
+      <div class="pcard">
+        <div class="ph"><b>A 左缘 · 垂直居中</b><span class="tag">推荐</span></div>
+        <div class="ps">面板贴左（x=8）；那条 34px 的工具轨跟着让到面板右侧（x=320），仍垂直居中。盖住输入表与第一步；右侧 AI 与数据预览完全不碰。</div>
+        <div class="diag">
+          <div class="zone" style="left:218px;top:15px;width:286px;height:280px">AI 360 · 预览 320<br>打开时 680</div>
+          <div class="dn" style="left:134px;top:118px;width:14px;height:76px;border-radius:3px;background-image:repeating-linear-gradient(to bottom, color-mix(in oklab,var(--fg) 28%,transparent) 0 3px, transparent 3px 17px);background-size:6px 100%;background-repeat:no-repeat;background-position:center 6px"></div>
+          <div class="dn" style="left:10px;top:25px;width:111px;height:55px">输入表<br>1 240 × 5</div>
+          <div class="dn" style="left:151px;top:38px;width:80px;height:27px">01 filter</div>
+          <div class="dn" style="left:244px;top:38px;width:80px;height:27px">02 groupby</div>
+          <div class="dn" style="left:336px;top:25px;width:126px;height:63px">结果表<br>520×400</div>
+          <div class="dlog">日志（折叠 48 / 打开 260）</div>
+          <div class="dp" style="left:3px;top:44px">
+            <span class="t">命令</span>
+            <span class="l">300 × 540</span>
+            <div class="rows"></div>
+          </div>
+          <div class="dg-head"><span class="b">Easy Csv</span><span class="m"><span>文件</span><span>编辑</span><span>查看</span><span>工具</span><span>运行</span></span><span class="i"><i></i><i></i><i></i><i></i></span></div>
+        </div>
+      </div>
+
+      <div class="pcard">
+        <div class="ph"><b>B 锚定「命令」按钮下方</b><span class="tag">次选</span></div>
+        <div class="ps">面板顶边贴按钮（y=42），来源最明确；但它正好落在右侧停靠带与管道尾部上，两个浮层叠在一起。</div>
+        <div class="diag">
+          <div class="zone" style="left:218px;top:15px;width:286px;height:280px">AI 360 · 数据预览 320<br>（打开时占 680px）</div>
+          <div class="dn" style="left:134px;top:118px;width:14px;height:76px;border-radius:3px;background-image:repeating-linear-gradient(to bottom, color-mix(in oklab,var(--fg) 28%,transparent) 0 3px, transparent 3px 17px);background-size:6px 100%;background-repeat:no-repeat;background-position:center 6px"></div>
+          <div class="dn" style="left:10px;top:25px;width:111px;height:55px">输入表<br>1 240 × 5</div>
+          <div class="dn" style="left:151px;top:38px;width:80px;height:27px">01 filter</div>
+          <div class="dn" style="left:244px;top:38px;width:80px;height:27px">02 groupby</div>
+          <div class="dn" style="left:336px;top:25px;width:126px;height:63px">结果表<br>520×400</div>
+          <div class="dlog">日志（折叠 48 / 打开 260）</div>
+          <div class="dp" style="left:352px;top:18px">
+            <span class="t">命令</span>
+            <span class="l">300 × 540</span>
+            <div class="rows"></div>
+          </div>
+          <div class="dg-head"><span class="b">Easy Csv</span><span class="m"><span>文件</span><span>编辑</span><span>查看</span><span>工具</span><span>运行</span></span><span class="i"><i></i><i></i><i></i><i></i></span></div>
+        </div>
+      </div>
+
+      <div class="pcard">
+        <div class="ph"><b>C 右缘 · 垂直居中</b><span class="tag">现状默认</span></div>
+        <div class="ps">零改动（<code>clampPanelPosition</code> 的 <code>defaultX = vw - width</code>）。但整块压在 AI 面板上，读起来像 bug。</div>
+        <div class="diag">
+          <div class="zone" style="left:218px;top:15px;width:286px;height:280px">AI 360 · 数据预览 320<br>（打开时占 680px）</div>
+          <div class="dn" style="left:134px;top:118px;width:14px;height:76px;border-radius:3px;background-image:repeating-linear-gradient(to bottom, color-mix(in oklab,var(--fg) 28%,transparent) 0 3px, transparent 3px 17px);background-size:6px 100%;background-repeat:no-repeat;background-position:center 6px"></div>
+          <div class="dn" style="left:10px;top:25px;width:111px;height:55px">输入表<br>1 240 × 5</div>
+          <div class="dn" style="left:151px;top:38px;width:80px;height:27px">01 filter</div>
+          <div class="dn" style="left:244px;top:38px;width:80px;height:27px">02 groupby</div>
+          <div class="dn" style="left:336px;top:25px;width:126px;height:63px">结果表<br>520×400</div>
+          <div class="dlog">日志（折叠 48 / 打开 260）</div>
+          <div class="dp" style="left:357px;top:44px">
+            <span class="t">命令</span>
+            <span class="l">300 × 540</span>
+            <div class="rows"></div>
+          </div>
+          <div class="dg-head"><span class="b">Easy Csv</span><span class="m"><span>文件</span><span>编辑</span><span>查看</span><span>工具</span><span>运行</span></span><span class="i"><i></i><i></i><i></i><i></i></span></div>
+        </div>
+      </div>
+
+      <div class="pcard">
+        <div class="ph"><b>D 居中偏上</b><span class="tag">不推荐</span></div>
+        <div class="ps">居中 y=80，视线最正；正好遮住管道中段的三步——加步骤时最该看的地方。也与 Ctrl K 的模态形态混淆。</div>
+        <div class="diag">
+          <div class="zone" style="left:218px;top:15px;width:286px;height:280px">AI 360 · 数据预览 320<br>（打开时占 680px）</div>
+          <div class="dn" style="left:134px;top:118px;width:14px;height:76px;border-radius:3px;background-image:repeating-linear-gradient(to bottom, color-mix(in oklab,var(--fg) 28%,transparent) 0 3px, transparent 3px 17px);background-size:6px 100%;background-repeat:no-repeat;background-position:center 6px"></div>
+          <div class="dn" style="left:10px;top:25px;width:111px;height:55px">输入表<br>1 240 × 5</div>
+          <div class="dn" style="left:151px;top:38px;width:80px;height:27px">01 filter</div>
+          <div class="dn" style="left:244px;top:38px;width:80px;height:27px">02 groupby</div>
+          <div class="dn" style="left:336px;top:25px;width:126px;height:63px">结果表<br>520×400</div>
+          <div class="dlog">日志（折叠 48 / 打开 260）</div>
+          <div class="dp" style="left:189px;top:34px">
+            <span class="t">命令</span>
+            <span class="l">300 × 540</span>
+            <div class="rows"></div>
+          </div>
+          <div class="dg-head"><span class="b">Easy Csv</span><span class="m"><span>文件</span><span>编辑</span><span>查看</span><span>工具</span><span>运行</span></span><span class="i"><i></i><i></i><i></i><i></i></span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <table class="cmp">
+      <thead><tr><th>位置</th><th>盖住什么</th><th>与 AI / 数据预览停靠</th><th>来源连续性</th><th>1024 窄窗</th><th>改动量</th></tr></thead>
+      <tbody>
+        <tr><td>A 左缘居中</td><td>输入表 + 01 步</td><td class="pick">不冲突（右侧 680 全空）</td><td>弱：按钮在右上</td><td>8–308，占 26%；轨移到 320</td><td>小：<code>clamp</code> 加 <code>side</code></td></tr>
+        <tr><td>B 按钮下方</td><td>管道尾 + 结果表</td><td>完全重叠</td><td class="pick">强：就在按钮下</td><td>808–1188，贴边</td><td>中：要写锚点定位</td></tr>
+        <tr><td>C 右缘居中</td><td>管道尾 + 结果表</td><td>完全重叠</td><td>中</td><td>贴右缘，像停靠</td><td>0</td></tr>
+        <tr><td>D 居中偏上</td><td>中段三步（01/02/结果左半）</td><td class="pick">不冲突</td><td>弱</td><td>252–772</td><td>小：改 <code>defaultX</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="notes" style="margin-top:16px">
+      <div class="callout"><span class="mk ink">1</span><div><b>为什么是 A，而不是"贴着按钮"。</b>右上角已经被两个会变的停靠面板占住：AI 360（开历史时 520）+ 数据预览 320，全开时右侧 680px 全是它们的。面板一旦贴右上，就必然和它们叠在一起；而左缘是唯一一块<b>不会被其它面板占用</b>的地方。</div></div>
+      <div class="callout"><span class="mk ink">2</span><div><b>但工具轨不能被盖。</b>面板原先落在 24，正好吃掉那条轨的右半边，一开面板就切不了框选/剪切。<b>解法是让轨让位而不是让面板让位</b>——面板贴左（8）、轨滑到面板右侧（<code>translate</code> 308px，120ms），因为开面板时它才是主角。<br><b>盖住输入表则可以接受：</b>选操作时你要看的是"有哪些操作"，不是"我的列长什么样"——后者在命令表单里还要再看一遍。反过来，盖住管道尾部会让人一瞬间以为步骤丢了。</div></div>
+      <div class="callout"><span class="mk ink">3</span><div><b>按钮在右、面板在左，靠三件事补上连续性：</b>① 入口按钮保持打开态下划线；② 打开时 120ms <code>cubic-bezier(0.2,0,0,1)</code> 淡入 + 从左侧 8px 位移（不是缩放、不弹跳）；③ 关掉它只要 <code>Esc</code>、✕ 或菜单栏那个按钮——它不开在屏幕中央，就不会有"找不到怎么关"的问题。</div></div>
+      <div class="callout"><span class="mk ink">4</span><div><b>一条已知张力：</b>800 高的窗口里 540（面板）+ 260（日志抽屉）+ 36（标题栏）放不下。日志开着时面板会压住抽屉上半截——两个都是浮层，且命令面板是短暂停留，本稿接受这个重叠，不做"自动收起日志"的联动（那会打断正在看日志的人）。</div></div>
+    </div>
+    <div class="state-note"><b>落地就三行：</b><code>clampPanelPosition</code> 加可选 <code>side?: "left"</code>（默认 <code>right</code>，ChartPanel 不传 → 行为不变）→ CommandList 传 <code>"left"</code> 与 <code>offset: 8</code>、宽度算进 <code>width</code>（300）→ 位置只在 <code>resize</code> 时重算，不做拖动 → 画布工具轨收 <code>commandPanelInset</code>（<code>300 + 8</code>）右移。</div>
+  </div>
+
+  <!-- ============ 04 状态 ============ -->
+  <div class="frame">
+    <div class="cap"><span>04</span><b>状态</b><span>· 1x · 只裁头部与列表顶部</span><span class="file">搜索 / 键盘 / 空 / 首步 / 暗色</span></div>
+    <div class="states">
+      <div class="sbox">
+        <div class="hd">搜索「去重」</div>
+        <div class="sub">分组标题保留、命中高亮、组头显示 <code>n/m</code>；不匹配的组整组隐藏</div>
+        <div class="crop"><div class="panel new" data-panel='{"query":"去重","active":"03"}'></div></div>
+      </div>
+      <div class="sbox">
+        <div class="hd">键盘 ↓ 选中</div>
+        <div class="sub">9% 墨底 + 命令名转墨色，只有一种选中信号；<code>?</code> 随选中一起出现</div>
+        <div class="crop"><div class="panel new" data-panel='{"sel":3,"active":"01"}'></div></div>
+      </div>
+      <div class="sbox">
+        <div class="hd">没有匹配</div>
+        <div class="sub">给三个真能搜到的词，而不是"换个词试试"</div>
+        <div class="crop"><div class="panel new" data-panel='{"query":"vlookup","active":"01"}'></div></div>
+      </div>
+      <div class="sbox">
+        <div class="hd">管线为空时的首步提示</div>
+        <div class="sub">去掉蓝色 banner，改成一行灰字 + 2px 墨色竖条</div>
+        <div class="crop"><div class="panel new" data-panel='{"firstStep":true,"active":"01"}'></div></div>
+      </div>
+      <div class="sbox">
+        <div class="hd">悬停一行</div>
+        <div class="sub">4% 墨底；<code>?</code> 常驻弱色，悬停转墨——尺寸不变、不淡入、不缩放</div>
+        <div class="crop"><div class="panel new" data-panel='{"hov":2,"active":"01"}'></div></div>
+      </div>
+      <div class="sbox">
+        <div class="hd">暗色</div>
+        <div class="sub">行底与面板同色，吸顶分组头靠 9% 细线分隔</div>
+        <div class="crop"><div class="dark"><div class="panel new" data-panel='{"active":"01"}'></div></div></div>
+      </div>
+    </div>
+    <div class="state-note"><b>三条约定：</b>①「选中」与「悬停」不同色阶（9% / 4%），不叠环、不描边；② 行本身是「添加」，行尾 <code>?</code> 是「这个操作怎么用」——<code>?</code> <b>始终可见</b>（弱色 12px），只在悬停/选中时转墨，不做淡入也不做缩放；③ 帮助按钮是 16px 的可点区域，行高 30 仍留得住点击精度。</div>
+  </div>
+
+  <!-- ============ 05 否决 ============ -->
+  <div class="frame">
+    <div class="cap"><span>05</span><b>否决记录</b><span>· 走过的三条路</span><span class="file">都留在设计稿 §12.3 里</span></div>
+    <table class="cmp">
+      <thead><tr><th>方案</th><th>长什么样</th><th>为什么没留下</th></tr></thead>
+      <tbody>
+        <tr><td>左栏目录条（14 条 + 计数）</td><td>112px 宽的目录条，<code>01</code>–<code>14</code> + 短名 + 计数，点击跳组、滚动联动</td><td>它对"找某一类"有用，但占 112px 换来的只是跳转；<b>搜索已经解决了"找"</b>，而吸顶分组头解决了"我在哪"。删掉后面板从 380 收到 <b>300</b></td></tr>
+        <tr><td>保留折叠分组</td><td>14 个可折叠分类，展开一组看一组</td><td>61 项要 2–3 次点击才看到目标；且折叠状态本身要记，等于给"目录"再加一层状态</td></tr>
+        <tr><td>保持卡片列表（只修工艺）</td><td>每个操作一张卡，只换配色/圆角/字号</td><td>61 张 66px 的卡 = 8000px 滚动；"名字"和"描述"抢同一行的宽度，无法两行排</td></tr>
+      </tbody>
+    </table>
+    <div class="state-note"><b>一条原则：</b>这是<b>目录</b>，不是<b>导航</b>。目录该有的能力是"扫一遍"（吸顶分组 + 一行两行字）和"直接找"（顶上搜索）；凡是"跳转"性质的结构，都在跟搜索抢活。</div>
+  </div>
+
+  <!-- ============ 06 规格 ============ -->
+  <div class="frame">
+    <div class="cap"><span>06</span><b>规格 · 可直接照抄</b><span class="file">全部落在 4px 网格</span></div>
+    <div class="spec">
+      <div class="box">
+        <h4>尺寸</h4>
+        <dl>
+          <dt>面板</dt><dd>300×540 · 圆角 12 · 内边距 0</dd>
+          <dt>头部</dt><dd>44 高 · 内边距 0/8/0/14 · 间隔 10</dd>
+          <dt>搜索框</dt><dd>28 高 · 圆角 6 · 4% 墨底 · 无边框</dd>
+          <dt>行</dt><dd>40 高 · 列 1fr/20（名在上、描述在下，间距 1）· 圆角 5</dd>
+          <dt>分类头</dt><dd>26 高 · 吸顶 · 底部 1px 细线</dd>
+          <dt>底栏</dt><dd>34 高 · 上边框 1px</dd>
+        </dl>
+      </div>
+      <div class="box">
+        <h4>颜色 / 字</h4>
+        <dl>
+          <dt>命令名</dt><dd>等宽 11.5 / 行高 16 · <code>--fg</code>（这才是主角）</dd>
+          <dt>描述</dt><dd>11 · <code>--muted-fg</code> · 单行截断</dd>
+          <dt>分类头</dt><dd>10.5 / 500 · 无大写、无字距</dd>
+          <dt>序号</dt><dd>等宽 9 · <code>--muted-fg-3</code>，选中转墨</dd>
+          <dt>悬停 / 选中</dt><dd>4% 墨 / 9% 墨（只差一档）</dd>
+          <dt>命中</dt><dd>16% 墨底，不加下划线</dd>
+        </dl>
+      </div>
+      <div class="box">
+        <h4>行为</h4>
+        <dl>
+          <dt>位置</dt><dd><b>固定</b>：左缘 8、垂直居中，<code>resize</code> 时重算；<b>不拖、不记忆</b>（无 dockState、无 grab 光标）</dd>
+          <dt>点行</dt><dd>添加该操作 → 打开命令表单（行为不变）</dd>
+          <dt>点 ?</dt><dd>打开该命令帮助（行为不变，只在悬停/选中时出现）</dd>
+          <dt>键盘</dt><dd>↑↓ 走、⏎ 添加、Esc 关闭并归还焦点（现状保留）</dd>
+          <dt>不做</dt><dd>不加图标、不加彩色分类、不加"常用"伪分组（无数据支撑）</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="impl">
+      <div class="hd">分类短名（新增 i18n，14 条 × 中/英，只影响显示，不改 <code>category</code> 取值）</div>
+      <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:0 26px">
+        <table class="map">
+          <thead><tr><th>#</th><th>显示名</th><th>原 category</th><th style="text-align:right">n</th></tr></thead>
+          <tbody>
+            <tr><td class="n">01</td><td class="zh">探查</td><td class="en">Explore &amp; visualize</td><td class="ct">7</td></tr>
+            <tr><td class="n">02</td><td class="zh">筛选</td><td class="en">Search &amp; filter</td><td class="ct">8</td></tr>
+            <tr><td class="n">03</td><td class="zh">排序去重</td><td class="en">Sort &amp; deduplicate</td><td class="ct">3</td></tr>
+            <tr><td class="n">04</td><td class="zh">列操作</td><td class="en">Add, transform, drop…</td><td class="ct">9</td></tr>
+            <tr><td class="n">05</td><td class="zh">聚合</td><td class="en">Aggregate</td><td class="ct">6</td></tr>
+            <tr><td class="n">06</td><td class="zh">转置透视</td><td class="en">Transpose &amp; pivot</td><td class="ct">3</td></tr>
+            <tr><td class="n">07</td><td class="zh">合并文件</td><td class="en">Combine multiple CSV…</td><td class="ct">3</td></tr>
+          </tbody>
+        </table>
+        <table class="map">
+          <thead><tr><th>#</th><th>显示名</th><th>原 category</th><th style="text-align:right">n</th></tr></thead>
+          <tbody>
+            <tr><td class="n">08</td><td class="zh">格式转换</td><td class="en">Format, convert &amp; …</td><td class="ct">11</td></tr>
+            <tr><td class="n">09</td><td class="zh">拆分</td><td class="en">Split a CSV file…</td><td class="ct">2</td></tr>
+            <tr><td class="n">10</td><td class="zh">生成</td><td class="en">Generate CSV files</td><td class="ct">1</td></tr>
+            <tr><td class="n">11</td><td class="zh">输出</td><td class="en">Output</td><td class="ct">1</td></tr>
+            <tr><td class="n">12</td><td class="zh">脚本</td><td class="en">Scripting</td><td class="ct">2</td></tr>
+            <tr><td class="n">13</td><td class="zh">批量</td><td class="en">Batch method</td><td class="ct">3</td></tr>
+            <tr><td class="n">14</td><td class="zh">插件</td><td class="en">Plugins</td><td class="ct">2</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="impl">
+      <div class="hd">实施清单</div>
+      <div class="row"><span class="f">data/commands</span><span>新增 <code>COMMAND_CATEGORY_VIEW</code>：显示序 + 中文短名 + 英文短名，与 <code>commandCategories</code> 并存（不改 category 取值，避免影响分组与测试）</span></div>
+      <div class="row"><span class="f">CommandList.tsx</span><span>拆成 <code>CommandList</code>（壳/头/尾）+ <code>CommandRail</code> + <code>CommandRow</code> + <code>lib/search.ts</code>（纯函数，好测）；删 <code>Card</code>/<code>Hand</code>/<code>ChevronRight</code> 与 <code>expandedCategories</code> 状态</span></div>
+      <div class="row"><span class="f">panelDock.ts</span><span>新增可选 <code>side?: "left" | "right"</code>（默认 right，<code>panelDock.test</code> 与 ChartPanel 不动）；CommandList 传 <code>"left"</code>，并改掉那句写错的注释</span></div>
+      <div class="row"><span class="f">搜索聚焦</span><span><code>/</code> 聚焦搜索框（原型里画了键帽）：不实现就把这枚键帽删掉，别留空承诺</span></div>
+      <div class="row"><span class="f">滚动联动</span><span>复用 <code>useScrollSpy</code>（040 已实现，基于 <code>getBoundingClientRect</code>），分组头 <code>top:0</code> 吸顶</span></div>
+      <div class="row"><span class="f">i18n</span><span><code>zh|en/pipeline.ts</code>：14 个分类短名、底栏计数、空态三句、首步提示；删 <code>noCommandsFound</code>/<code>tryDifferentSearch</code> 的旧用法</span></div>
+      <div class="row"><span class="f">测试</span><span><code>CommandList.test</code> 断言重写：行数 = 分类内命令数、搜索命中数、左栏计数、空态例子、<code>?</code> 只在悬停/选中可见（查 <code>opacity</code> 不可靠 → 改为 <code>aria-hidden</code> 或 <code>tabIndex</code>）</span></div>
+      <div class="row"><span class="f">Enter 行为</span><span>现状 <code>Enter</code> 触发 <code>visibleCommands[activeIndex]</code>，重排后改为按「当前可见行」索引，注意搜索态下索引跨分组</span></div>
+    </div>
+
+    <div class="impl" style="grid-template-columns:1fr">
+      <div class="hd">验收</div>
+      <div class="row"><span class="f">1</span><span>1200×800 窗口打开面板：默认位置贴左（8）、工具轨在其右侧（320）；300×540 完整可见，无横向滚动</span></div>
+      <div class="row"><span class="f">2</span><span>滚动列表时，当前组的吸顶头始终贴顶（偏移 0），组名带 <code>01</code>–<code>14</code> 序号与计数</span></div>
+      <div class="row"><span class="f">3</span><span>搜「去重」：只剩 <code>dedup</code> 所在组（组头 <code>3/3</code>），底栏「命中 3 / 61」</span></div>
+      <div class="row"><span class="f">4</span><span>键盘：Tab 进搜索框 → ↓ 进入列表 → ↑↓ 走 11 行不跳位 → ⏎ 打开表单 → Esc 关闭并把焦点还给菜单栏「命令」按钮</span></div>
+      <div class="row"><span class="f">5</span><span>暗色：行底与面板同色，吸顶头下沿细线可见，命令名对比 ≥ 4.5:1</span></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ------------------------------------------------------------------
+   原型渲染：一份数据、一个 renderer，状态靠参数切换
+   ------------------------------------------------------------------ */
+const CATS = [
+  { i:'01', zh:'探查', en:'Explore & visualize', cmds:[
+    ['view','预览 CSV 文件'],['headers','显示列名'],['count','统计文件行数'],
+    ['flatten','以 flatten 显示每一行'],['hist','打印以行为条形的直方图'],
+    ['plot','绘制 CSV 文件数据图表'],['chart','使用 recharts 创建交互式图表']]},
+  { i:'02', zh:'筛选', en:'Search & filter', cmds:[
+    ['search','在 CSV 数据中搜索(或替换)'],['filter','根据表达式结果筛选 CSV 行'],
+    ['head','CSV 文件的前几行'],['tail','CSV 文件的后几行'],['slice','截取 CSV 文件的行'],
+    ['top','按列查找排名靠前的行'],['sample','随机采样 CSV 数据'],
+    ['bisect','在已排序的数据上二分查找']]},
+  { i:'03', zh:'排序去重', en:'Sort & deduplicate', cmds:[
+    ['sort','排序 CSV 数据'],['dedup','去重 CSV 文件'],['shuffle','打乱 CSV 数据顺序']]},
+  { i:'04', zh:'列操作', en:'Add, transform, drop and move columns', cmds:[
+    ['select','从 CSV 文件中选择列'],['drop','从 CSV 文件中删除列'],
+    ['map','通过计算表达式创建新列'],['transform','通过计算表达式转换列'],
+    ['enum','通过添加索引列来枚举'],['fill','填充空值'],['complete','补全范围内的缺失值'],
+    ['separate','将单列拆分为多列'],['blank','清空连续相同单元格']]},
+  { i:'05', zh:'聚合', en:'Aggregate', cmds:[
+    ['frequency','显示频率表'],['groupby','按组聚合数据'],['stats','计算基本统计信息'],
+    ['agg','聚合 CSV 文件数据'],['bins','将数值列分箱'],['window','计算窗口函数']]},
+  { i:'06', zh:'转置透视', en:'Transpose & pivot', cmds:[
+    ['transpose','转置 CSV 文件'],['pivot','将不同值拆分为各自的列'],['unpivot','将多列堆叠为更少的列']]},
+  { i:'07', zh:'合并文件', en:'Combine multiple CSV files', cmds:[
+    ['cat','按行或列拼接'],['join','连接 CSV 文件'],['merge','合并并排序 CSV 文件']]},
+  { i:'08', zh:'格式转换', en:'Format, convert & recombobulate', cmds:[
+    ['rename','重命名 CSV 文件的列'],['behead','删除表头行'],['fixlengths','修复记录长度'],
+    ['explode','根据列分隔符展开行'],['implode','合并连续相同的行'],['input','读取特殊格式的 CSV'],
+    ['scrape','将 HTML 抓取为 CSV'],['fmt','格式化 CSV 输出'],['to','转换为其他格式'],
+    ['from','从其他格式转换为 CSV'],['reverse','反转行顺序']]},
+  { i:'09', zh:'拆分', en:'Split a CSV file into multiple', cmds:[
+    ['split','将 CSV 数据分割为多个块'],['partition','根据列值分割 CSV 数据']]},
+  { i:'10', zh:'生成', en:'Generate CSV files', cmds:[['range','从数值范围创建 CSV 文件']]},
+  { i:'11', zh:'输出', en:'Output', cmds:[['output','将输出写入文件而非 stdout']]},
+  { i:'12', zh:'脚本', en:'Scripting', cmds:[['run','运行 xan 工作流或脚本'],['eval','评估/调试单个表达式']]},
+  { i:'13', zh:'批量', en:'Batch method', cmds:[
+    ['batch-search','搜索多个值并输出单独文件'],['batch-from','选择多个源文件及输入格式'],
+    ['batch-to','选择输出格式和输出目录']]},
+  { i:'14', zh:'插件', en:'Plugins', cmds:[['pinyin','将中文列转换为拼音'],['duckdb','用 DuckDB 执行 SQL 查询']]},
+];
+const TOTAL = CATS.reduce((n,c)=>n+c.cmds.length,0);
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function hl(text,q){
+  if(!q) return esc(text);
+  const i = text.toLowerCase().indexOf(q);
+  if(i<0) return esc(text);
+  return esc(text.slice(0,i))+'<mark>'+esc(text.slice(i,i+q.length))+'</mark>'+esc(text.slice(i+q.length));
+}
+
+function render(o = {}){
+  const q = (o.query||'').trim().toLowerCase();
+  const rows = [];
+  const groups = CATS.map(c=>{
+    const hit = c.cmds.filter(([n,d]) => !q || n.includes(q) || d.toLowerCase().includes(q)
+                 || c.zh.includes(q) || c.en.toLowerCase().includes(q));
+    return {c, hit};
+  });
+  const shown = groups.reduce((n,g)=>n+g.hit.length,0);
+
+  let idx = 0, list = '';
+
+  /* 备选 C：保留折叠分类，只把卡压成行 */
+  if(o.folded){
+    list = CATS.slice(0,6).map((c,i)=>{
+      const head = `<div class="p-group"><span class="gi">${c.i}</span><span>${esc(c.zh)}</span><span class="gc">${c.cmds.length}</span></div>`;
+      if(i!==0){
+        return `<div class="p-fold"><svg class="ic"><use href="#i-chevr"/></svg>`
+          + `<span>${esc(c.zh)}</span><span class="gc">${c.cmds.length}</span></div>`;
+      }
+      const rows = c.cmds.slice(0,3).map(([n,d])=>
+        `<div class="p-row"><span class="rt"><span class="nm">${esc(n)}</span>`
+        + `<span class="ds">${esc(d)}</span></span>`
+        + `<span class="q"><svg class="ic"><use href="#i-help"/></svg></span></div>`).join('');
+      return head + rows;
+    }).join('');
+    return shell(o, list, '', true);
+  }
+  if(o.firstStep){
+    list += `<div class="p-hint"><span class="bar"></span>管线为空：第一个步骤直接作用于输入文件</div>`;
+  }
+  groups.forEach(g=>{
+    if(!g.hit.length) return;
+    list += `<div class="p-group"><span class="gi">${g.c.i}</span><span>${esc(g.c.zh)}</span>`
+      + `<span class="gc">${q?`${g.hit.length}/${g.c.cmds.length}`:g.c.cmds.length}</span></div>`;
+    g.hit.forEach(([n,d])=>{
+      const sel = o.sel===idx, hov = o.hov===idx;
+      list += `<div class="p-row${sel?' is-sel':''}${hov?' is-hov':''}">`
+        + `<span class="rt"><span class="nm">${hl(n,q)}</span><span class="ds">${hl(d,q)}</span></span>`
+        + `<span class="q"><svg class="ic"><use href="#i-help"/></svg></span></div>`;
+      idx++;
+    });
+  });
+  if(!shown){
+    list = `<div class="p-empty"><span class="t">没有匹配的操作</span>`
+      + `<span class="s">「${esc(o.query)}」不是这个目录里的词</span>`
+      + `<span class="ex"><span>去重</span><span>金额</span><span>pivot</span></span></div>`;
+  }
+
+  const footLeft = q
+    ? `命中 <span class="mono">${shown}</span> / ${TOTAL}`
+    : `共 <span class="mono">${TOTAL}</span> 个操作`;
+
+  return shell(o, list, footLeft, false);
+}
+
+function shell(o, list, footLeft, plain){
+  const head = `<div class="p-head">
+      <span class="p-title">命令</span>
+      <div class="p-search"><svg class="ic"><use href="#i-search"/></svg>
+        <input value="${esc(o.query||'')}" placeholder="搜索操作名或描述" readonly /></div>
+      <button class="p-x"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>`;
+  const foot = plain ? '' : `<div class="p-foot">${footLeft}
+      <span class="sp"><kbd class="k">↑</kbd><kbd class="k">↓</kbd><kbd class="k">⏎</kbd><kbd class="k">esc</kbd></span>
+    </div>`;
+  return head + `<div class="p-body"><div class="p-list">${list}</div></div>` + foot;
+}
+
+document.querySelectorAll('[data-panel]').forEach(el=>{
+  let o = {};
+  try{ o = JSON.parse(el.dataset.panel || '{}'); }catch(e){}
+  el.innerHTML = render(o);
+});
+
+const tt = document.getElementById('tt');
+tt.addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+  tt.textContent = document.body.classList.contains('dark') ? '亮色' : '暗色';
+});
+</script>
+</body>
+</html>

@@ -1,22 +1,33 @@
-import React from "react";
-import { Card } from "@/components/ui/Card";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Search, X } from "lucide-react";
+
 import { ScrollArea } from "@/components/ui/ScrollArea";
-import { Button } from "@/components/ui/Button";
-import { Tooltip } from "@/components/ui/Tooltip";
-import {
-  ChevronRight,
-  ChevronDown,
-  HelpCircle,
-  Search,
-  Hand,
-  Sparkles,
-  X,
-} from "lucide-react";
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { XanCommand, PanelDockState } from "@/types/xan";
-import { commandCategories } from "@/data/commands";
+
+import type { XanCommand } from "@/types/xan";
 import { useLanguage } from "@/i18n";
 import { clampPanelPosition } from "@/utils/panelDock";
+import { CommandRow } from "./CommandRow";
+import { searchCommands } from "./lib/commandSearch";
+
+/** Panel size. Exported because the canvas tool rail slides clear of it. */
+export const COMMAND_PANEL_WIDTH = 300;
+export const COMMAND_PANEL_HEIGHT = 540;
+/** Gap between the window edge and the panel. */
+export const COMMAND_PANEL_INSET = 8;
+/**
+ * The panel sits flush left; the canvas tool rail moves to its right instead
+ * the catalog is the primary surface while it is open.
+ */
+const DOCK_OFFSET = COMMAND_PANEL_INSET;
+/** Debounce before the filter runs, in ms. */
+const SEARCH_DEBOUNCE_MS = 150;
+/** Docked left, so the panel clears the AI dock and the data profile. */
+const DOCK_OPTIONS = {
+  width: COMMAND_PANEL_WIDTH,
+  height: COMMAND_PANEL_HEIGHT,
+  side: "left" as const,
+  offset: DOCK_OFFSET,
+};
 
 interface CommandListProps {
   commands: XanCommand[];
@@ -27,19 +38,28 @@ interface CommandListProps {
   onSearchChange: (query: string) => void;
   isVisible: boolean;
   onClose: () => void;
-  /** Persisted docking state. */
-  dockState?: PanelDockState;
-  /** Report position changes for persistence. */
-  onDockChange?: (patch: Partial<PanelDockState>) => void;
-  /**
-   * Show the "your first operation applies straight to the input" strip. True
-   * while the current pipeline is still empty: the
-   * teaching lands exactly where the user clicks, inside the single entry point
-   * for adding operations.
-   */
+  /** Show the "your first operation applies straight to the input" line. */
   showFirstStepHint?: boolean;
 }
 
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="rounded-[3px] border border-border bg-card px-1 font-mono text-[9px] leading-[14px] text-muted-foreground">
+      {children}
+    </kbd>
+  );
+}
+
+/**
+ * The command catalog: 61 xan operations under 14 categories (design 072).
+ *
+ * Was a 280×500 draggable stack of cards — 66px per operation, ~8000px of
+ * scroll, uppercase English category labels. Now a 520×540 ledger: a 14-row
+ * table of contents on the left, one 30px row per operation on the right, a
+ * sticky group header and a footer that says how many there are and which keys
+ * work. Docked left because the right-hand side belongs to the AI dock and the
+ * data profile.
+ */
 export const CommandList = React.memo(function CommandList({
   commands,
   onCommandClick,
@@ -48,166 +68,47 @@ export const CommandList = React.memo(function CommandList({
   onSearchChange,
   isVisible,
   onClose,
-  dockState,
-  onDockChange,
   showFirstStepHint = false,
 }: CommandListProps) {
-  const [expandedCategories, setExpandedCategories] = useState<
-    Record<string, boolean>
-  >(
-    commandCategories.reduce(
-      (acc, category) => {
-        acc[category] = true;
-        return acc;
-      },
-      {} as Record<string, boolean>,
-    ),
-  );
-  const [isDragging, setIsDragging] = useState(false);
-  const [pos, setPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const dragStateRef = useRef({
-    startX: 0,
-    startY: 0,
-    offsetX: 0,
-    offsetY: 0,
-  });
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [keyboardNav, setKeyboardNav] = useState(false);
-  const activeCommandRef = useRef<HTMLDivElement>(null);
   const { effectiveLanguage, t } = useLanguage();
+  const language = effectiveLanguage;
 
-  // Debounce search input 150ms
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 150);
+    const timer = setTimeout(
+      () => setDebouncedQuery(searchQuery),
+      SEARCH_DEBOUNCE_MS,
+    );
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const filteredCommands = useMemo(() => {
-    const query = debouncedQuery.toLowerCase();
-    return commands.filter((command) => {
-      const desc =
-        effectiveLanguage === "zh"
-          ? command.descriptionCn
-          : command.description;
-      return (
-        command.name.toLowerCase().includes(query) ||
-        desc.toLowerCase().includes(query) ||
-        command.category.toLowerCase().includes(query)
-      );
-    });
-  }, [commands, debouncedQuery, effectiveLanguage]);
+  const result = useMemo(
+    () => searchCommands(commands, debouncedQuery, language),
+    [commands, debouncedQuery, language],
+  );
+  const groups = result.groups;
+  const query = debouncedQuery.trim().toLowerCase();
+  const searching = query.length > 0;
+  const flat = useMemo(() => groups.flatMap((g) => g.commands), [groups]);
+  const indexById = useMemo(
+    () => new Map(flat.map((command, index) => [command.id, index])),
+    [flat],
+  );
 
-  const groupedCommands = useMemo(() => {
-    return commandCategories.reduce(
-      (acc, category) => {
-        acc[category] = filteredCommands.filter(
-          (cmd) => cmd.category === category,
-        );
-        return acc;
-      },
-      {} as Record<string, XanCommand[]>,
-    );
-  }, [filteredCommands, effectiveLanguage]);
+  const [pos, setPos] = useState(() =>
+    clampPanelPosition(undefined, DOCK_OPTIONS),
+  );
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [keyboardNav, setKeyboardNav] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
-  const isSearching = debouncedQuery.trim().length > 0;
-
-  const visibleCommands = useMemo(() => {
-    if (isSearching) return filteredCommands;
-    return filteredCommands.filter((cmd) => expandedCategories[cmd.category]);
-  }, [filteredCommands, isSearching, expandedCategories]);
-
-  const visibleIndexMap = useMemo(() => {
-    const map: Record<string, number> = {};
-    visibleCommands.forEach((cmd, index) => {
-      map[cmd.id] = index;
-    });
-    return map;
-  }, [visibleCommands]);
-
-  const toggleCategory = (category: string) => {
-    setExpandedCategories((prev) => ({
-      ...prev,
-      [category]: !prev[category],
-    }));
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-
-    const rect = panelRef.current?.getBoundingClientRect();
-    if (rect) {
-      dragStateRef.current = {
-        startX: e.clientX,
-        startY: e.clientY,
-        offsetX: rect.left,
-        offsetY: rect.top,
-      };
-    }
-  };
-
+  // Docked, not draggable: re-centre when the window changes shape.
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging || !panelRef.current) return;
-
-      const deltaX = e.clientX - dragStateRef.current.startX;
-      const deltaY = e.clientY - dragStateRef.current.startY;
-
-      const toolbarHeight = 56;
-      const panelWidth = panelRef.current.offsetWidth;
-      const panelHeight = panelRef.current.offsetHeight;
-
-      let newX = dragStateRef.current.offsetX + deltaX;
-      let newY = dragStateRef.current.offsetY + deltaY;
-
-      newX = Math.max(0, Math.min(window.innerWidth - panelWidth, newX));
-      newY = Math.max(
-        toolbarHeight,
-        Math.min(window.innerHeight - panelHeight, newY),
-      );
-
-      panelRef.current.style.left = `${newX}px`;
-      panelRef.current.style.top = `${newY}px`;
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      if (panelRef.current) {
-        const rect = panelRef.current.getBoundingClientRect();
-        setPos({ x: rect.left, y: rect.top });
-        onDockChange?.({ x: rect.left, y: rect.top });
-      }
-    };
-
-    if (isDragging) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "move";
-      document.body.style.userSelect = "none";
-    }
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-  }, [isDragging, onDockChange]);
-
-  useEffect(() => {
-    if (isVisible && panelRef.current) {
-      const panelWidth = panelRef.current.offsetWidth || 280;
-      const panelHeight = panelRef.current.offsetHeight || 500;
-      // Persisted position wins; otherwise default to the left-center.
-      const clamped = clampPanelPosition(dockState, {
-        width: panelWidth,
-        height: panelHeight,
-      });
-      setPos({ x: clamped.x, y: clamped.y });
-    }
-  }, [isVisible, dockState?.x, dockState?.y]);
+    const onResize = () => setPos(clampPanelPosition(undefined, DOCK_OPTIONS));
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useEffect(() => {
     setActiveIndex(0);
@@ -219,55 +120,56 @@ export const CommandList = React.memo(function CommandList({
   }, [debouncedQuery]);
 
   useEffect(() => {
-    setActiveIndex((prev) =>
-      prev >= visibleCommands.length
-        ? Math.max(visibleCommands.length - 1, 0)
-        : prev,
-    );
-  }, [visibleCommands.length]);
+    setActiveIndex((prev) => Math.min(prev, Math.max(flat.length - 1, 0)));
+  }, [flat.length]);
 
   useEffect(() => {
-    activeCommandRef.current?.scrollIntoView({ block: "nearest" });
-  }, [activeIndex, visibleCommands.length]);
+    listRef.current
+      ?.querySelector('[aria-selected="true"]')
+      ?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, flat.length]);
 
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const inPanel = target ? panelRef.current?.contains(target) : false;
-      const isEditable = !!(
-        target &&
-        target.closest('textarea, input, select, [contenteditable="true"]')
+    (event: KeyboardEvent) => {
+      // `event.target` can be `window` (a synthetic dispatch in a test), which
+      // is not a Node and would blow up `contains`.
+      const target = event.target instanceof Node ? event.target : null;
+      const host = target instanceof HTMLElement ? target : null;
+      const inPanel = target ? Boolean(panelRef.current?.contains(target)) : false;
+      const isEditable = Boolean(
+        host?.closest('textarea, input, select, [contenteditable="true"]'),
       );
       if (!inPanel && isEditable) return;
 
-      if (e.key === "Escape") {
-        e.preventDefault();
+      if (event.key === "Escape") {
+        event.preventDefault();
         onClose();
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
+      } else if (event.key === "ArrowDown") {
+        event.preventDefault();
         setKeyboardNav(true);
         setActiveIndex((prev) =>
-          Math.min(prev + 1, Math.max(visibleCommands.length - 1, 0)),
+          Math.min(prev + 1, Math.max(flat.length - 1, 0)),
         );
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
         setKeyboardNav(true);
         setActiveIndex((prev) => Math.max(prev - 1, 0));
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        setKeyboardNav(true);
-        const command = visibleCommands[activeIndex];
-        if (command) onCommandClick(command);
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        const command = flat[activeIndex];
+        if (!command) return;
+        // Shift+Enter reaches the help that the row's `?` also opens.
+        if (event.shiftKey && onHelpClick) onHelpClick(command);
+        else onCommandClick(command);
       }
     },
-    [visibleCommands, activeIndex, onCommandClick, onClose],
+    [flat, activeIndex, onCommandClick, onHelpClick, onClose],
   );
 
   useEffect(() => {
-    if (isVisible) {
-      window.addEventListener("keydown", handleKeyDown);
-      return () => window.removeEventListener("keydown", handleKeyDown);
-    }
+    if (!isVisible) return;
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isVisible, handleKeyDown]);
 
   if (!isVisible) return null;
@@ -275,156 +177,158 @@ export const CommandList = React.memo(function CommandList({
   return (
     <div
       ref={panelRef}
+      data-testid="command-list"
       style={{
         left: pos.x,
         top: pos.y,
+        width: COMMAND_PANEL_WIDTH,
+        height: COMMAND_PANEL_HEIGHT,
       }}
-      className={`fixed w-[min(280px,calc(100vw-16px))] h-[min(500px,calc(100vh-80px))] flex flex-col bg-background border border-border/50 rounded-lg shadow-xl z-floating ${isDragging ? "shadow-2xl" : ""}`}
+      className="fixed z-floating flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-[0_12px_28px_-14px_rgba(0,0,0,0.22),0_1px_3px_rgba(0,0,0,0.05)] animate-in fade-in-0 slide-in-from-left-2 duration-[120ms] ease-[cubic-bezier(0.2,0,0,1)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]"
       onContextMenu={(e) => e.preventDefault()}
-      onMouseMove={() => setKeyboardNav(false)}
     >
-      <div className="p-2 border-b bg-card/80 flex items-center gap-2">
-        <div
-          className="flex items-center gap-2 cursor-grab active:cursor-grabbing select-none"
-          onMouseDown={handleMouseDown}
-        >
-          <Hand className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-[13px] font-medium text-foreground">
-            {t.cmds}
-          </span>
-        </div>
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60 z-10 pointer-events-none" />
+      <div className="flex h-11 flex-none items-center gap-2.5 border-b border-border-soft pl-3.5 pr-2">
+        <span className="flex-none text-[13px] font-medium">{t.cmds}</span>
+        <div className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md border border-transparent bg-foreground/[0.04] px-2 focus-within:border-primary/40 focus-within:bg-card">
+          <Search className="h-[13px] w-[13px] flex-none text-muted-foreground/50" />
           <input
             type="text"
-            placeholder={t.searchCommand}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
+            placeholder={t.commandSearchPlaceholder}
             autoFocus
-            className="w-full pl-8 pr-3 py-1.5 text-xs border border-border/50 rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
+            className="h-full w-full min-w-0 border-0 bg-transparent p-0 text-[11.5px] outline-none placeholder:text-muted-foreground/50"
           />
         </div>
-        <Tooltip content={t.close}>
-          <Button
-            variant="ghost"
-            size="xs"
-            aria-label={t.close}
-            onClick={onClose}
-            className="h-7 w-7 p-0"
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        </Tooltip>
+        <button
+          type="button"
+          aria-label={t.close}
+          onClick={onClose}
+          className="grid h-6 w-6 flex-none place-items-center rounded-[5px] text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
+        >
+          <X className="h-[13px] w-[13px]" />
+        </button>
       </div>
 
-      {/* In-place first-step teaching. */}
-      {showFirstStepHint && (
-        <div
-          className="flex items-start gap-2 border-b border-info/30 bg-info-soft px-3 py-2"
-          data-testid="command-list-first-step-hint"
+      <div className="flex min-h-0 flex-1">
+        <ScrollArea
+          ref={listRef}
+          role="listbox"
+          aria-label={t.cmds}
+          aria-activedescendant={
+            flat[activeIndex] ? `cmd-row-${flat[activeIndex].id}` : undefined
+          }
+          tabIndex={0}
+          hideHorizontalScrollbar
+          blockContent
+          className="min-w-0 flex-1 outline-none"
+          viewportClassName="pl-1.5 pr-3 pb-1.5"
+          onMouseMove={() => setKeyboardNav(false)}
         >
-          <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-info" />
-          <p className="text-[10.5px] leading-relaxed text-info">
-            {t.onboardingPanelHint}
-          </p>
-        </div>
-      )}
-      <ScrollArea className="flex-1">
-        <div className="p-2">
-          {commandCategories.map((category) => {
-            const categoryCommands = groupedCommands[category];
-            if (categoryCommands.length === 0) return null;
-
-            return (
-              <div key={category} className="mb-4">
-                <button
-                  className="w-full flex items-center justify-between px-3 py-2 text-left rounded-lg hover:bg-accent/30 transition-colors"
-                  onClick={() => toggleCategory(category)}
-                >
-                  <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    {category}
-                  </h3>
-                  <div className="text-muted-foreground/70">
-                    {isSearching || expandedCategories[category] ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </div>
-                </button>
-
-                {(isSearching || expandedCategories[category]) && (
-                  <div className="mt-2 space-y-1.5 px-1">
-                    {categoryCommands.map((command) => {
-                      const isActive =
-                        visibleIndexMap[command.id] === activeIndex;
-                      return (
-                        <Card
-                          key={command.id}
-                          ref={isActive ? activeCommandRef : undefined}
-                          role="button"
-                          tabIndex={isActive ? 0 : -1}
-                          onClick={() => onCommandClick(command)}
-                          onMouseEnter={() => {
-                            if (!keyboardNav) {
-                              setActiveIndex(visibleIndexMap[command.id] ?? 0);
-                            }
-                          }}
-                          className={`cursor-pointer transition-all duration-200 bg-card/80 border-border/50 ${
-                            isActive
-                              ? "ring-2 ring-primary/30 bg-accent/50"
-                              : "hover:shadow-md hover:bg-accent/30"
-                          }`}
-                        >
-                          <div className="p-3">
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-sm">
-                                    {command.name}
-                                  </span>
-                                </div>
-                                <div className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2 mt-1">
-                                  {effectiveLanguage === "zh"
-                                    ? command.descriptionCn
-                                    : command.description}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1.5 flex-shrink-0">
-                                {onHelpClick && (
-                                  <div
-                                    className="w-6 h-6 bg-muted/60 hover:bg-primary/20 rounded-full flex items-center justify-center transition-all hover:scale-110 cursor-pointer"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onHelpClick(command);
-                                    }}
-                                  >
-                                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/70 hover:text-primary" />
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {filteredCommands.length === 0 && (
-            <div className="text-center py-12 px-4">
-              <p className="text-sm font-medium text-muted-foreground mb-1">
-                {t.noCommandsFound}
-              </p>
-              <p className="text-xs text-muted-foreground/70">
-                {t.tryDifferentSearch}
-              </p>
+          {showFirstStepHint && (
+            <div
+              data-testid="command-list-first-step-hint"
+              className="flex items-center gap-2 border-b border-border-soft px-[7px] py-2 pr-2"
+            >
+              <span className="h-3 w-0.5 flex-none rounded-full bg-primary" />
+              <span className="text-[10.5px] leading-relaxed text-muted-foreground">
+                {t.onboardingPanelHint}
+              </span>
             </div>
           )}
-        </div>
-      </ScrollArea>
+
+          {groups.map((group) => (
+            <div
+              key={group.view.key}
+              role="group"
+              aria-label={group.view.label[language]}
+            >
+              <div
+                role="presentation"
+                className="sticky top-0 z-[1] flex h-[26px] items-center gap-1.5 bg-card px-[7px] text-[10.5px] font-medium text-muted-foreground shadow-[inset_0_-1px_0_var(--border-soft)]"
+              >
+                <span className="font-mono text-[9px] text-muted-foreground/50">
+                  {group.view.index}
+                </span>
+                <span>{group.view.label[language]}</span>
+                <span className="ml-auto font-mono text-[9.5px] tabular-nums text-muted-foreground/50">
+                  {searching
+                    ? `${group.commands.length}/${result.counts[group.view.key] ?? group.commands.length}`
+                    : group.commands.length}
+                </span>
+              </div>
+              {group.commands.map((command) => {
+                const index = indexById.get(command.id) ?? 0;
+                return (
+                  <CommandRow
+                    key={command.id}
+                    rowId={`cmd-row-${command.id}`}
+                    command={command}
+                    description={
+                      language === "zh"
+                        ? command.descriptionCn
+                        : command.description
+                    }
+                    query={query}
+                    active={index === activeIndex}
+                    helpLabel={t.commandHelpFor.replace("{name}", command.name)}
+                    onSelect={() => onCommandClick(command)}
+                    onHelp={
+                      onHelpClick ? () => onHelpClick(command) : undefined
+                    }
+                    onHover={() => {
+                      if (!keyboardNav) setActiveIndex(index);
+                    }}
+                  />
+                );
+              })}
+            </div>
+          ))}
+
+          {groups.length === 0 && (
+            <div className="flex flex-col items-start gap-1 px-2 pb-2 pt-5">
+              <span className="text-[12px] font-medium">
+                {t.commandEmptyTitle}
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                {t.commandEmptyHint.replace("{query}", debouncedQuery)}
+              </span>
+              <div className="mt-1.5 flex gap-1.5">
+                {[
+                  t.commandExampleDedup,
+                  t.commandExampleAmount,
+                  t.commandExamplePivot,
+                ].map((example) => (
+                  <button
+                    key={example}
+                    type="button"
+                    onClick={() => onSearchChange(example)}
+                    className="rounded border border-primary/30 px-1.5 font-mono text-[10px] leading-[15px] text-primary transition-colors hover:bg-primary/[0.08]"
+                  >
+                    {example}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </ScrollArea>
+      </div>
+
+      <div className="flex h-[34px] flex-none items-center gap-2 whitespace-nowrap border-t border-border-soft pl-3.5 pr-3 text-[10.5px] text-muted-foreground">
+        <span>
+          {searching
+            ? t.commandHits
+                .replace("{n}", String(result.hits))
+                .replace("{total}", String(result.total))
+            : t.commandCount.replace("{count}", String(result.total))}
+        </span>
+        <span className="ml-auto flex flex-none items-center gap-1 text-[10px] text-muted-foreground/60">
+          <Kbd>↑</Kbd>
+          <Kbd>↓</Kbd>
+          <Kbd>⏎</Kbd>
+          <Kbd>esc</Kbd>
+        </span>
+      </div>
     </div>
   );
 });

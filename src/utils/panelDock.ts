@@ -14,15 +14,32 @@ export interface ClampOptions {
   minY?: number;
   viewportWidth?: number;
   viewportHeight?: number;
+  /**
+   * Edge the panel docks against when it has no saved position (design 072).
+   * The command catalog sits on the left because the right-hand side is taken
+   * by the AI dock (360-520) and the data profile (320). Defaults to `right`,
+   * which is what the chart panel relies on.
+   */
+  side?: "left" | "right";
+  /** Gap between the docked edge and the viewport, in px (default 0). */
+  offset?: number;
 }
 
 /**
  * Clamp a docked x/y into the visible area. Missing coordinates fall back to
- * a sensible default: right edge for x, vertically centered for y.
+ * a sensible default: the configured edge for x, vertically centered for y.
  */
 export function clampPanelPosition(
   dock: PanelDockState | undefined,
-  { width, height, minY = 56, viewportWidth, viewportHeight }: ClampOptions,
+  {
+    width,
+    height,
+    minY = 56,
+    viewportWidth,
+    viewportHeight,
+    side = "right",
+    offset = 0,
+  }: ClampOptions,
 ): { x: number; y: number } {
   const vw =
     viewportWidth ?? (typeof window !== "undefined" ? window.innerWidth : 1280);
@@ -30,7 +47,8 @@ export function clampPanelPosition(
     viewportHeight ??
     (typeof window !== "undefined" ? window.innerHeight : 720);
 
-  const defaultX = Math.max(0, vw - width);
+  const defaultX =
+    side === "left" ? offset : Math.max(0, vw - width - offset);
   const defaultY = Math.max(minY, Math.min((vh - height) / 2, vh - height));
 
   const x = dock?.x !== undefined ? dock.x : defaultX;

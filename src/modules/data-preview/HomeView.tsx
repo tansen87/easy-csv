@@ -128,6 +128,8 @@ interface HomeViewProps {
   commandCount?: number;
   /** Open the floating command panel — the single "add an operation" entry. */
   onOpenCommandPanel?: () => void;
+  /** Width the open command panel takes on the left; the tool rail slides right. */
+  commandPanelInset?: number;
   onOpenAIPanel?: () => void;
   /** Load the built-in sample data + demo pipeline. */
   onLoadDemo?: () => void;
@@ -203,6 +205,7 @@ export const HomeView = React.memo(function HomeView({
   onDelimiterChange,
   showOnboardingGuide = false,
   commandCount = 0,
+  commandPanelInset = 0,
   onOpenCommandPanel,
   onOpenAIPanel,
   onLoadDemo,
@@ -389,6 +392,7 @@ export const HomeView = React.memo(function HomeView({
           rows={data}
           columnWidths={columnWidths}
           inputFileName={inputFileName}
+          commandPanelInset={commandPanelInset}
           resultPreview={resultPreview}
           onStepsChange={(newPipeline) => {
             if (onPipelineReorder && selectedTabId) {

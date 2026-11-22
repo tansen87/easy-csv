@@ -273,10 +273,17 @@ export interface Translations {
   // CommandList
   cmds: string;
   searchCommand: string;
+  commandSearchPlaceholder: string;
+  commandCount: string;
+  commandHits: string;
+  commandEmptyTitle: string;
+  commandEmptyHint: string;
+  commandExampleDedup: string;
+  commandExampleAmount: string;
+  commandExamplePivot: string;
+  commandHelpFor: string;
   stepActionParams: string;
   stepActionRename: string;
-  noCommandsFound: string;
-  tryDifferentSearch: string;
   executePipelinesHint: string;
   newTab: string;
 

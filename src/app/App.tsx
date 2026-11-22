@@ -58,6 +58,10 @@ import { xanCommands } from "@/data/commands";
 import { helpDocs, helpDocsZh } from "@/generated/help-docs";
 import { MainMenu } from "@/components/menu/MainMenu";
 import {
+  COMMAND_PANEL_INSET,
+  COMMAND_PANEL_WIDTH,
+} from "@/modules/logs/CommandList";
+import {
   TitleBarBrand,
   useTitleBarDoubleClick,
   WindowControls,
@@ -2112,6 +2116,11 @@ function AppContent() {
                 onDelimiterChange={onDelimiterModeChange}
                 showOnboardingGuide={showOnboardingGuide}
                 aiDockWidth={aiDockWidth}
+                commandPanelInset={
+                  ui.showCommandPanel
+                    ? COMMAND_PANEL_WIDTH + COMMAND_PANEL_INSET
+                    : 0
+                }
                 commandCount={xanCommands.length}
                 onOpenCommandPanel={() => ui.setShowCommandPanel(true)}
                 onOpenAIPanel={() => ui.setShowAIPanel(true)}
@@ -2133,10 +2142,6 @@ function AppContent() {
             onSearchChange={ui.setSearchQuery}
             isVisible={ui.showCommandPanel}
             onClose={() => ui.setShowCommandPanel(false)}
-            dockState={session.panelStates.commandList}
-            onDockChange={(patch) =>
-              session.updatePanelState("commandList", patch)
-            }
             showFirstStepHint={currentPipelineLength === 0}
           />
 
