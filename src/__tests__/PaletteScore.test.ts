@@ -90,7 +90,7 @@ describe("matchItem", () => {
 
 describe("searchItems", () => {
   const items = [
-    item({ label: "Open", group: "Actions", source: "action" }),
+    item({ label: "Open", group: "Tabs", source: "tab" }),
     item({ label: "filter", source: "command" }),
     item({ label: "finance_2025.csv", source: "file" }),
     item({ label: "batch-filter", source: "command" }),

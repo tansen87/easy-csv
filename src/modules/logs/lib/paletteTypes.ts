@@ -8,13 +8,7 @@ import type { LucideIcon } from "lucide-react";
  * Kept in its own module so `lib/scoreItem.ts` can depend on it without a cycle
  * back into the component.
  */
-export type PaletteSource =
-  | "action"
-  | "command"
-  | "step"
-  | "tab"
-  | "file"
-  | "template";
+export type PaletteSource = "command" | "step" | "tab" | "file";
 
 export interface PaletteItem {
   id: string;

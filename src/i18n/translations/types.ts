@@ -667,7 +667,6 @@ export interface Translations {
   // CommandPalette
   commandPalette: string;
   palettePlaceholder: string;
-  paletteActions: string;
   paletteCommands: string;
   paletteTabs: string;
   /** Steps of the current pipeline (design 073: merged canvas search). */
@@ -678,10 +677,8 @@ export interface Translations {
   /** Search scope label, paired with the live query. */
   paletteSearchScope: string;
   paletteCount: string;
-  paletteTotal: string;
   paletteEmptyTitle: string;
   paletteEmptyHint: string;
-  paletteSourceAction: string;
   paletteNavigateHint: string;
   paletteSelectHint: string;
   paletteCloseHint: string;

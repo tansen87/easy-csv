@@ -408,7 +408,7 @@ NODE_ENV=test       node -e "console.log(typeof require('react').act)"  # functi
 | `utils/format.ts` | `formatDateTime` / `formatElapsed` / `formatBytes`(后两者由 020、022 从业务文件上提复用) |
 | `utils/lineageSchema.ts` | 聚合表达式的保守解析(设计 045): `parseAggregations`(`sum(col("金额")) as 金额合计` → 别名 + 函数 + 参数,**拿不到别名就返回空数组**,调用方退回旧行为)、`pickSourceColumn`(参数里第一个真实存在的输入列)、`aggregationColumns`(groupby / agg 的输出列,带来源与表达式) |
 | `utils/settingsSearch.ts` | **设置搜索的纯函数**(设计 030 §4.3): `parseQuery` / `filterSettings`(空查询原样返回、逐词 AND、跨分组过滤并丢弃零命中分组、命中分组名则整组保留)/ `countMatches` / `highlightSegments`(按字面匹配,正则元字符不当模式;重叠区间合并) |
-| `utils/pinyinInitials.ts` | **自动生成,禁止手改**(`scripts/gen-pinyin-initials.mjs`): 711 个汉字的拼音首字母,写成两张并行字符串 + 首次调用时构一次 Map;`pinyinInitials(text)` 只取汉字、其余字符丢弃,查不到的字跳过(只会少匹配不会错匹配)。命令面板用 `dk` 匹配「打开文件」 |
+| `utils/pinyinInitials.ts` | **自动生成,禁止手改**(`scripts/gen-pinyin-initials.mjs`): 711 个汉字的拼音首字母,写成两张并行字符串 + 首次调用时构一次 Map;`pinyinInitials(text)` 只取汉字、其余字符丢弃,查不到的字跳过(只会少匹配不会错匹配)。命令面板用它匹配中文标签页 / 文件名 |
 | `utils/params.ts` · `utils/platform.ts` · `utils/separateHistory.ts` · `utils/executionHistory.ts` · `utils/versionDiff.ts` · `utils/panelDock.ts` · `utils/csv.ts` · `utils/batchFilterValues.ts` | 其余纯函数工具(参数构造、平台判断、拆分结果/执行历史持久化、版本差异、面板停靠、CSV 工具;`batchFilterValues.ts` = 解析 `xan frequency` 的 `field,value,count` 表:按表头嗅探输出分隔符 + 引号感知拆行,供 Batch Filter「从列取值」用) |
 
 ### 服务层 (`services/`)
@@ -537,8 +537,8 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `logs/LogPanel.tsx` | **底部停靠日志抽屉**(design 071): 一次执行 = 一个可折叠运行组(组头状态点/标签名/开始时间/行数/级别小计/复制全部/重跑);级别 chips + 「仅当前标签页 / 全部」+ 全文搜索三者 AND,命中 `<mark>` 与回车跳转;顶部拖拽调高(高度持久化)、最大化;磁盘回填行只读、按天分隔;导出当前过滤行 / 打开日志目录 / 清空(仅内存)。design 028 §5.4 的标签页 scope 语义保留 |
 | `logs/CommandList.tsx` | **命令面板**,可拖拽浮动面板,按分类展示命令,支持搜索和历史记录 |
 | `logs/lib/logGroups.ts` | 日志抽屉的纯逻辑层(design 071): `buildLogGroups`(runId → 运行组,无 run 按标签页,无 tab 归「应用」组,新组在上,状态 = 最重级别)、`filterLogs`(级别 × 标签页 × 逐词 AND 搜索)、`levelTotals`、`highlightMessage`(复用 settingsSearch 的字面高亮) |
-| `logs/CommandPalette.tsx` | **全局命令面板**(Ctrl/Cmd+K): `›` 提示符 + 等宽查询 + 命中/可用计数;空查询分组浏览(组名 + 计数),有查询跨组按分数单列排序并把来源压成右列 10px 标签;命中片段上色、`↑↓` 回环、IME 组字不执行;尺寸 680×(≤480) |
-| `logs/lib/scoreItem.ts` | 命令面板的排序与高亮区间(设计 053,纯函数): `matchItem`(整词 100 / 前缀 80 / 任意位置 60 / 拼音首字母 55 / 描述·关键词·快捷键 30)+ `searchItems`(丢 disabled、同分按来源 操作→命令→标签页→最近→模板) |
+| `logs/CommandPalette.tsx` | **全局命令面板**(Ctrl F): `›` 提示符 + 等宽查询 + 搜索态命中/可用计数;空查询直接按 `01–14` 分类目录浏览(组头吸顶 + 序号 + 计数),命令之后是当前管道 / 文件 / 标签页,**不含应用操作与模板**(打开、运行、设置、模板等走菜单栏与快捷键);有查询跨组按分数单列排序并把来源压成右列 10px 标签;命中片段上色、`↑↓` 回环、IME 组字不执行 |
+| `logs/lib/scoreItem.ts` | 命令面板的排序与高亮区间(设计 053,纯函数): `matchItem`(整词 100 / 前缀 80 / 任意位置 60 / 拼音首字母 55 / 描述·关键词·快捷键 30)+ `searchItems`(丢 disabled、同分按来源 命令→当前管道→标签页→最近) |
 | `logs/lib/paletteTypes.ts` | `PaletteItem` / `PaletteSource` 类型(从组件里搬出来,避免 `scoreItem.ts` 反向依赖组件造成循环) |
 | `modules/plugins/PluginSetupDialog.tsx` | 启动时缺 xan 的引导: 一键下载安装 + 打开插件目录的手动兜底;不走 `usePluginCatalog`(只管一个插件) |
 | `modules/plugins/DownloadPrefixSetting.tsx` | 「下载加速前缀」输入框(设计 023 §6): 读/存 `get_/set_plugin_download_prefix`,保存后回读后端规范化结果,清除时发 `null`;校验失败由后端文案透出 |

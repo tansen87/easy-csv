@@ -6,13 +6,7 @@ import {
   save as saveDialog,
 } from "@tauri-apps/plugin-dialog";
 import { readFile, writeFile } from "@tauri-apps/plugin-fs";
-import {
-  FileClock,
-  NotebookTabs,
-  Command,
-  Zap,
-  LibraryBig,
-} from "lucide-react";
+import { FileClock, NotebookTabs, Command } from "lucide-react";
 
 import { LogPanel } from "@/modules/logs/LogPanel";
 import { ChartPanel } from "@/modules/data-preview/charts/ChartPanel";
@@ -73,7 +67,6 @@ import {
 } from "@/hooks/useAppBootstrap";
 import { useDialogStack } from "@/hooks/useDialogStack";
 import { useLanguage } from "@/i18n";
-import { translations } from "@/i18n/translations";
 import { useToast } from "@/hooks/useToast";
 import { useLogs } from "@/hooks/useLogs";
 import { useUIState } from "@/hooks/useUIState";
@@ -1451,10 +1444,8 @@ function AppContent() {
   const hasInputFile = !!tabsHook.getCurrentTab()?.inputFile;
 
   const currentPipelineLength = tabsHook.getCurrentPipeline().length;
-  const undoStackLength = pipeline.undoStack.length;
-  const redoStackLength = pipeline.redoStack.length;
 
-  // ── First-run onboarding (design 027 §4.2) ──────────────────────────────
+  // --- First-run onboarding (design 027 §4.2) ---
   // The guide card shows only for the first file the user opens, and only
   // while they have not added a step yet; adding one marks it seen for good.
   // (`onboarding` itself is created above, next to `handleLoadDemo`.)
@@ -1492,315 +1483,6 @@ function AppContent() {
 
   // Command palette items
   const paletteItems = useMemo<PaletteItem[]>(() => {
-    const actions: PaletteItem[] = [
-      {
-        id: "open-file",
-        label: t.open,
-        description: t.openFileFormats,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        shortcut: "Ctrl+O",
-        onSelect: handleOpenFile,
-      },
-      {
-        id: "open-new-tab",
-        label: t.openNewTab,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        shortcut: "Ctrl+N",
-        onSelect: handleOpenNewTabWithFile,
-      },
-      {
-        id: "save-pipeline",
-        label: t.savePipeline,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        shortcut: "Ctrl+S",
-        disabled: currentPipelineLength === 0,
-        onSelect: handleSavePipelineAndMarkSaved,
-      },
-      {
-        id: "import-workflow",
-        label: t.importWorkflow,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        shortcut: "Ctrl+I",
-        onSelect: handleImportPipeline,
-      },
-      {
-        id: "export-workflow",
-        label: t.exportWorkflow,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        shortcut: "Ctrl+E",
-        disabled: currentPipelineLength === 0,
-        onSelect: handleExportPipelineAndMarkSaved,
-      },
-      {
-        id: "undo",
-        label: t.undo,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        shortcut: "Ctrl+Z",
-        disabled: undoStackLength === 0,
-        onSelect: () => {
-          pipeline.undo();
-          setSelectedStep(null);
-        },
-      },
-      {
-        id: "redo",
-        label: t.redo,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        shortcut: "Ctrl+Y",
-        disabled: redoStackLength === 0,
-        onSelect: () => {
-          pipeline.redo();
-          setSelectedStep(null);
-        },
-      },
-      {
-        id: "execute",
-        label: t.execute,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        shortcut: "Ctrl+R",
-        disabled: currentPipelineLength === 0 || isExecuting,
-        onSelect: handleExecuteAndMarkSaved,
-      },
-      {
-        id: "settings",
-        label: t.settings,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        shortcut: "Shift+S",
-        onSelect: onShowSettings,
-      },
-      {
-        id: "check-update",
-        label: t.checkUpdate,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        shortcut: "Shift+C",
-        onSelect: checkForUpdates,
-      },
-      {
-        id: "help",
-        label: t.help,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        shortcut: "Shift+H",
-        onSelect: onHelp,
-      },
-      {
-        id: "refresh",
-        label: t.refreshTitle,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        shortcut: "F5",
-        onSelect: () => ui.setShowRefreshDialog(true),
-      },
-      {
-        id: "toggle-log-panel",
-        label: t.logPanel,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        shortcut: "Alt+Q",
-        onSelect: onToggleLogPanel,
-      },
-      {
-        id: "toggle-data-profile",
-        label: t.dataProfile,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        disabled: !hasInputFile,
-        onSelect: onToggleDataProfile,
-      },
-      {
-        id: "toggle-version-panel",
-        label: t.versionHistory,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        onSelect: () => ui.setShowVersionPanel(!ui.showVersionPanel),
-      },
-      {
-        id: "toggle-lineage-panel",
-        label: t.dataLineage,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        onSelect: () => ui.setShowLineagePanel(!ui.showLineagePanel),
-      },
-      {
-        id: "toggle-ai-panel",
-        label: t.ai,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        shortcut: "Alt+A",
-        onSelect: () => ui.setShowAIPanel(!ui.showAIPanel),
-      },
-      {
-        id: "csv-diff",
-        label: t.csvDiff,
-        description: t.csvDiffNoResult,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        onSelect: () => {
-          ui.setCsvDiffInitialFileA(
-            tabsHook.getCurrentTab()?.inputFile || undefined,
-          );
-          ui.setShowCsvDiff(true);
-        },
-      },
-      {
-        id: "csv-encoding",
-        label: t.csvEncoding,
-        description: t.csvEncodingHint,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        onSelect: () => {
-          ui.setCsvEncodingInitialInput(
-            tabsHook.getCurrentTab()?.inputFile || undefined,
-          );
-          ui.setShowCsvEncoding(true);
-        },
-      },
-      {
-        id: "separate-good-bad",
-        label: t.separateGoodBad,
-        description: t.separateNoResult,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        onSelect: () => {
-          ui.setSeparateCsvInitialInput(
-            tabsHook.getCurrentTab()?.inputFile || undefined,
-          );
-          ui.setShowSeparateCsv(true);
-        },
-      },
-      {
-        id: "clean-special-chars",
-        label: t.cleanChars,
-        description: t.cleanCharsEmptyResult,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        onSelect: () => {
-          ui.setCleanCharsInitialInput(
-            tabsHook.getCurrentTab()?.inputFile || undefined,
-          );
-          ui.setShowCleanChars(true);
-        },
-      },
-      {
-        id: "split-lines",
-        label: t.splitLines,
-        description: t.linesPerFileHint,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        onSelect: () => {
-          ui.setSplitLinesInitialInput(
-            tabsHook.getCurrentTab()?.inputFile || undefined,
-          );
-          ui.setShowSplitLines(true);
-        },
-      },
-      {
-        id: "enumerate-by-group",
-        label: t.enumerateByGroup,
-        description: t.enumerateHint,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        onSelect: () => {
-          ui.setEnumerateByGroupInitialInput(
-            tabsHook.getCurrentTab()?.inputFile || undefined,
-          );
-          ui.setShowEnumerateByGroup(true);
-        },
-      },
-      {
-        id: "csv-to-excel",
-        label: t.csvToExcel,
-        description: t.excelHint,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        onSelect: () => {
-          ui.setCsvToExcelInitialInput(
-            tabsHook.getCurrentTab()?.inputFile || undefined,
-          );
-          ui.setShowCsvToExcel(true);
-        },
-      },
-      {
-        id: "merge-excel",
-        label: t.mergeExcel,
-        description: t.mergeExcelHint,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        onSelect: () => {
-          ui.setMergeExcelInitialInput(
-            tabsHook.getCurrentTab()?.inputFile || undefined,
-          );
-          ui.setShowMergeExcel(true);
-        },
-      },
-      {
-        id: "use-or-save-template",
-        label: t.paletteTemplates,
-        group: t.paletteActions,
-        groupIcon: Zap,
-        shortcut: "Ctrl+T",
-        onSelect: openTemplates,
-      },
-    ];
-
-    // English alias for localized action labels, so English input matches even
-    // while the UI (labels) is Chinese.
-    const actionEnKey: Record<string, keyof typeof translations.en> = {
-      "open-file": "open",
-      "open-new-tab": "openNewTab",
-      "save-pipeline": "savePipeline",
-      "import-workflow": "importWorkflow",
-      "export-workflow": "exportWorkflow",
-      undo: "undo",
-      redo: "redo",
-      execute: "execute",
-      settings: "settings",
-      "check-update": "checkUpdate",
-      help: "help",
-      refresh: "refreshTitle",
-      "toggle-log-panel": "logPanel",
-      "toggle-data-profile": "dataProfile",
-      "toggle-version-panel": "versionHistory",
-      "toggle-lineage-panel": "dataLineage",
-      "toggle-ai-panel": "ai",
-      "csv-diff": "csvDiff",
-      "csv-encoding": "csvEncoding",
-      "separate-good-bad": "separateGoodBad",
-      "clean-special-chars": "cleanChars",
-      "enumerate-by-group": "enumerateByGroup",
-      "csv-to-excel": "csvToExcel",
-      "use-or-save-template": "paletteTemplates",
-    };
-    const actionsWithSearch: PaletteItem[] = actions.map((a) => {
-      const k = actionEnKey[a.id];
-      return {
-        ...a,
-        source: "action" as const,
-        ...(k ? { search: translations.en[k] } : {}),
-      };
-    });
-
-    const templateItems: PaletteItem[] = templateStore.templates.map((tpl) => ({
-      id: `template-${tpl.id}`,
-      label: tpl.name,
-      description: tpl.description || t.newFromTemplate,
-      keywords: t.newFromTemplate,
-      groupIcon: LibraryBig,
-      source: "template",
-      group: t.paletteTemplates,
-      onSelect: () => void handleApplyTemplate(tpl.id),
-    }));
-
     const tabs: PaletteItem[] = tabsHook.tabs.map((tab) => ({
       id: `tab-${tab.id}`,
       label: tab.name,
@@ -1873,44 +1555,17 @@ function AppContent() {
       };
     });
 
-    return [
-      ...actionsWithSearch,
-      ...steps,
-      ...tabs,
-      ...recent,
-      ...commands,
-      ...templateItems,
-    ];
+    return [...steps, ...tabs, ...recent, ...commands];
   }, [
     t,
     effectiveLanguage,
-    undoStackLength,
-    redoStackLength,
-    isExecuting,
-    hasInputFile,
     tabsHook.tabs,
     tabsHook.recentFiles,
     tabsHook.getCurrentPipeline,
-    handleOpenFile,
-    handleOpenNewTabWithFile,
-    handleSavePipeline,
-    handleImportPipeline,
-    handleExportPipeline,
-    handleExecute,
     handleCommandClick,
     showCommandHelp,
     onOpenRecentFile,
-    onShowSettings,
-    checkForUpdates,
-    onHelp,
-    onToggleLogPanel,
-    onToggleDataProfile,
-    pipeline,
     setSelectedStep,
-    ui,
-    templateStore.templates,
-    handleApplyTemplate,
-    currentPipelineLength,
   ]);
 
   return (

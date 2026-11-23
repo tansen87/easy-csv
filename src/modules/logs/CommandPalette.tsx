@@ -91,10 +91,12 @@ function Highlighted({
 }
 
 /**
- * The empty-query directory (design 073): actions first, then the 14 command
- * categories in their ledger order, then current-pipeline steps, files, tabs and
- * templates. Commands carry `category`; every other source carries its group
- * name, so those groups keep their own labels.
+ * The empty-query directory (design 073): the 14 command categories in their
+ * ledger order, then current-pipeline steps, files and tabs. Commands carry
+ * `category`; every other source carries its group name, so those groups keep
+ * their own labels. App actions and templates live in the menu bar and its
+ * shortcuts, not here - they would fill the whole first screen with a second
+ * copy of the menus.
  */
 function buildDirectory(
   rows: ScoredItem[],
@@ -112,8 +114,6 @@ function buildDirectory(
   ) => {
     if (list.length > 0) groups.push({ key, index, name, rows: list });
   };
-
-  push("actions", null, t.paletteActions, pick((i) => i.source === "action"));
 
   const commands = pick((i) => i.source === "command");
   const known = new Set<string>();
@@ -133,14 +133,23 @@ function buildDirectory(
     commands.filter((row) => !known.has(row.item.category ?? "")),
   );
 
-  push("steps", null, t.paletteSteps, pick((i) => i.source === "step"));
-  push("files", null, t.recentFiles, pick((i) => i.source === "file"));
-  push("tabs", null, t.paletteTabs, pick((i) => i.source === "tab"));
   push(
-    "templates",
+    "steps",
     null,
-    t.paletteTemplates,
-    pick((i) => i.source === "template"),
+    t.paletteSteps,
+    pick((i) => i.source === "step"),
+  );
+  push(
+    "files",
+    null,
+    t.recentFiles,
+    pick((i) => i.source === "file"),
+  );
+  push(
+    "tabs",
+    null,
+    t.paletteTabs,
+    pick((i) => i.source === "tab"),
   );
 
   return groups;
@@ -174,17 +183,13 @@ export const CommandPalette = React.memo(function CommandPalette({
 
   /** Empty query keeps the directory; a query collapses it into one ranked list. */
   const directory = useMemo<DirectoryGroup[]>(
-    () =>
-      searching
-        ? []
-        : buildDirectory(results, t, effectiveLanguage),
+    () => (searching ? [] : buildDirectory(results, t, effectiveLanguage)),
     [results, searching, t, effectiveLanguage],
   );
 
   /** One flat list across groups, so ↑↓ stays global. */
   const flat = useMemo<ScoredItem[]>(
-    () =>
-      searching ? results : directory.flatMap((group) => group.rows),
+    () => (searching ? results : directory.flatMap((group) => group.rows)),
     [searching, results, directory],
   );
 
@@ -276,17 +281,17 @@ export const CommandPalette = React.memo(function CommandPalette({
 
   if (!isOpen) return null;
 
+  // Search mode counts matches against what can be run; the directory shows
+  // each group's own count instead.
   const countLabel = searching
     ? t.paletteCount
         .replace("{shown}", String(results.length))
         .replace("{total}", String(availableCount))
-    : t.paletteTotal.replace("{count}", String(availableCount));
+    : null;
   const activeRow = flat[activeIndex];
 
   const sourceLabel = (source?: PaletteSource): string => {
     switch (source) {
-      case "action":
-        return t.paletteSourceAction;
       case "command":
         return t.paletteCommands;
       case "step":
@@ -295,8 +300,6 @@ export const CommandPalette = React.memo(function CommandPalette({
         return t.paletteTabs;
       case "file":
         return t.recentFiles;
-      case "template":
-        return t.paletteTemplates;
       default:
         return "";
     }
@@ -424,9 +427,11 @@ export const CommandPalette = React.memo(function CommandPalette({
           {" · "}
           {searching ? trimmed : t.paletteDirectoryHint}
         </span>
-        <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground/60">
-          {countLabel}
-        </span>
+        {countLabel ? (
+          <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground/60">
+            {countLabel}
+          </span>
+        ) : null}
       </div>
 
       <ScrollArea
@@ -450,9 +455,11 @@ export const CommandPalette = React.memo(function CommandPalette({
             directory.map((group) => (
               <div key={group.key}>
                 <div className="sticky top-0 z-[1] flex items-baseline gap-1.5 bg-card px-2.5 pb-1 pt-2.5">
-                  <span className="w-5 shrink-0 font-mono text-[9.5px] tabular-nums text-muted-foreground/50">
-                    {group.index ?? "-"}
-                  </span>
+                  {group.index ? (
+                    <span className="w-5 shrink-0 font-mono text-[9.5px] tabular-nums text-muted-foreground/50">
+                      {group.index}
+                    </span>
+                  ) : null}
                   <span className="text-[11px] font-medium text-muted-foreground">
                     {group.name}
                   </span>
@@ -460,9 +467,7 @@ export const CommandPalette = React.memo(function CommandPalette({
                     {group.rows.length}
                   </span>
                 </div>
-                {group.rows.map((row) =>
-                  renderRow(row, flat.indexOf(row)),
-                )}
+                {group.rows.map((row) => renderRow(row, flat.indexOf(row)))}
               </div>
             ))
           )}

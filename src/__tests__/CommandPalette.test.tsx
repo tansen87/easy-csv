@@ -6,6 +6,9 @@ import { CommandPalette } from "@/modules/logs/CommandPalette";
 import type { PaletteItem } from "@/modules/logs/lib/paletteTypes";
 import { FileText, FolderOpen, Play } from "lucide-react";
 
+/** Every fixture sits in one command category, so array order is row order. */
+const CATEGORY = "Add, transform, drop and move columns";
+
 function makeItems(): PaletteItem[] {
   return [
     {
@@ -13,18 +16,22 @@ function makeItems(): PaletteItem[] {
       label: "Open",
       description: "CSV, Excel, JSON",
       icon: FolderOpen,
-      group: "Actions",
-      source: "action",
+      group: "Commands",
+      category: CATEGORY,
+      source: "command",
       shortcut: "Ctrl+O",
+      onHelp: vi.fn(),
       onSelect: vi.fn(),
     },
     {
       id: "execute",
       label: "Execute",
       icon: Play,
-      group: "Actions",
-      source: "action",
+      group: "Commands",
+      category: CATEGORY,
+      source: "command",
       shortcut: "Ctrl+R",
+      onHelp: vi.fn(),
       onSelect: vi.fn(),
     },
     {
@@ -33,7 +40,7 @@ function makeItems(): PaletteItem[] {
       description: "Select columns from a CSV file",
       icon: FileText,
       group: "Commands",
-      category: "Add, transform, drop and move columns",
+      category: CATEGORY,
       source: "command",
       keywords: "Add, transform, drop and move columns",
       onHelp: vi.fn(),
@@ -42,8 +49,9 @@ function makeItems(): PaletteItem[] {
     {
       id: "hidden",
       label: "Hidden",
-      group: "Actions",
-      source: "action",
+      group: "Commands",
+      category: CATEGORY,
+      source: "command",
       disabled: true,
       onSelect: vi.fn(),
     },
@@ -56,8 +64,8 @@ function rankingItems(): PaletteItem[] {
     {
       id: "open-file",
       label: "打开文件",
-      group: "Actions",
-      source: "action",
+      group: "Recent Files",
+      source: "file",
       onSelect: vi.fn(),
     },
     {
@@ -142,7 +150,6 @@ const findButton = (container: HTMLElement, label: string): HTMLButtonElement =>
 describe("CommandPalette", () => {
   it("renders groups and items when open", () => {
     const { container } = renderPalette(makeItems());
-    expect(container.textContent).toContain("Actions");
     expect(container.textContent).toContain("Columns");
     expect(container.textContent).toContain("Open");
     expect(container.textContent).toContain("select");

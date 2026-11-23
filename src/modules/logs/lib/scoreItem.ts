@@ -46,16 +46,13 @@ export const SCORE = {
 /**
  * Tie-break for equal scores. Commands come before files on purpose: the thing
  * you look for in a *command* palette is usually a command. This is separate
- * from the browsing order of the empty state (actions first), which the item
- * array itself defines.
+ * from the browsing order of the empty state, which the item array defines.
  */
 export const SOURCE_ORDER: Record<PaletteSource, number> = {
-  action: 0,
-  command: 1,
-  step: 2,
-  tab: 3,
-  file: 4,
-  template: 5,
+  command: 0,
+  step: 1,
+  tab: 2,
+  file: 3,
 };
 
 /** Longest query we bother scoring; longer input is treated as "no match". */
