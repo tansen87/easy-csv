@@ -1535,9 +1535,11 @@ export function FlowPanel({
         />
       )}
 
-      {/* Canvas status indicator - Bottom-left */}
+      {/* Canvas status indicator - bottom-left; rides above the log drawer
+          through the height the drawer publishes on `:root`. */}
       <div
-        className="absolute bottom-2 left-3 z-50 flex items-center gap-3 text-[11px] text-muted-foreground/60 select-none pointer-events-none"
+        className="absolute left-3 z-50 flex items-center gap-3 text-[11px] text-muted-foreground/60 select-none pointer-events-none"
+        style={{ bottom: "calc(var(--log-drawer-height, 0px) + 8px)" }}
         data-tick={tick}
       >
         <span className="flex items-center gap-1">

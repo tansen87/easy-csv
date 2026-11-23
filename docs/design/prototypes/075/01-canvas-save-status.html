@@ -1,0 +1,1014 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>075 · 画布保存状态重设计</title>
+<style>
+  :root {
+    --ink: oklch(0.145 0 0);
+    --muted: oklch(0.556 0 0);
+    --faint: oklch(0.556 0 0 / 62%);
+    --line: oklch(0.2 0.01 80 / 10%);
+    --line-strong: oklch(0.2 0.01 80 / 22%);
+    --page: oklch(0.975 0.004 85);
+    --paper: #fff;
+    --brand: oklch(0.42 0.055 250);
+    --brand-soft: color-mix(in oklab, var(--brand) 9%, transparent);
+    --success: oklch(0.52 0.09 150);
+    --warning: oklch(0.55 0.1 72);
+    --red: oklch(0.55 0.18 27);
+    --canvas-dot: oklch(0.2 0.01 80 / 10%);
+    --chip-shadow: 0 4px 12px -10px rgba(0, 0, 0, 0.28);
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: Inter, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { margin: 0; background: var(--page); }
+
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 56px 32px 96px;
+  }
+
+  /* ── 文档头 ─────────────────────────────────────────────── */
+  .doc-head {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 24px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  .doc-no {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    padding-top: 6px;
+    letter-spacing: 0.02em;
+  }
+
+  h1 {
+    margin: 0 0 8px;
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  .lede {
+    margin: 0;
+    max-width: 720px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .decision {
+    display: flex;
+    gap: 8px;
+    margin: 14px 0 0;
+    padding: 8px 12px;
+    border-left: 2px solid var(--brand);
+    background: var(--brand-soft);
+    font-size: 12.5px;
+    max-width: 760px;
+  }
+
+  .decision b { font-weight: 500; }
+
+  .direction {
+    margin: 28px 0 0;
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 0 24px;
+  }
+
+  .direction dt,
+  .direction dd {
+    margin: 0;
+    padding: 7px 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .direction dt {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--faint);
+    padding-top: 10px;
+  }
+
+  .direction dd { font-size: 13px; }
+
+  .direction dd b {
+    font-weight: 500;
+  }
+
+  /* ── 章节 ───────────────────────────────────────────────── */
+  section { margin-top: 72px; }
+
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+
+  .sec-no {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: var(--brand);
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+  }
+
+  .sec-note {
+    margin: 0 0 22px;
+    max-width: 760px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  h3 {
+    margin: 34px 0 12px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  /* ── 应用窗口 mock ──────────────────────────────────────── */
+  .app {
+    position: relative;
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--paper);
+    box-shadow: 0 30px 60px -48px rgba(0, 0, 0, 0.45);
+  }
+
+  .titlebar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 36px;
+    padding: 0 12px;
+    background: color-mix(in oklab, var(--brand) 7%, #fff);
+    border-bottom: 1px solid var(--line);
+    font-size: 11.5px;
+    color: var(--muted);
+    user-select: none;
+  }
+
+  .titlebar .brand {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: 0.01em;
+  }
+
+  .titlebar .menus { display: flex; gap: 14px; }
+
+  .titlebar .field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 300px;
+    height: 24px;
+    margin-left: auto;
+    padding: 0 8px;
+    border: 1px solid var(--line-strong);
+    border-radius: 7px;
+    background: #fff;
+    font-size: 11px;
+    color: var(--faint);
+  }
+
+  .titlebar .field .prompt { color: var(--brand); font-family: var(--mono); font-size: 12px; }
+
+  .titlebar .field kbd { margin-left: auto; }
+
+  .titlebar .icons { display: flex; gap: 10px; color: var(--faint); font-size: 11px; }
+
+  kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 17px;
+    min-width: 16px;
+    padding: 0 4px;
+    border: 1px solid var(--line-strong);
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    line-height: 1;
+    color: var(--faint);
+    background: transparent;
+  }
+
+  .tabstrip {
+    display: flex;
+    align-items: stretch;
+    height: 34px;
+    padding: 0 8px;
+    gap: 2px;
+    border-bottom: 1px solid var(--line);
+    background: #fff;
+  }
+
+  .tab {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 12px;
+    font-size: 12px;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+  }
+
+  .tab.active {
+    color: var(--ink);
+    border-bottom-color: var(--brand);
+    font-weight: 500;
+  }
+
+  .tab .close { font-size: 11px; color: var(--faint); }
+
+  .tab .dirty {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--warning);
+  }
+
+  /* 画布 */
+  .canvas {
+    position: relative;
+    height: 400px;
+    background-color: #fff;
+    background-image: radial-gradient(var(--canvas-dot) 1px, transparent 1px);
+    background-size: 20px 20px;
+    overflow: hidden;
+  }
+
+  .canvas svg.wires {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .node {
+    position: absolute;
+    width: 168px;
+    padding: 9px 10px 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 6px 16px -14px rgba(0, 0, 0, 0.35);
+  }
+
+  .node .idx {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .node .cmd {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink);
+    margin-top: 2px;
+  }
+
+  .node .meta {
+    font-size: 10.5px;
+    color: var(--faint);
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 日志抽屉 */
+  .drawer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 168px;
+    background: #fff;
+    border-top: 1px solid var(--line-strong);
+    box-shadow: 0 -14px 30px -28px rgba(0, 0, 0, 0.4);
+  }
+
+  .drawer-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 32px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink);
+  }
+
+  .drawer-head .count {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .drawer-head .chips { display: flex; gap: 6px; margin-left: 6px; }
+
+  .dchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 21px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 10.5px;
+    color: var(--muted);
+  }
+
+  .dchip .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--success); }
+  .dchip .dot.warn { background: var(--warning); }
+
+  .logrow {
+    display: grid;
+    grid-template-columns: 64px 54px minmax(0, 1fr);
+    gap: 12px;
+    padding: 6px 12px;
+    font-size: 11px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .logrow .t { font-family: var(--mono); font-size: 10px; color: var(--faint); }
+  .logrow .lvl { display: flex; align-items: center; gap: 5px; }
+  .logrow .lvl i { width: 5px; height: 5px; border-radius: 50%; background: var(--success); }
+  .logrow .lvl.err i { background: var(--red); }
+  .logrow .msg { font-family: var(--mono); font-size: 10.5px; }
+
+  /* ── 现有状态条 ─────────────────────────────────────────── */
+  .status-old {
+    position: absolute;
+    left: 12px;
+    bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+    color: color-mix(in oklab, var(--muted) 60%, transparent);
+    user-select: none;
+  }
+
+  .status-old .rule { width: 1px; height: 12px; background: var(--line-strong); opacity: .6; }
+  .status-old .dot { width: 6px; height: 6px; border-radius: 50%; background: color-mix(in oklab, var(--success) 60%, transparent); }
+
+  /* ── 新页脚 chip ───────────────────────────────────────── */
+  .chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 26px;
+    padding: 0 8px;
+    border: 1px solid color-mix(in oklab, var(--line-strong) 72%, transparent);
+    border-radius: 7px;
+    background: #fff;
+    box-shadow: 0 6px 16px -12px rgba(0, 0, 0, 0.32);
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  .chip .n {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  .chip .unit { color: var(--faint); }
+
+  .chip .rule { width: 1px; height: 12px; background: var(--line); }
+
+  .chip .state { display: inline-flex; align-items: center; gap: 6px; }
+
+  .chip .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .chip .dot.ok { background: color-mix(in oklab, var(--success) 70%, transparent); }
+  .chip .dot.warn { background: var(--warning); }
+  .chip .dot.busy { background: var(--muted); }
+
+  .chip .time {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
+    color: color-mix(in oklab, var(--muted) 82%, transparent);
+  }
+
+  .chip .save {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 500;
+    color: var(--brand);
+  }
+
+  .chip:hover { border-color: var(--line-strong); }
+  .chip.dirty { cursor: pointer; }
+  .chip.dirty:hover { background: color-mix(in oklab, var(--brand) 4%, #fff); }
+  .chip.dirty:focus-visible { outline: 2px solid var(--brand-soft); outline-offset: 1px; }
+
+  /* hover 绝对时间 */
+  .abs {
+    position: absolute;
+    left: 8px;
+    bottom: calc(100% + 7px);
+    padding: 4px 7px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: #fff;
+    box-shadow: var(--chip-shadow);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateY(2px);
+    transition: opacity 120ms cubic-bezier(.2, 0, 0, 1), transform 120ms cubic-bezier(.2, 0, 0, 1);
+    pointer-events: none;
+  }
+
+  .chip:hover .abs { opacity: 1; transform: translateY(0); }
+
+  /* 红注释 */
+  .annotation {
+    position: absolute;
+    border: 1px dashed var(--red);
+    border-radius: 4px;
+    pointer-events: none;
+  }
+
+  .anno-tag {
+    position: absolute;
+    left: 0;
+    top: -19px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: var(--red);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    white-space: nowrap;
+  }
+
+  .anno-tag.below { top: auto; bottom: -19px; }
+
+  /* ── 问题清单 ───────────────────────────────────────────── */
+  .findings {
+    margin: 22px 0 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--line-strong);
+  }
+
+  .findings li {
+    display: grid;
+    grid-template-columns: 24px 150px minmax(0, 1fr);
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 12.5px;
+  }
+
+  .findings .no {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--red);
+    padding-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .findings .where {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--faint);
+    padding-top: 1px;
+  }
+
+  /* ── 状态图 ─────────────────────────────────────────────── */
+  .states {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 8px;
+  }
+
+  .state-card {
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .state-stage {
+    position: relative;
+    height: 132px;
+    background-color: #fff;
+    background-image: radial-gradient(var(--canvas-dot) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .state-stage .chip { position: absolute; left: 12px; bottom: 10px; }
+
+  .state-caption {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--line);
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+
+  .state-caption b {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--brand);
+    font-weight: 400;
+  }
+
+  .state-caption b::after {
+    content: "·";
+    margin: 0 6px;
+    color: var(--line-strong);
+  }
+
+  /* 抽屉抬升示意 */
+  .state-stage .fake-drawer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 62px;
+    background: #fff;
+    border-top: 1px solid var(--line-strong);
+  }
+
+  .state-stage .fake-drawer::before {
+    content: "日志 · 128 条";
+    position: absolute;
+    left: 12px;
+    top: 7px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--faint);
+  }
+
+  .state-stage .chip.lifted { left: 12px; bottom: 72px; }
+
+  .lift-hint {
+    position: absolute;
+    right: 12px;
+    bottom: 72px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--faint);
+  }
+
+  /* ── 规格表 ─────────────────────────────────────────────── */
+  table.spec {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 12.5px;
+  }
+
+  table.spec th,
+  table.spec td {
+    text-align: left;
+    vertical-align: top;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  table.spec th {
+    width: 132px;
+    font-weight: 400;
+    color: var(--faint);
+    font-family: var(--mono);
+    font-size: 10.5px;
+  }
+
+  table.spec code,
+  .code {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink);
+    background: color-mix(in oklab, var(--ink) 4%, transparent);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  /* ── 暗色示意 ───────────────────────────────────────────── */
+  .dark-stage {
+    position: relative;
+    height: 108px;
+    margin-top: 8px;
+    border-radius: 10px;
+    border: 1px solid oklch(0.3 0 0);
+    background-color: oklch(0.145 0 0);
+    background-image: radial-gradient(oklch(0.96 0.005 85 / 8%) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .dark-stage .chip {
+    position: absolute;
+    left: 12px;
+    bottom: 10px;
+    background: oklch(0.205 0 0);
+    border-color: oklch(1 0 0 / 10%);
+    box-shadow: none;
+    color: oklch(0.72 0 0);
+  }
+
+  .dark-stage .chip .n { color: oklch(0.985 0 0); }
+  .dark-stage .chip .rule { background: oklch(1 0 0 / 10%); }
+  .dark-stage .chip .time { color: oklch(0.72 0 0 / 70%); }
+  .dark-stage .chip .save { color: oklch(0.78 0.045 245); }
+  .dark-stage .chip .dot.ok { background: oklch(0.62 0.1 150); }
+
+  .dark-note {
+    position: absolute;
+    right: 12px;
+    bottom: 10px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: oklch(0.72 0 0 / 60%);
+  }
+
+  /* ── 备选 B ─────────────────────────────────────────────── */
+  .alt-stage {
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .alt-tabstrip {
+    display: flex;
+    align-items: stretch;
+    height: 40px;
+    padding: 0 8px;
+    gap: 2px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .alt-tab {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 12px;
+    font-size: 12px;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+  }
+
+  .alt-tab.active { color: var(--ink); font-weight: 500; border-bottom-color: var(--brand); }
+  .alt-tab .dirty { width: 6px; height: 6px; border-radius: 50%; background: var(--warning); }
+
+  .alt-canvas {
+    position: relative;
+    height: 108px;
+    background-color: #fff;
+    background-image: radial-gradient(var(--canvas-dot) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .alt-canvas .status-old { color: color-mix(in oklab, var(--muted) 78%, transparent); }
+
+  /* ── 取舍 ───────────────────────────────────────────────── */
+  .tradeoff {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 14px;
+  }
+
+  .tradeoff > div {
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: #fff;
+    font-size: 12.5px;
+  }
+
+  .tradeoff h4 {
+    margin: 0 0 6px;
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+
+  .tradeoff p { margin: 0; color: var(--muted); }
+
+  .foot {
+    margin-top: 72px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line-strong);
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--faint);
+  }
+
+  @media (max-width: 860px) {
+    .states, .tradeoff { grid-template-columns: minmax(0, 1fr); }
+    .doc-head, .direction { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+    .doc-no { padding-top: 0; }
+    .direction dt { border-top: none; padding: 10px 0 0; }
+    .direction dd { border-top: none; padding: 0 0 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-head">
+    <div class="doc-no">075<br />2026-11-23</div>
+    <div>
+      <h1>画布左下角的保存状态</h1>
+      <p class="lede">
+        现状：步骤数、已保存标记与相对时间直接压在点阵画布上，日志抽屉打开时被整块盖住。
+        重设计只解决两件事——让保存状态始终看得见，让它看起来像一个有归属的页脚，而不是浮在画布上的灰字。
+      </p>
+      <p class="decision">
+        <b>已拍板（2026-11-23）：</b>只做「跟随抽屉抬升」。状态条现有样式保持不变，chip 改版与交互升级暂不实施。
+      </p>
+    </div>
+  </header>
+
+  <dl class="direction">
+    <dt>产品</dt>
+    <dd>桌面 CSV 管道画布；状态行只回答两件事：<b>保存了没有、多久之前</b>。</dd>
+    <dt>性格</dt>
+    <dd>安静、准确，像账本页脚。</dd>
+    <dt>世界</dt>
+    <dd>账本与索引卡（033 / 040 / 072 / 073 / 074 已定）。</dd>
+    <dt>时刻</dt>
+    <dd>保存状态那一个点（墨绿 / 琥珀）与相对时间的等宽数字。</dd>
+    <dt>签名</dt>
+    <dd>账本页脚：一条细线、一个等宽数字、永远在日志抽屉之上。</dd>
+  </dl>
+
+  <!-- ═══ 01 现状 ═══ -->
+  <section>
+    <div class="sec-head"><span class="sec-no">01</span><h2>现状</h2></div>
+    <p class="sec-note">
+      状态条是画布内的一行 11px 灰字（<span class="code">bottom-2 left-3</span>，60% muted，无底色，<span class="code">pointer-events-none</span>）；
+      日志抽屉是 <span class="code">fixed bottom-0</span>、默认 260 高、层级更高的浮层。
+    </p>
+
+    <div class="app">
+      <div class="titlebar">
+        <span class="brand">Easy Csv</span>
+        <span class="menus"><span>文件</span><span>编辑</span><span>查看</span><span>工具</span><span>帮助</span><span>执行</span></span>
+        <span class="field"><span class="prompt">›</span><span>搜索命令、步骤或文件</span><kbd>Ctrl F</kbd></span>
+        <span class="icons"><span>▤</span><span>◻</span><span>⚙</span></span>
+      </div>
+      <div class="tabstrip">
+        <span class="tab active">订单清洗<span class="close">×</span></span>
+        <span class="tab">用户表<span class="close">×</span></span>
+        <span class="tab" style="color:var(--faint)">+</span>
+      </div>
+      <div class="canvas">
+        <svg class="wires" viewBox="0 0 1120 400" preserveAspectRatio="none">
+          <path d="M208 66 H250" stroke="oklch(0.2 0.01 80 / 30%)" stroke-width="1.5" fill="none" />
+          <path d="M418 66 H460" stroke="oklch(0.2 0.01 80 / 30%)" stroke-width="1.5" fill="none" />
+          <path d="M628 66 H670" stroke="oklch(0.2 0.01 80 / 30%)" stroke-width="1.5" fill="none" />
+        </svg>
+
+        <div class="node" style="left:40px;top:38px">
+          <div class="idx">01</div>
+          <div class="cmd">orders.csv</div>
+          <div class="meta">输入表 · 24,812 行</div>
+        </div>
+        <div class="node" style="left:250px;top:38px">
+          <div class="idx">02</div>
+          <div class="cmd">filter</div>
+          <div class="meta">status == "paid"</div>
+        </div>
+        <div class="node" style="left:460px;top:38px">
+          <div class="idx">03</div>
+          <div class="cmd">select</div>
+          <div class="meta">order_id, amount, city</div>
+        </div>
+        <div class="node" style="left:670px;top:38px">
+          <div class="idx">04</div>
+          <div class="cmd">sort</div>
+          <div class="meta">amount desc</div>
+        </div>
+
+        <div class="drawer">
+          <div class="drawer-head">
+            <span>日志</span>
+            <span class="count">128 条</span>
+            <span class="chips">
+              <span class="dchip"><i class="dot"></i>成功 96</span>
+              <span class="dchip"><i class="dot warn"></i>警告 3</span>
+            </span>
+          </div>
+          <div class="logrow"><span class="t">19:51:02</span><span class="lvl"><i></i>成功</span><span class="msg">xan filter -e 'status == "paid"' orders.csv</span></div>
+          <div class="logrow"><span class="t">19:51:02</span><span class="lvl"><i></i>成功</span><span class="msg">24,812 → 11,204 行 · 1.8s</span></div>
+          <div class="logrow"><span class="t">19:51:03</span><span class="lvl err"><i></i>错误</span><span class="msg">sort: 第 3 列不存在，已跳过本步</span></div>
+        </div>
+
+        <!-- 被盖住的位置示意 -->
+        <div class="annotation" style="left:8px;bottom:calc(168px + 2px);width:206px;height:26px">
+          <span class="anno-tag">保存状态在这里被整块盖住</span>
+        </div>
+      </div>
+    </div>
+
+    <ul class="findings">
+      <li><span class="no">1</span><span class="where">FlowPanel.tsx:1539</span><span>没有底面，直接压在点阵与节点上；60% 灰字在节点从下方穿过时几乎读不出来。</span></li>
+      <li><span class="no">2</span><span class="where">LogPanel.tsx:361</span><span>抽屉 <span class="code">fixed bottom-0</span> 且层级更高，一打开就把状态条整块盖住——运行后最需要看保存状态，却看不见。</span></li>
+      <li><span class="no">3</span><span class="where">FlowPanel.tsx:1543–1567</span><span>三段同权：步数、状态、时间字号与色值一样；真正要紧的「未保存」只有一个 6px 点。</span></li>
+      <li><span class="no">4</span><span class="where">FlowPanel.tsx:1545</span><span>`3 steps` 英文写死，中文界面里混英文（单位没有走 i18n）。</span></li>
+      <li><span class="no">5</span><span class="where">FlowPanel.tsx:1540</span><span>只有相对时间，没有绝对时间；<span class="code">pointer-events-none</span>，不可点、不可聚焦、不能就地保存。</span></li>
+      <li><span class="no">6</span><span class="where">KeyIndicatorOverlay.tsx:84</span><span>键盘 HUD 在 <span class="code">bottom-11</span>，只比状态条高 10px；抽屉打开时两者一起被埋。</span></li>
+    </ul>
+  </section>
+
+  <!-- ═══ 02 推荐 ═══ -->
+  <section>
+    <div class="sec-head"><span class="sec-no">02</span><h2>推荐：账本页脚，跟随抽屉抬升</h2></div>
+    <p class="sec-note">
+      状态条收成一块 26px 高的页脚 chip：白卡、1px 细线、极浅中性投影，保留步数 / 状态 / 时间三段，但把「未保存」变成可点的保存动作。
+      抽屉打开时整块 chip 跟着抬到抽屉顶边上方 8px，用 <span class="code">transform</span> 过渡，不动布局属性。
+    </p>
+
+    <div class="states">
+      <div class="state-card">
+        <div class="state-stage">
+          <div class="chip">
+            <span class="n">3</span><span class="unit">步</span>
+            <span class="rule"></span>
+            <span class="state"><i class="dot ok"></i>已保存</span>
+            <span class="rule"></span>
+            <span class="time">7 分钟前</span>
+            <span class="abs">2026-11-23 19:51:03</span>
+          </div>
+        </div>
+        <div class="state-caption"><b>静息</b>已保存 · 悬停时间看绝对时间</div>
+      </div>
+
+      <div class="state-card">
+        <div class="state-stage">
+          <div class="chip dirty" tabindex="0">
+            <span class="n">3</span><span class="unit">步</span>
+            <span class="rule"></span>
+            <span class="state"><i class="dot warn"></i>未保存</span>
+            <span class="rule"></span>
+            <span class="save">保存<kbd>Ctrl S</kbd></span>
+          </div>
+        </div>
+        <div class="state-caption"><b>未保存</b>整块可点 → 保存，键盘可聚焦</div>
+      </div>
+
+      <div class="state-card">
+        <div class="state-stage">
+          <div class="chip">
+            <span class="n">3</span><span class="unit">步</span>
+            <span class="rule"></span>
+            <span class="state"><i class="dot busy"></i>保存中…</span>
+          </div>
+        </div>
+        <div class="state-caption"><b>保存中</b>时间段暂时让位，不跳动宽度</div>
+      </div>
+
+      <div class="state-card">
+        <div class="state-stage">
+          <div class="fake-drawer"></div>
+          <div class="chip lifted">
+            <span class="n">3</span><span class="unit">步</span>
+            <span class="rule"></span>
+            <span class="state"><i class="dot ok"></i>已保存</span>
+            <span class="rule"></span>
+            <span class="time">7 分钟前</span>
+          </div>
+          <span class="lift-hint">抽屉高 + 8px</span>
+        </div>
+        <div class="state-caption"><b>抽屉打开</b>整块抬升，不再被盖住</div>
+      </div>
+    </div>
+
+    <h3>暗色</h3>
+    <div class="dark-stage">
+      <div class="chip">
+        <span class="n">3</span><span class="unit">步</span>
+        <span class="rule"></span>
+        <span class="state"><i class="dot ok"></i>已保存</span>
+        <span class="rule"></span>
+        <span class="time">7 分钟前</span>
+      </div>
+      <span class="dark-note">无投影，靠面阶与 10% 细线分层</span>
+    </div>
+
+    <h3>规格</h3>
+    <table class="spec">
+      <tr><th>位置</th><td>画布左下，<span class="code">left: 12</span>；静息 <span class="code">bottom: 8</span>；抽屉打开时整体抬升抽屉高 + 8。</td></tr>
+      <tr><th>尺寸</th><td>高 26 · 内距 0 8 · 段间距 8 · 段间竖线 1×12（10% 细线）。</td></tr>
+      <tr><th>面</th><td>亮色：白卡 + 1px 16% 墨细线 + <span class="code">0 6px 16px -12px rgba(0,0,0,.32)</span>；暗色：<span class="code">oklch(.205 0 0)</span>，10% 细线，无投影。</td></tr>
+      <tr><th>字号</th><td>正文 11px；步数与时间用等宽、<span class="code">tabular-nums</span>；时间 10.5px、muted 82%。</td></tr>
+      <tr><th>状态</th><td>6px 圆点 + 11px 文案：已保存（success 70%）/ 未保存（warning）/ 保存中（muted）。</td></tr>
+      <tr><th>未保存</th><td>时间段换成 <span class="code">保存</span> + 键帽 <span class="code">Ctrl S</span>，整块可点；焦点环 2px brand/9%。</td></tr>
+      <tr><th>时间</th><td>相对时间常驻；hover 在 chip 上方 7px 浮出绝对时间 <span class="code">YYYY-MM-DD HH:mm:ss</span>。</td></tr>
+      <tr><th>动效</th><td>只动 <span class="code">transform</span> 与 <span class="code">opacity</span>，120ms <span class="code">cubic-bezier(.2,0,0,1)</span>；抽屉拖拽时跟随，不延迟。</td></tr>
+      <tr><th>层级</th><td>仍留在画布内（z 50）。因为抬升后不再与抽屉相交，无需把日志抽屉降级。</td></tr>
+      <tr><th>键盘 HUD</th><td>与 chip 同属左下栈，HUD 在 chip 上方 8px，随 chip 一起抬升。</td></tr>
+      <tr><th>边界</th><td>抽屉最大化（全屏）时整块隐藏；窗口 &lt; 960 保持同一位置（左侧工具轨垂直居中，不冲突）。</td></tr>
+    </table>
+  </section>
+
+  <!-- ═══ 03 备选 ═══ -->
+  <section>
+    <div class="sec-head"><span class="sec-no">03</span><h2>备选：保存状态进标签页</h2></div>
+    <p class="sec-note">
+      另一种常见做法：未保存点长在标签页上（悬停给出「未保存 · 3 步 · 7 分钟前」），画布页脚只留步数与最后保存时间。
+      它永远不会被底部抽屉影响，但状态离「画布上正在做的事」更远，且多标签时要逐个扫。
+    </p>
+
+    <div class="alt-stage">
+      <div class="alt-tabstrip">
+        <span class="alt-tab active"><i class="dirty"></i>订单清洗<span class="close">×</span></span>
+        <span class="alt-tab">用户表<span class="close">×</span></span>
+        <span class="alt-tab" style="color:var(--faint)">+</span>
+      </div>
+      <div class="alt-canvas">
+        <div class="status-old">
+          <span><span style="font-weight:500;font-variant-numeric:tabular-nums">3</span> 步</span>
+          <span class="rule"></span>
+          <span style="font-family:var(--mono);font-size:10.5px">7 分钟前</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tradeoff">
+      <div>
+        <h4>推荐 · 账本页脚</h4>
+        <p>保留现有信息架构，只解决遮挡与可读性；抽屉开合是唯一需要联动的状态，改动集中在 FlowPanel 与 App 的 inset 传值。</p>
+      </div>
+      <div>
+        <h4>备选 · 标签页</h4>
+        <p>标准编辑器心智，天然免疫底部遮挡；但保存状态与画布动作分离，中文标签宽窄不一时第二行元信息容易被挤掉。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 04 交互 ═══ -->
+  <section>
+    <div class="sec-head"><span class="sec-no">04</span><h2>交互与边界</h2></div>
+    <ul class="findings">
+      <li><span class="no">a</span><span class="where">未保存</span><span>点击 chip 任意位置 = 保存管道；<span class="code">Enter / Space</span> 等效；成功后回到「已保存」，时间归零为「刚刚」。</span></li>
+      <li><span class="no">b</span><span class="where">已保存</span><span>不接收点击，但可聚焦读取 <span class="code">aria-label</span>；hover 显示绝对时间。</span></li>
+      <li><span class="no">c</span><span class="where">抽屉拖拽</span><span>chip 的位移与抽屉高度同一帧更新（同一 <span class="code">transform</span>），不出现一帧被盖住。</span></li>
+      <li><span class="no">d</span><span class="where">无管道</span><span>0 步时显示 <span class="code">0 步 · 尚未保存</span>，不显示时间。</span></li>
+      <li><span class="no">e</span><span class="where">i18n</span><span>单位「步 / step」与「保存 / Save」走翻译键，去掉现有的硬编码英文。</span></li>
+      <li><span class="no">f</span><span class="where">屏幕阅读器</span><span>一个 <span class="code">role="status"</span> 容器，内容为「已保存，7 分钟前」；只在状态变化时播报，不让时间每分钟打断。</span></li>
+    </ul>
+  </section>
+
+  <div class="foot">
+    <span>easy-csv · design 075 · canvas save status</span>
+    <span>静态原型，未改动生产代码</span>
+  </div>
+
+</div>
+</body>
+</html>

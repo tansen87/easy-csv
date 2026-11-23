@@ -276,6 +276,20 @@ export const LogPanel = React.memo(function LogPanel({
     setHeight((h) => Math.min(h, max));
   }, [isVisible, isMaximized]);
 
+  // Publish the rendered height so canvas overlays anchored to the bottom (the
+  // status line in `FlowPanel`) ride above the drawer, including mid-drag.
+  // `0` while hidden or maximized - a maximized drawer already covers the canvas.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty(
+      "--log-drawer-height",
+      `${isVisible && !isMaximized ? height : 0}px`,
+    );
+    return () => {
+      root.style.removeProperty("--log-drawer-height");
+    };
+  }, [isVisible, isMaximized, height]);
+
   /** Top-edge drag: up grows, down shrinks. Persisted on release. */
   const handleResizeStart = (e: React.PointerEvent) => {
     if (isMaximized) return;
