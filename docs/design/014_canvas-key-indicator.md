@@ -1,5 +1,10 @@
 # 画布按键与鼠标指示器（WASD/方向键 + 鼠标键 HUD）
 
+> 状态: **已退役(2026-11-23)**。按键回声没有决策价值(用户知道自己按了什么),且与保存状态抢左下角;
+> 帮助文档快捷键表、可开关的 `GestureLegend` 已覆盖教学。`KeyIndicatorOverlay` 与 `useCanvasPointerHud`
+> 已删除,Space 的按住状态由 `useCanvasSpaceKey` 继续提供给自定义鼠标手势;设计 013 的键盘平移不变。
+> 下文保留为历史设计记录。
+
 > 基于 `src/components/panel/hooks/useCanvasKeyboardPan.ts`（013 文档落地实现：按键集合存于
 > `useRef`，不触发重渲染）、`src/components/panel/FlowPanel.tsx` L1723-1753（Canvas status
 > indicator，`absolute bottom-2 left-3 z-50`，`pointer-events-none`）、L1529-1536（外层容器

@@ -16,7 +16,7 @@ import "reactflow/dist/style.css";
 import { nodeTypes } from "@/modules/pipeline/nodes";
 import { CoordinateGrid } from "@/modules/pipeline/CoordinateGrid";
 import { useCanvasKeyboardPan } from "@/modules/pipeline/hooks/useCanvasKeyboardPan";
-import { useCanvasPointerHud } from "@/modules/pipeline/hooks/useCanvasPointerHud";
+import { useCanvasSpaceKey } from "@/modules/pipeline/hooks/useCanvasSpaceKey";
 import { useStepFocus } from "@/modules/pipeline/hooks/useStepFocus";
 import { useStepClipboard } from "@/modules/pipeline/hooks/useStepClipboard";
 import { useNodeHitTest } from "@/modules/pipeline/hooks/useNodeHitTest";
@@ -26,7 +26,6 @@ import { usePipelineLayout } from "@/modules/pipeline/hooks/usePipelineLayout";
 import { createEdgeConfig } from "@/modules/pipeline/lib/layout";
 import { CutVisualization } from "@/modules/pipeline/overlays/CutVisualization";
 import { ConnectionVisualization } from "@/modules/pipeline/overlays/ConnectionVisualization";
-import { KeyIndicatorOverlay } from "@/modules/pipeline/overlays/KeyIndicatorOverlay";
 import { GestureLegend } from "@/modules/pipeline/overlays/GestureLegend";
 import {
   PipelineStep,
@@ -508,32 +507,12 @@ export function FlowPanel({
     cycleNoticeTimerRef.current = setTimeout(() => setCycleNotice(false), 3000);
   }, []);
 
-  // Canvas HUD state (pressed keys / mouse buttons / Space) fed by the two canvas
-  // hooks below. Only updated at key/mouse change points, see docs/design/014.
-  const [panKeys, setPanKeys] = useState<string[]>([]);
-  const [panShift, setPanShift] = useState(false);
-  const [mouseButtons, setMouseButtons] = useState<number[]>([]);
-  const [spaceDown, setSpaceDown] = useState(false);
-  const handlePanKeysChange = useCallback((keys: string[], shift: boolean) => {
-    setPanKeys(keys);
-    setPanShift(shift);
-  }, []);
-  const handlePointerChange = useCallback(
-    (buttons: number[], space: boolean) => {
-      setMouseButtons(buttons);
-      setSpaceDown(space);
-    },
-    [],
-  );
+  // Space is React Flow's temporary pan key; the custom mouse handlers below
+  // must stand down while it is held.
+  const spaceDown = useCanvasSpaceKey();
 
   // Canvas pan via WASD / arrow keys (see docs/design/013_canvas-keyboard-pan.md)
-  useCanvasKeyboardPan(reactFlowInstance, true, handlePanKeysChange);
-
-  // Canvas mouse-button + Space tracker (see docs/design/014_canvas-key-indicator.md)
-  useCanvasPointerHud(
-    reactFlowWrapper as React.RefObject<HTMLElement>,
-    handlePointerChange,
-  );
+  useCanvasKeyboardPan(reactFlowInstance, true);
 
   const persistNodePositions = useCallback(
     (nodeList: Node[]) => {
@@ -1512,19 +1491,6 @@ export function FlowPanel({
           </Button>
         </div>
       )}
-
-      {/* Canvas key / mouse HUD - just above the status indicator */}
-      <KeyIndicatorOverlay
-        keys={panKeys}
-        shift={panShift}
-        buttons={mouseButtons}
-        space={spaceDown}
-        labels={{
-          left: t.mouseLeft,
-          middle: t.mouseMiddle,
-          right: t.mouseRight,
-        }}
-      />
 
       {showGestureLegend && (
         <GestureLegend

@@ -226,7 +226,6 @@ export const enPipeline = {
   gestureLocked: "Read only",
   saveIntermediateAsInput: "Save result up to this step as CSV",
   mouseLeft: "LMB",
-  mouseMiddle: "MMB",
   mouseRight: "RMB",
   logs: "Logs",
   noLogsYet: "No logs yet",

@@ -393,7 +393,6 @@ export interface Translations {
   rightClickMenuMode: string;
   saveIntermediateAsInput: string;
   mouseLeft: string;
-  mouseMiddle: string;
   mouseRight: string;
 
   // LogPanel

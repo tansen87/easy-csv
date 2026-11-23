@@ -218,7 +218,6 @@ export const zhPipeline = {
   gestureLocked: "只读",
   saveIntermediateAsInput: "保存到该步的结果为CSV",
   mouseLeft: "左键",
-  mouseMiddle: "中键",
   mouseRight: "右键",
   logs: "日志",
   noLogsYet: "暂无日志",

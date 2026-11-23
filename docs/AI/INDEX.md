@@ -508,12 +508,11 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `pipeline/nodes/index.ts` | 节点类型注册表(nodeTypes) |
 | `pipeline/lib/layout.ts` | dagre 自动布局 + 节点/边生成与连接方向解析(`getLayoutedElements`/`createEdgeConfig`/`resolveHandles`/`handleAnchor`/`pickStartHandle`/`buildConnectPreviewPath`/`transformBezierPath`) |
 | `pipeline/lib/cutGeometry.ts` | 切割几何计算: 交点检测、clip-path 生成、坠落方向 |
-| `pipeline/hooks/useCanvasKeyboardPan.ts` | 画布键盘平移 |
-| `pipeline/hooks/useCanvasPointerHud.ts` | 画布指针 HUD |
+| `pipeline/hooks/useCanvasKeyboardPan.ts` | 画布键盘平移(WASD / 方向键,Shift 加速) |
+| `pipeline/hooks/useCanvasSpaceKey.ts` | 追踪 Space 是否按住:Space 是 React Flow 的临时平移键,自定义鼠标手势在此期间让位 |
 | `pipeline/overlays/SearchOverlay.tsx` | 画布搜索框 UI(Ctrl+F) |
 | `pipeline/overlays/CutVisualization.tsx` | 切刀轨迹 SVG 渲染 |
 | `pipeline/overlays/ConnectionVisualization.tsx` | 右键连线贝塞尔实时预览 SVG |
-| `pipeline/overlays/KeyIndicatorOverlay.tsx` | 关键指标浮层 |
 | `pipeline/CoordinateGrid.tsx` | ReactFlow 画布坐标网格背景 |
 | `pipeline/panels/VersionControlPanel.tsx` | 管道版本控制面板(设计 044): 提交日志式列表(56px 一行)、头部(保存版本/关闭/版本数+是否有未保存改动)、搜索、保存区(描述+标签 chips)、空状态、底部列表/时间线切换与清除入口、行菜单与三个确认框 |
 | `pipeline/panels/VersionLogRow.tsx` | 版本日志的单行: 竖轨节点、行内展开 diff(基线切换 + 恢复/删除)、行内重命名/加标签编辑器。表现层组件,动作由 `RowActions` 注入 |
