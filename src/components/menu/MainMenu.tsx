@@ -1,6 +1,6 @@
 import React from "react";
 import { createPortal } from "react-dom";
-import { ScrollText, Bot, Settings, Check, Search } from "lucide-react";
+import { ScrollText, Bot, Settings, Search } from "lucide-react";
 
 import { PipelineStep } from "@/types/xan";
 import type { RunSession } from "@/types/execution";
@@ -110,7 +110,6 @@ interface MainMenuProps {
   viewPanels: ViewPanelMenuItem[];
   /** Selecting the panel that is already open closes the dock. */
   onSelectViewPanel: (id: ViewPanelId) => void;
-  onCloseViewDock: () => void;
   showAIPanel: boolean;
   onToggleAIPanel: () => void;
   /**
@@ -178,7 +177,6 @@ export const MainMenu = React.memo(function MainMenu({
   activeViewPanel,
   viewPanels,
   onSelectViewPanel,
-  onCloseViewDock,
   showAIPanel,
   onToggleAIPanel,
   pendingVariables = 0,
@@ -726,13 +724,6 @@ export const MainMenu = React.memo(function MainMenu({
                           : "text-muted-foreground hover:bg-foreground/8",
                     )}
                   >
-                    <Check
-                      className={cn(
-                        "h-2.5 w-2.5 shrink-0 text-primary",
-                        !active && "opacity-0",
-                      )}
-                      aria-hidden="true"
-                    />
                     <span className="whitespace-nowrap">{panel.label}</span>
                     {panel.id === "variables" && pendingVariables > 0 && (
                       <span
@@ -754,27 +745,6 @@ export const MainMenu = React.memo(function MainMenu({
                   </button>
                 );
               })}
-              <div className="my-1 h-px bg-border/60" role="separator" />
-              <button
-                role="menuitem"
-                onClick={() => {
-                  onCloseViewDock();
-                  setActiveMenu(null);
-                }}
-                disabled={activeViewPanel === null}
-                className={cn(
-                  "group flex h-8 w-full items-center gap-2 rounded-lg px-2.5 text-xs font-medium transition-colors",
-                  activeViewPanel === null
-                    ? "text-foreground/40 cursor-not-allowed"
-                    : "text-muted-foreground hover:bg-foreground/8",
-                )}
-              >
-                <span className="h-2.5 w-2.5 flex-none" aria-hidden="true" />
-                <span className="whitespace-nowrap">{t.viewDockClose}</span>
-                <kbd className="ml-auto text-[10px] leading-4 text-muted-foreground/70 border border-border rounded px-1">
-                  Alt 0
-                </kbd>
-              </button>
             </div>
           )}
         </div>

@@ -98,7 +98,6 @@ function baseProps(overrides: Record<string, unknown> = {}) {
       { id: "variables", label: "Variables", key: "4" },
     ],
     onSelectViewPanel: vi.fn(),
-    onCloseViewDock: vi.fn(),
     hasInputFile: true,
     showAIPanel: false,
     onToggleAIPanel: vi.fn(),

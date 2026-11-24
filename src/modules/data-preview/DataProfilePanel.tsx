@@ -153,7 +153,6 @@ export const DataProfilePanel = React.memo(function DataProfilePanel({
       onContextMenu={(event) => event.preventDefault()}
     >
       <DockHeader
-        index="01"
         title={t.dataProfile}
         meta={meta}
         closeLabel={t.close}

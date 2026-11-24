@@ -2,6 +2,7 @@ import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Pencil, RotateCcw, Search, Tag, Trash2, X } from "lucide-react";
 import { DockHeader } from "@/components/ui/DockHeader";
+import { ScrollArea } from "@/components/ui/ScrollArea";
 import { ConfirmDialog } from "@/modules/dialogs/common/ConfirmDialog";
 import {
   EditorKind,
@@ -382,7 +383,6 @@ export function VersionControlPanel({
       onContextMenu={(e) => e.preventDefault()}
     >
       <DockHeader
-        index="02"
         title={t.versionHistory}
         closeLabel={t.close}
         onClose={onClose}
@@ -439,152 +439,160 @@ export function VersionControlPanel({
 
       {/* Body */}
       {composerOpen ? (
-        <div className="flex-1 space-y-2.5 overflow-y-auto px-4 pb-4 pt-3">
-          <h4 className="text-xs font-medium text-muted-foreground">
-            {t.versionSaveTitle}
-          </h4>
-          <input
-            type="text"
-            autoFocus
-            value={draftMessage}
-            onChange={(e) => setDraftMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                void submitComposer();
-              }
-              if (e.key === "Escape") resetComposer();
-            }}
-            placeholder={t.versionMessagePlaceholder}
-            className="h-8 w-full rounded-[7px] border border-border bg-card px-2.5 text-[12px] outline-none focus:border-primary"
-          />
-          <div className="flex min-h-[30px] flex-wrap items-center gap-1 rounded-[7px] border border-border bg-card px-1.5 py-1">
-            {draftTags.map((tag) => (
-              <span
-                key={tag}
-                className="flex h-5 items-center gap-1 rounded bg-muted px-1.5 text-[10.5px]"
-              >
-                <span className="text-muted-foreground/70">#</span>
-                {tag}
-                <button
-                  type="button"
-                  aria-label={t.versionRemoveTag.replace("{tag}", tag)}
-                  onClick={() =>
-                    setDraftTags((prev) => prev.filter((x) => x !== tag))
-                  }
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
+        <ScrollArea className="min-h-0 flex-1" blockContent hideHorizontalScrollbar>
+          <div className="space-y-2.5 px-4 pb-4 pt-3">
+            <h4 className="text-xs font-medium text-muted-foreground">
+              {t.versionSaveTitle}
+            </h4>
             <input
               type="text"
-              value={tagDraft}
-              onChange={(e) => setTagDraft(e.target.value)}
+              autoFocus
+              value={draftMessage}
+              onChange={(e) => setDraftMessage(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
+                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                   e.preventDefault();
-                  addDraftTag();
-                }
-                if (e.key === "Backspace" && !tagDraft && draftTags.length) {
-                  setDraftTags((prev) => prev.slice(0, -1));
+                  void submitComposer();
                 }
                 if (e.key === "Escape") resetComposer();
               }}
-              placeholder={t.versionTagInputPlaceholder}
-              className="h-5 min-w-[60px] flex-1 bg-transparent px-1 text-[11px] outline-none placeholder:text-muted-foreground/70"
+              placeholder={t.versionMessagePlaceholder}
+              className="h-8 w-full rounded-[7px] border border-border bg-card px-2.5 text-[12px] outline-none focus:border-primary"
             />
+            <div className="flex min-h-[30px] flex-wrap items-center gap-1 rounded-[7px] border border-border bg-card px-1.5 py-1">
+              {draftTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="flex h-5 items-center gap-1 rounded bg-muted px-1.5 text-[10.5px]"
+                >
+                  <span className="text-muted-foreground/70">#</span>
+                  {tag}
+                  <button
+                    type="button"
+                    aria-label={t.versionRemoveTag.replace("{tag}", tag)}
+                    onClick={() =>
+                      setDraftTags((prev) => prev.filter((x) => x !== tag))
+                    }
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              <input
+                type="text"
+                value={tagDraft}
+                onChange={(e) => setTagDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addDraftTag();
+                  }
+                  if (e.key === "Backspace" && !tagDraft && draftTags.length) {
+                    setDraftTags((prev) => prev.slice(0, -1));
+                  }
+                  if (e.key === "Escape") resetComposer();
+                }}
+                placeholder={t.versionTagInputPlaceholder}
+                className="h-5 min-w-[60px] flex-1 bg-transparent px-1 text-[11px] outline-none placeholder:text-muted-foreground/70"
+              />
+            </div>
+            <p className="text-[10.5px] leading-relaxed text-muted-foreground tabular-nums">
+              {composerFacts}
+              {composerAgainst && <> · {composerAgainst}</>}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void submitComposer()}
+                disabled={isSaving}
+                className="h-7 rounded-[7px] bg-primary px-3 text-[11.5px] font-medium text-primary-foreground transition-opacity disabled:opacity-50"
+              >
+                {isSaving ? t.saving : t.saveVersion}
+              </button>
+              <button
+                type="button"
+                onClick={resetComposer}
+                className="h-7 rounded-[7px] px-2 text-[11.5px] text-muted-foreground hover:text-foreground"
+              >
+                {t.cancel}
+              </button>
+              <span className="ml-auto flex items-center gap-1 font-mono text-[9.5px] text-muted-foreground/70">
+                <kbd className="rounded border border-border px-1 leading-[13px]">
+                  Ctrl
+                </kbd>
+                <kbd className="rounded border border-border px-1 leading-[13px]">
+                  ↵
+                </kbd>
+              </span>
+            </div>
           </div>
-          <p className="text-[10.5px] leading-relaxed text-muted-foreground tabular-nums">
-            {composerFacts}
-            {composerAgainst && <> · {composerAgainst}</>}
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void submitComposer()}
-              disabled={isSaving}
-              className="h-7 rounded-[7px] bg-primary px-3 text-[11.5px] font-medium text-primary-foreground transition-opacity disabled:opacity-50"
-            >
-              {isSaving ? t.saving : t.saveVersion}
-            </button>
-            <button
-              type="button"
-              onClick={resetComposer}
-              className="h-7 rounded-[7px] px-2 text-[11.5px] text-muted-foreground hover:text-foreground"
-            >
-              {t.cancel}
-            </button>
-            <span className="ml-auto flex items-center gap-1 font-mono text-[9.5px] text-muted-foreground/70">
-              <kbd className="rounded border border-border px-1 leading-[13px]">
-                Ctrl
-              </kbd>
-              <kbd className="rounded border border-border px-1 leading-[13px]">
-                ↵
-              </kbd>
-            </span>
-          </div>
-        </div>
+        </ScrollArea>
       ) : versions.length === 0 ? (
-        <div className="flex-1 overflow-y-auto px-4 pt-6">
-          <h4 className="text-[12.5px] font-medium">{t.versionEmptyTitle}</h4>
-          <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-            {t.versionEmptyDesc.replace(
-              "{steps}",
-              String(workspace.steps.length),
-            )}
-          </p>
-          <button
-            type="button"
-            onClick={openComposer}
-            className="mt-3 flex h-7 items-center gap-1.5 rounded-[7px] border border-border bg-card px-2.5 text-[11.5px] transition-colors hover:bg-muted"
-          >
-            {t.versionEmptyAction}
-          </button>
-        </div>
+        <ScrollArea className="min-h-0 flex-1" blockContent hideHorizontalScrollbar>
+          <div className="px-4 pt-6 pb-4">
+            <h4 className="text-[12.5px] font-medium">{t.versionEmptyTitle}</h4>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+              {t.versionEmptyDesc.replace(
+                "{steps}",
+                String(workspace.steps.length),
+              )}
+            </p>
+            <button
+              type="button"
+              onClick={openComposer}
+              className="mt-3 flex h-7 items-center gap-1.5 rounded-[7px] border border-border bg-card px-2.5 text-[11.5px] transition-colors hover:bg-muted"
+            >
+              {t.versionEmptyAction}
+            </button>
+          </div>
+        </ScrollArea>
       ) : rows.length === 0 ? (
-        <div className="flex-1 overflow-y-auto px-4 pt-6">
-          <h4 className="text-[12.5px] font-medium">
-            {t.versionNoMatchTitle.replace("{query}", query.trim())}
-          </h4>
-          <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-            {t.versionNoMatchHint}
-          </p>
-          <button
-            type="button"
-            onClick={() => setQuery("")}
-            className="mt-3 h-7 rounded-[7px] border border-border bg-card px-2.5 text-[11.5px] transition-colors hover:bg-muted"
-          >
-            {t.versionClearSearch}
-          </button>
-        </div>
+        <ScrollArea className="min-h-0 flex-1" blockContent hideHorizontalScrollbar>
+          <div className="px-4 pt-6 pb-4">
+            <h4 className="text-[12.5px] font-medium">
+              {t.versionNoMatchTitle.replace("{query}", query.trim())}
+            </h4>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+              {t.versionNoMatchHint}
+            </p>
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="mt-3 h-7 rounded-[7px] border border-border bg-card px-2.5 text-[11.5px] transition-colors hover:bg-muted"
+            >
+              {t.versionClearSearch}
+            </button>
+          </div>
+        </ScrollArea>
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto pt-2">
-          {rows.map((row, index) => (
-            <VersionLogRow
-              key={row.version.id}
-              version={row.version}
-              depth={row.depth}
-              first={index === 0}
-              last={index === rows.length - 1}
-              isCurrent={currentVersionId === row.version.id}
-              isExpanded={expandedId === row.version.id}
-              menuOpen={menu?.versionId === row.version.id}
-              summary={summaryOf(row.version)}
-              timeLabel={timeLabel(row.version)}
-              diff={expandedId === row.version.id ? expandedDiff : null}
-              versions={versions}
-              compareTargetId={compareTargetId}
-              editor={
-                editor?.versionId === row.version.id
-                  ? { kind: editor.kind, value: editor.value }
-                  : null
-              }
-              actions={actions}
-            />
-          ))}
-        </div>
+        <ScrollArea className="min-h-0 flex-1" blockContent hideHorizontalScrollbar>
+          <div className="pt-2 pb-3">
+            {rows.map((row, index) => (
+              <VersionLogRow
+                key={row.version.id}
+                version={row.version}
+                depth={row.depth}
+                first={index === 0}
+                last={index === rows.length - 1}
+                isCurrent={currentVersionId === row.version.id}
+                isExpanded={expandedId === row.version.id}
+                menuOpen={menu?.versionId === row.version.id}
+                summary={summaryOf(row.version)}
+                timeLabel={timeLabel(row.version)}
+                diff={expandedId === row.version.id ? expandedDiff : null}
+                versions={versions}
+                compareTargetId={compareTargetId}
+                editor={
+                  editor?.versionId === row.version.id
+                    ? { kind: editor.kind, value: editor.value }
+                    : null
+                }
+                actions={actions}
+              />
+            ))}
+          </div>
+        </ScrollArea>
       )}
 
       {/* Footer: view mode + the destructive action, kept away from the rows */}

@@ -45,8 +45,8 @@
 
 ### 方案 A · 单槽 + 页签栏 → [原型 01](prototypes/076/01-view-dock-single-slot.html)
 
-- **结构**:停靠区永远一列 320(可拖 280–420),右缘一条 40px 页签栏;四项各占 30×38,图标 16 + 序号 9px,激活项品牌 12% 底、墨色转品牌。
-- **菜单**:改成单选(`menuitemradio`),勾永远只有一个;底部一条「关闭停靠区」。`Alt 1–4` 直接切页。
+- **结构**:停靠区永远一列 320(可拖 280–420),右缘一条 40px 页签栏;四项各占 30×38,只有 16px 图标,激活项品牌 12% 底、墨色转品牌。
+- **菜单**:改成单选(`menuitemradio`),选中态只靠一行浅底,行首不画勾;菜单只有四项。`Alt 1–4` 直接切页。
 - **宽度账**:320 + 40 = 360 恒定;1200 窗口里画布 840。
 - **代价**:一次只能看一个。想对照"缺失值分布"和"哪列在血缘里活下来"要来回切。
 
@@ -107,7 +107,7 @@
 | 项 | 现状 | 改成 |
 |---|---|---|
 | 宽度来源 | 五处各算各的 | 一个 `dockWidth`(停靠列 + AI),画布/标签页带/日志/读数都用它 |
-| 面板头部 | 四个 36px 头、四个 × | 统一 `DockHeader`:序号 + 标题 + 页内动作 + 收起(仅 B) + 关闭 |
+| 面板头部 | 四个 36px 头、四个 × | 统一 `DockHeader`:标题 + 页内动作 + 收起(仅 B) + 关闭 |
 | 页内动作 | 概览的刷新在标题行 | 移到事实行右端(与 C 一致),标题行只留收起与关闭 |
 | 菜单勾选 | 四个勾 / 一个画面 | 勾只表示"在停靠区里";B 额外写位置词,A/C 改单选 |
 | 变量与 AI | 变量 `z-30` 压住 AI | 变量是停靠列的一列,排在 AI 左边;AI 不会被替换 |
@@ -125,7 +125,7 @@
 | `src/app/App.tsx` | 删概览与变量两段绝对定位 dock(2046-2060、2088-2103);`showVariablePanel` 本地 state 删除;`onToggle*` 改走 `useViewDock` |
 | `src/modules/data-preview/HomeView.tsx` | 删版本/血缘两段绝对定位(458-504)与 `panelRightInset` 计算(238-241),改成 `<ViewDock>` 子元素 |
 | `src/components/menu/MainMenu.tsx` | `view` 面板四项:单选(B 保留复选)+ 位置词;`anyCollapsedPanelOpen` 换判据 |
-| `src/components/ui/DockHeader.tsx` | 新增:序号、标题、动作、收起、关闭 |
+| `src/components/ui/DockHeader.tsx` | 新增:标题、动作、收起、关闭 |
 | 四个面板组件 | 头部换成 `DockHeader`;`onClose` 语义不变(从停靠区移除) |
 | `src/__tests__/ExecuteMenu.test.tsx:580-591` | `查看` 下划线的判据改成一个 dock 状态,断言不变 |
 | 新增测试 | `useViewDock.test.ts`:LRU 收列、预算守门(1200/1024/1440 三档)、三态切换、全收 |
@@ -160,20 +160,20 @@
 
 | 项 | 实现 |
 |---|---|
-| 单选 | 查看菜单四项 `role="menuitemradio"`,勾 = `activePanel`;再点同一项 = 关闭;底部「关闭停靠区」`Alt 0` |
-| 页签栏 | 40px,四项 30×38(图标 16 + 序号 8.5px),激活 = 品牌 12% 底 + 品牌墨色;`aria-pressed` |
-| 快捷键 | `Alt 1–4` 开/关对应面板,`Alt 0` 全关 |
+| 单选 | 查看菜单四项 `role="menuitemradio"`,`aria-checked` = `activePanel`,但**行首不画勾**——选中只由 `bg-primary/10` 的一行浅底表示;再点同一项 = 关闭。菜单里没有第五项,也没有 `Alt 0` |
+| 页签栏 | 40px,四项 30×38,只有 16px 图标(不带序号),激活 = 品牌 12% 底 + 品牌墨色;`aria-pressed` |
+| 快捷键 | `Alt 1–4` 开/关对应面板 |
 | 宽度 | 280–420,拖左缘 6px 热区;双击复位 320;四面板共用 |
 | 切换动效 | 120ms 淡入(`.dock-panel-in`),不动宽度,尊重 `prefers-reduced-motion` |
 | 单一宽度来源 | `dockWidth` 同时给主区域预留、日志抽屉 `rightInset`、图表胶囊 `capsuleRight` |
-| 统一头部 | `DockHeader`(序号 + 标题 + 事实行 + 页内动作 + 关闭),四面板共用 |
+| 统一头部 | `DockHeader`(标题 + 事实行 + 页内动作 + 关闭),四面板共用 |
 
 ### 9.2 文件
 
 | 文件 | 改动 |
 |---|---|
 | `src/types/viewDock.ts` | 新增:`ViewPanelId`、`ViewPanelMenuItem`(菜单行类型) |
-| `src/modules/pipeline/viewPanels.ts` | 新增:四面板注册表(序号 / 文案键 / 图标 / 快捷键)、宽度常量与 `clampDockWidth` |
+| `src/modules/pipeline/viewPanels.ts` | 新增:四面板注册表(文案键 / 图标 / 快捷键)、宽度常量与 `clampDockWidth` |
 | `src/hooks/useViewDock.ts` | 新增:单选状态 + 宽度 + `Alt 1–4` / `Alt 0` |
 | `src/modules/pipeline/ViewDock.tsx` | 新增:面板列 + 页签栏 + 拖宽热区 |
 | `src/components/ui/DockHeader.tsx` | 新增:统一列头 |
@@ -186,20 +186,41 @@
 | 文案 | `viewDockClose` / `viewDockResize`(中英 + 类型) |
 | 测试 | 新增 `src/__tests__/ViewDock.test.tsx`(7 例);`ExecuteMenu.test.tsx` 改 props + 新增单选组例 |
 
-### 9.3 与原型的三处偏差
+### 9.3 与原型的两处偏差
 
-1. **菜单行由 App 构建**:`components/` 不允许 import `modules/`(019 §5.2),所以 `MainMenu` 收 `viewPanels: ViewPanelMenuItem[]`(id / 已本地化文案 / 键帽 / 是否禁用),自己不再认识面板。菜单行不带序号,也没有底部说明行 —— 序号只属于页签栏与面板头。
+1. **菜单行由 App 构建**:`components/` 不允许 import `modules/`(019 §5.2),所以 `MainMenu` 收 `viewPanels: ViewPanelMenuItem[]`(id / 已本地化文案 / 键帽 / 是否禁用),自己不再认识面板。菜单行不带序号,也没有底部说明行。
 2. **页签栏底部没有额外关闭按钮**:与原型一致,关闭只有三个入口 —— 面板头 ×、菜单「关闭停靠区」、`Alt 0`。
-3. **序号写在面板里**:`DockHeader` 的 `index` 由各面板写死 `"01"`–`"04"`,与 `viewPanels.ts` 的注册表同源但不在运行时传递(避免为四个固定面板多铺一层 props)。
+3. **没有序号**:最初面板头与页签栏都带 `01`–`04`,后来整条去掉(见 §9.4),`DockHeader` 与注册表都不再有 `index`。
 
-### 9.4 验证
+### 9.4 减法三则(2026-11-24 追加)
+
+**去掉勾。** 查看菜单里的四行原来复用 `Check` 图标表达"当前面板",选中行既有一行浅底、又有一个勾,两种信号说同一件事。勾连同它的占位一起删掉(`Check` 也从 `MainMenu` 的 import 里移除),选中态只留底色;`aria-checked` 保留,读屏仍知道哪一项是当前面板。
+
+**去掉索引编号。** 面板头的 `01`、页签栏图标下的 `01`–`04` 全部删除:`DockHeader` 不再收 `index`,`viewPanels.ts` 的注册表也不再存序号,页签栏每格只剩一个 16px 图标(`grid place-items-center`)。序号在菜单里已经删过一次,这是它在界面上最后的两处。
+
+**去掉第五项。** 分隔线与「关闭停靠区」整段删除,`Alt 0` 也一并去掉——`Alt + 数字` 现在只表示"切到第 N 个面板",不再兼职"全关"。关闭仍有三个入口:面板头 ×、再点一次当前菜单项、点一下已激活的页签栏图标。`onCloseViewDock` 这个 prop、`viewDockClose` 这条文案(中/英/类型)与 `useViewDock` 里的 `Alt 0` 分支全部移除,`closeDock` 仍被四个面板的 × 使用。
+
+### 9.5 滚动区统一(2026-11-24 追加)
+
+停靠区四个面板原来只有「数据概览」用 `ScrollArea`,其余三个是原生 `overflow-y-auto`——同一个停靠列里两种滚动条。现已全部统一:
+
+| 面板 | 位置 | 处理 |
+|---|---|---|
+| 数据概览 | 列清单 | 原本就是 `ScrollArea` |
+| 版本控制 | 保存版本表单 / 空状态 / 无匹配 / 版本列表 | 4 处全部换成 `ScrollArea`(`blockContent` + `hideHorizontalScrollbar`),内边距下沉到内层 div |
+| 数据血缘 | 主体 | 换成 `ScrollArea`,`ref` 与 `onKeyDown` 直接挂在根上(键盘上下移动仍靠 `querySelectorAll("[data-lineage-row]")`) |
+| 管道变量 | 变量组 | 换成 `ScrollArea`,首行间距走 `viewportClassName="pt-1"` |
+
+统一参数:`blockContent`(Radix 内部 `display:table` 改回 block,网格行才能撑满宽度)、`hideHorizontalScrollbar`(只有纵向内容)。滚动条沿用既有默认 `type="hover"`——与帮助中心、AI 面板、数据概览一致,鼠标进入面板才浮出细滑块。
+
+### 9.6 验证
 
 - `npx tsc --noEmit` 通过;`npx eslint src` 0 error(77 条既有 warning)。
 - `npx vitest run`:**67 文件 / 806 例全绿**。
 - `npx vite build` 通过(仅既有的 dynamic-import / chunk 体积提示)。
 - 真实组件在浏览器里目视过一遍(临时 harness,已删):面板顶边落在 36px 顶栏之下,与标签页带齐平;页签栏 40px;画布与停靠列无重叠。
 
-### 9.5 后续可做
+### 9.7 后续可做
 
 - 停靠状态不跨会话;要记忆可接 `session.panelStates`(先把 `activePanel` 落进快照)。
 - 窄窗(≤1024)现在仍会被压画布 —— A 没有预算规则,若实际反馈"太窄",再引 B 的 440 守门。

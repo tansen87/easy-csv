@@ -98,7 +98,7 @@ describe("useViewDock (design 076)", () => {
     expect(railButtons()[0]).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("binds Alt+1..4 to the panels and Alt+0 to closing", () => {
+  it("binds Alt+1..4 to the panels", () => {
     renderHarness();
 
     fireEvent.keyDown(window, { key: "3", altKey: true });
@@ -108,7 +108,7 @@ describe("useViewDock (design 076)", () => {
     expect(screen.getByTestId("active-panel")).toHaveTextContent("none");
 
     fireEvent.keyDown(window, { key: "1", altKey: true });
-    fireEvent.keyDown(window, { key: "0", altKey: true });
+    fireEvent.keyDown(window, { key: "1", altKey: true });
     expect(screen.queryByTestId("view-dock")).toBeNull();
   });
 

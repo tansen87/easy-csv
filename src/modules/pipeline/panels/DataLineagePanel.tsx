@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Maximize2, MoreHorizontal, Search, X } from "lucide-react";
 import { DockHeader } from "@/components/ui/DockHeader";
+import { ScrollArea } from "@/components/ui/ScrollArea";
 import { useLanguage } from "@/i18n";
 import { StepLineage } from "@/types/xan";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -159,7 +160,6 @@ export function DataLineagePanel({
       onContextMenu={(e) => e.preventDefault()}
     >
       <DockHeader
-        index="03"
         title={t.dataLineage}
         closeLabel={t.lineageClose}
         onClose={onClose}
@@ -233,10 +233,12 @@ export function DataLineagePanel({
         </div>
       )}
 
-      <div
+      <ScrollArea
         ref={bodyRef}
         onKeyDown={handleBodyKeyDown}
-        className="min-h-0 flex-1 overflow-y-auto"
+        className="min-h-0 flex-1"
+        blockContent
+        hideHorizontalScrollbar
       >
         {isEmpty && <LineageEmptyState />}
 
@@ -322,7 +324,7 @@ export function DataLineagePanel({
             ))}
           </>
         )}
-      </div>
+      </ScrollArea>
 
       {!isEmpty && (
         <div className="flex h-9 flex-none items-center gap-1.5 border-t border-border/60 px-4 text-[10.5px] tabular-nums text-muted-foreground">

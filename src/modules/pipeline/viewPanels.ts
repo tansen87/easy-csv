@@ -18,8 +18,6 @@ import type { ViewPanelId } from "@/types/viewDock";
 
 export interface ViewPanelDef {
   id: ViewPanelId;
-  /** Rail / panel index, "01"-"04". */
-  index: string;
   /** i18n key holding the panel name (also used by the menu and the rail). */
   labelKey: "dataProfile" | "versionHistory" | "dataLineage" | "variables";
   icon: LucideIcon;
@@ -30,28 +28,24 @@ export interface ViewPanelDef {
 export const VIEW_PANELS: readonly ViewPanelDef[] = [
   {
     id: "profile",
-    index: "01",
     labelKey: "dataProfile",
     icon: Table2,
     key: "1",
   },
   {
     id: "version",
-    index: "02",
     labelKey: "versionHistory",
     icon: History,
     key: "2",
   },
   {
     id: "lineage",
-    index: "03",
     labelKey: "dataLineage",
     icon: GitMerge,
     key: "3",
   },
   {
     id: "variables",
-    index: "04",
     labelKey: "variables",
     icon: Braces,
     key: "4",

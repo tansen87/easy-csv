@@ -114,16 +114,13 @@ export function ViewDock({
                 aria-pressed={active}
                 onClick={() => onSelectPanel(panel.id)}
                 className={cn(
-                  "flex h-[38px] w-[30px] flex-col items-center justify-center gap-1 rounded-md transition-colors",
+                  "grid h-[28px] w-[28px] place-items-center rounded-md transition-colors",
                   active
                     ? "bg-primary/12 text-primary"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
               >
                 <Icon className="h-4 w-4" strokeWidth={1.5} />
-                <span className="font-mono text-[8.5px] leading-none tabular-nums opacity-80">
-                  {panel.index}
-                </span>
               </button>
             </Tooltip>
           );

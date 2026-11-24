@@ -1697,7 +1697,6 @@ function AppContent() {
                 activeViewPanel={viewDock.activePanel}
                 viewPanels={viewPanelMenuItems}
                 onSelectViewPanel={viewDock.togglePanel}
-                onCloseViewDock={viewDock.closeDock}
                 showAIPanel={ui.showAIPanel}
                 onToggleAIPanel={() => ui.setShowAIPanel(!ui.showAIPanel)}
                 pendingVariables={pendingVariableCount}

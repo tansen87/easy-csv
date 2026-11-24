@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Select } from "@/components/ui/Select";
 import {
   PipelineStep,
@@ -287,7 +288,6 @@ export function VariablePanel({
       onContextMenu={(e) => e.preventDefault()}
     >
       <DockHeader
-        index="04"
         title={t.variables}
         closeLabel={t.close}
         onClose={onClose}
@@ -358,7 +358,12 @@ export function VariablePanel({
       {isEmpty && !addOpen ? (
         <EmptyState onAdd={() => setAddOpen(true)} />
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto pt-1">
+        <ScrollArea
+          className="min-h-0 flex-1"
+          viewportClassName="pt-1"
+          blockContent
+          hideHorizontalScrollbar
+        >
           {renderGroup(
             t.variableGroupPending,
             pendingVars.length,
@@ -472,7 +477,7 @@ export function VariablePanel({
               {t.addVariable}
             </button>
           )}
-        </div>
+        </ScrollArea>
       )}
 
       {!isEmpty && (

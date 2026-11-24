@@ -16,8 +16,6 @@ import { Tooltip } from "@/components/ui/Tooltip";
  * holds the page's own buttons (refresh, save version, …). Close is always last.
  */
 interface DockHeaderProps {
-  /** "01"–"04"; the same number the rail shows. */
-  index: string;
   title: string;
   meta?: React.ReactNode;
   actions?: React.ReactNode;
@@ -27,7 +25,6 @@ interface DockHeaderProps {
 }
 
 export function DockHeader({
-  index,
   title,
   meta,
   actions,
@@ -43,12 +40,6 @@ export function DockHeader({
       )}
     >
       <div className="flex h-9 items-center gap-2 pl-3 pr-1.5">
-        <span
-          aria-hidden="true"
-          className="font-mono text-[9.5px] tabular-nums text-muted-foreground/70"
-        >
-          {index}
-        </span>
         <h3 className="text-[13px] font-medium">{title}</h3>
         <div className="ml-auto flex items-center gap-0.5">
           {actions}

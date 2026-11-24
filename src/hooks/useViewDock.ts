@@ -35,15 +35,10 @@ export function useViewDock() {
     setPanelWidth(clampDockWidth(width));
   }, []);
 
-  /** Alt+1..4 switch panels, Alt+0 closes — the menu shows the same keycaps. */
+  /** Alt+1..4 switch panels; the menu shows the same keycaps. */
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
-        return;
-      }
-      if (event.key === "0") {
-        setActivePanel(null);
-        event.preventDefault();
         return;
       }
       const panel = VIEW_PANELS.find((entry) => entry.key === event.key);
