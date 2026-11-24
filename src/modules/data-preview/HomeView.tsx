@@ -6,9 +6,6 @@ import {
   PipelineEdge,
   XanCommand,
   PipelineTab,
-  PipelineVersion,
-  StepLineage,
-  StoredPipelineStep,
   DelimiterMode,
   DelimiterSource,
   TabularFormat,
@@ -33,12 +30,6 @@ import { FlowPanel } from "@/modules/pipeline/FlowPanel";
 import { FirstStepGuide } from "@/components/onboarding/FirstStepGuide";
 import { RunTimer } from "@/components/ui/RunTimer";
 import { EmptyState, RecentFile } from "@/modules/data-preview/EmptyState";
-import { VersionControlPanel } from "@/modules/pipeline/panels/VersionControlPanel";
-import { DataLineagePanel } from "@/modules/pipeline/panels/DataLineagePanel";
-
-/** Width of the version / lineage panels (w-80). */
-const SIDE_PANEL_WIDTH = 320;
-
 interface HomeViewProps {
   tabs: PipelineTab[];
   selectedTabId: string;
@@ -82,31 +73,6 @@ interface HomeViewProps {
   recentFiles?: RecentFile[];
   onOpenRecentFile?: (filePath: string) => void;
   reactFlowInstanceRef?: React.RefObject<any>;
-  versions?: PipelineVersion[];
-  currentVersionId?: string;
-  currentSnapshot?: {
-    steps: StoredPipelineStep[];
-    edges: PipelineEdge[];
-  };
-  onSaveVersion?: (
-    message?: string,
-    tags?: string[],
-  ) => Promise<PipelineVersion | undefined>;
-  onRestoreVersion?: (versionId: string) => void;
-  onDeleteVersion?: (versionId: string) => void;
-  onAddTag?: (versionId: string, tag: string) => void;
-  onRemoveTag?: (versionId: string, tag: string) => void;
-  onRenameVersion?: (versionId: string, message: string) => void;
-  onClearAllVersions?: () => void;
-  isSavingVersion?: boolean;
-  lineageData?: StepLineage[];
-  onSaveLineage?: () => void;
-  showVersionPanel?: boolean;
-  showLineagePanel?: boolean;
-  /** Right-docked AI width; right-side panels shift to make room. */
-  aiDockWidth?: number;
-  onToggleVersionPanel?: () => void;
-  onToggleLineagePanel?: () => void;
   doubleClickFitView?: boolean;
   onSavePipeline?: () => void;
   onSaveIntermediate?: (stepId: string) => void;
@@ -168,24 +134,6 @@ export const HomeView = React.memo(function HomeView({
   recentFiles = [],
   onOpenRecentFile,
   reactFlowInstanceRef,
-  versions = [],
-  currentVersionId,
-  currentSnapshot,
-  onSaveVersion,
-  onRestoreVersion,
-  onDeleteVersion,
-  onAddTag,
-  onRemoveTag,
-  onRenameVersion,
-  onClearAllVersions,
-  isSavingVersion = false,
-  lineageData = [],
-  onSaveLineage,
-  showVersionPanel = false,
-  showLineagePanel = false,
-  aiDockWidth = 0,
-  onToggleVersionPanel,
-  onToggleLineagePanel,
   isExecuting = false,
   tabRuns = {},
   otherRunningCount = 0,
@@ -234,11 +182,6 @@ export const HomeView = React.memo(function HomeView({
     !!branchProgress &&
     (branchProgress.status === "executing" ||
       currentRun?.durationMs !== undefined);
-  /** Right side reserved by the docked panels; the top rail and readout stop there. */
-  const panelRightInset =
-    aiDockWidth +
-    (showVersionPanel ? SIDE_PANEL_WIDTH : 0) +
-    (showLineagePanel ? SIDE_PANEL_WIDTH : 0);
   /** Success lingers for 2.5s, then the readout and rail fade away; errors stay. */
   const [runReadoutDismissed, setRunReadoutDismissed] = useState(false);
   useEffect(() => {
@@ -380,10 +323,7 @@ export const HomeView = React.memo(function HomeView({
 
   return (
     <div className="h-full relative">
-      <div
-        className="absolute inset-0 overflow-hidden"
-        style={{ paddingRight: aiDockWidth }}
-      >
+      <div className="absolute inset-0 overflow-hidden">
         <FlowPanel
           steps={pipeline}
           headers={displayHeaders}
@@ -455,59 +395,8 @@ export const HomeView = React.memo(function HomeView({
         onDismissGuide={() => onDismissOnboardingGuide?.()}
       />
 
-      {/* Version Control Panel */}
-      <div
-        className={`absolute top-9 bottom-0 z-20 transition-all duration-300 ${
-          showVersionPanel ? "w-80" : "w-0"
-        }`}
-        style={{ right: aiDockWidth }}
-      >
-        {showVersionPanel && (
-          <div className="h-full bg-card border-l border-border/50 shadow-lg">
-            <VersionControlPanel
-              versions={versions}
-              currentVersionId={currentVersionId}
-              currentSnapshot={currentSnapshot}
-              onSaveVersion={onSaveVersion || (async () => undefined)}
-              onRestoreVersion={onRestoreVersion || (() => {})}
-              onDeleteVersion={onDeleteVersion || (() => {})}
-              onAddTag={onAddTag || (() => {})}
-              onRemoveTag={onRemoveTag || (() => {})}
-              onRenameVersion={onRenameVersion || (() => {})}
-              onClearAllVersions={onClearAllVersions}
-              isSaving={isSavingVersion}
-              onClose={onToggleVersionPanel || (() => {})}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Data Lineage Panel */}
-      <div
-        className={`absolute top-9 bottom-0 z-20 transition-all duration-300 ${
-          showLineagePanel ? "w-80" : "w-0"
-        }`}
-        style={{
-          right:
-            aiDockWidth + (showVersionPanel ? SIDE_PANEL_WIDTH : 0),
-        }}
-      >
-        {showLineagePanel && (
-          <div className="h-full bg-card border-l border-border/50 shadow-lg">
-            <DataLineagePanel
-              lineageData={lineageData}
-              onSaveLineage={onSaveLineage || (() => {})}
-              onClose={onToggleLineagePanel || (() => {})}
-            />
-          </div>
-        )}
-      </div>
-
       {showRunReadout && branchProgress && (
-        <div
-          className="pointer-events-none absolute left-0 top-9 z-10 h-[2px] overflow-hidden bg-border/40"
-          style={{ right: panelRightInset }}
-        >
+        <div className="pointer-events-none absolute left-0 right-0 top-9 z-10 h-[2px] overflow-hidden bg-border/40">
           <div
             className={`h-full origin-left transition-transform duration-200 ${
               branchProgress.status === "completed"
@@ -522,8 +411,7 @@ export const HomeView = React.memo(function HomeView({
       )}
 
       <div
-        className="absolute left-2 top-9 z-10"
-        style={{ right: panelRightInset }}
+        className="absolute left-2 right-2 top-9 z-10"
         onContextMenu={(e) => e.preventDefault()}
       >
         <div className="flex h-9 items-start px-3 pt-1">

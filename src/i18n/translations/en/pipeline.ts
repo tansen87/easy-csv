@@ -22,6 +22,8 @@ export const enPipeline = {
     "Runs beyond this limit wait in line and start as soon as a slot frees up (1-16)",
   logPanel: "Logs",
   view: "View",
+  viewDockClose: "Close dock",
+  viewDockResize: "Resize panel",
   search: "Search",
   helpCenter: "Help Center",
   reportIssue: "Report Issue",

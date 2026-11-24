@@ -58,6 +58,11 @@ interface LogPanelProps {
   selectedTabId?: string;
   /** Tab id → name, used for the group headers. */
   tabs?: { id: string; name: string }[];
+  /**
+   * Pixels to keep free at the window's right edge (AI panel + view dock,
+   * design 076). Without it the drawer slid underneath the docked panels.
+   */
+  rightInset?: number;
 }
 
 /** Severity dot, the only place colour appears in the list. */
@@ -116,6 +121,7 @@ export const LogPanel = React.memo(function LogPanel({
   onDockChange,
   selectedTabId,
   tabs,
+  rightInset = 0,
 }: LogPanelProps) {
   const { t } = useLanguage();
   const [isMaximized, setIsMaximized] = useState(false);
@@ -377,7 +383,7 @@ export const LogPanel = React.memo(function LogPanel({
       style={
         isMaximized
           ? { left: 0, top: 0, width: "100vw", height: "100vh" }
-          : { left: 0, right: 0, bottom: 0, height }
+          : { left: 0, right: rightInset, bottom: 0, height }
       }
       className={`fixed z-floating flex flex-col overflow-hidden bg-card shadow-lg ${
         isMaximized
@@ -649,9 +655,15 @@ export const LogPanel = React.memo(function LogPanel({
                       }
                     >
                       {isCollapsed ? (
-                        <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                        <ChevronRight
+                          className="h-3 w-3 shrink-0 text-muted-foreground"
+                          strokeWidth={1.5}
+                        />
                       ) : (
-                        <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                        <ChevronDown
+                          className="h-3 w-3 shrink-0 text-muted-foreground"
+                          strokeWidth={1.5}
+                        />
                       )}
                       <span className="min-w-0 max-w-[220px] truncate text-[11.5px] font-medium text-foreground">
                         {group.key === APP_GROUP_KEY
@@ -706,39 +718,38 @@ export const LogPanel = React.memo(function LogPanel({
                             ? t.copied
                             : t.logCopyAll}
                         </span>
-                        {onRerun && group.tabId && (() => {
-                          const rerunTabId = group.tabId;
-                          return (
-                          <span
-                            role="button"
-                            tabIndex={0}
-                            aria-label={t.logRerun}
-                            className="flex items-center gap-1 hover:text-foreground"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onRerun(rerunTabId);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.stopPropagation();
-                                onRerun(rerunTabId);
-                              }
-                            }}
-                          >
-                            {t.logRerun}
-                          </span>
-                          );
-                        })()}
+                        {onRerun &&
+                          group.tabId &&
+                          (() => {
+                            const rerunTabId = group.tabId;
+                            return (
+                              <span
+                                role="button"
+                                tabIndex={0}
+                                aria-label={t.logRerun}
+                                className="flex items-center gap-1 hover:text-foreground"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onRerun(rerunTabId);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.stopPropagation();
+                                    onRerun(rerunTabId);
+                                  }
+                                }}
+                              >
+                                {t.logRerun}
+                              </span>
+                            );
+                          })()}
                       </span>
                     </button>
 
                     {!isCollapsed && (
                       <div>
                         {group.entries.map((log) => {
-                          const segments = highlightMessage(
-                            log.message,
-                            query,
-                          );
+                          const segments = highlightMessage(log.message, query);
                           const hasHit =
                             query.trim().length > 0 &&
                             segments.some((s) => s.hit);
@@ -758,9 +769,7 @@ export const LogPanel = React.memo(function LogPanel({
                               />
                               <p
                                 className="min-w-0 flex-1 whitespace-pre-wrap break-all font-mono text-[11px] leading-[17px] text-foreground"
-                                {...(hasHit
-                                  ? { "data-log-hit": true }
-                                  : {})}
+                                {...(hasHit ? { "data-log-hit": true } : {})}
                               >
                                 {segments.map((seg, i) =>
                                   seg.hit ? (
@@ -782,9 +791,7 @@ export const LogPanel = React.memo(function LogPanel({
                               <span className="flex shrink-0 items-center gap-1.5">
                                 <Tooltip
                                   content={
-                                    copiedLogId === log.id
-                                      ? t.copied
-                                      : t.copy
+                                    copiedLogId === log.id ? t.copied : t.copy
                                   }
                                 >
                                   <Button

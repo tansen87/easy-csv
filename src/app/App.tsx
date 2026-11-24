@@ -22,6 +22,12 @@ import { PipelineTemplateDialog } from "@/modules/dialogs/file/PipelineTemplateD
 import { VariableValuesDialog } from "@/modules/dialogs/common/VariableValuesDialog";
 import { ExecutionHistoryDialog } from "@/modules/dialogs/app/ExecutionHistoryDialog";
 import { VariablePanel } from "@/modules/variables/VariablePanel";
+import { ViewDock } from "@/modules/pipeline/ViewDock";
+import { VIEW_PANELS } from "@/modules/pipeline/viewPanels";
+import type { ViewPanelMenuItem } from "@/types/viewDock";
+import { VersionControlPanel } from "@/modules/pipeline/panels/VersionControlPanel";
+import { DataLineagePanel } from "@/modules/pipeline/panels/DataLineagePanel";
+import { useViewDock } from "@/hooks/useViewDock";
 import { collectVariablesFromPipeline } from "@/utils/params";
 import { CsvDiffDialog } from "@/modules/dialogs/file/CsvDiffDialog";
 import { CsvEncodingDialog } from "@/modules/dialogs/file/CsvEncodingDialog";
@@ -296,8 +302,8 @@ function AppContent() {
   // Selected step
   const [selectedStep, setSelectedStep] = useState<PipelineStep | null>(null);
 
-  // Variables panel
-  const [showVariablePanel, setShowVariablePanel] = useState(false);
+  /** Right-hand dock: one slot, rail, width (design 076). */
+  const viewDock = useViewDock();
   const [showAbout, setShowAbout] = useState(false);
 
   // Pipeline save status tracking
@@ -1292,11 +1298,6 @@ function AppContent() {
     [tabsHook.setTabs, tabsHook.selectedTabId],
   );
 
-  const onToggleVariablePanel = useCallback(
-    () => setShowVariablePanel((v) => !v),
-    [],
-  );
-
   // 「查看 → 管道变量」右侧的琥珀计数: 引用了、但默认值为空的变量数
   // 这些变量会让执行停在补值弹窗上,所以要在菜单里就能看见
   const pendingVariableCount = (() => {
@@ -1312,16 +1313,6 @@ function AppContent() {
   // Stable HomeView callbacks so the memoized HomeView (and the React Flow
   // canvas beneath it) do not re-render on unrelated context changes (theme,
   // language). Inline arrows below would otherwise defeat React.memo.
-  const onToggleVersionPanel = useCallback(
-    () => ui.setShowVersionPanel(!ui.showVersionPanel),
-    [ui.showVersionPanel],
-  );
-
-  const onToggleLineagePanel = useCallback(
-    () => ui.setShowLineagePanel(!ui.showLineagePanel),
-    [ui.showLineagePanel],
-  );
-
   const currentTab = tabsHook.getCurrentTab();
 
   const currentSnapshot = useMemo(
@@ -1365,10 +1356,6 @@ function AppContent() {
   const onToggleLogPanel = useCallback(
     () => ui.setShowLogPanel(!ui.showLogPanel),
     [ui.showLogPanel],
-  );
-  const onToggleDataProfile = useCallback(
-    () => ui.setShowDataProfile(!ui.showDataProfile),
-    [ui.showDataProfile],
   );
   const onShowSettings = useCallback(() => ui.setShowSettingsDialog(true), []);
 
@@ -1442,6 +1429,18 @@ function AppContent() {
   }, [settings, showToastRef, refreshRetention]);
 
   const hasInputFile = !!tabsHook.getCurrentTab()?.inputFile;
+
+  // 查看菜单里的四行(design 076): 顺序与右侧页签栏一致, 概览需要输入文件
+  const viewPanelMenuItems = useMemo<ViewPanelMenuItem[]>(
+    () =>
+      VIEW_PANELS.map((panel) => ({
+        id: panel.id,
+        label: t[panel.labelKey],
+        key: panel.key,
+        disabled: panel.id === "profile" && !hasInputFile,
+      })),
+    [t, hasInputFile],
+  );
 
   const currentPipelineLength = tabsHook.getCurrentPipeline().length;
 
@@ -1695,21 +1694,12 @@ function AppContent() {
                 currentPipelineLength={tabsHook.getCurrentPipeline().length}
                 showLogPanel={ui.showLogPanel}
                 onToggleLogPanel={onToggleLogPanel}
-                showDataProfile={ui.showDataProfile}
-                onToggleDataProfile={onToggleDataProfile}
-                hasInputFile={!!tabsHook.getCurrentTab()?.inputFile}
-                showVersionPanel={ui.showVersionPanel}
-                onToggleVersionPanel={() =>
-                  ui.setShowVersionPanel(!ui.showVersionPanel)
-                }
-                showLineagePanel={ui.showLineagePanel}
-                onToggleLineagePanel={() =>
-                  ui.setShowLineagePanel(!ui.showLineagePanel)
-                }
+                activeViewPanel={viewDock.activePanel}
+                viewPanels={viewPanelMenuItems}
+                onSelectViewPanel={viewDock.togglePanel}
+                onCloseViewDock={viewDock.closeDock}
                 showAIPanel={ui.showAIPanel}
                 onToggleAIPanel={() => ui.setShowAIPanel(!ui.showAIPanel)}
-                showVariablePanel={showVariablePanel}
-                onToggleVariablePanel={onToggleVariablePanel}
                 pendingVariables={pendingVariableCount}
               />
             </div>
@@ -1717,79 +1707,118 @@ function AppContent() {
           </header>
 
           <main className="absolute inset-0 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-hidden">
-              <HomeView
-                tabs={tabsHook.tabs}
-                selectedTabId={tabsHook.selectedTabId}
-                onTabChange={tabsHook.setSelectedTabId}
-                onRemoveTab={handleRemoveTab}
-                onRenameTab={tabsHook.renameTab}
-                resultPreview={resultPreview}
-                onAddCommand={handleCommandClick}
-                onStepClick={handleStepClick}
-                onStepUpdate={handleStepUpdate}
-                onStepAliasUpdate={handleStepAliasUpdate}
-                onStepDelete={handleStepRemove}
-                onTableDelete={handleClearInputData}
-                onPipelineReorder={pipeline.updateTabPipeline}
-                onEdgesChange={onEdgesChange}
-                onInputPositionChange={onInputPositionChange}
-                onOpenFile={handleOpenFile}
-                onImportPipeline={handleImportPipeline}
-                onOpenUrl={handleOpenUrl}
-                branchProgress={currentRun?.branch ?? null}
-                showProgressBar={!!currentRun?.showProgress}
-                otherRunningCount={otherRunningCount}
-                tabRuns={execution.runs}
-                isExecuting={isExecuting}
-                onCancelExecution={() =>
-                  void execution.cancelRun(tabsHook.selectedTabId)
-                }
-                recentFiles={tabsHook.recentFiles}
-                onOpenRecentFile={onOpenRecentFile}
-                reactFlowInstanceRef={reactFlowInstanceRef}
-                showVersionPanel={ui.showVersionPanel}
-                showLineagePanel={ui.showLineagePanel}
-                onToggleVersionPanel={onToggleVersionPanel}
-                onToggleLineagePanel={onToggleLineagePanel}
-                versions={versionsHook.getCurrentVersions()}
-                currentVersionId={tabsHook.getCurrentTab()?.currentVersionId}
-                currentSnapshot={currentSnapshot}
-                onSaveVersion={handleSaveVersionAndMarkSaved}
-                onRestoreVersion={versionsHook.restoreVersion}
-                onDeleteVersion={versionsHook.deleteVersion}
-                onClearAllVersions={versionsHook.clearAllVersions}
-                onAddTag={versionsHook.addTag}
-                onRemoveTag={versionsHook.removeTag}
-                onRenameVersion={versionsHook.renameVersion}
-                isSavingVersion={versionsHook.isSavingVersion}
-                lineageData={lineageHook.lineageData}
-                onSaveLineage={lineageHook.saveLineage}
-                pipelineSavedAt={pipelineSavedAt}
-                doubleClickFitView={settings.doubleClickFitView}
-                onSavePipeline={handleSavePipelineAndMarkSaved}
-                onSaveIntermediate={handleSaveIntermediateAsInput}
-                delimiter={tabsHook.getCurrentTab()?.defaultDelimiter}
-                delimiterMode={delimiterMode}
-                delimiterSource={tabsHook.getCurrentTab()?.delimiterSource}
-                delimiterConfidence={
-                  tabsHook.getCurrentTab()?.delimiterConfidence
-                }
-                inputFormat={tabsHook.getCurrentTab()?.inputFormat}
-                sourceTable={tabsHook.getCurrentTab()?.sourceTable}
-                onDelimiterChange={onDelimiterModeChange}
-                showOnboardingGuide={showOnboardingGuide}
-                aiDockWidth={aiDockWidth}
-                commandCount={xanCommands.length}
-                onOpenCommandSearch={() => ui.setShowCommandPalette(true)}
-                onShowCommandHelp={showCommandHelp}
-                onOpenAIPanel={() => ui.setShowAIPanel(true)}
-                onLoadDemo={handleLoadDemo}
-                onDismissOnboardingGuide={onboarding.markSeen}
-                demoReveal={demoRevealPill}
-                onAdvanceDemoReveal={handleAdvanceDemoReveal}
-                onSkipDemoReveal={handleSkipDemoReveal}
-              />
+            {/* Canvas and the right-hand dock share one row, so the dock is a
+                real column instead of an overlay (design 076). AI is still
+                fixed to the window edge; its width is reserved here. */}
+            <div
+              className="flex flex-1 overflow-hidden"
+              style={{ paddingRight: aiDockWidth }}
+            >
+              <div className="min-w-0 flex-1">
+                <HomeView
+                  tabs={tabsHook.tabs}
+                  selectedTabId={tabsHook.selectedTabId}
+                  onTabChange={tabsHook.setSelectedTabId}
+                  onRemoveTab={handleRemoveTab}
+                  onRenameTab={tabsHook.renameTab}
+                  resultPreview={resultPreview}
+                  onAddCommand={handleCommandClick}
+                  onStepClick={handleStepClick}
+                  onStepUpdate={handleStepUpdate}
+                  onStepAliasUpdate={handleStepAliasUpdate}
+                  onStepDelete={handleStepRemove}
+                  onTableDelete={handleClearInputData}
+                  onPipelineReorder={pipeline.updateTabPipeline}
+                  onEdgesChange={onEdgesChange}
+                  onInputPositionChange={onInputPositionChange}
+                  onOpenFile={handleOpenFile}
+                  onImportPipeline={handleImportPipeline}
+                  onOpenUrl={handleOpenUrl}
+                  branchProgress={currentRun?.branch ?? null}
+                  showProgressBar={!!currentRun?.showProgress}
+                  otherRunningCount={otherRunningCount}
+                  tabRuns={execution.runs}
+                  isExecuting={isExecuting}
+                  onCancelExecution={() =>
+                    void execution.cancelRun(tabsHook.selectedTabId)
+                  }
+                  recentFiles={tabsHook.recentFiles}
+                  onOpenRecentFile={onOpenRecentFile}
+                  reactFlowInstanceRef={reactFlowInstanceRef}
+                  pipelineSavedAt={pipelineSavedAt}
+                  doubleClickFitView={settings.doubleClickFitView}
+                  onSavePipeline={handleSavePipelineAndMarkSaved}
+                  onSaveIntermediate={handleSaveIntermediateAsInput}
+                  delimiter={tabsHook.getCurrentTab()?.defaultDelimiter}
+                  delimiterMode={delimiterMode}
+                  delimiterSource={tabsHook.getCurrentTab()?.delimiterSource}
+                  delimiterConfidence={
+                    tabsHook.getCurrentTab()?.delimiterConfidence
+                  }
+                  inputFormat={tabsHook.getCurrentTab()?.inputFormat}
+                  sourceTable={tabsHook.getCurrentTab()?.sourceTable}
+                  onDelimiterChange={onDelimiterModeChange}
+                  showOnboardingGuide={showOnboardingGuide}
+                  commandCount={xanCommands.length}
+                  onOpenCommandSearch={() => ui.setShowCommandPalette(true)}
+                  onShowCommandHelp={showCommandHelp}
+                  onOpenAIPanel={() => ui.setShowAIPanel(true)}
+                  onLoadDemo={handleLoadDemo}
+                  onDismissOnboardingGuide={onboarding.markSeen}
+                  demoReveal={demoRevealPill}
+                  onAdvanceDemoReveal={handleAdvanceDemoReveal}
+                  onSkipDemoReveal={handleSkipDemoReveal}
+                />
+              </div>
+
+              <ViewDock
+                activePanel={viewDock.activePanel}
+                onSelectPanel={viewDock.togglePanel}
+                width={viewDock.panelWidth}
+                onWidthChange={viewDock.setWidth}
+              >
+                {viewDock.activePanel === "profile" && (
+                  <DataProfilePanel
+                    filePath={tabsHook.getCurrentTab()?.inputFile || ""}
+                    delimiter={tabsCtl.resolveRunDelimiter()}
+                    isVisible
+                    onClose={viewDock.closeDock}
+                  />
+                )}
+                {viewDock.activePanel === "version" && (
+                  <VersionControlPanel
+                    versions={versionsHook.getCurrentVersions()}
+                    currentVersionId={
+                      tabsHook.getCurrentTab()?.currentVersionId
+                    }
+                    currentSnapshot={currentSnapshot}
+                    onSaveVersion={handleSaveVersionAndMarkSaved}
+                    onRestoreVersion={versionsHook.restoreVersion}
+                    onDeleteVersion={versionsHook.deleteVersion}
+                    onAddTag={versionsHook.addTag}
+                    onRemoveTag={versionsHook.removeTag}
+                    onRenameVersion={versionsHook.renameVersion}
+                    onClearAllVersions={versionsHook.clearAllVersions}
+                    isSaving={versionsHook.isSavingVersion}
+                    onClose={viewDock.closeDock}
+                  />
+                )}
+                {viewDock.activePanel === "lineage" && (
+                  <DataLineagePanel
+                    lineageData={lineageHook.lineageData}
+                    onSaveLineage={lineageHook.saveLineage}
+                    onClose={viewDock.closeDock}
+                  />
+                )}
+                {viewDock.activePanel === "variables" && (
+                  <VariablePanel
+                    steps={tabsHook.getCurrentTab()?.pipeline || []}
+                    variables={tabsHook.getCurrentTab()?.variables || []}
+                    onChange={onVariablesChange}
+                    onClose={viewDock.closeDock}
+                  />
+                )}
+              </ViewDock>
             </div>
           </main>
 
@@ -1812,6 +1841,7 @@ function AppContent() {
             }
             selectedTabId={tabsHook.selectedTabId}
             tabs={tabsHook.tabs}
+            rightInset={aiDockWidth + viewDock.dockWidth}
           />
 
           <ExecutionHistoryDialog
@@ -1832,7 +1862,7 @@ function AppContent() {
               session.updatePanelState("chartPanel", patch)
             }
             capsuleY={collapsedStack.chartPanel}
-            capsuleRight={8 + aiDockWidth}
+            capsuleRight={8 + aiDockWidth + viewDock.dockWidth}
             chartState={ui.chartsByTab[tabsHook.selectedTabId] ?? null}
           />
 
@@ -2042,23 +2072,6 @@ function AppContent() {
             />
           )}
 
-          {/* Data Profile Panel */}
-          <div
-            className="absolute top-9 bottom-0 z-20 transition-all duration-300"
-            style={{ right: aiDockWidth, width: ui.showDataProfile ? 320 : 0 }}
-          >
-            {ui.showDataProfile && (
-              <div className="h-full bg-card border-l border-border/50 shadow-lg">
-                <DataProfilePanel
-                  filePath={tabsHook.getCurrentTab()?.inputFile || ""}
-                  delimiter={tabsCtl.resolveRunDelimiter()}
-                  isVisible={ui.showDataProfile}
-                  onClose={() => ui.setShowDataProfile(false)}
-                />
-              </div>
-            )}
-          </div>
-
           <AIPanel
             isVisible={ui.showAIPanel}
             onClose={() => {
@@ -2083,24 +2096,6 @@ function AppContent() {
               onCancel={cancelVariables}
             />
           )}
-
-          {/* Pipeline variables panel (right drawer) */}
-          <div
-            className={`absolute top-9 right-0 bottom-0 z-30 transition-all duration-300 ${
-              showVariablePanel ? "w-80" : "w-0"
-            }`}
-          >
-            {showVariablePanel && (
-              <div className="h-full bg-card border-l border-border/50 shadow-lg">
-                <VariablePanel
-                  steps={tabsHook.getCurrentTab()?.pipeline || []}
-                  variables={tabsHook.getCurrentTab()?.variables || []}
-                  onChange={onVariablesChange}
-                  onClose={onToggleVariablePanel}
-                />
-              </div>
-            )}
-          </div>
         </div>
       }
     </>

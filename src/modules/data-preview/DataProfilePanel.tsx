@@ -6,8 +6,9 @@ import React, {
   useState,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { CircleAlert, RotateCw, Search, SearchX, X } from "lucide-react";
+import { CircleAlert, RotateCw, Search, SearchX } from "lucide-react";
 
+import { DockHeader } from "@/components/ui/DockHeader";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useLanguage } from "@/i18n";
@@ -148,46 +149,33 @@ export const DataProfilePanel = React.memo(function DataProfilePanel({
 
   return (
     <div
-      className="flex h-full flex-col"
+      className="flex h-full flex-col bg-card"
       onContextMenu={(event) => event.preventDefault()}
     >
-      <div className="flex flex-none items-start gap-1 pt-[13px] pr-2.5 pb-2.5 pl-4">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-[13px] leading-[18px] font-medium">
-            {t.dataProfile}
-          </h2>
-          {meta && (
-            <div className="mt-[3px] truncate text-[11px] leading-[15px] tabular-nums text-muted-foreground">
-              {meta}
-            </div>
-          )}
-        </div>
-        <Tooltip content={t.profileRefresh}>
-          <button
-            type="button"
-            onClick={refresh}
-            disabled={loading || !filePath}
-            aria-label={t.profileRefresh}
-            className="grid h-[26px] w-[26px] place-items-center rounded-md text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <RotateCw className="h-3.5 w-3.5" />
-          </button>
-        </Tooltip>
-        <Tooltip content={t.close}>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t.close}
-            className="grid h-[26px] w-[26px] place-items-center rounded-md text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </Tooltip>
-      </div>
+      <DockHeader
+        index="01"
+        title={t.dataProfile}
+        meta={meta}
+        closeLabel={t.close}
+        onClose={onClose}
+        actions={
+          <Tooltip content={t.profileRefresh}>
+            <button
+              type="button"
+              onClick={refresh}
+              disabled={loading || !filePath}
+              aria-label={t.profileRefresh}
+              className="grid h-[26px] w-[26px] place-items-center rounded-md text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <RotateCw className="h-3.5 w-3.5" />
+            </button>
+          </Tooltip>
+        }
+      />
 
       {hasData && (
         <>
-          <div className="flex-none px-4 pb-2">
+          <div className="flex-none px-4 pb-2 pt-2.5">
             <label className="flex h-7 items-center gap-[7px] rounded-[7px] border border-border bg-background px-2 transition-[border-color,box-shadow] focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20">
               <Search className="h-[13px] w-[13px] shrink-0 text-muted-foreground/60" />
               <input

@@ -19,6 +19,8 @@ export const zhPipeline = {
   maxConcurrentRunsDesc: "超出上限的执行会排队等待, 有空位时自动开始(1~16)",
   logPanel: "日志",
   view: "查看",
+  viewDockClose: "关闭停靠区",
+  viewDockResize: "调整面板宽度",
   search: "搜索",
   helpCenter: "帮助中心",
   reportIssue: "报告问题",

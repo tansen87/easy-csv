@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 076-03 · 查看菜单停靠重设计 · 方案 C 一体检查器</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:#fff;
+    --fg:oklch(0.145 0 0);
+    --card:#fff;
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --border-strong:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-ink:oklch(0.35 0.05 250);
+    --chrome:color-mix(in oklab, oklch(0.42 0.055 250) 12%, #fff);
+    --chrome-border:color-mix(in oklab, oklch(0.42 0.055 250) 30%, transparent);
+    --brand-6:color-mix(in oklab, var(--brand) 6%, transparent);
+    --brand-9:color-mix(in oklab, var(--brand) 9%, transparent);
+    --brand-12:color-mix(in oklab, var(--brand) 12%, transparent);
+
+    --stage:oklch(0.975 0.004 85);
+    --canvas-dot:oklch(0.2 0.01 80 / 11%);
+    --canvas-line:oklch(0.2 0.01 80 / 30%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-win:0 24px 64px -34px oklch(0.2 0.02 80 / 34%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+    --shadow-fly:0 16px 40px -20px oklch(0.2 0.02 80 / 28%),0 2px 6px oklch(0.2 0.02 80 / 6%);
+
+    --warning:oklch(0.55 0.1 72);
+    --warning-soft:oklch(0.55 0.1 72 / 12%);
+    --success:oklch(0.52 0.09 150);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--stage)}
+  body{font-family:var(--font);color:var(--fg);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .page{max-width:1320px;margin:0 auto;padding:56px 32px 104px}
+
+  .doc-head{display:grid;grid-template-columns:76px minmax(0,1fr);gap:24px;padding-bottom:26px;border-bottom:1px solid var(--border-strong)}
+  .doc-no{font-family:var(--mono);font-size:12px;color:var(--muted-fg);padding-top:6px;letter-spacing:.02em}
+  h1{margin:0 0 8px;font-size:27px;font-weight:500;line-height:1.28;letter-spacing:-.01em}
+  .lede{margin:0;max-width:780px;font-size:13.5px;color:var(--muted-fg)}
+  .decision{display:flex;gap:8px;margin:16px 0 0;padding:8px 12px;border-left:2px solid var(--brand);
+            background:var(--brand-6);font-size:12.5px;max-width:820px}
+  .decision b{font-weight:500}
+
+  section{margin-top:60px}
+  .sec-hd{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+  .sec-no{font-family:var(--mono);font-size:11px;color:var(--brand)}
+  h2{margin:0;font-size:18px;font-weight:500;letter-spacing:-.005em}
+  .sec-note{margin:0 0 20px;max-width:820px;font-size:13px;color:var(--muted-fg)}
+  h3{margin:32px 0 12px;font-size:13.5px;font-weight:500}
+  p{margin:0 0 12px;font-size:13px;color:var(--muted-fg);max-width:820px}
+
+  kbd{display:inline-flex;align-items:center;justify-content:center;height:16px;min-width:16px;padding:0 4px;
+      border:1px solid var(--border);border-radius:3px;font-family:var(--mono);font-size:9.5px;line-height:1;color:var(--muted-fg-2)}
+  .i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .i12{width:12px;height:12px}
+  .i14{width:14px;height:14px}
+
+  .win{position:relative;width:1240px;height:720px;display:flex;flex-direction:column;background:var(--bg);
+       border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow-win)}
+  .figure{position:relative;width:max-content}
+  .cap{margin:10px 0 0;font-size:11.5px;color:var(--muted-fg-2);max-width:920px}
+  .cap b{font-weight:500;color:var(--fg)}
+
+  .bar{position:relative;flex:none;display:flex;align-items:center;height:36px;padding-left:16px;
+       background:var(--chrome);box-shadow:inset 0 -1px 0 var(--chrome-border);z-index:6}
+  .brand{flex:none;padding-right:12px;font-size:12.5px;font-weight:500;line-height:1;color:var(--fg)}
+  .menus{display:flex;align-items:center;flex:none}
+  .mwrap{position:relative}
+  .mbtn{height:26px;padding:0 12px;border:0;border-radius:6px;background:transparent;font-family:var(--font);
+        font-size:12px;font-weight:500;line-height:1;color:var(--brand-ink);white-space:nowrap;
+        display:inline-flex;align-items:center;gap:5px}
+  .mbtn.open{background:var(--brand-12)}
+  .mbtn.exec{position:relative;margin-left:2px}
+  .mbtn .badge{display:inline-flex;align-items:center;justify-content:center;min-width:14px;height:14px;padding:0 3px;
+               border-radius:99px;background:var(--warning-soft);color:var(--warning);
+               font-family:var(--mono);font-size:9px;line-height:1}
+  .field-wrap{position:absolute;left:50%;top:5px;transform:translateX(-50%);width:380px}
+  .field{display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:8px;height:26px;
+         padding:0 6px 0 10px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--muted-fg-2)}
+  .field .prompt{font-family:var(--mono);font-size:13px;line-height:1;color:var(--brand);text-align:center;transform:translateY(-1px)}
+  .field .ph{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .icons{margin-left:auto;display:flex;align-items:center;gap:2px;flex:none}
+  .icon-btn{position:relative;display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;
+            background:transparent;color:var(--brand-ink)}
+  .icon-btn.on{background:var(--brand-12)}
+  .icon-btn.on::after{content:"";position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:12px;height:2px;
+                      border-radius:99px;background:currentColor}
+  .wctl{display:flex;flex:none;margin-left:10px}
+  .wbtn{display:grid;place-items:center;width:46px;height:36px;border:0;background:transparent;color:var(--muted-fg)}
+
+  .pm{position:absolute;left:-8px;top:33px;width:262px;padding:5px;border:1px solid var(--border);border-radius:10px;
+      background:var(--card);box-shadow:var(--shadow-fly);z-index:20}
+  .mi{display:flex;align-items:center;gap:8px;height:30px;padding:0 8px;border-radius:6px;font-size:12px;color:var(--muted-fg)}
+  .mi.on{color:var(--fg)}
+  .mi.hov{background:color-mix(in oklab, var(--fg) 8%, transparent)}
+  .mi .chk{width:12px;display:grid;place-items:center;color:var(--brand);flex:none}
+  .mi .no{font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3);width:14px;flex:none}
+  .mi .lbl{flex:1;white-space:nowrap}
+  .mi .state{font-size:10px;color:var(--muted-fg-2)}
+  .pm-sep{height:1px;margin:5px 8px;background:var(--border-soft)}
+  .pm-note{display:flex;align-items:center;justify-content:space-between;height:26px;padding:0 8px;
+           font-size:10.5px;color:var(--muted-fg-2)}
+
+  .body{flex:1;display:flex;min-height:0}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .tabstrip{flex:none;display:flex;align-items:center;gap:4px;height:34px;padding:0 10px;border-bottom:1px solid var(--border-soft)}
+  .tab{display:flex;align-items:center;gap:7px;height:26px;padding:0 8px 0 10px;border-radius:6px;font-size:11.5px;color:var(--muted-fg)}
+  .tab.on{background:var(--muted);color:var(--fg);font-weight:500}
+  .tab .x{font-size:12px;color:var(--muted-fg-3)}
+  .tab-add{display:grid;place-items:center;width:24px;height:24px;border-radius:5px;color:var(--muted-fg-3)}
+  .canvas{position:relative;flex:1;overflow:hidden;background-color:var(--bg);
+          background-image:radial-gradient(var(--canvas-dot) 1px,transparent 1px);background-size:22px 22px}
+  .edges{position:absolute;inset:0;width:100%;height:100%}
+  .edges path{fill:none;stroke:var(--canvas-line);stroke-width:1.25}
+  .rail{position:absolute;left:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:2px;
+        padding:3px;border:1px solid var(--border);border-radius:7px;background:var(--card);box-shadow:var(--shadow-card)}
+  .rail b{display:grid;place-items:center;width:24px;height:24px;border-radius:5px;color:var(--muted-fg-2)}
+  .rail b.on{background:var(--brand-9);color:var(--brand-ink)}
+  .tnode{position:absolute;background:var(--card);border:1px solid var(--border);border-radius:8px;
+         box-shadow:var(--shadow-card);overflow:hidden;width:182px}
+  .tnode .th{display:flex;align-items:center;gap:6px;height:26px;padding:0 9px;border-bottom:1px solid var(--border-soft);
+             font-family:var(--mono);font-size:10.5px;color:var(--fg)}
+  .tnode .th .st{font-family:var(--font);font-size:9.5px;color:var(--muted-fg-2);margin-left:auto}
+  .tnode .tb{padding:6px 9px 7px}
+  .tnode .kv{display:flex;align-items:center;gap:6px;height:16px;font-size:10px;color:var(--muted-fg)}
+  .tnode .kv b{font-family:var(--mono);font-size:9.5px;font-weight:400;color:var(--fg)}
+  .readout{position:absolute;top:10px;right:12px;display:flex;align-items:center;gap:8px;font-family:var(--mono);
+           font-size:10px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .statusline{position:absolute;left:12px;bottom:10px;display:flex;align-items:center;gap:10px;font-size:10px;
+              color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .statusline .sdot{width:5px;height:5px;border-radius:50%;background:var(--success)}
+
+  /* ── 检查器 ── */
+  .insp{flex:none;width:360px;display:flex;flex-direction:column;border-left:1px solid var(--border-strong);background:var(--card)}
+  .ihead{flex:none;display:flex;align-items:center;gap:6px;height:40px;padding:0 8px 0 10px;border-bottom:1px solid var(--border-soft)}
+  .seg{display:flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--border);border-radius:7px;background:var(--card)}
+  .seg b{display:flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:5px;font-size:11.5px;
+         font-weight:400;color:var(--muted-fg)}
+  .seg b .n{font-family:var(--mono);font-size:8.5px;color:var(--muted-fg-3);line-height:1}
+  .seg b.on{background:var(--muted);color:var(--fg);font-weight:500}
+  .seg b.on .n{color:var(--brand)}
+  .ihead .spacer{flex:1}
+  .ibtn{display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:5px;background:transparent;color:var(--muted-fg-2)}
+  .isub{flex:none;display:flex;align-items:center;gap:8px;height:28px;padding:0 12px;border-bottom:1px solid var(--border-soft);
+        font-size:10.5px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .isub .warn{color:var(--warning)}
+  .ibody{flex:1;min-height:0;padding:8px 0 12px;overflow:hidden}
+
+  .row{display:grid;grid-template-columns:minmax(0,1fr) 54px 26px;align-items:center;height:30px;padding:0 12px;gap:10px;
+       font-size:11.5px;color:var(--fg)}
+  .row .nm{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .ruler{height:3px;border-radius:2px;background:color-mix(in oklab, var(--fg) 9%, transparent);position:relative}
+  .ruler i{position:absolute;top:0;bottom:0;left:0;border-radius:2px;background:color-mix(in oklab, var(--fg) 40%, transparent)}
+  .miss{font-family:var(--mono);font-size:10px;text-align:right;color:var(--muted-fg-3);font-variant-numeric:tabular-nums}
+  .miss.warn{color:var(--warning)}
+
+  .vrow{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:8px;height:38px;padding:0 12px}
+  .vrow .dot{width:6px;height:6px;border-radius:50%;background:var(--border-strong);justify-self:center}
+  .vrow .dot.cur{background:var(--brand)}
+  .vrow .t{font-size:11.5px;color:var(--fg)}
+  .vrow .tag{font-family:var(--mono);font-size:9px;padding:0 4px;border:1px solid var(--border);border-radius:3px;
+             color:var(--muted-fg-2);line-height:14px}
+  .vrow .m{font-size:10px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .vrow.sel{background:var(--brand-6)}
+
+  .lineage{padding:8px 12px 0}
+  .lg-row{display:flex;align-items:center;gap:8px;height:26px;font-size:11px;color:var(--fg)}
+  .lg-chip{font-family:var(--mono);font-size:10px;padding:1px 6px;border:1px solid var(--border);border-radius:4px;line-height:16px}
+  .lg-chip.gone{color:var(--muted-fg-3);border-style:dashed}
+  .lg-arrow{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+  .lg-note{margin-top:10px;padding:6px 8px;border-left:2px solid var(--border);font-size:10.5px;color:var(--muted-fg-2)}
+
+  .varlist{padding:2px 0}
+  .vitem{display:grid;grid-template-columns:minmax(0,1fr) 52px minmax(0,84px);align-items:center;gap:8px;
+         height:30px;padding:0 12px;font-size:11.5px}
+  .vitem .name{font-family:var(--mono);font-size:10.5px;color:var(--fg);overflow:hidden;text-overflow:ellipsis}
+  .vitem .type{font-size:10px;color:var(--muted-fg-2)}
+  .vitem .val{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg)}
+  .vitem .val.empty{color:var(--warning);font-family:var(--font)}
+
+  table{border-collapse:collapse;width:100%;max-width:1000px;font-size:12.5px}
+  th{text-align:left;font-weight:500;font-size:11px;color:var(--muted-fg-2);padding:8px 12px 8px 0;border-bottom:1px solid var(--border-strong)}
+  td{padding:9px 12px 9px 0;border-bottom:1px solid var(--border-soft);color:var(--muted-fg);vertical-align:top}
+  td:first-child{color:var(--fg);white-space:nowrap}
+  code{font-family:var(--mono);font-size:11px;background:var(--muted);padding:1px 4px;border-radius:3px;color:var(--fg)}
+  col.c1{width:170px}
+
+  ul{margin:0 0 12px;padding-left:18px;font-size:13px;color:var(--muted-fg);max-width:820px}
+  li{margin-bottom:6px}
+  li b{font-weight:500;color:var(--fg)}
+
+  .head-states{display:flex;flex-direction:column;gap:14px}
+  .head-crop{width:360px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff;box-shadow:var(--shadow-card)}
+  .head-lbl{margin:6px 0 0;font-size:10.5px;color:var(--muted-fg-2)}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></symbol>
+    <symbol id="i-log" viewBox="0 0 24 24"><path d="M4 5h13l3 3v11H4z"/><path d="M8 9h6M8 13h8M8 17h5"/></symbol>
+    <symbol id="i-bot" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 3v4M9 13v1M15 13v1"/></symbol>
+    <symbol id="i-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5 5 19"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5 9 17.5 20 6.5"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.5h-4.5"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 4 4 8l8 4 8-4z"/><path d="M4 12l8 4 8-4M4 16l8 4 8-4"/></symbol>
+    <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="18" r="2.2"/><path d="M7.5 16.4 18 4M16.5 16.4 6 4"/></symbol>
+    <symbol id="i-lines" viewBox="0 0 24 24"><path d="M4 7h16M4 12h11M4 17h7"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+    <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9.5 10v10"/></symbol>
+  </defs>
+</svg>
+
+<div class="page">
+
+  <header class="doc-head">
+    <div class="doc-no">076 · 03</div>
+    <div>
+      <h1>查看菜单：四个面板互相盖住<br>方案 C · 一体检查器</h1>
+      <p class="lede">四个面板合并成一个 360px 的检查器，头部是一排分段：概览 / 版本 / 血缘 / 变量。查看菜单从“开关四个面板”变成“把检查器翻到哪一页”，勾也永远只有一个。</p>
+      <div class="decision"><span>治的是<b>语法</b>而不是<b>坐标</b>：面板不再是四个可以同时存在的窗口，而是一个窗口的四页。</span></div>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-hd"><span class="sec-no">1</span><h2>一个壳，四页</h2></div>
+    <p class="sec-note">头部 40px：分段控件 + 一个关闭。分段下面是这一页的事实行（行数列数、版本数、源列数、待填数），和今天每个面板的副标题同源。页内动作（刷新、保存版本、新增变量）留在事实行右端。</p>
+
+    <div class="figure">
+      <div class="win">
+        <div class="bar">
+          <div class="brand">Easy CSV</div>
+          <div class="menus">
+            <span class="mbtn">文件</span><span class="mbtn">编辑</span>
+            <div class="mwrap">
+              <span class="mbtn open">查看</span>
+              <div class="pm">
+                <div class="mi"><span class="chk"><svg class="i i12"><use href="#i-check"/></svg></span><span class="no">01</span><span class="lbl">数据概览</span><span class="state">5 列</span></div>
+                <div class="mi"><span class="chk"></span><span class="no">02</span><span class="lbl">版本控制</span><span class="state">3 个</span></div>
+                <div class="mi on hov"><span class="chk"><svg class="i i12"><use href="#i-check"/></svg></span><span class="no">03</span><span class="lbl">数据血缘</span><span class="state">4 列</span></div>
+                <div class="mi"><span class="chk"></span><span class="no">04</span><span class="lbl">管道变量</span><span class="state">1 待填</span></div>
+                <div class="pm-sep"></div>
+                <div class="pm-note"><span>翻页，不叠加</span><kbd>Ctrl 1–4</kbd></div>
+              </div>
+            </div>
+            <span class="mbtn">工具</span><span class="mbtn">帮助</span>
+            <span class="mbtn exec">运行<span class="badge">1</span></span>
+          </div>
+          <div class="field-wrap"><div class="field"><span class="prompt">›</span><span class="ph">搜索命令、步骤或文件</span><kbd>Ctrl F</kbd></div></div>
+          <div class="icons">
+            <span class="icon-btn"><svg class="i"><use href="#i-search"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-log"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-bot"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-cog"/></svg></span>
+          </div>
+          <div class="wctl"><span class="wbtn">–</span><span class="wbtn">□</span><span class="wbtn">×</span></div>
+        </div>
+
+        <div class="body">
+          <div class="main">
+            <div class="tabstrip">
+              <div class="tab on">销售分析<span class="x">×</span></div>
+              <div class="tab">Tab1<span class="x">×</span></div>
+              <div class="tab-add"><svg class="i i12"><use href="#i-lines"/></svg></div>
+            </div>
+            <div class="canvas">
+              <svg class="edges" viewBox="0 0 860 640" preserveAspectRatio="none">
+                <path d="M240 168 C 280 168, 280 232, 300 232"/>
+                <path d="M460 232 C 500 232, 500 300, 520 300"/>
+              </svg>
+              <div class="rail">
+                <b><svg class="i"><use href="#i-table"/></svg></b>
+                <b><svg class="i"><use href="#i-layers"/></svg></b>
+                <b><svg class="i"><use href="#i-scissors"/></svg></b>
+                <b><svg class="i"><use href="#i-dots"/></svg></b>
+              </div>
+              <div class="tnode" style="left:58px;top:120px">
+                <div class="th">input<span class="st">5,000 行</span></div>
+                <div class="tb">
+                  <div class="kv"><b>日期</b>日期</div>
+                  <div class="kv"><b>地区</b>字符</div>
+                  <div class="kv"><b>金额</b>数值</div>
+                </div>
+              </div>
+              <div class="tnode" style="left:300px;top:196px">
+                <div class="th">filter<span class="st">-1,204</span></div>
+                <div class="tb"><div class="kv"><b>金额</b>&gt; 10000</div></div>
+              </div>
+              <div class="tnode" style="left:340px;top:340px">
+                <div class="th">output<span class="st">3,796 行</span></div>
+                <div class="tb"><div class="kv"><b>sales.csv</b></div></div>
+              </div>
+              <div class="readout"><span>分支 1/1</span><span>0.8s</span></div>
+              <div class="statusline"><span>3 步</span><span class="sdot"></span><span>已保存 16:42</span></div>
+            </div>
+          </div>
+
+          <div class="insp">
+            <div class="ihead">
+              <div class="seg">
+                <b><span class="n">01</span>概览</b>
+                <b><span class="n">02</span>版本</b>
+                <b class="on"><span class="n">03</span>血缘</b>
+                <b><span class="n">04</span>变量</b>
+              </div>
+              <span class="spacer"></span>
+              <span class="ibtn"><svg class="i i12"><use href="#i-close"/></svg></span>
+            </div>
+            <div class="isub">源 5 列 · 结果 4 列 · 1 列被移除<span style="margin-left:auto;color:var(--muted-fg-3)">v3</span></div>
+            <div class="ibody">
+              <div class="lineage">
+                <div class="lg-row"><span class="lg-chip">日期</span><span class="lg-arrow">→</span><span class="lg-chip">日期</span></div>
+                <div class="lg-row"><span class="lg-chip">地区</span><span class="lg-arrow">→</span><span class="lg-chip">地区</span></div>
+                <div class="lg-row"><span class="lg-chip">金额</span><span class="lg-arrow">→</span><span class="lg-chip">金额合计</span><span class="lg-arrow">→</span><span class="lg-chip">销售额</span></div>
+                <div class="lg-row"><span class="lg-chip gone">数量</span><span class="lg-arrow">×</span><span class="lg-chip gone">已移除</span></div>
+              </div>
+              <div class="lg-note" style="margin-left:12px;margin-right:12px">金额在 03 号步骤被聚合成销售额</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>一列到底。</b>360 宽，和 AI 面板同宽；1200 的窗口里画布还有 840。打开第二个“面板”这件事在界面上不存在了——所以也不会有覆盖。</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-hd"><span class="sec-no">2</span><h2>头部与四页的事实行</h2></div>
+    <p class="sec-note">分段用两字短名（概览 / 版本 / 血缘 / 变量），序号 01–04 是同一套签名。事实行永远只说这一页的数字，动作放在它右端。</p>
+
+    <div class="head-states">
+      <div>
+        <div class="head-crop">
+          <div class="ihead" style="border-bottom:1px solid var(--border-soft)">
+            <div class="seg">
+              <b class="on"><span class="n">01</span>概览</b><b><span class="n">02</span>版本</b><b><span class="n">03</span>血缘</b><b><span class="n">04</span>变量</b>
+            </div>
+            <span class="spacer"></span>
+            <span class="ibtn"><svg class="i i12"><use href="#i-close"/></svg></span>
+          </div>
+          <div class="isub" style="border-bottom:1px solid var(--border-soft)">5,000 行 · 5 列 · 2 列有缺失
+            <span style="margin-left:auto"><svg class="i i12" style="color:var(--muted-fg-2)"><use href="#i-refresh"/></svg></span>
+          </div>
+          <div class="ibody" style="padding:6px 0 10px">
+            <div class="row"><span class="nm">日期</span><span class="ruler"><i style="width:100%"></i></span><span class="miss">0</span></div>
+            <div class="row"><span class="nm">地区</span><span class="ruler"><i style="width:99.8%"></i></span><span class="miss warn">12</span></div>
+            <div class="row"><span class="nm">品类</span><span class="ruler"><i style="width:100%"></i></span><span class="miss">0</span></div>
+            <div class="row"><span class="nm">金额</span><span class="ruler"><i style="width:99.9%"></i></span><span class="miss warn">3</span></div>
+            <div class="row"><span class="nm">数量</span><span class="ruler"><i style="width:99.2%"></i></span><span class="miss warn">41</span></div>
+          </div>
+        </div>
+        <p class="head-lbl">01 数据概览 · 行数、列数、缺失列数；刷新在事实行右端</p>
+      </div>
+
+      <div>
+        <div class="head-crop">
+          <div class="ihead" style="border-bottom:1px solid var(--border-soft)">
+            <div class="seg">
+              <b><span class="n">01</span>概览</b><b><span class="n">02</span>版本</b><b><span class="n">03</span>血缘</b><b class="on"><span class="n">04</span>变量</b>
+            </div>
+            <span class="spacer"></span>
+            <span class="ibtn"><svg class="i i12"><use href="#i-close"/></svg></span>
+          </div>
+          <div class="isub" style="border-bottom:1px solid var(--border-soft)">3 个变量 · <span class="warn">1 个待填写</span>
+            <span style="margin-left:auto;color:var(--brand-ink)">新增</span>
+          </div>
+          <div class="ibody" style="padding:6px 0 10px">
+            <div class="vitem"><span class="name">region</span><span class="type">文本</span><span class="val">华东</span></div>
+            <div class="vitem"><span class="name">min_amount</span><span class="type">数值</span><span class="val empty">待填写</span></div>
+            <div class="vitem"><span class="name">top_n</span><span class="type">整数</span><span class="val">10</span></div>
+          </div>
+        </div>
+        <p class="head-lbl">04 管道变量 · 待填数在事实行，同时也在菜单与运行按钮上</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-hd"><span class="sec-no">3</span><h2>规则</h2></div>
+    <table>
+      <colgroup><col class="c1"/><col/></colgroup>
+      <tr><th>项</th><th>取值</th></tr>
+      <tr><td>宽度</td><td>360 固定，可拖 320–440。宽度是这一个壳的属性，四页共享</td></tr>
+      <tr><td>打开 / 翻页</td><td>查看菜单四项都是“打开检查器并翻到这一页”；已打开时再点同一项 = 收起</td></tr>
+      <tr><td>菜单</td><td><code>menuitemradio</code>，勾 = 当前页；未打开时无勾。右端显示该页的关键数字</td></tr>
+      <tr><td>快捷键</td><td><kbd>Ctrl 1</kbd>–<kbd>Ctrl 4</kbd> 翻页并打开；<kbd>Esc</kbd> 沿用菜单关闭</td></tr>
+      <tr><td>待填变量</td><td>运行按钮上挂琥珀数字（示例里的 <code>运行 1</code>），不必打开 04 也知道会被拦</td></tr>
+      <tr><td>宽度来源</td><td>只有一条 <code>inspectorWidth</code>，画布/标签页带/日志共用</td></tr>
+    </table>
+
+    <h3>代价</h3>
+    <ul>
+      <li><b>不能同看。</b>比 A 还彻底：连“两个入口”都没了，对照概览与血缘要翻页。</li>
+      <li><b>页内要二级头。</b>分段下面是事实行，事实行下面是内容；原来的“标题 + 副标题”变成了三层，压掉 40px 垂直空间。</li>
+      <li><b>四页语义不同。</b>概览是“看”、版本是“存与回滚”、变量是“改值”，塞进同一壳后，页内主动作的重量不一样，壳本身给不了统一承诺。</li>
+    </ul>
+  </section>
+
+</div>
+</body>
+</html>

@@ -673,6 +673,27 @@
   animation: fade-in 0.5s ease-out;
 }
 
+/* Docked panel swap (design 076)
+   One surface replaces another inside the same 320px column. Only opacity moves
+   — the width of the dock is never tweened, so switching panels cannot make the
+   canvas reflow frame by frame. */
+@keyframes dock-panel-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+.dock-panel-in {
+  animation: dock-panel-in 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dock-panel-in {
+    animation: none;
+  }
+}
+
 /* In-flight feedback for a toolbar button
    A button whose work is in flight keeps its label and size; only a 2px
    indeterminate line appears along its bottom edge (a ::after, so no DOM node

@@ -42,6 +42,9 @@ export interface Translations {
   maxConcurrentRunsDesc: string;
   logPanel: string;
   view: string;
+  /** Right-hand dock of the View menu (design 076). */
+  viewDockClose: string;
+  viewDockResize: string;
   search: string;
   helpCenter: string;
   reportIssue: string;

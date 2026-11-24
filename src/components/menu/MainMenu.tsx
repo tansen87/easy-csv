@@ -8,6 +8,7 @@ import { useLanguage } from "@/i18n";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/utils";
 import { usesCustomTitleBar } from "@/lib/platform";
+import type { ViewPanelId, ViewPanelMenuItem } from "@/types/viewDock";
 
 /** "0.8.0" → "v0.8.0"; an already-prefixed value is left as is. */
 const withVersionPrefix = (version: string) =>
@@ -99,17 +100,19 @@ interface MainMenuProps {
   currentPipelineLength: number;
   showLogPanel: boolean;
   onToggleLogPanel: () => void;
-  showDataProfile: boolean;
-  onToggleDataProfile: () => void;
-  hasInputFile: boolean;
-  showVersionPanel: boolean;
-  onToggleVersionPanel: () => void;
-  showLineagePanel: boolean;
-  onToggleLineagePanel: () => void;
+  /**
+   * Which panel the right-hand dock is showing (design 076 · option A). One
+   * slot means one value: the menu's radio, the rail and the canvas all read
+   * the same field, so a checkmark can never point at a panel you cannot see.
+   */
+  activeViewPanel: ViewPanelId | null;
+  /** The four rows, in dock order; the shell owns labels and disabled state. */
+  viewPanels: ViewPanelMenuItem[];
+  /** Selecting the panel that is already open closes the dock. */
+  onSelectViewPanel: (id: ViewPanelId) => void;
+  onCloseViewDock: () => void;
   showAIPanel: boolean;
   onToggleAIPanel: () => void;
-  showVariablePanel: boolean;
-  onToggleVariablePanel: () => void;
   /**
    * Referenced pipeline variables whose default value is empty (design 046).
    * Rendered as a small amber count next to the 管道变量 entry so the "this
@@ -172,17 +175,12 @@ export const MainMenu = React.memo(function MainMenu({
   currentPipelineLength,
   showLogPanel,
   onToggleLogPanel,
-  showDataProfile,
-  onToggleDataProfile,
-  hasInputFile,
-  showVersionPanel,
-  onToggleVersionPanel,
-  showLineagePanel,
-  onToggleLineagePanel,
+  activeViewPanel,
+  viewPanels,
+  onSelectViewPanel,
+  onCloseViewDock,
   showAIPanel,
   onToggleAIPanel,
-  showVariablePanel,
-  onToggleVariablePanel,
   pendingVariables = 0,
   showSettingsDialog,
 }: MainMenuProps) {
@@ -508,11 +506,7 @@ export const MainMenu = React.memo(function MainMenu({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [activeMenu, setActiveMenu]);
 
-  const anyCollapsedPanelOpen =
-    showDataProfile ||
-    showVersionPanel ||
-    showLineagePanel ||
-    showVariablePanel;
+  const anyCollapsedPanelOpen = activeViewPanel !== null;
 
   const commandButtonClass = (active: boolean) =>
     cn(
@@ -703,113 +697,83 @@ export const MainMenu = React.memo(function MainMenu({
           </button>
           {activeMenu === "view" && (
             <div role="menu" className={MENU_PANEL}>
-              <div
-                role="menuitemcheckbox"
-                aria-checked={showDataProfile}
-                aria-disabled={!hasInputFile}
-              >
-                <button
-                  onClick={() => {
-                    if (!hasInputFile) return;
-                    onToggleDataProfile();
-                    setActiveMenu(null);
-                  }}
-                  disabled={!hasInputFile}
-                  className={cn(
-                    "group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium transition-colors",
-                    !hasInputFile
-                      ? "text-foreground/40 cursor-not-allowed"
-                      : showDataProfile
-                        ? "text-foreground hover:bg-foreground/8"
-                        : "text-muted-foreground hover:bg-foreground/8",
-                  )}
-                >
-                  <Check
+              {viewPanels.map((panel) => {
+                const disabled = panel.disabled === true;
+                const active = activeViewPanel === panel.id;
+                return (
+                  <button
+                    key={panel.id}
+                    role="menuitemradio"
+                    aria-checked={active}
+                    aria-disabled={disabled}
+                    disabled={disabled}
+                    title={
+                      disabled && panel.id === "profile"
+                        ? t.dataProfileRequiresInput
+                        : undefined
+                    }
+                    onClick={() => {
+                      if (disabled) return;
+                      onSelectViewPanel(panel.id);
+                      setActiveMenu(null);
+                    }}
                     className={cn(
-                      "h-2.5 w-2.5 shrink-0 text-primary",
-                      !showDataProfile && "opacity-0",
+                      "group flex h-8 w-full items-center gap-2 rounded-lg px-2.5 text-xs font-medium transition-colors",
+                      disabled
+                        ? "text-foreground/40 cursor-not-allowed"
+                        : active
+                          ? "bg-primary/10 text-foreground"
+                          : "text-muted-foreground hover:bg-foreground/8",
                     )}
-                    aria-hidden="true"
-                  />
-                  <span className="whitespace-nowrap">{t.dataProfile}</span>
-                </button>
-              </div>
-              <button
-                role="menuitemcheckbox"
-                aria-checked={showVersionPanel}
-                onClick={() => {
-                  onToggleVersionPanel();
-                  setActiveMenu(null);
-                }}
-                className={cn(
-                  "group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium transition-colors",
-                  showVersionPanel
-                    ? "text-foreground hover:bg-foreground/8"
-                    : "text-muted-foreground hover:bg-foreground/8",
-                )}
-              >
-                <Check
-                  className={cn(
-                    "h-2.5 w-2.5 shrink-0 text-primary",
-                    !showVersionPanel && "opacity-0",
-                  )}
-                  aria-hidden="true"
-                />
-                <span className="whitespace-nowrap">{t.versionHistory}</span>
-              </button>
-              <button
-                role="menuitemcheckbox"
-                aria-checked={showLineagePanel}
-                onClick={() => {
-                  onToggleLineagePanel();
-                  setActiveMenu(null);
-                }}
-                className={cn(
-                  "group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium transition-colors",
-                  showLineagePanel
-                    ? "text-foreground hover:bg-foreground/8"
-                    : "text-muted-foreground hover:bg-foreground/8",
-                )}
-              >
-                <Check
-                  className={cn(
-                    "h-2.5 w-2.5 shrink-0 text-primary",
-                    !showLineagePanel && "opacity-0",
-                  )}
-                  aria-hidden="true"
-                />
-                <span className="whitespace-nowrap">{t.dataLineage}</span>
-              </button>
-              <button
-                role="menuitemcheckbox"
-                aria-checked={showVariablePanel}
-                onClick={() => {
-                  onToggleVariablePanel();
-                  setActiveMenu(null);
-                }}
-                className={cn(
-                  "group flex items-center gap-2 w-full h-8 px-2.5 rounded-lg text-xs font-medium transition-colors",
-                  showVariablePanel
-                    ? "text-foreground hover:bg-foreground/8"
-                    : "text-muted-foreground hover:bg-foreground/8",
-                )}
-              >
-                <Check
-                  className={cn(
-                    "h-2.5 w-2.5 shrink-0 text-primary",
-                    !showVariablePanel && "opacity-0",
-                  )}
-                  aria-hidden="true"
-                />
-                <span className="whitespace-nowrap">{t.variables}</span>
-                {pendingVariables > 0 && (
-                  <span
-                    data-testid="pending-variable-count"
-                    className="ml-auto rounded-full bg-warning-soft px-1.5 font-mono text-[9.5px] leading-[15px] tabular-nums text-warning"
                   >
-                    {pendingVariables}
-                  </span>
+                    <Check
+                      className={cn(
+                        "h-2.5 w-2.5 shrink-0 text-primary",
+                        !active && "opacity-0",
+                      )}
+                      aria-hidden="true"
+                    />
+                    <span className="whitespace-nowrap">{panel.label}</span>
+                    {panel.id === "variables" && pendingVariables > 0 && (
+                      <span
+                        data-testid="pending-variable-count"
+                        className="ml-auto rounded-full bg-warning-soft px-1.5 font-mono text-[9.5px] leading-[15px] tabular-nums text-warning"
+                      >
+                        {pendingVariables}
+                      </span>
+                    )}
+                    <kbd
+                      className={cn(
+                        "text-[10px] leading-4 text-muted-foreground/70 border border-border rounded px-1",
+                        (panel.id !== "variables" || pendingVariables === 0) &&
+                          "ml-auto",
+                      )}
+                    >
+                      Alt {panel.key}
+                    </kbd>
+                  </button>
+                );
+              })}
+              <div className="my-1 h-px bg-border/60" role="separator" />
+              <button
+                role="menuitem"
+                onClick={() => {
+                  onCloseViewDock();
+                  setActiveMenu(null);
+                }}
+                disabled={activeViewPanel === null}
+                className={cn(
+                  "group flex h-8 w-full items-center gap-2 rounded-lg px-2.5 text-xs font-medium transition-colors",
+                  activeViewPanel === null
+                    ? "text-foreground/40 cursor-not-allowed"
+                    : "text-muted-foreground hover:bg-foreground/8",
                 )}
+              >
+                <span className="h-2.5 w-2.5 flex-none" aria-hidden="true" />
+                <span className="whitespace-nowrap">{t.viewDockClose}</span>
+                <kbd className="ml-auto text-[10px] leading-4 text-muted-foreground/70 border border-border rounded px-1">
+                  Alt 0
+                </kbd>
               </button>
             </div>
           )}

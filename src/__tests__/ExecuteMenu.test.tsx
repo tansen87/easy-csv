@@ -90,17 +90,18 @@ function baseProps(overrides: Record<string, unknown> = {}) {
     maxConcurrentRuns: 4,
     showLogPanel: false,
     onToggleLogPanel: vi.fn(),
-    showDataProfile: false,
-    onToggleDataProfile: vi.fn(),
+    activeViewPanel: null,
+    viewPanels: [
+      { id: "profile", label: "Data Profile", key: "1" },
+      { id: "version", label: "Version History", key: "2" },
+      { id: "lineage", label: "Data Lineage", key: "3" },
+      { id: "variables", label: "Variables", key: "4" },
+    ],
+    onSelectViewPanel: vi.fn(),
+    onCloseViewDock: vi.fn(),
     hasInputFile: true,
-    showVersionPanel: false,
-    onToggleVersionPanel: vi.fn(),
-    showLineagePanel: false,
-    onToggleLineagePanel: vi.fn(),
     showAIPanel: false,
     onToggleAIPanel: vi.fn(),
-    showVariablePanel: false,
-    onToggleVariablePanel: vi.fn(),
     showSettingsDialog: false,
     ...overrides,
   };
@@ -577,12 +578,35 @@ describe("menu-bar dropdowns (design 054)", () => {
     expect(document.activeElement).toBe(view);
   });
 
+  it("offers the dock panels as one radio group (design 076)", () => {
+    const onSelectViewPanel = vi.fn();
+    const first = renderMenu({ activeMenu: "view", onSelectViewPanel });
+
+    const items = first.getAllByRole("menuitemradio");
+    expect(items).toHaveLength(4);
+    expect(
+      items.every((item) => item.getAttribute("aria-checked") === "false"),
+    ).toBe(true);
+
+    fireEvent.click(items[2]);
+    expect(onSelectViewPanel).toHaveBeenCalledWith("lineage");
+    first.unmount();
+
+    // One slot means one check: the menu can never claim four panels are open.
+    const second = renderMenu({ activeMenu: "view", activeViewPanel: "lineage" });
+    const checked = second
+      .getAllByRole("menuitemradio")
+      .filter((item) => item.getAttribute("aria-checked") === "true");
+    expect(checked).toHaveLength(1);
+    expect(checked[0].textContent).toContain("Data Lineage");
+  });
+
   it("marks the 查看 trigger when one of its panels is open", () => {
     const closed = renderMenu({ activeMenu: null });
     expect(trigger(closed.container, "view").querySelector("span")).toBeNull();
     closed.unmount();
 
-    const open = renderMenu({ showDataProfile: true });
+    const open = renderMenu({ activeViewPanel: "profile" });
     const rail = trigger(open.container, "view").querySelector("span");
     expect(rail).not.toBeNull();
     // Same 12px bar the toolbar toggles use, so the bar reads as one system.

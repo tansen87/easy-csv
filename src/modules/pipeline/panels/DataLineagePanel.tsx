@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Maximize2, MoreHorizontal, Search, X } from "lucide-react";
+import { DockHeader } from "@/components/ui/DockHeader";
 import { useLanguage } from "@/i18n";
 import { StepLineage } from "@/types/xan";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -98,7 +99,8 @@ export function DataLineagePanel({
   const handleBodyKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
     const rows = Array.from(
-      bodyRef.current?.querySelectorAll<HTMLElement>("[data-lineage-row]") ?? [],
+      bodyRef.current?.querySelectorAll<HTMLElement>("[data-lineage-row]") ??
+        [],
     );
     if (rows.length === 0) return;
     const active = document.activeElement as HTMLElement | null;
@@ -127,9 +129,10 @@ export function DataLineagePanel({
         `${t.lineageRenamed} ${change.diff.renamed.length} ${t.lineageColumnsUnit}`,
       );
     }
-    if (change.diff.added.length > 0) parts.push(`+${change.diff.added.length}`);
+    if (change.diff.added.length > 0)
+      parts.push(`+${change.diff.added.length}`);
     if (change.diff.removed.length > 0) {
-      parts.push(`−${change.diff.removed.length}`);
+      parts.push(`-${change.diff.removed.length}`);
     }
     return parts.join(" · ");
   };
@@ -155,10 +158,13 @@ export function DataLineagePanel({
       className="flex h-full flex-col bg-card"
       onContextMenu={(e) => e.preventDefault()}
     >
-      <div className="flex-none px-4 pt-3">
-        <div className="flex h-7 items-center gap-2">
-          <h3 className="text-[13px] font-medium">{t.dataLineage}</h3>
-          <div className="ml-auto flex items-center gap-0.5">
+      <DockHeader
+        index="03"
+        title={t.dataLineage}
+        closeLabel={t.lineageClose}
+        onClose={onClose}
+        actions={
+          <>
             <Tooltip content={t.lineageFullscreen}>
               <button
                 type="button"
@@ -198,21 +204,13 @@ export function DataLineagePanel({
                 </div>
               )}
             </div>
-            <Tooltip content={t.lineageClose}>
-              <button
-                type="button"
-                aria-label={t.lineageClose}
-                onClick={onClose}
-                className="grid h-[26px] w-[26px] place-items-center rounded-[7px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </Tooltip>
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        {!isEmpty && (
-          <div className="relative mt-2.5">
+      {!isEmpty && (
+        <div className="flex-none px-4 pt-2.5">
+          <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground/70" />
             <input
               type="text"
@@ -232,8 +230,8 @@ export function DataLineagePanel({
               </button>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <div
         ref={bodyRef}
@@ -305,10 +303,7 @@ export function DataLineagePanel({
 
         {!isEmpty && !activeColumn && changes.length > 0 && (
           <>
-            <GroupLabel
-              label={t.lineageGroupChanges}
-              count={changes.length}
-            />
+            <GroupLabel label={t.lineageGroupChanges} count={changes.length} />
             {changes.map((change) => (
               <div
                 key={change.stepId}

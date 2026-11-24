@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MoreHorizontal, X } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Select } from "@/components/ui/Select";
@@ -14,6 +14,7 @@ import {
   isValidVariableName,
   VariableRef,
 } from "@/utils/params";
+import { DockHeader } from "@/components/ui/DockHeader";
 import { useLanguage } from "@/i18n";
 import {
   TYPE_OPTIONS,
@@ -154,7 +155,12 @@ export function VariablePanel({
         ? variables.map((v) => (v.name === name ? { ...v, ...patch } : v))
         : [
             ...variables,
-            { name, defaultValue: "", type: "string", ...patch } as PipelineVariable,
+            {
+              name,
+              defaultValue: "",
+              type: "string",
+              ...patch,
+            } as PipelineVariable,
           ],
     );
   };
@@ -224,7 +230,9 @@ export function VariablePanel({
           <span
             className={cn(
               "ml-auto font-mono text-[10px] tabular-nums",
-              tone === "warning" ? "text-warning/80" : "text-muted-foreground/60",
+              tone === "warning"
+                ? "text-warning/80"
+                : "text-muted-foreground/60",
             )}
           >
             {count}
@@ -260,7 +268,9 @@ export function VariablePanel({
             }
             onMenuClose={() => setMenuFor(null)}
             onCopy={() => {
-              void navigator.clipboard?.writeText(`{{${v.name}}}`).catch(() => {});
+              void navigator.clipboard
+                ?.writeText(`{{${v.name}}}`)
+                .catch(() => {});
             }}
             onSetType={(ty) => setType(v.name, ty)}
             onDelete={() => removeVariable(v.name)}
@@ -273,38 +283,29 @@ export function VariablePanel({
 
   return (
     <div
-      className="flex h-full flex-col bg-card"
+      className="relative flex h-full flex-col bg-card"
       onContextMenu={(e) => e.preventDefault()}
     >
-      <div className="flex-none px-4 pt-3">
-        <div className="flex h-7 items-center gap-2">
-          <h3 className="text-[13px] font-medium">{t.variables}</h3>
-          <div className="ml-auto flex items-center gap-0.5">
-            <Tooltip content={t.variableMenu}>
-              <button
-                type="button"
-                aria-label={t.variableMenu}
-                aria-expanded={panelMenuOpen}
-                disabled={variables.length === 0}
-                onClick={() => setPanelMenuOpen((open) => !open)}
-                className="grid h-[26px] w-[26px] place-items-center rounded-[7px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-              >
-                <MoreHorizontal className="h-[13px] w-[13px]" />
-              </button>
-            </Tooltip>
-            <Tooltip content={t.close}>
-              <button
-                type="button"
-                aria-label={t.close}
-                onClick={onClose}
-                className="grid h-[26px] w-[26px] place-items-center rounded-[7px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </Tooltip>
-          </div>
-        </div>
-      </div>
+      <DockHeader
+        index="04"
+        title={t.variables}
+        closeLabel={t.close}
+        onClose={onClose}
+        actions={
+          <Tooltip content={t.variableMenu}>
+            <button
+              type="button"
+              aria-label={t.variableMenu}
+              aria-expanded={panelMenuOpen}
+              disabled={variables.length === 0}
+              onClick={() => setPanelMenuOpen((open) => !open)}
+              className="grid h-[26px] w-[26px] place-items-center rounded-[7px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              <MoreHorizontal className="h-[13px] w-[13px]" />
+            </button>
+          </Tooltip>
+        }
+      />
 
       {panelMenuOpen && variables.length > 0 && (
         <div
@@ -365,7 +366,12 @@ export function VariablePanel({
             pendingVars,
             pendingVars.length > 0 ? t.variablePendingHint : undefined,
           )}
-          {renderGroup(t.variableGroupReady, readyVars.length, "muted", readyVars)}
+          {renderGroup(
+            t.variableGroupReady,
+            readyVars.length,
+            "muted",
+            readyVars,
+          )}
           {referencedOnly.length > 0 && (
             <>
               <div className="flex h-[30px] items-baseline gap-1.5 px-4 text-[10.5px] text-muted-foreground">

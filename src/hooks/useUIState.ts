@@ -12,12 +12,9 @@ export function useUIState() {
   const [isMenuActivated, setIsMenuActivated] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
-  const [showDataProfile, setShowDataProfile] = useState(false);
   const [showRefreshDialog, setShowRefreshDialog] = useState(false);
   // Update check/install state lives in `useUpdater`; only dialog visibility is
   // pure UI state.
-  const [showVersionPanel, setShowVersionPanel] = useState(false);
-  const [showLineagePanel, setShowLineagePanel] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showChartPanel, setShowChartPanel] = useState(false);
   /**
@@ -91,14 +88,8 @@ export function useUIState() {
     setShowSettingsDialog,
     showUpdateDialog,
     setShowUpdateDialog,
-    showDataProfile,
-    setShowDataProfile,
     showRefreshDialog,
     setShowRefreshDialog,
-    showVersionPanel,
-    setShowVersionPanel,
-    showLineagePanel,
-    setShowLineagePanel,
     showAIPanel,
     setShowAIPanel,
     showChartPanel,

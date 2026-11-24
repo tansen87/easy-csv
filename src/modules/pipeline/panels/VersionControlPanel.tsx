@@ -1,6 +1,7 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Pencil, RotateCcw, Search, Tag, Trash2, X } from "lucide-react";
+import { DockHeader } from "@/components/ui/DockHeader";
 import { ConfirmDialog } from "@/modules/dialogs/common/ConfirmDialog";
 import {
   EditorKind,
@@ -380,46 +381,41 @@ export function VersionControlPanel({
       className="flex h-full flex-col bg-card"
       onContextMenu={(e) => e.preventDefault()}
     >
-      {/* Header */}
-      <div className="flex-none px-4 pt-3">
-        <div className="flex h-7 items-center gap-2">
-          <h3 className="text-[13px] font-medium">{t.versionHistory}</h3>
-          <div className="ml-auto flex items-center gap-0.5">
-            <button
-              type="button"
-              onClick={openComposer}
-              className="flex h-[26px] items-center gap-1 rounded-[7px] bg-primary/10 pl-[7px] pr-2.5 text-[11.5px] font-medium text-primary transition-colors hover:bg-primary/15"
-            >
-              {t.saveVersion}
-            </button>
-            <button
-              type="button"
-              aria-label={t.close}
-              onClick={onClose}
-              className="grid h-[26px] w-[26px] place-items-center rounded-[7px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
+      <DockHeader
+        index="02"
+        title={t.versionHistory}
+        closeLabel={t.close}
+        onClose={onClose}
+        actions={
+          <button
+            type="button"
+            onClick={openComposer}
+            className="flex h-[26px] items-center gap-1 rounded-[7px] bg-primary/10 pl-[7px] pr-2.5 text-[11.5px] font-medium text-primary transition-colors hover:bg-primary/15"
+          >
+            {t.saveVersion}
+          </button>
+        }
+        meta={
+          versions.length > 0 ? (
+            <>
+              <span>
+                {t.versionPanelMeta.replace("{count}", String(versions.length))}
+              </span>
+              {dirty && (
+                <>
+                  <span className="opacity-60">·</span>
+                  <span className="truncate text-foreground">
+                    {t.versionDirtyHint}
+                  </span>
+                </>
+              )}
+            </>
+          ) : null
+        }
+      />
 
-        {versions.length > 0 && (
-          <div className="mt-0.5 flex h-5 items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums">
-            <span>
-              {t.versionPanelMeta.replace("{count}", String(versions.length))}
-            </span>
-            {dirty && (
-              <>
-                <span className="opacity-60">·</span>
-                <span className="truncate text-foreground">
-                  {t.versionDirtyHint}
-                </span>
-              </>
-            )}
-          </div>
-        )}
-
-        <div className="relative mt-2.5">
+      <div className="flex-none px-4 pt-2.5">
+        <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground/70" />
           <input
             type="text"
