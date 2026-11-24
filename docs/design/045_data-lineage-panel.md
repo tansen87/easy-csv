@@ -97,3 +97,18 @@
 - **搜索只匹配当前列名**,不匹配历史名字(搜「金额」找不到已改名为「销售额」的列)。要么在元信息里补「原名」,要么搜索时一并匹配 `sourceName`。
 - **多分支管道**:`StepLineage[]` 是 DFS 顺序,同一层并行分支的步骤会交错,泳道图在这种管道上只能保证"每列一条线",不保证竖线严格对应执行顺序。
 - **`ColumnSchema` 仍是启发式**:`computeOutputSchema` 只覆盖了常见命令(select / drop / rename / map / transform / window / groupby / agg / separate / enum / pivot / transpose / flatten …),`join` / `merge` 仍按"列不变"处理。
+
+## 8. 修订:「⋯ → 导出血缘 JSONL」真的导出文件(2026-11-24)
+
+用户反馈这个菜单项**点了没反应**。查下去不是渲染问题:它调的是 `lineageHook.saveLineage` → Rust `save_lineage_data`,静默写 `<数据目录>/lineage/<tabId>.json`,没有对话框、没有 toast、没有打开位置 —— 用户视角就是"什么都没发生",而且那个文件名是标签页 id,永远找不到。配套的 `load_lineage_data` 在前端**从未被调用**,所以这条持久化链路其实是半截的。
+
+| 项 | 改成 |
+|---|---|
+| 导出 | 新增 `src/utils/lineageExport.ts`:`exportLineageJsonl(lineage, defaultFileName)` 走系统保存对话框(`plugin-dialog` 的 `save`,过滤器 JSON Lines,默认名 `<标签页名>.lineage.jsonl`,非法字符替换成 `-`),用户确认后 `writeFile` 写 **JSONL**(`toJsonl`:每条 `StepLineage` 一个紧凑对象、一行一条、结尾换行);取消对话框返回 `null` |
+| 反馈 | `App.handleExportLineage`:无血缘 → warning toast;成功 → `"血缘 JSONL 已导出: <路径>"`;失败 → error toast |
+| 死代码 | 删掉 `useDataLineage` 的 `saveLineage` / `loadLineage`(前端无人调用);Rust 的 `save_lineage_data` / `load_lineage_data` 暂留在 `storage.rs`(存储原语,未接前端) |
+| 测试 | 新增 `lineageExport.test.ts`(7 例:`toJsonl` 一行一条/结尾换行、写文件内容、取消不写、文件名清洗与兜底) |
+
+**为什么是 JSONL 而不是 JSON 数组**:血缘本来就是一条条记录(一步一行),`jq -c` 能流式处理、`tail -f` 能跟、两次导出 diff 只动变化的步骤、Excel/BI 能逐行读。真需要数组时 `jq -s '.' file.jsonl` 一条命令即可。菜单项与全屏头部的按钮文案同步改成「导出血缘 JSONL」。
+
+> 仍未做:血缘不随会话快照持久化(`serializeTabSnapshot` 不含 `lineage`),重启后要重跑一次才有内容 —— 这与本次 bug 无关,但正是当初那条 `save_lineage_data` 想解决的事;若要做,应该在跑完后自动落盘并在切标签页时 `loadLineage`。

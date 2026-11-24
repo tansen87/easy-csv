@@ -29,6 +29,7 @@ import { VersionControlPanel } from "@/modules/pipeline/panels/VersionControlPan
 import { DataLineagePanel } from "@/modules/pipeline/panels/DataLineagePanel";
 import { useViewDock } from "@/hooks/useViewDock";
 import { collectVariablesFromPipeline } from "@/utils/params";
+import { exportLineageJsonl, lineageFileName } from "@/utils/lineageExport";
 import { CsvDiffDialog } from "@/modules/dialogs/file/CsvDiffDialog";
 import { CsvEncodingDialog } from "@/modules/dialogs/file/CsvEncodingDialog";
 import { SeparateCSVDialog } from "@/modules/dialogs/file/SeparateCSVDialog";
@@ -1379,6 +1380,29 @@ function AppContent() {
     [showToastRef, t],
   );
 
+  /**
+   * 数据血缘「导出 JSON」: 走系统保存对话框,写到用户选的路径.
+   * 原先调的是 `save_lineage_data`(静默写进 <数据目录>/lineage/<tabId>.json,
+   * 且没有任何反馈),所以菜单项看起来像没反应.
+   */
+  const handleExportLineage = useCallback(async () => {
+    const lineage = lineageHook.lineageData;
+    if (lineage.length === 0) {
+      showToast(t.lineageNothingToExport, "warning");
+      return;
+    }
+    try {
+      const filePath = await exportLineageJsonl(
+        lineage,
+        lineageFileName(tabsHook.getCurrentTab()?.name ?? ""),
+      );
+      if (!filePath) return;
+      showToast(`${t.lineageExported}: ${filePath}`, "success");
+    } catch (error) {
+      showToast(`Failed to export lineage: ${error}`, "error");
+    }
+  }, [lineageHook.lineageData, showToast, t, tabsHook]);
+
   const handleOpenLogsDir = useCallback(() => {
     invoke("reveal_logs_dir").catch((error) =>
       showToastRef.current(`Failed to open log folder: ${error}`, "error"),
@@ -1805,7 +1829,7 @@ function AppContent() {
                 {viewDock.activePanel === "lineage" && (
                   <DataLineagePanel
                     lineageData={lineageHook.lineageData}
-                    onSaveLineage={lineageHook.saveLineage}
+                    onSaveLineage={handleExportLineage}
                     onClose={viewDock.closeDock}
                   />
                 )}

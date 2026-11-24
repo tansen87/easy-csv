@@ -199,7 +199,7 @@ export function DataLineagePanel({
                     }}
                     className="flex h-[26px] w-full items-center rounded-md px-2 text-left text-[11.5px] text-popover-foreground transition-colors hover:bg-muted"
                   >
-                    {t.lineageExportJson}
+                    {t.lineageExportJsonl}
                   </button>
                 </div>
               )}

@@ -8,7 +8,6 @@ import {
   PipelineTab,
   ColumnLineagePath,
 } from "@/types/xan";
-import { invoke } from "@tauri-apps/api/core";
 import {
   aggregationColumns,
   pickSourceColumn,
@@ -696,31 +695,6 @@ export function useDataLineage(
     [computeLineage, selectedTabId, setTabs],
   );
 
-  const saveLineage = useCallback(async () => {
-    try {
-      await invoke("save_lineage_data", {
-        pipelineId: selectedTabId,
-        lineage: JSON.stringify(lineageData),
-      });
-    } catch (error) {
-      console.error("Failed to save lineage:", error);
-    }
-  }, [selectedTabId, lineageData]);
-
-  const loadLineage = useCallback(async () => {
-    try {
-      const content = await invoke<string>("load_lineage_data", {
-        pipelineId: selectedTabId,
-      });
-      const lineage: StepLineage[] = JSON.parse(content);
-      setLineageData(lineage);
-      return lineage;
-    } catch (error) {
-      console.error("Failed to load lineage:", error);
-      return [];
-    }
-  }, [selectedTabId]);
-
   const getLineageForStep = useCallback(
     (stepId: string): StepLineage | undefined => {
       return lineageData.find((l) => l.stepId === stepId);
@@ -742,8 +716,6 @@ export function useDataLineage(
   return {
     lineageData,
     trackLineage,
-    saveLineage,
-    loadLineage,
     getLineageForStep,
     getLineageForColumn,
     buildColumnLineagePaths,

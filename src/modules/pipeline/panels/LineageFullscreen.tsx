@@ -53,7 +53,7 @@ export function LineageFullscreen({
             onClick={onSave}
             className="flex h-7 items-center gap-1.5 rounded-[7px] border border-border bg-card px-2.5 text-[11.5px] transition-colors hover:bg-muted"
           >
-            {t.lineageExportJson}
+            {t.lineageExportJsonl}
           </button>
           <Tooltip content={t.exitFullscreen}>
             <button

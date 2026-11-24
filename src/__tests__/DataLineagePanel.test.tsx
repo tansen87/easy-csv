@@ -250,10 +250,10 @@ describe("DataLineagePanel · states", () => {
   it("exports the lineage JSON from the ⋯ menu", () => {
     const { props } = renderPanel();
     fireEvent.click(screen.getByRole("button", { name: "更多" }));
-    fireEvent.click(screen.getByText("导出血缘 JSON"));
+    fireEvent.click(screen.getByText("导出血缘 JSONL"));
 
     expect(props.onSaveLineage).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText("导出血缘 JSON")).not.toBeInTheDocument();
+    expect(screen.queryByText("导出血缘 JSONL")).not.toBeInTheDocument();
   });
 
   it("closes from the header button", () => {

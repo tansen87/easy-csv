@@ -68,7 +68,9 @@ export interface Translations {
   lineageFullscreen: string;
   lineageMore: string;
   lineageClose: string;
-  lineageExportJson: string;
+  lineageExportJsonl: string;
+  lineageExported: string;
+  lineageNothingToExport: string;
   lineageGroupResult: string;
   lineageGroupRemoved: string;
   lineageGroupChanges: string;
