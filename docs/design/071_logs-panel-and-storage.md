@@ -111,3 +111,20 @@
 | 签名细节 | **时间轨**:抽屉主体 `pl-7` + 左侧 1px hairline(`bottom-4 top-2`),每个运行组一枚 9px 空心节点(`RAIL_NODE_CLASS`,描边/填充 = 最重级别);组内原有的独立状态圆点删除(节点即是) |
 | 动效 | 「复制全部 / 重跑」默认 `opacity-0`,hover 150ms 淡入(命名 group `group/head`);行内复制/删除改 `group/row`;mark 字重 600 → 500 |
 | 检索 | 搜索框右侧新增 mono 命中位置指示 `1/3`(Enter 循环,`hitIndex` 状态 + `hitTotal` memo) |
+
+## 11. 全屏让出菜单栏(2026-11-24 修订)
+
+全屏(最大化)时面板原本是 `left/top: 0` + `100vw/100vh`,把窗口菜单栏整条盖住 —— 边看日志边改「查看 / 运行」得先还原,而这恰恰是读日志时最常做的事。
+
+改动两处:
+
+| 项 | 改成 |
+|---|---|
+| 全屏几何 | `top: 36px`(菜单栏 `.app-header` 是 `h-9`)、`height: calc(100vh - 36px)`、`left/right: 0`;不再写 `100vw/100vh`,也不用 `h-screen w-screen` 那套 class |
+| 层级 | 新增 `--z-chrome: 45`(`z-chrome` 工具类),窗口菜单栏从 `z-20` 提到它之上:全屏面板是 `z-floating(40)`,`z-20` 的头会连同它内部 `z-50` 的下拉一起被压在面板下面 —— 菜单能看见但点开是空的 |
+
+同一套几何也用在图表面板的全屏(`ChartPanel`,同为 `z-floating` 的全屏表面,否则它的标题行与还原按钮会被菜单栏压住)。层级序列因此固定为:`base < panel(10) < floating(40) < chrome(45) < modal(50) < toast(60) < tooltip`。
+
+抽屉态(非全屏)不受影响:仍然 `bottom: 0` + `right: rightInset`,最大高度仍受 `TITLEBAR_HEIGHT = 56` 约束(全屏起点 `APP_HEADER_HEIGHT = 36` 是另一个常量,两者含义不同)。
+
+回归测试:`LogPanel.test.tsx` 新增一例,点最大化后断言 `top: 36px` / `height: calc(100vh - 36px)`、还原后回到 `bottom: 0px`。

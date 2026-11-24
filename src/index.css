@@ -355,10 +355,14 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Panel z-index layers: base(canvas) < panel < floating < modal < toast < tooltip */
+/* Panel z-index layers: base(canvas) < panel < floating < chrome < modal < toast < tooltip
+   `chrome` is the window's menu bar: it must stay above floating surfaces (a
+   maximized log drawer starts right below it, and its menus still have to open
+   over that surface) but below dialogs. */
 :root {
   --z-panel: 10;
   --z-floating: 40;
+  --z-chrome: 45;
   --z-modal: 50;
   --z-toast: 60;
   --z-tooltip: 9999;
@@ -366,6 +370,9 @@
 
 @utility z-panel {
   z-index: var(--z-panel);
+}
+@utility z-chrome {
+  z-index: var(--z-chrome);
 }
 @utility z-floating {
   z-index: var(--z-floating);

@@ -1521,7 +1521,14 @@ export const ChartPanel = React.memo(function ChartPanel({
       ref={panelRef}
       style={
         isMaximized
-          ? { left: 0, top: 0, width: "100vw", height: "100vh" }
+          ? {
+              // Below the menu bar, like the maximized log drawer: the window
+              // chrome must stay reachable (design 076 follow-up).
+              left: 0,
+              right: 0,
+              top: 36,
+              height: "calc(100vh - 36px)",
+            }
           : {
               left: pos.x,
               top: pos.y,

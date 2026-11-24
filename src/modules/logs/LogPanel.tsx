@@ -83,7 +83,13 @@ const RAIL_NODE_CLASS: Record<LogRunGroup["status"], string> = {
 
 const DEFAULT_HEIGHT = 260;
 const MIN_HEIGHT = 160;
-/** The title bar the docked drawer must never grow past. */
+/** Height of the window's menu bar (`.app-header` is `h-9`). */
+const APP_HEADER_HEIGHT = 36;
+/**
+ * The docked drawer must never grow past this: the header plus a breath, so a
+ * dragged-to-max drawer still reads as a drawer and not as a broken full screen.
+ * Distinct from `APP_HEADER_HEIGHT`, which is where the maximized surface starts.
+ */
 const TITLEBAR_HEIGHT = 56;
 
 const pad2 = (value: number) => String(value).padStart(2, "0");
@@ -382,13 +388,18 @@ export const LogPanel = React.memo(function LogPanel({
     <div
       style={
         isMaximized
-          ? { left: 0, top: 0, width: "100vw", height: "100vh" }
+          ? {
+              left: 0,
+              right: 0,
+              top: APP_HEADER_HEIGHT,
+              height: `calc(100vh - ${APP_HEADER_HEIGHT}px)`,
+            }
           : { left: 0, right: rightInset, bottom: 0, height }
       }
+      // Maximized stays below the menu bar so 「查看」/「运行」 are still there to
+      // use while reading logs; the header sits at `z-chrome` for that reason.
       className={`fixed z-floating flex flex-col overflow-hidden bg-card shadow-lg ${
-        isMaximized
-          ? "h-screen w-screen"
-          : "rounded-t-lg border-x border-t border-border"
+        isMaximized ? "w-full" : "rounded-t-lg border-x border-t border-border"
       }`}
       onContextMenu={(e) => e.preventDefault()}
       data-testid="log-panel"

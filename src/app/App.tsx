@@ -1576,8 +1576,8 @@ function AppContent() {
             ref={headerRef}
             className={
               usesCustomTitleBar
-                ? "app-header app-titlebar absolute top-0 left-0 right-0 h-9 flex items-center pl-4 z-20"
-                : "app-header absolute top-0 left-0 right-0 h-9 flex items-center px-4 gap-4 z-20"
+                ? "app-header app-titlebar absolute top-0 left-0 right-0 h-9 flex items-center pl-4 z-chrome"
+                : "app-header absolute top-0 left-0 right-0 h-9 flex items-center px-4 gap-4 z-chrome"
             }
             onContextMenu={(e) => e.preventDefault()}
             // The whole bar drags and double-clicks to maximise; buttons and

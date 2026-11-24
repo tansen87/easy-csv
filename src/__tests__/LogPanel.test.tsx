@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, fireEvent } from "@testing-library/react";
 import { LanguageProvider } from "@/i18n";
+import { translations } from "@/i18n/translations";
 import { LogPanel } from "@/modules/logs/LogPanel";
 import type { LogEntry } from "@/types/xan";
 import {
@@ -138,6 +139,22 @@ describe("LogPanel run groups (design 071)", () => {
     // The old per-line tab badge is gone — grouping owns the tab name.
     const lines = container.querySelectorAll("p");
     expect(lines).toHaveLength(3);
+  });
+
+  it("starts below the menu bar when maximized (design 076)", () => {
+    const { getByTestId, getByLabelText } = renderPanel(logs);
+    const panel = getByTestId("log-panel");
+    expect(panel.style.top).toBe("");
+
+    fireEvent.click(getByLabelText(translations.en.maximize));
+    // The window chrome must stay reachable while reading logs.
+    expect(panel.style.top).toBe("36px");
+    expect(panel.style.height).toBe("calc(100vh - 36px)");
+    expect(panel.style.bottom).toBe("");
+
+    fireEvent.click(getByLabelText(translations.en.restore));
+    expect(panel.style.top).toBe("");
+    expect(panel.style.bottom).toBe("0px");
   });
 
   it("level chips filter the list", () => {
