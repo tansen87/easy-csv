@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
 import { RunTimer } from "@/components/ui/RunTimer";
 import { useLanguage } from "@/i18n";
+import { useToolRun } from "@/hooks/useToolRuns";
 import { formatDateTime, formatElapsed } from "@/utils/format";
 import {
   clearLastSplitLinesResult,
@@ -111,6 +112,9 @@ export function SplitLinesDialog({
   );
   const [noHeaders, setNoHeaders] = useState(false);
   const [isSplitting, setIsSplitting] = useState(false);
+  const { begin, end, running, startedAt } = useToolRun("splitLines");
+  /** This dialog started it, or a previous run outlived the dialog. */
+  const busy = isSplitting || running;
   const [lastResult, setLastResult] = useState<StoredSplitLinesResult | null>(
     null,
   );
@@ -118,6 +122,9 @@ export function SplitLinesDialog({
   const [outputDirExists, setOutputDirExists] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  /** Latest `isOpen` for an in-flight run: a closed dialog still finishes. */
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
 
   /** Only feedback is cleared on edit — the last result stays visible. */
   const clearFeedback = useCallback(() => {
@@ -242,6 +249,7 @@ export function SplitLinesDialog({
   }, []);
 
   const handleSplit = useCallback(async () => {
+    if (busy) return;
     if (!inputFile.trim()) {
       setError(t.separateSelectFile);
       return;
@@ -251,6 +259,7 @@ export function SplitLinesDialog({
       return;
     }
     clearFeedback();
+    begin();
     setIsSplitting(true);
     try {
       const data = await invoke<SplitLinesResult>("split_lines", {
@@ -274,23 +283,35 @@ export function SplitLinesDialog({
       };
       saveLastSplitLinesResult(stored);
       setLastResult(stored);
+      if (!isOpenRef.current) {
+        const firstOut = data.output_paths[0];
+        onShowToast?.(
+          firstOut
+            ? `${t.toolFinished}: ${firstOut}${data.output_paths.length > 1 ? ` · +${data.output_paths.length - 1}` : ""}`
+            : t.toolFinished,
+          "success",
+        );
+      }
       setIsStaleResult(false);
     } catch (err) {
       setError(String(err));
-      if (!isOpen) {
+      if (!isOpenRef.current) {
         onShowToast?.(String(err), "error");
       }
     } finally {
+      end();
       setIsSplitting(false);
     }
   }, [
+    begin,
+    end,
+    busy,
     inputFile,
     outputDir,
     linesPerFileValue,
     noHeaders,
     t,
     clearFeedback,
-    isOpen,
     onShowToast,
   ]);
 
@@ -582,9 +603,9 @@ export function SplitLinesDialog({
             {t.splitLinesReady.replace("{rows}", rowsLabel)}
           </span>
           <span className="flex items-center gap-3">
-            <RunTimer running={isSplitting} />
-            <Button size="sm" onClick={handleSplit} disabled={isSplitting}>
-              {isSplitting ? t.splitting : t.splitLinesStart}
+            <RunTimer running={busy} startedAt={startedAt} />
+            <Button size="sm" onClick={handleSplit} disabled={busy}>
+              {busy ? t.splitting : t.splitLinesStart}
             </Button>
           </span>
         </div>

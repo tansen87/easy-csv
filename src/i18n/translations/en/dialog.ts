@@ -48,6 +48,7 @@ export const enDialog = {
   csvEncodingNoResult:
     "Choose an input file, an output file and encodings, then click Convert. The result is written directly to the output file.",
   success: "Conversion successful",
+  toolFinished: "Finished",
   sameEncoding: "Source and target encodings are the same",
   bytes: "bytes",
   csvEncodingLastResult: "Last conversion",

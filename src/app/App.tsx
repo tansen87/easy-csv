@@ -28,6 +28,7 @@ import type { ViewPanelMenuItem } from "@/types/viewDock";
 import { VersionControlPanel } from "@/modules/pipeline/panels/VersionControlPanel";
 import { DataLineagePanel } from "@/modules/pipeline/panels/DataLineagePanel";
 import { useViewDock } from "@/hooks/useViewDock";
+import { ToolRunProvider, useToolRuns } from "@/hooks/useToolRuns";
 import { collectVariablesFromPipeline } from "@/utils/params";
 import { exportLineageJsonl, lineageFileName } from "@/utils/lineageExport";
 import { CsvDiffDialog } from "@/modules/dialogs/file/CsvDiffDialog";
@@ -305,6 +306,8 @@ function AppContent() {
 
   /** Right-hand dock: one slot, rail, width (design 076). */
   const viewDock = useViewDock();
+  /** One-shot tools still running; the Tools menu shows their elapsed time. */
+  const toolRuns = useToolRuns();
   const [showAbout, setShowAbout] = useState(false);
 
   // Pipeline save status tracking
@@ -1592,6 +1595,7 @@ function AppContent() {
   ]);
 
   return (
+    <ToolRunProvider runs={toolRuns.runs} actions={toolRuns.actions}>
     <>
       {
         <div className="app-window h-screen relative overflow-hidden">
@@ -1716,6 +1720,7 @@ function AppContent() {
                   !ui.showLogPanel && logs.some((l) => l.type === "error")
                 }
                 currentPipelineLength={tabsHook.getCurrentPipeline().length}
+                toolRuns={toolRuns.runs}
                 showLogPanel={ui.showLogPanel}
                 onToggleLogPanel={onToggleLogPanel}
                 activeViewPanel={viewDock.activePanel}
@@ -2029,6 +2034,7 @@ function AppContent() {
             onClose={() => ui.setShowCsvDiff(false)}
             defaultDelimiter={settings.defaultDelimiter}
             initialFileA={ui.csvDiffInitialFileA}
+            onShowToast={showToast}
           />
 
           <CsvEncodingDialog
@@ -2122,6 +2128,7 @@ function AppContent() {
         </div>
       }
     </>
+    </ToolRunProvider>
   );
 }
 

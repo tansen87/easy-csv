@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { RunTimer } from "@/components/ui/RunTimer";
 import { Select } from "@/components/ui/Select";
 import { useLanguage } from "@/i18n";
+import { useToolRun } from "@/hooks/useToolRuns";
 import { useCsvProbe } from "@/hooks/useCsvProbe";
 import { formatDateTime, formatElapsed } from "@/utils/format";
 import {
@@ -140,6 +141,9 @@ export function EnumerateByGroupDialog({
   const [indexColumn, setIndexColumn] = useState(DEFAULT_INDEX_COLUMN);
   const [assumeSorted, setAssumeSorted] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const { begin, end, running, startedAt } = useToolRun("enumerateByGroup");
+  /** This dialog started it, or a previous run outlived the dialog. */
+  const busy = isRunning || running;
   const [lastResult, setLastResult] = useState<StoredGroupEnumResult | null>(
     null,
   );
@@ -147,6 +151,9 @@ export function EnumerateByGroupDialog({
   const [outputExists, setOutputExists] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  /** Latest `isOpen` for an in-flight run: a closed dialog still finishes. */
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
 
   /** Only feedback is cleared on edit — the last result stays visible. */
   const clearFeedback = useCallback(() => {
@@ -306,6 +313,7 @@ export function EnumerateByGroupDialog({
   }, []);
 
   const handleRun = useCallback(async () => {
+    if (busy) return;
     if (!inputFile.trim()) {
       setError(t.groupEnumSelectFile);
       return;
@@ -319,6 +327,7 @@ export function EnumerateByGroupDialog({
       return;
     }
     clearFeedback();
+    begin();
     setIsRunning(true);
     try {
       const data = await invoke<GroupEnumerateResult>("enumerate_by_group", {
@@ -350,16 +359,23 @@ export function EnumerateByGroupDialog({
       };
       saveLastGroupEnumResult(stored);
       setLastResult(stored);
+      if (!isOpenRef.current) {
+        onShowToast?.(`${t.toolFinished}: ${data.output_path}`, "success");
+      }
       setIsStaleResult(false);
     } catch (err) {
       setError(String(err));
-      if (!isOpen) {
+      if (!isOpenRef.current) {
         onShowToast?.(String(err), "error");
       }
     } finally {
+      end();
       setIsRunning(false);
     }
   }, [
+    begin,
+    end,
+    busy,
     inputFile,
     outputDir,
     groupColumn,
@@ -372,7 +388,6 @@ export function EnumerateByGroupDialog({
     delimiterMode,
     t,
     clearFeedback,
-    isOpen,
     onShowToast,
   ]);
 
@@ -736,9 +751,9 @@ export function EnumerateByGroupDialog({
                   .replace("{index}", indexColumn.trim() || "—")}
           </span>
           <span className="flex items-center gap-3">
-            <RunTimer running={isRunning} />
-            <Button size="sm" onClick={handleRun} disabled={isRunning}>
-              {isRunning ? t.groupEnumRunning : t.groupEnumStart}
+            <RunTimer running={busy} startedAt={startedAt} />
+            <Button size="sm" onClick={handleRun} disabled={busy}>
+              {busy ? t.groupEnumRunning : t.groupEnumStart}
             </Button>
           </span>
         </div>

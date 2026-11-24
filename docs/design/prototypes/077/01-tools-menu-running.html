@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 077-01 · 工具菜单:正在运行的工具</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:#fff;
+    --fg:oklch(0.145 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --muted:oklch(0.97 0 0);
+    --line:oklch(0.2 0.01 80 / 8%);
+    --line-strong:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-ink:oklch(0.35 0.05 250);
+    --brand-6:color-mix(in oklab, var(--brand) 6%, transparent);
+    --brand-9:color-mix(in oklab, var(--brand) 9%, transparent);
+    --brand-12:color-mix(in oklab, var(--brand) 12%, transparent);
+
+    --chrome:color-mix(in oklab, oklch(0.42 0.055 250) 12%, #fff);
+    --page:oklch(0.975 0.004 85);
+    --warning:oklch(0.55 0.1 72);
+    --redline:oklch(0.55 0.21 27);
+    --shadow-menu:0 12px 28px -14px rgba(0,0,0,0.22),0 1px 3px rgba(0,0,0,0.05);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--page)}
+  body{font-family:var(--font);color:var(--fg);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .page{max-width:1320px;margin:0 auto;padding:56px 32px 104px}
+
+  .doc-head{display:grid;grid-template-columns:76px minmax(0,1fr);gap:24px;padding-bottom:26px;border-bottom:1px solid var(--line-strong)}
+  .doc-no{font-family:var(--mono);font-size:12px;color:var(--muted-fg);padding-top:6px;letter-spacing:.02em}
+  h1{margin:0 0 8px;font-size:27px;font-weight:500;line-height:1.28;letter-spacing:-.01em}
+  .lede{margin:0;max-width:790px;font-size:13.5px;color:var(--muted-fg)}
+  .decision{display:flex;gap:8px;margin:16px 0 0;padding:8px 12px;border-left:2px solid var(--brand);
+            background:var(--brand-6);font-size:12.5px;max-width:830px}
+  .decision b{font-weight:500}
+
+  section{margin-top:56px}
+  .sec-hd{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+  .sec-no{font-family:var(--mono);font-size:11px;color:var(--brand)}
+  h2{margin:0;font-size:18px;font-weight:500;letter-spacing:-.005em}
+  .sec-note{margin:0 0 18px;max-width:850px;font-size:13px;color:var(--muted-fg)}
+  p{margin:0 0 10px;font-size:13px;color:var(--muted-fg);max-width:850px}
+
+  /* ── 菜单裁切块 ─────────────────────────────────────── */
+  .cols{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+  .col{width:242px}
+  .crop{
+    position:relative;width:242px;height:372px;padding:6px 0 10px;border:1px solid var(--line-strong);border-radius:10px;
+    background:var(--page);overflow:hidden;
+  }
+  .crop.audit{height:372px;padding-bottom:40px}
+  .bar{
+    display:flex;align-items:center;gap:14px;height:32px;padding:0 12px;background:var(--chrome);
+    font-size:12px;font-weight:500;color:var(--brand-ink);box-shadow:inset 0 -1px 0 color-mix(in oklab, var(--brand) 30%, transparent);
+  }
+  .bar .on{background:var(--brand-12);border-radius:5px;padding:3px 8px;margin-left:-8px}
+  .bar .rest{color:var(--brand-ink);opacity:.9}
+
+  .menu{position:relative;width:226px;margin:8px 0 0 8px;padding:6px;border:1px solid var(--line-strong);
+        border-radius:9px;background:#fff;box-shadow:var(--shadow-menu)}
+  .mi{display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border-radius:7px;font-size:12px;color:var(--fg)}
+  .mi .run{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--brand);
+           white-space:nowrap}
+  .mi .run::before{content:"";width:4px;height:4px;border-radius:99px;background:currentColor}
+  .mi .tm{font-family:var(--mono);font-size:10px;font-variant-numeric:tabular-nums;color:var(--brand);opacity:.85}
+  .mi.hi{outline:1px dashed var(--redline);outline-offset:-1px}
+  .mi .quietrun{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;font-variant-numeric:tabular-nums;color:var(--muted-fg-2)}
+  .mi .quietrun::before{content:"";width:4px;height:4px;border-radius:99px;background:var(--brand)}
+  .msep{height:1px;margin:5px 6px;background:var(--line)}
+
+  /* 顶部运行卡 */
+  .runcard{display:flex;align-items:center;gap:8px;margin:2px 2px 6px;padding:6px 8px 6px 10px;border-radius:7px;
+           background:var(--brand-6);border-left:2px solid var(--brand);font-size:11.5px}
+  .runcard .name{font-weight:500;color:var(--fg)}
+  .runcard .state{font-size:10px;color:var(--brand)}
+  .runcard .tm{margin-left:auto;font-family:var(--mono);font-size:10px;font-variant-numeric:tabular-nums;color:var(--brand)}
+  .runcard .hint{font-size:10px;color:var(--muted-fg-2);margin-left:auto}
+
+  /* 小圆点方案 */
+  .dotonly{width:4px;height:4px;border-radius:99px;background:var(--brand);margin-left:auto;flex:none}
+
+  /* 标注 */
+  .redline{position:absolute;border:1px dashed var(--redline);border-radius:5px;pointer-events:none}
+  .tag{position:absolute;display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:3px;
+       background:var(--redline);color:#fff;font-size:10px;white-space:nowrap;line-height:1}
+  .cap{margin:10px 0 0;font-size:11.5px;line-height:1.7;color:var(--muted-fg-2)}
+  .cap b{font-weight:500;color:var(--fg)}
+  .opt-hd{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .opt-hd .letter{font-family:var(--mono);font-size:11px;color:var(--brand)}
+  .opt-hd h3{margin:0;font-size:13.5px;font-weight:500}
+  .opt-hd .pick{font-size:10px;color:var(--brand);border:1px solid color-mix(in oklab,var(--brand) 35%,transparent);
+                border-radius:3px;padding:0 4px;line-height:15px}
+
+  table{border-collapse:collapse;width:100%;max-width:1020px;font-size:12.5px}
+  th{text-align:left;font-weight:500;font-size:11px;color:var(--muted-fg-2);padding:8px 12px 8px 0;border-bottom:1px solid var(--line-strong)}
+  td{padding:9px 12px 9px 0;border-bottom:1px solid var(--line);color:var(--muted-fg);vertical-align:top}
+  td:first-child{color:var(--fg);white-space:nowrap}
+  code{font-family:var(--mono);font-size:11px;background:var(--muted);padding:1px 4px;border-radius:3px;color:var(--fg)}
+  col.c1{width:180px}
+  ul{margin:0 0 10px;padding-left:18px;font-size:13px;color:var(--muted-fg);max-width:850px}
+  li{margin-bottom:6px}
+  li b{font-weight:500;color:var(--fg)}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header class="doc-head">
+    <div class="doc-no">077 · 01</div>
+    <div>
+      <h1>工具菜单:正在运行的那个工具</h1>
+      <p class="lede">工具菜单里的八件事都是「开一个对话框 → 点开始 → 等」。「工具」菜单本身只是八个入口:点开、关掉,它就退回一张白纸 —— 哪怕后台那次合并还在跑。三个方案,都在菜单里给正在跑的工具留一句话。</p>
+      <div class="decision"><span>本轮只给原型,不动代码。方案 A 直接在条目右端写状态,不新增结构;推荐它。</span></div>
+    </div>
+  </header>
+
+  <!-- ══ 现状 ══ -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">1</span><h2>现状:关掉对话框 = 一切归零</h2></div>
+    <p class="sec-note">八个对话框都是模态的(<code>fixed inset-0 z-50</code>),但它们全都允许在运行中关掉:点背景、点 ×、按 Esc 都直接 <code>onClose</code>。关掉之后后端那条 <code>invoke</code> 还在跑,菜单里却没有任何迹象。</p>
+
+    <div class="cols">
+      <div class="col">
+        <div class="crop audit">
+          <div class="bar"><span class="on">工具</span><span class="rest">帮助</span><span class="rest">运行</span></div>
+          <div class="menu">
+            <div class="mi">对比差异</div>
+            <div class="mi">转换编码</div>
+            <div class="mi">拆分坏行</div>
+            <div class="mi">清除符号</div>
+            <div class="mi">按行数拆分</div>
+            <div class="mi">组内编号</div>
+            <div class="msep"></div>
+            <div class="mi">转为 Excel</div>
+            <div class="mi hi">合并工作簿</div>
+          </div>
+          <span class="tag" style="left:14px;bottom:12px">合并正在跑,这里和平时一模一样</span>
+        </div>
+        <p class="cap"><b>八个入口,零状态。</b>菜单只回答「有哪些工具」,不回答「哪件事正在发生」。</p>
+      </div>
+
+      <div class="col" style="width:auto;flex:1;min-width:330px">
+        <p class="cap" style="margin-top:0">代码里能读到的三个事实:</p>
+        <ul style="margin-top:2px">
+          <li><b>能关掉,但不会停。</b>合并中「开始」是禁用的,关闭按钮却没有拦 —— 关掉对话框,后端照旧跑完。</li>
+          <li><b>成功时没有任何回声。</b><code>handleMerge</code> 成功只写 localStorage 与本地 state;对话框已关闭时,这次结果要等下次打开「合并工作簿」才看得见。<b>只有失败才弹 toast</b>(<code>if (!isOpen) onShowToast(...)</code>)。</li>
+          <li><b>用户以为关掉就是取消。</b>于是重复打开同一个工具再点一次开始,两个进程写同一个输出文件。</li>
+        </ul>
+        <p class="cap">菜单是最合适的位置:它本来就列着这八件事,而且对话框关掉后它是唯一还能看到工具的地方。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ 三案 ══ -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">2</span><h2>三个方案</h2></div>
+    <p class="sec-note">共同点:菜单项的顺序与高度都不变,只在对应条目上补状态;没有工具在跑时,菜单与今天完全一致。</p>
+
+    <div class="cols">
+
+      <!-- A -->
+      <div class="col">
+        <div class="opt-hd"><span class="letter">A</span><h3>条目右端状态</h3><span class="pick">推荐</span></div>
+        <div class="crop">
+          <div class="bar"><span class="on">工具</span><span class="rest">帮助</span><span class="rest">运行</span></div>
+          <div class="menu">
+            <div class="mi">对比差异</div>
+            <div class="mi">转换编码</div>
+            <div class="mi">拆分坏行</div>
+            <div class="mi">清除符号</div>
+            <div class="mi">按行数拆分</div>
+            <div class="mi">组内编号</div>
+            <div class="msep"></div>
+            <div class="mi">转为 Excel</div>
+            <div class="mi">合并工作簿<span class="run">运行中</span><span class="tm">12.4 s</span></div>
+          </div>
+        </div>
+        <p class="cap"><b>一句话,不动结构。</b>圆点 + 「运行中」+ 等宽计时,占右端约 84px;其余七行一个像素不变。</p>
+      </div>
+
+      <!-- B -->
+      <div class="col">
+        <div class="opt-hd"><span class="letter">B</span><h3>顶部运行卡</h3></div>
+        <div class="crop">
+          <div class="bar"><span class="on">工具</span><span class="rest">帮助</span><span class="rest">运行</span></div>
+          <div class="menu">
+            <div class="runcard">
+              <span class="name">合并工作簿</span>
+              <span class="state">运行中</span>
+              <span class="tm">12.4 s</span>
+            </div>
+            <div class="mi">对比差异</div>
+            <div class="mi">转换编码</div>
+            <div class="mi">拆分坏行</div>
+            <div class="mi">清除符号</div>
+            <div class="mi">按行数拆分</div>
+            <div class="mi">组内编号</div>
+            <div class="msep"></div>
+            <div class="mi">转为 Excel</div>
+            <div class="mi">合并工作簿</div>
+          </div>
+        </div>
+        <p class="cap"><b>先报状态,再列菜单。</b>跑两件事时叠两张卡;代价是同一个名字在下面又出现一次。</p>
+      </div>
+
+      <!-- C -->
+      <div class="col">
+        <div class="opt-hd"><span class="letter">C</span><h3>只留一个计时</h3></div>
+        <div class="crop">
+          <div class="bar"><span class="on">工具</span><span class="rest">帮助</span><span class="rest">运行</span></div>
+          <div class="menu">
+            <div class="mi">对比差异</div>
+            <div class="mi">转换编码</div>
+            <div class="mi">拆分坏行</div>
+            <div class="mi">清除符号</div>
+            <div class="mi">按行数拆分</div>
+            <div class="mi">组内编号</div>
+            <div class="msep"></div>
+            <div class="mi">转为 Excel</div>
+            <div class="mi">合并工作簿<span class="quietrun">12.4 s</span></div>
+          </div>
+        </div>
+        <p class="cap"><b>最克制。</b>一个圆点加一串等宽数字 —— 知道的人看得懂,不知道的人只会觉得它坏了。</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══ 状态与规则 ══ -->
+  <section>
+    <div class="sec-hd"><span class="sec-no">3</span><h2>状态怎么来、什么时候消失</h2></div>
+
+    <p class="sec-note">运行态现在是各对话框自己的 <code>useState</code>,对话框一关就没了 —— 要显示在菜单里,必须抬到 App。一个 <code>toolRuns</code> 表就够:</p>
+
+    <table>
+      <colgroup><col class="c1"/><col/></colgroup>
+      <tr><th>项</th><th>取值</th></tr>
+      <tr><td>状态来源</td><td><code>Record&lt;ToolId, { startedAt: number }&gt;</code>,存在 App;八个对话框在开始处 <code>begin(tool)</code>、<code>finally</code> 里 <code>end(tool)</code>(它们已经有 <code>setIsMerging</code> 这类开关,改一行即可)</td></tr>
+      <tr><td>计时</td><td>用现有的 <code>RunTimer</code>(工具对话框里本来就在用它),格式沿用它的 <code>0.4 s</code> / <code>1:04</code>,等宽数字;不上进度百分比 —— 八件事都是一次 <code>invoke</code>,后端没有进度事件</td></tr>
+      <tr><td>出现条件</td><td>该工具有进行中的运行。同时跑两个就两行各自带状态,不汇总、不置顶(菜单位置稳定优先)</td></tr>
+      <tr><td>结束</td><td>结束时该行状态立刻消失,恢复成普通条目;成功若对话框已关闭,补一条 toast(与失败现有的 <code>onShowToast</code> 对齐)</td></tr>
+      <tr><td>点运行中的条目</td><td>重新打开该工具的对话框(上次参数在 localStorage 里),里面「开始」处于禁用态并显示「已有一次运行在进行」;不做「取消」——合并/拆分都没有取消命令,画一个按不动的按钮比不画更糟</td></tr>
+      <tr><td>不做</td><td>菜单项不加进度条、不加徽标数字、不做「最近一次运行」——后者是另一个设计(结果面板已经存在,但只在打开对话框时可见)</td></tr>
+    </table>
+
+    <p style="margin-top:14px"><b>为什么是 A。</b>菜单的回答对象是「哪件事在发生」,状态就该长在那件事的名字旁边;B 会在一个 226px 宽的菜单里把同一个名字写两遍,C 只有计时没有词。A 的代价最小:一行 32px 内多 70px 文本,七行不动。</p>
+    <p style="font-size:11.5px;color:var(--muted-fg-2)">落地清单(采纳 A 时):<code>useToolRuns</code> hook + App 里传 <code>begin/end</code> 给八个对话框(各自改两行)+ <code>MainMenu</code> 的 Tools 段按 <code>toolRuns</code> 渲染右端 + 一条「成功后 toast」的补丁 + 两个测试(无运行时不渲染状态、有运行时渲染计时)。</p>
+  </section>
+
+</div>
+</body>
+</html>

@@ -8,6 +8,8 @@ import { useLanguage } from "@/i18n";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/utils";
 import { usesCustomTitleBar } from "@/lib/platform";
+import { formatRunningTime } from "@/components/ui/RunTimer";
+import type { ToolRuns } from "@/hooks/useToolRuns";
 import type { ViewPanelId, ViewPanelMenuItem } from "@/types/viewDock";
 
 /** "0.8.0" → "v0.8.0"; an already-prefixed value is left as is. */
@@ -31,6 +33,30 @@ const MENU_PANEL = cn(
   "shadow-[0_12px_28px_-14px_rgba(0,0,0,0.22),0_1px_3px_rgba(0,0,0,0.05)]",
   "dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]",
 );
+
+/**
+ * Quiet elapsed readout for a tool that is still running (design 077 · C): a
+ * 4px dot plus the number. The word "运行中" only survives in the accessible
+ * name — the row already sits under 「工具」, so the dot is enough of a signal.
+ */
+function ToolElapsed({ startedAt }: { startedAt: number }) {
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 500);
+    return () => window.clearInterval(id);
+  }, []);
+  const { value, unit } = formatRunningTime(Math.max(0, now - startedAt));
+  return (
+    <span className="flex shrink-0 items-center gap-1.5 font-mono text-[10px] tabular-nums text-muted-foreground/70">
+      <span className="h-1 w-1 rounded-full bg-primary" aria-hidden="true" />
+      <span>
+        {value}
+        {unit ? ` ${unit}` : ""}
+      </span>
+      <span className="sr-only">运行中</span>
+    </span>
+  );
+}
 
 /** The 12px underline that means "this entry has something open behind it". */
 const OPEN_UNDERLINE =
@@ -98,6 +124,8 @@ interface MainMenuProps {
   currentVersion?: string;
   showLogErrorBadge: boolean;
   currentPipelineLength: number;
+  /** Start times of the one-shot tools that are still running (design 077). */
+  toolRuns?: ToolRuns;
   showLogPanel: boolean;
   onToggleLogPanel: () => void;
   /**
@@ -172,6 +200,7 @@ export const MainMenu = React.memo(function MainMenu({
   currentVersion,
   showLogErrorBadge,
   currentPipelineLength,
+  toolRuns,
   showLogPanel,
   onToggleLogPanel,
   activeViewPanel,
@@ -783,6 +812,9 @@ export const MainMenu = React.memo(function MainMenu({
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.csvDiff}
                 </span>
+                {toolRuns?.csvDiff !== undefined && (
+                  <ToolElapsed startedAt={toolRuns.csvDiff} />
+                )}
               </button>
               <button
                 role="menuitem"
@@ -795,6 +827,9 @@ export const MainMenu = React.memo(function MainMenu({
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.csvEncoding}
                 </span>
+                {toolRuns?.csvEncoding !== undefined && (
+                  <ToolElapsed startedAt={toolRuns.csvEncoding} />
+                )}
               </button>
               <button
                 role="menuitem"
@@ -807,6 +842,9 @@ export const MainMenu = React.memo(function MainMenu({
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.separateGoodBad}
                 </span>
+                {toolRuns?.separateGoodBad !== undefined && (
+                  <ToolElapsed startedAt={toolRuns.separateGoodBad} />
+                )}
               </button>
               <button
                 role="menuitem"
@@ -819,6 +857,9 @@ export const MainMenu = React.memo(function MainMenu({
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.cleanChars}
                 </span>
+                {toolRuns?.cleanChars !== undefined && (
+                  <ToolElapsed startedAt={toolRuns.cleanChars} />
+                )}
               </button>
               <button
                 role="menuitem"
@@ -831,6 +872,9 @@ export const MainMenu = React.memo(function MainMenu({
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.splitLines}
                 </span>
+                {toolRuns?.splitLines !== undefined && (
+                  <ToolElapsed startedAt={toolRuns.splitLines} />
+                )}
               </button>
               <button
                 role="menuitem"
@@ -843,6 +887,9 @@ export const MainMenu = React.memo(function MainMenu({
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.enumerateByGroup}
                 </span>
+                {toolRuns?.enumerateByGroup !== undefined && (
+                  <ToolElapsed startedAt={toolRuns.enumerateByGroup} />
+                )}
               </button>
               {/* Tools split in two: six one-file utilities, then the format
                   and merge jobs that read or write more than one file. */}
@@ -858,6 +905,9 @@ export const MainMenu = React.memo(function MainMenu({
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.csvToExcel}
                 </span>
+                {toolRuns?.csvToExcel !== undefined && (
+                  <ToolElapsed startedAt={toolRuns.csvToExcel} />
+                )}
               </button>
               <button
                 role="menuitem"
@@ -870,6 +920,9 @@ export const MainMenu = React.memo(function MainMenu({
                 <span className="flex-1 text-left whitespace-nowrap">
                   {t.mergeExcel}
                 </span>
+                {toolRuns?.mergeExcel !== undefined && (
+                  <ToolElapsed startedAt={toolRuns.mergeExcel} />
+                )}
               </button>
             </div>
           )}

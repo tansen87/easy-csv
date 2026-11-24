@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { RunTimer } from "@/components/ui/RunTimer";
 import { useLanguage } from "@/i18n";
+import { useToolRun } from "@/hooks/useToolRuns";
 import { cn } from "@/lib/utils";
 import { formatElapsed } from "@/utils/format";
 
@@ -97,6 +98,8 @@ interface CsvDiffDialogProps {
   onClose: () => void;
   defaultDelimiter: string;
   initialFileA?: string;
+  /** Report a finished run when the dialog was closed while it ran. */
+  onShowToast?: (message: string, type?: "info" | "success" | "warning" | "error") => void;
 }
 
 export function CsvDiffDialog({
@@ -104,6 +107,7 @@ export function CsvDiffDialog({
   onClose,
   defaultDelimiter,
   initialFileA,
+  onShowToast,
 }: CsvDiffDialogProps) {
   const { t } = useLanguage();
   const [fileA, setFileA] = useState("");
@@ -115,8 +119,14 @@ export function CsvDiffDialog({
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const [isComparing, setIsComparing] = useState(false);
+  const { begin, end, running } = useToolRun("csvDiff");
+  /** This dialog started it, or a previous run outlived the dialog. */
+  const busy = isComparing || running;
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  /** Latest `isOpen` for an in-flight compare: a closed dialog still finishes. */
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
 
   useEffect(() => {
     if (isOpen) {
@@ -191,10 +201,12 @@ export function CsvDiffDialog({
   }, []);
 
   const handleCompare = useCallback(async () => {
+    if (busy) return;
     if (!fileA || !fileB) {
       setError(t.csvDiffSelectBoth);
       return;
     }
+    begin();
     setIsComparing(true);
     setError(null);
     setElapsedMs(null);
@@ -210,12 +222,16 @@ export function CsvDiffDialog({
       setResult(data);
       setElapsedMs(performance.now() - startedAt);
       setPage(0);
+      if (!isOpenRef.current) {
+        onShowToast?.(`${t.toolFinished}: ${t.csvDiff}`, "success");
+      }
     } catch (err) {
       setError(String(err));
     } finally {
+      end();
       setIsComparing(false);
     }
-  }, [fileA, fileB, delimiter, keyColumns, t]);
+  }, [fileA, fileB, delimiter, keyColumns, t, begin, end, busy, onShowToast]);
 
   if (!isOpen) return null;
 
@@ -528,9 +544,9 @@ export function CsvDiffDialog({
               size="sm"
               className="ml-auto shrink-0 gap-1.5"
               onClick={handleCompare}
-              disabled={isComparing}
+              disabled={busy}
             >
-              {isComparing && (
+              {busy && (
                 <RefreshCw className="h-3.5 w-3.5 animate-spin" />
               )}
               {t.compare}

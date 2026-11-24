@@ -47,6 +47,7 @@ export const zhDialog = {
   csvEncodingNoResult:
     "选择输入文件、输出文件与编码, 点击开始转换. 结果直接写入输出文件",
   success: "转换成功",
+  toolFinished: "已完成",
   sameEncoding: "源编码与目标编码相同",
   bytes: "字节",
   csvEncodingLastResult: "上次转换",

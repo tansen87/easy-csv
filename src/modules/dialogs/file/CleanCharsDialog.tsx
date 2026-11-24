@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Button } from "@/components/ui/Button";
 import { RunTimer } from "@/components/ui/RunTimer";
 import { useLanguage } from "@/i18n";
+import { useToolRun } from "@/hooks/useToolRuns";
 import { useCsvProbe } from "@/hooks/useCsvProbe";
 import { formatDateTime, formatElapsed } from "@/utils/format";
 import {
@@ -124,6 +125,9 @@ export function CleanCharsDialog({
   const [customChars, setCustomChars] = useState("");
   const [mergeQuotedNewlines, setMergeQuotedNewlines] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const { begin, end, running, startedAt } = useToolRun("cleanChars");
+  /** This dialog started it, or a previous run outlived the dialog. */
+  const busy = isRunning || running;
   const [lastResult, setLastResult] = useState<StoredCleanCharsResult | null>(
     null,
   );
@@ -131,6 +135,9 @@ export function CleanCharsDialog({
   const [outputExists, setOutputExists] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  /** Latest `isOpen` for an in-flight run: a closed dialog still finishes. */
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
   /** Once the user edits the output path, stop deriving it from the input. */
   const outputTouchedRef = useRef(false);
 
@@ -292,6 +299,7 @@ export function CleanCharsDialog({
   }, []);
 
   const handleRun = useCallback(async () => {
+    if (busy) return;
     if (!inputFile.trim()) {
       setError(t.cleanCharsSelectFile);
       return;
@@ -310,6 +318,7 @@ export function CleanCharsDialog({
     }
 
     clearFeedback();
+    begin();
     setIsRunning(true);
     try {
       const data = await invoke<CleanCharsResult>("clean_special_chars", {
@@ -340,13 +349,21 @@ export function CleanCharsDialog({
       };
       saveLastCleanCharsResult(stored);
       setLastResult(stored);
+      if (!isOpenRef.current) {
+        onShowToast?.(`${t.toolFinished}: ${data.output_path}`, "success");
+      }
       setIsStaleResult(false);
     } catch (err) {
       setError(String(err));
     } finally {
+      end();
       setIsRunning(false);
     }
   }, [
+    begin,
+    end,
+    busy,
+    onShowToast,
     inputFile,
     outputFile,
     hasAction,
@@ -699,9 +716,9 @@ export function CleanCharsDialog({
                   )}
           </span>
           <span className="flex items-center gap-3">
-            <RunTimer running={isRunning} />
-            <Button size="sm" onClick={handleRun} disabled={isRunning || !canRun}>
-              {isRunning ? t.cleanCharsRunning : t.cleanCharsStart}
+            <RunTimer running={busy} startedAt={startedAt} />
+            <Button size="sm" onClick={handleRun} disabled={busy || !canRun}>
+              {busy ? t.cleanCharsRunning : t.cleanCharsStart}
             </Button>
           </span>
         </div>

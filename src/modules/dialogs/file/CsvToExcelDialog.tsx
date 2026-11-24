@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { RunTimer } from "@/components/ui/RunTimer";
 import { Select } from "@/components/ui/Select";
 import { useLanguage } from "@/i18n";
+import { useToolRun } from "@/hooks/useToolRuns";
 import { useCsvProbe } from "@/hooks/useCsvProbe";
 import { formatDateTime, formatElapsed } from "@/utils/format";
 import {
@@ -139,6 +140,9 @@ export function CsvToExcelDialog({
   const [multi, setMulti] = useState(false);
   const [chunkSize, setChunkSize] = useState(String(DEFAULT_CHUNK_SIZE));
   const [isRunning, setIsRunning] = useState(false);
+  const { begin, end, running, startedAt } = useToolRun("csvToExcel");
+  /** This dialog started it, or a previous run outlived the dialog. */
+  const busy = isRunning || running;
   const [lastResult, setLastResult] = useState<StoredCsvToExcelResult | null>(
     null,
   );
@@ -146,6 +150,9 @@ export function CsvToExcelDialog({
   const [outputExists, setOutputExists] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  /** Latest `isOpen` for an in-flight run: a closed dialog still finishes. */
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
 
   /** Only feedback is cleared on edit — the last result stays visible. */
   const clearFeedback = useCallback(() => {
@@ -296,6 +303,7 @@ export function CsvToExcelDialog({
   }, []);
 
   const handleRun = useCallback(async () => {
+    if (busy) return;
     if (!inputFile.trim()) {
       setError(t.excelSelectFile);
       return;
@@ -305,6 +313,7 @@ export function CsvToExcelDialog({
       return;
     }
     clearFeedback();
+    begin();
     setIsRunning(true);
     try {
       const data = await invoke<CsvToXlsxResult>("csv_to_xlsx", {
@@ -335,16 +344,23 @@ export function CsvToExcelDialog({
       };
       saveLastCsvToExcelResult(stored);
       setLastResult(stored);
+      if (!isOpenRef.current) {
+        onShowToast?.(`${t.toolFinished}: ${data.output_path}`, "success");
+      }
       setIsStaleResult(false);
     } catch (err) {
       setError(String(err));
-      if (!isOpen) {
+      if (!isOpenRef.current) {
         onShowToast?.(String(err), "error");
       }
     } finally {
+      end();
       setIsRunning(false);
     }
   }, [
+    begin,
+    end,
+    busy,
     inputFile,
     outputDir,
     multi,
@@ -356,7 +372,6 @@ export function CsvToExcelDialog({
     delimiterMode,
     t,
     clearFeedback,
-    isOpen,
     onShowToast,
   ]);
 
@@ -719,9 +734,9 @@ export function CsvToExcelDialog({
                 )}
           </span>
           <span className="flex items-center gap-3">
-            <RunTimer running={isRunning} />
-            <Button size="sm" onClick={handleRun} disabled={isRunning}>
-              {isRunning ? t.excelRunning : t.excelStart}
+            <RunTimer running={busy} startedAt={startedAt} />
+            <Button size="sm" onClick={handleRun} disabled={busy}>
+              {busy ? t.excelRunning : t.excelStart}
             </Button>
           </span>
         </div>

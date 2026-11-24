@@ -600,6 +600,27 @@ describe("menu-bar dropdowns (design 054)", () => {
     expect(checked[0].textContent).toContain("Data Lineage");
   });
 
+  it("shows a quiet elapsed readout for a tool that is still running (design 077)", () => {
+    const rowOf = (container: HTMLElement) =>
+      Array.from(container.querySelectorAll('[role="menuitem"]')).find((el) =>
+        el.textContent?.includes(copy.mergeExcel),
+      )!;
+
+    const idle = renderMenu({ activeMenu: "tools" });
+    expect(rowOf(idle.container).textContent).toBe(copy.mergeExcel);
+    idle.unmount();
+
+    const running = renderMenu({
+      activeMenu: "tools",
+      toolRuns: { mergeExcel: Date.now() - 12_000 },
+    });
+    const row = rowOf(running.container);
+    // Dot + number only; the word 「运行中」 stays in the accessible name.
+    expect(row.textContent).toContain("12");
+    expect(row.textContent).toContain("s");
+    expect(row.textContent).toContain("运行中");
+  });
+
   it("marks the 查看 trigger when one of its panels is open", () => {
     const closed = renderMenu({ activeMenu: null });
     expect(trigger(closed.container, "view").querySelector("span")).toBeNull();

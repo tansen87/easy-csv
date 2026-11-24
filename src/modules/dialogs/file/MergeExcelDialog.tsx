@@ -15,6 +15,7 @@ import { RunTimer } from "@/components/ui/RunTimer";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Select } from "@/components/ui/Select";
 import { useLanguage } from "@/i18n";
+import { useToolRun } from "@/hooks/useToolRuns";
 import { formatDateTime, formatElapsed } from "@/utils/format";
 import {
   clearLastExcelMergeResult,
@@ -234,6 +235,9 @@ export function MergeExcelDialog({
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const [isMerging, setIsMerging] = useState(false);
+  const { begin, end, running, startedAt } = useToolRun("mergeExcel");
+  /** This dialog started it, or a previous run outlived the dialog. */
+  const busy = isMerging || running;
   const [lastResult, setLastResult] = useState<StoredExcelMergeResult | null>(
     null,
   );
@@ -241,6 +245,9 @@ export function MergeExcelDialog({
   const [outputExists, setOutputExists] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  /** Latest `isOpen` for an in-flight run: a closed dialog still finishes. */
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
 
   /** The shape actually driving the UI/payload (`split` → `by_sheet`). */
   const shape: ExcelOutputShape =
@@ -447,6 +454,7 @@ export function MergeExcelDialog({
   }, []);
 
   const handleMerge = useCallback(async () => {
+    if (busy) return;
     if (sources.length === 0) {
       setError(t.mergeExcelNoSources);
       return;
@@ -466,6 +474,7 @@ export function MergeExcelDialog({
     const effectiveFormat: ExcelOutputFormat =
       shape === "multi_sheet" ? "xlsx" : outputFormat;
     clearFeedback();
+    begin();
     setIsMerging(true);
     try {
       const data = await invoke<ExcelMergeResult>("merge_excel_sources", {
@@ -534,17 +543,24 @@ export function MergeExcelDialog({
       saveLastExcelMergeResult(stored);
       setLastResult(stored);
       setIsStaleResult(false);
+      if (!isOpenRef.current) {
+        onShowToast?.(`${t.toolFinished}: ${data.output_path}`, "success");
+      }
       // The scan result is still valid (the options did not change), but the
       // preview shows the merged table now — keep it as is.
     } catch (err) {
       setError(String(err));
-      if (!isOpen) {
+      if (!isOpenRef.current) {
         onShowToast?.(String(err), "error");
       }
     } finally {
+      end();
       setIsMerging(false);
     }
   }, [
+    begin,
+    end,
+    busy,
     sources,
     sheetMode,
     sheetName,
@@ -560,7 +576,6 @@ export function MergeExcelDialog({
     excluded,
     t,
     clearFeedback,
-    isOpen,
     onShowToast,
   ]);
 
@@ -1277,9 +1292,9 @@ export function MergeExcelDialog({
             {readyLine}
           </span>
           <span className="flex items-center gap-3">
-            <RunTimer running={isMerging} />
-            <Button size="sm" onClick={handleMerge} disabled={isMerging}>
-              {isMerging ? t.mergeExcelRunning : t.mergeExcelStart}
+            <RunTimer running={busy} startedAt={startedAt} />
+            <Button size="sm" onClick={handleMerge} disabled={busy}>
+              {busy ? t.mergeExcelRunning : t.mergeExcelStart}
             </Button>
           </span>
         </div>

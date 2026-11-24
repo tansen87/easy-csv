@@ -20,7 +20,7 @@ interface RunTimerProps {
  * dialogs. The button already names the state ("拆分中"), so this only reports
  * the number: `0.4 s` up to a minute, then `1:04`.
  */
-function formatRunningTime(ms: number): { value: string; unit?: string } {
+export function formatRunningTime(ms: number): { value: string; unit?: string } {
   if (ms < 60_000) {
     return { value: (ms / 1000).toFixed(1), unit: "s" };
   }

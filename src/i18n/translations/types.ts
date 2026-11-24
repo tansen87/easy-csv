@@ -727,6 +727,8 @@ export interface Translations {
   csvEncodingSelectFiles: string;
   csvEncodingNoResult: string;
   success: string;
+  /** Toast for a one-shot tool that finished while its dialog was closed. */
+  toolFinished: string;
   sameEncoding: string;
   bytes: string;
   csvEncodingLastResult: string;

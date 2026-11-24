@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { RunTimer } from "@/components/ui/RunTimer";
 import { Select } from "@/components/ui/Select";
 import { useLanguage } from "@/i18n";
+import { useToolRun } from "@/hooks/useToolRuns";
 import { useCsvProbe } from "@/hooks/useCsvProbe";
 import { formatDateTime, formatElapsed } from "@/utils/format";
 import {
@@ -140,6 +141,9 @@ export function SeparateCSVDialog({
   const [skiprows, setSkiprows] = useState("0");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isSeparating, setIsSeparating] = useState(false);
+  const { begin, end, running, startedAt } = useToolRun("separateGoodBad");
+  /** This dialog started it, or a previous run outlived the dialog. */
+  const busy = isSeparating || running;
   const [lastResult, setLastResult] = useState<StoredSeparateResult | null>(
     null,
   );
@@ -150,6 +154,9 @@ export function SeparateCSVDialog({
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  /** Latest `isOpen` for an in-flight run: a closed dialog still finishes. */
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
 
   /** Only feedback is cleared on edit — the last result stays visible. */
   const clearFeedback = useCallback(() => {
@@ -316,6 +323,7 @@ export function SeparateCSVDialog({
     outputExists === null || outputExists.good || outputExists.bad;
 
   const handleSeparate = useCallback(async () => {
+    if (busy) return;
     if (!inputFile.trim()) {
       setError(t.separateSelectFile);
       return;
@@ -330,6 +338,7 @@ export function SeparateCSVDialog({
       }
     }
     clearFeedback();
+    begin();
     setIsSeparating(true);
     try {
       const data = await invoke<SeparateResult>("separate_csv", {
@@ -361,16 +370,23 @@ export function SeparateCSVDialog({
       };
       saveLastSeparateResult(stored);
       setLastResult(stored);
+      if (!isOpenRef.current) {
+        onShowToast?.(`${t.toolFinished}: ${data.good_path}`, "success");
+      }
       setIsStaleResult(false);
     } catch (err) {
       setError(String(err));
-      if (!isOpen) {
+      if (!isOpenRef.current) {
         onShowToast?.(String(err), "error");
       }
     } finally {
+      end();
       setIsSeparating(false);
     }
   }, [
+    begin,
+    end,
+    busy,
     inputFile,
     outputDir,
     effectiveDelimiter,
@@ -381,7 +397,6 @@ export function SeparateCSVDialog({
     skiprows,
     t,
     clearFeedback,
-    isOpen,
     onShowToast,
   ]);
 
@@ -853,9 +868,9 @@ export function SeparateCSVDialog({
                   .replace("{delimiter}", delimiterLabel(effectiveDelimiter))}
           </span>
           <span className="flex items-center gap-3">
-            <RunTimer running={isSeparating} />
-            <Button size="sm" onClick={handleSeparate} disabled={isSeparating}>
-              {isSeparating ? t.separating : t.separateStart}
+            <RunTimer running={busy} startedAt={startedAt} />
+            <Button size="sm" onClick={handleSeparate} disabled={busy}>
+              {busy ? t.separating : t.separateStart}
             </Button>
           </span>
         </div>

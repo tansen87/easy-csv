@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { useState } from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { LanguageProvider } from "@/i18n";
 import { MergeExcelDialog } from "@/modules/dialogs/file/MergeExcelDialog";
+import { ToolRunProvider } from "@/hooks/useToolRuns";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { enDialog } from "@/i18n/translations/en/dialog";
@@ -442,6 +444,77 @@ describe("MergeExcelDialog", () => {
     renderDialog();
     expect(await screen.findByText(/multi-sheet workbook/)).toBeInTheDocument();
     expect(screen.queryByText(/Sheet1/)).toBeNull();
+  });
+
+  it("refuses a second start while an earlier run is still in flight (design 077)", () => {
+    // A dialog closed mid-run, then reopened: the run lives in the app shell,
+    // so the dialog must show it as busy instead of offering a second start.
+    render(
+      <LanguageProvider>
+        <ToolRunProvider
+          runs={{ mergeExcel: Date.now() - 5_000 }}
+          actions={{ begin: vi.fn(), end: vi.fn() }}
+        >
+          <MergeExcelDialog isOpen onClose={vi.fn()} />
+        </ToolRunProvider>
+      </LanguageProvider>,
+    );
+
+    const start = screen.getByRole("button", {
+      name: t("mergeExcelRunning"),
+    });
+    expect(start).toBeDisabled();
+  });
+
+  it("toasts a finished merge when the dialog was closed mid-run (design 077)", async () => {
+    let resolveMerge: (value: unknown) => void = () => {};
+    mockInvoke.mockImplementation((async (cmd: string) => {
+      if (cmd === "merge_excel_sources") {
+        // Hold the backend open so we can close the dialog first.
+        return new Promise((resolve) => {
+          resolveMerge = resolve;
+        });
+      }
+      if (cmd === "scan_excel_sources") return SCAN_RESULT;
+      if (cmd === "read_excel_header") return ["id", "name"];
+      if (cmd === "file_exists") return true;
+      return undefined;
+    }) as unknown as typeof invoke);
+
+    const onShowToast = vi.fn();
+    function Harness() {
+      const [open, setOpen] = useState(true);
+      return (
+        <MergeExcelDialog
+          isOpen={open}
+          onClose={() => setOpen(false)}
+          onShowToast={onShowToast}
+        />
+      );
+    }
+
+    render(
+      <LanguageProvider>
+        <Harness />
+      </LanguageProvider>,
+    );
+    mockOpen.mockResolvedValue(["/data/a.xlsx"]);
+    fireEvent.click(await screen.findByText(t("mergeExcelAddFiles")));
+    fireEvent.click(await screen.findByText(t("mergeExcelStart")));
+
+    // Close while the run is still in flight: the closure still sees the old
+    // `isOpen`, which is why the check reads a ref.
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByText(t("mergeExcelStart"))).toBeNull();
+
+    resolveMerge(MERGE_RESULT);
+
+    await waitFor(() => {
+      expect(onShowToast).toHaveBeenCalledWith(
+        `${t("toolFinished")}: /data/out/merged.csv`,
+        "success",
+      );
+    });
   });
 
   function seedStored(overrides: Partial<StoredExcelMergeResult> = {}): void {

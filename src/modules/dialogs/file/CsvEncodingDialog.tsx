@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { RunTimer } from "@/components/ui/RunTimer";
 import { Select } from "@/components/ui/Select";
 import { useLanguage } from "@/i18n";
+import { useToolRun } from "@/hooks/useToolRuns";
 import { formatBytes, formatDateTime, formatElapsed } from "@/utils/format";
 import {
   clearLastEncodingResult,
@@ -80,6 +81,9 @@ export function CsvEncodingDialog({
   const [sourceEncoding, setSourceEncoding] = useState(DEFAULT_ENCODING);
   const [targetEncoding, setTargetEncoding] = useState(DEFAULT_ENCODING);
   const [isConverting, setIsConverting] = useState(false);
+  const { begin, end, running, startedAt } = useToolRun("csvEncoding");
+  /** This dialog started it, or a previous run outlived the dialog. */
+  const busy = isConverting || running;
   const [lastResult, setLastResult] = useState<StoredEncodingResult | null>(
     null,
   );
@@ -209,11 +213,13 @@ export function CsvEncodingDialog({
   }, []);
 
   const handleConvert = useCallback(async () => {
+    if (busy) return;
     if (!inputFile.trim() || !outputFile.trim()) {
       setError(t.csvEncodingSelectFiles);
       return;
     }
     clearFeedback();
+    begin();
     setIsConverting(true);
     try {
       const data = await invoke<CsvEncodingResult>("convert_csv_encoding", {
@@ -244,9 +250,13 @@ export function CsvEncodingDialog({
         onShowToast?.(String(err), "error");
       }
     } finally {
+      end();
       setIsConverting(false);
     }
   }, [
+    begin,
+    end,
+    busy,
     inputFile,
     outputFile,
     sourceEncoding,
@@ -510,14 +520,14 @@ export function CsvEncodingDialog({
             {isSameEncoding ? t.sameEncoding : t.csvEncodingFooterHint}
           </span>
           <span className="flex items-center gap-3">
-            <RunTimer running={isConverting} />
+            <RunTimer running={busy} startedAt={startedAt} />
             <Button
               size="sm"
               onClick={handleConvert}
-              disabled={isConverting || isSameEncoding}
+              disabled={busy || isSameEncoding}
             >
-              {isConverting && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
-              {isConverting ? t.converting : t.convert}
+              {busy && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+              {busy ? t.converting : t.convert}
             </Button>
           </span>
         </div>
