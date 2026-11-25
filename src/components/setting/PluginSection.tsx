@@ -20,7 +20,7 @@ interface PluginSectionProps {
   sectionId: string;
   /** The group's display name. */
   name: string;
-  /** Position in `SETTINGS_GROUPS`; the heading's `01`…`06`. */
+  /** Position in `SETTINGS_GROUPS`; the heading's `01`…`09`. */
   index: number;
   showToast: (
     message: string,

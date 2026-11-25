@@ -241,9 +241,10 @@ export interface Translations {
   settingsSearchResults: string;
   settingsNavHintClear: string;
   settingsGroupAppearance: string;
-  settingsGroupDataHelp: string;
+  settingsGroupData: string;
   settingsGroupWindow: string;
   settingsGroupUpdate: string;
+  settingsGroupMaintenance: string;
   settingsClear: string;
   settingsExpand: string;
   settingsCollapse: string;
@@ -417,6 +418,7 @@ export interface Translations {
   logLevelError: string;
   logCountUnit: string;
   logJumpToLatest: string;
+  settingsGroupRun: string;
   settingsGroupLogs: string;
   logRetentionDays: string;
   logRetentionDaysDesc: string;

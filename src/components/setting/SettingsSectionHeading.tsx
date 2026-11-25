@@ -5,7 +5,7 @@ interface SettingsSectionHeadingProps {
   id: string;
   name: string;
   /**
-   * Position in `SETTINGS_GROUPS`, 1-based. Rendered as `01`…`06` **through a
+   * Position in `SETTINGS_GROUPS`, 1-based. Rendered as `01`…`09` **through a
    * `data-index` attribute** (see the `.settings-index` rule in `index.css`),
    * so the number stays decoration: it never joins `textContent`, and a
    * filtered list keeps the original number instead of renumbering.

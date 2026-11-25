@@ -144,10 +144,10 @@ describe("settings dialog — structure contracts (design 030 §0.4)", () => {
     expect(rowIds(container)).not.toContain("plugins");
   });
 
-  // The `01`…`07` beside each group name is decoration rendered from
+  // The `01`…`09` beside each group name is decoration rendered from
   // `data-index` (see `.settings-index` in `index.css`), but the *order* it
-  // encodes is a product decision: logs sit between window and update
-  // (071), plugins before AI.
+  // encodes is a product decision: run and logs sit between window and
+  // plugins (071), plugins before AI, update before the final maintenance.
   it("numbers the groups in definition order — plugins before AI", () => {
     const { container } = renderDialog();
 
@@ -157,11 +157,14 @@ describe("settings dialog — structure contracts (design 030 §0.4)", () => {
         ?.getAttribute("data-index");
 
     expect(indexOf("appearance")).toBe("01");
+    expect(indexOf("data")).toBe("02");
     expect(indexOf("window")).toBe("03");
-    expect(indexOf("logs")).toBe("04");
-    expect(indexOf("update")).toBe("05");
+    expect(indexOf("run")).toBe("04");
+    expect(indexOf("logs")).toBe("05");
     expect(indexOf("plugins")).toBe("06");
     expect(indexOf("ai")).toBe("07");
+    expect(indexOf("update")).toBe("08");
+    expect(indexOf("maintenance")).toBe("09");
   });
 
   it("lists exactly the same groups in the directory as in the content", () => {

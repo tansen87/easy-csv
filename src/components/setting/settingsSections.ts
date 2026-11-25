@@ -8,16 +8,12 @@ import type { Translations } from "@/i18n/translations/types";
  * 1. every row id appears exactly once here and is used verbatim as the row's
  *    `data-settings-row` / anchor id - no second list to drift;
  * 2. the group list is the single source for both the nav entries and the
- *    content headings.
+ *    content headings. Both are asserted in `SettingsDialog.test.tsx`.
  *
- * Both are asserted by a contract test in `settingsSections.test.ts`.
- *
- * Group order: `界面`, the merged `数据与帮助`, then
- * `窗口行为` and `更新`, then **plugins before AI** - the plugin group is what
- * most users touch first (xan has to be installed before anything runs), while
- * AI is optional. The catalogue list that used to be the plugins pane is gone
- * - the plugin group is a status line on its heading plus one row per
- * catalogue entry.
+ * Group order: `界面`, `数据`, `窗口`, `运行`, `日志`, then **plugins before
+ * AI** (xan must be installed before anything runs; AI is optional), then
+ * `更新` and `维护` last - resets and destructive actions go at the bottom.
+ * The plugin group is a heading status line, not a list.
  */
 
 export type SettingsTextKey = keyof Translations;
@@ -61,10 +57,7 @@ export interface SettingsGroupDef {
   /** Aliases for the group name itself (lets a category name be searched). */
   groupKeywords?: string[];
   rows: SettingsRowDef[];
-  /**
-   * The group's content is one embedded panel instead of rows. `插件管理` is
-   * the only one: `PluginManager` brings its own list and scrolling.
-   */
+  /** The group's content is an embedded panel instead of rows. */
   summary?: "plugins";
 }
 
@@ -139,8 +132,8 @@ export const SETTINGS_GROUPS: SettingsGroupDef[] = [
     ],
   },
   {
-    id: "data-help",
-    nameKey: "settingsGroupDataHelp",
+    id: "data",
+    nameKey: "settingsGroupData",
     rows: [
       {
         id: "delimiter",
@@ -150,10 +143,8 @@ export const SETTINGS_GROUPS: SettingsGroupDef[] = [
         keywords: [
           "delimiter",
           "separator",
-          "sep",
           "tab",
           "分隔符",
-          "分隔",
           "逗号",
           "分号",
           "制表符",
@@ -165,46 +156,6 @@ export const SETTINGS_GROUPS: SettingsGroupDef[] = [
         descKey: "noHeadersDesc",
         control: "checkbox",
         keywords: ["header", "headers", "column names", "表头", "首行", "列名"],
-      },
-      {
-        id: "max-concurrent",
-        titleKey: "maxConcurrentRuns",
-        descKey: "maxConcurrentRunsDesc",
-        control: "number",
-        keywords: [
-          "concurrency",
-          "concurrent",
-          "parallel",
-          "tabs",
-          "queue",
-          "并发",
-          "并行",
-          "标签页",
-          "排队",
-        ],
-      },
-      {
-        id: "onboarding-reset",
-        titleKey: "onboardingReset",
-        descKey: "onboardingResetDesc",
-        control: "action",
-        keywords: [
-          "onboarding",
-          "guide",
-          "tour",
-          "welcome",
-          "引导",
-          "新手",
-          "教程",
-        ],
-      },
-      {
-        id: "clear-execution-history",
-        titleKey: "clearExecutionHistory",
-        descKey: "clearExecutionHistoryDesc",
-        control: "danger",
-        dangerous: true,
-        keywords: ["history", "clear", "delete", "历史", "清除", "删除", "记录"],
       },
     ],
   },
@@ -253,6 +204,27 @@ export const SETTINGS_GROUPS: SettingsGroupDef[] = [
     ],
   },
   {
+    id: "run",
+    nameKey: "settingsGroupRun",
+    rows: [
+      {
+        id: "max-concurrent",
+        titleKey: "maxConcurrentRuns",
+        descKey: "maxConcurrentRunsDesc",
+        control: "number",
+        keywords: [
+          "concurrency",
+          "parallel",
+          "tabs",
+          "queue",
+          "并行",
+          "标签页",
+          "排队",
+        ],
+      },
+    ],
+  },
+  {
     id: "logs",
     nameKey: "settingsGroupLogs",
     rows: [
@@ -261,33 +233,14 @@ export const SETTINGS_GROUPS: SettingsGroupDef[] = [
         titleKey: "autoShowLogPanel",
         descKey: "autoShowLogPanelDesc",
         control: "checkbox",
-        keywords: [
-          "log",
-          "auto",
-          "open",
-          "drawer",
-          "panel",
-          "日志",
-          "自动",
-          "弹出",
-          "打开",
-        ],
+        keywords: ["drawer", "panel", "抽屉"],
       },
       {
         id: "log-retention",
         titleKey: "logRetentionDays",
         descKey: "logRetentionDaysDesc",
         control: "number",
-        keywords: [
-          "log",
-          "logs",
-          "retention",
-          "prune",
-          "jsonl",
-          "日志",
-          "保留",
-          "清理",
-        ],
+        keywords: ["logs", "prune", "jsonl", "清理"],
       },
       {
         id: "open-logs-dir",
@@ -304,21 +257,6 @@ export const SETTINGS_GROUPS: SettingsGroupDef[] = [
           "目录",
           "文件夹",
         ],
-      },
-    ],
-  },
-  {
-    id: "update",
-    nameKey: "settingsGroupUpdate",
-    rows: [
-      {
-        id: "auto-check-update",
-        // A switch, so it says what happens on its own rather than naming the
-        // menu command (`updateSection` reads as a button).
-        titleKey: "settingsAutoCheckUpdate",
-        descKey: "settingsAutoCheckUpdateDesc",
-        control: "checkbox",
-        keywords: ["update", "upgrade", "version", "release", "更新", "升级", "版本"],
       },
     ],
   },
@@ -379,8 +317,7 @@ export const SETTINGS_GROUPS: SettingsGroupDef[] = [
           "令牌",
         ],
       },
-      // The old single "clear AI learning data" cluster, split into one row per
-      // action so each of them can be searched and described (design 030 §0.5).
+      // One row per AI data action, so each is searchable (design 030 §0.5).
       {
         id: "ai-clear-conversations",
         titleKey: "aiClearConversations",
@@ -407,6 +344,49 @@ export const SETTINGS_GROUPS: SettingsGroupDef[] = [
       },
     ],
   },
+  {
+    id: "update",
+    nameKey: "settingsGroupUpdate",
+    rows: [
+      {
+        id: "auto-check-update",
+        // Names what happens on its own, not the menu command.
+        titleKey: "settingsAutoCheckUpdate",
+        descKey: "settingsAutoCheckUpdateDesc",
+        control: "checkbox",
+        keywords: ["update", "upgrade", "version", "release", "更新", "升级", "版本"],
+      },
+    ],
+  },
+  {
+    id: "maintenance",
+    nameKey: "settingsGroupMaintenance",
+    rows: [
+      {
+        id: "onboarding-reset",
+        titleKey: "onboardingReset",
+        descKey: "onboardingResetDesc",
+        control: "action",
+        keywords: [
+          "onboarding",
+          "guide",
+          "tour",
+          "welcome",
+          "引导",
+          "新手",
+          "教程",
+        ],
+      },
+      {
+        id: "clear-execution-history",
+        titleKey: "clearExecutionHistory",
+        descKey: "clearExecutionHistoryDesc",
+        control: "danger",
+        dangerous: true,
+        keywords: ["history", "clear", "delete", "历史", "清除", "删除", "记录"],
+      },
+    ],
+  },
 ];
 
 /** Anchor id of a group's heading, in both the nav and the content list. */
@@ -429,7 +409,7 @@ export interface SettingsGroupModel {
   id: string;
   name: string;
   /**
-   * 1-based position in `SETTINGS_GROUPS`, rendered as the `01`…`06` beside the
+   * 1-based position in `SETTINGS_GROUPS`, rendered as the `01`…`09` beside the
    * group name. Kept on the model rather than derived from the rendered list so
    * a filtered list still shows the original number (design 040 §3).
    */

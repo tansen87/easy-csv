@@ -34,10 +34,12 @@ export const enSettings = {
   settingsSearchResults: "{count} results",
   settingsNavHintClear: "Esc clears the search",
   settingsGroupAppearance: "Appearance",
-  settingsGroupDataHelp: "Data & help",
+  settingsGroupData: "Data",
   settingsGroupWindow: "Window",
   settingsGroupUpdate: "Updates",
+  settingsGroupRun: "Runs",
   settingsGroupLogs: "Logs",
+  settingsGroupMaintenance: "Maintenance",
   logRetentionDays: "Log retention",
   logRetentionDaysDesc:
     "One JSONL log file per day; files older than the retention are pruned at startup. 0 keeps logs in memory only.",
