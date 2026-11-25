@@ -660,7 +660,8 @@ export function FlowPanel({
     ],
   );
 
-  // Primary button move - swapped drags first, then the connect preview.
+  // Primary button move - only the swapped drag (cut / connect follow the
+  // pointer through window listeners below so they survive leaving the canvas).
   const handlePrimaryMove = useCallback(
     (e: React.MouseEvent) => {
       const drag = swapDragRef.current;
@@ -692,25 +693,12 @@ export function FlowPanel({
         );
         return;
       }
-
-      if (isConnecting) {
-        moveConnect(e);
-      } else if (isCutting && !isClosingCut) {
-        moveCut(e);
-      }
     },
-    [
-      isConnecting,
-      isCutting,
-      isClosingCut,
-      moveConnect,
-      moveCut,
-      setNodes,
-      reactFlowWrapper,
-    ],
+    [setNodes, reactFlowWrapper],
   );
 
-  // Primary button release - finish a swapped drag or the connection.
+  // Primary button release - only the swapped drag; cut / connect finish on
+  // the window listener.
   const handlePrimaryEnd = useCallback(
     (e: React.MouseEvent) => {
       const drag = swapDragRef.current;
@@ -773,22 +761,8 @@ export function FlowPanel({
         }
         return;
       }
-
-      if (isConnecting) {
-        e.preventDefault();
-        e.stopPropagation();
-        finishConnect();
-      } else if (isCutting) {
-        e.preventDefault();
-        e.stopPropagation();
-        finishCut();
-      }
     },
     [
-      isConnecting,
-      isCutting,
-      finishConnect,
-      finishCut,
       selectedNodeIds,
       getNodeRect,
       setNodes,
@@ -796,6 +770,34 @@ export function FlowPanel({
       reactFlowInstance,
     ],
   );
+
+  // Cut / connect follow the pointer on `window`: fast strokes, crossing nodes
+  // and releasing outside the canvas no longer break the gesture ("断触").
+  useEffect(() => {
+    if (!isCutting && !isConnecting) return;
+
+    const onMove = (event: MouseEvent) => {
+      if (isCutting) {
+        moveCut(event);
+      } else {
+        moveConnect(event);
+      }
+    };
+    const onUp = () => {
+      if (isCutting) {
+        finishCut();
+      } else {
+        finishConnect();
+      }
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [isCutting, isConnecting, moveCut, moveConnect, finishCut, finishConnect]);
 
   // Prevent default right-click menu on panel
   // Right-click no longer opens anything here; the native menu is suppressed

@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import type { Dispatch, MouseEvent, RefObject, SetStateAction } from "react";
+import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { Edge, Node } from "reactflow";
 import type { PipelineEdge } from "@/types/xan";
 import {
@@ -101,7 +101,7 @@ export function useConnectGesture({
 
   // Right-click move - connect mode: live preview path with target snapping
   const moveConnect = useCallback(
-    (e: MouseEvent) => {
+    (e: { clientX: number; clientY: number }) => {
       if (
         !isConnecting ||
         !reactFlowWrapper.current ||

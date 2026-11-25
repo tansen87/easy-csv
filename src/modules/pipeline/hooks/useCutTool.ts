@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import type { Dispatch, MouseEvent, RefObject, SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { Edge, Node } from "reactflow";
 import type { PipelineEdge } from "@/types/xan";
 import { getEdgeEndpoints } from "@/modules/pipeline/lib/layout";
@@ -54,6 +54,10 @@ export function useCutTool({
 }: UseCutToolArgs) {
   // Cutting function status
   const [cutPath, setCutPath] = useState<{ x: number; y: number }[]>([]);
+  // Latest path for the release handler: a mouseup can arrive before React
+  // commits the final mousemove, and a stale path would miss the last pixels.
+  const cutPathRef = useRef(cutPath);
+  cutPathRef.current = cutPath;
   const [isCutting, setIsCutting] = useState(false);
   const [isClosingCut, setIsClosingCut] = useState(false);
   const [cutStartPoint, setCutStartPoint] = useState<{
@@ -299,7 +303,7 @@ export function useCutTool({
 
   // Right-click - start cutting (blank area or table node)
   const startCut = useCallback(
-    (e: MouseEvent) => {
+    (e: { clientX: number; clientY: number }) => {
       setIsCutting(true);
       setIsClosingCut(false);
       if (reactFlowWrapper.current) {
@@ -309,6 +313,7 @@ export function useCutTool({
           y: e.clientY - rect.top,
         };
         setCutStartPoint(startPoint);
+        cutPathRef.current = [startPoint];
         setCutPath([startPoint]);
       }
     },
@@ -317,18 +322,21 @@ export function useCutTool({
 
   // Right-click move - cut mode: extend the path and update pending highlights
   const moveCut = useCallback(
-    (e: MouseEvent) => {
+    (e: { clientX: number; clientY: number }) => {
       if (!isCutting || isClosingCut || !reactFlowWrapper.current) return;
 
       const rect = reactFlowWrapper.current.getBoundingClientRect();
       const newPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
       if (cutStartPoint) {
-        setCutPath([cutStartPoint, newPoint]);
+        const nextPath = [cutStartPoint, newPoint];
+        cutPathRef.current = nextPath;
+        setCutPath(nextPath);
       }
 
       // Real-time collision detection - Update pending elements highlight
-      if (cutPath.length >= 2 && reactFlowInstance.current) {
-        const flowPath = cutPath.map((p) =>
+      const activePath = cutPathRef.current;
+      if (activePath.length >= 2 && reactFlowInstance.current) {
+        const flowPath = activePath.map((p) =>
           reactFlowInstance.current!.screenToFlowPosition({
             x: p.x + rect.left,
             y: p.y + rect.top,
@@ -464,7 +472,6 @@ export function useCutTool({
       isCutting,
       isClosingCut,
       getNodeRect,
-      cutPath,
       nodes,
       edges,
       cutStartPoint,
@@ -475,9 +482,9 @@ export function useCutTool({
 
   // Right-click release - complete the cut
   const finishCut = useCallback(() => {
-    if (cutPath.length > 1) {
-      const currentPath = [...cutPath];
-      detectAndDeleteElements(currentPath);
+    const currentPath = cutPathRef.current;
+    if (currentPath.length > 1) {
+      detectAndDeleteElements([...currentPath]);
     }
 
     setIsClosingCut(true);
@@ -485,13 +492,14 @@ export function useCutTool({
 
     setTimeout(() => {
       setIsClosingCut(false);
+      cutPathRef.current = [];
       setCutPath([]);
       setCutStartPoint(null);
       setPendingDeleteNodes(new Set());
       setPendingDeleteEdges(new Set());
       setPendingSeams({});
     }, 220);
-  }, [cutPath, detectAndDeleteElements]);
+  }, [detectAndDeleteElements]);
 
   // Update node's pending-delete highlight, seam preview and cut parts
   useEffect(() => {
