@@ -6,6 +6,7 @@ import type { PipelineTab } from "@/types/xan";
 import { buildPrefixToStep } from "@/hooks/execution/buildPrefixToStep";
 import { serializeStepParams } from "@/hooks/execution/serializeStepParams";
 import { resolveStepPlaceholders } from "@/utils/params";
+import { rememberStepExport } from "@/utils/stepExportMemory";
 
 interface UseSaveIntermediateProps {
   getCurrentTab: () => PipelineTab | undefined;
@@ -107,6 +108,9 @@ export function useSaveIntermediate({
 
         const encoder = new TextEncoder();
         await writeFile(filePath, encoder.encode(output));
+        // Feeds "run from the next step": that step's default input becomes
+        // this file (design 078).
+        rememberStepExport(currentTab.id, stepId, filePath);
         showToast(`Intermediate saved to: ${filePath}`, "success");
       } catch (error) {
         showToast(`Failed to save intermediate: ${error}`, "error");

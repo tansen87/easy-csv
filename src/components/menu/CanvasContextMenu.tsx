@@ -1,4 +1,4 @@
-import { useEffect, useRef, useLayoutEffect } from "react";
+import { Fragment, useEffect, useRef, useLayoutEffect } from "react";
 import type { LucideIcon } from "lucide-react";
 
 export interface CanvasMenuItem {
@@ -6,6 +6,10 @@ export interface CanvasMenuItem {
   label: string;
   icon?: LucideIcon;
   disabled?: boolean;
+  /** Draw a hairline divider above this item. */
+  separatorBefore?: boolean;
+  /** Destructive entry: red text, tinted hover. */
+  danger?: boolean;
   onSelect: () => void;
 }
 
@@ -67,8 +71,11 @@ export function CanvasContextMenu({
         {items.map((item) => {
           const Icon = item.icon;
           return (
+            <Fragment key={item.key}>
+            {item.separatorBefore && (
+              <div className="my-1 h-px bg-border/60" role="separator" />
+            )}
             <button
-              key={item.key}
               role="menuitem"
               disabled={item.disabled}
               onClick={() => {
@@ -78,12 +85,15 @@ export function CanvasContextMenu({
               className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 item.disabled
                   ? "text-muted-foreground/40 cursor-not-allowed"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  : item.danger
+                    ? "text-danger hover:bg-danger-soft"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
               }`}
             >
               {Icon && <Icon className="h-3.5 w-3.5" />}
               {item.label}
             </button>
+            </Fragment>
           );
         })}
       </div>

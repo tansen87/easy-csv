@@ -503,9 +503,9 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 
 | 文件 | 职责 |
 |------|------|
-| `pipeline/FlowPanel.tsx` | **可视化管道编辑器主组件**,组合子组件,管理状态和事件处理;右键拖拽连线(贝塞尔实时预览)、切刀、节点拖拽;**输入数据表格的右键菜单**(`tableContextMenu`)把 `QuickActionRequest` 交给 HomeView 打开快速浮窗(设计 031) |
+| `pipeline/FlowPanel.tsx` | **可视化管道编辑器主组件**,组合子组件,管理状态和事件处理;右键拖拽连线(贝塞尔实时预览)、右键划线切割删除、节点拖拽(右键划线/连线不再需要模式切换);步骤菜单只从卡片 ⋯ 或 Shift F10 打开(设计 078,右键菜单已移除);**输入数据表格的右键菜单**(`tableContextMenu`)把 `QuickActionRequest` 交给 HomeView 打开快速浮窗(设计 031) |
 | `pipeline/nodes/TableNode.tsx` | 输入数据表格节点,支持表头重命名和右键菜单;四方向连接点;表头行的**分隔符徽标**(设计 018);非 CSV 输入(parquet/duckdb)改为只读格式徽标、不显示分隔符控件(设计 024) |
-| `pipeline/nodes/PipelineStepNode.tsx` | 管道步骤节点,支持别名编辑、参数展示、切割动画 |
+| `pipeline/nodes/PipelineStepNode.tsx` | 管道步骤节点,支持别名编辑、参数展示;外部悬停工具条(参数 / 重命名 / ⋯) |
 | `pipeline/nodes/ResultTableNode.tsx` | 结果表节点(F1) |
 | `pipeline/nodes/index.ts` | 节点类型注册表(nodeTypes) |
 | `pipeline/lib/layout.ts` | dagre 自动布局 + 节点/边生成与连接方向解析(`getLayoutedElements`/`createEdgeConfig`/`resolveHandles`/`handleAnchor`/`pickStartHandle`/`buildConnectPreviewPath`/`transformBezierPath`) |
@@ -620,7 +620,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `menu/MainMenu.tsx` | 顶部工具栏: **文件菜单**、撤销/重做、**工具菜单**、执行、命令面板、帮助、**设置**。菜单栏顺序为 文件 / 编辑 / 查看 / 工具 / 帮助。**「工具」菜单承载一次性文件工具**(对比差异、转换编码、拆分坏行、按行数拆分、组内编号 ｜ 转为 Excel、合并工作簿;命名规范见设计 054:去 CSV 前缀、动词+对象),它们只开对话框 + 调一个后端命令、不进画布也不参与管道生命周期,故与「文件」菜单的打开/新建标签/模板/保存/导入/导出分开。**帮助菜单第一行为「查看示例」**(调用 `onLoadDemo` → `App.tsx` 的 `handleLoadDemo`,与空状态「看看示例」同一个 action,design 027 §4.1),其后依次是「帮助中心」「检查更新」。运行中的「执行」按钮挂 `data-busy` + `.exec-busy`(设计 028 §5.6.1);**检查更新期间「帮助」按钮挂 `data-checking` + `.update-busy`**(设计 022 §5.4,复用同一条底部横条;标记刻意不复用 `data-busy`,见 `ExecuteMenu.test.tsx` 的定位方式)。**「帮助」按钮任何状态都可点击**(横条是纯叠加,不置灰、不 `disabled`、不 `cursor-not-allowed`),慢检查不得把「帮助中心」锁在门外。**五个下拉统一外壳(设计 054)**:`MENU_PANEL` 常量 = 宽随内容(`min 208 / max 268`,原死写 180)、圆角 10、内边距 6、距触发器 6;行 `px-2.5`、可点项 `text-foreground`(原来全是 muted,只有禁用才 40%,整屏像半禁用)、悬停 8% 墨蓝、禁用整行 40% 且键帽一起降(`group-disabled:opacity-50`);分组只用一条 `mx-2.5 my-1.5 border-t border-foreground/15` 的内缩线(**无分组小标**):文件 3+3、查看 `命令面板∣4 个开关∣搜索`、工具 5+2,编辑与帮助不切。触发器打开态只叠 12% 墨蓝底、**字色仍是 ink**(原来变 `bg-accent + text-foreground`,一打开就丢品牌色);「查看」在有面板开着时补 12px 底轨(与右侧图标开关同一套),与「菜单开着」互不覆盖。键盘:↑↓/Home/End 在项间走(跳过 disabled)、Esc 关闭并把焦点还给触发器(`data-menu-trigger`),五个下拉都挂了 `role="menu"`/`aria-haspopup`。原型 `docs/design/prototypes/054/01-menu-submenus.html`。**「设置」入口在右侧按钮组末尾(AI 右侧)、只出图标 + tooltip**(`aria-label` 承载可访问名);**对话框打开期间用 `commandButtonClass(true)` 高亮 + 同款 12px 底部小横线**(与命令面板/日志/AI 三个面板开关的激活态完全一致:同底色、同横线类名,另配 `aria-expanded`) |
 | `titlebar/TitleBar.tsx` | 自定义窗口标题栏(设计 043,**仅 Windows**):`TitleBarBrand`(应用名 + 悬停点阵,`data-tauri-drag-region="deep"`)与 `WindowControls`(46×48 的最小化/最大化·还原/关闭,10px 线性图标,关闭悬停 #c42b1c)。最大化图标靠 `onResized` + `isMaximized` 同步,窗口失焦时给 `body[data-window-active=false]` 让整条降透明度。双击最大化交给 Tauri 的 drag region 脚本,**不要另加 onDoubleClick**(会双触发)。落地版与原型 043 的差异:行高 **40px**(原型 48),已删掉品牌右侧的 3×2 悬停点阵,"Easy Csv"与"文件"间距收紧到 4px+菜单自身 12px 内边距 |
 | `menu/ContextMenu.tsx` | 表格列右键菜单: 快速筛选、替换、透视、变换、排序;**只上报** `QuickActionRequest`(列 + 子类型 + 右键坐标),由快速浮窗负责参数(设计 031) |
-| `menu/CanvasContextMenu.tsx` | 画布空白处右键菜单 |
+| `menu/CanvasContextMenu.tsx` | 步骤 ⋯ 菜单(从此步运行 / 导出此步结果 / 复制 / 粘贴 / 删除,设计 078) |
 | `setting/ThemeProvider.tsx` | 主题上下文(dark/light/system)— 019 §2.1 计划迁往 `app/providers/` |
 | `setting/SettingsDialog.tsx` | 设置弹窗外壳(设计 030 / **040 重做**): 头部标题 + 两栏(左目录 / 右内容)+ **底部 56px 分隔带**(左「改动即时生效, 保存后写入本地配置」,右「恢复默认 / 保存设置」,**保存是唯一主操作**);灰画布 `bg-muted dark:bg-background` + 白卡、`max-w-5xl` × `h-[min(680px,86vh)]`;`/` 聚焦搜索、有查询时 `Esc` 先清空再关闭 — 019 §2.1 计划迁往 `modules/dialogs/app/` |
 | `setting/SettingsTabContent.tsx` | 设置内容(**设计 040**: 组序号 + 尾部细线的组标题 + 无阴影卡片): 每分组一组名一行卡片 + 每个设置一行 + 搜索空状态 + 清除数据确认框;控件 —— 开关(`SettingsSwitch`)、步进器、分段器(滑块只动 `transform`)、`AccentChips`(颜色在 `index.css`)、密钥显隐;**描述列第二行**(`SettingsRow` 的 `extra`)承载分隔符样例与 API 控制台外链;只负责「每种控件怎么渲染」,结构与文案在 `settingsSections.ts` |

@@ -20,6 +20,7 @@ import { useCanvasSpaceKey } from "@/modules/pipeline/hooks/useCanvasSpaceKey";
 import { useStepFocus } from "@/modules/pipeline/hooks/useStepFocus";
 import { useStepClipboard } from "@/modules/pipeline/hooks/useStepClipboard";
 import { useNodeHitTest } from "@/modules/pipeline/hooks/useNodeHitTest";
+
 import { useCutTool } from "@/modules/pipeline/hooks/useCutTool";
 import { useConnectGesture } from "@/modules/pipeline/hooks/useConnectGesture";
 import { usePipelineLayout } from "@/modules/pipeline/hooks/usePipelineLayout";
@@ -43,10 +44,6 @@ import type { QuickActionRequest } from "@/types/dialog";
 import {
   Copy,
   Trash2,
-  ClipboardPaste,
-  Scissors,
-  MousePointerClick,
-  FileDown,
   BoxSelect,
   Hand,
   ArrowLeftRight,
@@ -148,6 +145,8 @@ interface FlowPanelProps {
   doubleClickFitView?: boolean;
   onSavePipeline?: () => void;
   onSaveIntermediate?: (stepId: string) => void;
+  /** Run this step and everything downstream on an exported CSV (design 078). */
+  onRunFromStep?: (stepId: string) => void;
   /** Delimiter the input file was read with, plus how it was resolved. */
   delimiter?: string;
   delimiterMode?: DelimiterMode;
@@ -185,6 +184,7 @@ export function FlowPanel({
   pipelineSavedAt,
   doubleClickFitView = true,
   onSaveIntermediate,
+  onRunFromStep,
   delimiter,
   delimiterMode,
   delimiterSource,
@@ -247,20 +247,6 @@ export function FlowPanel({
   );
   const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    stepId: string;
-  } | null>(null);
-
-  const closeContextMenu = useCallback(() => {
-    setContextMenu(null);
-  }, []);
-
-  // Right-click interaction mode: "cut" keeps the cut-to-delete / connect
-  // gesture; "menu" opens the canvas context menu instead (paste, more later).
-  const [rightClickMode, setRightClickMode] = useState<"cut" | "menu">("cut");
-
   // Left-button tool: box select (default, matches the old behaviour) or pan
   // the view. Persisted so the canvas keeps the chosen hand across restarts.
   const [leftTool, setLeftTool] = useState<CanvasLeftTool>(() => {
@@ -301,7 +287,6 @@ export function FlowPanel({
       return next;
     });
     setCanvasMenu(null);
-    setContextMenu(null);
     setTableContextMenu(null);
   }, []);
 
@@ -336,20 +321,15 @@ export function FlowPanel({
   } | null>(null);
 
   const handleContextMenu = useCallback(
-    (stepId: string, x: number, y: number) => {
+    (stepId: string, x: number, y: number, openMenu?: boolean) => {
       // Swapped buttons: the right button drives the left tool, so node
       // context menus must not open from it. Locked canvas is read-only.
       if (swapMouseButtons || locked) return;
-      // In menu mode, right-clicking a step node opens the canvas context menu
-      // (with that step under the cursor). Nodes call this via their own
-      // onContextMenu which stops propagation, so we route here explicitly.
-      if (rightClickMode === "menu") {
-        setCanvasMenu({ x, y, stepId });
-      } else {
-        setContextMenu({ x, y, stepId });
-      }
+      // Only the card's ⋯ (and Shift+F10, which routes here through the same
+      // state) opens the step menu; a plain right click no longer does.
+      if (openMenu) setCanvasMenu({ x, y, stepId });
     },
-    [rightClickMode, swapMouseButtons, locked],
+    [swapMouseButtons, locked],
   );
 
   const [tableContextMenu, setTableContextMenu] = useState<{
@@ -391,17 +371,14 @@ export function FlowPanel({
   // forced "tidy" layout produces new positions.
   const persistNodePositionsRef = useRef<(nodeList: Node[]) => void>(() => {});
 
-  // Cutting function status (line delay 200ms), must read current state
-  // instead of old snapshot when cutting in succession,
-  // otherwise the last callback will use old array
-  // Fully overwrite App's edges, add back the edges that were cut out.
+  // Latest edges for gesture callbacks that read state from events.
   const edgesRef = useRef<Edge[]>(edges);
   edgesRef.current = edges;
 
   // Shared ReactFlow instance handle (set in onInit below)
   const reactFlowInstance = useRef<any>(null);
 
-  // Canvas hit-testing shared by the cut tool, connect gesture and menus
+  // Canvas hit-testing shared by the connect gesture and menus
   const { getNodeRect, getNodeAtPosition } = useNodeHitTest({
     nodes,
     reactFlowWrapper,
@@ -412,7 +389,8 @@ export function FlowPanel({
   // "focus this step" and flashes the highlight.
   const { highlightedNodeId } = useStepFocus({ nodes, reactFlowInstance });
 
-  // Cutting function status - owned by useCutTool
+  // Cut-to-delete gesture (right button on blank/table). The right-click menu
+  // mode is gone, so cutting is always available; nodes still connect instead.
   const cut = useCutTool({
     nodes,
     edges,
@@ -450,8 +428,12 @@ export function FlowPanel({
   } = connect;
 
   // Copy/paste clipboard - owned by useStepClipboard
-  const { clipboardRef, handleCopySelected, handlePasteClipboard } =
-    useStepClipboard({
+  const {
+    clipboardRef,
+    copySteps,
+    handleCopySelected,
+    handlePasteClipboard,
+  } = useStepClipboard({
       steps,
       edges,
       selectedNodeIds,
@@ -622,47 +604,64 @@ export function FlowPanel({
     ],
   );
 
-  // Primary button - start connecting (on a step node), cutting (blank/table),
-  // or opening the menu when the buttons are swapped.
-  const handleCutStart = useCallback(
+  // Right button = connect on a step card, cut (划 line) on blank/table. The
+  // menu mode is gone, so cutting needs no switch; starting in the capture
+  // phase keeps it out of the nodes' own mouse handling.
+  const handlePrimaryCapture = useCallback(
     (e: React.MouseEvent) => {
-      if (spaceDown || locked) return;
-      const primaryButton = swapMouseButtons ? 0 : 2;
-      if (e.button !== primaryButton) return;
-      // Normal menu mode: the contextmenu event opens the menu.
-      if (!swapMouseButtons && rightClickMode !== "cut") return;
+      handleSwapMouseDownCapture(e);
+      if (swapMouseButtons || spaceDown || locked || e.button !== 2) return;
+      // Ignore overlays (rail, menus): only the canvas itself cuts or connects.
+      const target = e.target as HTMLElement | null;
+      if (!target?.closest(".react-flow")) return;
       e.preventDefault();
       e.stopPropagation();
 
       const clickedNode = getNodeAtPosition(e.clientX, e.clientY);
-      if (rightClickMode === "cut") {
-        if (clickedNode && clickedNode !== "table-node") {
-          startConnect(clickedNode);
-        } else {
-          startCut(e);
-        }
+      if (clickedNode && clickedNode !== "table-node") {
+        startConnect(clickedNode);
       } else {
-        setCanvasMenu({
-          x: e.clientX,
-          y: e.clientY,
-          stepId:
-            clickedNode && clickedNode !== "table-node" ? clickedNode : null,
-        });
+        startCut(e);
       }
     },
     [
+      handleSwapMouseDownCapture,
+      swapMouseButtons,
       spaceDown,
       locked,
-      swapMouseButtons,
-      rightClickMode,
       getNodeAtPosition,
       startConnect,
       startCut,
     ],
   );
 
-  // Primary button move - swapped drags first, then connect / cut.
-  const handleCutMove = useCallback(
+  // Swapped layout: the left button is the primary one and does the same
+  // connect / cut work; the right button drives the select/pan tool above.
+  const handlePrimaryStart = useCallback(
+    (e: React.MouseEvent) => {
+      if (!swapMouseButtons || spaceDown || locked || e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const clickedNode = getNodeAtPosition(e.clientX, e.clientY);
+      if (clickedNode && clickedNode !== "table-node") {
+        startConnect(clickedNode);
+      } else {
+        startCut(e);
+      }
+    },
+    [
+      swapMouseButtons,
+      spaceDown,
+      locked,
+      getNodeAtPosition,
+      startConnect,
+      startCut,
+    ],
+  );
+
+  // Primary button move - swapped drags first, then the connect preview.
+  const handlePrimaryMove = useCallback(
     (e: React.MouseEvent) => {
       const drag = swapDragRef.current;
       if (drag) {
@@ -711,8 +710,8 @@ export function FlowPanel({
     ],
   );
 
-  // Primary button release - finish a swapped drag, connect, or cut.
-  const handleCutEnd = useCallback(
+  // Primary button release - finish a swapped drag or the connection.
+  const handlePrimaryEnd = useCallback(
     (e: React.MouseEvent) => {
       const drag = swapDragRef.current;
       if (drag) {
@@ -799,32 +798,19 @@ export function FlowPanel({
   );
 
   // Prevent default right-click menu on panel
-  const handlePanelContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      if (swapMouseButtons || locked) return;
-      if (rightClickMode === "menu") {
-        const nodeId = getNodeAtPosition(e.clientX, e.clientY);
-        setCanvasMenu({
-          x: e.clientX,
-          y: e.clientY,
-          stepId: nodeId && nodeId !== "table-node" ? nodeId : null,
-        });
-      }
-    },
-    [rightClickMode, getNodeAtPosition, swapMouseButtons, locked],
-  );
+  // Right-click no longer opens anything here; the native menu is suppressed
+  // so the canvas keeps its custom gestures.
+  const handlePanelContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+  }, []);
 
   useEffect(() => {
-    const handleClickOutside = () => {
-      closeContextMenu();
-      closeTableContextMenu();
-    };
-    if (contextMenu || tableContextMenu) {
+    const handleClickOutside = () => closeTableContextMenu();
+    if (tableContextMenu) {
       document.addEventListener("click", handleClickOutside);
       return () => document.removeEventListener("click", handleClickOutside);
     }
-  }, [contextMenu, tableContextMenu, closeContextMenu, closeTableContextMenu]);
+  }, [tableContextMenu, closeTableContextMenu]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -966,27 +952,34 @@ export function FlowPanel({
     [],
   );
 
+  /** Fade, then remove, an explicit set of steps (menu + keyboard share it). */
+  const deleteSteps = useCallback(
+    (ids: string[]) => {
+      if (locked || ids.length === 0 || deleteTimerRef.current) return;
+      const extraEdgeIds = edges
+        .filter(
+          (e) =>
+            e.source &&
+            e.target &&
+            !ids.includes(e.source) &&
+            !ids.includes(e.target),
+        )
+        .map((e) => e.id);
+      setSelectedNodeIds(new Set());
+      setDeletingNodeIds(new Set(ids));
+      // Let the 200ms fade play before the step leaves the pipeline.
+      deleteTimerRef.current = setTimeout(() => {
+        deleteTimerRef.current = null;
+        onStepRemove(ids, extraEdgeIds);
+        setDeletingNodeIds(new Set());
+      }, 220);
+    },
+    [edges, onStepRemove, locked],
+  );
+
   const handleDeleteSelected = useCallback(() => {
-    if (locked || selectedNodeIds.size === 0 || deleteTimerRef.current) return;
-    const ids = [...selectedNodeIds];
-    const extraEdgeIds = edges
-      .filter(
-        (e) =>
-          e.source &&
-          e.target &&
-          !ids.includes(e.source) &&
-          !ids.includes(e.target),
-      )
-      .map((e) => e.id);
-    setSelectedNodeIds(new Set());
-    setDeletingNodeIds(new Set(ids));
-    // Let the 200ms fade play before the step leaves the pipeline.
-    deleteTimerRef.current = setTimeout(() => {
-      deleteTimerRef.current = null;
-      onStepRemove(ids, extraEdgeIds);
-      setDeletingNodeIds(new Set());
-    }, 220);
-  }, [selectedNodeIds, edges, onStepRemove, locked]);
+    deleteSteps([...selectedNodeIds]);
+  }, [deleteSteps, selectedNodeIds]);
 
   // Fade the nodes and the edges attached to them while the timer runs.
   useEffect(() => {
@@ -1084,38 +1077,88 @@ export function FlowPanel({
     };
   }, [canvasToolsOpen]);
 
-  // Canvas context menu items (right-click menu mode). Built on every render
-  // so the paste disabled state reflects the current clipboard and the save
-  // entry only shows when the cursor is over a step node. Extend this list as
-  // more menu features are added.
+  // Canvas context menu items (right-click menu mode / card ⋯, design 078).
+  // Built on every render so the paste disabled state reflects the current
+  // clipboard and the step entries only show when a step is under the cursor.
   const canvasMenuItems: CanvasMenuItem[] = [
+    ...(canvasMenu?.stepId && onRunFromStep && !locked
+      ? [
+          {
+            key: "run-from-step",
+            label: t.runFromStep,
+            onSelect: () => onRunFromStep(canvasMenu.stepId!),
+          } as CanvasMenuItem,
+        ]
+      : []),
     ...(canvasMenu?.stepId && onSaveIntermediate && !locked
       ? [
           {
             key: "save-intermediate",
             label: t.saveIntermediateAsInput,
-            icon: FileDown,
             onSelect: () => onSaveIntermediate(canvasMenu.stepId!),
+          } as CanvasMenuItem,
+        ]
+      : []),
+    ...(canvasMenu?.stepId && !locked
+      ? [
+          {
+            key: "copy-step",
+            label: t.copyStep,
+            separatorBefore: true,
+            onSelect: () => copySteps([canvasMenu.stepId!]),
           } as CanvasMenuItem,
         ]
       : []),
     {
       key: "paste",
-      label: t.paste,
-      icon: ClipboardPaste,
+      label: canvasMenu?.stepId ? t.pasteStep : t.paste,
       disabled: !clipboardRef.current || locked,
       onSelect: handlePasteClipboard,
     },
+    ...(canvasMenu?.stepId && !locked
+      ? [
+          {
+            key: "delete-step",
+            label: t.deleteStep,
+            danger: true,
+            onSelect: () => deleteSteps([canvasMenu.stepId!]),
+          } as CanvasMenuItem,
+        ]
+      : []),
   ];
+
+  // Shift+F10 opens the same step menu from the keyboard (design 078), so the
+  // entry is reachable without the mouse and without switching modes.
+  useEffect(() => {
+    if (locked) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "F10" || !event.shiftKey || !selectedStepId) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, [contenteditable='true']")) return;
+      const node = document.querySelector(
+        `.react-flow__node[data-id="${selectedStepId}"]`,
+      );
+      if (!node) return;
+      event.preventDefault();
+      const rect = node.getBoundingClientRect();
+      setCanvasMenu({
+        x: rect.right,
+        y: rect.top + 48,
+        stepId: selectedStepId,
+      });
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [locked, selectedStepId]);
 
   return (
     <div
       ref={reactFlowWrapper}
       className={`relative h-full w-full ${leftTool === "pan" ? "canvas-pan-tool" : ""} ${isCutting ? "canvas-cutting" : ""}`}
-      onMouseDownCapture={handleSwapMouseDownCapture}
-      onMouseDown={handleCutStart}
-      onMouseMove={handleCutMove}
-      onMouseUp={handleCutEnd}
+      onMouseDownCapture={handlePrimaryCapture}
+      onMouseDown={handlePrimaryStart}
+      onMouseMove={handlePrimaryMove}
+      onMouseUp={handlePrimaryEnd}
       onContextMenu={handlePanelContextMenu}
     >
       {cycleNotice && (
@@ -1172,13 +1215,6 @@ export function FlowPanel({
         <CoordinateGrid />
       </ReactFlow>
 
-      {/* Cut visualization line */}
-      <CutVisualization
-        isCutting={isCutting}
-        isClosingCut={isClosingCut}
-        cutPath={cutPath}
-      />
-
       {/* Swapped buttons: right-drag box selection */}
       {swapSelectRect && (
         <div
@@ -1206,6 +1242,13 @@ export function FlowPanel({
         />
       )}
 
+      {/* Cut blade while the right button is drawing on blank canvas */}
+      <CutVisualization
+        isCutting={isCutting}
+        isClosingCut={isClosingCut}
+        cutPath={cutPath}
+      />
+
       {/* Connection visualization line */}
       <ConnectionVisualization
         isConnecting={isConnecting}
@@ -1216,8 +1259,7 @@ export function FlowPanel({
       />
 
       {/* Canvas tools: a persistent rail with the left-button tool (select /
-          pan) above the right-click mode (cut / menu). Keeping both visible
-          makes each mode discoverable without hiding it behind a dot. */}
+          pan), the button swap and the canvas menu. */}
       <div
         className="absolute left-3 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-0.5 rounded-[9px] border border-border bg-card p-[3px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-none"
         onMouseDown={(e) => e.stopPropagation()}
@@ -1255,53 +1297,6 @@ export function FlowPanel({
             }`}
           >
             <Hand className="h-3.5 w-3.5" />
-          </button>
-        </Tooltip>
-        <span className="mx-auto my-0.5 h-px w-[18px] bg-border/60" />
-        <Tooltip
-          content={
-            swapMouseButtons ? t.leftClickCutMode : t.rightClickCutMode
-          }
-          side="right"
-        >
-          <button
-            type="button"
-            onClick={() => {
-              setRightClickMode("cut");
-              setCanvasMenu(null);
-            }}
-            aria-pressed={rightClickMode === "cut"}
-            disabled={locked}
-            className={`flex h-[26px] w-[26px] items-center justify-center rounded-[5px] transition-colors disabled:opacity-35 ${
-              rightClickMode === "cut"
-                ? "bg-canvas-ink-soft text-canvas-ink"
-                : "text-muted-foreground hover:bg-accent/60"
-            }`}
-          >
-            <Scissors className="h-3.5 w-3.5" />
-          </button>
-        </Tooltip>
-        <Tooltip
-          content={
-            swapMouseButtons ? t.leftClickMenuMode : t.rightClickMenuMode
-          }
-          side="right"
-        >
-          <button
-            type="button"
-            onClick={() => {
-              setRightClickMode("menu");
-              setCanvasMenu(null);
-            }}
-            aria-pressed={rightClickMode === "menu"}
-            disabled={locked}
-            className={`flex h-[26px] w-[26px] items-center justify-center rounded-[5px] transition-colors disabled:opacity-35 ${
-              rightClickMode === "menu"
-                ? "bg-canvas-ink-soft text-canvas-ink"
-                : "text-muted-foreground hover:bg-accent/60"
-            }`}
-          >
-            <MousePointerClick className="h-3.5 w-3.5" />
           </button>
         </Tooltip>
         <span className="mx-auto my-0.5 h-px w-[18px] bg-border/60" />
@@ -1405,7 +1400,6 @@ export function FlowPanel({
                 onClick={() => {
                   if (!locked) {
                     setCanvasMenu(null);
-                    setContextMenu(null);
                     setTableContextMenu(null);
                   }
                   toggleLocked();
@@ -1495,7 +1489,6 @@ export function FlowPanel({
       {showGestureLegend && (
         <GestureLegend
           leftTool={leftTool}
-          rightClickMode={rightClickMode}
           swapMouseButtons={swapMouseButtons}
           locked={locked}
         />

@@ -273,7 +273,12 @@ export function getLayoutedElements(
   onStepClick: (step: PipelineStep) => void,
   onStepRemove: (stepId: string | string[]) => void,
   onStepAliasUpdate: (stepId: string, alias: string) => void,
-  onContextMenu: (stepId: string, x: number, y: number) => void,
+  onContextMenu: (
+    stepId: string,
+    x: number,
+    y: number,
+    openMenu?: boolean,
+  ) => void,
   onTableContextMenu: (col: number, x: number, y: number) => void,
   onTableRename: (col: number, newName: string) => void,
   onSave: () => void,

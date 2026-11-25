@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 078 · 步骤右键菜单：从此步运行 / 导出此步结果</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --rule:oklch(0.2 0.01 80 / 7%);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --edge:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+
+    --danger:oklch(0.52 0.16 27);
+    --danger-soft:color-mix(in oklab,var(--danger) 8%,transparent);
+    --ok:oklch(0.5 0.09 150);
+    --mark:oklch(0.56 0.17 27);
+
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --canvas-dot:oklch(0.2 0.01 80 / 8%);
+    --chrome:oklch(0.985 0.002 80);
+    --tab:oklch(0.975 0.002 80);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-menu:0 8px 24px oklch(0.2 0.02 80 / 10%),0 1px 2px oklch(0.2 0.02 80 / 6%);
+  }
+  .dark{
+    color:var(--fg);
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --rule:oklch(0.96 0.005 85 / 9%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --edge:oklch(1 0 0 / 24%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 18%,transparent);
+    --danger:oklch(0.7 0.12 27);
+    --danger-soft:color-mix(in oklab,var(--danger) 12%,transparent);
+    --ok:oklch(0.72 0.08 150);
+    --stage:oklch(0.115 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --canvas-dot:oklch(1 0 0 / 7%);
+    --chrome:oklch(0.175 0 0);
+    --tab:oklch(0.165 0 0);
+    --shadow-card:none;
+    --shadow-menu:0 10px 30px oklch(0 0 0 / 45%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased}
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       border-bottom:1px solid var(--border-soft);margin-bottom:16px}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto;font-family:var(--mono);font-size:10px}
+
+  /* ── 应用外壳 ─────────────────────────────── */
+  .app{width:1160px;max-width:100%;height:720px;flex:none;border:1px solid var(--border);border-radius:12px;
+       overflow:hidden;display:flex;flex-direction:column;position:relative;background:var(--bg);color:var(--fg);
+       box-shadow:var(--shadow-card)}
+  .topbar{height:44px;flex:none;display:flex;align-items:center;gap:2px;padding:0 12px;
+          border-bottom:1px solid var(--border);background:var(--chrome)}
+  .tbtn{font-size:12px;padding:5px 9px;border-radius:6px;color:var(--muted-fg)}
+  .tbtn.dim{color:var(--muted-fg-3)}
+  .spacer{flex:1}
+  .cmdbar{height:26px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid var(--border);
+          border-radius:6px;width:300px;color:var(--muted-fg-3);font-size:11px}
+  .cmdbar .caret{font-family:var(--mono);color:var(--muted-fg-2)}
+  .key{font-family:var(--mono);font-size:9.5px;border:1px solid var(--border);border-radius:4px;
+       padding:1px 4px;color:var(--muted-fg-2);background:var(--bg)}
+  .tabbar{height:30px;flex:none;display:flex;align-items:center;gap:2px;padding:0 8px;
+          border-bottom:1px solid var(--border);background:var(--tab)}
+  .tab{height:24px;display:inline-flex;align-items:center;gap:6px;padding:0 9px;border-radius:5px;
+       font-size:11.5px;color:var(--muted-fg-3)}
+  .tab.on{background:var(--brand-soft);color:var(--brand);border:1px solid var(--brand-12)}
+  .tab .dot{width:4px;height:4px;border-radius:50%;background:var(--ok)}
+
+  .canvas{flex:1;position:relative;overflow:hidden;background-color:var(--bg);
+          background-image:radial-gradient(circle,var(--canvas-dot) 1px,transparent 1px);
+          background-size:22px 22px}
+  .edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+  .rail{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:26px;height:96px;
+        border:1px solid var(--border);border-radius:7px;background:var(--card);display:flex;
+        flex-direction:column;z-index:3}
+  .rail i{flex:1;display:grid;place-items:center;font:400 9px/1 var(--mono);color:var(--muted-fg-3)}
+  .rail i.on{color:var(--brand);background:var(--brand-soft);border-radius:5px;margin:2px}
+  .rail i+ i{border-top:1px solid var(--border-soft)}
+
+  /* 输入表 */
+  .in{position:absolute;width:520px;background:var(--paper);border:1px solid var(--border);
+      border-radius:12px;overflow:hidden;box-shadow:var(--shadow-card);z-index:2}
+  .in-hd{height:40px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--rule)}
+  .in-title{font-size:13px;font-weight:500;white-space:nowrap}
+  .in-meta{margin-left:auto;font:400 10.5px/1 var(--mono);color:var(--muted-fg-3)}
+  .in table{width:100%;border-collapse:collapse;font-size:11px}
+  .in th,.in td{padding:5px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--rule);
+                color:var(--muted-fg)}
+  .in th{background:color-mix(in oklab,var(--muted) 60%,transparent);font-weight:500;font-size:10.5px;
+         color:var(--muted-fg-3);letter-spacing:.01em}
+  .in td.r{text-align:right;font-family:var(--mono);font-size:10.5px}
+  .in .num{width:34px;text-align:right;font:400 10px/1 var(--mono);color:var(--muted-fg-3)}
+  .in-foot{height:26px;display:flex;align-items:center;gap:10px;padding:0 12px;font:400 10px/1 var(--mono);
+           color:var(--muted-fg-3);border-top:1px solid var(--rule);background:color-mix(in oklab,var(--muted) 35%,transparent)}
+
+  /* 步骤卡片：无序号，220 宽 */
+  .step{position:absolute;width:220px;background:var(--card);border:1px solid var(--border);
+        border-radius:10px;box-shadow:var(--shadow-card);z-index:2}
+  .step .body{padding:10px 11px}
+  .step .head{display:flex;align-items:center;gap:8px;min-width:0}
+  .step .alias{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .step .cmd{margin-left:auto;flex:none;font:400 10.5px/1 var(--mono);color:var(--muted-fg-3)}
+  .step .params{margin-top:5px;display:flex;flex-direction:column;gap:2px}
+  .pline{display:flex;gap:6px;min-width:0;font:400 10.5px/16px var(--mono)}
+  .pk{flex:none;min-width:54px;color:var(--muted-fg-3)}
+  .pv{color:var(--muted-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .step.selected{background:var(--paper);border-color:var(--brand);
+                 box-shadow:inset 2px 0 0 var(--brand),var(--shadow-card)}
+  .step.error{border-color:color-mix(in oklab,var(--danger) 55%,var(--border));
+              box-shadow:inset 2px 0 0 var(--danger),var(--shadow-card)}
+  .step .err{margin-top:6px;font:400 10px/15px var(--mono);color:var(--danger);
+             display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .step.skipped .body{opacity:.45}
+  .step.skipped .state{color:var(--muted-fg-2)}
+  .in.skipped .in-hd, .in.skipped table, .in.skipped .in-foot{opacity:.4}
+  .in .state2{font:400 9.5px/1 var(--mono);color:var(--muted-fg-3);border:1px solid var(--border);
+              border-radius:4px;padding:2px 5px;margin-left:8px}
+  .step.running{background:var(--paper);border-color:var(--brand-12);
+                box-shadow:inset 2px 0 0 var(--brand),var(--shadow-card)}
+  .step.done .head .alias{color:var(--fg)}
+  .step .bar{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--brand-12);
+             border-radius:0 0 10px 10px;overflow:hidden}
+  .step .bar i{display:block;height:100%;width:58%;background:var(--brand)}
+  .state{position:absolute;right:10px;bottom:8px;font:400 9.5px/1 var(--mono);color:var(--muted-fg-3)}
+
+  /* 右键菜单 */
+  .menu{position:absolute;width:236px;padding:4px;background:var(--card);border:1px solid var(--border);
+        border-radius:10px;box-shadow:var(--shadow-menu);z-index:5}
+  .menu .row{height:32px;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:6px;
+             font-size:12px;color:var(--fg);cursor:default;min-width:0}
+  .menu .row .m{margin-left:auto;flex:none;font:400 10px/1 var(--mono);color:var(--muted-fg-3)}
+  .menu .row span:not(.m){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .menu .row.hot{background:color-mix(in oklab,var(--fg) 7%,transparent)}
+  .menu .row.muted{color:var(--muted-fg-3)}
+  .menu .row.disabled{color:var(--muted-fg-3)}
+  .menu .row.danger{color:var(--danger)}
+  .menu .sep{height:1px;margin:4px 6px;background:var(--border-soft)}
+
+  /* 运行来源浮条 */
+  .srcbar{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;
+          height:30px;padding:0 6px 0 11px;border:1px solid var(--border);border-radius:8px;background:var(--card);
+          box-shadow:var(--shadow-card);font-size:11px;color:var(--muted-fg);z-index:4;white-space:nowrap}
+  .srcbar .lbl{color:var(--fg)}
+  .srcbar .sep2{width:1px;height:11px;background:var(--border)}
+  .srcbar .path{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-2)}
+  .srcbar .change{font-size:11px;color:var(--brand);padding:3px 6px;border-radius:5px}
+  .srcbar .cancel{font-size:11px;color:var(--muted-fg);text-decoration:underline;text-underline-offset:2px}
+
+  /* Toast */
+  .toast-wrap{position:absolute;top:0;left:0;right:0;display:flex;justify-content:center;padding:12px;z-index:6}
+  .toast{display:flex;align-items:center;gap:10px;padding:8px 10px 8px 12px;border:1px solid var(--border);
+         border-radius:10px;background:var(--card);box-shadow:var(--shadow-card);font-size:12px;color:var(--fg)}
+  .toast .ok-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);flex:none}
+  .toast .sub{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-3)}
+  .toast .act{margin-left:6px;font-size:11.5px;color:var(--brand);padding:3px 6px;border-radius:5px}
+
+  /* 标注 */
+  .tag{position:absolute;font-family:var(--mono);font-size:9.5px;line-height:1.2;color:#fff;background:var(--mark);
+       border-radius:50%;width:16px;height:16px;display:grid;place-items:center;z-index:7}
+  .legend{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 22px;font-size:11px;line-height:1.7;
+          color:var(--muted-fg);max-width:1120px}
+  .legend span{display:inline-flex;gap:6px;align-items:baseline}
+  .legend b{font:400 10px/1 var(--mono);color:var(--mark)}
+  .legend span.ok b{color:var(--brand)}
+
+  /* 规格区 */
+  .cols{display:grid;grid-template-columns:1.05fr .95fr;gap:24px}
+  .panel{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:16px 18px}
+  .panel h3{margin:0 0 10px;font-size:12.5px;font-weight:500}
+  .panel ul{margin:0;padding-left:16px;font-size:11.5px;line-height:1.9;color:var(--muted-fg)}
+  .panel ul b{font-weight:500;color:var(--fg)}
+  table.spec{width:100%;border-collapse:collapse;font-size:11.5px}
+  table.spec th{text-align:left;font-weight:500;color:var(--muted-fg-3);font-size:10.5px;
+                padding:0 8px 7px 0;border-bottom:1px solid var(--border-soft)}
+  table.spec td{padding:7px 8px 7px 0;border-bottom:1px solid var(--border-soft);color:var(--muted-fg);
+                vertical-align:top}
+  table.spec td:first-child{color:var(--fg);white-space:nowrap}
+  table.spec tr:last-child td{border-bottom:0}
+  .mono{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-2)}
+  .callout{display:flex;gap:12px;padding:14px 16px;border:1px solid var(--border);border-radius:10px;
+           background:var(--card);margin-top:18px}
+  .callout .n{font:500 10px/1.6 var(--mono);color:var(--muted-fg-3);flex:none}
+  .callout p{margin:0;font-size:11.5px;line-height:1.8;color:var(--muted-fg)}
+  .callout p b{font-weight:500;color:var(--fg)}
+
+  /* 入口示意 */
+  .demo{position:relative;height:400px;border:1px solid var(--border);border-radius:12px;background:var(--bg);
+        background-image:radial-gradient(circle,var(--canvas-dot) 1px,transparent 1px);background-size:22px 22px;
+        overflow:hidden}
+  .demo .step{position:absolute}
+  .strip{position:absolute;right:2px;top:-34px;display:flex;height:26px;border:1px solid var(--border);
+         border-radius:6px;background:var(--card);overflow:hidden;box-shadow:var(--shadow-card);z-index:3}
+  .strip .b{width:25px;display:grid;place-items:center;color:var(--muted-fg)}
+  .strip .b+.b{border-left:1px solid var(--border-soft)}
+  .strip .b.on{background:var(--brand-soft);color:var(--brand)}
+  .hint{position:absolute;font:400 10.5px/1.7 var(--mono);color:var(--muted-fg-3)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">078 · 管道画布 / 步骤右键菜单</div>
+    <h1>从此步运行、导出此步结果：把上游导出的 CSV 当成这一次的输入</h1>
+    <p>场景：「按地区汇总」报错，但之前已经从「去重」导出过结果。过去只能改标签页的输入文件、再把整条管道重跑一遍；现在从这一步「从此步运行」，输入默认就是上游上次导出的那份 CSV，只跑这一步及之后。<b>步骤卡片不带序号</b>，范围用步骤名表达。菜单入口也不再依赖右键模式：卡片上的 <b>⋯</b> 直接打开同一份菜单，右键继续只负责连接与切割。</p>
+  </div>
+
+  <div class="direction">
+    <div><dt>产品</dt><dd>桌面 CSV 管道编辑器，把一串 xan 命令连成流水线</dd></div>
+    <div><dt>性格</dt><dd>精确、安静，像被翻旧的实验记录本</dd></div>
+    <div><dt>世界</dt><dd>实验室台账：账本纸、等宽读数、可追溯的来源</dd></div>
+    <div><dt>时刻</dt><dd>只有本次真正执行的那一段链路被墨色描出</dd></div>
+    <div><dt>签名</dt><dd>运行浮条里的来源行：<span class="mono">输入 ← 去重.csv</span></dd></div>
+  </div>
+
+  <!-- ══════════ 01 现状 ══════════ -->
+  <section class="frame">
+    <div class="cap"><span>01</span><b>现状</b><span class="file">CanvasContextMenu.tsx · FlowPane.tsx:1091-1109</span></div>
+
+    <div class="app">
+      <div class="topbar">
+        <span class="tbtn">文件</span><span class="tbtn">编辑</span><span class="tbtn">查看</span>
+        <span class="tbtn">工具</span><span class="tbtn">帮助</span>
+        <span class="spacer"></span>
+        <div class="cmdbar"><span class="caret">›</span><span>搜索操作、命令、文件</span><span class="spacer"></span><span class="key">Ctrl F</span></div>
+        <span class="spacer"></span>
+        <span class="tbtn dim">运行</span>
+      </div>
+      <div class="tabbar"><span class="tab on"><span class="dot"></span>销售数据.csv</span></div>
+
+      <div class="canvas">
+        <svg class="edges">
+          <path d="M560 226 C574 226 582 159 596 159" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+          <path d="M710 198 C710 206 710 210 710 216" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+          <path d="M710 280 C710 296 710 310 710 326" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+        </svg>
+
+        <div class="rail"><i class="on">切</i><i>菜</i></div>
+
+        <div class="in" style="left:40px;top:96px">
+          <div class="in-hd"><span class="in-title">销售数据.csv</span><span class="in-meta">6 列 · 12,480 行</span></div>
+          <table>
+            <tr><th class="num">#</th><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+            <tr><td class="num">1</td><td>2026-01-04</td><td>华东</td><td>键盘</td><td class="r">1,280</td></tr>
+            <tr><td class="num">2</td><td>2026-01-04</td><td>华南</td><td>显示器</td><td class="r">2,340</td></tr>
+            <tr><td class="num">3</td><td>2026-01-05</td><td>华北</td><td>键盘</td><td class="r">980</td></tr>
+            <tr><td class="num">4</td><td>2026-01-05</td><td>华东</td><td>鼠标</td><td class="r">420</td></tr>
+            <tr><td class="num">5</td><td>2026-01-06</td><td>西南</td><td>显示器</td><td class="r">3,100</td></tr>
+            <tr><td class="num">6</td><td>2026-01-06</td><td>华南</td><td>键盘</td><td class="r">1,120</td></tr>
+          </table>
+          <div class="in-foot"><span>销售数据.csv</span><span>·</span><span>12,480 行 × 6 列</span></div>
+        </div>
+
+        <div class="step" style="left:600px;top:120px">
+          <div class="body">
+            <div class="head"><span class="alias">保留华东</span><span class="cmd">search</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">column</span><span class="pv">地区</span></div>
+              <div class="pline"><span class="pk">pattern</span><span class="pv">华东</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step" style="left:600px;top:220px">
+          <div class="body">
+            <div class="head"><span class="alias">去重</span><span class="cmd">dedup</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">column</span><span class="pv">日期</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step selected error" style="left:600px;top:330px">
+          <div class="body">
+            <div class="head"><span class="alias">按地区汇总</span><span class="cmd">agg</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">groupby</span><span class="pv">地区</span></div>
+            </div>
+            <div class="err">xan: column “利润” not found</div>
+          </div>
+        </div>
+
+        <div class="menu" style="left:840px;top:330px">
+          <div class="row">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10"/><path d="M8 9l4 4 4-4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+            <span>保存到该步的结果为CSV</span>
+          </div>
+          <div class="row muted">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h2"/></svg>
+            <span>粘贴</span>
+          </div>
+        </div>
+
+        <span class="tag" style="left:824px;top:336px">1</span>
+        <span class="tag" style="left:1080px;top:336px">2</span>
+        <span class="tag" style="left:824px;top:368px">3</span>
+        <span class="tag" style="left:1080px;top:400px">4</span>
+        <span class="tag" style="left:18px;top:322px">5</span>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><b>1</b>报错的这一步想单独重跑，菜单里没有入口：只能改标签页的输入文件，再整条重跑</span>
+      <span><b>2</b>「保存到该步的结果为CSV」12 个字，保存的是什么、到哪一步，都读不出来</span>
+      <span><b>3</b>与节点无关的「粘贴」和节点动作同列同权重，没有分隔</span>
+      <span><b>4</b>没有“下次从哪份文件开始跑”的衔接，导出与运行彼此独立</span>
+      <span><b>5</b>入口前提是左侧竖条处于「菜」模式，而模式切换没有任何提示</span>
+    </div>
+  </section>
+
+  <!-- ══════════ 02 改后 · 亮色 ══════════ -->
+  <section class="frame">
+    <div class="cap"><span>02</span><b>改后 · 亮色</b><span class="file">菜单 236 · 行 32 · 无图标 · 无步骤序号</span></div>
+
+    <div class="app">
+      <div class="topbar">
+        <span class="tbtn">文件</span><span class="tbtn">编辑</span><span class="tbtn">查看</span>
+        <span class="tbtn">工具</span><span class="tbtn">帮助</span>
+        <span class="spacer"></span>
+        <div class="cmdbar"><span class="caret">›</span><span>搜索操作、命令、文件</span><span class="spacer"></span><span class="key">Ctrl F</span></div>
+        <span class="spacer"></span>
+        <span class="tbtn dim">运行</span>
+      </div>
+      <div class="tabbar"><span class="tab on"><span class="dot"></span>销售数据.csv</span></div>
+
+      <div class="canvas">
+        <svg class="edges">
+          <path d="M560 226 C574 226 582 159 596 159" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+          <path d="M710 198 C710 206 710 210 710 216" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+          <path d="M710 280 C710 296 710 310 710 326" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+        </svg>
+
+        <div class="rail"><i>切</i><i class="on">菜</i></div>
+
+        <div class="in" style="left:40px;top:96px">
+          <div class="in-hd"><span class="in-title">销售数据.csv</span><span class="in-meta">6 列 · 12,480 行</span></div>
+          <table>
+            <tr><th class="num">#</th><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+            <tr><td class="num">1</td><td>2026-01-04</td><td>华东</td><td>键盘</td><td class="r">1,280</td></tr>
+            <tr><td class="num">2</td><td>2026-01-04</td><td>华南</td><td>显示器</td><td class="r">2,340</td></tr>
+            <tr><td class="num">3</td><td>2026-01-05</td><td>华北</td><td>键盘</td><td class="r">980</td></tr>
+            <tr><td class="num">4</td><td>2026-01-05</td><td>华东</td><td>鼠标</td><td class="r">420</td></tr>
+            <tr><td class="num">5</td><td>2026-01-06</td><td>西南</td><td>显示器</td><td class="r">3,100</td></tr>
+            <tr><td class="num">6</td><td>2026-01-06</td><td>华南</td><td>键盘</td><td class="r">1,120</td></tr>
+          </table>
+          <div class="in-foot"><span>销售数据.csv</span><span>·</span><span>12,480 行 × 6 列</span></div>
+        </div>
+
+        <div class="step" style="left:600px;top:120px">
+          <div class="body">
+            <div class="head"><span class="alias">保留华东</span><span class="cmd">search</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">column</span><span class="pv">地区</span></div>
+              <div class="pline"><span class="pk">pattern</span><span class="pv">华东</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step" style="left:600px;top:220px">
+          <div class="body">
+            <div class="head"><span class="alias">去重</span><span class="cmd">dedup</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">column</span><span class="pv">日期</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step selected error" style="left:600px;top:330px">
+          <div class="body">
+            <div class="head"><span class="alias">按地区汇总</span><span class="cmd">agg</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">groupby</span><span class="pv">地区</span></div>
+            </div>
+            <div class="err">xan: column “利润” not found</div>
+          </div>
+        </div>
+
+        <div class="menu" style="left:840px;top:318px">
+          <div class="row hot"><span>从此步运行</span><span class="m">用上次导出</span></div>
+          <div class="row"><span>导出此步结果…</span><span class="m">CSV</span></div>
+          <div class="sep"></div>
+          <div class="row"><span>编辑参数…</span><span class="m">⏎</span></div>
+          <div class="row"><span>重命名</span></div>
+          <div class="row"><span>复制步骤</span></div>
+          <div class="sep"></div>
+          <div class="row danger"><span>删除</span><span class="m">Del</span></div>
+        </div>
+
+        <span class="tag" style="left:822px;top:324px">1</span>
+        <span class="tag" style="left:1082px;top:356px">2</span>
+        <span class="tag" style="left:822px;top:390px">3</span>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span class="ok"><b>1</b>输入默认取「去重」上次导出的 CSV，只跑这一步及之后；没有导出过就弹一次文件选择</span>
+      <span class="ok"><b>2</b>导出仍是从标签页输入跑到这一步；行尾 <code>CSV</code> 说明落盘格式</span>
+      <span class="ok"><b>3</b>行分组：运行 / 编辑 / 危险三段</span>
+    </div>
+  </section>
+
+  <!-- ══════════ 03 改后 · 暗色 ══════════ -->
+  <section class="frame">
+    <div class="cap"><span>03</span><b>改后 · 暗色</b><span class="file">面阶 + hairline；错误卡左缘保留红色</span></div>
+
+    <div class="app dark">
+      <div class="topbar">
+        <span class="tbtn">文件</span><span class="tbtn">编辑</span><span class="tbtn">查看</span>
+        <span class="tbtn">工具</span><span class="tbtn">帮助</span>
+        <span class="spacer"></span>
+        <div class="cmdbar"><span class="caret">›</span><span>搜索操作、命令、文件</span><span class="spacer"></span><span class="key">Ctrl F</span></div>
+        <span class="spacer"></span>
+        <span class="tbtn dim">运行</span>
+      </div>
+      <div class="tabbar"><span class="tab on"><span class="dot"></span>销售数据.csv</span></div>
+
+      <div class="canvas">
+        <svg class="edges">
+          <path d="M560 226 C574 226 582 159 596 159" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+          <path d="M710 198 C710 206 710 210 710 216" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+          <path d="M710 280 C710 296 710 310 710 326" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+        </svg>
+
+        <div class="rail"><i>切</i><i class="on">菜</i></div>
+
+        <div class="in" style="left:40px;top:96px">
+          <div class="in-hd"><span class="in-title">销售数据.csv</span><span class="in-meta">6 列 · 12,480 行</span></div>
+          <table>
+            <tr><th class="num">#</th><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+            <tr><td class="num">1</td><td>2026-01-04</td><td>华东</td><td>键盘</td><td class="r">1,280</td></tr>
+            <tr><td class="num">2</td><td>2026-01-04</td><td>华南</td><td>显示器</td><td class="r">2,340</td></tr>
+            <tr><td class="num">3</td><td>2026-01-05</td><td>华北</td><td>键盘</td><td class="r">980</td></tr>
+            <tr><td class="num">4</td><td>2026-01-05</td><td>华东</td><td>鼠标</td><td class="r">420</td></tr>
+            <tr><td class="num">5</td><td>2026-01-06</td><td>西南</td><td>显示器</td><td class="r">3,100</td></tr>
+            <tr><td class="num">6</td><td>2026-01-06</td><td>华南</td><td>键盘</td><td class="r">1,120</td></tr>
+          </table>
+          <div class="in-foot"><span>销售数据.csv</span><span>·</span><span>12,480 行 × 6 列</span></div>
+        </div>
+
+        <div class="step" style="left:600px;top:120px">
+          <div class="body">
+            <div class="head"><span class="alias">保留华东</span><span class="cmd">search</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">column</span><span class="pv">地区</span></div>
+              <div class="pline"><span class="pk">pattern</span><span class="pv">华东</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step" style="left:600px;top:220px">
+          <div class="body">
+            <div class="head"><span class="alias">去重</span><span class="cmd">dedup</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">column</span><span class="pv">日期</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step selected error" style="left:600px;top:330px">
+          <div class="body">
+            <div class="head"><span class="alias">按地区汇总</span><span class="cmd">agg</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">groupby</span><span class="pv">地区</span></div>
+            </div>
+            <div class="err">xan: column “利润” not found</div>
+          </div>
+        </div>
+
+        <div class="menu" style="left:840px;top:318px">
+          <div class="row hot"><span>从此步运行</span><span class="m">用上次导出</span></div>
+          <div class="row"><span>导出此步结果…</span><span class="m">CSV</span></div>
+          <div class="sep"></div>
+          <div class="row"><span>编辑参数…</span><span class="m">⏎</span></div>
+          <div class="row"><span>重命名</span></div>
+          <div class="row"><span>复制步骤</span></div>
+          <div class="sep"></div>
+          <div class="row danger"><span>删除</span><span class="m">Del</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ 04 运行中 ══════════ -->
+  <section class="frame">
+    <div class="cap"><span>04</span><b>从此步运行 · 运行中</b><span class="file">来源浮条可换文件；上游明说“未参与”</span></div>
+
+    <div class="app">
+      <div class="topbar">
+        <span class="tbtn">文件</span><span class="tbtn">编辑</span><span class="tbtn">查看</span>
+        <span class="tbtn">工具</span><span class="tbtn">帮助</span>
+        <span class="spacer"></span>
+        <div class="cmdbar"><span class="caret">›</span><span>搜索操作、命令、文件</span><span class="spacer"></span><span class="key">Ctrl F</span></div>
+        <span class="spacer"></span>
+        <span class="tbtn dim">运行中</span>
+      </div>
+      <div class="tabbar"><span class="tab on"><span class="dot"></span>销售数据.csv</span></div>
+
+      <div class="canvas">
+        <svg class="edges">
+          <path d="M560 226 C574 226 582 159 596 159" fill="none" stroke="var(--edge)" stroke-width="1.2" stroke-dasharray="3 4"/>
+          <path d="M710 198 C710 206 710 210 710 216" fill="none" stroke="var(--edge)" stroke-width="1.2" stroke-dasharray="3 4"/>
+        </svg>
+
+        <div class="rail"><i>切</i><i class="on">菜</i></div>
+
+        <div class="srcbar">
+          <span class="lbl">从此步运行</span>
+          <span class="sep2"></span>
+          <span>输入</span>
+          <span class="path">销售数据_去重.csv</span>
+          <span class="change">更换</span>
+          <span class="sep2"></span>
+          <span class="path">运行中</span>
+          <span class="cancel">取消</span>
+        </div>
+
+        <div class="in skipped" style="left:40px;top:112px">
+          <div class="in-hd"><span class="in-title">销售数据.csv</span><span class="in-meta">6 列 · 12,480 行</span><span class="state2">本次未使用</span></div>
+          <table>
+            <tr><th class="num">#</th><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+            <tr><td class="num">1</td><td>2026-01-04</td><td>华东</td><td>键盘</td><td class="r">1,280</td></tr>
+            <tr><td class="num">2</td><td>2026-01-04</td><td>华南</td><td>显示器</td><td class="r">2,340</td></tr>
+            <tr><td class="num">3</td><td>2026-01-05</td><td>华北</td><td>键盘</td><td class="r">980</td></tr>
+            <tr><td class="num">4</td><td>2026-01-05</td><td>华东</td><td>鼠标</td><td class="r">420</td></tr>
+            <tr><td class="num">5</td><td>2026-01-06</td><td>西南</td><td>显示器</td><td class="r">3,100</td></tr>
+            <tr><td class="num">6</td><td>2026-01-06</td><td>华南</td><td>键盘</td><td class="r">1,120</td></tr>
+          </table>
+          <div class="in-foot"><span>销售数据.csv</span><span>·</span><span>12,480 行 × 6 列</span></div>
+        </div>
+
+        <div class="step skipped" style="left:600px;top:136px">
+          <div class="body">
+            <div class="head"><span class="alias">保留华东</span><span class="cmd">search</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">column</span><span class="pv">地区</span></div>
+            </div>
+          </div>
+          <span class="state">未参与</span>
+        </div>
+
+        <div class="step skipped" style="left:600px;top:236px">
+          <div class="body">
+            <div class="head"><span class="alias">去重</span><span class="cmd">dedup</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">column</span><span class="pv">日期</span></div>
+            </div>
+          </div>
+          <span class="state">已导出</span>
+        </div>
+
+        <div class="step running" style="left:600px;top:336px">
+          <div class="body">
+            <div class="head"><span class="alias">按地区汇总</span><span class="cmd">agg</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">groupby</span><span class="pv">地区</span></div>
+            </div>
+          </div>
+          <span class="state">运行中</span>
+          <div class="bar"><i></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span class="ok"><b>1</b>输入换成那份导出文件，标签页原本的输入不动；随时可以「更换」</span>
+      <span class="ok"><b>2</b>上游两步灰显并标注「未参与 / 已导出」，不再假装它们刚刚跑过</span>
+      <span class="ok"><b>3</b>下游继续按原分支执行，结果仍进同一个结果面板</span>
+    </div>
+  </section>
+
+  <!-- ══════════ 05 导出反馈 ══════════ -->
+  <section class="frame">
+    <div class="cap"><span>05</span><b>导出此步结果 · 完成反馈</b><span class="file">导出后记住路径，成为下一段的默认输入</span></div>
+
+    <div class="app">
+      <div class="topbar">
+        <span class="tbtn">文件</span><span class="tbtn">编辑</span><span class="tbtn">查看</span>
+        <span class="tbtn">工具</span><span class="tbtn">帮助</span>
+        <span class="spacer"></span>
+        <div class="cmdbar"><span class="caret">›</span><span>搜索操作、命令、文件</span><span class="spacer"></span><span class="key">Ctrl F</span></div>
+        <span class="spacer"></span>
+        <span class="tbtn dim">运行</span>
+      </div>
+      <div class="tabbar"><span class="tab on"><span class="dot"></span>销售数据.csv</span></div>
+
+      <div class="canvas">
+        <svg class="edges">
+          <path d="M560 226 C574 226 582 159 596 159" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+          <path d="M710 198 C710 206 710 210 710 216" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+        </svg>
+
+        <div class="rail"><i>切</i><i class="on">菜</i></div>
+
+        <div class="toast-wrap">
+          <div class="toast">
+            <span class="ok-dot"></span>
+            <span>已从「去重」导出 <span class="mono">2,431</span> 行到 <span class="mono">销售数据_去重.csv</span></span>
+            <span class="sub">318 KB</span>
+            <span class="act">打开文件夹</span>
+          </div>
+        </div>
+
+        <div class="in" style="left:40px;top:112px">
+          <div class="in-hd"><span class="in-title">销售数据.csv</span><span class="in-meta">6 列 · 12,480 行</span></div>
+          <table>
+            <tr><th class="num">#</th><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+            <tr><td class="num">1</td><td>2026-01-04</td><td>华东</td><td>键盘</td><td class="r">1,280</td></tr>
+            <tr><td class="num">2</td><td>2026-01-04</td><td>华南</td><td>显示器</td><td class="r">2,340</td></tr>
+            <tr><td class="num">3</td><td>2026-01-05</td><td>华北</td><td>键盘</td><td class="r">980</td></tr>
+            <tr><td class="num">4</td><td>2026-01-05</td><td>华东</td><td>鼠标</td><td class="r">420</td></tr>
+            <tr><td class="num">5</td><td>2026-01-06</td><td>西南</td><td>显示器</td><td class="r">3,100</td></tr>
+            <tr><td class="num">6</td><td>2026-01-06</td><td>华南</td><td>键盘</td><td class="r">1,120</td></tr>
+          </table>
+          <div class="in-foot"><span>销售数据.csv</span><span>·</span><span>12,480 行 × 6 列</span></div>
+        </div>
+
+        <div class="step" style="left:600px;top:136px">
+          <div class="body">
+            <div class="head"><span class="alias">保留华东</span><span class="cmd">search</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">column</span><span class="pv">地区</span></div>
+              <div class="pline"><span class="pk">pattern</span><span class="pv">华东</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step selected" style="left:600px;top:236px">
+          <div class="body">
+            <div class="head"><span class="alias">去重</span><span class="cmd">dedup</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">column</span><span class="pv">日期</span></div>
+            </div>
+          </div>
+          <span class="state">已导出</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span class="ok"><b>1</b>Toast 给出路径与打开动作，不新开窗口</span>
+      <span class="ok"><b>2</b>这次导出被记住；之后右击下一步「从此步运行」时，默认输入就是它</span>
+    </div>
+  </section>
+
+  <!-- ══════════ 06 入口 ══════════ -->
+  <section class="frame">
+    <div class="cap"><span>06</span><b>入口 · 卡片上的 ⋯</b><span class="file">不再需要为打开菜单切到「菜」</span></div>
+
+    <div class="demo">
+      <svg class="edges">
+        <path d="M311 152 C318 152 320 158 326 158" fill="none" stroke="var(--brand-12)" stroke-width="1.4" stroke-dasharray="3 4"/>
+      </svg>
+
+      <div class="rail"><i>切</i><i class="on">菜</i></div>
+
+      <div class="step selected" style="left:90px;top:170px">
+        <div class="strip">
+          <span class="b">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h9M17 18h3"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="18" r="2"/></svg>
+          </span>
+          <span class="b">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
+          </span>
+          <span class="b on">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg>
+          </span>
+        </div>
+        <div class="body">
+          <div class="head"><span class="alias">按地区汇总</span><span class="cmd">agg</span></div>
+          <div class="params">
+            <div class="pline"><span class="pk">groupby</span><span class="pv">地区</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="menu" style="left:330px;top:150px">
+        <div class="row hot"><span>从此步运行</span><span class="m">用上次导出</span></div>
+        <div class="row"><span>导出此步结果…</span><span class="m">CSV</span></div>
+        <div class="sep"></div>
+        <div class="row"><span>编辑参数…</span><span class="m">⏎</span></div>
+        <div class="row"><span>重命名</span></div>
+        <div class="row"><span>复制步骤</span></div>
+        <div class="sep"></div>
+        <div class="row danger"><span>删除</span><span class="m">Del</span></div>
+      </div>
+
+      <span class="hint" style="left:90px;top:118px">悬停或选中时出现</span>
+      <span class="hint" style="left:90px;top:260px">菜单从 ⋯ 展开，贴着按钮</span>
+      <span class="hint" style="left:90px;top:282px">键盘：选中后 Shift F10</span>
+
+      <span class="tag" style="left:291px;top:114px">1</span>
+      <span class="tag" style="left:42px;top:250px">2</span>
+      <span class="tag" style="left:314px;top:158px">3</span>
+    </div>
+
+    <div class="legend">
+      <span class="ok"><b>1</b>同一份菜单，从卡片的 ⋯ 打开；左栏的「菜」不再是每次操作前要按的开关</span>
+      <span class="ok"><b>2</b>右键保持原样：连接与切割。切/菜仍留在左栏，作为兼容入口</span>
+      <span class="ok"><b>3</b>选中步骤后 Shift F10 打开同一菜单，键盘可达</span>
+    </div>
+
+    <div class="callout">
+      <span class="n">C</span>
+      <p><b>为什么不做「右键点击 = 菜单、右键拖动 = 切割」。</b>靠位移阈值区分点击与拖动，会出现“手抖一下切断了卡片”的误操作；而且 027 已定红线：连线手势一律不改，右键在步骤上起手就是连线。把菜单挪到卡片自己的 ⋯ 上，既不碰手势，也不用再切模式。</p>
+    </div>
+  </section>
+
+  <!-- ══════════ 07 联动与规格 ══════════ -->
+  <section class="frame">
+    <div class="cap"><span>07</span><b>两项如何衔接</b><span class="file">导出 → 运行 是同一条链的两端</span></div>
+
+    <div class="callout">
+      <span class="n">A</span>
+      <p><b>为什么「从此步运行」这次成立。</b>它不假装上游已经算过，而是明确换一份输入：<b>上游最近一次导出的 CSV</b>。所以第 3 步报错、第 2 步导出过时，右击第 3 步即可只跑「按地区汇总」及其下游，标签页的输入文件保持不动。没有导出过时，第一次运行会先让你选文件，之后记住。</p>
+    </div>
+
+    <div class="callout">
+      <span class="n">B</span>
+      <p><b>两项的范围不同，文案必须说清。</b>「从此步运行」= 从此步到分支终点，输入是外部 CSV；「导出此步结果」= 从标签页输入到这一步，结果写盘。前者依赖后者留下的文件，这是它们唯一但关键的耦合。</p>
+    </div>
+
+    <div class="cols" style="margin-top:22px">
+      <div class="panel">
+        <h3>菜单结构与状态</h3>
+        <table class="spec">
+          <tr><th>行</th><th>状态</th><th>说明</th></tr>
+          <tr><td>从此步运行</td><td>默认 / 悬停</td><td>行尾 <span class="mono">用上次导出</span>；没有记录时写 <span class="mono">选择文件</span></td></tr>
+          <tr><td>从此步运行</td><td>首步</td><td>行尾 <span class="mono">当前输入</span>，不需要外部文件</td></tr>
+          <tr><td>从此步运行</td><td>运行中 · 禁用</td><td>行尾 <span class="mono">运行中</span>，避免重复启动</td></tr>
+          <tr><td>导出此步结果…</td><td>无输入文件 · 禁用</td><td>行尾 <span class="mono">CSV</span> 保留，说明可导出什么</td></tr>
+          <tr><td>导出此步结果…</td><td>output 步 · 隐藏</td><td>导出步本身没有可再导出的中间结果</td></tr>
+          <tr><td>编辑参数 / 重命名 / 复制</td><td>默认</td><td>与卡片悬停工具条同一组动作</td></tr>
+          <tr><td>删除</td><td>危险</td><td>红字、不填色；单独分隔，不与运行相邻</td></tr>
+        </table>
+      </div>
+
+      <div class="panel">
+        <h3>规格</h3>
+        <table class="spec">
+          <tr><td>菜单</td><td>236 宽 · 圆角 10 · 内边距 4 · 1px hairline</td></tr>
+          <tr><td>行</td><td>32 高 · 左右 8 · 圆角 6 · 12px / 400</td></tr>
+          <tr><td>行尾读数</td><td>10px 等宽 · 右对齐 · <span class="mono">muted-fg-3</span></td></tr>
+          <tr><td>步骤卡片</td><td>220 宽 · 无序号 · 10 圆角 · 标题 13 / 参数 10.5 等宽</td></tr>
+          <tr><td>错误卡</td><td>左缘 2px 红条 + 红字，不用整卡红底</td></tr>
+          <tr><td>来源浮条</td><td>30 高 · 路径 10.5 等宽 · 「更换」brand 色</td></tr>
+          <tr><td>未参与的步骤</td><td>40% 透明 + 行尾状态，不画运行线</td></tr>
+          <tr><td>图标</td><td>改后菜单不用图标，读数承担信息</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:22px">
+      <h3>落地提醒</h3>
+      <ul>
+        <li><b>范围</b>：新增纯函数 `buildSuffixFromStep()`（沿边取此步到分支终点），与现有 `buildPrefixToStep()` 对称。</li>
+        <li><b>输入覆盖</b>：执行时把 `inputFile` 换成来源文件，其余命令序列化沿用 `serializeStepParams`；标签页的输入指针不改。</li>
+        <li><b>记住来源</b>：按「标签页 + 步骤」记住该步上次导出的绝对路径（与 020/025 的“上次记录”同一套 localStorage 思路）；文件被删则退回选择文件。</li>
+        <li><b>导出不变</b>：仍走 `useSaveIntermediate()` 的前缀执行，只是文案与菜单分组调整。</li>
+        <li><b>位置</b>：实际菜单出现在光标处；原型把它画在卡片右侧，只为同时看清卡片与菜单。</li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

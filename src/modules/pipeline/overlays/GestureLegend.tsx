@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 
 interface GestureLegendProps {
   leftTool: "select" | "pan";
-  rightClickMode: "cut" | "menu";
   swapMouseButtons: boolean;
   locked: boolean;
   className?: string;
@@ -17,12 +16,11 @@ interface LegendItem {
 
 /**
  * Quiet binding legend for the canvas, toggled from the rail's canvas menu.
- * It mirrors the current left tool, right-click mode and button swap so the
- * hints can never drift from the actual gestures.
+ * It mirrors the current left tool and button swap so the hints can never
+ * drift from the actual gestures.
  */
 export function GestureLegend({
   leftTool,
-  rightClickMode,
   swapMouseButtons,
   locked,
   className,
@@ -30,8 +28,9 @@ export function GestureLegend({
   const { t } = useLanguage();
   const primary = swapMouseButtons ? t.mouseRight : t.mouseLeft;
   const secondary = swapMouseButtons ? t.mouseLeft : t.mouseRight;
-  const rightMode = rightClickMode === "cut" ? t.gestureCut : t.gestureMenu;
-  const rightItem: LegendItem = { keys: [secondary], label: rightMode };
+  // Secondary button: cut on blank canvas, connect from a step card. The
+  // legend shows the cut label; the crosshair/cursor tells the rest.
+  const rightItem: LegendItem = { keys: [secondary], label: t.gestureCut };
 
   const items: LegendItem[] =
     leftTool === "pan"

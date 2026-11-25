@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Handle, Position } from "reactflow";
-import { SlidersHorizontal, Pencil, Check } from "lucide-react";
+import { SlidersHorizontal, Pencil, Check, MoreHorizontal } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useLanguage } from "@/i18n";
@@ -12,7 +12,13 @@ export interface PipelineStepNodeData {
   onStepClick: (step: PipelineStep) => void;
   onStepRemove: (stepId: string | string[]) => void;
   onStepAliasUpdate: (stepId: string, alias: string) => void;
-  onContextMenu: (stepId: string, x: number, y: number) => void;
+  /** `openMenu` opens the step menu (the card's ⋯ / Shift+F10). */
+  onContextMenu: (
+    stepId: string,
+    x: number,
+    y: number,
+    openMenu?: boolean,
+  ) => void;
   isSelected: boolean;
   index: number;
   isDeleting?: boolean;
@@ -245,7 +251,7 @@ export function PipelineStepNode({
       </div>
       {!data.locked && (
         <div
-          className={`absolute -top-4 right-2 flex h-[26px] items-stretch rounded-[6px] border border-border bg-card transition-opacity duration-100 group-hover:opacity-100 group-focus-within:opacity-100 ${
+          className={`absolute right-0 -top-[30px] flex h-[26px] items-stretch rounded-[6px] border border-border bg-card transition-opacity duration-100 group-hover:opacity-100 group-focus-within:opacity-100 after:absolute after:inset-x-0 after:-bottom-1 after:h-1 after:content-[''] ${
             selected ? "opacity-100" : "opacity-0"
           }`}
         >
@@ -271,11 +277,32 @@ export function PipelineStepNode({
               e.stopPropagation();
               setIsEditing(true);
             }}
-            className={`grid h-6 w-[25px] place-items-center rounded-r-[5px] text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 ${
+            className={`grid h-6 w-[25px] place-items-center border-r border-border-soft text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 ${
               isEditing ? "bg-brand-soft text-primary" : ""
             }`}
           >
             <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
+          </button>
+        </Tooltip>
+        <Tooltip content={t.stepActionMore} side="top">
+          <button
+            type="button"
+            aria-label={t.stepActionMore}
+            aria-haspopup="menu"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Anchor the menu to the card's outer right edge (design 078),
+              // not to the button, so it never covers the card itself.
+              // The strip's parent is the visible card (the React Flow node
+              // wrapper is wider than the card by design).
+              const card =
+                e.currentTarget.parentElement ?? e.currentTarget;
+              const rect = card.getBoundingClientRect();
+              data.onContextMenu(data.step.id, rect.right + 8, rect.top, true);
+            }}
+            className="grid h-6 w-[25px] place-items-center rounded-r-[5px] text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+          >
+            <MoreHorizontal className="h-3.5 w-3.5" strokeWidth={1.5} />
           </button>
         </Tooltip>
       </div>
@@ -356,7 +383,6 @@ export function PipelineStepNode({
               onContextMenu={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                data.onContextMenu(data.step.id, e.clientX, e.clientY);
               }}
             >
               {renderCardContent()}
@@ -381,9 +407,10 @@ export function PipelineStepNode({
             : undefined
         }
         onContextMenu={(e) => {
+          // Right click no longer opens a menu; it starts a connection (on a
+          // card) or a cut (on blank canvas) through the canvas gesture.
           e.preventDefault();
           e.stopPropagation();
-          data.onContextMenu(data.step.id, e.clientX, e.clientY);
         }}
       >
         {renderCardContent()}

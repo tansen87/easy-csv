@@ -706,6 +706,8 @@ export function useExecution({
     runs,
     isTabExecuting,
     resultPreview,
+    /** Write a run's result cards (also used by "run from this step"). */
+    setTabResultPreview,
     overwriteConfirm,
     confirmOverwriteExecution,
     cancelOverwriteExecution,

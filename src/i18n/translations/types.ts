@@ -279,6 +279,7 @@ export interface Translations {
   commandDocs: string;
   stepActionParams: string;
   stepActionRename: string;
+  stepActionMore: string;
   executePipelinesHint: string;
   newTab: string;
 
@@ -371,13 +372,10 @@ export interface Translations {
   daysAgo: string;
   saved: string;
   unsaved: string;
-  rightClickCutMode: string;
   leftToolSelect: string;
   leftToolPan: string;
   rightToolSelect: string;
   rightToolPan: string;
-  leftClickCutMode: string;
-  leftClickMenuMode: string;
   swapMouseButtons: string;
   restoreMouseButtons: string;
   canvasTools: string;
@@ -391,12 +389,16 @@ export interface Translations {
   gestureSelect: string;
   gesturePan: string;
   gestureCut: string;
-  gestureMenu: string;
   gestureZoom: string;
   gestureWheel: string;
   gestureLocked: string;
-  rightClickMenuMode: string;
   saveIntermediateAsInput: string;
+  runFromStep: string;
+  runFromStepNoSteps: string;
+  runFromStepNeedInput: string;
+  runFromStepFailed: string;
+  /** `{name}` placeholder. */
+  runFromStepDone: string;
   mouseLeft: string;
   mouseRight: string;
 
@@ -410,6 +412,9 @@ export interface Translations {
   copy: string;
   copied: string;
   paste: string;
+  copyStep: string;
+  pasteStep: string;
+  deleteStep: string;
   scrollToBottom: string;
   noMatchingLogs: string;
   logLevelInfo: string;

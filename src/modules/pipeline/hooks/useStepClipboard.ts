@@ -30,24 +30,33 @@ export function useStepClipboard({
     edges: { source: string; target: string }[];
   } | null>(null);
 
+  /** Copy an explicit set of steps (used by the step menu, design 078). */
+  const copySteps = useCallback(
+    (stepIds: string[]) => {
+      const idSet = new Set(stepIds);
+      const selectedSteps = steps.filter((s) => idSet.has(s.id));
+      if (selectedSteps.length === 0) return;
+      const ids = new Set(selectedSteps.map((s) => s.id));
+      const internalEdges = edges.filter(
+        (e) => e.source && e.target && ids.has(e.source) && ids.has(e.target),
+      );
+      clipboardRef.current = {
+        steps: selectedSteps,
+        edges: internalEdges.map((e) => ({
+          source: e.source,
+          target: e.target,
+        })),
+      };
+    },
+    [steps, edges],
+  );
+
   const handleCopySelected = useCallback(() => {
     if (selectedNodeIds.size === 0) return;
-    const selectedSteps = steps.filter((s) => selectedNodeIds.has(s.id));
-    if (selectedSteps.length === 0) return;
-    const ids = new Set(selectedSteps.map((s) => s.id));
-    const internalEdges = edges.filter(
-      (e) => e.source && e.target && ids.has(e.source) && ids.has(e.target),
-    );
-    clipboardRef.current = {
-      steps: selectedSteps,
-      edges: internalEdges.map((e) => ({
-        source: e.source,
-        target: e.target,
-      })),
-    };
+    copySteps([...selectedNodeIds]);
     // Close the floating action bar after copying
     clearSelection();
-  }, [selectedNodeIds, steps, edges, clearSelection]);
+  }, [selectedNodeIds, copySteps, clearSelection]);
 
   const handlePasteClipboard = useCallback(() => {
     const clip = clipboardRef.current;
@@ -82,5 +91,5 @@ export function useStepClipboard({
     }
   }, [steps, edges, onStepsChange, onEdgesChange]);
 
-  return { clipboardRef, handleCopySelected, handlePasteClipboard };
+  return { clipboardRef, copySteps, handleCopySelected, handlePasteClipboard };
 }

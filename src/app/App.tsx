@@ -69,6 +69,7 @@ import { useFileSave } from "@/hooks/fileIO/useFileSave";
 import { useImportExport } from "@/hooks/fileIO/useImportExport";
 import { useExecution } from "@/hooks/execution/useExecution";
 import { useSaveIntermediate } from "@/hooks/execution/useSaveIntermediate";
+import { useRunFromStep } from "@/hooks/execution/useRunFromStep";
 import {
   useAppBootstrap,
   useRunCompletionNotification,
@@ -813,6 +814,20 @@ function AppContent() {
     getCurrentTab: tabsCtl.getCurrentTab,
     resolveRunDelimiter: tabsCtl.resolveRunDelimiter,
     showToast,
+  });
+
+  const { handleRunFromStep } = useRunFromStep({
+    getCurrentTab: tabsCtl.getCurrentTab,
+    resolveRunDelimiter: tabsCtl.resolveRunDelimiter,
+    showToast,
+    addLog,
+    setTabResultPreview: execution.setTabResultPreview,
+    labels: {
+      noSteps: t.runFromStepNoSteps,
+      needInput: t.runFromStepNeedInput,
+      failed: t.runFromStepFailed,
+      done: t.runFromStepDone,
+    },
   });
 
   // Wrap save/execute/export callbacks to update pipeline save timestamp
@@ -1777,6 +1792,7 @@ function AppContent() {
                   doubleClickFitView={settings.doubleClickFitView}
                   onSavePipeline={handleSavePipelineAndMarkSaved}
                   onSaveIntermediate={handleSaveIntermediateAsInput}
+                  onRunFromStep={handleRunFromStep}
                   delimiter={tabsHook.getCurrentTab()?.defaultDelimiter}
                   delimiterMode={delimiterMode}
                   delimiterSource={tabsHook.getCurrentTab()?.delimiterSource}

@@ -76,6 +76,8 @@ interface HomeViewProps {
   doubleClickFitView?: boolean;
   onSavePipeline?: () => void;
   onSaveIntermediate?: (stepId: string) => void;
+  /** Run this step and everything downstream on an exported CSV (design 078). */
+  onRunFromStep?: (stepId: string) => void;
   pipelineSavedAt?: number;
   /** Delimiter the selected tab's input file. */
   delimiter?: string;
@@ -141,6 +143,7 @@ export const HomeView = React.memo(function HomeView({
   doubleClickFitView = true,
   onSavePipeline,
   onSaveIntermediate,
+  onRunFromStep,
   pipelineSavedAt,
   delimiter,
   delimiterMode,
@@ -371,6 +374,7 @@ export const HomeView = React.memo(function HomeView({
           doubleClickFitView={doubleClickFitView}
           onSavePipeline={onSavePipeline}
           onSaveIntermediate={onSaveIntermediate}
+          onRunFromStep={onRunFromStep}
           delimiter={delimiter}
           delimiterMode={delimiterMode}
           delimiterSource={delimiterSource}

@@ -36,7 +36,12 @@ interface UsePipelineLayoutArgs {
   onSaveRef: RefObject<() => void>;
   onTableDeleteRef: RefObject<(() => void) | undefined>;
   onDelimiterChangeRef: RefObject<((mode: any) => void) | undefined>;
-  handleContextMenu: (stepId: string, x: number, y: number) => void;
+  handleContextMenu: (
+    stepId: string,
+    x: number,
+    y: number,
+    openMenu?: boolean,
+  ) => void;
   handleTableContextMenu: (col: number, x: number, y: number) => void;
   nodes: Node[];
   setNodes: Dispatch<SetStateAction<Node[]>>;
