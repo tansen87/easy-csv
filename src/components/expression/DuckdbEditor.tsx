@@ -223,14 +223,26 @@ export function DuckdbEditor({
         return;
       }
 
+      // Tab belongs to the editor: accept the highlighted suggestion when the
+      // popover is open, otherwise indent by two spaces. Without this, an empty
+      // editor lets Tab bubble to the dialog and push focus out of the field.
+      // Shift+Tab is left alone so the keyboard can still move backwards out.
+      if (e.key === "Tab" && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (suggestions.length > 0) {
+          insertAt(value, range.start, range.end, suggestions[selIndex].insert);
+        } else {
+          const ta = e.currentTarget;
+          const start = ta.selectionStart ?? value.length;
+          const end = ta.selectionEnd ?? value.length;
+          insertAt(value, start, end, "  ");
+        }
+        return;
+      }
+
       if (suggestions.length === 0) return;
       switch (e.key) {
-        case "Tab":
-          // Accept the highlighted autocomplete item.
-          e.preventDefault();
-          e.stopPropagation();
-          insertAt(value, range.start, range.end, suggestions[selIndex].insert);
-          break;
         case "ArrowDown":
           e.preventDefault();
           setSelIndex((i) => (i + 1) % suggestions.length);
