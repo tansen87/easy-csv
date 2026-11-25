@@ -74,6 +74,10 @@ interface SettingsTabContentProps {
   /** Auto-open the log drawer when a run starts (071); default off. */
   autoShowLogPanel: boolean;
   onAutoShowLogPanelChange: (value: boolean) => void;
+  /** Usage ledger toggle and wipe (design 079). */
+  ledgerEnabled: boolean;
+  onLedgerEnabledChange: (value: boolean) => void;
+  onClearLedger: () => void;
   /** Open `data/logs/` in the system file manager. */
   onOpenLogsDir: () => void;
   /** Clear the "intro seen" flag so the canvas guide shows again. */
@@ -87,7 +91,12 @@ interface SettingsTabContentProps {
   ) => void;
 }
 
-type ClearTarget = "conversations" | "feedback" | "corrections" | "history";
+type ClearTarget =
+  | "conversations"
+  | "feedback"
+  | "corrections"
+  | "history"
+  | "ledger";
 
 /** Row id → which dataset its 「清除」 button wipes. */
 const CLEAR_TARGETS: Record<string, ClearTarget> = {
@@ -95,9 +104,10 @@ const CLEAR_TARGETS: Record<string, ClearTarget> = {
   "ai-clear-conversations": "conversations",
   "ai-clear-feedback": "feedback",
   "ai-clear-corrections": "corrections",
+  "clear-ledger": "ledger",
 };
 
-const CLEAR_COMMANDS: Record<ClearTarget, string> = {
+const CLEAR_COMMANDS: Record<Exclude<ClearTarget, "ledger">, string> = {
   conversations: "clear_conversations",
   feedback: "clear_feedback",
   corrections: "clear_corrections",
@@ -243,6 +253,9 @@ export function SettingsTabContent({
   onLogRetentionDaysChange,
   autoShowLogPanel,
   onAutoShowLogPanelChange,
+  ledgerEnabled,
+  onLedgerEnabledChange,
+  onClearLedger,
   onOpenLogsDir,
   onResetOnboarding,
   aiConfig,
@@ -265,14 +278,18 @@ export function SettingsTabContent({
     if (!clearTarget) return;
     setClearing(true);
     try {
-      await invoke(CLEAR_COMMANDS[clearTarget]);
+      if (clearTarget === "ledger") {
+        onClearLedger();
+      } else {
+        await invoke(CLEAR_COMMANDS[clearTarget]);
+      }
     } catch (error) {
       console.error("Failed to clear data:", error);
     } finally {
       setClearing(false);
       setClearTarget(null);
     }
-  }, [clearTarget]);
+  }, [clearTarget, onClearLedger]);
 
   const handleThemeChange = useCallback(
     (next: "dark" | "light" | "system") => {
@@ -360,7 +377,9 @@ export function SettingsTabContent({
                   ? doubleClickFitView
                   : row.id === "auto-open-logs"
                     ? autoShowLogPanel
-                    : autoCheckUpdate;
+                    : row.id === "usage-ledger"
+                      ? ledgerEnabled
+                      : autoCheckUpdate;
         const change =
           row.id === "no-headers"
             ? onNoHeadersChange
@@ -372,7 +391,9 @@ export function SettingsTabContent({
                   ? onDoubleClickFitViewChange
                   : row.id === "auto-open-logs"
                     ? onAutoShowLogPanelChange
-                    : onAutoCheckUpdateChange;
+                    : row.id === "usage-ledger"
+                      ? onLedgerEnabledChange
+                      : onAutoCheckUpdateChange;
         return (
           <SettingsSwitch
             ref={(node) => {
@@ -895,10 +916,14 @@ export function SettingsTabContent({
         <div className="z-modal fixed inset-0 flex items-center justify-center bg-black/50">
           <div className="w-[min(400px,calc(100vw-32px))] rounded-xl border border-border bg-card p-5 shadow-lg">
             <h3 className="mb-2 text-sm font-medium">
-              {t.aiClearConfirmTitle}
+              {clearTarget === "ledger"
+                ? t.ledgerClearConfirmTitle
+                : t.aiClearConfirmTitle}
             </h3>
             <p className="mb-4 text-xs text-muted-foreground">
-              {t.aiClearConfirmDesc}
+              {clearTarget === "ledger"
+                ? t.ledgerClearConfirmDesc
+                : t.aiClearConfirmDesc}
             </p>
             <div className="mt-3 flex justify-end gap-2">
               <Button

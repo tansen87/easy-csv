@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 079-01 · 使用账本：重复使用的回声</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --rule:oklch(0.2 0.01 80 / 7%);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --edge:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+    --brand-ink:oklch(0.35 0.05 250);
+
+    --ok:oklch(0.5 0.09 150);
+    --danger:oklch(0.52 0.16 27);
+    --danger-soft:color-mix(in oklab,var(--danger) 8%,transparent);
+    --mark:oklch(0.56 0.17 27);
+
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --canvas-dot:oklch(0.2 0.01 80 / 8%);
+    --chrome:oklch(0.985 0.002 80);
+    --tab:oklch(0.975 0.002 80);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-menu:0 8px 24px oklch(0.2 0.02 80 / 10%),0 1px 2px oklch(0.2 0.02 80 / 6%);
+  }
+  .dark{
+    color:var(--fg);
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --rule:oklch(0.96 0.005 85 / 9%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --edge:oklch(1 0 0 / 24%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 18%,transparent);
+    --brand-ink:oklch(0.8 0.04 245);
+    --ok:oklch(0.72 0.08 150);
+    --danger:oklch(0.7 0.12 27);
+    --danger-soft:color-mix(in oklab,var(--danger) 12%,transparent);
+    --stage:oklch(0.115 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --canvas-dot:oklch(1 0 0 / 7%);
+    --chrome:oklch(0.175 0 0);
+    --tab:oklch(0.165 0 0);
+    --shadow-card:none;
+    --shadow-menu:0 10px 30px oklch(0 0 0 / 45%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased}
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       border-bottom:1px solid var(--border-soft);margin-bottom:16px}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto;font-family:var(--mono);font-size:10px}
+  .note{margin:14px 0 0;font-size:11.5px;line-height:1.8;color:var(--muted-fg);max-width:1010px}
+  .note b{font-weight:500;color:var(--fg)}
+
+  /* ── 应用外壳（沿用 078） ───────────────────── */
+  .app{width:1160px;max-width:100%;height:680px;flex:none;border:1px solid var(--border);border-radius:12px;
+       overflow:hidden;display:flex;flex-direction:column;position:relative;background:var(--bg);color:var(--fg);
+       box-shadow:var(--shadow-card)}
+  .topbar{height:44px;flex:none;display:flex;align-items:center;gap:2px;padding:0 12px;
+          border-bottom:1px solid var(--border);background:var(--chrome)}
+  .tbtn{font-size:12px;padding:5px 9px;border-radius:6px;color:var(--muted-fg)}
+  .tbtn.dim{color:var(--muted-fg-3)}
+  .spacer{flex:1}
+  .cmdbar{height:26px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid var(--border);
+          border-radius:6px;width:300px;color:var(--muted-fg-3);font-size:11px}
+  .cmdbar .caret{font-family:var(--mono);color:var(--muted-fg-2)}
+  .key{font-family:var(--mono);font-size:9.5px;border:1px solid var(--border);border-radius:4px;
+       padding:1px 4px;color:var(--muted-fg-2);background:var(--bg)}
+  .tabbar{height:34px;flex:none;display:flex;align-items:center;gap:2px;padding:0 8px;
+          border-bottom:1px solid var(--border);background:var(--tab)}
+  .tab{height:24px;display:inline-flex;align-items:center;gap:6px;padding:0 9px;border-radius:5px;
+       font-size:11.5px;color:var(--muted-fg-3)}
+  .tab.on{background:var(--brand-soft);color:var(--brand);border:1px solid var(--brand-12)}
+  .tab .dot{width:4px;height:4px;border-radius:50%;background:var(--ok)}
+
+  /* 运行读数（现有 tab 行右端，追加结算段） */
+  .readout{margin-left:auto;display:flex;align-items:center;gap:8px;padding-left:12px;
+           font-size:10.5px;color:var(--muted-fg);white-space:nowrap}
+  .readout .mono{font-family:var(--mono);font-size:10px;color:var(--muted-fg-2);font-variant-numeric:tabular-nums}
+  .readout .pill{display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 6px;border-radius:4px;
+                 background:var(--brand-soft);color:var(--brand);font-size:10px;font-weight:500}
+  .readout .sep{width:1px;height:11px;background:var(--border)}
+  .readout .run-facts{display:inline-flex;align-items:center;gap:6px;height:18px;padding:0 7px;border-radius:4px;
+                      background:color-mix(in oklab,var(--brand) 7%,transparent);color:var(--brand-ink);
+                      font-family:var(--mono);font-size:10px;font-variant-numeric:tabular-nums}
+
+  .canvas{flex:1;position:relative;overflow:hidden;background-color:var(--bg);
+          background-image:radial-gradient(circle,var(--canvas-dot) 1px,transparent 1px);
+          background-size:22px 22px}
+  .edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+  .rail{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:26px;height:132px;
+        border:1px solid var(--border);border-radius:7px;background:var(--card);display:flex;
+        flex-direction:column;z-index:3}
+  .rail i{flex:1;display:grid;place-items:center;font:400 10px/1 var(--mono);color:var(--muted-fg-3)}
+  .rail i.on{color:var(--brand);background:var(--brand-soft);border-radius:5px;margin:2px}
+  .rail i + i{border-top:1px solid var(--border-soft)}
+
+  .in{position:absolute;width:470px;background:var(--paper);border:1px solid var(--border);
+      border-radius:12px;overflow:hidden;box-shadow:var(--shadow-card);z-index:2}
+  .in-hd{height:38px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--rule)}
+  .in-title{font-size:12.5px;font-weight:500;white-space:nowrap}
+  .in-meta{margin-left:auto;font:400 10.5px/1 var(--mono);color:var(--muted-fg-3)}
+  .in table{width:100%;border-collapse:collapse;font-size:11px}
+  .in th,.in td{padding:5px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--rule);
+                color:var(--muted-fg)}
+  .in th{background:color-mix(in oklab,var(--muted) 60%,transparent);font-weight:500;font-size:10.5px;
+         color:var(--muted-fg-3)}
+  .in td.r{text-align:right;font-family:var(--mono);font-size:10.5px}
+  .in .num{width:30px;text-align:right;font:400 10px/1 var(--mono);color:var(--muted-fg-3)}
+  .in-foot{height:24px;display:flex;align-items:center;gap:10px;padding:0 12px;font:400 10px/1 var(--mono);
+           color:var(--muted-fg-3);border-top:1px solid var(--rule);
+           background:color-mix(in oklab,var(--muted) 35%,transparent)}
+
+  .step{position:absolute;width:206px;background:var(--card);border:1px solid var(--border);
+        border-radius:10px;box-shadow:var(--shadow-card);z-index:2}
+  .step .body{padding:9px 10px}
+  .step .head{display:flex;align-items:center;gap:8px;min-width:0}
+  .step .alias{font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .step .cmd{margin-left:auto;flex:none;font:400 10px/1 var(--mono);color:var(--muted-fg-3)}
+  .step .params{margin-top:5px;display:flex;flex-direction:column;gap:2px}
+  .pline{display:flex;gap:6px;min-width:0;font:400 10.5px/16px var(--mono)}
+  .pk{flex:none;min-width:52px;color:var(--muted-fg-3)}
+  .pv{color:var(--muted-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* 结果节点（对应 ResultTableNode） */
+  .result{position:absolute;width:540px;background:var(--card);border:1px solid var(--border);
+          border-radius:10px;overflow:hidden;box-shadow:var(--shadow-card);z-index:2}
+  .result-hd{height:38px;display:flex;align-items:center;gap:8px;padding:0 12px;background:var(--muted);
+             border-bottom:1px solid var(--rule)}
+  .result-hd .name{font-size:12.5px;font-weight:500}
+  .result-hd .meta{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg-2);
+                   font-variant-numeric:tabular-nums;margin-left:auto}
+  .result table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
+  .result th,.result td{padding:5px 9px;border:1px solid var(--rule);text-align:left;
+                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted-fg)}
+  .result th{background:color-mix(in oklab,var(--muted) 55%,transparent);font-weight:500;font-size:10px;
+             color:var(--muted-fg-2)}
+  .result td.r{text-align:right;font-family:var(--mono);font-size:10.5px;font-variant-numeric:tabular-nums}
+
+  /* 账本读数（画布右下常驻） */
+  .ledger-chip{position:absolute;right:16px;bottom:16px;display:flex;align-items:center;gap:7px;height:26px;
+               padding:0 10px 0 8px;border:1px solid var(--border);border-radius:7px;background:var(--card);
+               box-shadow:var(--shadow-card);font-size:11px;color:var(--muted-fg);z-index:4;white-space:nowrap}
+  .ledger-chip .num{font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;color:var(--fg)}
+  .ledger-chip .lead{color:var(--muted-fg-2)}
+  .ledger-chip .arrow{color:var(--muted-fg-3);font-size:10px}
+
+  /* 刻痕 */
+  .tally{width:22px;height:20px;flex:none;color:var(--brand)}
+  .tally path{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+  .tally.ghost{color:var(--muted-fg-3);opacity:.5}
+  .tally.sm{width:16px;height:15px}
+
+  /* 里程碑浮卡 */
+  .toast{position:absolute;right:16px;bottom:52px;width:306px;border:1px solid var(--border);border-radius:10px;
+         background:var(--card);box-shadow:var(--shadow-menu);z-index:5;overflow:hidden}
+  .toast .in2{padding:14px 14px 12px}
+  .toast .row1{display:flex;align-items:flex-start;gap:10px}
+  .toast .eyebrow2{font-family:var(--mono);font-size:9.5px;letter-spacing:.03em;color:var(--muted-fg-3);
+                   margin-bottom:3px}
+  .toast .big{font-family:var(--mono);font-size:23px;line-height:1.15;font-weight:500;
+              font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .toast .sub{margin:7px 0 0;font-size:11.5px;line-height:1.65;color:var(--muted-fg)}
+  .toast .foot{display:flex;align-items:center;padding:7px 14px;border-top:1px solid var(--border-soft);
+               font-size:11px;color:var(--brand-ink)}
+  .toast .foot .dismiss{margin-left:auto;color:var(--muted-fg-3);font-family:var(--mono);font-size:10px}
+
+  /* 历程面板（dock 320） */
+  .dock{width:320px;border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden;
+        box-shadow:var(--shadow-card);display:flex;flex-direction:column}
+  .dock-hd{height:40px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--border-soft)}
+  .dock-hd .t{font-size:12px;font-weight:500}
+  .dock-hd .x{margin-left:auto;color:var(--muted-fg-3);font-size:12px}
+  .dock-body{padding:14px 14px 10px}
+  .big-num{font-family:var(--mono);font-size:33px;line-height:1.05;font-weight:500;font-variant-numeric:tabular-nums;
+           letter-spacing:-.02em}
+  .big-lbl{margin-top:4px;font-size:11px;color:var(--muted-fg)}
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;
+            padding-top:12px;border-top:1px solid var(--border-soft)}
+  .stat .v{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+  .stat .k{font-size:10px;color:var(--muted-fg-3);margin-top:1px}
+  .sect{margin-top:14px;padding-top:12px;border-top:1px solid var(--border-soft)}
+  .sect-hd{display:flex;align-items:baseline;gap:8px;font-size:10.5px;color:var(--muted-fg-3);
+           font-family:var(--mono);letter-spacing:.02em}
+  .sect-hd .r{margin-left:auto;font-size:10px}
+  .bars{display:flex;align-items:flex-end;gap:6px;height:56px;margin-top:10px}
+  .bars .b{flex:1;background:color-mix(in oklab,var(--fg) 16%,transparent);border-radius:2px 2px 0 0}
+  .bars .b.on{background:var(--brand)}
+  .week{display:flex;align-items:center;gap:5px;margin-top:9px}
+  .week i{width:6px;height:6px;border-radius:50%;background:var(--brand)}
+  .week i.off{background:color-mix(in oklab,var(--fg) 12%,transparent)}
+  .week .t{margin-left:auto;font-size:10px;color:var(--muted-fg-3);font-family:var(--mono)}
+  .mile{display:flex;align-items:center;gap:9px;height:32px;font-size:11.5px}
+  .mile .tally{width:18px;height:17px}
+  .mile .nm{color:var(--fg)}
+  .mile .th{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);
+            font-variant-numeric:tabular-nums}
+  .mile.locked .nm{color:var(--muted-fg-3)}
+  .mile.locked .th{color:var(--muted-fg-3);opacity:.75}
+  .mile .when{font-family:var(--mono);font-size:10px;color:var(--brand);min-width:34px;text-align:right}
+  .dock-foot{padding:9px 14px;border-top:1px solid var(--border-soft);display:flex;align-items:center;gap:8px;
+             font-size:10px;color:var(--muted-fg-3)}
+  .dock-foot .clr{margin-left:auto;color:var(--muted-fg-2)}
+
+  /* 设置行 */
+  .setting{width:640px;border:1px solid var(--border);border-radius:10px;background:var(--card);padding:12px 14px;
+           display:flex;align-items:flex-start;gap:14px}
+  .setting .lbl{font-size:12px;font-weight:500}
+  .setting .desc{margin-top:3px;font-size:11px;line-height:1.7;color:var(--muted-fg);max-width:440px}
+  .switch{margin-left:auto;position:relative;width:28px;height:16px;border-radius:99px;background:var(--brand);flex:none}
+  .switch::after{content:"";position:absolute;top:2px;left:14px;width:12px;height:12px;border-radius:50%;background:#fff}
+  .ghostbtn{margin-left:8px;font-size:10.5px;color:var(--muted-fg-2);border:1px solid var(--border);
+            border-radius:5px;padding:3px 7px;white-space:nowrap}
+
+  /* 方案对比 */
+  .opts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;align-items:start}
+  .opt-hd{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .opt-hd .letter{font-family:var(--mono);font-size:11px;color:var(--brand)}
+  .opt-hd h3{margin:0;font-size:13px;font-weight:500}
+  .opt-hd .pick{font-size:10px;color:var(--brand);border:1px solid color-mix(in oklab,var(--brand) 35%,transparent);
+                border-radius:3px;padding:0 4px;line-height:15px}
+  .opt-hd .no{font-size:10px;color:var(--muted-fg-3);border:1px solid var(--border);border-radius:3px;
+              padding:0 4px;line-height:15px}
+  .crop{position:relative;border:1px solid var(--border);border-radius:10px;overflow:hidden;
+        background-color:var(--bg);background-image:radial-gradient(circle,var(--canvas-dot) 1px,transparent 1px);
+        background-size:20px 20px}
+  .crop .pad{padding:14px}
+  .opt .cap2{margin:9px 0 0;font-size:11px;line-height:1.7;color:var(--muted-fg)}
+  .opt .cap2 b{font-weight:500;color:var(--fg)}
+
+  /* 判断：两栏 */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .panel{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:14px 16px}
+  .panel h3{margin:0 0 8px;font-size:12.5px;font-weight:500}
+  .panel h3 .k{font-family:var(--mono);font-size:10px;color:var(--brand);margin-right:6px}
+  .panel ul{margin:0;padding-left:16px;font-size:11.5px;line-height:1.9;color:var(--muted-fg)}
+  .panel ul b{font-weight:500;color:var(--fg)}
+  .panel.stop{border-color:color-mix(in oklab,var(--danger) 26%,var(--border))}
+  .panel.stop h3 .k{color:var(--danger)}
+  .callout{display:flex;gap:12px;padding:13px 16px;border:1px solid var(--border);border-radius:10px;
+           background:var(--card);margin-top:16px}
+  .callout .n{font-family:var(--mono);font-size:10px;color:var(--brand);flex:none;padding-top:2px}
+  .callout p{margin:0;font-size:11.5px;line-height:1.8;color:var(--muted-fg);max-width:none}
+  .callout p b{font-weight:500;color:var(--fg)}
+
+  /* 反例 */
+  .badge-xp{border:1px dashed var(--danger);border-radius:10px;padding:12px}
+  .xp-t{display:flex;align-items:center;gap:8px;font-size:11px}
+  .xp-lv{font-family:var(--mono);font-size:10px;color:var(--danger)}
+  .xp-bar{height:6px;margin-top:8px;border-radius:99px;background:color-mix(in oklab,var(--fg) 9%,transparent);
+          overflow:hidden}
+  .xp-bar i{display:block;height:100%;width:62%;background:var(--danger);opacity:.55}
+  .xp-meta{margin-top:6px;font-family:var(--mono);font-size:9.5px;color:var(--muted-fg-3)}
+  .streak{display:flex;gap:4px;margin-top:10px}
+  .streak i{width:18px;height:18px;border-radius:4px;background:color-mix(in oklab,var(--danger) 12%,transparent);
+            color:var(--danger);font:400 9px/18px var(--mono);text-align:center}
+  .streak i.miss{background:transparent;border:1px dashed color-mix(in oklab,var(--fg) 16%,transparent);color:var(--muted-fg-3)}
+  .quest{margin-top:10px;font-size:10.5px;color:var(--muted-fg);line-height:1.9}
+  .quest s{color:var(--muted-fg-3)}
+
+  /* 标注 */
+  .tag{position:absolute;font-family:var(--mono);font-size:9.5px;line-height:1.2;color:#fff;background:var(--mark);
+       border-radius:50%;width:16px;height:16px;display:grid;place-items:center;z-index:7}
+  .legend{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 22px;font-size:11px;line-height:1.7;
+          color:var(--muted-fg);max-width:1120px}
+  .legend span{display:inline-flex;gap:6px;align-items:baseline}
+  .legend b{font:400 10px/1 var(--mono);color:var(--mark)}
+
+  /* 表格 */
+  table.spec{width:100%;border-collapse:collapse;font-size:11.5px}
+  table.spec th{text-align:left;font-weight:500;color:var(--muted-fg-3);font-size:10.5px;
+                padding:0 10px 7px 0;border-bottom:1px solid var(--border-soft)}
+  table.spec td{padding:7px 10px 7px 0;border-bottom:1px solid var(--border-soft);color:var(--muted-fg);
+                vertical-align:top;line-height:1.7}
+  table.spec td:first-child{color:var(--fg);white-space:nowrap}
+  table.spec tr:last-child td{border-bottom:0}
+  .cols2{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+  .mini-hd{font-size:11px;font-weight:500;color:var(--muted-fg);margin:0 0 8px;font-family:var(--mono)}
+  .dark-zone{padding:14px;background-color:var(--bg);
+             background-image:radial-gradient(circle,var(--canvas-dot) 1px,transparent 1px);background-size:20px 20px}
+  ul.plain{margin:0;padding-left:16px;font-size:11.5px;line-height:1.9;color:var(--muted-fg)}
+  ul.plain b{font-weight:500;color:var(--fg)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">079 · 使用账本 / 重复使用的回声</div>
+    <h1>用久了该有回声：把真实产出记成一本账</h1>
+    <p>问题不在「有没有奖励」，而在「重复使用的价值有没有被看见」。这个工具一次跑完，只剩一张结果表和一行日志；第二次、第十次、第一百次，屏幕和第一次一模一样。<b>建议做一层很薄的账本</b>：每次运行结束记下本次产出的行数与耗时，右下角留一个累计读数，跨过某个整数时用一道刻痕和一张小卡确认一次。<b>不建议做积分、等级、连续登录、排行榜</b>——那套东西会把注意力从「这活干完了」挪到「怎么攒分」，也会在断签时变成压力。下面给出三个方向、推荐方向的四个画面，以及口径、存储与落地清单。</p>
+  </div>
+
+  <div class="direction">
+    <div><dt>产品</dt><dd>桌面 CSV 管道编辑器，把一串 xan 命令连成流水线，本地跑完就出结果</dd></div>
+    <div><dt>性格</dt><dd>精确、克制，带一点纪念感</dd></div>
+    <div><dt>世界</dt><dd>实验室台账：账本纸、等宽读数、铅笔刻痕</dd></div>
+    <div><dt>时刻</dt><dd>一次运行结束，数字从旧值滚到新值，右下角多一行累计</dd></div>
+    <div><dt>签名</dt><dd>里程碑是一道刻痕（五笔之一），不是徽章、金币或礼花</dd></div>
+  </div>
+
+  <!-- ═════════ 01 判断 ═════════ -->
+  <section class="frame">
+    <div class="cap"><span>01</span><b>先回答「有没有必要」：做薄的，不做游戏层</b><span class="file">判断</span></div>
+
+    <div class="two">
+      <div class="panel">
+        <h3><span class="k">做</span>真实产出的累计</h3>
+        <ul>
+          <li><b>行数</b>：这次到底清了多少行。它是用户唯一真正在意的产出，也是唯一不会被解释成「刷」的数字。</li>
+          <li><b>次数与时长</b>：跑过多少次、每次多久。重复劳动的量一旦可见，就有「这本账在长」的感觉。</li>
+          <li><b>里程碑</b>：第一万行、第十万行、第一百次运行。一年只有十几个时刻，足够稀有，值得记一笔。</li>
+        </ul>
+      </div>
+      <div class="panel stop">
+        <h3><span class="k">不做</span>会反噬的那几样</h3>
+        <ul>
+          <li><b>积分 / 等级</b>：给动作标价，用户就会挑性价比高的动作，而不是把活干完。</li>
+          <li><b>连续登录 / 断签惩罚</b>：这是工作工具，不是日记应用。忙起来断签只会带来负罪感。</li>
+          <li><b>排行榜</b>：本机工具，没有对手，也没有人愿意把处理量公开。</li>
+          <li><b>虚拟货币 / 抽奖 / 每日任务</b>：一旦可消费，就得设计「怎么花」，这是另一个产品。</li>
+          <li><b>满屏特效</b>：礼花、金币、全屏弹窗会盖住结果表，恰好打断用户最想看的那个瞬间。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout">
+      <span class="n">原则</span>
+      <p><b>奖励只记录事实，不制造货币。</b>界面只回答两个问题：这次产出了多少？到今天一共多少？前者出现在运行结束的地方，后者常驻右下角；跨过整数时确认一次，其余时候闭嘴。整层可以在设置里关掉，已有的数字留在本机。</p>
+    </div>
+  </section>
+
+  <!-- ═════════ 02 三个方向 ═════════ -->
+  <section class="frame">
+    <div class="cap"><span>02</span><b>三个方向：结算行 / 刻痕里程碑 / 游戏层</b><span class="file">方向</span></div>
+
+    <div class="opts">
+
+      <!-- A 结算 -->
+      <div class="opt">
+        <div class="opt-hd"><span class="letter">A</span><h3>运行结算行</h3><span class="pick">采用</span></div>
+        <div class="crop">
+          <div class="pad">
+            <div class="readout" style="margin:0;padding:0">
+              <span class="pill">完成</span>
+              <span class="mono">2.1 s</span>
+              <span class="sep"></span>
+              <span class="run-facts">本次 24,318 行 · 3 步</span>
+            </div>
+            <div style="height:26px"></div>
+            <div class="ledger-chip" style="position:static;display:inline-flex">
+              <span class="lead">账本</span>
+              <span class="num">312,904 行</span>
+              <span class="arrow">›</span>
+            </div>
+          </div>
+        </div>
+        <p class="cap2"><b>不新增界面。</b>本次的三个事实接在现有运行读数后面，几秒后随读数一起消失；累计读数常驻画布右下角，点开是「历程」。<b>成本最低，也最不打断。</b></p>
+      </div>
+
+      <!-- B 里程碑 -->
+      <div class="opt">
+        <div class="opt-hd"><span class="letter">B</span><h3>刻痕里程碑</h3><span class="pick">采用</span></div>
+        <div class="crop">
+          <div class="pad" style="padding:44px 14px 14px">
+            <div class="toast" style="position:static;width:auto">
+              <div class="in2">
+                <div class="row1">
+                  <svg class="tally" viewBox="0 0 22 20"><path d="M3 3v14M8 3v14M13 3v14M2 17l18-12"/></svg>
+                  <div style="min-width:0">
+                    <div class="eyebrow2">本次跨过</div>
+                    <div class="big">100,000 行</div>
+                  </div>
+                </div>
+                <p class="sub">账本记下这一笔。从第一次运行算起，共 47 次，累计 4 小时 12 分。</p>
+              </div>
+              <div class="foot">查看历程<span class="dismiss">5 s</span></div>
+            </div>
+          </div>
+        </div>
+        <p class="cap2"><b>一年十几个时刻。</b>右下角一张小卡，数字滚一次，刻痕画一笔；5 秒后自己走。不做全屏、不做礼花、不做「太棒了」。</p>
+      </div>
+
+      <!-- C 反例 -->
+      <div class="opt">
+        <div class="opt-hd"><span class="letter">C</span><h3>完整游戏层</h3><span class="no">不做</span></div>
+        <div class="crop">
+          <div class="pad">
+            <div class="badge-xp">
+              <div class="xp-t"><span class="xp-lv">Lv.4</span><span>数据清洁工</span></div>
+              <div class="xp-bar"><i></i></div>
+              <div class="xp-meta">1,240 / 2,000 XP · 距 Lv.5 还差 760</div>
+              <div class="streak"><i>一</i><i>二</i><i>三</i><i class="miss">四</i><i>五</i><i>六</i><i class="miss">日</i></div>
+              <div class="quest">今日任务<br/><s>运行 3 次</s> 2/3 · 导出 1 个文件 0/1</div>
+            </div>
+          </div>
+        </div>
+        <p class="cap2"><b>反例，仅用于对比。</b>等级、断签、每日任务把「干完活」换成「维持状态」。在每天要用的桌面工具里，它会稳定地制造焦虑，也和第 01 节的判断冲突。</p>
+      </div>
+
+    </div>
+
+    <p class="note"><b>采用 A + B。</b>A 负责「这次」的即时回声，B 负责「一路」的稀有确认；两者共享同一份账本数据，所以不存在两套统计。C 不进设计。</p>
+  </section>
+
+  <!-- ═════════ 03 运行结束（亮色） ═════════ -->
+  <section class="frame">
+    <div class="cap"><span>03</span><b>画面一：运行结束后的结算（亮色）</b><span class="file">HomeView.tsx 运行读数 · FlowPanel 画布右下</span></div>
+
+    <div class="app">
+      <div class="topbar">
+        <span class="tbtn">文件</span><span class="tbtn">编辑</span><span class="tbtn">查看</span>
+        <span class="tbtn">工具</span><span class="tbtn">帮助</span>
+        <span class="spacer"></span>
+        <div class="cmdbar"><span class="caret">›</span><span>搜索操作、命令、文件</span><span class="spacer"></span><span class="key">Ctrl F</span></div>
+        <span class="spacer"></span>
+        <span class="tbtn dim">运行</span>
+      </div>
+
+      <div class="tabbar">
+        <span class="tab on"><span class="dot"></span>销售数据.csv</span>
+        <span class="tab">退货.csv</span>
+        <div class="readout">
+          <span class="mono">分支 3/3</span>
+          <span class="pill">完成 · 汇总</span>
+          <span class="sep"></span>
+          <span class="mono">2.1 s</span>
+          <span class="sep"></span>
+          <span class="run-facts">本次 24,318 行 · 3 步</span>
+        </div>
+      </div>
+
+      <div class="canvas">
+        <svg class="edges">
+          <path d="M472 214 C488 214 496 164 512 164" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+          <path d="M612 196 V200" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+          <path d="M612 256 V280" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+          <path d="M718 312 C730 312 728 262 736 252" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+        </svg>
+
+        <div class="rail"><i class="on">切</i><i>菜</i><i>？</i></div>
+
+        <div class="in" style="left:32px;top:86px;width:440px">
+          <div class="in-hd"><span class="in-title">销售数据.csv</span><span class="in-meta">6 列 · 96,204 行</span></div>
+          <table>
+            <tr><th class="num">#</th><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+            <tr><td class="num">1</td><td>2026-11-02</td><td>华东</td><td>键盘</td><td class="r">1,280</td></tr>
+            <tr><td class="num">2</td><td>2026-11-02</td><td>华南</td><td>显示器</td><td class="r">2,340</td></tr>
+            <tr><td class="num">3</td><td>2026-11-03</td><td>华北</td><td>键盘</td><td class="r">980</td></tr>
+            <tr><td class="num">4</td><td>2026-11-03</td><td>华东</td><td>鼠标</td><td class="r">420</td></tr>
+          </table>
+          <div class="in-foot"><span>销售数据.csv</span><span>·</span><span>96,204 行 × 6 列</span></div>
+        </div>
+
+        <div class="step" style="left:512px;top:132px">
+          <div class="body">
+            <div class="head"><span class="alias">去掉空行</span><span class="cmd">drop-empty</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">all</span><span class="pv">true</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step" style="left:512px;top:200px">
+          <div class="body">
+            <div class="head"><span class="alias">修剪空白</span><span class="cmd">trim</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">columns</span><span class="pv">地区,品类</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step" style="left:512px;top:280px">
+          <div class="body">
+            <div class="head"><span class="alias">按地区汇总</span><span class="cmd">groupby</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">column</span><span class="pv">地区</span></div>
+              <div class="pline"><span class="pk">sum</span><span class="pv">金额</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="result" style="left:736px;top:132px;width:404px">
+          <div class="result-hd">
+            <span class="name">销售数据_clean.csv</span>
+            <span class="meta">24,318 行 × 3 列</span>
+          </div>
+          <table>
+            <tr><th>地区</th><th style="text-align:right">行数</th><th style="text-align:right">金额合计</th></tr>
+            <tr><td>华东</td><td class="r">8,204</td><td class="r">1,284,300</td></tr>
+            <tr><td>华南</td><td class="r">6,118</td><td class="r">1,006,240</td></tr>
+            <tr><td>华北</td><td class="r">5,402</td><td class="r">884,120</td></tr>
+            <tr><td>西南</td><td class="r">3,190</td><td class="r">502,880</td></tr>
+            <tr><td>东北</td><td class="r">1,404</td><td class="r">208,470</td></tr>
+          </table>
+        </div>
+
+        <div class="ledger-chip">
+          <span class="lead">账本</span>
+          <span class="num">312,904 行</span>
+          <span class="arrow">›</span>
+        </div>
+      </div>
+
+      <span class="tag" style="left:1072px;top:84px">1</span>
+      <span class="tag" style="left:986px;bottom:20px">2</span>
+    </div>
+
+    <div class="legend">
+      <span><b>1</b>本次结算接在现有运行读数后面，读数几秒后消失，结算跟着一起走</span>
+      <span><b>2</b>累计读数常驻右下角，点击打开「历程」；不抢焦点，不弹窗</span>
+    </div>
+  </section>
+
+  <!-- ═════════ 04 里程碑 ═════════ -->
+  <section class="frame">
+    <div class="cap"><span>04</span><b>画面二：里程碑那一刻（亮色 / 暗色）</b><span class="file">新增 LedgerMilestoneToast</span></div>
+
+    <div class="cols2">
+      <div>
+        <div class="crop" style="height:230px">
+          <div class="toast" style="right:18px;bottom:18px">
+            <div class="in2">
+              <div class="row1">
+                <svg class="tally" viewBox="0 0 22 20"><path d="M3 3v14M8 3v14M13 3v14M2 17l18-12"/></svg>
+                <div style="min-width:0">
+                  <div class="eyebrow2">本次跨过</div>
+                  <div class="big">100,000 行</div>
+                </div>
+              </div>
+              <p class="sub">账本记下这一笔。从第一次运行算起，共 47 次，累计 4 小时 12 分。</p>
+            </div>
+            <div class="foot">查看历程<span class="dismiss">5 s</span></div>
+          </div>
+        </div>
+        <p class="mini-hd" style="margin-top:8px">亮色</p>
+      </div>
+
+      <div>
+        <div class="crop dark" style="height:230px">
+          <div class="toast" style="right:18px;bottom:18px">
+            <div class="in2">
+              <div class="row1">
+                <svg class="tally" viewBox="0 0 22 20"><path d="M3 3v14M8 3v14M13 3v14M2 17l18-12"/></svg>
+                <div style="min-width:0">
+                  <div class="eyebrow2">本次跨过</div>
+                  <div class="big">100,000 行</div>
+                </div>
+              </div>
+              <p class="sub">账本记下这一笔。从第一次运行算起，共 47 次，累计 4 小时 12 分。</p>
+            </div>
+            <div class="foot">查看历程<span class="dismiss">5 s</span></div>
+          </div>
+        </div>
+        <p class="mini-hd" style="margin-top:8px">暗色</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <span class="n">动效</span>
+      <p><b>240 ms 数字滚动 + 180 ms 刻痕描边。</b>数字从旧值滚到新值，等宽不跳位；刻痕按书写方向从左到右画一笔。卡片从右下角上浮 4px 淡入，5 秒后自己走，右上角可以立刻关。<code>prefers-reduced-motion</code> 下全部改为直接显示。不做音效、不做礼花、不做全屏遮罩。</p>
+    </div>
+  </section>
+
+  <!-- ═════════ 05 历程面板 + 设置 ═════════ -->
+  <section class="frame">
+    <div class="cap"><span>05</span><b>画面三：历程面板与设置开关</b><span class="file">ViewDock 新面板 · 设置 › 通用</span></div>
+
+    <div style="display:flex;gap:26px;align-items:flex-start">
+      <div class="dock">
+        <div class="dock-hd"><span class="t">历程</span><span class="x">×</span></div>
+        <div class="dock-body">
+          <div class="big-num">312,904</div>
+          <div class="big-lbl">累计处理行数</div>
+
+          <div class="stat-row">
+            <div class="stat"><div class="v">47</div><div class="k">次运行</div></div>
+            <div class="stat"><div class="v">128</div><div class="k">个文件</div></div>
+            <div class="stat"><div class="v">18</div><div class="k">种命令</div></div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-hd">最近 8 周<span class="r">行</span></div>
+            <div class="bars">
+              <div class="b" style="height:16px"></div>
+              <div class="b" style="height:30px"></div>
+              <div class="b" style="height:24px"></div>
+              <div class="b" style="height:42px"></div>
+              <div class="b" style="height:34px"></div>
+              <div class="b" style="height:52px"></div>
+              <div class="b" style="height:27px"></div>
+              <div class="b on" style="height:44px"></div>
+            </div>
+            <div class="week">
+              <i></i><i></i><i class="off"></i><i></i><i></i><i class="off"></i><i></i>
+              <span class="t">本周 5 天有产出</span>
+            </div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-hd">刻痕<span class="r">3 / 12</span></div>
+            <div class="mile">
+              <svg class="tally" viewBox="0 0 22 20"><path d="M3 3v14M8 3v14M13 3v14M2 17l18-12"/></svg>
+              <span class="nm">一万行</span><span class="when">09-18</span>
+            </div>
+            <div class="mile">
+              <svg class="tally" viewBox="0 0 22 20"><path d="M3 3v14M8 3v14M13 3v14M2 17l18-12"/></svg>
+              <span class="nm">十次运行</span><span class="when">09-21</span>
+            </div>
+            <div class="mile">
+              <svg class="tally" viewBox="0 0 22 20"><path d="M3 3v14M8 3v14M13 3v14M2 17l18-12"/></svg>
+              <span class="nm">十万行</span><span class="when">11-25</span>
+            </div>
+            <div class="mile locked">
+              <svg class="tally ghost" viewBox="0 0 22 20"><path d="M3 3v14M8 3v14M13 3v14M2 17l18-12"/></svg>
+              <span class="nm">百万行</span><span class="th">1,000,000</span>
+            </div>
+            <div class="mile locked">
+              <svg class="tally ghost" viewBox="0 0 22 20"><path d="M3 3v14M8 3v14M13 3v14M2 17l18-12"/></svg>
+              <span class="nm">百次运行</span><span class="th">100</span>
+            </div>
+            <div class="mile locked">
+              <svg class="tally ghost" viewBox="0 0 22 20"><path d="M3 3v14M8 3v14M13 3v14M2 17l18-12"/></svg>
+              <span class="nm">十种命令</span><span class="th">10 / 18</span>
+            </div>
+          </div>
+        </div>
+        <div class="dock-foot">
+          <span>只记数字，不记文件名与路径</span>
+          <span class="clr">清空…</span>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:0">
+        <p class="mini-hd">设置 › 通用（新增一行）</p>
+        <div class="setting">
+          <div>
+            <div class="lbl">记录使用账本</div>
+            <div class="desc">只在本机记录行数、运行次数与命令名；不记录文件名、路径和列名，也不上传。</div>
+          </div>
+          <span class="switch"></span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <span class="ghostbtn">清空账本</span>
+          <span class="ghostbtn">导出账本 JSON</span>
+        </div>
+
+        <ul class="plain" style="margin-top:16px">
+          <li><b>位置。</b>历程作为 ViewDock 的第五个面板（<code>Alt 5</code>），和数据分析、版本、血缘、变量同列；不新开窗口。</li>
+          <li><b>入口。</b>右下角账本读数、里程碑卡片的「查看历程」、查看菜单里的「历程」，三处都指向同一个面板。</li>
+          <li><b>克制。</b>面板里只有一个大数字和一张小柱图；不做环形进度、不做连续天数火焰。</li>
+        </ul>
+
+        <div class="panel" style="margin-top:16px">
+          <h3><span class="k">空态</span>账本还没有一页</h3>
+          <ul>
+            <li>第一次成功运行前，右下角读数不出现；面板显示 <b>「第一次运行后，这里开始记账」</b>。</li>
+            <li>第一次运行完成时，出现第一道刻痕「开页」，不做额外弹窗——结算行本身就是它。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ 06 口径 ═════════ -->
+  <section class="frame">
+    <div class="cap"><span>06</span><b>口径与规则：记什么、怎么防重复</b><span class="file">数据口径</span></div>
+
+    <div class="cols2">
+      <div>
+        <table class="spec">
+          <tr><th>项</th><th>口径</th></tr>
+          <tr><td>行数</td><td>取本次运行<b>最后一个结果节点</b>的 <code>ResultPreview.totalRows</code>；多分支只记主链路终点，不把中间步骤的行数相加。取不到行数时记 0，不估算。</td></tr>
+          <tr><td>运行次数</td><td>一次成功执行记 1 次（全量、从前缀、从此步运行都算）。失败与取消不记。</td></tr>
+          <tr><td>耗时</td><td>用运行会话里已有的 <code>durationMs</code>，与执行历史同源，保证两处读数一致。</td></tr>
+          <tr><td>文件数</td><td>导出、另存为输入时产生的新路径去重计数；同一路径覆盖写不重复计。</td></tr>
+          <tr><td>命令种类</td><td>成功运行中出现过的 <code>command.name</code> 去重集合，用于「十种命令」这类发现型刻痕。</td></tr>
+        </table>
+      </div>
+      <div>
+        <table class="spec">
+          <tr><th>项</th><th>规则</th></tr>
+          <tr><td>去重</td><td>以 <code>runId</code> 为键，同一 run 只记一次；重放、刷新、切换标签页都不会重复累加。</td></tr>
+          <tr><td>跨标签页</td><td>多个标签页并发运行各记各的，累计写在同一份账本上；写入用一次读改写，避免互相覆盖。</td></tr>
+          <tr><td>里程碑</td><td>只在跨过阈值的那一次触发，已解锁的存时间戳，永不回退；重装或清空后重新开始。</td></tr>
+          <tr><td>关闭开关</td><td>停止写入，界面读数与面板入口一起隐藏；已有数据保留，重新打开后从断点继续。</td></tr>
+          <tr><td>清空</td><td>二次确认，清空总量、按日分桶、刻痕与文件计数；不触碰任何管道、结果或日志。</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <p class="note"><b>为什么不记「节省时间」。</b>换手算、复制粘贴的耗时无法核实，写出来就是编的数字。时长只报实际跑掉的秒数，加总成「累计运行 4 小时 12 分」——它是真的。</p>
+  </section>
+
+  <!-- ═════════ 07 里程碑目录 ═════════ -->
+  <section class="frame">
+    <div class="cap"><span>07</span><b>十二道刻痕：稀有、真实、和功能有关</b><span class="file">阈值与文案</span></div>
+
+    <table class="spec">
+      <tr><th style="width:150px">刻痕</th><th style="width:130px">触发</th><th style="width:300px">卡片副文案</th><th>说明</th></tr>
+      <tr><td>开页</td><td>第 1 次成功运行</td><td>账本从这一笔开始。</td><td>不单独弹卡，结算行即确认</td></tr>
+      <tr><td>一万行</td><td>累计 10,000 行</td><td>第一次到五位数。之后每次运行都会更长。</td><td>最早的正反馈，通常第一周就到</td></tr>
+      <tr><td>十万行</td><td>累计 100,000 行</td><td>账本记下这一笔。从第一次运行算起，共 {runs} 次。</td><td>最常见的「大数」时刻</td></tr>
+      <tr><td>百万行</td><td>累计 1,000,000 行</td><td>七位数。这本账开始有厚度了。</td><td>—</td></tr>
+      <tr><td>千万行</td><td>累计 10,000,000 行</td><td>八位数。已经是一份很难手算的量。</td><td>年度级</td></tr>
+      <tr><td>十次运行</td><td>累计 10 次成功运行</td><td>同一条流水线跑了十次。</td><td>次数的第一批</td></tr>
+      <tr><td>百次运行</td><td>累计 100 次</td><td>一百次。工具已经替你跑过一百趟。</td><td>—</td></tr>
+      <tr><td>第一个管道</td><td>保存第 1 条管道</td><td>这条流水线留下来了，下次不用重连。</td><td>发现型</td></tr>
+      <tr><td>十个管道</td><td>保存第 10 条</td><td>十条流水线。工作开始成体系。</td><td>发现型</td></tr>
+      <tr><td>十种命令</td><td>用到第 10 种命令</td><td>已经用过十种清理动作。</td><td>提示还有没试过的命令</td></tr>
+      <tr><td>第一次用模板</td><td>应用任意模板</td><td>从空白开始的日子结束了。</td><td>发现型</td></tr>
+      <tr><td>第一次从此步运行</td><td>用 078 的「从此步运行」</td><td>只重跑要改的那一段，不动上游。</td><td>与新功能联动</td></tr>
+    </table>
+
+    <p class="note"><b>英文侧同步。</b><code>开页 = First page</code>、<code>十万行 = 100,000 rows</code>、<code>刻痕 = Mark</code>、<code>历程 = Ledger</code>、<code>本次 = This run</code>、<code>累计 = Total</code>、<code>查看历程 = View ledger</code>、<code>记录使用账本 = Track usage</code>、<code>清空账本 = Clear ledger</code>。文案里不出现「成就」「解锁」「恭喜」。</p>
+  </section>
+
+  <!-- ═════════ 08 存储与落地 ═════════ -->
+  <section class="frame">
+    <div class="cap"><span>08</span><b>存储结构与落地清单</b><span class="file">localStorage · 实施</span></div>
+
+    <div class="cols2">
+      <div>
+        <p class="mini-hd">localStorage · easy-csv:ledger:v1</p>
+        <pre style="margin:0;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card);
+                    font-family:var(--mono);font-size:10.5px;line-height:1.8;color:var(--muted-fg);overflow:auto">{
+  "v": 1,
+  "totals": { "rows": 312904, "runs": 47, "files": 128, "ms": 15120000 },
+  "commands": ["map", "search", "dedup", "trim", "..."],
+  "milestones": { "rows-100k": "2026-11-25T14:02:00Z" },
+  "days": { "2026-11-25": { "rows": 24318, "runs": 1 } },
+  "lastRunId": "3f9c..."
+}</pre>
+        <p class="note" style="margin-top:10px">写入放在现有执行成功分支里，和「结果预览 / 日志」同一处；<code>lastRunId</code> 防重复，<code>days</code> 只保留 90 天。</p>
+      </div>
+
+      <div>
+        <p class="mini-hd">落地步骤（建议顺序）</p>
+        <ul class="plain">
+          <li><b>1 · useLedger</b>：<code>recordRun({runId, rows, ms, commands})</code>、<code>unlocked</code>、<code>reset</code>；纯函数部分可单测。</li>
+          <li><b>2 · 结算行</b>：在 <code>HomeView</code> 现有运行读数末尾追加 <code>本次 …</code>，数据来自本次运行结果与 <code>durationMs</code>。</li>
+          <li><b>3 · 账本读数</b>：<code>FlowPanel</code> 右下角常驻按钮，点击打开历程面板。</li>
+          <li><b>4 · 历程面板</b>：<code>viewPanels.ts</code> 加 <code>ledger</code>，<code>ViewDock</code> 渲染；空态与柱图。</li>
+          <li><b>5 · 里程碑卡</b>：新组件，队列一次只显示一张；<code>prefers-reduced-motion</code> 分支。</li>
+          <li><b>6 · 设置</b>：通用分组加开关与「清空账本」，i18n 中英同步。</li>
+          <li><b>7 · 测试</b>：累加/去重、阈值只触发一次、关闭开关不写入、清空后回到空态。</li>
+        </ul>
+        <p class="note" style="margin-top:10px"><b>估算：</b>新增 1 个 hook、1 个面板、1 个浮卡组件，改动 3 个既有文件（HomeView / FlowPanel / Settings），不动后端。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ 09 风险 ═════════ -->
+  <section class="frame">
+    <div class="cap"><span>09</span><b>风险与边界</b><span class="file">需要提前想清楚的三件事</span></div>
+
+    <div class="two">
+      <div class="panel stop">
+        <h3><span class="k">风险</span>数字带来的压力</h3>
+        <ul>
+          <li>只展示累计，不展示「连续 N 天」，没有断签，也没有「今天还差 X 行」。</li>
+          <li>面板里的周柱是回看，不是目标；不设 KPI、不设进度环。</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3><span class="k">边界</span>什么时候该停</h3>
+        <ul>
+          <li>如果后续要加分享、称号、商店，就不是这一层了，应该另立设计并重新回答「有没有必要」。</li>
+          <li>本机账本不参与云同步；换机器从零开始，这是可接受的代价。</li>
+          <li>用户关掉开关后，界面不再出现任何相关元素，不做挽留提示。</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="note"><b>一句话。</b>这不是「让用户多打开软件」的机制，而是「让每一次真实产出留下痕迹」的记录。前者靠焦虑，后者靠回声；这个产品适合后者。</p>
+  </section>
+
+</div>
+</body>
+</html>

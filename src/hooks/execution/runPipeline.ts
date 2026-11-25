@@ -17,6 +17,20 @@ import {
 } from "@/utils/executionHistory";
 
 /**
+ * Rows in the final successful branch output. The preview list caps parsing at
+ * 500 rows, so the ledger parses the (already byte-capped) output once more.
+ */
+function finalOutputRows(
+  results: Array<{ success: boolean; output?: string }>,
+): number {
+  for (let i = results.length - 1; i >= 0; i -= 1) {
+    const output = results[i].success ? results[i].output : undefined;
+    if (output?.trim()) return parseCsvString(output).rows.length;
+  }
+  return 0;
+}
+
+/**
  * Execute the stashed run: resolve `{{var}}` placeholders on a deep clone
  * (stored placeholders and the tab pipeline stay untouched), split the
  * graph into branches, run each branch (normal pipeline / batch / chart),
@@ -236,6 +250,24 @@ export async function runPipeline(
       : pipelineFailed || executionError
         ? "error"
         : "success";
+
+    // Usage ledger (design 079): one record per successful run, keyed by runId
+    // so a replay cannot count twice. Rows come from the final branch output,
+    // not the 500-row preview cap.
+    if (status === "success" && deps.recordLedger) {
+      deps.recordLedger({
+        runId: ctx.runId,
+        tabId: ctx.tabId,
+        rows: finalOutputRows(allResults),
+        ms: durationMs,
+        steps: steps.length,
+        commands: Array.from(new Set(steps.map((step) => step.command.name))),
+        files: currentPipeline
+          .filter((step) => step.command.id === "output")
+          .map((step) => String(step.parameters?.path ?? ""))
+          .filter(Boolean),
+      });
+    }
 
     // Completion feedback (071 feedback, supersedes the 2026-09-30 removal):
     // an in-app toast — the log drawer no longer auto-opens at run start, so

@@ -65,7 +65,11 @@ export function RunTimer({
         className,
       )}
     >
-      <span className="inline-block min-w-[46px] text-right font-mono text-[11.5px] tabular-nums text-foreground">
+      {/* No fixed min-width: right-aligning a 3–4 character reading inside a
+          46px box pushed the number away from its leading separator and left a
+          dead gap. Tabular digits already keep the width steady; only a jump
+          from 9.9 to 10.0 (or into minutes) changes it, twice per run. */}
+      <span className="inline-block text-right font-mono text-[11.5px] tabular-nums text-foreground">
         {value}
       </span>
       {unit && (

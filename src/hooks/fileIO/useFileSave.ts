@@ -19,6 +19,8 @@ interface UseFileSaveProps {
     message: string,
     type?: "info" | "success" | "warning" | "error",
   ) => void;
+  /** Called after a script was actually written (usage ledger, design 079). */
+  onSaved?: () => void;
 }
 
 /**
@@ -31,6 +33,7 @@ export function useFileSave({
   getCurrentTab,
   resolveRunDelimiter,
   showToast,
+  onSaved,
 }: UseFileSaveProps) {
   const handleSavePipeline = useCallback(async () => {
     const currentPipeline = getCurrentPipeline();
@@ -98,12 +101,19 @@ export function useFileSave({
 
         const encoder = new TextEncoder();
         await writeFile(filePath, encoder.encode(scriptContent));
+        onSaved?.();
         showToast(`Pipeline saved to: ${filePath}`, "success");
       }
     } catch (error) {
       showToast(`Failed to save pipeline: ${error}`, "error");
     }
-  }, [getCurrentPipeline, getCurrentTab, showToast, resolveRunDelimiter]);
+  }, [
+    getCurrentPipeline,
+    getCurrentTab,
+    showToast,
+    resolveRunDelimiter,
+    onSaved,
+  ]);
 
   return { handleSavePipeline };
 }
