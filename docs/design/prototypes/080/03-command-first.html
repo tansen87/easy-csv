@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 080-03 · 命令参数框：方案 C 命令优先</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --rule:oklch(0.2 0.01 80 / 7%);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+    --brand-ink:oklch(0.35 0.05 250);
+    --ok:oklch(0.5 0.09 150);
+
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --chrome:oklch(0.985 0.002 80);
+    --tab:oklch(0.975 0.002 80);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-dlg:0 18px 48px oklch(0.2 0.02 80 / 16%),0 2px 6px oklch(0.2 0.02 80 / 8%);
+  }
+  html.dark{
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --rule:oklch(0.96 0.005 85 / 9%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 18%,transparent);
+    --brand-ink:oklch(0.8 0.04 245);
+    --stage:oklch(0.115 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --chrome:oklch(0.175 0 0);
+    --tab:oklch(0.165 0 0);
+    --shadow-card:none;
+    --shadow-dlg:0 20px 60px oklch(0 0 0 / 55%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased}
+  code{font-family:var(--mono);font-size:.92em}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme{position:absolute;right:0;top:4px;font:400 11px var(--font);color:var(--muted-fg);
+         border:1px solid var(--border);border-radius:6px;background:var(--card);padding:5px 10px;cursor:pointer}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       border-bottom:1px solid var(--border-soft);margin-bottom:16px}
+  .cap b{font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto;font-family:var(--mono);font-size:10px}
+  .note{margin:14px 0 0;font-size:11.5px;line-height:1.8;color:var(--muted-fg);max-width:1010px}
+  .note b{font-weight:500;color:var(--fg)}
+
+  .app{width:1160px;max-width:100%;height:640px;border:1px solid var(--border);border-radius:12px;
+       overflow:hidden;display:flex;flex-direction:column;position:relative;background:var(--bg);
+       box-shadow:var(--shadow-card)}
+  .topbar{height:44px;flex:none;display:flex;align-items:center;gap:2px;padding:0 12px;
+          border-bottom:1px solid var(--border);background:var(--chrome)}
+  .tbtn{font-size:12px;padding:5px 9px;border-radius:6px;color:var(--muted-fg)}
+  .tbtn.dim{color:var(--muted-fg-3)}
+  .spacer{flex:1}
+  .cmdbar{height:26px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid var(--border);
+          border-radius:6px;width:300px;color:var(--muted-fg-3);font-size:11px;background:var(--bg)}
+  .cmdbar .caret{font-family:var(--mono);color:var(--muted-fg-2)}
+  .kbd{font:400 9.5px var(--mono);border:1px solid var(--border);border-radius:3px;padding:1px 3px;
+       color:var(--muted-fg-3);margin-left:6px}
+  .tabbar{height:34px;flex:none;display:flex;align-items:center;gap:2px;padding:0 8px;
+          border-bottom:1px solid var(--border);background:var(--tab)}
+  .tab{height:24px;display:inline-flex;align-items:center;gap:6px;padding:0 9px;border-radius:5px;
+       font-size:11.5px;color:var(--muted-fg-3)}
+  .tab.on{background:var(--brand-soft);color:var(--brand);border:1px solid var(--brand-12)}
+  .tab .dot{width:4px;height:4px;border-radius:50%;background:var(--ok)}
+
+  .canvas{flex:1;position:relative;overflow:hidden;background-color:var(--bg);
+          background-image:radial-gradient(circle,var(--dot) 1px,transparent 1px);background-size:22px 22px}
+  .edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .step{position:absolute;width:210px;background:var(--card);border:1px solid var(--border);
+        border-radius:10px;box-shadow:var(--shadow-card)}
+  .step .body{padding:9px 10px}
+  .step .head{display:flex;align-items:center;gap:8px}
+  .step .alias{font-size:12.5px;font-weight:500}
+  .step .cmd{margin-left:auto;font:400 10px/1 var(--mono);color:var(--muted-fg-3)}
+  .step .params{margin-top:5px;display:flex;flex-direction:column;gap:2px}
+  .pline{display:flex;gap:6px;font:400 10.5px/16px var(--mono);min-width:0}
+  .pk{flex:none;min-width:52px;color:var(--muted-fg-3)}
+  .pv{color:var(--muted-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .scrim{position:absolute;inset:0;background:oklch(0.2 0.01 80 / 20%);z-index:5}
+  html.dark .scrim{background:oklch(0 0 0 / 45%)}
+
+  /* ── dialog C：命令行优先 ───────────────────── */
+  .dlg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:700px;height:524px;
+       background:var(--card);border:1px solid var(--border);border-radius:12px;
+       box-shadow:var(--shadow-dlg);z-index:6;overflow:hidden;display:flex;flex-direction:column}
+  .scroll{flex:1;min-height:0;position:relative;overflow:hidden}
+  .thumb{position:absolute;right:4px;top:14px;width:6px;height:132px;border-radius:3px;
+         background:color-mix(in oklab,var(--muted-fg) 26%,transparent)}
+  .dlg-hd{height:52px;flex:none;display:flex;align-items:center;gap:10px;padding:0 16px 0 20px;
+          border-bottom:1px solid var(--border)}
+  .dlg-hd h2{margin:0;font-size:14px;font-weight:500}
+  .cmd-id{font:400 10.5px/1 var(--mono);color:var(--muted-fg-3);border:1px solid var(--border);
+          border-radius:4px;padding:3px 5px}
+  .hd-r{margin-left:auto;display:flex;align-items:center;gap:4px}
+  .ghost-btn{font:400 11.5px var(--font);color:var(--muted-fg);background:none;border:0;
+             border-radius:5px;padding:5px 7px;cursor:pointer}
+  .xbtn{width:26px;height:26px;display:grid;place-items:center;border-radius:5px;border:0;
+        background:none;color:var(--muted-fg);font-size:14px;cursor:pointer}
+
+  .body{padding:16px 22px 6px 20px}
+
+  .cmdline{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:9px 10px;
+           border:1px solid var(--border);border-radius:9px;background:var(--paper)}
+  .cmdline .bin{font:400 11.5px/1 var(--mono);color:var(--muted-fg-2);margin-right:2px}
+  .tok{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 6px 0 8px;border-radius:6px;
+       border:1px solid var(--border);background:var(--card);font:400 11.5px/1 var(--mono);color:var(--fg)}
+  .tok .k{color:var(--muted-fg-3)}
+  .tok .x{color:var(--muted-fg-3);font-size:10px}
+  .tok.on{border-color:var(--brand-12);background:var(--brand-soft);color:var(--brand)}
+  .tok.on .k{color:color-mix(in oklab,var(--brand) 60%,transparent)}
+  .tok.on .x{color:color-mix(in oklab,var(--brand) 70%,transparent)}
+  .tok.add{border-style:dashed;color:var(--muted-fg-2);background:transparent;padding:0 9px}
+
+  .sec{display:flex;align-items:center;gap:8px;padding:18px 0 8px}
+  .sec span{font:400 10.5px var(--mono);color:var(--muted-fg-3)}
+  .sec i{flex:1;height:1px;background:var(--border-soft)}
+  .sec em{font-style:normal;font-size:10.5px;color:var(--muted-fg-3)}
+
+  .editor{padding:12px 14px 14px;border:1px solid var(--border);border-radius:10px;background:var(--paper)}
+  .ed-hd{display:flex;align-items:baseline;gap:8px}
+  .ed-hd .name{font-size:12.5px;font-weight:500}
+  .ed-hd .flag{font:400 10.5px var(--mono);color:var(--muted-fg-3)}
+  .ed-hd .rm{margin-left:auto;font-size:11px;color:var(--muted-fg-3)}
+  .ed-desc{margin:4px 0 0;font-size:11px;line-height:1.55;color:var(--muted-fg-2)}
+  .input{margin-top:9px;height:32px;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:12px;
+         border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--fg)}
+  .input .val{flex:1}
+  .input .caret{color:var(--muted-fg-3);font-size:9px}
+  .input.focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+  .suggest{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+  .suggest .lb{font:400 10px var(--mono);color:var(--muted-fg-3)}
+  .sc{height:22px;padding:0 7px;border-radius:5px;border:1px solid var(--border);font-size:11px;
+      color:var(--muted-fg);display:inline-flex;align-items:center;background:var(--bg)}
+  .sc.on{background:var(--brand-soft);border-color:var(--brand-12);color:var(--brand);font-weight:500}
+
+  .optlist{border-top:1px solid var(--border-soft)}
+  .opt{display:flex;align-items:center;gap:10px;height:38px;border-bottom:1px solid var(--border-soft);
+       font-size:12px;color:var(--fg)}
+  .opt .plus{width:18px;height:18px;flex:none;display:grid;place-items:center;border:1px solid var(--border);
+             border-radius:4px;color:var(--muted-fg-2);font-size:11px;line-height:1;background:var(--bg)}
+  .opt .flag{margin-left:auto;font:400 10.5px var(--mono);color:var(--muted-fg-3)}
+  .opt .hint{font-size:11px;color:var(--muted-fg-3);width:120px;text-align:right}
+
+  .dlg-ft{flex:none;display:flex;align-items:center;gap:8px;height:52px;padding:0 20px;
+          border-top:1px solid var(--border);margin-top:6px}
+  .dlg-ft .left{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted-fg-3)}
+  .dlg-ft .left b{color:var(--muted-fg);font-weight:500}
+  .dlg-ft .left .div{width:1px;height:12px;background:var(--border)}
+  .dlg-ft .right{margin-left:auto;display:flex;gap:8px}
+
+  .copy{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:26px;padding:0 8px;
+        min-width:82px;flex:none;border-radius:6px;border:1px solid transparent;background:none;
+        color:var(--muted-fg);font:400 11px var(--font);cursor:pointer}
+  .copy svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.5;
+            stroke-linecap:round;stroke-linejoin:round}
+  .copy:disabled{color:var(--muted-fg-3);cursor:default}
+  .copy.ok{color:var(--brand);background:var(--brand-soft);border-color:var(--brand-12)}
+
+  .states{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:6px 16px 10px}
+  .st{padding:12px 0}
+  .st + .st{border-top:1px solid var(--border-soft)}
+  .st .lb{display:block;font:400 10px var(--mono);color:var(--muted-fg-3);margin-bottom:8px}
+  .ft-mock{display:flex;align-items:center;gap:8px;height:52px;padding:0 16px;
+           border:1px solid var(--border);border-radius:9px;background:var(--paper)}
+  .ft-mock .left{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted-fg-3)}
+  .ft-mock .left b{color:var(--muted-fg);font-weight:500}
+  .ft-mock .left .div{width:1px;height:12px;background:var(--border)}
+  .ft-mock .right{margin-left:auto;display:flex;gap:8px}
+  .btn{height:28px;padding:0 12px;border-radius:6px;font-size:12px;border:1px solid transparent;cursor:pointer}
+  .btn.ghost{background:none;color:var(--muted-fg)}
+  .btn.primary{background:var(--brand);color:oklch(0.985 0 0);font-weight:500}
+  html.dark .btn.primary{color:oklch(0.205 0 0)}
+</style>
+</head>
+<body>
+<main id="sheet">
+
+  <header class="stage-bar">
+    <div class="eyebrow">原型 080-03 · 命令参数框改版</div>
+    <h1>方案 C · 命令优先：先把命令行拼对，再谈字段</h1>
+    <p>把弹窗的主体从「表单」换成「一条可编辑的 xan 命令」：每个参数是一枚 token，点它才展开编辑器，没用到的参数在下面排队等你加。最贴合“GUI 包 CLI”这件事——所见即即将执行的命令，按键流也最快。</p>
+    <button class="theme" onclick="document.documentElement.classList.toggle('dark')">切换明暗</button>
+  </header>
+
+  <dl class="direction">
+    <div><dt>产品</dt><dd>把 xan 命令包成可视化管道的桌面工具，用户是每周洗几千万行 CSV 的人</dd></div>
+    <div><dt>性格</dt><dd>精确、克制、可核对</dd></div>
+    <div><dt>世界</dt><dd>终端与制表：等宽命令、纸白表格、发丝框线</dd></div>
+    <div><dt>时刻</dt><dd>命令行本身成为界面主角，其余全部退成纸白</dd></div>
+    <div><dt>签名</dt><dd>参数 token（<code>-c 地区</code>）与右侧等宽 flag 一一对应</dd></div>
+  </dl>
+
+  <section class="frame">
+    <div class="cap"><span>01</span><b>join · 选中一个 token 展开它的编辑器</b><span class="file">700 px</span></div>
+    <div class="app">
+      <div class="topbar">
+        <span class="tbtn">文件</span><span class="tbtn dim">编辑</span><span class="tbtn dim">查看</span>
+        <span class="tbtn">执行</span><span class="tbtn dim">工具</span><span class="tbtn dim">帮助</span>
+        <span class="spacer"></span>
+        <span class="cmdbar"><span class="caret">›</span> 搜索命令或步骤 <span class="spacer"></span> <span class="kbd">Ctrl F</span></span>
+      </div>
+      <div class="tabbar">
+        <span class="tab on"><span class="dot"></span>客户与订单</span>
+        <span class="tab">渠道汇总</span>
+      </div>
+      <div class="canvas">
+        <svg class="edges" viewBox="0 0 1160 562" preserveAspectRatio="none">
+          <path d="M330 150 H430" stroke="oklch(0.2 0.01 80 / 30%)" stroke-width="1.5" fill="none"/>
+        </svg>
+        <div class="step" style="left:120px;top:110px">
+          <div class="body">
+            <div class="head"><span class="alias">客户明细</span><span class="cmd">csv</span></div>
+            <div class="params"><div class="pline"><span class="pk">行数</span><span class="pv">48,210</span></div></div>
+          </div>
+        </div>
+        <div class="step" style="left:430px;top:110px">
+          <div class="body">
+            <div class="head"><span class="alias">并入订单</span><span class="cmd">join</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">-c</span><span class="pv">地区</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scrim"></div>
+
+      <div class="dlg">
+        <div class="dlg-hd">
+          <h2>连接</h2>
+          <code class="cmd-id">join</code>
+          <div class="hd-r">
+            <button class="ghost-btn">文档</button>
+            <button class="xbtn">×</button>
+          </div>
+        </div>
+
+        <div class="scroll">
+        <div class="body">
+          <div class="cmdline">
+            <span class="bin">xan join</span>
+            <span class="tok on"><span class="k">-c</span> 地区 <span class="x">×</span></span>
+            <span class="tok"><span class="k">--input1</span> 客户明细.csv <span class="x">×</span></span>
+            <span class="tok"><span class="k">--input2</span> 订单.csv <span class="x">×</span></span>
+            <span class="tok add">+ 参数</span>
+          </div>
+
+          <div class="sec"><span>正在编辑</span><i></i><em>-c 地区</em></div>
+
+          <div class="editor">
+            <div class="ed-hd">
+              <span class="name">连接列</span>
+              <span class="flag">columns · -c</span>
+              <span class="rm">移除</span>
+            </div>
+            <p class="ed-desc">可直接输入列名，也可以点下面的表头；右边表列名不同时再填 <code>columns2</code></p>
+            <div class="input focus"><span class="val">地区</span><span class="caret">▾</span></div>
+            <div class="suggest">
+              <span class="lb">表头</span>
+              <span class="sc on">地区</span>
+              <span class="sc">订单号</span>
+              <span class="sc">客户</span>
+              <span class="sc">金额</span>
+              <span class="sc">日期</span>
+            </div>
+          </div>
+
+          <div class="sec"><span>还能加</span><i></i><em>必填还差 input1、input2 的值</em></div>
+
+          <div class="optlist">
+            <div class="opt"><span class="plus">+</span>连接类型<span class="flag">join-type</span><span class="hint">默认 inner</span></div>
+            <div class="opt"><span class="plus">+</span>右表键列不同名<span class="flag">columns2</span><span class="hint"></span></div>
+            <div class="opt"><span class="plus">+</span>丢掉重复的键列<span class="flag">drop-key</span><span class="hint">默认否</span></div>
+            <div class="opt"><span class="plus">+</span>按子串模糊匹配<span class="flag">contains</span><span class="hint"></span></div>
+            <div class="opt"><span class="plus">+</span>键列按正则匹配<span class="flag">regex</span><span class="hint"></span></div>
+            <div class="opt"><span class="plus">+</span>忽略大小写<span class="flag">ignore-case</span><span class="hint"></span></div>
+            <div class="opt"><span class="plus">+</span>空值也算匹配<span class="flag">nulls</span><span class="hint"></span></div>
+          </div>
+        </div>
+        <span class="thumb"></span>
+        </div>
+
+        <div class="dlg-ft">
+          <div class="left">
+            <span>必填 <b>2 / 4</b> 已就位</span>
+            <span class="div"></span>
+            <button class="copy" disabled><svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>复制命令</button>
+          </div>
+          <div class="right">
+            <button class="btn ghost">取消</button>
+            <button class="btn primary">添加步骤</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>为什么值得这么做。</b>这个产品的真相是「你在拼一条 xan 命令」，而现在的弹窗把它藏起来、只在最后拼一次字符串。方案 C 直接把它摆到台面上：token 即参数，删 token 等于去掉参数，拼好的命令可以整条复制到终端复跑。<b>风险</b>：能读命令的人上手最快，不读命令的人第一眼会懵——所以还得配一条「必填 2 / 4 已就位」的兜底提示，并保留方案 A 的字段名做 fallback。</p>
+  </section>
+
+  <section class="frame">
+    <div class="cap"><span>02</span><b>复制按钮的三种状态</b><span class="file">底栏左侧</span></div>
+    <div class="states">
+      <div class="st">
+        <span class="lb">必填未齐 · 禁用，文案说明还差什么</span>
+        <div class="ft-mock">
+          <div class="left">
+            <span>必填 <b>2 / 4</b> 已就位</span>
+            <span class="div"></span>
+            <button class="copy" disabled><svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>复制命令</button>
+          </div>
+          <div class="right"><button class="btn ghost">取消</button><button class="btn primary">添加步骤</button></div>
+        </div>
+      </div>
+      <div class="st">
+        <span class="lb">必填已齐 · 可点，图标与文字同色</span>
+        <div class="ft-mock">
+          <div class="left">
+            <span>必填 <b>4 / 4</b> 已就位</span>
+            <span class="div"></span>
+            <button class="copy"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>复制命令</button>
+          </div>
+          <div class="right"><button class="btn ghost">取消</button><button class="btn primary">添加步骤</button></div>
+        </div>
+      </div>
+      <div class="st">
+        <span class="lb">点击后 · 1.5 秒反馈，宽度锁在 82px 不跳动</span>
+        <div class="ft-mock">
+          <div class="left">
+            <span>必填 <b>4 / 4</b> 已就位</span>
+            <span class="div"></span>
+            <button class="copy ok"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>已复制</button>
+          </div>
+          <div class="right"><button class="btn ghost">取消</button><button class="btn primary">添加步骤</button></div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>为什么复制值得一个常驻按钮。</b>这条命令的全部意义是「能在终端再跑一次」：排查、放进脚本、贴给同事。放在底栏而不是命令行行尾，是因为命令行会在 body 里随内容滚动，而底栏一直在。<b>状态</b>：必填没齐时按钮禁用（不复制半条命令，避免贴进终端才发现报错）；复制成功换成「✓ 已复制」并转品牌色，1.5 秒复原；按钮 `min-width: 82px` 锁定，两种文案宽度一致，底栏不会跳。</p>
+  </section>
+
+</main>
+</body>
+</html>

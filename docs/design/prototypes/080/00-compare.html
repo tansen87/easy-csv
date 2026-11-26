@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 080 · 命令参数框改版：三方案对照</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --brand:oklch(0.42 0.055 250);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased}
+  code{font-family:var(--mono);font-size:.92em;background:color-mix(in oklab,var(--muted) 75%,transparent);
+       padding:1px 4px;border-radius:3px}
+  #sheet{width:1100px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);margin-bottom:7px}
+  h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .lede{margin:8px 0 26px;font-size:12px;color:var(--muted-fg);max-width:900px;line-height:1.8}
+  .lede b{font-weight:500;color:var(--fg)}
+
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:34px}
+  .card{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--border);
+        border-radius:10px;padding:14px 15px 16px}
+  .card:hover{border-color:var(--brand-12)}
+  .card .tag{font:400 10px var(--mono);color:var(--muted-fg-3)}
+  .card h2{margin:6px 0 0;font-size:14px;font-weight:500}
+  .card p{margin:7px 0 0;font-size:11.5px;line-height:1.75;color:var(--muted-fg)}
+  .card .go{margin-top:12px;font:400 11px var(--mono);color:var(--brand)}
+
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);
+        border-radius:10px;overflow:hidden;font-size:11.5px}
+  table{table-layout:fixed}
+  th,td{padding:9px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--border-soft);
+        border-right:1px solid var(--border-soft);line-height:1.65}
+  th:last-child,td:last-child{border-right:0}
+  th:nth-child(1),td:nth-child(1){width:104px}
+  th{background:color-mix(in oklab,var(--muted) 55%,transparent);font-weight:500;font-size:11px;
+     color:var(--muted-fg)}
+  tr:last-child td{border-bottom:0}
+  td:first-child{color:var(--muted-fg)}
+  td b{font-weight:500}
+  .rec{margin-top:22px;padding:14px 16px;background:var(--card);border:1px solid var(--border);
+       border-radius:10px;font-size:11.5px;line-height:1.85;color:var(--muted-fg)}
+  .rec b{color:var(--fg);font-weight:500}
+</style>
+</head>
+<body>
+<main id="sheet">
+  <div class="eyebrow">原型 080 · 命令参数框改版</div>
+  <h1>三份方案对照</h1>
+  <p class="lede">起点是 62 个手写表单：字段名是 CLI flag（<code>select</code>、<code>keep-last</code>），唯一的人话说明藏在 placeholder 里、一打字就消失，其中只有 3 个表单接了真实表头。三份方案都保留「参数能一一对回命令」这件事，区别在于<b>把界面重心放在哪</b>。</p>
+
+  <div class="cards">
+    <a class="card" href="01-param-sheet.html">
+      <div class="tag">方案 A · 560 px</div>
+      <h2>参数清单</h2>
+      <p>一行一个参数：人话名在上、flag 在行尾，必填/常用/高级分三段，底部一条命令预览。改动最小，62 个命令通用。</p>
+      <div class="go">打开原型 →</div>
+    </a>
+    <a class="card" href="02-inspector.html">
+      <div class="tag">方案 B · 720 px</div>
+      <h2>双栏检查器</h2>
+      <p>左栏是参数地图（分组 + 计数 + 已填进度），右栏只滚当前一组。给 plot 18 项、join 13 项这类长表单。</p>
+      <div class="go">打开原型 →</div>
+    </a>
+    <a class="card" href="03-command-first.html">
+      <div class="tag">方案 C · 700 px</div>
+      <h2>命令优先</h2>
+      <p>主体是一条可编辑的 xan 命令，参数是 token，点开才编辑。最有辨识度，也最吃“用户读不读命令”。</p>
+      <div class="go">打开原型 →</div>
+    </a>
+  </div>
+
+  <table>
+    <tr>
+      <th>维度</th><th>A 参数清单</th><th>B 双栏检查器</th><th>C 命令优先</th>
+    </tr>
+    <tr>
+      <td>最适合</td>
+      <td>≤8 项的命令（多数）</td>
+      <td>≥8 项的长命令</td>
+      <td>熟练用户、键盘流、需要复跑命令的场景</td>
+    </tr>
+    <tr>
+      <td>一屏信息量</td>
+      <td><b>高</b>：所有常用项可见，无需滚动</td>
+      <td>中：一次只看一组，靠左栏导航</td>
+      <td>中高：命令全貌 + 单个参数编辑</td>
+    </tr>
+    <tr>
+      <td>新手友好</td>
+      <td><b>最好</b>：中文名 + 说明 + 控件</td>
+      <td>好：分组本身在教参数结构</td>
+      <td>最差：先看懂命令才敢点</td>
+    </tr>
+    <tr>
+      <td>与现有代码的改动面</td>
+      <td><b>小</b>：抽一个字段组件，62 个表单逐步迁移</td>
+      <td>中：多一套布局 + 参数量阈值切换</td>
+      <td>大：参数要能双向映射回 token，撤销/校验都要重写</td>
+    </tr>
+    <tr>
+      <td>需要的新数据</td>
+      <td>参数描述（已有）、表头（已传入但没用）</td>
+      <td>同 A + 分组元数据（可推导：必填/有默认/其余）</td>
+      <td>同 A + 参数的序列化顺序（已有 helpers）</td>
+    </tr>
+    <tr>
+      <td>风险</td>
+      <td>字段多时仍需滚动，但滚的是清单不是表单</td>
+      <td>152px 常驻左栏，短命令会显空</td>
+      <td>把 CLI 语法暴露给不读命令的人</td>
+    </tr>
+  </table>
+
+  <p class="rec"><b>建议的落地顺序：A 打底，B 供长命令，C 作为 A 的“看命令”开关。</b>三者并不互斥——字段组件（名字 / flag / 说明 / 控件）在 A、B、C 中是同一个；先把它抽出来，62 个表单逐个换成数据驱动，A 立刻生效；参数量 ≥8 时切 B 的两栏；再把 C 的命令行做成 A 底部那条预览的“展开可编辑”形态，谁想直接改命令谁展开。<br />这样第一步只动一个组件和 8 个左右的高频表单，就能验证「人话名 + flag 溯源 + 表头选择」是否真的减少了填错。</p>
+</main>
+</body>
+</html>

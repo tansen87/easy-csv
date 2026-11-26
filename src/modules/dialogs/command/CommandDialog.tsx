@@ -2,6 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BookOpen, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { COMMAND_FORMS } from "@/modules/dialogs/command";
+import {
+  ParamSheet,
+  usesParamSheet,
+} from "@/modules/dialogs/command/ParamSheet";
 import { COMMAND_LABELS, type CommandDialogState } from "@/types/dialog";
 import { useLanguage } from "@/i18n";
 
@@ -183,8 +187,10 @@ function CommandDialogShell({
         </div>
 
         <div className="flex min-h-0 flex-col">
-          {FormComponent && (
-            <FormComponent
+          {usesParamSheet(commandDialog.type) ? (
+            // Remount per command so the editor state never leaks between them.
+            <ParamSheet
+              key={commandDialog.type}
               commandDialog={commandDialog}
               onAddCommand={onAddCommand}
               onStepUpdate={onStepUpdate}
@@ -192,6 +198,17 @@ function CommandDialogShell({
               headers={headers}
               sourceTable={sourceTable}
             />
+          ) : (
+            FormComponent && (
+              <FormComponent
+                commandDialog={commandDialog}
+                onAddCommand={onAddCommand}
+                onStepUpdate={onStepUpdate}
+                setCommandDialog={setCommandDialog}
+                headers={headers}
+                sourceTable={sourceTable}
+              />
+            )
           )}
         </div>
       </div>

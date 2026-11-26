@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 080-01 · 命令参数框：方案 A 参数清单</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --rule:oklch(0.2 0.01 80 / 7%);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+    --brand-ink:oklch(0.35 0.05 250);
+    --ok:oklch(0.5 0.09 150);
+
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --chrome:oklch(0.985 0.002 80);
+    --tab:oklch(0.975 0.002 80);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-dlg:0 18px 48px oklch(0.2 0.02 80 / 16%),0 2px 6px oklch(0.2 0.02 80 / 8%);
+  }
+  html.dark{
+    --bg:oklch(0.145 0 0);
+    --fg:oklch(0.985 0 0);
+    --card:oklch(0.205 0 0);
+    --paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);
+    --muted-fg:oklch(0.708 0 0);
+    --muted-fg-2:oklch(0.6 0 0);
+    --muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);
+    --rule:oklch(0.96 0.005 85 / 9%);
+    --border-soft:oklch(0.96 0.005 85 / 9%);
+    --brand:oklch(0.78 0.045 245);
+    --brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 18%,transparent);
+    --brand-ink:oklch(0.8 0.04 245);
+    --stage:oklch(0.115 0 0);
+    --dot:oklch(1 0 0 / 7%);
+    --chrome:oklch(0.175 0 0);
+    --tab:oklch(0.165 0 0);
+    --shadow-card:none;
+    --shadow-dlg:0 20px 60px oklch(0 0 0 / 55%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased}
+  code{font-family:var(--mono);font-size:.92em}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme{position:absolute;right:0;top:4px;font:400 11px var(--font);color:var(--muted-fg);
+         border:1px solid var(--border);border-radius:6px;background:var(--card);padding:5px 10px;cursor:pointer}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       border-bottom:1px solid var(--border-soft);margin-bottom:16px}
+  .cap b{font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto;font-family:var(--mono);font-size:10px}
+  .note{margin:14px 0 0;font-size:11.5px;line-height:1.8;color:var(--muted-fg);max-width:1010px}
+  .note b{font-weight:500;color:var(--fg)}
+
+  /* app shell */
+  .app{width:1160px;max-width:100%;height:620px;border:1px solid var(--border);border-radius:12px;
+       overflow:hidden;display:flex;flex-direction:column;position:relative;background:var(--bg);
+       box-shadow:var(--shadow-card)}
+  .topbar{height:44px;flex:none;display:flex;align-items:center;gap:2px;padding:0 12px;
+          border-bottom:1px solid var(--border);background:var(--chrome)}
+  .tbtn{font-size:12px;padding:5px 9px;border-radius:6px;color:var(--muted-fg)}
+  .tbtn.dim{color:var(--muted-fg-3)}
+  .spacer{flex:1}
+  .cmdbar{height:26px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid var(--border);
+          border-radius:6px;width:300px;color:var(--muted-fg-3);font-size:11px;background:var(--bg)}
+  .cmdbar .caret{font-family:var(--mono);color:var(--muted-fg-2)}
+  .tabbar{height:34px;flex:none;display:flex;align-items:center;gap:2px;padding:0 8px;
+          border-bottom:1px solid var(--border);background:var(--tab)}
+  .tab{height:24px;display:inline-flex;align-items:center;gap:6px;padding:0 9px;border-radius:5px;
+       font-size:11.5px;color:var(--muted-fg-3)}
+  .tab.on{background:var(--brand-soft);color:var(--brand);border:1px solid var(--brand-12)}
+  .tab .dot{width:4px;height:4px;border-radius:50%;background:var(--ok)}
+
+  .canvas{flex:1;position:relative;overflow:hidden;background-color:var(--bg);
+          background-image:radial-gradient(circle,var(--dot) 1px,transparent 1px);background-size:22px 22px}
+  .edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .step{position:absolute;width:210px;background:var(--card);border:1px solid var(--border);
+        border-radius:10px;box-shadow:var(--shadow-card)}
+  .step .body{padding:9px 10px}
+  .step .head{display:flex;align-items:center;gap:8px}
+  .step .alias{font-size:12.5px;font-weight:500}
+  .step .cmd{margin-left:auto;font:400 10px/1 var(--mono);color:var(--muted-fg-3)}
+  .step .params{margin-top:5px;display:flex;flex-direction:column;gap:2px}
+  .pline{display:flex;gap:6px;font:400 10.5px/16px var(--mono);min-width:0}
+  .pk{flex:none;min-width:52px;color:var(--muted-fg-3)}
+  .pv{color:var(--muted-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .scrim{position:absolute;inset:0;background:oklch(0.2 0.01 80 / 20%);z-index:5}
+  html.dark .scrim{background:oklch(0 0 0 / 45%)}
+
+  /* dialog A */
+  .dlg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:560px;
+       background:var(--card);border:1px solid var(--border);border-radius:12px;
+       box-shadow:var(--shadow-dlg);z-index:6;overflow:hidden;display:flex;flex-direction:column;
+       max-height:calc(100% - 48px)}
+  .dlg-hd{height:52px;flex:none;display:flex;align-items:center;gap:10px;padding:0 16px 0 20px;
+          border-bottom:1px solid var(--border)}
+  .dlg-hd h2{margin:0;font-size:14px;font-weight:500}
+  .cmd-id{font:400 10.5px/1 var(--mono);color:var(--muted-fg-3);border:1px solid var(--border);
+          border-radius:4px;padding:3px 5px}
+  .hd-r{margin-left:auto;display:flex;align-items:center;gap:4px}
+  .ghost-btn{font:400 11.5px var(--font);color:var(--muted-fg);background:none;border:0;
+             border-radius:5px;padding:5px 7px;cursor:pointer}
+  .xbtn{width:26px;height:26px;display:grid;place-items:center;border-radius:5px;border:0;
+        background:none;color:var(--muted-fg);font-size:14px;cursor:pointer}
+
+  .dlg-body{padding:4px 20px 8px;overflow:auto}
+  .group{display:flex;align-items:center;gap:8px;padding:14px 0 2px}
+  .group span{font-size:10.5px;color:var(--muted-fg-3);font-family:var(--mono)}
+  .group i{flex:1;height:1px;background:var(--border-soft)}
+
+  .field{padding:10px 0 12px;border-bottom:1px solid var(--border-soft)}
+  .field:last-child{border-bottom:0}
+  .fl{display:flex;align-items:baseline;gap:8px}
+  .fname{font-size:12.5px;color:var(--fg);font-weight:500}
+  .req{font-size:10px;color:var(--brand);border:1px solid var(--brand-12);background:var(--brand-soft);
+       border-radius:3px;padding:1px 4px;margin-left:-2px}
+  .flag{margin-left:auto;font:400 10.5px/1 var(--mono);color:var(--muted-fg-3);white-space:nowrap}
+  .flag em{font-style:normal;color:var(--muted-fg)}
+  .fdesc{margin:3px 0 0;font-size:11px;line-height:1.55;color:var(--muted-fg-2)}
+  .ctl{margin-top:8px}
+
+  .input{height:32px;width:100%;display:flex;align-items:center;padding:0 10px;font-size:12px;
+         border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--fg)}
+  .input.ph{color:var(--muted-fg-3)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;padding:5px 6px;min-height:34px;align-items:center;
+         border:1px solid var(--border);border-radius:7px;background:var(--bg)}
+  .chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 5px 0 8px;border-radius:5px;
+        font-size:11.5px;background:var(--muted);color:var(--fg)}
+  .chip i{font-style:normal;color:var(--muted-fg-3);font-size:11px}
+  .chip.add{background:transparent;color:var(--muted-fg-2);border:1px dashed var(--border);padding:0 8px}
+  .ghost-input{font-size:11.5px;color:var(--muted-fg-3);padding:0 2px}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--bg)}
+  .seg span{padding:6px 12px;font-size:11.5px;color:var(--muted-fg)}
+  .seg span.on{background:var(--brand-soft);color:var(--brand);font-weight:500}
+  .row2{display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .sw{width:30px;height:17px;border-radius:9px;background:var(--muted);position:relative;
+      border:1px solid var(--border);display:inline-block;vertical-align:middle}
+  .sw i{position:absolute;left:2px;top:2px;width:11px;height:11px;border-radius:50%;background:var(--card);
+        box-shadow:0 1px 1px oklch(0.2 0.02 80 / 20%)}
+  .sw.on{background:var(--brand);border-color:var(--brand)}
+  .sw.on i{left:15px;background:oklch(0.985 0 0)}
+
+  .more{display:flex;align-items:center;gap:8px;padding:11px 0 3px;font-size:11.5px;color:var(--muted-fg)}
+  .more b{font-weight:500;color:var(--fg)}
+  .more .chev{font-family:var(--mono);color:var(--muted-fg-3)}
+
+  .preview{flex:none;display:flex;align-items:center;gap:10px;height:32px;padding:0 20px;
+           border-top:1px solid var(--border-soft);
+           background:color-mix(in oklab,var(--muted) 38%,transparent)}
+  .preview code{font-size:10.5px;color:var(--brand-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .preview .cp{margin-left:auto;font:400 10px var(--mono);color:var(--muted-fg-3);white-space:nowrap}
+
+  .dlg-ft{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;height:52px;
+          padding:0 20px;border-top:1px solid var(--border)}
+  .btn{height:28px;padding:0 12px;border-radius:6px;font-size:12px;border:1px solid transparent;cursor:pointer}
+  .btn.ghost{background:none;color:var(--muted-fg);border-color:transparent}
+  .btn.primary{background:var(--brand);color:oklch(0.985 0 0);font-weight:500}
+  html.dark .btn.primary{color:oklch(0.205 0 0)}
+  .kbd{font:400 9.5px var(--mono);border:1px solid var(--border);border-radius:3px;padding:1px 3px;
+       color:var(--muted-fg-3);margin-left:6px}
+</style>
+</head>
+<body>
+<main id="sheet">
+
+  <header class="stage-bar">
+    <div class="eyebrow">原型 080-01 · 命令参数框改版</div>
+    <h1>方案 A · 参数清单：一行一个参数，人话在前，flag 在后</h1>
+    <p>把 62 个手写表单收成同一张<code>参数清单</code>：字段名讲人话，CLI flag 退成行尾的等宽小字，必填/常用/高级分三组，底部一条实时命令预览。改动最小、密度最高，任何命令都套得进这一版式。</p>
+    <button class="theme" onclick="document.documentElement.classList.toggle('dark')">切换明暗</button>
+  </header>
+
+  <dl class="direction">
+    <div><dt>产品</dt><dd>把 xan 命令包成可视化管道的桌面工具，用户是每周洗几千万行 CSV 的人</dd></div>
+    <div><dt>性格</dt><dd>精确、克制、可核对</dd></div>
+    <div><dt>世界</dt><dd>终端与制表：等宽命令、纸白表格、发丝框线</dd></div>
+    <div><dt>时刻</dt><dd>底部那行命令预览，是界面上唯一允许出现品牌色的地方</dd></div>
+    <div><dt>签名</dt><dd>每个字段名右侧的等宽 flag（<code>-s</code> / <code>--check</code>）</dd></div>
+  </dl>
+
+  <section class="frame">
+    <div class="cap"><span>01</span><b>常规命令 · dedup · 折叠高级项</b><span class="file">560 px</span></div>
+    <div class="app">
+      <div class="topbar">
+        <span class="tbtn">文件</span><span class="tbtn dim">编辑</span><span class="tbtn dim">查看</span>
+        <span class="tbtn">执行</span><span class="tbtn dim">工具</span><span class="tbtn dim">帮助</span>
+        <span class="spacer"></span>
+        <span class="cmdbar"><span class="caret">›</span> 搜索命令或步骤 <span class="spacer"></span> <span class="kbd">Ctrl F</span></span>
+      </div>
+      <div class="tabbar">
+        <span class="tab on"><span class="dot"></span>销售明细 2024</span>
+        <span class="tab">渠道汇总</span>
+      </div>
+      <div class="canvas">
+        <svg class="edges" viewBox="0 0 1160 542" preserveAspectRatio="none">
+          <path d="M330 150 H430" stroke="oklch(0.2 0.01 80 / 30%)" stroke-width="1.5" fill="none"/>
+          <path d="M640 150 H740" stroke="oklch(0.2 0.01 80 / 30%)" stroke-width="1.5" fill="none"/>
+        </svg>
+        <div class="step" style="left:120px;top:104px">
+          <div class="body">
+            <div class="head"><span class="alias">输入</span><span class="cmd">csv</span></div>
+            <div class="params"><div class="pline"><span class="pk">行数</span><span class="pv">1,284,530</span></div></div>
+          </div>
+        </div>
+        <div class="step" style="left:430px;top:104px">
+          <div class="body">
+            <div class="head"><span class="alias">按客户去重</span><span class="cmd">dedup</span></div>
+            <div class="params">
+              <div class="pline"><span class="pk">select</span><span class="pv">客户</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="step" style="left:740px;top:104px">
+          <div class="body">
+            <div class="head"><span class="alias">结果</span><span class="cmd">12,041 行</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scrim"></div>
+
+      <div class="dlg">
+        <div class="dlg-hd">
+          <h2>去重</h2>
+          <code class="cmd-id">dedup</code>
+          <div class="hd-r">
+            <button class="ghost-btn">文档</button>
+            <button class="xbtn">×</button>
+          </div>
+        </div>
+
+        <div class="dlg-body">
+          <div class="group"><span>常用</span><i></i></div>
+
+          <div class="field">
+            <div class="fl"><span class="fname">去重的列</span><span class="flag"><em>select</em> · -s</span></div>
+            <p class="fdesc">只比较这几列；留空则整行比较</p>
+            <div class="ctl">
+              <div class="chips">
+                <span class="chip">地区 <i>×</i></span>
+                <span class="chip">客户 <i>×</i></span>
+                <span class="ghost-input">输入列名，或点选表头</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="fl"><span class="fname">保留哪一行</span><span class="flag"><em>keep-last</em></span></div>
+            <p class="fdesc">同一组重复里，留下先出现的还是后出现的</p>
+            <div class="ctl">
+              <div class="seg"><span class="on">第一行</span><span>最后一行</span></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="fl"><span class="fname">只验证不输出</span><span class="flag"><em>check</em></span></div>
+            <p class="fdesc">报告有没有重复，不改动数据</p>
+            <div class="ctl">
+              <span class="sw"><i></i></span>
+            </div>
+          </div>
+
+          <div class="more"><span class="chev">▸</span> 还有 <b>5 项</b>：保留重复行、标记列、外部索引、已排序、按表达式取舍</div>
+        </div>
+
+        <div class="preview">
+          <code>xan dedup -s 地区,客户</code>
+          <span class="cp">复制</span>
+        </div>
+
+        <div class="dlg-ft">
+          <button class="btn ghost">取消</button>
+          <button class="btn primary">添加步骤</button>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>三个决定。</b>① 字段名用中文讲目的，<code>select</code> 这类 flag 只做溯源，挂在行尾、不和名字抢位置；② 布尔 flag 按人的选择重写（<code>--keep-last</code> 是「第一行 / 最后一行」两段，<code>--check</code> 是开关），但命令预览里仍然出现真实 flag；③ 高频 3 项常驻，其余收进「还有 5 项」，弹窗高度不随命令参数多少而爆。</p>
+  </section>
+
+  <section class="frame">
+    <div class="cap"><span>02</span><b>展开高级项 + 列名从真实表头选</b><span class="file">560 px</span></div>
+    <div class="app" style="height:686px">
+      <div class="topbar">
+        <span class="tbtn">文件</span><span class="tbtn dim">编辑</span><span class="tbtn dim">查看</span>
+        <span class="tbtn">执行</span><span class="tbtn dim">工具</span><span class="tbtn dim">帮助</span>
+        <span class="spacer"></span>
+        <span class="cmdbar"><span class="caret">›</span> 搜索命令或步骤 <span class="spacer"></span> <span class="kbd">Ctrl F</span></span>
+      </div>
+      <div class="tabbar">
+        <span class="tab on"><span class="dot"></span>销售明细 2024</span>
+        <span class="tab">渠道汇总</span>
+      </div>
+      <div class="canvas">
+        <div class="step" style="left:120px;top:104px">
+          <div class="body">
+            <div class="head"><span class="alias">输入</span><span class="cmd">csv</span></div>
+            <div class="params"><div class="pline"><span class="pk">行数</span><span class="pv">1,284,530</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scrim"></div>
+
+      <div class="dlg">
+        <div class="dlg-hd">
+          <h2>去重</h2>
+          <code class="cmd-id">dedup</code>
+          <div class="hd-r">
+            <button class="ghost-btn">文档</button>
+            <button class="xbtn">×</button>
+          </div>
+        </div>
+
+        <div class="dlg-body">
+          <div class="group"><span>常用</span><i></i></div>
+
+          <div class="field">
+            <div class="fl"><span class="fname">去重的列</span><span class="flag"><em>select</em> · -s</span></div>
+            <div class="ctl">
+              <div class="chips">
+                <span class="chip">地区 <i>×</i></span>
+                <span class="chip">客户 <i>×</i></span>
+                <span class="ghost-input">输入列名，或点选表头</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="group" style="padding-top:16px"><span>高级 · 5 项</span><i></i></div>
+
+          <div class="field">
+            <div class="fl"><span class="fname">只输出重复的行</span><span class="flag"><em>keep-duplicates</em></span></div>
+            <p class="fdesc">反过来用：把重复项单独挑出来做核对</p>
+            <div class="ctl"><span class="sw"><i></i></span></div>
+          </div>
+
+          <div class="field">
+            <div class="fl"><span class="fname">加一列标记</span><span class="flag"><em>boolean</em></span></div>
+            <p class="fdesc">给每行标出是否重复，列名即此处填的值</p>
+            <div class="ctl"><div class="input ph">例如 是否重复</div></div>
+          </div>
+
+          <div class="field">
+            <div class="fl"><span class="fname">用表达式决定留哪行</span><span class="flag"><em>choose</em></span></div>
+            <p class="fdesc">比到重复时求值，可引用 <code>current_</code> 与 <code>new_</code> 前缀的列</p>
+            <div class="ctl"><div class="input ph">current_金额 &gt;= new_金额</div></div>
+          </div>
+
+          <div class="more" style="padding-top:14px"><span class="chev">▾</span> 还有 <b>2 项</b>：索引放磁盘、文件已排序
+          </div>
+        </div>
+
+        <div class="preview">
+          <code>xan dedup -s 地区,客户 --boolean 是否重复</code>
+          <span class="cp">复制</span>
+        </div>
+
+        <div class="dlg-ft">
+          <button class="btn ghost">取消</button>
+          <button class="btn primary">添加步骤</button>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>列名不再是盲打。</b>现在 62 个表单里只有 3 个用上了真实表头，其余全靠用户背列名；这里把 <code>headers</code>（App 早就传进来了）接成多选，输入即过滤，选中的列同时出现在命令预览里。<b>代价</b>：字段顺序固定为「目的 → 说明 → 控件 → 分组」，不再允许每个表单各写一套 grid。</p>
+  </section>
+
+</main>
+</body>
+</html>
