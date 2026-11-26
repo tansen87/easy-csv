@@ -63,6 +63,11 @@ export function ParamControl({
         }))}
         size="sm"
         ariaLabel={label}
+        // Same treatment as the batch forms: the sheet's scroll box would clip
+        // a long option list, and `to --format` alone has nine entries.
+        portal
+        flip
+        listMaxHeight="max-h-[420px]"
       />
     );
   }

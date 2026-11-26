@@ -31,6 +31,12 @@ export function BatchToForm(props: CommandFormProps) {
               ]}
               placeholder="Search or select..."
               size="md"
+              // The list holds 9–13 formats: a portal keeps it out of the
+              // dialog's scroll box, `flip` opens it upward near the bottom,
+              // and the height gives every row room before it scrolls.
+              portal
+              flip
+              listMaxHeight="max-h-[420px]"
             />
           </div>
           <div>
