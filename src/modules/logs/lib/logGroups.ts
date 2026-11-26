@@ -3,7 +3,8 @@
  *
  * One execution run = one group (`runId`); tab lines without a run and
  * app-level lines fall back to per-tab / app groups so nothing is lost.
- * Groups render newest-first; the status dot shows the worst severity.
+ * Groups render oldest-first (top → bottom) like a terminal; the status dot
+ * shows the worst severity.
  */
 import { LogEntry } from "@/types/xan";
 import { TextSegment, highlightSegments } from "@/utils/settingsSearch";
@@ -82,7 +83,9 @@ export function buildLogGroups(
     }
   }
 
-  return [...groups.values()].sort((a, b) => b.lastAt - a.lastAt);
+  // Start-time ascending: an older run keeps its place even if it finishes
+  // after a run that started later (concurrent tabs interleave in chunks).
+  return [...groups.values()].sort((a, b) => a.startedAt - b.startedAt);
 }
 
 /** Totals across every line — the numbers shown in the level chips. */

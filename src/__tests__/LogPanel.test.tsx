@@ -75,11 +75,12 @@ describe("log groups (design 071, pure logic)", () => {
       makeLog("5", "app line"),
     ];
     const groups = buildLogGroups(logs, tabNames, "应用");
+    // Oldest-first, top → bottom: `startedAt` ascending (stable on ties).
     expect(groups.map((g) => g.key)).toEqual([
-      "run:r2",
       "run:r1",
       "tab:a",
       "app",
+      "run:r2",
     ]);
     const r1 = groups.find((g) => g.key === "run:r1")!;
     expect(r1.label).toBe("Tab A");

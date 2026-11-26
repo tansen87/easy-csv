@@ -142,7 +142,8 @@ export const LogPanel = React.memo(function LogPanel({
   const [tabScope, setTabScope] = useState<TabScope>("all");
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const [atBottom, setAtBottom] = useState(true);
+  /** Whether the newest run (rendered at the bottom) is in view. */
+  const [atLatest, setAtLatest] = useState(true);
   /** 1-based position shown in the search box (unslop 071-02: "1/3"). */
   const [hitIndex, setHitIndex] = useState(0);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -245,10 +246,14 @@ export const LogPanel = React.memo(function LogPanel({
     [copyText],
   );
 
-  const jumpToBottom = useCallback(() => {
+  /**
+   * The timeline runs top → bottom in time order, so the latest execution sits
+   * at the bottom edge — 「最新」 means `scrollTop = scrollHeight`.
+   */
+  const jumpToLatest = useCallback(() => {
     const viewport = getViewport();
     if (viewport) viewport.scrollTop = viewport.scrollHeight;
-    setAtBottom(true);
+    setAtLatest(true);
   }, []);
 
   const handleViewportScroll = useCallback(() => {
@@ -256,7 +261,7 @@ export const LogPanel = React.memo(function LogPanel({
     if (!viewport) return;
     const nearBottom =
       viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 40;
-    setAtBottom(nearBottom);
+    setAtLatest(nearBottom);
   }, []);
 
   useEffect(() => {
@@ -267,11 +272,29 @@ export const LogPanel = React.memo(function LogPanel({
     return () => viewport.removeEventListener("scroll", handleViewportScroll);
   }, [isVisible, handleViewportScroll]);
 
+  /**
+   * Bumps whenever a line is added (or the set is replaced) — the follow
+   * effect keys off it so a 500-line rotating buffer still pulls the view up
+   * when the length happens to stay constant.
+   */
+  const latestMarker = useMemo(() => {
+    let latest = 0;
+    for (const log of logs) latest = Math.max(latest, log.timestamp.getTime());
+    return `${logs.length}:${latest}`;
+  }, [logs]);
+
+  // Follow the newest run while the user stays at the bottom of the drawer.
   useEffect(() => {
-    if (!isVisible || !atBottom) return;
+    if (!isVisible || !atLatest) return;
     const viewport = getViewport();
     if (viewport) viewport.scrollTop = viewport.scrollHeight;
-  }, [isVisible, filtered.length, atBottom]);
+  }, [isVisible, latestMarker, atLatest]);
+
+  // Reopening the drawer starts at the newest run, so a stale "scrolled away"
+  // flag must not show the jump button; the effect above lands on the bottom.
+  useEffect(() => {
+    if (isVisible) setAtLatest(true);
+  }, [isVisible]);
 
   useEffect(() => {
     return () => {
@@ -848,10 +871,10 @@ export const LogPanel = React.memo(function LogPanel({
         )}
       </ScrollArea>
 
-      {!atBottom && filtered.length > 0 && (
+      {!atLatest && filtered.length > 0 && (
         <button
           type="button"
-          onClick={jumpToBottom}
+          onClick={jumpToLatest}
           className="absolute bottom-3 right-3 z-10 flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2 text-[11px] text-muted-foreground shadow-xs transition-colors hover:bg-muted hover:text-foreground"
         >
           <ArrowDown className="h-3.5 w-3.5" />
