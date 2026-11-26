@@ -1,11 +1,23 @@
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/Select";
 import type { XanParameter } from "@/types/xan";
-import { isColumnParam } from "@/modules/dialogs/command/lib/paramMeta";
+import {
+  isColumnParam,
+  optionLabel,
+  type ParamFieldKind,
+} from "@/modules/dialogs/command/lib/paramMeta";
+import type { EffectiveLanguage } from "@/i18n/translations/types";
 import { ColumnField } from "@/modules/dialogs/command/fields/ColumnField";
+import { PathField } from "@/modules/dialogs/command/fields/PathField";
+import { PathListField } from "@/modules/dialogs/command/fields/PathListField";
+import { LinesField } from "@/modules/dialogs/command/fields/LinesField";
 import { ExpressionEditor } from "@/components/expression/ExpressionEditor";
+import { DuckdbEditor } from "@/components/expression/DuckdbEditor";
 
 interface ParamControlProps {
+  /** Owning command, so option labels can be resolved per command. */
+  commandId: string;
+  language: EffectiveLanguage;
   param: XanParameter;
   value: unknown;
   onChange: (value: unknown) => void;
@@ -18,8 +30,19 @@ interface ParamControlProps {
   columnPlaceholder: string;
   /** The parameter's description, used as the expression editor's hint. */
   description?: string;
-  /** Seat the full xan expression editor instead of a one-line input. */
-  expression?: boolean;
+  /** Richer control than `param.type` implies: path, path list or code. */
+  fieldKind?: ParamFieldKind;
+  /** Separator to write a list back with, instead of an array. */
+  fieldJoin?: string;
+  /** Folder picker label; omitted means files only. */
+  folderLabel?: string;
+  /** Selected table of a `.duckdb` input, for the SQL editor's templates. */
+  sourceTable?: string;
+  pickFileLabel?: string;
+  pickFolderLabel?: string;
+  addFileLabel?: string;
+  fileCountLabel?: string;
+  lineCountLabel?: string;
 }
 
 /**
@@ -30,6 +53,8 @@ interface ParamControlProps {
  * header, next to 移除.
  */
 export function ParamControl({
+  commandId,
+  language,
   param,
   value,
   onChange,
@@ -38,9 +63,69 @@ export function ParamControl({
   headersLabel,
   columnPlaceholder,
   description,
-  expression,
+  fieldKind,
+  fieldJoin,
+  folderLabel,
+  sourceTable,
+  pickFileLabel = "",
+  pickFolderLabel = "",
+  addFileLabel = "",
+  fileCountLabel = "",
+  lineCountLabel = "",
 }: ParamControlProps) {
-  if (expression) {
+  if (fieldKind === "lines") {
+    return (
+      <LinesField
+        value={value}
+        onChange={(next) => onChange(next)}
+        label={label}
+        placeholder={description}
+        countLabel={lineCountLabel}
+      />
+    );
+  }
+
+  if (fieldKind === "path") {
+    return (
+      <PathField
+        value={String(value ?? "")}
+        onChange={(next) => onChange(next)}
+        label={label}
+        placeholder={description}
+        pickFileLabel={pickFileLabel}
+        pickFolderLabel={pickFolderLabel}
+      />
+    );
+  }
+
+  if (fieldKind === "path-list") {
+    return (
+      <PathListField
+        value={value}
+        onChange={(next) => onChange(next)}
+        label={label}
+        addLabel={addFileLabel}
+        countLabel={fileCountLabel}
+        join={fieldJoin}
+        folderLabel={folderLabel}
+      />
+    );
+  }
+
+  if (fieldKind === "sql") {
+    return (
+      <DuckdbEditor
+        value={String(value ?? "")}
+        onChange={(next) => onChange(next)}
+        columns={headers}
+        placeholder={description}
+        sourceTable={sourceTable}
+        autoFocus
+      />
+    );
+  }
+
+  if (fieldKind === "code") {
     return (
       <ExpressionEditor
         value={String(value ?? "")}
@@ -58,7 +143,7 @@ export function ParamControl({
         value={String(value ?? "")}
         onChange={(next) => onChange(next)}
         options={param.options.map((option) => ({
-          label: option,
+          label: optionLabel(commandId, param.name, option, language),
           value: option,
         }))}
         size="sm"

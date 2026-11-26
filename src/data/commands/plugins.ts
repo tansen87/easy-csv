@@ -41,6 +41,7 @@ export const pluginsCommands: XanCommand[] = [
 {
     id: "duckdb",
     name: "duckdb",
+    native: true,
     description: "Run a DuckDB SQL query",
     descriptionCn: "用 DuckDB 执行 SQL 查询",
     category: "Plugins",

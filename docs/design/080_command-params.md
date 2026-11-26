@@ -1,6 +1,6 @@
 # 080 · 命令参数框改版：命令优先（方案 C）
 
-> 状态: **已实现（2026-11-26）· 61 个命令里 52 个已走新面板,9 个需要文件选择器 / 面板编辑器的仍用旧表单**
+> 状态: **已实现（2026-11-26）· 61 个命令里 60 个已走新面板,只剩 `run`(它的模式是表单状态,不是参数)**
 > 日期: 2026-11-26
 > 原型: `docs/design/prototypes/080/`（`00-compare.html` 三案对照；`03-command-first.html` 定稿方向）
 > 关联: `019`（模块边界）、`053`/`072`/`073`（命令面板与命令目录）、`074`（帮助入口迁到表单标题行）、`076`（ViewDock）
@@ -70,6 +70,14 @@
 ```
 
 宽度 700，高度 524（`max-height: min(524px, 80vh)`），中间区滚动。
+
+### 4.0 原生命令
+
+`chart`、`duckdb`、`batch-from` / `batch-to` / `batch-search` **不经过 xan**——它们在应用内执行(recharts 画图、DuckDB 引擎、三条批量流)。数据里用 `XanCommand.native = true` 标出来,面板据此:
+
+- 命令行区不写 `xan` 前缀,只写命令名(`duckdb --sql …`,而不是 `xan duckdb …`);
+- **不显示「复制命令」按钮**——没有可交付给终端的命令行,给一个复制按钮只会误导;
+- 底栏退回「必填计数 + 取消/添加步骤」,不再为不存在的命令留空位。
 
 ### 4.1 复制命令
 
@@ -163,3 +171,55 @@
 - 9 个 bespoke 命令待做:文件/目录选择器需要新的字段类型(`path`),面板编辑类(chart/plot)本就不适合 token 化。
 - 必填未齐时「添加步骤」仍可点(与旧表单一致),等确认是否改成硬拦。
 - `paramMeta` 的字段标签只覆盖 join / dedup / select;新迁一个命令要顺手补它的标签,否则回落到参数名。
+
+---
+
+## 9 · 剩余 9 个命令怎么收敛（2026-11-26）
+
+原型：`docs/design/prototypes/080/04-field-vocabulary.html`
+
+### 9.1 结论
+
+它们不是"另一种界面",而是**面板缺 6 个字段类型 + 命令数据缺 options**。把这 6 个字段按现有解剖补齐(`ParamControl` 里加分支),卡片、命令区、列表、底栏一行都不用改。
+
+| 命令 | 现在缺什么 | 补什么 |
+|---|---|---|
+| `batch-from` | 源文件/文件夹选择器;13 个 format 选项写死在表单里 | `path` + `path-list` + 数据 `options` |
+| `batch-to` | output-dir 选择器;9 个 format 选项写死 | `path` + 数据 `options` |
+| `batch-search` | 值一值一行;5 个下拉的选项写死 | `lines` + 数据 `options` |
+| `cat` | 多文件清单;「文件 / 路径列 / glob」是表单模式 | `path-list` + 模式分段 |
+| `chart` | 4 种图形的选项写死(数据里只有一句英文描述) | 数据 `options`(其余全是普通参数) |
+| `plot` | 6 处下拉写死(聚合、点样式、粒度、回归…) | 数据 `options` + 已有的 `ColumnField` |
+| `duckdb` | SQL 编辑器 + 表选择 | `code` + `table` |
+| `scrape` | 输入目录/路径 | `path`(其余直接可迁) |
+| `run` | 「管道 / 脚本文件」是表单模式,不是参数 | 模式分段;否则永久保留 |
+
+### 9.2 六个字段
+
+| 字段 | 规格 | 用在 |
+|---|---|---|
+| `path` | 32px 输入框 + 右侧两个 14px 图标按钮(文件 / 文件夹),可手打可点选 | batch-from、batch-to、cat、scrape |
+| `path-list` | 22px 文件 chip + 「+ 添加文件」,下方一行等宽小字报「N 个文件 · 约 X MB」 | cat、batch-from |
+| `table` | 只读下拉,值来自当前 `.duckdb` 的表;没选表时禁用并写「先选择表」 | duckdb |
+| `code` | 复用 `DuckdbEditor` / `ExpressionEditor`,底部签名条 | duckdb、map(已接) |
+| `lines` | ≥72px 多行框,右下角报行数 | batch-filter |
+| `segmented` | ≤4 个选项时用分段控件,超过仍用下拉 | chart、模式 |
+
+### 9.3 三条硬规则
+
+1. **选项写进数据,不写进表单。** 表单里硬编码的数组(4 种图、6 个粒度、9 个格式)补成 `type: "select" + options`,通用控件立刻出对的下拉——这比多写 9 个表单便宜得多,也是这次能收敛的真正原因。
+2. **模式不是参数。** cat / run 的「模式」不进命令行,用分段控件放在编辑器卡上方,按它显隐后续字段。
+3. **预览不进弹窗。** chart / plot 的结果在右侧 ChartPanel 看;弹窗塞图表会让高度随数据跳动,底栏跟着跑。
+
+### 9.4 建议顺序与进度
+
+1. ✅ **补数据 `options`(已完成 2026-11-26)** — `chart --chart-type`(7 种)、`plot` 的 `aggregate` / `marker` / `granularity` / `x-scale` / `y-scale` / `density-scale` 改成 `type: "select" + options`;`batch-to.format` 本来就有 options。**`chart`、`plot`、`batch-to` 三个已切到新面板**,`BESPOKE_FORMS` 从 9 个降到 6 个。
+   - 选项的中文标签放在 `paramMeta.OPTION_LABELS`,按 `command.param.value` 索引——同一个 `bar` 在图表里是「柱状图」、在 plot 的点样式里是「竖条」。
+   - 顺手修掉一个连带问题:**默认值现在参与面板显示**。提交时 `handleCommandSubmit` 会把 `default` 并进参数,所以面板也用合并后的视图算 token、必填计数和复制内容——否则 `chart-type`(必填且有默认 `line`)会一直显示"必填未齐",和真实行为不符。
+2. ✅ **`path` + `path-list`(已完成 2026-11-26)** — 新增 `fields/PathField.tsx`(输入框 + 文件/文件夹两个 14px 图标按钮)与 `fields/PathListField.tsx`(文件 chip + 「添加文件」+ 底部「N 个文件」);字段映射收在 `paramMeta.paramFieldKind()` 的 `FIELD_KINDS` 表里(`cat.inputs` / `batch-from.source-path` / `batch-to.output-dir` / `scrape.evaluate-file`)。**`cat`、`batch-from`、`scrape` 已切到新面板**。
+   - `cat.inputs` 的值原本就是**数组**(多选对话框写回),`buildCommandTokens` 现在按 `|` 拼接显示——与 `serializeStepParams` 和后端 positional 的切分规则一致。
+3. ✅ **`sql` 字段(已完成 2026-11-26)** — `duckdb.sql` 用 `DuckdbEditor`(模板条 + 高亮),`sourceTable` 从 `CommandFormProps` 透传到编辑器;实测它**是 prop 不是参数**,所以不需要设计稿里提过的 `table` 字段。`duckdb` 已切到新面板。
+4. ✅ **`lines` + 条件字段(已完成 2026-11-26)** — `batch-search.manual-values` 用新的 `fields/LinesField.tsx`(多行 + 右下角「N 行」报数),`output-dir` 用路径字段;同时给 `XanParameter` 加了 `visibleWhen: { param, equals[] }`,让「文本条件 / 数字条件」两个操作符组按 `filter-type` 只显示一个,`manual-values` / `extract-column` 按 `value-mode` 切换。**隐藏字段不进命令行、不进必填计数、也不进提交内容**,所以切类型不会留下残余 flag。
+   - 顺手补了 `batch-search` 九个参数的 `descriptionCn` 与中文标签,面板不再中英混排。
+5. ⚠️ **数据缺口(已缩小)**: `batch-search` 已补 `descriptionCn`;`batch-from` / `batch-to` 仍然只有英文 `description`,中文界面里那几行还是英文,补数据即可,不涉及代码。
+6. ⏳ **只剩 `run`**: 它的「管道 / 脚本文件」是**表单状态而非参数**(数据里没有 `mode` 字段,表单靠它决定改 `pipeline` 还是 `file`),要迁移得先决定是给数据加一个 `mode` 参数,还是给面板加「非参数的表单模式」机制。

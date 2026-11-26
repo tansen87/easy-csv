@@ -1287,6 +1287,12 @@ export interface Translations {
   paramCopyDisabled: string;
   paramHeaders: string;
   paramPlaceholder: string;
+  paramPickFile: string;
+  paramPickFolder: string;
+  paramAddFile: string;
+  paramAddFolder: string;
+  paramFileCount: string;
+  paramLineCount: string;
   paramRequiredProgress: string;
   paramNoRequired: string;
   paramMissing: string;

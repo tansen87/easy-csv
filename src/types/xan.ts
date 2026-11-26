@@ -6,6 +6,12 @@ export interface XanCommand {
   category: string;
   /** Marks a command that runs through an external CLI plugin instead of xan */
   plugin?: boolean;
+  /**
+   * Runs inside the app, not through xan: `chart` (recharts), `duckdb`, and the
+   * three batch flows. The parameter sheet drops the `xan` prefix and the copy
+   * button for these, because there is no command line to hand over.
+   */
+  native?: boolean;
   parameters: XanParameter[];
 }
 
@@ -26,6 +32,12 @@ export interface XanParameter {
   options?: string[];
   flag?: string;
   isPositional?: boolean;
+  /**
+   * Hide the field unless another parameter holds one of these values.
+   * `batch-search` uses it for the two operator sets: exactly one of
+   * `text-operator` / `number-operator` is meaningful at a time.
+   */
+  visibleWhen?: { param: string; equals: string[] };
 }
 
 export interface PipelineStep {

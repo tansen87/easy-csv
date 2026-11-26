@@ -96,8 +96,10 @@ describe("ParamSheet · join", () => {
     expect(screen.getByText("必填 2 / 2 已就位")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /复制命令/ }));
 
+    // Defaults are on the command too: join-type defaults to inner, and that
+    // is exactly what the run will build.
     expect(writeText).toHaveBeenCalledWith(
-      "xan join 地区 客户明细.csv 订单.csv",
+      "xan join 地区 客户明细.csv 订单.csv --join-type inner",
     );
   });
 
@@ -163,12 +165,22 @@ describe("usesParamSheet", () => {
     expect(usesParamSheet("sort")).toBe(true);
     expect(usesParamSheet("rename")).toBe(true);
     expect(usesParamSheet("to")).toBe(true);
+    // Second batch: data gained real options, so these three fit the sheet.
+    expect(usesParamSheet("chart")).toBe(true);
+    expect(usesParamSheet("plot")).toBe(true);
+    expect(usesParamSheet("batch-to")).toBe(true);
+    // Third batch: the path fields unlocked these three.
+    expect(usesParamSheet("cat")).toBe(true);
+    expect(usesParamSheet("batch-from")).toBe(true);
+    expect(usesParamSheet("scrape")).toBe(true);
+    // Fourth batch: the SQL editor.
+    expect(usesParamSheet("duckdb")).toBe(true);
+    // Fifth batch: conditional fields + the lines editor.
+    expect(usesParamSheet("batch-search")).toBe(true);
   });
 
   it("leaves the pickers and panel editors on their own forms", () => {
-    expect(usesParamSheet("plot")).toBe(false);
-    expect(usesParamSheet("batch-from")).toBe(false);
-    expect(usesParamSheet("duckdb")).toBe(false);
+    expect(usesParamSheet("run")).toBe(false);
   });
 });
 
@@ -190,5 +202,101 @@ describe("ParamSheet · map", () => {
     // (design 056); the sheet must not downgrade it to a one-line input.
     const editor = screen.getByPlaceholderText("要评估的表达式");
     expect(editor.tagName).toBe("TEXTAREA");
+  });
+});
+
+describe("ParamSheet · path fields", () => {
+  it("lists cat's input files as chips with a count", () => {
+    renderSheet({
+      type: "cat",
+      params: { mode: "rows", inputs: ["订单-1.csv", "订单-2.csv"] },
+    });
+
+    const token = screen.getByRole("button", {
+      name: /订单-1\.csv\|订单-2\.csv/,
+    });
+    fireEvent.click(token);
+
+    expect(screen.getByRole("button", { name: "添加文件" })).toBeInTheDocument();
+    expect(screen.getByText("2 个文件")).toBeInTheDocument();
+  });
+
+  it("gives batch-from's sources a multi-file list plus a folder button", () => {
+    renderSheet({
+      type: "batch-from",
+      params: { "source-path": "/data/a.csv;/data/b.csv" },
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /^--source-path/ }),
+    );
+
+    expect(screen.getByRole("button", { name: "添加文件" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "添加文件夹" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("2 个文件")).toBeInTheDocument();
+  });
+});
+
+describe("ParamSheet · duckdb", () => {
+  it("opens the SQL editor as the whole interface", () => {
+    renderSheet({ type: "duckdb", params: {} });
+
+    // `duckdb --sql` is required, so it auto-opens; the sheet must give it the
+    // DuckDB editor (highlighted textarea), not a one-line input.
+    const editor = screen.getByRole("textbox");
+    expect(editor.tagName).toBe("TEXTAREA");
+    expect(screen.getByText("必填 0 / 1 已就位")).toBeInTheDocument();
+  });
+});
+
+describe("ParamSheet · batch-search", () => {
+  it("hides the operator set that does not match the filter type", () => {
+    renderSheet({
+      type: "batch-search",
+      params: { column: "地区", "filter-type": "number" },
+    });
+
+    // Both operators carry a default, so the visible one is already a token.
+    expect(screen.getByText("--number-operator")).toBeInTheDocument();
+    expect(screen.queryByText("--text-operator")).not.toBeInTheDocument();
+  });
+
+  it("counts the values typed one per line", () => {
+    renderSheet({
+      type: "batch-search",
+      params: {
+        column: "地区",
+        "manual-values": "华东\n华南\n\n华北",
+      },
+    });
+
+    // The token collapses the newlines so the command line stays one row.
+    fireEvent.click(screen.getByRole("button", { name: /华东 华南/ }));
+
+    expect(screen.getByText("3 行")).toBeInTheDocument();
+    expect(screen.getByRole("textbox")).toHaveValue("华东\n华南\n\n华北");
+  });
+});
+
+describe("ParamSheet · native commands", () => {
+  it("drops the xan prefix and the copy button", () => {
+    renderSheet({ type: "duckdb", params: {} });
+
+    expect(screen.queryByText(/^xan /)).not.toBeInTheDocument();
+    expect(screen.getByText("duckdb")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /复制命令/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps both for a command that really runs through xan", () => {
+    renderSheet({ type: "map", params: {} });
+
+    expect(screen.getByText("xan map")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /复制命令/ }),
+    ).toBeInTheDocument();
   });
 });

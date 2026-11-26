@@ -430,7 +430,8 @@ export const exploreCommands: XanCommand[] = [
       },
       {
         name: "aggregate",
-        type: "string",
+        type: "select",
+        options: ["sum", "mean"],
         description:
           'How to aggregate values when discretizing the x axis. Can be "sum" or "mean"',
         descriptionCn: '离散化X轴时如何聚合值,可以是"sum"或"mean"',
@@ -454,7 +455,8 @@ export const exploreCommands: XanCommand[] = [
       },
       {
         name: "granularity",
-        type: "string",
+        type: "select",
+        options: ["years", "months", "days", "hours", "minutes", "seconds"],
         description:
           'Force temporal granularity for x axis. Can be "years", "months", "days", "hours", "minutes" or "seconds"',
         descriptionCn:
@@ -488,7 +490,8 @@ export const exploreCommands: XanCommand[] = [
       },
       {
         name: "marker",
-        type: "string",
+        type: "select",
+        options: ["braille", "dot", "halfblock", "bar", "block"],
         description:
           'Marker to use. Can be "braille", "dot", "halfblock", "bar" or "block"',
         descriptionCn:
@@ -548,7 +551,8 @@ export const exploreCommands: XanCommand[] = [
       },
       {
         name: "x-scale",
-        type: "string",
+        type: "select",
+        options: ["lin", "pow", "sqrt", "log", "log2", "log10"],
         description:
           'Apply a scale to the x axis. Can be "lin", "pow", "sqrt", "log", "log2", "log10"',
         descriptionCn:
@@ -558,7 +562,8 @@ export const exploreCommands: XanCommand[] = [
       },
       {
         name: "y-scale",
-        type: "string",
+        type: "select",
+        options: ["lin", "pow", "sqrt", "log", "log2", "log10"],
         description:
           'Apply a scale to the y axis. Can be "lin", "pow", "sqrt", "log", "log2", "log10"',
         descriptionCn:
@@ -575,7 +580,8 @@ export const exploreCommands: XanCommand[] = [
       },
       {
         name: "density-scale",
-        type: "string",
+        type: "select",
+        options: ["lin", "pow", "sqrt", "log", "log2", "log10"],
         description:
           'Apply a scale to the density gradient. Can be "lin", "pow", "sqrt", "log", "log2", "log10"',
         descriptionCn:
@@ -644,13 +650,15 @@ export const exploreCommands: XanCommand[] = [
   {
     id: "chart",
     name: "chart",
+    native: true,
     description: "Create interactive charts using recharts",
     descriptionCn: "使用recharts创建交互式图表",
     category: "Explore & visualize",
     parameters: [
       {
         name: "chart-type",
-        type: "string",
+        type: "select",
+        options: ["line", "scatter", "bar", "histogram", "pie", "wordcloud", "heatmap"],
         description:
           'Type of chart to create. Can be "line", "scatter", "bar", "histogram", "pie", "wordcloud", "heatmap"',
         descriptionCn:

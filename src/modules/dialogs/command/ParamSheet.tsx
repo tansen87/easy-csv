@@ -13,7 +13,8 @@ import {
 import { getParameterDescription } from "@/modules/dialogs/command/lib/parameterDescriptions";
 import {
   PARAM_GROUP_ORDER,
-  isExpressionEditorParam,
+  isParamVisible,
+  paramField,
   paramGroup,
   paramHasValue,
   paramLabel,
@@ -44,6 +45,7 @@ export function ParamSheet({
   onStepUpdate,
   setCommandDialog,
   headers = [],
+  sourceTable,
 }: CommandFormProps) {
   const { t, effectiveLanguage } = useLanguage();
   // Open a field straight away: the first required one still empty, otherwise
@@ -78,19 +80,33 @@ export function ParamSheet({
   if (!command) return null;
 
   const params = commandDialog.params;
-  const tokens = buildCommandTokens(command, params, effectiveLanguage);
-  const onCommand = new Set(tokens.map((token) => token.name));
-  const inactive = command.parameters.filter(
-    (param) => !onCommand.has(param.name),
+  // Submit merges defaults into `params`, so the sheet shows the same merged
+  // view: a parameter with a default is already on the command, and a required
+  // one with a default counts as satisfied.
+  const withDefaults: Record<string, unknown> = {};
+  for (const param of command.parameters) {
+    const value = param.default;
+    if (value === undefined || value === "" || value === false) continue;
+    withDefaults[param.name] = value;
+  }
+  const effective = { ...withDefaults, ...params };
+  // Fields whose `visibleWhen` does not match are not part of this command at
+  // all: they leave the token line, the required count and the submit payload.
+  const visible = command.parameters.filter((param) =>
+    isParamVisible(param, effective),
   );
+  const visibleCommand = { ...command, parameters: visible };
+  const tokens = buildCommandTokens(visibleCommand, effective, effectiveLanguage);
+  const onCommand = new Set(tokens.map((token) => token.name));
+  const inactive = visible.filter((param) => !onCommand.has(param.name));
   const ordered = [...inactive].sort(
     (a, b) =>
       PARAM_GROUP_ORDER.indexOf(paramGroup(a)) -
       PARAM_GROUP_ORDER.indexOf(paramGroup(b)),
   );
-  const required = command.parameters.filter((param) => param.required);
+  const required = visible.filter((param) => param.required);
   const missing = required.filter(
-    (param) => !paramHasValue(param, params[param.name]),
+    (param) => !paramHasValue(param, effective[param.name]),
   );
   const requiredDone = required.length - missing.length;
   const canCopy = missing.length === 0;
@@ -100,6 +116,15 @@ export function ParamSheet({
   const activeLabel = activeParam
     ? paramLabel(command, activeParam, effectiveLanguage)
     : "";
+  const activeField = activeParam
+    ? paramField(command.id, activeParam.name)
+    : undefined;
+
+  /** Only the visible fields go to the command, so a hidden one cannot leak. */
+  const visibleNames = new Set(visible.map((param) => param.name));
+  const submitParams = Object.fromEntries(
+    Object.entries(effective).filter(([name]) => visibleNames.has(name)),
+  );
 
   const setValue = (name: string, value: unknown) =>
     updateParam(commandDialog, setCommandDialog, name, value);
@@ -122,7 +147,9 @@ export function ParamSheet({
   const handleCopy = async () => {
     if (!canCopy) return;
     try {
-      await navigator.clipboard?.writeText(commandLineText(command, params));
+      await navigator.clipboard?.writeText(
+        commandLineText(visibleCommand, effective),
+      );
       setCopied(true);
       if (copyTimer.current) clearTimeout(copyTimer.current);
       copyTimer.current = setTimeout(() => setCopied(false), 1500);
@@ -149,7 +176,9 @@ export function ParamSheet({
           {/* The command. Tokens are the source of truth. */}
           <div className="flex flex-wrap items-center gap-1.5 rounded-[9px] border border-border bg-paper p-2.5">
             <span className="mr-0.5 font-mono text-[11.5px] text-muted-foreground">
-              xan {command.name}
+              {/* Native commands (chart, duckdb, batch-*) run inside the app,
+                  so there is no `xan` in front of them. */}
+              {command.native ? command.name : `xan ${command.name}`}
             </span>
             {tokens.map((token) => {
               const param = command.parameters.find(
@@ -182,8 +211,11 @@ export function ParamSheet({
                       {token.flag || token.name}
                     </span>
                     {!token.isFlag && (
+                      // A multi-line value (batch-search) would break the row;
+                      // collapse whitespace for display only — the copied
+                      // command keeps the original text.
                       <span className="max-w-[180px] truncate">
-                        {token.value}
+                        {token.value.replace(/\s+/g, " ")}
                       </span>
                     )}
                   </button>
@@ -227,8 +259,8 @@ export function ParamSheet({
                 <div className="flex items-center gap-2">
                   {/* Parameter first, plain-language name after it — the same
                       order as the "can add" list below. */}
-                  <span className="flex items-baseline gap-2">
-                    <span className="font-mono text-[11px] text-foreground">
+                  <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                    <span className="flex-none whitespace-nowrap font-mono text-[11px] text-foreground">
                       {flagOf(activeParam)}
                     </span>
                     {activeLabel !== activeParam.name && (
@@ -240,12 +272,12 @@ export function ParamSheet({
                       </span>
                     )}
                   </span>
-                  <div className="ml-auto flex items-center gap-2.5">
+                  <div className="flex flex-none items-center gap-2.5">
                     {activeParam.type === "flag" && (
                       <FlagSwitch
                         on={paramHasValue(
                           activeParam,
-                          params[activeParam.name],
+                          effective[activeParam.name],
                         )}
                         onChange={(next) => setValue(activeParam.name, next)}
                         label={activeLabel}
@@ -254,7 +286,7 @@ export function ParamSheet({
                     <button
                       type="button"
                       onClick={() => remove(activeParam)}
-                      className="text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+                      className="whitespace-nowrap text-[11px] text-muted-foreground transition-colors hover:text-foreground"
                     >
                       {t.paramRemove}
                     </button>
@@ -271,17 +303,26 @@ export function ParamSheet({
                   <div className="mt-2.5">
                     <ParamControl
                       param={activeParam}
-                      value={params[activeParam.name]}
+                      value={effective[activeParam.name]}
                       onChange={(value) => setValue(activeParam.name, value)}
+                      commandId={command.id}
+                      language={effectiveLanguage}
                       headers={headers}
                       label={activeLabel}
                       headersLabel={t.paramHeaders}
                       columnPlaceholder={t.paramPlaceholder}
                       description={description(activeParam)}
-                      expression={isExpressionEditorParam(
-                        command.id,
-                        activeParam.name,
-                      )}
+                      sourceTable={sourceTable}
+                      fieldKind={activeField?.kind}
+                      fieldJoin={activeField?.join}
+                      folderLabel={
+                        activeField?.folders ? t.paramAddFolder : undefined
+                      }
+                      pickFileLabel={t.paramPickFile}
+                      pickFolderLabel={t.paramPickFolder}
+                      addFileLabel={t.paramAddFile}
+                      fileCountLabel={t.paramFileCount}
+                      lineCountLabel={t.paramLineCount}
                     />
                   </div>
                 )}
@@ -375,23 +416,33 @@ export function ParamSheet({
                   .replace("{done}", String(requiredDone))
                   .replace("{total}", String(required.length))}
           </span>
-          <span className="h-3 w-px bg-border" />
-          <button
-            type="button"
-            onClick={() => void handleCopy()}
-            disabled={!canCopy}
-            title={canCopy ? t.paramCopy : t.paramCopyDisabled}
-            className={cn(
-              "inline-flex h-[26px] min-w-[82px] items-center justify-center gap-1.5 rounded-md border border-transparent px-2 text-[11px] transition-colors",
-              copied
-                ? "border-brand-border bg-brand-soft text-brand"
-                : "text-muted-foreground hover:text-foreground",
-              !canCopy && "cursor-default opacity-50 hover:text-muted-foreground",
-            )}
-          >
-            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-            {copied ? t.paramCopied : t.paramCopy}
-          </button>
+          {/* Nothing to copy for a native command: it runs inside the app. */}
+          {!command.native && (
+            <>
+              <span className="h-3 w-px bg-border" />
+              <button
+                type="button"
+                onClick={() => void handleCopy()}
+                disabled={!canCopy}
+                title={canCopy ? t.paramCopy : t.paramCopyDisabled}
+                className={cn(
+                  "inline-flex h-[26px] min-w-[82px] items-center justify-center gap-1.5 rounded-md border border-transparent px-2 text-[11px] transition-colors",
+                  copied
+                    ? "border-brand-border bg-brand-soft text-brand"
+                    : "text-muted-foreground hover:text-foreground",
+                  !canCopy &&
+                    "cursor-default opacity-50 hover:text-muted-foreground",
+                )}
+              >
+                {copied ? (
+                  <Check className="h-3 w-3" />
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
+                {copied ? t.paramCopied : t.paramCopy}
+              </button>
+            </>
+          )}
         </div>
         <div className="ml-auto flex gap-2">
           <Button
@@ -407,7 +458,7 @@ export function ParamSheet({
             size="sm"
             onClick={() =>
               handleCommandSubmit({
-                commandDialog,
+                commandDialog: { ...commandDialog, params: submitParams },
                 onAddCommand,
                 onStepUpdate,
                 setCommandDialog,
@@ -427,17 +478,7 @@ export function ParamSheet({
  * file pickers (batch-*, cat, scrape), table pickers (duckdb) and the two panel
  * editors (chart, plot), plus `run`. Everything else is driven by the sheet.
  */
-const BESPOKE_FORMS: ReadonlySet<string> = new Set([
-  "batch-from",
-  "batch-to",
-  "batch-search",
-  "cat",
-  "chart",
-  "plot",
-  "duckdb",
-  "scrape",
-  "run",
-]);
+const BESPOKE_FORMS: ReadonlySet<string> = new Set(["run"]);
 
 export function usesParamSheet(type: string): boolean {
   return !BESPOKE_FORMS.has(type);

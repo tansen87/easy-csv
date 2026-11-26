@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 080-04 · 剩余命令的字段词汇</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+    --bg:oklch(1 0 0);--fg:oklch(0.145 0 0);--card:oklch(1 0 0);--paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);--muted-fg:oklch(0.556 0 0);--muted-fg-2:oklch(0.66 0 0);--muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);--rule:oklch(0.2 0.01 80 / 7%);--border-soft:oklch(0.2 0.01 80 / 8%);
+    --brand:oklch(0.42 0.055 250);--brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);--brand-ink:oklch(0.35 0.05 250);
+    --stage:oklch(0.945 0.002 80);--dot:oklch(0.2 0.01 80 / 8%);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+  }
+  html.dark{
+    --bg:oklch(0.145 0 0);--fg:oklch(0.985 0 0);--card:oklch(0.205 0 0);--paper:oklch(0.215 0.008 75);
+    --muted:oklch(0.269 0 0);--muted-fg:oklch(0.708 0 0);--muted-fg-2:oklch(0.6 0 0);--muted-fg-3:oklch(0.47 0 0);
+    --border:oklch(1 0 0 / 10%);--rule:oklch(0.96 0.005 85 / 9%);--border-soft:oklch(0.96 0.005 85 / 9%);
+    --brand:oklch(0.78 0.045 245);--brand-soft:color-mix(in oklab,var(--brand) 14%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 18%,transparent);--brand-ink:oklch(0.8 0.04 245);
+    --stage:oklch(0.115 0 0);--dot:oklch(1 0 0 / 7%);--shadow-card:none;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased}
+  code{font-family:var(--mono);font-size:.92em}
+
+  #sheet{width:1100px;margin:0 auto;padding:28px 0 64px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:20px;position:relative}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:960px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+  .theme{position:absolute;right:0;top:2px;font:400 11px var(--font);color:var(--muted-fg);
+         border:1px solid var(--border);border-radius:6px;background:var(--card);padding:5px 10px;cursor:pointer}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .spec{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 15px 16px;
+        box-shadow:var(--shadow-card)}
+  .spec-hd{display:flex;align-items:baseline;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--border-soft)}
+  .spec-hd .k{font:400 10px var(--mono);color:var(--muted-fg-3)}
+  .spec-hd .n{font-size:13px;font-weight:500}
+  .spec-hd .tag{margin-left:auto;font:400 9.5px var(--mono);color:var(--muted-fg-3)}
+  .spec-body{padding-top:12px}
+  .spec-ft{margin-top:10px;font-size:11px;line-height:1.6;color:var(--muted-fg)}
+  .spec-ft b{font-weight:500;color:var(--fg)}
+
+  .lbl{display:flex;align-items:baseline;gap:6px;margin-bottom:5px}
+  .lbl .fn{font:400 10.5px var(--mono);color:var(--fg)}
+  .lbl .ln{font-size:12px;color:var(--muted-fg)}
+
+  .input{height:32px;display:flex;align-items:center;gap:8px;padding:0 8px 0 10px;font-size:12px;
+         border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--fg)}
+  .input .val{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .input .ph{flex:1;color:var(--muted-fg-3)}
+  .icon-btn{width:24px;height:24px;flex:none;display:grid;place-items:center;border-radius:5px;
+            border:1px solid transparent;color:var(--muted-fg);background:transparent}
+  .icon-btn:hover{color:var(--fg);background:var(--muted)}
+  .icon-btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5;
+                stroke-linecap:round;stroke-linejoin:round}
+
+  .chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:5px 6px;min-height:34px;
+         border:1px solid var(--border);border-radius:7px;background:var(--bg)}
+  .chip{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 5px 0 8px;border-radius:5px;
+        font-size:11px;background:var(--muted);color:var(--fg);max-width:200px}
+  .chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chip i{font-style:normal;color:var(--muted-fg-3);font-size:10px}
+  .chip.add{background:transparent;border:1px dashed var(--border);color:var(--muted-fg-2);padding:0 8px;gap:4px}
+  .chips-meta{margin-top:6px;font:400 10px var(--mono);color:var(--muted-fg-3);font-variant-numeric:tabular-nums}
+
+  .selectbox{height:32px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid var(--border);
+             border-radius:7px;background:var(--bg);font-size:12px}
+  .selectbox .caret{margin-left:auto;color:var(--muted-fg-3);font-size:9px}
+  .selectbox .hint{font:400 10px var(--mono);color:var(--muted-fg-3)}
+  .selectbox.empty{color:var(--muted-fg-3)}
+
+  .code{border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--bg)}
+  .code pre{margin:0;padding:9px 10px;font:400 11px/18px var(--mono);white-space:pre;overflow:hidden}
+  .kw{color:oklch(0.48 0.14 310)}
+  .fn2{color:oklch(0.5 0.11 245)}
+  .str{color:oklch(0.5 0.1 145)}
+  .code .strip{display:flex;align-items:center;gap:8px;height:24px;padding:0 10px;border-top:1px solid var(--rule);
+               font:400 9.5px var(--mono);color:var(--muted-fg-3);background:color-mix(in oklab,var(--muted) 35%,transparent)}
+
+  .area{min-height:72px;border:1px solid var(--border);border-radius:7px;background:var(--bg);
+        padding:8px 10px;font:400 11.5px/20px var(--mono);color:var(--muted-fg-2);position:relative;
+        white-space:pre-line}
+  .area .count{position:absolute;right:8px;bottom:6px;font:400 9.5px var(--mono);color:var(--muted-fg-3)}
+
+  .seg{display:inline-flex;padding:2px;border:1px solid var(--border);border-radius:7px;background:var(--muted)}
+  .seg span{padding:5px 10px;font-size:11.5px;color:var(--muted-fg);border-radius:5px}
+  .seg span.on{background:var(--card);color:var(--fg);font-weight:500;box-shadow:0 1px 1px oklch(0.2 0.02 80 / 8%)}
+
+  .rules{margin-top:18px;background:var(--card);border:1px solid var(--border);border-radius:12px;
+         padding:14px 16px 16px;box-shadow:var(--shadow-card)}
+  .rules h2{margin:0 0 10px;font-size:12.5px;font-weight:500}
+  .rules ol{margin:0;padding-left:18px}
+  .rules li{font-size:11.5px;line-height:1.9;color:var(--muted-fg)}
+  .rules li b{color:var(--fg);font-weight:500}
+  .rules code{background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+</style>
+</head>
+<body>
+<main id="sheet">
+
+  <header class="stage-bar">
+    <div class="eyebrow">原型 080-04 · 命令参数框改版</div>
+    <h1>剩余 9 个命令：不是 9 张新界面，是 6 个字段</h1>
+    <p>那 9 个之所以还用手写表单，不是它们"特殊"，而是它们用到了面板里还缺的控件。把这 6 个字段按现有的解剖结构（参数名等宽在前、解释灰字在后、控件 32px）补进 <code>ParamControl</code>，其余的卡片、命令区、列表、底栏一行都不用改。</p>
+    <button class="theme" onclick="document.documentElement.classList.toggle('dark')">切换明暗</button>
+  </header>
+
+  <div class="grid">
+
+    <section class="spec">
+      <div class="spec-hd"><span class="k">01</span><span class="n">路径</span><span class="tag">path</span></div>
+      <div class="spec-body">
+        <div class="lbl"><span class="fn">input</span><span class="ln">输入文件</span></div>
+        <div class="input">
+          <span class="val">/data/销售明细 2024.csv</span>
+          <button class="icon-btn" title="选择文件"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></button>
+          <button class="icon-btn" title="选择文件夹"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>
+        </div>
+      </div>
+      <p class="spec-ft"><b>用在</b> batch-from · batch-to（output-dir）· cat · scrape。可直接粘贴，也可点图标开系统选择器。</p>
+    </section>
+
+    <section class="spec">
+      <div class="spec-hd"><span class="k">02</span><span class="n">文件清单</span><span class="tag">path-list</span></div>
+      <div class="spec-body">
+        <div class="lbl"><span class="fn">paths</span><span class="ln">要拼接的文件</span></div>
+        <div class="chips">
+          <span class="chip"><span>订单-2024Q1.csv</span><i>×</i></span>
+          <span class="chip"><span>订单-2024Q2.csv</span><i>×</i></span>
+          <span class="chip"><span>订单-2024Q3.csv</span><i>×</i></span>
+          <span class="chip add">+ 添加文件</span>
+        </div>
+        <div class="chips-meta">3 个文件 · 约 42 MB</div>
+      </div>
+      <p class="spec-ft"><b>用在</b> cat（Input File(s)）· batch-from（源清单）。与「列名 chip」同一种形状，只是内容是可删的文件。</p>
+    </section>
+
+    <section class="spec">
+      <div class="spec-hd"><span class="k">03</span><span class="n">表</span><span class="tag">table</span></div>
+      <div class="spec-body">
+        <div class="lbl"><span class="fn">source-table</span><span class="ln">查询的表</span></div>
+        <div class="selectbox">
+          <span class="val">orders_2024</span>
+          <span class="hint">6 列 · 1.2M 行</span>
+          <span class="caret">▾</span>
+        </div>
+      </div>
+      <p class="spec-ft"><b>用在</b> duckdb。值来自当前 <code>.duckdb</code> 的表清单；没选表时整块禁用并写「先选择表」，不给空下拉。</p>
+    </section>
+
+    <section class="spec">
+      <div class="spec-hd"><span class="k">04</span><span class="n">代码</span><span class="tag">code</span></div>
+      <div class="spec-body">
+        <div class="lbl"><span class="fn">sql</span><span class="ln">SQL 查询</span></div>
+        <div class="code">
+<pre><span class="kw">select</span> 地区, <span class="fn2">sum</span>(金额) <span class="kw">as</span> 销售额
+<span class="kw">from</span> orders_2024
+<span class="kw">group by</span> 地区</pre>
+          <div class="strip">Ctrl Space 补全 · Enter 换行</div>
+        </div>
+      </div>
+      <p class="spec-ft"><b>用在</b> duckdb（SQL）· map（表达式，已接）。复用 <code>DuckdbEditor</code> / <code>ExpressionEditor</code>，外壳不重画。</p>
+    </section>
+
+    <section class="spec">
+      <div class="spec-hd"><span class="k">05</span><span class="n">多行值</span><span class="tag">lines</span></div>
+      <div class="spec-body">
+        <div class="lbl"><span class="fn">values</span><span class="ln">要匹配的值</span></div>
+        <div class="area">华东
+华南
+华北
+<span class="count">3 行</span></div>
+      </div>
+      <p class="spec-ft"><b>用在</b> batch-filter（一值一行）。行数在右下角报数，不再让用户自己数有没有漏空行。</p>
+    </section>
+
+    <section class="spec">
+      <div class="spec-hd"><span class="k">06</span><span class="n">分段</span><span class="tag">segmented</span></div>
+      <div class="spec-body">
+        <div class="lbl"><span class="fn">chart-type</span><span class="ln">图形</span></div>
+        <div class="seg"><span class="on">折线</span><span>散点</span><span>柱</span><span>饼</span></div>
+      </div>
+      <p class="spec-ft"><b>用在</b> chart（4 种图）· 任何 ≤4 个选项的 select。选项超过 4 个仍然用下拉，别把长列表压成分段。</p>
+    </section>
+
+  </div>
+
+  <section class="rules">
+    <h2>六条收紧规则</h2>
+    <ol>
+      <li><b>选项写进数据，不写进表单。</b> chart 的 4 种图、plot 的粒度 / 回归线、batch 的各种 format，现在都是表单里硬编码的数组，命令定义里只有一句英文描述。补成 <code>type: "select" + options</code>，通用控件立刻能出对的下拉——这比多写 9 个表单便宜得多。</li>
+      <li><b>模式不是参数。</b> cat 的「文件 / 路径列 / glob」、run 的「管道 / 脚本文件」是表单状态，不进命令行。用一个分段控件放在编辑器卡上方，按它显隐后面的字段；它自己不出现在命令预览里。</li>
+      <li><b>同一种动作，同一种形状。</b> 选一个文件 = 输入框 + 两个图标按钮；选多个文件 = chip + 「+ 添加」；选表 = 只读下拉。不要为某个命令发明第三种"选择文件"的样子。</li>
+      <li><b>控件高度只有三档：</b> 32（输入 / 下拉）、22（chip）、≥72（代码 / 多行）。宽度一律撑满卡片内容宽，不做参差的列宽。</li>
+      <li><b>图标一套、14px、1.5 描边、取次要文字色。</b> 文件夹 / 文件 / 加号 / 叉，全部来自 lucide，不加第二个图标集，不给图标上色。</li>
+      <li><b>预览不进弹窗。</b> chart / plot 的结果在右侧 ChartPanel 里看，弹窗里只填参数——弹窗一旦塞图表，高度就会随数据跳动，底栏按钮也跟着跑。</li>
+    </ol>
+  </section>
+
+</main>
+</body>
+</html>

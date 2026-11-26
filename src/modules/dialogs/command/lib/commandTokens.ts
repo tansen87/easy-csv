@@ -48,7 +48,9 @@ export function buildCommandTokens(
     tokens.push({
       ...base,
       flag: param.isPositional ? "" : `--${param.name}`,
-      value: String(raw),
+      // `serializeStepParams` pipe-joins arrays, and the backend splits a
+      // positional argument on `|`, so the preview shows the same separator.
+      value: Array.isArray(raw) ? raw.join("|") : String(raw),
       isFlag: false,
     });
   }
