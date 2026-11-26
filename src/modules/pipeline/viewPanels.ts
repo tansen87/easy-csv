@@ -2,7 +2,6 @@ import {
   Braces,
   GitMerge,
   History,
-  NotebookPen,
   Table2,
   type LucideIcon,
 } from "lucide-react";
@@ -20,12 +19,7 @@ import type { ViewPanelId } from "@/types/viewDock";
 export interface ViewPanelDef {
   id: ViewPanelId;
   /** i18n key holding the panel name (also used by the menu and the rail). */
-  labelKey:
-    | "dataProfile"
-    | "versionHistory"
-    | "dataLineage"
-    | "variables"
-    | "ledger";
+  labelKey: "dataProfile" | "versionHistory" | "dataLineage" | "variables";
   icon: LucideIcon;
   /** `Alt + <key>` opens this panel (menu shows the same keycap). */
   key: string;
@@ -55,12 +49,6 @@ export const VIEW_PANELS: readonly ViewPanelDef[] = [
     labelKey: "variables",
     icon: Braces,
     key: "4",
-  },
-  {
-    id: "ledger",
-    labelKey: "ledger",
-    icon: NotebookPen,
-    key: "5",
   },
 ] as const;
 

@@ -5,12 +5,7 @@
  * can name a panel without importing business code (019 §5.2 forbids that).
  */
 
-export type ViewPanelId =
-  | "profile"
-  | "version"
-  | "lineage"
-  | "variables"
-  | "ledger";
+export type ViewPanelId = "profile" | "version" | "lineage" | "variables";
 
 /** One row of the View menu; the app shell builds these from the registry. */
 export interface ViewPanelMenuItem {

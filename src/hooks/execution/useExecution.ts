@@ -20,7 +20,6 @@ import type {
   TabChartState,
   VariablePrompt,
 } from "@/types/execution";
-import type { LedgerRunRecord } from "@/hooks/useLedger";
 import { useBatchFilter } from "@/hooks/useBatchFilter";
 import { useBatchConvert } from "@/hooks/useBatchConvert";
 import {
@@ -79,8 +78,6 @@ interface UseExecutionProps {
   saveVersion: (message?: string, tags?: string[]) => Promise<any>;
   /** Persist one execution record after each run. */
   saveExecutionHistory?: (entry: ExecutionHistoryInput) => Promise<void>;
-  /** Usage ledger (design 079): successful runs only. */
-  recordLedger?: (record: LedgerRunRecord) => void;
 }
 
 /** A dialog waiting for the user, always tagged with the run it belongs to. */
@@ -114,7 +111,6 @@ export function useExecution({
   trackLineage,
   saveVersion,
   saveExecutionHistory,
-  recordLedger,
 }: UseExecutionProps) {
   const { t } = useLanguage();
 
@@ -306,7 +302,6 @@ export function useExecution({
       saveVersion,
       saveExecutionHistory,
       formatDateTime,
-      recordLedger,
     }),
     [
       enqueuePrompt,
@@ -319,7 +314,6 @@ export function useExecution({
       saveExecutionHistory,
       autoShowLogPanel,
       saveVersion,
-      recordLedger,
       setShowChartPanel,
       setShowLogPanel,
       setTabChart,

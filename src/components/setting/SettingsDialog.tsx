@@ -59,10 +59,6 @@ interface SettingsDialogProps {
   /** Auto-open the log drawer when a run starts (071); default off. */
   autoShowLogPanel: boolean;
   onAutoShowLogPanelChange: (value: boolean) => void;
-  /** Usage ledger toggle and wipe (design 079). */
-  ledgerEnabled: boolean;
-  onLedgerEnabledChange: (value: boolean) => void;
-  onClearLedger: () => void;
   /** Open `data/logs/` in the system file manager. */
   onOpenLogsDir: () => void;
   /** Clear the "intro seen" flag so the canvas guide shows again. */
@@ -110,9 +106,6 @@ export function SettingsDialog({
   onLogRetentionDaysChange,
   autoShowLogPanel,
   onAutoShowLogPanelChange,
-  ledgerEnabled,
-  onLedgerEnabledChange,
-  onClearLedger,
   onOpenLogsDir,
   onResetOnboarding,
   onSave,
@@ -318,9 +311,6 @@ export function SettingsDialog({
               onLogRetentionDaysChange={onLogRetentionDaysChange}
               autoShowLogPanel={autoShowLogPanel}
               onAutoShowLogPanelChange={onAutoShowLogPanelChange}
-              ledgerEnabled={ledgerEnabled}
-              onLedgerEnabledChange={onLedgerEnabledChange}
-              onClearLedger={onClearLedger}
               onOpenLogsDir={onOpenLogsDir}
               onResetOnboarding={onResetOnboarding}
               aiConfig={aiConfig}

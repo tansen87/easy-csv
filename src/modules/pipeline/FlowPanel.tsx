@@ -147,9 +147,6 @@ interface FlowPanelProps {
   onSaveIntermediate?: (stepId: string) => void;
   /** Run this step and everything downstream on an exported CSV (design 078). */
   onRunFromStep?: (stepId: string) => void;
-  /** Cumulative usage ledger readout, bottom-right (design 079). */
-  ledger?: { rows: number; runs: number } | null;
-  onOpenLedger?: () => void;
   /** Delimiter the input file was read with, plus how it was resolved. */
   delimiter?: string;
   delimiterMode?: DelimiterMode;
@@ -188,8 +185,6 @@ export function FlowPanel({
   doubleClickFitView = true,
   onSaveIntermediate,
   onRunFromStep,
-  ledger,
-  onOpenLedger,
   delimiter,
   delimiterMode,
   delimiterSource,
@@ -199,7 +194,7 @@ export function FlowPanel({
   onDelimiterChange,
 }: FlowPanelProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const { t, effectiveLanguage } = useLanguage();
+  const { t } = useLanguage();
 
   // Store callbacks in refs to avoid unnecessary re-layout
   const onStepClickRef = useRef(onStepClick);
@@ -1499,31 +1494,6 @@ export function FlowPanel({
           swapMouseButtons={swapMouseButtons}
           locked={locked}
         />
-      )}
-
-      {/* Usage ledger readout (design 079): quiet, persistent, opens the panel.
-          It lives outside the ReactFlow surface so it never starts a cut. */}
-      {ledger && ledger.runs > 0 && onOpenLedger && (
-        <button
-          type="button"
-          title={t.ledgerView}
-          onClick={onOpenLedger}
-          onMouseDown={(event) => event.stopPropagation()}
-          onContextMenu={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-          }}
-          className="absolute right-3 z-40 flex h-[26px] items-center gap-1.5 rounded-[7px] border border-border bg-card px-2.5 text-[11px] text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-colors hover:text-foreground dark:shadow-none"
-          style={{ bottom: "calc(var(--log-drawer-height, 0px) + 8px)" }}
-        >
-          <span>{t.ledger}</span>
-          <span className="font-mono text-[11px] tabular-nums text-foreground">
-            {ledger.rows.toLocaleString(
-              effectiveLanguage === "zh" ? "zh-CN" : "en-US",
-            )}
-          </span>
-          <span className="text-[10px] text-muted-foreground/60">›</span>
-        </button>
       )}
 
       {/* Canvas status indicator - bottom-left; rides above the log drawer

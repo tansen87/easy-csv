@@ -54,9 +54,6 @@ function renderSettings(maxConcurrentRuns: number) {
         onDoubleClickFitViewChange={vi.fn()}
         autoCheckUpdate={true}
         onAutoCheckUpdateChange={vi.fn()}
-        ledgerEnabled={true}
-        onLedgerEnabledChange={vi.fn()}
-        onClearLedger={vi.fn()}
         maxConcurrentRuns={maxConcurrentRuns}
         onMaxConcurrentRunsChange={onMaxConcurrentRunsChange}
         logRetentionDays={7}

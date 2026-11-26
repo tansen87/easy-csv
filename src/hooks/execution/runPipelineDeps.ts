@@ -6,7 +6,6 @@ import type {
   StepLineage,
 } from "@/types/xan";
 import type { BatchFilterConfig } from "@/types/xan";
-import type { LedgerRunRecord } from "@/hooks/useLedger";
 import type {
   OverwriteConfirm,
   ResultPreview,
@@ -102,6 +101,4 @@ export interface RunPipelineDeps {
   saveVersion: (message?: string, tags?: string[]) => Promise<any>;
   saveExecutionHistory?: (entry: ExecutionHistoryInput) => Promise<void>;
   formatDateTime: (date: Date) => string;
-  /** Usage ledger (design 079): only successful runs are recorded. */
-  recordLedger?: (record: LedgerRunRecord) => void;
 }

@@ -69,11 +69,6 @@ interface HomeViewProps {
   tabRuns?: Record<string, import("@/types/execution").RunSession>;
   /** Tabs other than the current one still running - shown as a weak hint. */
   otherRunningCount?: number;
-  /** This run's ledger facts, appended to the run readout (design 079). */
-  settlement?: { rows: number; steps: number } | null;
-  /** Cumulative ledger readout (bottom-right of the canvas). */
-  ledger?: { rows: number; runs: number } | null;
-  onOpenLedger?: () => void;
   onCancelExecution?: () => void;
   recentFiles?: RecentFile[];
   onOpenRecentFile?: (filePath: string) => void;
@@ -144,9 +139,6 @@ export const HomeView = React.memo(function HomeView({
   isExecuting = false,
   tabRuns = {},
   otherRunningCount = 0,
-  settlement,
-  ledger,
-  onOpenLedger,
   onCancelExecution,
   doubleClickFitView = true,
   onSavePipeline,
@@ -171,7 +163,7 @@ export const HomeView = React.memo(function HomeView({
   onAdvanceDemoReveal,
   onSkipDemoReveal,
 }: HomeViewProps) {
-  const { t, effectiveLanguage } = useLanguage();
+  const { t } = useLanguage();
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
   const [quickAction, setQuickAction] = useState<QuickActionRequest | null>(
     null,
@@ -383,8 +375,6 @@ export const HomeView = React.memo(function HomeView({
           onSavePipeline={onSavePipeline}
           onSaveIntermediate={onSaveIntermediate}
           onRunFromStep={onRunFromStep}
-          ledger={ledger}
-          onOpenLedger={onOpenLedger}
           delimiter={delimiter}
           delimiterMode={delimiterMode}
           delimiterSource={delimiterSource}
@@ -411,8 +401,14 @@ export const HomeView = React.memo(function HomeView({
 
       {showRunReadout && branchProgress && (
         <div className="pointer-events-none absolute left-0 right-0 top-9 z-10 h-[2px] overflow-hidden bg-border/40">
+          {/* The same rule the Execute button's underline uses (`.run-rail-sweep`
+              shares its declaration), painted behind the fill so it only shows
+              in the unfinished part. */}
+          {branchProgress.status === "executing" && (
+            <span className="run-rail-sweep" />
+          )}
           <div
-            className={`h-full origin-left transition-transform duration-200 ${
+            className={`relative h-full origin-left transition-transform duration-200 ${
               branchProgress.status === "completed"
                 ? "bg-success"
                 : branchProgress.status === "error"
@@ -597,21 +593,6 @@ export const HomeView = React.memo(function HomeView({
                         startedAt={currentRun?.executingStartedAt}
                         frozenMs={currentRun?.durationMs}
                       />
-                    </>
-                  )}
-                  {settlement && branchProgress.status === "completed" && (
-                    <>
-                      <span className="h-3 w-px flex-none bg-border" />
-                      <span className="flex h-[18px] items-center rounded bg-primary/10 px-1.5 font-mono text-[10px] tabular-nums text-primary">
-                        {t.ledgerThisRun
-                          .replace(
-                            "{rows}",
-                            settlement.rows.toLocaleString(
-                              effectiveLanguage === "zh" ? "zh-CN" : "en-US",
-                            ),
-                          )
-                          .replace("{steps}", String(settlement.steps))}
-                      </span>
                     </>
                   )}
                   {isExecuting && onCancelExecution && (

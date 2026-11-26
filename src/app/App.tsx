@@ -28,9 +28,6 @@ import type { ViewPanelMenuItem } from "@/types/viewDock";
 import { VersionControlPanel } from "@/modules/pipeline/panels/VersionControlPanel";
 import { DataLineagePanel } from "@/modules/pipeline/panels/DataLineagePanel";
 import { useViewDock } from "@/hooks/useViewDock";
-import { useLedger } from "@/hooks/useLedger";
-import { LedgerPanel } from "@/modules/pipeline/panels/LedgerPanel";
-import { LedgerMilestoneToast } from "@/modules/pipeline/overlays/LedgerMilestoneToast";
 import { ToolRunProvider, useToolRuns } from "@/hooks/useToolRuns";
 import { collectVariablesFromPipeline } from "@/utils/params";
 import { exportLineageJsonl, lineageFileName } from "@/utils/lineageExport";
@@ -720,16 +717,11 @@ function AppContent() {
     loadCsvData: tabsHook.loadCsvData,
   });
 
-  // Usage ledger (design 079): local-only record of real output.
-  const ledger = useLedger();
-  const { recordTemplateApplied } = ledger;
-
   const { handleSavePipeline } = useFileSave({
     getCurrentPipeline: tabsCtl.getCurrentPipeline,
     getCurrentTab: tabsCtl.getCurrentTab,
     resolveRunDelimiter: tabsCtl.resolveRunDelimiter,
     showToast,
-    onSaved: ledger.recordPipelineSaved,
   });
 
   const { handleExportPipeline, handleImportPipeline } = useImportExport({
@@ -761,8 +753,6 @@ function AppContent() {
     trackLineage: lineageHook.trackLineage,
     saveVersion: versionsHook.saveVersion,
     saveExecutionHistory: executionHistory.saveEntry,
-    // Skipped entirely while the ledger is off, so no output is re-parsed.
-    recordLedger: ledger.state.enabled ? ledger.recordRun : undefined,
   });
 
   const {
@@ -787,28 +777,6 @@ function AppContent() {
       run.tabId !== tabsHook.selectedTabId &&
       (run.state === "running" || run.state === "preparing"),
   ).length;
-
-  /**
-   * Settlement line for the current tab's finished run: only when the ledger
-   * recorded this exact run, so a stale total from an earlier run never shows.
-   */
-  const ledgerSettlement =
-    ledger.state.enabled &&
-    ledger.lastRun &&
-    currentRun?.runId === ledger.lastRun.runId
-      ? { rows: ledger.lastRun.rows, steps: ledger.lastRun.steps }
-      : null;
-
-  const ledgerReadout = useMemo(
-    () =>
-      ledger.state.enabled
-        ? {
-            rows: ledger.state.totals.rows,
-            runs: ledger.state.totals.runs,
-          }
-        : null,
-    [ledger.state.enabled, ledger.state.totals.rows, ledger.state.totals.runs],
-  );
 
   useRunCompletionNotification(
     execution.runs,
@@ -854,7 +822,6 @@ function AppContent() {
     showToast,
     addLog,
     setTabResultPreview: execution.setTabResultPreview,
-    recordLedger: ledger.state.enabled ? ledger.recordRun : undefined,
     labels: {
       noSteps: t.runFromStepNoSteps,
       needInput: t.runFromStepNeedInput,
@@ -1164,7 +1131,6 @@ function AppContent() {
         );
       }
       showToast(`${t.templateApplied}: ${template.name}`, "success");
-      recordTemplateApplied();
     },
     [
       showToast,
@@ -1172,7 +1138,6 @@ function AppContent() {
       tabsHook,
       setSelectedStep,
       formatDateTime,
-      recordTemplateApplied,
       t,
       openSampleTemplate,
     ],
@@ -1815,9 +1780,6 @@ function AppContent() {
                   branchProgress={currentRun?.branch ?? null}
                   showProgressBar={!!currentRun?.showProgress}
                   otherRunningCount={otherRunningCount}
-                  settlement={ledgerSettlement}
-                  ledger={ledgerReadout}
-                  onOpenLedger={() => viewDock.togglePanel("ledger")}
                   tabRuns={execution.runs}
                   isExecuting={isExecuting}
                   onCancelExecution={() =>
@@ -1900,12 +1862,6 @@ function AppContent() {
                     onClose={viewDock.closeDock}
                   />
                 )}
-                {viewDock.activePanel === "ledger" && (
-                  <LedgerPanel
-                    state={ledger.state}
-                    onClose={viewDock.closeDock}
-                  />
-                )}
               </ViewDock>
             </div>
           </main>
@@ -1965,18 +1921,6 @@ function AppContent() {
 
           <ToastContainer toasts={toasts} onRemove={removeToastRef.current} />
 
-          {ledger.state.enabled && ledger.queue[0] && (
-            <LedgerMilestoneToast
-              unlock={ledger.queue[0]}
-              state={ledger.state}
-              onDismiss={ledger.dismissMilestone}
-              onViewLedger={() => {
-                ledger.dismissMilestone();
-                viewDock.openPanel("ledger");
-              }}
-            />
-          )}
-
           <SettingsDialog
             isOpen={ui.showSettingsDialog}
             onClose={() => ui.setShowSettingsDialog(false)}
@@ -1998,9 +1942,6 @@ function AppContent() {
             onLogRetentionDaysChange={settings.setLogRetentionDays}
             autoShowLogPanel={settings.autoShowLogPanel}
             onAutoShowLogPanelChange={settings.setAutoShowLogPanel}
-            ledgerEnabled={ledger.state.enabled}
-            onLedgerEnabledChange={ledger.setEnabled}
-            onClearLedger={ledger.reset}
             onOpenLogsDir={handleOpenLogsDir}
             onResetOnboarding={onboarding.reset}
             onSave={handleSaveSettings}

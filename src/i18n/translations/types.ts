@@ -1316,45 +1316,4 @@ export interface Translations {
   builtinStepDedup: string;
   builtinStepGroupByRegion: string;
 
-  // Usage ledger (design 079)
-  ledger: string;
-  ledgerTotalRows: string;
-  ledgerRuns: string;
-  ledgerFiles: string;
-  ledgerCommands: string;
-  ledgerWeeks: string;
-  ledgerWeekDays: string;
-  ledgerMarks: string;
-  ledgerMarksCount: string;
-  ledgerEmpty: string;
-  ledgerEmptyHint: string;
-  ledgerView: string;
-  ledgerThisRun: string;
-  ledgerMilestoneEyebrow: string;
-  ledgerMilestoneDesc: string;
-  ledgerRowsValue: string;
-  ledgerRunsValue: string;
-  ledgerPipelinesValue: string;
-  ledgerCommandsValue: string;
-  ledgerDurationMinutes: string;
-  ledgerDurationHours: string;
-  ledgerDurationHourMinutes: string;
-  ledgerMarkFirstRun: string;
-  ledgerMarkRows10k: string;
-  ledgerMarkRows100k: string;
-  ledgerMarkRows1m: string;
-  ledgerMarkRows10m: string;
-  ledgerMarkRuns10: string;
-  ledgerMarkRuns100: string;
-  ledgerMarkPipeline1: string;
-  ledgerMarkPipeline10: string;
-  ledgerMarkCommands10: string;
-  ledgerMarkTemplateFirst: string;
-  ledgerMarkStepRunFirst: string;
-  usageLedger: string;
-  usageLedgerDesc: string;
-  clearLedger: string;
-  clearLedgerDesc: string;
-  ledgerClearConfirmTitle: string;
-  ledgerClearConfirmDesc: string;
 }

@@ -3,7 +3,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { PipelineTab } from "@/types/xan";
 import type { ResultPreview } from "@/types/execution";
-import type { LedgerRunRecord } from "@/hooks/useLedger";
 import { buildPrefixToStep } from "@/hooks/execution/buildPrefixToStep";
 import { buildSuffixFromStep } from "@/hooks/execution/buildSuffixFromStep";
 import { serializeStepParams } from "@/hooks/execution/serializeStepParams";
@@ -24,8 +23,6 @@ interface UseRunFromStepProps {
     tabId?: string,
   ) => void;
   setTabResultPreview: (tabId: string, previews: ResultPreview[]) => void;
-  /** Usage ledger (design 079): a successful step run counts like any run. */
-  recordLedger?: (record: LedgerRunRecord) => void;
   labels: {
     noSteps: string;
     needInput: string;
@@ -46,7 +43,6 @@ export function useRunFromStep({
   showToast,
   addLog,
   setTabResultPreview,
-  recordLedger,
   labels,
 }: UseRunFromStepProps) {
   const handleRunFromStep = useCallback(
@@ -120,7 +116,6 @@ export function useRunFromStep({
       );
 
       try {
-        const startedAt = Date.now();
         const result = await invoke<any>("execute_xan_pipeline", {
           commands,
           inputFile,
@@ -157,22 +152,6 @@ export function useRunFromStep({
           `Run from step "${stepName}" completed`,
           currentTab.id,
         );
-        recordLedger?.({
-          runId: `run-from-step-${startedAt}`,
-          tabId: currentTab.id,
-          rows: parseCsvString(output).rows.length,
-          ms: Date.now() - startedAt,
-          steps: suffix.length,
-          commands: Array.from(
-            new Set(suffix.map((step) => step.command.name)),
-          ),
-          // The suffix writes through its own output steps, if any.
-          files: suffix
-            .filter((step) => step.command.id === "output")
-            .map((step) => String(step.parameters?.path ?? ""))
-            .filter(Boolean),
-          via: "step-run",
-        });
         showToast(labels.done.replace("{name}", stepName), "success");
       } catch (error) {
         const message = `${labels.failed}: ${error}`;
@@ -186,7 +165,6 @@ export function useRunFromStep({
       showToast,
       addLog,
       setTabResultPreview,
-      recordLedger,
       labels.noSteps,
       labels.needInput,
       labels.failed,

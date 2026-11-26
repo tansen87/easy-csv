@@ -701,15 +701,21 @@
   }
 }
 
-/* In-flight feedback for a toolbar button
-   A button whose work is in flight keeps its label and size; only a 2px
-   indeterminate line appears along its bottom edge (a ::after, so no DOM node
-   is added and nothing shifts). The host button needs `relative` and
-   `overflow-hidden`. Two callers share it:
-     - `.exec-busy`   - "Execute" while a run is in flight;
-     - `.update-busy` - Help while an update check is in flight, so a manual
-                        check is visible instead of looking
-                        like a click that did nothing. */
+/* In-flight underline
+   Work that is in flight keeps its label and size and gets one 2px
+   indeterminate line sliding along an edge. Everything about it is shared,
+   because it means the same thing everywhere it appears:
+     - `.exec-busy`      - "Execute" while a run is in flight;
+     - `.update-busy`    - Help while an update check is in flight, so a manual
+                           check is visible instead of looking like a click
+                           that did nothing;
+     - `.run-rail-sweep` - the run rail under the tab strip (HomeView). It is a
+                           real node rather than a `::after` because the rail
+                           already holds the determinate fill, and it paints
+                           underneath that fill, so the sweep only shows in the
+                           part that has not finished.
+   Hosts need `relative` and `overflow-hidden`. Transform only: the compositor
+   moves a 2px-tall layer, no layout and no repaint per frame. */
 @keyframes busy-underline {
   0% {
     transform: translateX(-100%);
@@ -719,7 +725,8 @@
   }
 }
 .exec-busy::after,
-.update-busy::after {
+.update-busy::after,
+.run-rail-sweep {
   content: "";
   position: absolute;
   left: 0;
@@ -729,6 +736,18 @@
   border-radius: 999px;
   background: var(--primary);
   animation: busy-underline 1.15s ease-in-out infinite;
+}
+
+/* With motion turned off, a moving dash would be lost anyway; a calm full
+   width tint says "in flight" without it, and all three hosts stay identical. */
+@media (prefers-reduced-motion: reduce) {
+  .exec-busy::after,
+  .update-busy::after,
+  .run-rail-sweep {
+    animation: none;
+    width: 100%;
+    opacity: 0.45;
+  }
 }
 .animate-slide-up {
   animation: slide-up 0.6s ease-out;
