@@ -505,7 +505,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 
 | 文件 | 职责 |
 |------|------|
-| `pipeline/FlowPanel.tsx` | **可视化管道编辑器主组件**,组合子组件,管理状态和事件处理;右键拖拽连线(贝塞尔实时预览)、右键划线切割删除、节点拖拽(右键划线/连线不再需要模式切换);步骤菜单只从卡片 ⋯ 或 Shift F10 打开(设计 078,右键菜单已移除);**输入数据表格的右键菜单**(`tableContextMenu`)把 `QuickActionRequest` 交给 HomeView 打开快速浮窗(设计 031) |
+| `pipeline/FlowPanel.tsx` | **可视化管道编辑器主组件**,组合子组件,管理状态和事件处理;右键拖拽连线(贝塞尔实时预览)、右键划线切割删除、节点拖拽(右键划线/连线不再需要模式切换);步骤菜单只从卡片 ⋯ 或 Shift F10 打开(设计 078,右键菜单已移除);**输入表右键只打开列菜单,不启动切割或连线**(命中 `table-node` 时手势直接放行,切刀不会跟着弹出);**输入数据表格的右键菜单**(`tableContextMenu`)把 `QuickActionRequest` 交给 HomeView 打开快速浮窗(设计 031) |
 | `pipeline/nodes/TableNode.tsx` | 输入数据表格节点,支持表头重命名和右键菜单;四方向连接点;表头行的**分隔符徽标**(设计 018);非 CSV 输入(parquet/duckdb)改为只读格式徽标、不显示分隔符控件(设计 024) |
 | `pipeline/nodes/PipelineStepNode.tsx` | 管道步骤节点,支持别名编辑、参数展示;外部悬停工具条(参数 / 重命名 / ⋯) |
 | `pipeline/nodes/ResultTableNode.tsx` | 结果表节点(F1) |

@@ -614,11 +614,17 @@ export function FlowPanel({
       // Ignore overlays (rail, menus): only the canvas itself cuts or connects.
       const target = e.target as HTMLElement | null;
       if (!target?.closest(".react-flow")) return;
+
+      // The input table owns its right-click (column actions). Bail out before
+      // preventDefault/stopPropagation so that event still reaches the header /
+      // cell, and so no blade follows the pointer while the menu is open.
+      const clickedNode = getNodeAtPosition(e.clientX, e.clientY);
+      if (clickedNode === "table-node") return;
+
       e.preventDefault();
       e.stopPropagation();
 
-      const clickedNode = getNodeAtPosition(e.clientX, e.clientY);
-      if (clickedNode && clickedNode !== "table-node") {
+      if (clickedNode) {
         startConnect(clickedNode);
       } else {
         startCut(e);
@@ -640,11 +646,15 @@ export function FlowPanel({
   const handlePrimaryStart = useCallback(
     (e: React.MouseEvent) => {
       if (!swapMouseButtons || spaceDown || locked || e.button !== 0) return;
+
+      const clickedNode = getNodeAtPosition(e.clientX, e.clientY);
+      // Same rule as the right button: the input table never starts a gesture.
+      if (clickedNode === "table-node") return;
+
       e.preventDefault();
       e.stopPropagation();
 
-      const clickedNode = getNodeAtPosition(e.clientX, e.clientY);
-      if (clickedNode && clickedNode !== "table-node") {
+      if (clickedNode) {
         startConnect(clickedNode);
       } else {
         startCut(e);
