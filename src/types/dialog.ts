@@ -85,6 +85,8 @@ export interface CommandDialogState {
   params: Record<string, any>;
   isUpdate?: boolean;
   stepId?: string;
+  /** Step alias shown in the inspector header ("command · step name"). */
+  stepLabel?: string;
 }
 
 /** Props every command parameter form receives. */
@@ -99,6 +101,13 @@ export interface CommandFormProps {
   headers?: string[];
   /** Chosen table when the input is a `.duckdb` file. */
   sourceTable?: string;
+  /** Scroll cap for the form body (081: the wide dialog, not the 80vh modal). */
+  bodyMaxHeight?: string;
+  /**
+   * Fill the parent instead of capping the body (081 · right inspector): the
+   * form becomes a flex column with the footer pinned to the bottom.
+   */
+  fill?: boolean;
 }
 
 /** Human-readable title for each command dialog. */

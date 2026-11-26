@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BookOpen, X } from "lucide-react";
+import { BookOpen, Minimize2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { COMMAND_FORMS } from "@/modules/dialogs/command";
-import {
-  ParamSheet,
-  usesParamSheet,
-} from "@/modules/dialogs/command/ParamSheet";
+import { CommandFormBody } from "@/modules/dialogs/command/CommandFormBody";
 import { COMMAND_LABELS, type CommandDialogState } from "@/types/dialog";
+import { xanCommands } from "@/data/commands";
 import { useLanguage } from "@/i18n";
 
 // Kept as a re-export so imports written against the old location keep working
@@ -31,20 +28,28 @@ interface CommandDialogProps {
   sourceTable?: string;
   /** Open this command's docs (design 074); the old dock row `?` moved here. */
   onShowHelp?: (commandName: string) => void;
+  /**
+   * Design 081 · D: collapse back into the right-hand inspector instead of
+   * closing. Absent when the dialog is opened without an inspector behind it.
+   */
+  onCollapse?: () => void;
 }
 
 /**
- * Unified entry point for every command parameter form.
+ * Design 081 · D — the wide split dialog.
  *
- * Split in two so the hooks in `CommandDialogShell` are never called
- * conditionally - the previous single-component version returned early on a
- * null dialog *before* its hooks, which broke the rules of hooks
- * (`react-hooks/rules-of-hooks`).
+ * Used for commands that need the extra context (batch-*, join, duckdb, chart):
+ * parameters on the left, command description + input columns on the right.
+ * Everyday tweaks open the right inspector instead (see `CommandInspector`).
  */
 export function CommandDialog(props: CommandDialogProps) {
   if (!props.commandDialog) return null;
   return <CommandDialogShell {...props} commandDialog={props.commandDialog} />;
 }
+
+const DIALOG_MAX_HEIGHT = "min(80vh, 600px)";
+/** Header (48) + footer (56) are fixed; the form body scrolls. */
+const BODY_MAX_HEIGHT = `calc(${DIALOG_MAX_HEIGHT} - 104px)`;
 
 function CommandDialogShell({
   commandDialog,
@@ -54,45 +59,44 @@ function CommandDialogShell({
   headers = [],
   sourceTable,
   onShowHelp,
+  onCollapse,
 }: CommandDialogProps & { commandDialog: CommandDialogState }) {
-  const { t } = useLanguage();
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const isDragging = useRef(false);
-  const dragStart = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
+  const { t, effectiveLanguage } = useLanguage();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const isZh = effectiveLanguage === "zh";
+  /** Dragged position of the card, relative to its centred origin. */
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    isDragging.current = true;
-    dragStart.current = {
-      x: e.clientX,
-      y: e.clientY,
-      offsetX: offset.x,
-      offsetY: offset.y,
-    };
+  /** The wide dialog is movable by its title bar, like the old modal. */
+  const handleHeaderMouseDown = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      // Buttons in the header keep their own clicks.
+      if ((event.target as HTMLElement).closest("button")) return;
+      event.preventDefault();
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const start = offset;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging.current) return;
-      setOffset({
-        x: dragStart.current.offsetX + (e.clientX - dragStart.current.x),
-        y: dragStart.current.offsetY + (e.clientY - dragStart.current.y),
-      });
-    };
+      const onMove = (moveEvent: MouseEvent) => {
+        setOffset({
+          x: start.x + moveEvent.clientX - startX,
+          y: start.y + moveEvent.clientY - startY,
+        });
+      };
+      const onUp = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
 
-    const handleMouseUp = () => {
-      isDragging.current = false;
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    document.body.style.cursor = "grabbing";
-    document.body.style.userSelect = "none";
-  };
-
-  const FormComponent = COMMAND_FORMS[commandDialog.type];
+      document.body.style.cursor = "grabbing";
+      document.body.style.userSelect = "none";
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [offset],
+  );
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -127,10 +131,16 @@ function CommandDialogShell({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  const title = commandDialog.stepLabel ?? COMMAND_LABELS[commandDialog.type];
+  const command = xanCommands.find((entry) => entry.id === commandDialog.type);
+  const description = isZh
+    ? command?.descriptionCn || command?.description
+    : command?.description;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/20 backdrop-blur-none"
+        className="absolute inset-0 bg-black/20"
         onClick={() => setCommandDialog(null)}
         onContextMenu={(e) => e.preventDefault()}
       />
@@ -138,35 +148,39 @@ function CommandDialogShell({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        aria-label={title}
         tabIndex={-1}
-        className="absolute flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border bg-card shadow-xl outline-none"
-        style={{
-          left: `calc(50% + ${offset.x}px)`,
-          top: `calc(50% + ${offset.y}px)`,
-          transform: "translate(-50%, -50%)",
-        }}
+        className="relative flex h-[min(80vh,600px)] w-[min(800px,calc(100vw-32px))] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl outline-none"
+        style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
         onContextMenu={(e) => e.preventDefault()}
-        onClick={(e) => e.stopPropagation()}
       >
         <div
-          className="flex h-[52px] shrink-0 cursor-grab items-center gap-2.5 border-b border-border px-5 select-none active:cursor-grabbing"
-          onMouseDown={handleMouseDown}
+          className="flex h-12 shrink-0 cursor-grab items-center gap-2.5 border-b border-border px-4 select-none active:cursor-grabbing"
+          onMouseDown={handleHeaderMouseDown}
         >
-          <div className="flex items-center gap-2.5">
-            <h3 className="text-[15px] font-medium text-foreground">
-              {COMMAND_LABELS[commandDialog.type]}
-            </h3>
-            <span className="font-mono text-[11px] text-muted-foreground">
-              {commandDialog.type}
-            </span>
-          </div>
-          <div className="ml-auto flex items-center gap-1">
+          <h3 className="min-w-0 truncate text-[14px] font-medium text-foreground">
+            {title}
+          </h3>
+          <span className="flex-none font-mono text-[10.5px] text-muted-foreground">
+            {commandDialog.type}
+          </span>
+          <div className="ml-auto flex flex-none items-center gap-0.5">
+            {onCollapse && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1.5 px-2 text-[11px] font-normal text-muted-foreground"
+                onClick={onCollapse}
+              >
+                <Minimize2 className="h-3.5 w-3.5" />
+                {t.commandCollapse}
+              </Button>
+            )}
             {onShowHelp && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 cursor-pointer gap-1.5 px-2 text-[11.5px] font-normal text-muted-foreground"
-                onMouseDown={(e) => e.stopPropagation()}
+                className="h-7 gap-1.5 px-2 text-[11px] font-normal text-muted-foreground"
                 onClick={() => onShowHelp(commandDialog.type)}
               >
                 <BookOpen className="h-3.5 w-3.5" />
@@ -176,40 +190,58 @@ function CommandDialogShell({
             <Button
               variant="ghost"
               size="icon-sm"
-              className="cursor-pointer"
               aria-label={t.close}
               onClick={() => setCommandDialog(null)}
-              onMouseDown={(e) => e.stopPropagation()}
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-col">
-          {usesParamSheet(commandDialog.type) ? (
-            // Remount per command so the editor state never leaks between them.
-            <ParamSheet
-              key={commandDialog.type}
+        <div className="flex min-h-0 flex-1">
+          <div className="flex min-w-0 flex-1 flex-col">
+            <CommandFormBody
               commandDialog={commandDialog}
               onAddCommand={onAddCommand}
               onStepUpdate={onStepUpdate}
               setCommandDialog={setCommandDialog}
               headers={headers}
               sourceTable={sourceTable}
+              bodyMaxHeight={BODY_MAX_HEIGHT}
             />
-          ) : (
-            FormComponent && (
-              <FormComponent
-                commandDialog={commandDialog}
-                onAddCommand={onAddCommand}
-                onStepUpdate={onStepUpdate}
-                setCommandDialog={setCommandDialog}
-                headers={headers}
-                sourceTable={sourceTable}
-              />
-            )
-          )}
+          </div>
+
+          {/* Second column: what the command does and which columns it sees.
+              Hidden on narrow windows so the form keeps a usable width. */}
+          <aside className="hidden w-[268px] flex-none flex-col overflow-y-auto border-l border-border-soft bg-muted/30 px-4 py-3 min-[860px]:flex">
+            <div className="font-mono text-[10px] tracking-[0.02em] text-muted-foreground/60">
+              {t.commandDocsSection}
+            </div>
+            <p className="mt-1.5 text-[11.5px] leading-relaxed text-muted-foreground">
+              {description || "—"}
+            </p>
+
+            <div className="mt-4 font-mono text-[10px] tracking-[0.02em] text-muted-foreground/60">
+              {t.commandInputColumns}
+              {headers.length > 0 ? ` · ${headers.length}` : ""}
+            </div>
+            {headers.length > 0 ? (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {headers.map((header) => (
+                  <span
+                    key={header}
+                    className="max-w-full truncate rounded border border-border bg-card px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+                  >
+                    {header}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-1.5 text-[11px] text-muted-foreground/70">
+                {t.commandNoInputColumns}
+              </p>
+            )}
+          </aside>
         </div>
       </div>
     </div>

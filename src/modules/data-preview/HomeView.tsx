@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useLayoutEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/ScrollArea";
 import { X, Square } from "lucide-react";
 import {
@@ -16,6 +16,7 @@ import {
   CommandDialog,
   CommandDialogState,
 } from "@/modules/dialogs/command/CommandDialog";
+import { CommandInspector } from "@/modules/dialogs/command/CommandInspector";
 import { QuickActionDialog } from "@/modules/dialogs/quick/QuickActionDialog";
 import {
   buildInstantColumnAction,
@@ -109,6 +110,11 @@ interface HomeViewProps {
   /** Advance the reveal one step, then run it (click-driven). */
   onAdvanceDemoReveal?: () => void;
   onSkipDemoReveal?: () => void;
+  /**
+   * Design 081: the right inspector takes the place of the ViewDock while a
+   * step's parameters are open, so the app shell can hide that column.
+   */
+  onCommandInspectorChange?: (open: boolean) => void;
 }
 
 export const HomeView = React.memo(function HomeView({
@@ -162,6 +168,7 @@ export const HomeView = React.memo(function HomeView({
   demoReveal,
   onAdvanceDemoReveal,
   onSkipDemoReveal,
+  onCommandInspectorChange,
 }: HomeViewProps) {
   const { t } = useLanguage();
   const [columnWidths, _setColumnWidths] = useState<Record<number, number>>({});
@@ -172,6 +179,19 @@ export const HomeView = React.memo(function HomeView({
   const [commandDialog, setCommandDialog] = useState<CommandDialogState | null>(
     null,
   );
+  /** Design 081 · D: the wide split dialog expanded from the inspector. */
+  const [inspectorExpanded, setInspectorExpanded] = useState(false);
+  const inspectorOpen = commandDialog !== null;
+
+  // The inspector replaces the ViewDock column, so the shell must hide it
+  // before the first paint of this frame — otherwise both columns render once.
+  useLayoutEffect(() => {
+    onCommandInspectorChange?.(inspectorOpen);
+  }, [inspectorOpen, onCommandInspectorChange]);
+
+  useEffect(() => {
+    if (!inspectorOpen) setInspectorExpanded(false);
+  }, [inspectorOpen]);
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingTabName, setEditingTabName] = useState<string>("");
   const [renamedColumns, setRenamedColumns] = useState<Record<number, string>>(
@@ -325,7 +345,8 @@ export const HomeView = React.memo(function HomeView({
   }
 
   return (
-    <div className="h-full relative">
+    <div className="flex h-full min-h-0">
+      <div className="relative min-w-0 flex-1">
       <div className="absolute inset-0 overflow-hidden">
         <FlowPanel
           steps={pipeline}
@@ -348,6 +369,7 @@ export const HomeView = React.memo(function HomeView({
               params: { ...s.parameters },
               isUpdate: true,
               stepId: s.id,
+              stepLabel: s.alias || s.command.name,
             });
           }}
           onStepAliasUpdate={onStepAliasUpdate || (() => {})}
@@ -630,8 +652,22 @@ export const HomeView = React.memo(function HomeView({
           onClose={() => setQuickAction(null)}
         />
       )}
+      </div>
 
-      {commandDialog && (
+      {commandDialog && !inspectorExpanded && (
+        <CommandInspector
+          commandDialog={commandDialog}
+          onAddCommand={onAddCommand}
+          onStepUpdate={onStepUpdate}
+          setCommandDialog={setCommandDialog}
+          headers={headers}
+          sourceTable={sourceTable}
+          onShowHelp={onShowCommandHelp}
+          onExpand={() => setInspectorExpanded(true)}
+        />
+      )}
+
+      {commandDialog && inspectorExpanded && (
         <CommandDialog
           commandDialog={commandDialog}
           onAddCommand={onAddCommand}
@@ -640,6 +676,7 @@ export const HomeView = React.memo(function HomeView({
           headers={headers}
           sourceTable={sourceTable}
           onShowHelp={onShowCommandHelp}
+          onCollapse={() => setInspectorExpanded(false)}
         />
       )}
     </div>
