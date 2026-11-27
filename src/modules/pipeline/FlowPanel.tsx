@@ -1328,7 +1328,7 @@ export function FlowPanel({
       {/* Canvas tools: a persistent rail with the left-button tool (select /
           pan), the button swap and the canvas menu. */}
       <div
-        className="absolute left-3 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-0.5 rounded-[9px] border border-border bg-card p-[3px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-none"
+        className="absolute left-2 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-0.5 rounded-[9px] border border-border bg-card p-[3px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-none"
         onMouseDown={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.stopPropagation()}
       >

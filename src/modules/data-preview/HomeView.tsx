@@ -430,7 +430,7 @@ export const HomeView = React.memo(function HomeView({
         className="absolute left-2 right-2 top-9 z-10"
         onContextMenu={(e) => e.preventDefault()}
       >
-        <div className="flex h-9 items-start px-3 pt-1">
+        <div className="flex h-9 items-start px-1.5 pt-1">
           <ScrollArea className="h-full min-w-0 flex-1">
             <div className="flex items-center gap-1 pr-4">
               {tabs.map((tab) => (
