@@ -37,7 +37,7 @@
 | 更新 | 位置进 React state，每帧重渲染整张表单 | 位置只用于本层 `translate3d`；表单子树 props 不变，React 直接复用 |
 | 其他 | — | 画布/浮层尺寸走 `ResizeObserver`，拖动期间不测量 |
 
-结论：拖卡片、Space 平移、滚轮缩放时浮层贴卡跟随，长表单（`search` / `duckdb`）不再掉帧。代价是浮层不能再靠拖标题栏搬家——位置由卡片决定。
+结论：拖卡片、Space 平移、滚轮缩放时浮层贴卡跟随，长表单（`search` / `duckdb`）不再掉帧。标题栏仍可拖动：拖动时**卡片与浮层作为一体移动**——拖动量写进步骤节点的位置（与画布上拖卡同一条状态路径），松手按 `persistNodePositions` 保存；浮层因为锚定在节点上而同步跟随。没有卡片可锚（新加命令）时，浮层才按偏移单独移动。
 
 **锚点取卡片盒，不取节点外框**：`layout.ts` 给步骤节点的名义宽度是 240（供 dagre 排版），而卡片实际是 220（`w-[220px]`）。直接用 `node.width` 会让「放在右侧」的间距比左侧多出这 20px。所以打开时用 `PipelineStepNode` 的 `data-step-card` 布局盒测一次（`getBoundingClientRect` 差值 ÷ zoom → 流坐标），之后拖动/缩放复用这份数字，仍不读布局。
 
@@ -48,7 +48,8 @@
 | 宽 | 480；窄画布时取 `画布宽 − 16`，不横向溢出 |
 | 高 | 最高 560，且不超过 `画布高 − 16`；字段区滚动，页脚固定 |
 | 间距 | 贴卡 12；四周留 8。右侧放不下翻到左侧，仍放不下就夹在画布内 |
-| 头部 | 40px：步骤名（或命令名）· 等宽命令名 · 文档 · 关闭 |
+| 头部 | 40px：步骤名（或命令名）· 等宽命令名 · 文档 · 关闭；整条可拖（`cursor-grab`） |
+| 拖动 | 有卡片：拖动量作用于步骤节点，卡片与浮层一起走，松手持久化位置；无卡片：浮层加偏移。两种情况都夹在画布内 |
 | 表单滚动 | `bodyMaxHeight = calc(上限 − 96px)`，沿用 `CommandFormShell` / `ParamSheet` 现有页脚 |
 | 关闭 | × / Esc / 取消 / 提交；无遮罩，点画布不关闭 |
 
@@ -56,7 +57,8 @@
 
 | 文件 | 内容 |
 |---|---|
-| `command/CommandDialog.tsx` | 重写为锚定浮层：store 订阅、纯数学定位、`translate3d`、首个字段聚焦、Esc 关闭 |
+| `command/CommandDialog.tsx` | 重写为锚定浮层：store 订阅、纯数学定位、`translate3d`、标题栏拖动（有卡片时移动卡片）、首个字段聚焦、Esc 关闭 |
+| `pipeline/FlowPanel.tsx` | 新增 `stepMoveApiRef`：浮层拖动调用 `move`/`commit`，走与画布拖卡相同的节点状态与 `persistNodePositions` |
 | `data-preview/HomeView.tsx` | 画布列包 `ReactFlowProvider`；浮层在列内渲染；移除检查器与展开状态 |
 | `app/App.tsx` | 移除 `commandInspectorOpen`；`ViewDock` 常驻；日志抽屉 / 图表胶囊右侧偏移恢复 |
 | `command/CommandFormBody.tsx` | 保留：统一表单挂载点（ParamSheet 或 `COMMAND_FORMS`） |
@@ -71,6 +73,7 @@
 |---|---|
 | 点步骤卡片 | 浮层出现在该卡右侧，标题为「命令 · 步骤名」；再点另一张卡直接换过去 |
 | 拖卡片 / 平移 / 缩放画布 | 浮层跟随，位置由 React Flow 坐标算出 |
+| 拖浮层标题栏 | 卡片与浮层一起移动（节点位置逐帧更新、松手保存）；未移动的点击不写位置；无卡片时浮层单独移动 |
 | 新加操作（快速操作「高级参数」） | 无卡片可锚 → 浮层落在画布中心，标题为命令名，按钮为「添加步骤」 |
 | 点画布空白 | 不关闭（避免误触丢草稿） |
 | 提交 / 取消 | 与旧对话框一致，走 `handleCommandSubmit` |

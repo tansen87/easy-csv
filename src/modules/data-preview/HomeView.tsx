@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { ReactFlowProvider } from "reactflow";
 import { ScrollArea, ScrollBar } from "@/components/ui/ScrollArea";
 import { X, Square } from "lucide-react";
@@ -27,7 +27,7 @@ import type {
   QuickActionRequest,
   QuickBuildResult,
 } from "@/modules/dialogs/quick/types";
-import { FlowPanel } from "@/modules/pipeline/FlowPanel";
+import { FlowPanel, type StepMoveApi } from "@/modules/pipeline/FlowPanel";
 import { FirstStepGuide } from "@/components/onboarding/FirstStepGuide";
 import { RunTimer } from "@/components/ui/RunTimer";
 import { EmptyState, RecentFile } from "@/modules/data-preview/EmptyState";
@@ -173,6 +173,8 @@ export const HomeView = React.memo(function HomeView({
   const [commandDialog, setCommandDialog] = useState<CommandDialogState | null>(
     null,
   );
+  /** Canvas handle for dragging a step by the parameter popover's title bar. */
+  const stepMoveApiRef = useRef<StepMoveApi | null>(null);
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingTabName, setEditingTabName] = useState<string>("");
   const [renamedColumns, setRenamedColumns] = useState<Record<number, string>>(
@@ -363,6 +365,7 @@ export const HomeView = React.memo(function HomeView({
           savedEdges={edges}
           savedInputPosition={inputPosition}
           reactFlowInstanceRef={reactFlowInstanceRef}
+          stepMoveApiRef={stepMoveApiRef}
           onEdgesChange={(edges) => {
             if (onEdgesChange && selectedTabId) {
               onEdgesChange(selectedTabId, edges);
@@ -644,6 +647,7 @@ export const HomeView = React.memo(function HomeView({
           headers={headers}
           sourceTable={sourceTable}
           onShowHelp={onShowCommandHelp}
+          stepMoveApiRef={stepMoveApiRef}
         />
       )}
       </div>

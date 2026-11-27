@@ -14,6 +14,12 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { nodeTypes } from "@/modules/pipeline/nodes";
+
+/** Canvas-side handle used by the parameter popover's title-bar drag. */
+export interface StepMoveApi {
+  move: (stepId: string, position: { x: number; y: number }) => void;
+  commit: () => void;
+}
 import { CoordinateGrid } from "@/modules/pipeline/CoordinateGrid";
 import { useCanvasKeyboardPan } from "@/modules/pipeline/hooks/useCanvasKeyboardPan";
 import { useCanvasSpaceKey } from "@/modules/pipeline/hooks/useCanvasSpaceKey";
@@ -141,6 +147,12 @@ interface FlowPanelProps {
   savedEdges?: PipelineEdge[];
   savedInputPosition?: { x: number; y: number };
   reactFlowInstanceRef?: React.RefObject<any>;
+  /**
+   * Imperative handle for the anchored parameter popover: dragging its title
+   * bar moves the step card itself, so the card and the popover stay together.
+   * `commit` persists the final positions the same way a node drag does.
+   */
+  stepMoveApiRef?: React.RefObject<StepMoveApi | null>;
   pipelineSavedAt?: number;
   doubleClickFitView?: boolean;
   onSavePipeline?: () => void;
@@ -181,6 +193,7 @@ export function FlowPanel({
   savedEdges,
   savedInputPosition,
   reactFlowInstanceRef,
+  stepMoveApiRef,
   pipelineSavedAt,
   doubleClickFitView = true,
   onSaveIntermediate,
@@ -367,6 +380,11 @@ export function FlowPanel({
   // event callbacks rather than from the render closure.
   const nodesRef = useRef<Node[]>(nodes);
   nodesRef.current = nodes;
+  /** Last position requested by the parameter popover's title-bar drag. */
+  const stepMovePendingRef = useRef<{
+    stepId: string;
+    position: { x: number; y: number };
+  } | null>(null);
   // Set after persistNodePositions is defined; the layout hook calls it when a
   // forced "tidy" layout produces new positions.
   const persistNodePositionsRef = useRef<(nodeList: Node[]) => void>(() => {});
@@ -521,6 +539,35 @@ export function FlowPanel({
     [steps, onStepsChange, onInputPositionChange],
   );
   persistNodePositionsRef.current = persistNodePositions;
+
+  // Dragging the parameter popover's title bar moves the step card through the
+  // same node state a canvas drag uses, then persists on release. The last
+  // requested position is remembered so the commit cannot race a pending
+  // render (pointerup may arrive before the last state flush).
+  if (stepMoveApiRef) {
+    stepMoveApiRef.current = {
+      move: (stepId, position) => {
+        stepMovePendingRef.current = { stepId, position };
+        setNodes((prev) =>
+          prev.map((node) =>
+            node.id === stepId ? { ...node, position } : node,
+          ),
+        );
+      },
+      commit: () => {
+        const pending = stepMovePendingRef.current;
+        stepMovePendingRef.current = null;
+        const latest = pending
+          ? nodesRef.current.map((node) =>
+              node.id === pending.stepId
+                ? { ...node, position: pending.position }
+                : node,
+            )
+          : nodesRef.current;
+        persistNodePositionsRef.current(latest);
+      },
+    };
+  }
 
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, _node: Node, draggedNodes: Node[]) => {

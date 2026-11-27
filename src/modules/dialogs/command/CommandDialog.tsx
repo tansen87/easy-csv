@@ -1,7 +1,11 @@
 import {
   type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
+  type RefObject,
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -37,6 +41,14 @@ interface CommandDialogProps {
   sourceTable?: string;
   /** Open this command's docs (design 074); the old dock row `?` moved here. */
   onShowHelp?: (commandName: string) => void;
+  /**
+   * Canvas handle: dragging the title bar moves the anchored step card along
+   * with the popover (and persists the new position on release).
+   */
+  stepMoveApiRef?: RefObject<{
+    move: (stepId: string, position: { x: number; y: number }) => void;
+    commit: () => void;
+  } | null>;
 }
 
 /** Popover width on a roomy canvas. */
@@ -54,6 +66,14 @@ const CHROME_HEIGHT = HEADER_HEIGHT + 56;
 const MAX_HEIGHT_VAR = "--command-popover-max-height";
 
 /**
+ * Title-bar drag handler, published by the positioning layer to the surface.
+ * Context keeps the handler stable so dragging never re-renders the form.
+ */
+const PopoverDragContext = createContext<
+  ((event: ReactPointerEvent<HTMLElement>) => void) | null
+>(null);
+
+/**
  * Design 081 · B — the parameter popover anchored to its step card.
  *
  * `CommandPopover` is the only part that re-renders while a card moves: it
@@ -67,7 +87,10 @@ export function CommandDialog(props: CommandDialogProps) {
   if (!props.commandDialog) return null;
   const { commandDialog } = props;
   return (
-    <CommandPopover anchorStepId={commandDialog.stepId}>
+    <CommandPopover
+      anchorStepId={commandDialog.stepId}
+      stepMoveApiRef={props.stepMoveApiRef}
+    >
       <CommandDialogSurface {...props} commandDialog={commandDialog} />
     </CommandPopover>
   );
@@ -75,9 +98,11 @@ export function CommandDialog(props: CommandDialogProps) {
 
 function CommandPopover({
   anchorStepId,
+  stepMoveApiRef,
   children,
 }: {
   anchorStepId?: string;
+  stepMoveApiRef?: CommandDialogProps["stepMoveApiRef"];
   children: ReactNode;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -98,6 +123,18 @@ function CommandPopover({
     width: number;
     height: number;
   } | null>(null);
+  /** Free nudge used only when there is no card to move (new command). */
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const dragOffsetRef = useRef(dragOffset);
+  dragOffsetRef.current = dragOffset;
+  const dragCleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    setDragOffset({ x: 0, y: 0 });
+  }, [anchorStepId]);
+
+  // A dialog closed mid-drag must not leave window listeners behind.
+  useEffect(() => () => dragCleanupRef.current?.(), []);
 
   const anchorNode = useStore(
     useCallback(
@@ -112,6 +149,73 @@ function CommandPopover({
   /** Latest zoom for one-off measurements, without re-running on every pan. */
   const zoomRef = useRef(zoom);
   zoomRef.current = zoom;
+  /** Anchor state at drag start (a ref keeps `startDrag` stable for context). */
+  const anchorPositionRef = useRef({ x: 0, y: 0 });
+  anchorPositionRef.current = {
+    x: anchorNode?.position.x ?? 0,
+    y: anchorNode?.position.y ?? 0,
+  };
+  const hasAnchorRef = useRef(false);
+  hasAnchorRef.current = Boolean(anchorNode);
+
+  const startDrag = useCallback(
+    (event: ReactPointerEvent<HTMLElement>) => {
+      // Header buttons keep their own clicks.
+      if ((event.target as HTMLElement).closest("button")) return;
+      event.preventDefault();
+      dragCleanupRef.current?.();
+
+      // With a card, the drag moves the card itself; the popover follows
+      // because it is anchored to the node. Without one (new command), the
+      // popover moves freely by an offset.
+      const moveApi = stepMoveApiRef?.current;
+      const movesCard = Boolean(anchorStepId && hasAnchorRef.current && moveApi);
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const baseX = dragOffsetRef.current.x;
+      const baseY = dragOffsetRef.current.y;
+      const anchorStart = anchorPositionRef.current;
+      const scale = zoomRef.current || 1;
+
+      document.body.style.cursor = "grabbing";
+      document.body.style.userSelect = "none";
+      let moved = false;
+
+      const onMove = (moveEvent: PointerEvent) => {
+        if (movesCard && anchorStepId && moveApi) {
+          const dx = moveEvent.clientX - startX;
+          const dy = moveEvent.clientY - startY;
+          if (!moved && Math.abs(dx) + Math.abs(dy) < 1) return;
+          moved = true;
+          moveApi.move(anchorStepId, {
+            x: anchorStart.x + dx / scale,
+            y: anchorStart.y + dy / scale,
+          });
+          return;
+        }
+        moved = true;
+        setDragOffset({
+          x: baseX + moveEvent.clientX - startX,
+          y: baseY + moveEvent.clientY - startY,
+        });
+      };
+      const onUp = () => {
+        // A plain click must not write a "moved" position into the pipeline.
+        if (movesCard && moveApi && moved) moveApi.commit();
+        dragCleanupRef.current = null;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
+      };
+      dragCleanupRef.current = onUp;
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
+    },
+    [anchorStepId, stepMoveApiRef],
+  );
 
   useLayoutEffect(() => {
     const hostEl = hostRef.current;
@@ -202,6 +306,10 @@ function CommandPopover({
     x = (host.width - width) / 2;
     y = (host.height - renderedHeight) / 2;
   }
+  // A drag of the title bar offsets the anchored (or centred) spot; the clamp
+  // below still keeps the whole surface inside the canvas.
+  x += dragOffset.x;
+  y += dragOffset.y;
   x = Math.max(EDGE_MARGIN, Math.min(x, host.width - width - EDGE_MARGIN));
   y = Math.max(
     EDGE_MARGIN,
@@ -209,26 +317,28 @@ function CommandPopover({
   );
 
   return (
-    <div
-      ref={hostRef}
-      data-testid="command-dialog-anchor"
-      className="pointer-events-none absolute inset-0 z-30"
-    >
+    <PopoverDragContext.Provider value={startDrag}>
       <div
-        ref={surfaceWrapRef}
-        className="absolute left-0 top-0"
-        style={
-          {
-            width,
-            maxHeight,
-            transform: `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`,
-            [MAX_HEIGHT_VAR]: `${Math.round(maxHeight)}px`,
-          } as CSSProperties
-        }
+        ref={hostRef}
+        data-testid="command-dialog-anchor"
+        className="pointer-events-none absolute inset-0 z-30"
       >
-        {children}
+        <div
+          ref={surfaceWrapRef}
+          className="absolute left-0 top-0"
+          style={
+            {
+              width,
+              maxHeight,
+              transform: `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`,
+              [MAX_HEIGHT_VAR]: `${Math.round(maxHeight)}px`,
+            } as CSSProperties
+          }
+        >
+          {children}
+        </div>
       </div>
-    </div>
+    </PopoverDragContext.Provider>
   );
 }
 
@@ -242,6 +352,7 @@ function CommandDialogSurface({
   onShowHelp,
 }: CommandDialogProps & { commandDialog: CommandDialogState }) {
   const { t } = useLanguage();
+  const startDrag = useContext(PopoverDragContext);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   // Land in the first field, the same way the old dialog did.
@@ -273,7 +384,10 @@ function CommandDialogSurface({
       style={{ maxHeight: `var(${MAX_HEIGHT_VAR})` }}
       onContextMenu={(event) => event.preventDefault()}
     >
-      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border pl-3.5 pr-2">
+      <div
+        onPointerDown={startDrag ?? undefined}
+        className="flex h-10 shrink-0 cursor-grab select-none items-center gap-2 border-b border-border pl-3.5 pr-2 active:cursor-grabbing"
+      >
         <h3 className="min-w-0 truncate text-[13px] font-medium text-foreground">
           {title}
         </h3>
