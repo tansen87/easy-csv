@@ -28,6 +28,8 @@ export const zhPipeline = {
   aboutDistribution: "分发",
   aboutLicense: "许可证",
   aboutRepository: "仓库",
+  aboutCopyInfo: "复制版本信息",
+  aboutCopied: "已复制",
   viewSample: "查看示例",
   dataProfileRequiresInput: "需要载入输入文件",
   dataProfile: "数据概览",

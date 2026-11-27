@@ -31,6 +31,8 @@ export const enPipeline = {
   aboutDistribution: "Distribution",
   aboutLicense: "License",
   aboutRepository: "Repository",
+  aboutCopyInfo: "Copy version info",
+  aboutCopied: "Copied",
   viewSample: "View Example",
   dataProfileRequiresInput: "Requires an input file",
   dataProfile: "Data Profile",

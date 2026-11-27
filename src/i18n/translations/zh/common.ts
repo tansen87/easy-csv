@@ -49,7 +49,7 @@ export const zhCommon = {
   otherTabsRunning: "另有 {count} 个标签页在运行",
   crossTabOverwriteTitle: "另一个标签页正在写这个文件?",
   crossTabOverwriteMessage:
-    "标签页「{name}」正在写入同一个输出文件:{path}。继续执行会覆盖它的结果。",
+    "标签页「{name}」正在写入同一个输出文件:{path}. 继续执行会覆盖它的结果.",
   logFilterCurrent: "当前标签页",
   logFilterAll: "全部",
   logLevelFilter: "日志级别过滤",
@@ -64,7 +64,7 @@ export const zhCommon = {
   collapsePanel: "折叠",
   copyCsv: "复制为 CSV",
   copyMarkdown: "复制为 Markdown 表格",
-  resultTruncated: "结果已截断为前几行,请用 output/to 步骤导出完整数据.",
+  resultTruncated: "结果已截断为前几行, 请用 output/to 步骤导出完整数据.",
   commandPalette: "命令面板",
   palettePlaceholder: "搜索命令、步骤或文件",
   paletteCommands: "命令",

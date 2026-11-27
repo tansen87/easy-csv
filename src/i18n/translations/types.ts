@@ -52,6 +52,8 @@ export interface Translations {
   aboutDistribution: string;
   aboutLicense: string;
   aboutRepository: string;
+  aboutCopyInfo: string;
+  aboutCopied: string;
   /** First row of the Help menu: opens the built-in sample. */
   viewSample: string;
   dataProfileRequiresInput: string;

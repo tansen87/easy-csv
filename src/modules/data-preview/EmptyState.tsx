@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { Star } from "lucide-react";
+import { GithubIcon } from "@/components/ui/GithubIcon";
 
 import { Button } from "@/components/ui/Button";
 import { useLanguage } from "@/i18n";
@@ -245,7 +245,7 @@ export function EmptyState({
         onClick={() => onOpenUrl?.(GITHUB_URL)}
         className="absolute bottom-5 right-6 h-auto gap-1.5 px-0 text-xs font-normal text-muted-foreground hover:text-foreground hover:no-underline"
       >
-        <Star className="size-3.5" strokeWidth={1.5} />
+        <GithubIcon className="size-3.5" />
         {t.starOnGitHub}
       </Button>
     </div>

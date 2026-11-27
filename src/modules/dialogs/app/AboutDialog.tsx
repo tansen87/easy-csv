@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { Check, Copy, X } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Button } from "@/components/ui/Button";
@@ -38,6 +38,7 @@ interface AboutDialogProps {
 export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
   const { t } = useLanguage();
   const [info, setInfo] = useState<AppInfo | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -63,6 +64,18 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
+  // "Copied" is a local, self-clearing acknowledgement: no toast, no colour
+  // flash - the label simply says it worked for a moment.
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
+  useEffect(() => {
+    if (!isOpen) setCopied(false);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const distribution = info
@@ -70,6 +83,18 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
         ARCH_LABELS[info.arch] ?? info.arch
       }`
     : "—";
+
+  const versionLine = info
+    ? `easy-csv ${info.version} · Tauri ${info.tauriVersion} · ${distribution}`
+    : "";
+
+  const handleCopy = () => {
+    if (!versionLine) return;
+    void navigator.clipboard
+      ?.writeText(versionLine)
+      .then(() => setCopied(true))
+      .catch(() => {});
+  };
 
   const rows = [
     { label: t.aboutVersion, value: info?.version ?? "—" },
@@ -139,10 +164,27 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
             </div>
           </div>
 
-          <div className="mt-4 border-t border-border/60 pt-3">
+          <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3">
             <span className="font-mono text-[11px] text-muted-foreground">
               © {new Date().getFullYear()} tansen
             </span>
+            {/* One-line build stamp for issue reports: version, Tauri, OS. */}
+            <button
+              type="button"
+              onClick={handleCopy}
+              disabled={!info}
+              aria-label={t.aboutCopyInfo}
+              className="flex h-6 items-center gap-1.5 rounded-[5px] px-1.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+            >
+              {copied ? (
+                <Check className="h-3 w-3" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+              <span aria-live="polite">
+                {copied ? t.aboutCopied : t.aboutCopyInfo}
+              </span>
+            </button>
           </div>
         </div>
       </div>
