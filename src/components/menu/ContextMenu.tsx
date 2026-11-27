@@ -469,13 +469,11 @@ export function ContextMenu({
         <MenuItem
           icon={Trash2}
           label={t.deleteColumnAction}
-          danger
           onClick={() => emit("drop-column")}
         />
         <MenuItem
           icon={Crop}
           label={t.keepOnlyColumnAction}
-          danger
           onClick={() => emit("keep-column")}
         />
       </Submenu>

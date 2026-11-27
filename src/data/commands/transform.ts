@@ -62,16 +62,16 @@ export const transformCommands: XanCommand[] = [
       {
         name: "expression",
         type: "string",
-        description: "Expression to evaluate",
-        descriptionCn: "要评估的表达式",
+        description: "Expression",
+        descriptionCn: "表达式",
         required: true,
         isPositional: true,
       },
       {
         name: "evaluate-file",
         type: "string",
-        description: "Read evaluation expression from a file instead",
-        descriptionCn: "从文件读取评估表达式",
+        description: "Read expression from a file instead",
+        descriptionCn: "从文件读取表达式",
         required: false,
       },
       {
@@ -80,7 +80,7 @@ export const transformCommands: XanCommand[] = [
         description:
           "If set, expressions named with a column already existing in the file will be overwritten with the result of the expression instead of adding a new column at the end",
         descriptionCn:
-          "如果设置,与文件中已存在列同名的表达式将被覆盖,而不是在末尾添加新列",
+          "如果设置, 与文件中已存在列同名的表达式将被覆盖, 而不是在末尾添加新列",
         required: false,
         default: false,
       },
@@ -88,8 +88,8 @@ export const transformCommands: XanCommand[] = [
         name: "filter",
         type: "flag",
         description:
-          "If given, will not write rows in the output if all results of evaluated expression are falsey",
-        descriptionCn: "如果提供,当评估表达式的所有结果为假值时,将不写入输出行",
+          "If given, will not write rows in the output if all results of expression are falsey",
+        descriptionCn: "如果提供, 当评估表达式的所有结果为假值时, 将不写入输出行",
         required: false,
         default: false,
       },
@@ -128,8 +128,8 @@ export const transformCommands: XanCommand[] = [
       {
         name: "expression",
         type: "string",
-        description: "Expression to evaluate",
-        descriptionCn: "要评估的表达式",
+        description: "Expression",
+        descriptionCn: "表达式",
         required: true,
         isPositional: true,
       },

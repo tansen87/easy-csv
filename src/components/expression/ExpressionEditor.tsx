@@ -4,7 +4,10 @@ import {
   getAutocompleteSuggestions,
   AutocompleteItem,
 } from "@/components/expression/autocomplete";
-import { measurePopover, type PopoverPlacement } from "@/components/expression/popover";
+import {
+  measurePopover,
+  type PopoverPlacement,
+} from "@/components/expression/popover";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { getFunctionByName } from "@/data/functions";
@@ -451,9 +454,7 @@ export function ExpressionEditor({
               <div className="flex h-8 items-center gap-2 px-2.5 text-[11.5px] text-muted-foreground">
                 <span className="min-w-0 flex-1 truncate">
                   {t.exprNoMatch}{" "}
-                  <span className="font-mono text-foreground">
-                    “{noMatch}”
-                  </span>
+                  <span className="font-mono text-foreground">“{noMatch}”</span>
                 </span>
                 <span className={KBD_CLASS}>Esc</span>
               </div>
@@ -491,7 +492,7 @@ export function ExpressionEditor({
         <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground/60">
           {functionContext
             ? `${functionContext.paramIndex + 1} / ${functionContext.params.length}`
-            : "xan"}
+            : ""}
         </span>
       </div>
     </div>

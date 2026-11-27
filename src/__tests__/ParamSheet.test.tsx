@@ -200,7 +200,7 @@ describe("ParamSheet · map", () => {
 
     // map --expression is the one parameter that always had the code editor
     // (design 056); the sheet must not downgrade it to a one-line input.
-    const editor = screen.getByPlaceholderText("要评估的表达式");
+    const editor = screen.getByPlaceholderText("表达式");
     expect(editor.tagName).toBe("TEXTAREA");
   });
 });
