@@ -509,7 +509,7 @@ export function FlowPanel({
   // must stand down while it is held.
   const spaceDown = useCanvasSpaceKey();
 
-  // Canvas pan via WASD / arrow keys (see docs/design/013_canvas-keyboard-pan.md)
+  // Canvas pan via WASD only (see docs/design/013_canvas-keyboard-pan.md)
   useCanvasKeyboardPan(reactFlowInstance, true);
 
   const persistNodePositions = useCallback(

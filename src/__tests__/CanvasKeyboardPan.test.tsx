@@ -71,9 +71,15 @@ describe("useCanvasKeyboardPan", () => {
     key("keyup", "w");
   });
 
-  it("maps arrow keys and A/S/D to the correct axes", () => {
-    const { instanceRef, viewport } = makeInstance();
+  it("maps A/S/D to the correct axes and leaves the arrow keys alone", () => {
+    const { instanceRef, setViewport, viewport } = makeInstance();
     render(<Harness instanceRef={instanceRef} />);
+
+    // Arrow keys belong to menus / lists / the command palette, not the canvas.
+    key("keydown", "ArrowUp");
+    vi.advanceTimersByTime(500);
+    expect(setViewport).not.toHaveBeenCalled();
+    key("keyup", "ArrowUp");
 
     key("keydown", "a"); // [1,0] -> x increases
     vi.advanceTimersByTime(1000);

@@ -241,7 +241,7 @@ export const enPipeline = {
   fitCanvas: "Fit canvas",
   zoomReset: "Zoom 100%",
   lockCanvas: "Lock canvas",
-  showGestureHints: "Show gesture hints",
+  showGestureHints: "Gesture hints",
   gestureSelect: "Select",
   gesturePan: "Pan",
   gestureCut: "Cut",

@@ -1,14 +1,12 @@
 import { useEffect, useRef, type RefObject } from "react";
 
+// WASD only: arrow keys are left to the rest of the UI (menus, lists) so
+// canvas panning never swallows them.
 const PAN_KEYS: Record<string, [number, number]> = {
   w: [0, 1],
-  arrowup: [0, 1],
   a: [1, 0],
-  arrowleft: [1, 0],
   s: [0, -1],
-  arrowdown: [0, -1],
   d: [-1, 0],
-  arrowright: [-1, 0],
 }; // [dx, dy], The direction is the direction of the 'field of view'; View port translation is reversed
 
 const BASE_SPEED = 600; // px/s, Screen space
@@ -66,7 +64,8 @@ export function useCanvasKeyboardPan(
       }
       const k = e.key.toLowerCase();
       if (PAN_KEYS[k] && !pressed.current.has(k)) {
-        e.preventDefault(); // Prevent scrolling of nested scroll containers with arrow keys
+        // Keep WASD from leaking into nested scroll containers / typeahead.
+        e.preventDefault();
         pressed.current.add(k);
         lastTs.current = performance.now();
         if (!rafId.current) rafId.current = requestAnimationFrame(tick);

@@ -514,7 +514,7 @@ AI 助手前端逻辑,RAG 检索与提示词构建(`services/ai/`):
 | `pipeline/nodes/index.ts` | 节点类型注册表(nodeTypes) |
 | `pipeline/lib/layout.ts` | dagre 自动布局 + 节点/边生成与连接方向解析(`getLayoutedElements`/`createEdgeConfig`/`resolveHandles`/`handleAnchor`/`pickStartHandle`/`buildConnectPreviewPath`/`transformBezierPath`) |
 | `pipeline/lib/cutGeometry.ts` | 切割几何计算: 交点检测、clip-path 生成、坠落方向 |
-| `pipeline/hooks/useCanvasKeyboardPan.ts` | 画布键盘平移(WASD / 方向键,Shift 加速) |
+| `pipeline/hooks/useCanvasKeyboardPan.ts` | 画布键盘平移(**仅 WASD**, Shift 加速; 方向键已交还菜单/列表/命令面板, 2026-11-27) |
 | `pipeline/hooks/useCanvasSpaceKey.ts` | 追踪 Space 是否按住:Space 是 React Flow 的临时平移键,自定义鼠标手势在此期间让位 |
 | `pipeline/overlays/SearchOverlay.tsx` | 画布搜索框 UI(Ctrl+F) |
 | `pipeline/overlays/CutVisualization.tsx` | 切刀轨迹 SVG 渲染 |

@@ -188,3 +188,11 @@ mock：`instanceRef.current = { getViewport: () => ({x:0,y:0,zoom:1}), setViewpo
 - [x] Ctrl+D / Alt+A / Shift+S 等全局快捷键行为不变；
 - [x] 中键拖拽、Space+左键拖拽、Shift 框选、双击 fitView、切刀、右键连线均不受影响；
 - [x] `pnpm test` 全量通过。
+
+---
+
+## 7. 修订(2026-11-27):只保留 WASD
+
+方向键与画布平移脱钩:`PAN_KEYS` 只留 `W/A/S/D`。理由是方向键在菜单、列表、命令面板、表达式补全里都是原生的焦点/候选键,画布抢走它会把这些交互吃掉一层。WASD、八方向组合、Shift 2 倍速、输入框守卫、全局组合键让位全部不变。
+
+`src/modules/pipeline/hooks/useCanvasKeyboardPan.ts` 中删除 `arrowup/arrowdown/arrowleft/arrowright` 四项;按下 WASD 时的 `preventDefault` 保留(防止按键漏进嵌套滚动容器)。

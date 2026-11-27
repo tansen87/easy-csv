@@ -232,7 +232,7 @@ export const zhPipeline = {
   fitCanvas: "适应画布",
   zoomReset: "缩放 100%",
   lockCanvas: "锁定画布",
-  showGestureHints: "显示画布手势",
+  showGestureHints: "画布手势",
   gestureSelect: "框选",
   gesturePan: "平移",
   gestureCut: "划线",
