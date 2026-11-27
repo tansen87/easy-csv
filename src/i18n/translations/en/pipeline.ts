@@ -221,6 +221,7 @@ export const enPipeline = {
   renamePending: "Columns changed",
   saveRenameStep: "Save as rename step",
   deleteSteps: "Delete",
+  selectionUnit: "steps",
   justNow: "just now",
   minutesAgo: "{n}m ago",
   hoursAgo: "{n}h ago",

@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>原型 082-01 · 已选步骤的操作条</title>
+<style>
+  :root{
+    --font:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+
+    --bg:oklch(1 0 0);
+    --fg:oklch(0.145 0 0);
+    --card:oklch(1 0 0);
+    --paper:oklch(0.995 0.004 85);
+    --muted:oklch(0.97 0 0);
+    --muted-fg:oklch(0.556 0 0);
+    --muted-fg-2:oklch(0.66 0 0);
+    --muted-fg-3:oklch(0.76 0 0);
+    --border:oklch(0.922 0 0);
+    --rule:oklch(0.2 0.01 80 / 7%);
+    --border-soft:oklch(0.2 0.01 80 / 8%);
+    --edge:oklch(0.2 0.01 80 / 22%);
+
+    --brand:oklch(0.42 0.055 250);
+    --brand-soft:color-mix(in oklab,var(--brand) 9%,transparent);
+    --brand-12:color-mix(in oklab,var(--brand) 12%,transparent);
+
+    --ok:oklch(0.5 0.09 150);
+    --danger:oklch(0.52 0.16 27);
+    --danger-soft:color-mix(in oklab,var(--danger) 9%,transparent);
+    --mark:oklch(0.56 0.17 27);
+
+    --stage:oklch(0.93 0.002 80);
+    --dot:oklch(0.2 0.01 80 / 9%);
+    --canvas-dot:oklch(0.2 0.01 80 / 8%);
+    --chrome:oklch(0.985 0.002 80);
+    --tab:oklch(0.975 0.002 80);
+    --shadow-card:0 1px 2px oklch(0.2 0.02 80 / 5%);
+    --shadow-bar:0 6px 20px oklch(0.2 0.02 80 / 9%),0 1px 2px oklch(0.2 0.02 80 / 6%);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--font);color:var(--fg);background-color:var(--stage);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:16px 16px;
+       -webkit-font-smoothing:antialiased}
+  code{font-family:var(--mono);font-size:.92em;color:var(--fg);
+       background:color-mix(in oklab,var(--muted) 75%,transparent);padding:1px 4px;border-radius:3px}
+
+  #sheet{width:1200px;margin:0 auto;padding:28px 0 72px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--muted-fg);margin-bottom:7px}
+  .stage-bar{padding-bottom:22px}
+  .stage-bar h1{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em}
+  .stage-bar p{margin:8px 0 0;font-size:12px;color:var(--muted-fg);max-width:1010px;line-height:1.8}
+  .stage-bar p b{font-weight:500;color:var(--fg)}
+
+  .direction{display:grid;grid-template-columns:repeat(5,1fr);margin-bottom:38px;
+             border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+  .direction div{padding:11px 14px;border-right:1px solid var(--border-soft)}
+  .direction div:last-child{border-right:0}
+  .direction dt{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3);margin-bottom:4px}
+  .direction dd{margin:0;font-size:11.5px;line-height:1.6}
+
+  .frame + .frame{margin-top:48px}
+  .cap{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;
+       border-bottom:1px solid var(--border-soft);margin-bottom:16px}
+  .cap b{font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--fg)}
+  .cap span{font-family:var(--mono);font-size:10px;color:var(--muted-fg-3)}
+  .cap .file{color:var(--muted-fg-3);margin-left:auto;font-family:var(--mono);font-size:10px}
+  .note{margin:14px 0 0;font-size:11.5px;line-height:1.8;color:var(--muted-fg);max-width:1010px}
+  .note b{font-weight:500;color:var(--fg)}
+
+  /* ── 应用外壳 ───────────────────────────── */
+  .app{width:1160px;max-width:100%;height:600px;flex:none;border:1px solid var(--border);border-radius:12px;
+       overflow:hidden;display:flex;flex-direction:column;position:relative;background:var(--bg);color:var(--fg);
+       box-shadow:var(--shadow-card)}
+  .topbar{height:44px;flex:none;display:flex;align-items:center;gap:2px;padding:0 12px;
+          border-bottom:1px solid var(--border);background:var(--chrome)}
+  .tbtn{font-size:12px;padding:5px 9px;border-radius:6px;color:var(--muted-fg)}
+  .spacer{flex:1}
+  .cmdbar{height:26px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid var(--border);
+          border-radius:6px;width:300px;color:var(--muted-fg-3);font-size:11px}
+  .cmdbar .caret{font-family:var(--mono);color:var(--muted-fg-2)}
+  .key{font-family:var(--mono);font-size:9.5px;border:1px solid var(--border);border-radius:4px;
+       padding:1px 4px;color:var(--muted-fg-2);background:var(--bg)}
+  .tabbar{height:30px;flex:none;display:flex;align-items:center;gap:2px;padding:0 8px;
+          border-bottom:1px solid var(--border);background:var(--tab)}
+  .tab{height:24px;display:inline-flex;align-items:center;gap:6px;padding:0 9px;border-radius:5px;
+       font-size:11.5px;color:var(--muted-fg-3)}
+  .tab.on{background:var(--brand-soft);color:var(--brand);border:1px solid var(--brand-12)}
+  .tab .dot{width:4px;height:4px;border-radius:50%;background:var(--ok)}
+  .body{flex:1;display:flex;min-height:0;position:relative}
+  .canvas{flex:1;position:relative;overflow:hidden;background-color:var(--bg);
+          background-image:radial-gradient(circle,var(--canvas-dot) 1px,transparent 1px);
+          background-size:22px 22px}
+  .edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+  .rail{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:26px;height:96px;
+        border:1px solid var(--border);border-radius:7px;background:var(--card);display:flex;
+        flex-direction:column;z-index:3}
+  .rail i{flex:1;display:grid;place-items:center;font:400 9px/1 var(--mono);color:var(--muted-fg-3)}
+  .rail i.on{color:var(--brand);background:var(--brand-soft);border-radius:5px;margin:2px}
+  .rail i + i{border-top:1px solid var(--border-soft)}
+
+  .in{position:absolute;width:360px;background:var(--paper);border:1px solid var(--border);
+      border-radius:10px;overflow:hidden;box-shadow:var(--shadow-card);z-index:2}
+  .in-hd{height:34px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--rule)}
+  .in-title{font-size:12px;font-weight:500;white-space:nowrap}
+  .in-meta{margin-left:auto;font:400 10px/1 var(--mono);color:var(--muted-fg-3)}
+  .in table{width:100%;border-collapse:collapse;font-size:10.5px}
+  .in th,.in td{padding:4px 9px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--rule);
+                color:var(--muted-fg)}
+  .in th{background:color-mix(in oklab,var(--muted) 60%,transparent);font-weight:500;font-size:10px;
+         color:var(--muted-fg-3)}
+  .in td.r{text-align:right;font-family:var(--mono);font-size:10px}
+  .in-foot{height:22px;display:flex;align-items:center;gap:8px;padding:0 10px;font:400 9.5px/1 var(--mono);
+           color:var(--muted-fg-3);border-top:1px solid var(--rule);
+           background:color-mix(in oklab,var(--muted) 35%,transparent)}
+
+  .step{position:absolute;width:196px;background:var(--card);border:1px solid var(--border);
+        border-radius:9px;box-shadow:var(--shadow-card);z-index:2}
+  .step .pad{padding:8px 10px}
+  .step .head{display:flex;align-items:center;gap:8px;min-width:0}
+  .step .alias{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .step .cmd{flex:none;font:400 9.5px/1 var(--mono);color:var(--muted-fg-3)}
+  .step .params{margin-top:4px;display:flex;flex-direction:column;gap:1px}
+  .pline{display:flex;gap:6px;min-width:0;font:400 10px/15px var(--mono)}
+  .pk{flex:none;min-width:48px;color:var(--muted-fg-3)}
+  .pv{color:var(--muted-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .step.selected{border-color:var(--brand);box-shadow:inset 2px 0 0 var(--brand),var(--shadow-card)}
+  .step .hoverstrip{position:absolute;right:-1px;top:-31px;height:26px;display:flex;align-items:stretch;
+        border:1px solid var(--border);border-radius:6px;background:var(--card);overflow:hidden}
+  .hoverstrip span{width:25px;display:grid;place-items:center;color:var(--muted-fg-3)}
+  .hoverstrip span + span{border-left:1px solid var(--border-soft)}
+  .hoverstrip svg{width:12px;height:12px}
+
+  .ic svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.5;
+          stroke-linecap:round;stroke-linejoin:round}
+
+  /* ── 现状：顶部药丸 ─────────────────────── */
+  .audit-bar{position:absolute;left:50%;top:40px;transform:translateX(-50%);z-index:6;
+             display:flex;align-items:center;height:34px;padding:0 4px;border:1px solid var(--border);
+             border-radius:9px;background:var(--card);box-shadow:0 4px 12px oklch(0.2 0.02 80 / 7%)}
+  .audit-bar .n{padding:0 8px;font:500 11px/1 var(--mono);color:var(--muted-fg);font-variant-numeric:tabular-nums}
+  .audit-bar .act{display:flex;align-items:center;gap:6px;height:26px;padding:0 6px;border-radius:5px;
+                  font-size:11px;color:var(--muted-fg)}
+  .audit-bar .act.danger{color:var(--danger)}
+  .audit-bar .act .ic{font:400 12px/1 var(--mono);opacity:.8}
+
+  /* ── 新版操作条（三种位置共用） ─────────── */
+  .selbar{position:absolute;z-index:6;display:flex;align-items:center;height:28px;padding:0 2px;
+          border:1px solid var(--border);border-radius:6px;background:var(--card)}
+  .selbar.quiet{box-shadow:none}
+  .selbar.count{display:flex;align-items:baseline;gap:3px;padding:0 6px;white-space:nowrap}
+  .selbar .num{font:500 11px/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--fg)}
+  .selbar .unit{font-size:10px;color:var(--muted-fg)}
+  .selbar .sep{width:1px;height:14px;background:var(--border-soft);flex:none}
+  .selbar .act{display:flex;align-items:center;gap:6px;height:22px;padding:0 6px;border-radius:4px;
+               font-size:11px;color:var(--muted-fg)}
+  .selbar .act .ic{font:400 12px/1 var(--mono);color:var(--muted-fg-2)}
+  .selbar .act.danger{color:var(--muted-fg)}
+  .selbar .act.danger .ic{color:var(--muted-fg-2)}
+  .selbar .act.danger.on-danger{color:var(--danger);background:var(--danger-soft)}
+  .selbar .act.danger.on-danger .ic{color:var(--danger)}
+  .selbar .act:hover{background:var(--muted);color:var(--fg)}
+  .selbar .act.danger:hover{background:var(--danger-soft);color:var(--danger)}
+  .selbar .act.danger:hover .ic{color:var(--danger)}
+  .selbar .kbd{font:400 9px/1 var(--mono);color:var(--muted-fg-3);border:1px solid var(--border);
+               border-radius:3px;padding:2px 4px;background:var(--bg)}
+
+  /* A 底部托盘（居中） + 手势提示（右下、扁平文字） */
+  .tray{left:50%;bottom:8px;transform:translateX(-50%)}
+  .gesturelegend{position:absolute;right:12px;bottom:8px;z-index:5;display:flex;align-items:center;gap:12px;
+        font-size:10.5px;color:var(--muted-fg-2);white-space:nowrap}
+  .gitem{display:inline-flex;align-items:center;gap:5px}
+  .gesturelegend .gk{display:inline-flex;height:18px;align-items:center;padding:0 5px;border:1px solid var(--border);
+        border-radius:3px;font:400 9.5px/1 var(--mono);color:var(--muted-fg)}
+  .gesturelegend .gsep{width:1px;height:12px;background:var(--border-soft)}
+  .gesturelegend .plus{font-size:9px;color:var(--muted-fg-3)}
+  .foot-demo{margin-top:14px;padding:12px 14px;border:1px solid var(--border-soft);border-radius:8px;
+             background-color:var(--bg);background-image:radial-gradient(circle,var(--canvas-dot) 1px,transparent 1px);
+             background-size:22px 22px;font-size:10.5px;color:var(--muted-fg-3)}
+  .statusline{position:absolute;left:12px;bottom:16px;display:flex;align-items:center;gap:12px;
+              font-size:11px;color:var(--muted-fg-3);font-family:var(--mono)}
+  .statusline .dotdirty{width:6px;height:6px;border-radius:50%;background:var(--mark)}
+
+  /* B 选区上方浮条 */
+  .floatbar{}
+
+  /* C 顶部上下文行 */
+  .ctxrow{position:absolute;left:0;right:0;top:30px;z-index:6;display:flex;align-items:center;gap:10px;
+          height:36px;padding:0 14px;border-bottom:1px solid var(--border-soft);background:var(--paper)}
+  .ctxrow .num{font:500 12px/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--fg)}
+  .ctxrow .unit{font-size:10.5px;color:var(--muted-fg)}
+  .ctxrow .sep{width:1px;height:16px;background:var(--border-soft)}
+  .ctxrow .act{display:flex;align-items:center;gap:6px;height:26px;padding:0 7px;border-radius:5px;
+               font-size:11.5px;color:var(--muted-fg)}
+  .ctxrow .act:hover{background:var(--muted);color:var(--fg)}
+  .ctxrow .act.danger{color:var(--muted-fg)}
+  .ctxrow .act.danger:hover{background:var(--danger-soft);color:var(--danger)}
+  .ctxrow .kbd{font:400 9px/1 var(--mono);color:var(--muted-fg-3);border:1px solid var(--border);
+               border-radius:3px;padding:2px 4px;background:var(--bg)}
+  .ctxrow .right{margin-left:auto;font:400 9.5px/1 var(--mono);color:var(--muted-fg-3)}
+
+  /* 标注 */
+  .tag{position:absolute;font-family:var(--mono);font-size:9.5px;line-height:1.2;color:#fff;background:var(--mark);
+       border-radius:50%;width:16px;height:16px;display:grid;place-items:center;z-index:8}
+  .legend{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 22px;font-size:11px;line-height:1.7;
+          color:var(--muted-fg);max-width:1120px}
+  .legend span{display:inline-flex;gap:6px;align-items:baseline}
+  .legend b{font:400 10px/1 var(--mono);color:var(--mark)}
+  .dim{position:absolute;font:400 9.5px/1.6 var(--mono);color:var(--muted-fg-2);background:var(--bg);
+       border:1px dashed var(--mark);border-radius:3px;padding:2px 5px;z-index:8;white-space:nowrap}
+
+  /* 表格与面板 */
+  table.spec{width:100%;border-collapse:collapse;font-size:11.5px}
+  table.spec th{text-align:left;font-weight:500;color:var(--muted-fg-3);font-size:10.5px;
+                padding:0 10px 7px 0;border-bottom:1px solid var(--border-soft)}
+  table.spec td{padding:8px 10px 8px 0;border-bottom:1px solid var(--border-soft);color:var(--muted-fg);
+                vertical-align:top;line-height:1.7}
+  table.spec td:first-child{color:var(--fg);white-space:nowrap}
+  table.spec tr:last-child td{border-bottom:0}
+  .pick{font-size:9.5px;color:var(--brand);border:1px solid color-mix(in oklab,var(--brand) 35%,transparent);
+        border-radius:3px;padding:0 4px;line-height:15px}
+  .no{font-size:9.5px;color:var(--muted-fg-3);border:1px solid var(--border);border-radius:3px;
+      padding:0 4px;line-height:15px}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  .panel{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:14px 16px}
+  .panel h3{margin:0 0 8px;font-size:12.5px;font-weight:500}
+  .panel h3 .k{font-family:var(--mono);font-size:10px;color:var(--brand);margin-right:6px}
+  .panel ul{margin:0;padding-left:16px;font-size:11.5px;line-height:1.9;color:var(--muted-fg)}
+  .panel ul b{font-weight:500;color:var(--fg)}
+  .callout{display:flex;gap:12px;padding:13px 16px;border:1px solid var(--border);border-radius:10px;
+           background:var(--card);margin-top:16px}
+  .callout .n{font-family:var(--mono);font-size:10px;color:var(--brand);flex:none;padding-top:2px}
+  .callout p{margin:0;font-size:11.5px;line-height:1.8;color:var(--muted-fg);max-width:none}
+  .callout p b{font-weight:500;color:var(--fg)}
+  ul.plain{margin:0;padding-left:16px;font-size:11.5px;line-height:1.9;color:var(--muted-fg)}
+  ul.plain b{font-weight:500;color:var(--fg)}
+</style>
+</head>
+<body>
+<div id="sheet">
+
+  <div class="stage-bar">
+    <div class="eyebrow">082 · 画布 / 已选步骤的操作条</div>
+    <h1>选中几步之后，复制和删除应该待在哪儿</h1>
+    <p>现在在画布上选中一张卡（哪怕只选一张），顶部正中就浮出一条 34 高的白色药丸：一个裸露的「1」、复制、删除。它和选区没有空间关系，和标签栏/命令输入抢同一条水平线，而且红色删除是全条最响的元素。下面三个放置方案 + 一套统一刻度，先定位置，再落实现。</p>
+  </div>
+
+  <div class="direction">
+    <div><dt>产品</dt><dd>桌面 CSV 管道编辑器；在画布上选中若干步骤，要复制或删掉</dd></div>
+    <div><dt>性格</dt><dd>精确、安静；批量动作用一个托盘解决</dd></div>
+    <div><dt>世界</dt><dd>实验台：托盘放在台面边缘，不压着样本</dd></div>
+    <div><dt>时刻</dt><dd>选中第二张卡，画布边缘出现一条操作托盘</dd></div>
+    <div><dt>签名</dt><dd>动作右边的键帽：<code>⌘C</code> / <code>Del</code>，只在批量操作里出现</dd></div>
+  </div>
+
+  <!-- ═════════ 00 现状 ═════════ -->
+  <section class="frame">
+    <div class="cap"><span>00</span><b>现状：顶部居中的药丸</b><span class="file">FlowPanel.tsx · top-10 · 单张选中也会出现</span></div>
+
+    <div class="app">
+      <div class="topbar">
+        <span class="tbtn">文件</span><span class="tbtn">编辑</span><span class="tbtn">查看</span>
+        <span class="tbtn">工具</span><span class="tbtn">帮助</span>
+        <span class="spacer"></span>
+        <div class="cmdbar"><span class="caret">›</span><span>搜索操作、命令、文件</span><span class="spacer"></span><span class="key">Ctrl F</span></div>
+        <span class="spacer"></span>
+        <span class="tbtn">运行</span>
+      </div>
+      <div class="tabbar">
+        <span class="tab on"><span class="dot"></span>销售数据.csv</span>
+        <div class="spacer"></div>
+        <span class="tab">分支 3/3 · 完成</span>
+      </div>
+
+      <div class="body">
+        <div class="canvas">
+          <svg class="edges">
+            <path d="M392 160 C408 160 416 128 430 128" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+            <path d="M626 148 V196" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+          </svg>
+          <div class="rail"><i class="on">切</i><i>菜</i><i>？</i></div>
+
+          <div class="in" style="left:36px;top:96px">
+            <div class="in-hd"><span class="in-title">销售数据.csv</span><span class="in-meta">6 列 · 96,204 行</span></div>
+            <table>
+              <tr><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td>2026-11-02</td><td>华东</td><td>键盘</td><td class="r">1,280</td></tr>
+              <tr><td>2026-11-03</td><td>华南</td><td>显示器</td><td class="r">2,340</td></tr>
+              <tr><td>2026-11-04</td><td>华北</td><td>键盘</td><td class="r">980</td></tr>
+            </table>
+            <div class="in-foot"><span>96,204 行 × 6 列</span></div>
+          </div>
+
+          <div class="step selected" style="left:430px;top:96px">
+            <div class="pad">
+              <div class="head"><span class="alias">去掉空行</span><span class="cmd">drop-empty</span></div>
+              <div class="params"><div class="pline"><span class="pk">all</span><span class="pv">true</span></div></div>
+            </div>
+            <div class="hoverstrip">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/></svg></span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+              <span><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg></span>
+            </div>
+          </div>
+
+          <div class="step" style="left:430px;top:196px">
+            <div class="pad">
+              <div class="head"><span class="alias">按地区汇总</span><span class="cmd">groupby</span></div>
+              <div class="params">
+                <div class="pline"><span class="pk">column</span><span class="pv">地区</span></div>
+                <div class="pline"><span class="pk">sum</span><span class="pv">金额</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="audit-bar">
+            <span class="n">1</span>
+            <span class="act"><span class="ic"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>复制</span>
+            <span class="act danger"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>删除</span>
+          </div>
+
+          <span class="tag" style="left:508px;top:14px">1</span>
+          <span class="tag" style="left:820px;top:14px">2</span>
+          <span class="tag" style="left:352px;top:334px">3</span>
+          <span class="dim" style="left:536px;top:8px">与选区无关，固定在画布顶部</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><b>1</b>「1」没有单位，像没写完的字；选中一张卡就弹，和卡片 hover 条上的操作重复</span>
+      <span><b>2</b>顶部正中与标签栏、命令输入的落点重叠，画布上边永远有一条悬浮物</span>
+      <span><b>3</b>红色图标 + 红字让删除成为全条最响的元素，复制反而弱；34 高 + 9 圆角既不是药丸也不是卡片</span>
+    </div>
+    <p class="note"><b>已有的入口。</b>单张卡的 hover 条已有「参数 / 重命名 / ⋯」，⋯ 菜单里有「复制 / 粘贴 / 删除」。所以批量操作条只在<b>选中 ≥ 2 个步骤</b>时出现即可，不需要在单选时重复一遍。快捷键 <code>Ctrl C</code> / <code>Delete</code> 已经是主路径，条上把键帽写出来比再放一个大按钮有用。</p>
+  </section>
+
+  <!-- ═════════ 01 方案 A ═════════ -->
+  <section class="frame">
+    <div class="cap"><span>01</span><b>方案 A：底部操作托盘</b><span class="pick">采用</span><span class="file">画布底部居中 · 与状态行同基线</span></div>
+
+    <div class="app">
+      <div class="topbar">
+        <span class="tbtn">文件</span><span class="tbtn">编辑</span><span class="tbtn">查看</span>
+        <span class="tbtn">工具</span><span class="tbtn">帮助</span>
+        <span class="spacer"></span>
+        <div class="cmdbar"><span class="caret">›</span><span>搜索操作、命令、文件</span><span class="spacer"></span><span class="key">Ctrl F</span></div>
+        <span class="spacer"></span>
+        <span class="tbtn">运行</span>
+      </div>
+      <div class="tabbar">
+        <span class="tab on"><span class="dot"></span>销售数据.csv</span>
+        <div class="spacer"></div>
+        <span class="tab">分支 3/3 · 完成</span>
+      </div>
+
+      <div class="body">
+        <div class="canvas">
+          <svg class="edges">
+            <path d="M392 160 C408 160 416 128 430 128" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+            <path d="M626 148 V236" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+          </svg>
+          <div class="rail"><i class="on">切</i><i>菜</i><i>？</i></div>
+
+          <div class="in" style="left:36px;top:96px">
+            <div class="in-hd"><span class="in-title">销售数据.csv</span><span class="in-meta">6 列 · 96,204 行</span></div>
+            <table>
+              <tr><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td>2026-11-02</td><td>华东</td><td>键盘</td><td class="r">1,280</td></tr>
+              <tr><td>2026-11-03</td><td>华南</td><td>显示器</td><td class="r">2,340</td></tr>
+              <tr><td>2026-11-04</td><td>华北</td><td>键盘</td><td class="r">980</td></tr>
+            </table>
+            <div class="in-foot"><span>96,204 行 × 6 列</span></div>
+          </div>
+
+          <div class="step selected" style="left:430px;top:96px">
+            <div class="pad">
+              <div class="head"><span class="alias">去掉空行</span><span class="cmd">drop-empty</span></div>
+              <div class="params"><div class="pline"><span class="pk">all</span><span class="pv">true</span></div></div>
+            </div>
+          </div>
+
+          <div class="step selected" style="left:430px;top:196px">
+            <div class="pad">
+              <div class="head"><span class="alias">按地区汇总</span><span class="cmd">groupby</span></div>
+              <div class="params">
+                <div class="pline"><span class="pk">column</span><span class="pv">地区</span></div>
+                <div class="pline"><span class="pk">sum</span><span class="pv">金额</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="selbar tray">
+            <span class="count"><span class="num">2</span><span class="unit">步</span></span>
+            <span class="sep"></span>
+            <span class="act">复制<span class="kbd">⌘C</span></span>
+            <span class="act danger">删除<span class="kbd">Del</span></span>
+          </div>
+
+          <div class="statusline"><span>3 steps</span><span>·</span><span>已保存</span></div>
+
+          <span class="tag" style="left:700px;top:480px">1</span>
+          <span class="tag" style="left:748px;top:456px">2</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><b>1</b>操作托盘独占底部中心，距底 8——与右下角手势提示共用同一条底边；日志抽屉打开时一起上移</span>
+      <span><b>2</b>手势提示搬到右下角：去掉卡片、描边和底色，只剩一行等宽小字；有选中时它让位隐藏，清空选择后回来</span>
+    </div>
+
+    <div class="foot-demo">
+      <div style="display:flex;justify-content:flex-end">
+        <div class="gesturelegend" style="position:static">
+          <span class="gitem"><span class="gk">左键</span>框选</span>
+          <span class="gsep"></span>
+          <span class="gitem"><span class="gk">右键</span>划线</span>
+          <span class="gsep"></span>
+          <span class="gitem"><span class="gk">Space</span><span class="plus">+</span><span class="gk">左键</span>平移</span>
+          <span class="gsep"></span>
+          <span class="gitem"><span class="gk">滚轮</span>缩放</span>
+        </div>
+      </div>
+      <p style="margin:8px 0 0">未选中时：右下角的一行提示，不再是一个和操作条抢形状的卡片。</p>
+    </div>
+    <p class="note"><b>为什么推荐。</b>管道从左往右长在画布上半部分，底部是空的；托盘不盖节点，也不和顶部标签栏/命令输入抢位置。底部中心只留「任务」——手势提示退到右下角、压成一行小字，并且在有选中时自动让位：两个表面永不同时出现，也就不存在谁盖谁、谁更响。选区怎么变托盘都不跳，复制/删除本来就是键盘动作，位置稳定比「离选区近」更重要。</p>
+  </section>
+
+  <!-- ═════════ 02 方案 B ═════════ -->
+  <section class="frame">
+    <div class="cap"><span>02</span><b>方案 B：选区上方浮条</b><span class="no">备选</span><span class="file">锚定选区包围盒 · 12px</span></div>
+
+    <div class="app">
+      <div class="topbar">
+        <span class="tbtn">文件</span><span class="tbtn">编辑</span><span class="tbtn">查看</span>
+        <span class="tbtn">工具</span><span class="tbtn">帮助</span>
+        <span class="spacer"></span>
+        <div class="cmdbar"><span class="caret">›</span><span>搜索操作、命令、文件</span><span class="spacer"></span><span class="key">Ctrl F</span></div>
+        <span class="spacer"></span>
+        <span class="tbtn">运行</span>
+      </div>
+      <div class="tabbar">
+        <span class="tab on"><span class="dot"></span>销售数据.csv</span>
+        <div class="spacer"></div>
+        <span class="tab">分支 3/3 · 完成</span>
+      </div>
+
+      <div class="body">
+        <div class="canvas">
+          <svg class="edges">
+            <path d="M392 160 C408 160 416 128 430 128" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+            <path d="M626 148 V236" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+          </svg>
+          <div class="rail"><i class="on">切</i><i>菜</i><i>？</i></div>
+
+          <div class="in" style="left:36px;top:96px">
+            <div class="in-hd"><span class="in-title">销售数据.csv</span><span class="in-meta">6 列 · 96,204 行</span></div>
+            <table>
+              <tr><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td>2026-11-02</td><td>华东</td><td>键盘</td><td class="r">1,280</td></tr>
+              <tr><td>2026-11-03</td><td>华南</td><td>显示器</td><td class="r">2,340</td></tr>
+              <tr><td>2026-11-04</td><td>华北</td><td>键盘</td><td class="r">980</td></tr>
+            </table>
+            <div class="in-foot"><span>96,204 行 × 6 列</span></div>
+          </div>
+
+          <div class="step selected" style="left:430px;top:150px">
+            <div class="pad">
+              <div class="head"><span class="alias">去掉空行</span><span class="cmd">drop-empty</span></div>
+              <div class="params"><div class="pline"><span class="pk">all</span><span class="pv">true</span></div></div>
+            </div>
+          </div>
+
+          <div class="step selected" style="left:430px;top:250px">
+            <div class="pad">
+              <div class="head"><span class="alias">按地区汇总</span><span class="cmd">groupby</span></div>
+              <div class="params">
+                <div class="pline"><span class="pk">column</span><span class="pv">地区</span></div>
+                <div class="pline"><span class="pk">sum</span><span class="pv">金额</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="selbar floatbar" style="left:430px;top:98px">
+            <span class="count"><span class="num">2</span><span class="unit">步</span></span>
+            <span class="sep"></span>
+            <span class="act">复制<span class="kbd">⌘C</span></span>
+            <span class="act danger">删除<span class="kbd">Del</span></span>
+          </div>
+
+          <span class="tag" style="left:414px;top:88px">1</span>
+          <span class="tag" style="left:660px;top:88px">2</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><b>1</b>贴选区包围盒上缘 12px、水平居中；框选结束才出现，拖动选区期间隐藏</span>
+      <span><b>2</b>上方放不下翻到下方，左右夹在画布内；跨两列选区时可能压住中间节点</span>
+    </div>
+    <p class="note"><b>代价。</b>它随选区走：换一张卡、框选范围一变就要重新定位；多选跨列时又会盖住中间节点。位置感最好，但也是三种里最「吵」的。</p>
+  </section>
+
+  <!-- ═════════ 03 方案 C ═════════ -->
+  <section class="frame">
+    <div class="cap"><span>03</span><b>方案 C：顶部上下文行</b><span class="no">备选</span><span class="file">去药丸、去阴影 · 细线分隔</span></div>
+
+    <div class="app">
+      <div class="topbar">
+        <span class="tbtn">文件</span><span class="tbtn">编辑</span><span class="tbtn">查看</span>
+        <span class="tbtn">工具</span><span class="tbtn">帮助</span>
+        <span class="spacer"></span>
+        <div class="cmdbar"><span class="caret">›</span><span>搜索操作、命令、文件</span><span class="spacer"></span><span class="key">Ctrl F</span></div>
+        <span class="spacer"></span>
+        <span class="tbtn">运行</span>
+      </div>
+      <div class="tabbar">
+        <span class="tab on"><span class="dot"></span>销售数据.csv</span>
+        <div class="spacer"></div>
+        <span class="tab">分支 3/3 · 完成</span>
+      </div>
+
+      <div class="body">
+        <div class="canvas">
+          <svg class="edges">
+            <path d="M392 196 C408 196 416 164 430 164" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+            <path d="M626 184 V232" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+          </svg>
+          <div class="rail"><i class="on">切</i><i>菜</i><i>？</i></div>
+
+          <div class="ctxrow">
+            <span class="num">2</span><span class="unit">步已选</span>
+            <span class="sep"></span>
+            <span class="act">复制<span class="kbd">⌘C</span></span>
+            <span class="act danger">删除<span class="kbd">Del</span></span>
+            <span class="right">Esc 取消选择</span>
+          </div>
+
+          <div class="in" style="left:36px;top:132px">
+            <div class="in-hd"><span class="in-title">销售数据.csv</span><span class="in-meta">6 列 · 96,204 行</span></div>
+            <table>
+              <tr><th>日期</th><th>地区</th><th>品类</th><th style="text-align:right">金额</th></tr>
+              <tr><td>2026-11-02</td><td>华东</td><td>键盘</td><td class="r">1,280</td></tr>
+              <tr><td>2026-11-03</td><td>华南</td><td>显示器</td><td class="r">2,340</td></tr>
+              <tr><td>2026-11-04</td><td>华北</td><td>键盘</td><td class="r">980</td></tr>
+            </table>
+            <div class="in-foot"><span>96,204 行 × 6 列</span></div>
+          </div>
+
+          <div class="step selected" style="left:430px;top:132px">
+            <div class="pad">
+              <div class="head"><span class="alias">去掉空行</span><span class="cmd">drop-empty</span></div>
+              <div class="params"><div class="pline"><span class="pk">all</span><span class="pv">true</span></div></div>
+            </div>
+          </div>
+
+          <div class="step selected" style="left:430px;top:232px">
+            <div class="pad">
+              <div class="head"><span class="alias">按地区汇总</span><span class="cmd">groupby</span></div>
+              <div class="params">
+                <div class="pline"><span class="pk">column</span><span class="pv">地区</span></div>
+                <div class="pline"><span class="pk">sum</span><span class="pv">金额</span></div>
+              </div>
+            </div>
+          </div>
+
+          <span class="tag" style="left:300px;top:76px">1</span>
+          <span class="tag" style="left:960px;top:76px">2</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><b>1</b>不再是悬浮药丸：一条 36 高的通栏上下文行，只有 1px 底线，画布内容整体下移 36</span>
+      <span><b>2</b>动作靠左排，右侧写 <code>Esc 取消选择</code>；没有阴影，和标签栏共用一条水平节奏</span>
+    </div>
+    <p class="note"><b>代价。</b>改动最小，但选中时整张画布往下缩 36px，节点会跟着重排观感；顶部仍然离选区最远，和多选的实际视线脱节。</p>
+  </section>
+
+  <!-- ═════════ 04 对比 ═════════ -->
+  <section class="frame">
+    <div class="cap"><span>04</span><b>三种放置怎么选</b><span class="file">对比</span></div>
+
+    <table class="spec">
+      <tr>
+        <th style="width:150px">方案</th>
+        <th style="width:96px">与选区关系</th>
+        <th style="width:96px">遮挡</th>
+        <th style="width:110px">稳定性</th>
+        <th style="width:130px">与顶部 chrome</th>
+        <th style="width:80px">实现成本</th>
+        <th>结论</th>
+      </tr>
+      <tr>
+        <td>00 顶部药丸</td>
+        <td>无</td>
+        <td>画布上缘</td>
+        <td>固定</td>
+        <td>抢同一水平线</td>
+        <td>—</td>
+        <td>单选也弹、计数无单位、删除最响</td>
+      </tr>
+      <tr>
+        <td>A 底部托盘</td>
+        <td>无（但动作可键盘直达）</td>
+        <td>画布下缘</td>
+        <td>固定，选区变化不跳</td>
+        <td>无冲突</td>
+        <td>低</td>
+        <td><span class="pick">采用</span> 底部空、稳定、无阴影；随日志抽屉上移</td>
+      </tr>
+      <tr>
+        <td>B 选区上方浮条</td>
+        <td>最近（12px）</td>
+        <td>可能压节点</td>
+        <td>跟着选区跳</td>
+        <td>无冲突</td>
+        <td>中</td>
+        <td><span class="no">不采用</span> 位置感最好，但吵；跨列选区会盖住中间步骤</td>
+      </tr>
+      <tr>
+        <td>C 顶部上下文行</td>
+        <td>无</td>
+        <td>占 36 高</td>
+        <td>固定</td>
+        <td>把顶部 chrome 再加一行</td>
+        <td>低</td>
+        <td><span class="no">不采用</span> 最克制，但选中会压缩画布，且仍离选区最远</td>
+      </tr>
+    </table>
+
+    <div class="callout">
+      <span class="n">结论</span>
+      <p><b>A + 只在 ≥ 2 步时出现。</b>单张卡的操作留在卡片自己的 hover 条与 <code>⋯</code> 菜单里；批量选中时底部托盘出现，计数写单位，删除默认灰、hover 才红，复制/删除后面挂 <code>⌘C</code> / <code>Del</code> 键帽。位置稳定、不盖节点、不与标签栏抢位置，日志抽屉打开时按现有变量一起上移。底部中心只属于任务托盘；手势提示退到右下角并压成一行小字，有选中时让位——两者永不同时出现。</p>
+    </div>
+  </section>
+
+  <!-- ═════════ 05 规则 ═════════ -->
+  <section class="frame">
+    <div class="cap"><span>05</span><b>落地规则（采纳 A 时）</b><span class="file">尺寸、状态、文案</span></div>
+
+    <div class="two">
+      <div class="panel">
+        <h3><span class="k">尺寸</span>托盘与刻度</h3>
+        <ul>
+          <li>高 <b>28</b>，圆角 <b>6</b>，1px hairline，<b>无阴影</b>；左右内边距 2。</li>
+          <li>计数：等宽 <b>11</b> + 单位 10（<code>2 步</code> / <code>2 steps</code>），后面 1px 分隔线 14 高。</li>
+          <li>动作：22 高、<b>11</b> 字，<b>不带图标</b>；键帽 9 等宽 + 1px 边框。</li>
+          <li>位置：底部居中、距底 <b>8</b>——与右下角手势提示同一条底边；日志抽屉打开时再加抽屉高度。</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3><span class="k">行为</span>出现与消失</h3>
+        <ul>
+          <li>只有 <b>selectedNodeIds ≥ 2</b> 才出现；单张选中走卡片 hover 条，不重复。锁定画布时不出现。</li>
+          <li>删除默认 <b>灰字灰图标</b>，hover 才 <b>danger</b>；不弹二次确认（与今天的 Delete 键一致）。</li>
+          <li>键盘不变：<code>Ctrl/Cmd C</code> 复制、<code>Delete</code> 删除；托盘只是把键帽写出来。</li>
+          <li>除按钮外 <b>pointer-events: none</b>；剪切 / 连线 / 框选进行中自动隐藏，避免和手势抢位置。</li>
+          <li>手势提示：搬到右下角、去掉卡片（只剩 keycap + 文字），有选中托盘时让位隐藏，清空选择后回来。</li>
+          <li>进入动效只有 120ms 的 <b>opacity + 4px 上浮</b>（复用 <code>quick-enter</code>）；选区数量变化不重播。</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="note"><b>不改的部分。</b>复制/删除的实际逻辑、撤销、剪贴板、快捷键、锁定画布的禁用规则一律不动，只换容器、位置与视觉层级；语言文案沿用现有 <code>copy</code> / <code>deleteSteps</code>。</p>
+  </section>
+
+</div>
+</body>
+</html>

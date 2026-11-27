@@ -212,6 +212,7 @@ export const zhPipeline = {
   renamePending: "列名已修改",
   saveRenameStep: "保存为 rename 步骤",
   deleteSteps: "删除",
+  selectionUnit: "步",
   justNow: "刚刚",
   minutesAgo: "{n} 分钟前",
   hoursAgo: "{n} 小时前",

@@ -280,6 +280,8 @@ export interface Translations {
   stepActionParams: string;
   stepActionRename: string;
   stepActionMore: string;
+  /** Unit after the multi-select count, e.g. `2 步` / `2 steps`. */
+  selectionUnit: string;
   executePipelinesHint: string;
   newTab: string;
 

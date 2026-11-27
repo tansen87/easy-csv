@@ -52,7 +52,9 @@ export function GestureLegend({
       role="status"
       aria-live="off"
       className={cn(
-        "pointer-events-none absolute bottom-1 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[10.5px] text-muted-foreground",
+        // Design 082: a quiet floor note in the bottom-right corner, not a
+        // second card. The action tray owns the centre; this yields to it.
+        "pointer-events-none absolute bottom-2 right-3 z-30 flex items-center gap-3 text-[10.5px] text-muted-foreground/70",
         className,
       )}
     >

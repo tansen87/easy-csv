@@ -48,8 +48,6 @@ import {
 } from "@/components/menu/CanvasContextMenu";
 import type { QuickActionRequest } from "@/types/dialog";
 import {
-  Copy,
-  Trash2,
   BoxSelect,
   Hand,
   ArrowLeftRight,
@@ -61,7 +59,7 @@ import {
   Mouse,
 } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { Button } from "@/components/ui/Button";
+import { modKeySymbol } from "@/utils/platform";
 import { useLanguage } from "@/i18n";
 
 /** Left-button tool: box select or pan, persisted across restarts. */
@@ -1210,6 +1208,16 @@ export function FlowPanel({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [locked, selectedStepId]);
 
+  // Multi-select tray (design 082): the centre of the bottom edge is where a
+  // task bar belongs. The gesture hints moved to the bottom-right corner as
+  // flat text and yield while the tray is visible, so the two never compete.
+  const showSelectionTray =
+    selectedNodeIds.size >= 2 &&
+    !locked &&
+    !isCutting &&
+    !isConnecting &&
+    !swapSelectRect;
+
   return (
     <div
       ref={reactFlowWrapper}
@@ -1515,37 +1523,50 @@ export function FlowPanel({
         />
       )}
 
-      {/* Multi-select floating action bar (hidden while the search overlay is
-          open so the two top-centre surfaces never stack). */}
-      {selectedNodeIds.size > 0 && (
-        <div className="absolute left-1/2 top-10 z-20 flex h-[34px] -translate-x-1/2 items-center rounded-[9px] border border-border bg-card px-1 shadow-[0_4px_12px_rgba(0,0,0,0.07)] dark:shadow-none">
-          <span className="px-2 font-mono text-[11px] font-medium tabular-nums text-muted-foreground">
-            {selectedNodeIds.size}
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            onClick={handleCopySelected}
-            className="h-[26px] gap-1.5 rounded-[5px] px-1.5 text-[11px] font-normal transition-colors hover:bg-canvas-ink-soft hover:text-foreground"
+      {/* Multi-select tray (design 082). Bottom-centre so it never fights the
+          tab strip or the menu-bar search, stacked above the gesture legend,
+          and pointer-transparent except its buttons so a marquee / cut / pan
+          started under it still works. Hidden while a canvas gesture runs. */}
+      {showSelectionTray && (
+          <div
+            className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2"
+            style={{ bottom: "calc(var(--log-drawer-height, 0px) + 8px)" }}
           >
-            <Copy className="h-3.5 w-3.5" />
-            {t.copy}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            onClick={handleDeleteSelected}
-            className="h-[26px] gap-1.5 rounded-[5px] px-1.5 text-[11px] font-normal text-destructive transition-colors hover:bg-destructive/10 hover:text-destructive"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            {t.deleteSteps}
-          </Button>
-        </div>
-      )}
+            <div className="quick-enter pointer-events-none flex h-7 items-center rounded-md border border-border bg-card px-0.5">
+              <span className="flex items-baseline gap-1 px-1.5">
+                <span className="font-mono text-[11px] font-medium tabular-nums text-foreground">
+                  {selectedNodeIds.size}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {t.selectionUnit}
+                </span>
+              </span>
+              <span className="h-3.5 w-px bg-border/70" />
+              <button
+                type="button"
+                onClick={handleCopySelected}
+                className="pointer-events-auto ml-0.5 flex h-[22px] items-center gap-1.5 rounded-[4px] px-1.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                {t.copy}
+                <kbd className="rounded-[3px] border border-border bg-background px-1 py-0.5 font-mono text-[9px] leading-none text-muted-foreground/70">
+                  {modKeySymbol()} C
+                </kbd>
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteSelected}
+                className="pointer-events-auto flex h-[22px] items-center gap-1.5 rounded-[4px] px-1.5 text-[11px] text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+              >
+                {t.deleteSteps}
+                <kbd className="rounded-[3px] border border-border bg-background px-1 py-0.5 font-mono text-[9px] leading-none text-muted-foreground/70">
+                  Del
+                </kbd>
+              </button>
+            </div>
+          </div>
+        )}
 
-      {showGestureLegend && (
+      {showGestureLegend && !showSelectionTray && (
         <GestureLegend
           leftTool={leftTool}
           swapMouseButtons={swapMouseButtons}
