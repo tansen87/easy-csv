@@ -1,7 +1,6 @@
 import { ReactNode, useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/Button";
 import { ScrollArea } from "@/components/ui/ScrollArea";
-import { cn } from "@/lib/utils";
 import type { CommandDialogState } from "@/types/dialog";
 import { XanCommand } from "@/types/xan";
 import { handleCommandSubmit } from "@/modules/dialogs/command/lib/helpers";
@@ -14,10 +13,8 @@ interface CommandFormShellProps {
   setCommandDialog: (dialog: CommandDialogState | null) => void;
   disabled?: boolean;
   children?: ReactNode;
-  /** Scroll cap for the fields (081 wide dialog passes a shorter one). */
+  /** Scroll cap for the fields (081 popover passes the canvas-bound cap). */
   bodyMaxHeight?: string;
-  /** Right inspector (081 A): fill the column instead of capping the body. */
-  fill?: boolean;
 }
 
 export function CommandFormShell({
@@ -28,7 +25,6 @@ export function CommandFormShell({
   disabled,
   children,
   bodyMaxHeight = "calc(80vh - 108px)",
-  fill = false,
 }: CommandFormShellProps) {
   const { t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -92,12 +88,12 @@ export function CommandFormShell({
   }, [computePos]);
 
   return (
-    <div className={cn("flex min-h-0 flex-col", fill && "h-full flex-1")}>
+    <div className="flex min-h-0 flex-col">
       <ScrollArea
-        className={cn("min-h-0", fill && "flex-1")}
+        className="min-h-0"
         hideHorizontalScrollbar
         blockContent
-        viewportStyle={fill ? undefined : { maxHeight: bodyMaxHeight }}
+        viewportStyle={{ maxHeight: bodyMaxHeight }}
       >
         <div
           ref={containerRef}

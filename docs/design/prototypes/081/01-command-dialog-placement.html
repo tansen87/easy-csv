@@ -185,8 +185,8 @@
   .dock-rail i.on{background:var(--brand-soft);color:var(--brand)}
 
   /* ── B 锚定浮层 ─────────────────────────── */
-  .popover{position:absolute;width:388px;background:var(--card);border:1px solid var(--border);
-           border-radius:10px;box-shadow:var(--shadow-menu);z-index:6}
+  .popover{position:absolute;width:480px;background:var(--card);border:1px solid var(--border);
+           border-radius:8px;box-shadow:var(--shadow-menu);z-index:6}
   .pop-hd{height:38px;display:flex;align-items:center;gap:7px;padding:0 12px;border-bottom:1px solid var(--border-soft)}
   .pop-hd .n{font-size:12.5px;font-weight:500}
   .pop-hd .c{font:400 9.5px/1 var(--mono);color:var(--muted-fg-3)}
@@ -270,15 +270,15 @@
   <div class="stage-bar">
     <div class="eyebrow">081 · 命令对话框 / 放置位置</div>
     <h1>改参数时，表单应该待在哪儿</h1>
-    <p>现在点步骤卡片或添加一个操作，都会在窗口正中弹出一块 672×80vh、带遮罩、可拖动的模态表单。它挡住画布、挡住正在改的那一步，又没有固定位置——每次打开都停在中间。下面给四个放置方案，都在同一张画布上对比：<b>右栏检查器、锚定浮层、底部抽屉、宽分栏对话框</b>。推荐右栏检查器（大表单就地展开为宽分栏），理由与尺寸写在最后。</p>
+    <p>点步骤卡片或添加一个操作，原来会在窗口正中弹出一块 672×80vh、带遮罩、可拖动的模态表单：挡住画布，也挡住正在改的那一步。四个放置方案在同一张画布上对比——<b>右栏检查器、锚定浮层、底部抽屉、宽分栏对话框</b>。最终采用<b>方案 B</b>：浮层贴在步骤卡右侧 12px，拖卡、平移、缩放都跟着走；上一版 B 的拖动掉帧，原因与解法写在 §02.1。</p>
   </div>
 
   <div class="direction">
     <div><dt>产品</dt><dd>桌面 CSV 管道编辑器，选中一步就要改它的参数</dd></div>
     <div><dt>性格</dt><dd>精确、安静，工具在手边而不是眼前</dd></div>
-    <div><dt>世界</dt><dd>实验台：操作台面始终完整，工具挂在一侧</dd></div>
-    <div><dt>时刻</dt><dd>选中步骤，右栏整列换成它的参数；画布一像素不动</dd></div>
-    <div><dt>签名</dt><dd>右栏顶部一行「命令 · 步骤名」，像试剂瓶标签</dd></div>
+    <div><dt>世界</dt><dd>实验台：台面始终完整，工具贴着正在处理的那份样本</dd></div>
+    <div><dt>时刻</dt><dd>选中步骤，参数浮层贴在那张卡右侧；卡片动，浮层跟着动</dd></div>
+    <div><dt>签名</dt><dd>编辑中的卡片与浮层共用同一条品牌色内描边，一眼看出它们是一对</dd></div>
   </div>
 
   <!-- ═════════ 00 现状 ═════════ -->
@@ -385,7 +385,7 @@
 
   <!-- ═════════ 01 方案 A ═════════ -->
   <section class="frame">
-    <div class="cap"><span>01</span><b>方案 A：右栏参数检查器</b><span class="pick">采用</span><span class="file">复用 ViewDock 同一列，不新增表面</span></div>
+    <div class="cap"><span>01</span><b>方案 A：右栏参数检查器</b><span class="no">不采用</span><span class="file">画布要让出 470 列，工具被推到视线另一侧</span></div>
 
     <div class="app">
       <div class="topbar">
@@ -495,7 +495,7 @@ GROUP BY 地区</div></div>
 
   <!-- ═════════ 02 方案 B ═════════ -->
   <section class="frame">
-    <div class="cap"><span>02</span><b>方案 B：锚定步骤卡片的浮层</b><span class="no">不采用</span><span class="file">距离最近，但装不下长表单，跟随拖动也吃力</span></div>
+    <div class="cap"><span>02</span><b>方案 B：锚定步骤卡片的浮层</b><span class="pick">采用</span><span class="file">贴卡 12px，跟随由 React Flow 坐标算出，零布局读取</span></div>
 
     <div class="app">
       <div class="topbar">
@@ -540,7 +540,9 @@ GROUP BY 地区</div></div>
 
           <div class="popover" style="left:638px;top:96px">
             <div class="pop-hd">
-              <span class="n">按地区汇总</span><span class="c">groupby</span><span class="x">×</span>
+              <span class="n">按地区汇总</span><span class="c">groupby</span>
+              <span class="x" style="margin-left:auto">文档</span>
+              <span class="x" style="margin-left:8px">×</span>
             </div>
             <div class="pop-body">
               <div class="grid2">
@@ -548,10 +550,14 @@ GROUP BY 地区</div></div>
                 <div class="field"><span class="lb">sum</span><div class="box on">金额</div></div>
               </div>
               <div class="grid2">
+                <div class="field"><span class="lb">min / max</span><div class="box">—</div></div>
                 <div class="field"><span class="lb">separator</span><div class="box">,</div></div>
+              </div>
+              <div class="grid2">
+                <div class="field"><span class="lb">output</span><div class="box">地区,金额合计</div></div>
                 <div class="field"><span class="lb">flags</span><div class="box">keep-empty</div></div>
               </div>
-              <div class="pop-more">还有 3 个参数 · 打开完整表单 ›</div>
+              <div class="pop-more">字段区在 540 高处内部滚动 · 页脚不动</div>
             </div>
             <div class="pop-foot">
               <span class="btn ghost">取消</span>
@@ -559,22 +565,55 @@ GROUP BY 地区</div></div>
             </div>
           </div>
 
-          <span class="tag" style="left:624px;top:82px">1</span>
-          <span class="tag" style="left:786px;top:86px">2</span>
+          <span class="tag" style="left:622px;top:82px">1</span>
+          <span class="tag" style="left:1096px;top:82px">2</span>
+          <span class="tag" style="left:398px;top:302px">3</span>
         </div>
       </div>
     </div>
 
     <div class="legend">
-      <span><b>1</b>浮层贴卡片右侧 12px，编辑对象一眼可辨（空间不足时翻到左侧 / 下方）</span>
-      <span><b>2</b>超过 4 个参数显示「打开完整表单」，退化成方案 D</span>
-      <span>代价：DuckDB、search、batch-* 这类长表单要么截断，要么还是要跳去另一处，入口不统一</span>
+      <span><b>1</b>浮层贴卡片右侧 12px；右边放不下就翻到左侧，再夹在画布内（四周留 8px）</span>
+      <span><b>2</b>表单再长也不跳走：整块最高 560，字段区内部滚动，页脚始终可见</span>
+      <span><b>3</b>无遮罩、标题栏不可拖；点画布不关闭，Esc / × / 取消 / 更新才关</span>
+    </div>
+    <p class="note">新加操作没有卡片可锚 → 浮层落在画布中心，同样无遮罩；切到另一张卡时浮层直接换过去，参数草稿与今天一致。</p>
+  </section>
+
+  <!-- ═════════ 02.1 拖动性能 ═════════ -->
+  <section class="frame">
+    <div class="cap"><span>02.1</span><b>拖动掉帧：上一版 B 为什么卡，这次怎么修</b><span class="file">React Flow store → 纯数学 → 只写 transform</span></div>
+
+    <div class="two">
+      <div class="panel">
+        <h3><span class="k">旧</span>每帧读布局，还把位置塞进 React</h3>
+        <ul>
+          <li><b>rAF 轮询</b>：不管卡片动没动，每一帧都跑一次定位。</li>
+          <li><b>getBoundingClientRect</b>：每帧读卡片矩形，读一次就逼浏览器重算布局。</li>
+          <li><b>位置进 state</b>：每帧重渲染整个参数表单（search 有二十多个字段）。</li>
+          <li>结果：拖卡片时浮层慢半拍，长表单掉帧最明显。</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3><span class="k">新</span>事件驱动，只写一条 transform</h3>
+        <ul>
+          <li>位置 = 卡片流坐标 × 视口 zoom + 视口平移，全是<b>数字运算</b>，不读 DOM。</li>
+          <li>订阅 React Flow store 的节点与 transform：<b>卡片真的动</b>才触发。</li>
+          <li>只给浮层写 <b>translate3d</b>；表单子树不参与重渲染，交给合成器。</li>
+          <li>画布尺寸由 ResizeObserver 缓存，拖动 / 平移 / 缩放期间零布局读取。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout">
+      <span class="n">结果</span>
+      <p>拖卡片、按住空格平移、滚轮缩放，浮层都贴着卡片走，帧率与不开浮层时一致。<b>代价</b>：浮层不再靠拖标题栏搬家——位置由卡片决定，这正是 B 想要的归属感。</p>
     </div>
   </section>
 
   <!-- ═════════ 03 方案 C ═════════ -->
   <section class="frame">
-    <div class="cap"><span>03</span><b>方案 C：底部命令抽屉</b><span class="no">备选</span><span class="file">宽度够，但与日志抽屉抢同一块底部</span></div>
+    <div class="cap"><span>03</span><b>方案 C：底部命令抽屉</b><span class="no">不采用</span><span class="file">宽度够，但与日志抽屉抢同一块底部</span></div>
 
     <div class="app">
       <div class="topbar">
@@ -668,7 +707,7 @@ GROUP BY 地区</div></div>
 
   <!-- ═════════ 04 方案 D ═════════ -->
   <section class="frame">
-    <div class="cap"><span>04</span><b>方案 D：宽分栏对话框（参数 + 说明 / 输入列）</b><span class="pick">采用 · 按需展开</span><span class="file">仍居中，但为复杂命令留出第二栏</span></div>
+    <div class="cap"><span>04</span><b>方案 D：宽分栏对话框（参数 + 说明 / 输入列）</b><span class="no">不采用</span><span class="file">遮罩 + 居中，对「改一步」这种轻操作太重</span></div>
 
     <div class="app">
       <div class="topbar">
@@ -783,16 +822,16 @@ GROUP BY 地区</div></div>
         <td>470 内滚动</td>
         <td>复用 ViewDock 同列</td>
         <td>中</td>
-        <td><span class="pick">采用</span> 画布完整、无遮罩、无拖动；与「选步骤 → 改参数」一致</td>
+        <td><span class="no">不采用</span> 画布要让出 470 列，工具被推到视线另一侧</td>
       </tr>
       <tr>
         <td>B 锚定浮层</td>
         <td>局部</td>
         <td>最近（12px）</td>
-        <td>放不下</td>
+        <td>480 宽，540 高内滚动</td>
         <td>无</td>
         <td>中</td>
-        <td>适合 2–4 个短参数；长表单必须再跳一次，入口不统一</td>
+        <td><span class="pick">采用</span> 贴卡、跟随零成本；长表单内部滚动，不再跳去别处</td>
       </tr>
       <tr>
         <td>C 底部抽屉</td>
@@ -810,44 +849,46 @@ GROUP BY 地区</div></div>
         <td>最好</td>
         <td>无</td>
         <td>中</td>
-        <td>复杂命令的最佳容器；不适合每次微调</td>
+        <td>遮罩 + 居中，对「改一步」这种轻操作太重；第二栏的信息用「文档」按钮替代</td>
       </tr>
     </table>
 
     <div class="callout">
-      <span class="n">建议</span>
-      <p><b>A 作为唯一的日常入口，D 作为 A 的展开形态。</b>选中步骤或新加操作 → 右栏显示参数（470 宽，无遮罩）；遇到 batch-*、join、duckdb、chart 这类需要在「参数 / 说明 / 输入列」之间来回看的命令，右栏顶部出现「展开」，点击后同一个表单进入 D 的 800 宽分栏，关闭时回到右栏。B 与 C 不采用：前者装不下长表单，后者与日志抽屉抢同一块地方。</p>
+      <span class="n">结论</span>
+      <p><b>B 作为唯一入口。</b>点步骤卡或新加操作 → 浮层贴在卡片右侧 12px（无卡片时落在画布中心），同一个表单覆盖全部命令：短表单自然高度，长表单字段区滚动、页脚不动。A 让画布让出一整列，C 与日志抽屉抢底部，D 的遮罩在轻操作里太重，都不采用。上一版 B 的拖动掉帧用「store 订阅 + 纯数学 + 只写 transform」解决（§02.1），与不开浮层时同帧率。</p>
     </div>
   </section>
 
   <!-- ═════════ 06 规则 ═════════ -->
   <section class="frame">
-    <div class="cap"><span>06</span><b>落地规则（采纳 A + D 时）</b><span class="file">交互与尺寸</span></div>
+    <div class="cap"><span>06</span><b>落地规则（采纳 B 时）</b><span class="file">交互与尺寸</span></div>
 
     <div class="two">
       <div class="panel">
-        <h3><span class="k">尺寸</span>列宽与门槛</h3>
+        <h3><span class="k">尺寸</span>浮层与边距</h3>
         <ul>
-          <li>右栏默认 <b>470</b>，可在 420–560 之间拖；小于 420 时表单改为单列。</li>
-          <li>D 展开为 <b>800 × 600</b>，左 532 / 右 268；窗口低于 960 宽时不开第二栏，直接堆叠。</li>
-          <li>画布最小保留 440；不足时右栏改为覆盖式（仍无遮罩），按 Esc 关闭。</li>
+          <li>宽 <b>480</b>；窄画布时取 <b>画布宽 − 16</b>（最小 280），不横向溢出。</li>
+          <li>最高 <b>560</b>，同样不超过画布高 − 16；字段区滚动，页脚固定。</li>
+          <li>贴卡间距 <b>12</b>；四周保留 <b>8</b>。右侧放不下翻到左侧，仍放不下就夹在画布内。</li>
+          <li>间距以<b>卡片外框</b>为准（布局给节点的名义宽度与卡片实际宽度不同），左右两侧因此相等。</li>
+          <li>头 <b>40</b>（步骤名 · 命令名 · 文档 · 关闭），表单页脚沿用现有 52–56。</li>
         </ul>
       </div>
       <div class="panel">
-        <h3><span class="k">行为</span>打开、保存、关闭</h3>
+        <h3><span class="k">行为</span>打开、跟随、关闭</h3>
         <ul>
-          <li>点步骤卡片 → 右栏切到「参数」，标题为 <b>命令 · 步骤名</b>；点空白 → 保持草稿并回到上一个面板。</li>
-          <li>新加操作 → 同一位置，标题为 <b>新建 · 命令</b>，底部按钮为「添加步骤」。</li>
-          <li>无遮罩，点画布不会关闭表单，避免误触丢改动；关闭只有 ×、Esc、取消、保存四个动作。</li>
-          <li>切换步骤时先提交当前草稿（与今天点「更新步骤」一致），不弹二次确认。</li>
-          <li>Cmd/Ctrl + Enter 保存，Esc 取消；焦点进入第一个参数，Tab 在参数间移动。</li>
+          <li>点步骤卡片 → 浮层出现在该卡右侧，标题为 <b>命令 · 步骤名</b>；再点另一张卡直接换过去。</li>
+          <li>拖卡片 / 平移 / 缩放画布 → 浮层跟着走，位置由 React Flow 坐标算出，不轮询。</li>
+          <li>新加操作没有卡片 → 浮层落在画布中心，标题为 <b>新建 · 命令</b>，底部按钮为「添加步骤」。</li>
+          <li>无遮罩、标题栏不可拖；点画布不关闭（防误触丢草稿），Esc / × / 取消 / 提交才关。</li>
+          <li>焦点进入第一个参数；切换步骤沿用「先提交当前草稿」的现有语义。</li>
         </ul>
       </div>
     </div>
 
-    <p class="note"><b>不改的部分。</b>命令表单本身（字段、校验、参数序列化、帮助文档）一律不动，只换容器；「文档」按钮继续复用现有帮助；批量类表单的状态与运行逻辑不迁移。现有 <code>CommandDialog</code> 的拖动、遮罩与居中逻辑删除，`offset` 状态一并移除。</p>
+    <p class="note"><b>不改的部分。</b>命令表单本身（字段、校验、参数序列化、帮助文档）一律不动，只换容器；「文档」按钮继续复用现有帮助；批量类表单的状态与运行逻辑不迁移。旧容器（居中模态、右栏检查器、宽分栏）的拖动、遮罩、展开/收起状态全部删除。</p>
 
-    <p class="note"><b>为什么不是 B/C。</b>表单长度不是均匀的：`search` 有 20 多个字段、`duckdb` 至少要 240px 编辑器、`batch-*` 要列目录。B 的 388 宽只能覆盖最简单的一类，剩下的还是要跳走；C 的宽度最好，但底部已经被日志抽屉占用，两个抽屉叠在一起时「编辑」和「看日志」会互相顶掉。</p>
+    <p class="note"><b>为什么只留一个容器。</b>表单长度不均匀：`search` 二十多个字段、`duckdb` 要 240px 编辑器、`batch-*` 要列目录。B 用「自然高度 + 内部滚动 + 最高 560」覆盖全部形态，不再需要「长表单跳去另一个地方」，入口只有一处；A 让画布让位，C 与日志抽屉抢底部，D 的遮罩对轻操作太重，因此都不保留。</p>
   </section>
 
 </div>

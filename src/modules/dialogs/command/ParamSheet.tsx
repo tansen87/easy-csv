@@ -47,7 +47,6 @@ export function ParamSheet({
   headers = [],
   sourceTable,
   bodyMaxHeight = "calc(80vh - 104px)",
-  fill = false,
 }: CommandFormProps) {
   const { t, effectiveLanguage } = useLanguage();
   // Open a field straight away: the first required one still empty, otherwise
@@ -167,12 +166,12 @@ export function ParamSheet({
     param.type !== "flag" && !param.isPositional ? `--${param.name}` : param.name;
 
   return (
-    <div className={cn("flex min-h-0 flex-col", fill && "h-full flex-1")}>
+    <div className="flex min-h-0 flex-col">
       <ScrollArea
-        className={cn("min-h-0", fill && "flex-1")}
+        className="min-h-0"
         hideHorizontalScrollbar
         blockContent
-        viewportStyle={fill ? undefined : { maxHeight: bodyMaxHeight }}
+        viewportStyle={{ maxHeight: bodyMaxHeight }}
       >
         <div className="px-5 pt-4 pb-3">
           {/* The command. Tokens are the source of truth. */}

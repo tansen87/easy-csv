@@ -6,8 +6,8 @@ import {
 } from "@/modules/dialogs/command/ParamSheet";
 
 /**
- * The parameter editor itself (design 081): shared by the right-hand inspector
- * (A) and the wide split dialog (D) so both mount exactly the same form.
+ * The parameter editor itself (design 081): the single mount point for the
+ * anchored popover, so every command renders through the same path.
  */
 export function CommandFormBody(props: CommandFormProps) {
   const { commandDialog } = props;

@@ -379,6 +379,7 @@ export function PipelineStepNode({
             }
           >
             <Card
+              data-step-card
               className={cardClass}
               onContextMenu={(e) => {
                 e.preventDefault();
@@ -396,6 +397,7 @@ export function PipelineStepNode({
   return (
     <div className={`relative ${data.isDeleting ? "node-deleting" : ""}`}>
       <Card
+        data-step-card
         className={cardClass}
         style={
           data.isPendingDelete

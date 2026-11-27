@@ -277,11 +277,6 @@ export interface Translations {
   // Command palette
   /** Label of the per-command docs entry (form header + Shift+Enter hint). */
   commandDocs: string;
-  commandExpand: string;
-  commandCollapse: string;
-  commandDocsSection: string;
-  commandInputColumns: string;
-  commandNoInputColumns: string;
   stepActionParams: string;
   stepActionRename: string;
   stepActionMore: string;

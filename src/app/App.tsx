@@ -307,8 +307,6 @@ function AppContent() {
 
   /** Right-hand dock: one slot, rail, width (design 076). */
   const viewDock = useViewDock();
-  /** Design 081: the command inspector owns the right column while open. */
-  const [commandInspectorOpen, setCommandInspectorOpen] = useState(false);
   /** One-shot tools still running; the Tools menu shows their elapsed time. */
   const toolRuns = useToolRuns();
   const [showAbout, setShowAbout] = useState(false);
@@ -1814,11 +1812,9 @@ function AppContent() {
                   demoReveal={demoRevealPill}
                   onAdvanceDemoReveal={handleAdvanceDemoReveal}
                   onSkipDemoReveal={handleSkipDemoReveal}
-                  onCommandInspectorChange={setCommandInspectorOpen}
                 />
               </div>
 
-              {!commandInspectorOpen && (
               <ViewDock
                 activePanel={viewDock.activePanel}
                 onSelectPanel={viewDock.togglePanel}
@@ -1867,7 +1863,6 @@ function AppContent() {
                   />
                 )}
               </ViewDock>
-              )}
             </div>
           </main>
 
@@ -1890,9 +1885,7 @@ function AppContent() {
             }
             selectedTabId={tabsHook.selectedTabId}
             tabs={tabsHook.tabs}
-            rightInset={
-              aiDockWidth + (commandInspectorOpen ? 0 : viewDock.dockWidth)
-            }
+            rightInset={aiDockWidth + viewDock.dockWidth}
           />
 
           <ExecutionHistoryDialog
@@ -1913,11 +1906,7 @@ function AppContent() {
               session.updatePanelState("chartPanel", patch)
             }
             capsuleY={collapsedStack.chartPanel}
-            capsuleRight={
-              8 +
-              aiDockWidth +
-              (commandInspectorOpen ? 0 : viewDock.dockWidth)
-            }
+            capsuleRight={8 + aiDockWidth + viewDock.dockWidth}
             chartState={ui.chartsByTab[tabsHook.selectedTabId] ?? null}
           />
 
