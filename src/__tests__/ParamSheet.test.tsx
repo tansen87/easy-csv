@@ -66,7 +66,7 @@ describe("ParamSheet · join", () => {
     renderSheet({ type: "join", params: {} });
 
     expect(screen.getByText("xan join")).toBeInTheDocument();
-    expect(screen.getByText("必填 0 / 2 已就位")).toBeInTheDocument();
+    expect(screen.getByText("必填 0 / 2")).toBeInTheDocument();
     // The hint names the parameters, not their Chinese labels.
     expect(screen.getByText("还差 input1、input2")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "添加步骤" })).toBeInTheDocument();
@@ -82,7 +82,7 @@ describe("ParamSheet · join", () => {
     });
 
     expect(screen.getByText("客户明细.csv")).toBeInTheDocument();
-    expect(screen.getByText("必填 1 / 2 已就位")).toBeInTheDocument();
+    expect(screen.getByText("必填 1 / 2")).toBeInTheDocument();
     // Still one required field missing, so copying is not offered yet.
     expect(screen.getByRole("button", { name: /复制命令/ })).toBeDisabled();
   });
@@ -93,7 +93,7 @@ describe("ParamSheet · join", () => {
       params: { columns: "地区", input1: "客户明细.csv", input2: "订单.csv" },
     });
 
-    expect(screen.getByText("必填 2 / 2 已就位")).toBeInTheDocument();
+    expect(screen.getByText("必填 2 / 2")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /复制命令/ }));
 
     // Defaults are on the command too: join-type defaults to inner, and that
@@ -109,7 +109,7 @@ describe("ParamSheet · join", () => {
     fireEvent.click(screen.getByRole("button", { name: "移除 左表文件" }));
 
     expect(screen.queryByText("客户明细.csv")).not.toBeInTheDocument();
-    expect(screen.getByText("必填 0 / 2 已就位")).toBeInTheDocument();
+    expect(screen.getByText("必填 0 / 2")).toBeInTheDocument();
   });
 });
 
@@ -247,7 +247,7 @@ describe("ParamSheet · duckdb", () => {
     // DuckDB editor (highlighted textarea), not a one-line input.
     const editor = screen.getByRole("textbox");
     expect(editor.tagName).toBe("TEXTAREA");
-    expect(screen.getByText("必填 0 / 1 已就位")).toBeInTheDocument();
+    expect(screen.getByText("必填 0 / 1")).toBeInTheDocument();
   });
 });
 
