@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { cn } from "@/lib/utils";
@@ -425,21 +425,15 @@ export function ParamSheet({
                 type="button"
                 onClick={() => void handleCopy()}
                 disabled={!canCopy}
-                title={canCopy ? t.paramCopy : t.paramCopyDisabled}
                 className={cn(
-                  "inline-flex h-[26px] min-w-[82px] items-center justify-center gap-1.5 rounded-md border border-transparent px-2 text-[11px] transition-colors",
+                  "inline-flex h-[26px] min-w-[48px] items-center justify-center rounded-md border border-transparent text-[11px] transition-colors",
                   copied
-                    ? "border-brand-border bg-brand-soft text-brand"
+                    ? "bg-brand-soft text-brand"
                     : "text-muted-foreground hover:text-foreground",
                   !canCopy &&
                     "cursor-default opacity-50 hover:text-muted-foreground",
                 )}
               >
-                {copied ? (
-                  <Check className="h-3 w-3" />
-                ) : (
-                  <Copy className="h-3 w-3" />
-                )}
                 {copied ? t.paramCopied : t.paramCopy}
               </button>
             </>
