@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Select } from "@/components/ui/Select";
 import { DelimiterModeSelect } from "@/components/ui/DelimiterModeSelect";
 import { PluginSection } from "./PluginSection";
+import { ShortcutsSection } from "./ShortcutsSection";
 import { SettingsGroupCard } from "./SettingsGroupCard";
 import { SettingsSectionHeading } from "./SettingsSectionHeading";
 import { SettingsSwitch } from "./SettingsSwitch";
@@ -29,6 +30,7 @@ import {
 } from "@/services/ai/types";
 import { loadProviderApiKey } from "@/services/ai";
 import type { DelimiterMode } from "@/types/xan";
+import type { ShortcutActionId, ShortcutMap } from "@/lib/shortcuts";
 import { SettingsRow } from "./SettingsRow";
 import { ACCENTS, type Accent } from "./ThemeProvider";
 import {
@@ -78,6 +80,10 @@ interface SettingsTabContentProps {
   onOpenLogsDir: () => void;
   /** Clear the "intro seen" flag so the canvas guide shows again. */
   onResetOnboarding?: () => void;
+  /** Design 083: current bindings and their editor. */
+  shortcuts: ShortcutMap;
+  onShortcutChange: (id: ShortcutActionId, combo: string) => void;
+  onResetShortcuts: () => void;
   aiConfig: AIConfig;
   onAIConfigChange: (config: AIConfig) => void;
   /** Used by the plugins / clear-data actions to report outcomes. */
@@ -245,6 +251,9 @@ export function SettingsTabContent({
   onAutoShowLogPanelChange,
   onOpenLogsDir,
   onResetOnboarding,
+  shortcuts,
+  onShortcutChange,
+  onResetShortcuts,
   aiConfig,
   onAIConfigChange,
   showToast,
@@ -740,7 +749,18 @@ export function SettingsTabContent({
               {/* The plugin group renders itself: its rows are dynamic (one per
                   catalogue entry) and it owns the catalogue once, so the heading
                   summary and the rows cannot disagree. */}
-              {group.summary === "plugins" ? (
+              {group.summary === "shortcuts" ? (
+                <section className="mb-6">
+                  <ShortcutsSection
+                    sectionId={sectionElementId(group.id)}
+                    name={group.name}
+                    index={group.index}
+                    shortcuts={shortcuts}
+                    onChange={onShortcutChange}
+                    onReset={onResetShortcuts}
+                  />
+                </section>
+              ) : group.summary === "plugins" ? (
                 <section className="mb-6">
                   <PluginSection
                     sectionId={sectionElementId(group.id)}

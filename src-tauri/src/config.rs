@@ -38,6 +38,10 @@ pub struct AppConfig {
   /// Auto-open the log drawer when a run starts (071 feedback). `None` →
   /// app default (false): the completion toast owns opening.
   pub auto_show_log_panel: Option<bool>,
+  /// JSON object of action id → key combo. The frontend owns the schema and the
+  /// validation; this is only an opaque blob so a new shortcut never needs a
+  /// migration. `None` → the built-in defaults.
+  pub shortcuts: Option<String>,
 }
 
 impl Default for AppConfig {
@@ -54,6 +58,7 @@ impl Default for AppConfig {
       max_concurrent_runs: None,
       log_retention_days: None,
       auto_show_log_panel: None,
+      shortcuts: None,
     }
   }
 }
@@ -531,6 +536,7 @@ pub fn load_config() -> Result<AppConfig, String> {
   let max_concurrent_runs = get_config_string("max_concurrent_runs").and_then(|v| v.parse().ok());
   let log_retention_days = get_config_string("log_retention_days").and_then(|v| v.parse().ok());
   let auto_show_log_panel = get_config_string("auto_show_log_panel").and_then(|v| v.parse().ok());
+  let shortcuts = get_config_string("shortcuts");
 
   Ok(AppConfig {
     default_delimiter: default_delimiter.or(default.default_delimiter),
@@ -545,6 +551,7 @@ pub fn load_config() -> Result<AppConfig, String> {
     max_concurrent_runs: max_concurrent_runs.or(default.max_concurrent_runs),
     log_retention_days: log_retention_days.or(default.log_retention_days),
     auto_show_log_panel: auto_show_log_panel.or(default.auto_show_log_panel),
+    shortcuts: shortcuts.or(default.shortcuts),
   })
 }
 
@@ -586,6 +593,9 @@ pub fn save_config(config: &AppConfig) -> Result<(), String> {
   }
   if let Some(v) = config.auto_show_log_panel {
     set_config_string("auto_show_log_panel", &v.to_string())?;
+  }
+  if let Some(ref v) = config.shortcuts {
+    set_config_string("shortcuts", v)?;
   }
   Ok(())
 }
@@ -787,6 +797,20 @@ pub async fn get_auto_show_log_panel() -> Option<bool> {
 pub async fn set_auto_show_log_panel(enabled: bool) -> Result<(), String> {
   let mut config = load_config()?;
   config.auto_show_log_panel = Some(enabled);
+  save_config(&config)
+}
+
+#[tauri::command]
+pub async fn get_shortcuts() -> Option<String> {
+  load_config().unwrap_or_default().shortcuts
+}
+
+/// Persist every binding at once. The payload is the frontend's JSON blob, so
+/// adding or renaming an action needs no backend change (design 083).
+#[tauri::command]
+pub async fn set_shortcuts(json: String) -> Result<(), String> {
+  let mut config = load_config()?;
+  config.shortcuts = Some(json);
   save_config(&config)
 }
 

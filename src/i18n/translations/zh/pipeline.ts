@@ -332,7 +332,7 @@ export const zhPipeline = {
   renameNewNameLabel: "新列名",
   deleteColumnAction: "删除此列",
   keepOnlyColumnAction: "只保留此列",
-  newFromTemplate: "从模板新建",
+  newFromTemplate: "模板",
   templateName: "模板名称",
   templateSearchPlaceholder: "搜索模板",
   templateNoMatches: "无匹配模板",

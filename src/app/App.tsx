@@ -88,6 +88,7 @@ import { useDataLineage } from "@/hooks/useDataLineage";
 import { useSession } from "@/hooks/useSession";
 import { useExecutionHistory } from "@/hooks/useExecutionHistory";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useShortcuts } from "@/hooks/useShortcuts";
 import { useUpdater } from "@/hooks/useUpdater";
 import { useRequiredPluginCheck } from "@/hooks/usePluginCatalog";
 
@@ -142,6 +143,7 @@ function AppContent() {
 
   // App settings
   const settings = useAppSettings(showToastRef);
+  const shortcutsUi = useShortcuts();
 
   // Startup guidance for a missing xan. The probe is owned
   // here rather than by a dialog so it runs exactly once, and the dialog is
@@ -1266,6 +1268,7 @@ function AppContent() {
       currentPipelineLength: tabsHook.getCurrentPipeline().length,
       isExecuting,
     },
+    shortcutsUi.shortcuts,
   );
 
   // Memoized callbacks for HomeView (O-5)
@@ -1944,6 +1947,9 @@ function AppContent() {
             onAutoShowLogPanelChange={settings.setAutoShowLogPanel}
             onOpenLogsDir={handleOpenLogsDir}
             onResetOnboarding={onboarding.reset}
+            shortcuts={shortcutsUi.shortcuts}
+            onShortcutChange={shortcutsUi.setShortcut}
+            onResetShortcuts={shortcutsUi.resetShortcuts}
             onSave={handleSaveSettings}
             aiConfig={aiConfig}
             onAIConfigChange={handleAIConfigChange}

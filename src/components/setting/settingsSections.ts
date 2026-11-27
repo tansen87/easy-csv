@@ -10,7 +10,7 @@ import type { Translations } from "@/i18n/translations/types";
  * 2. the group list is the single source for both the nav entries and the
  *    content headings. Both are asserted in `SettingsDialog.test.tsx`.
  *
- * Group order: `界面`, `数据`, `窗口`, `运行`, `日志`, then **plugins before
+ * Group order: `界面`, `数据`, `窗口`, `快捷键`, `运行`, `日志`, then **plugins before
  * AI** (xan must be installed before anything runs; AI is optional), then
  * `更新` and `维护` last - resets and destructive actions go at the bottom.
  * The plugin group is a heading status line, not a list.
@@ -58,7 +58,7 @@ export interface SettingsGroupDef {
   groupKeywords?: string[];
   rows: SettingsRowDef[];
   /** The group's content is an embedded panel instead of rows. */
-  summary?: "plugins";
+  summary?: "plugins" | "shortcuts";
 }
 
 export const SETTINGS_GROUPS: SettingsGroupDef[] = [
@@ -202,6 +202,27 @@ export const SETTINGS_GROUPS: SettingsGroupDef[] = [
         ],
       },
     ],
+  },
+  {
+    // Design 083: bindings are edited as keycaps, so the group renders its own
+    // panel; the keyword list keeps it findable from the search field.
+    id: "shortcuts",
+    nameKey: "settingsGroupShortcuts",
+    groupKeywords: [
+      "shortcut",
+      "shortcuts",
+      "keybinding",
+      "hotkey",
+      "keys",
+      "keyboard",
+      "快捷键",
+      "键位",
+      "按键",
+      "热键",
+      "绑定",
+    ],
+    rows: [],
+    summary: "shortcuts",
   },
   {
     id: "run",
@@ -416,7 +437,7 @@ export interface SettingsGroupModel {
   index: number;
   groupKeywords?: string[];
   rows: SettingsRowModel[];
-  summary?: "plugins";
+  summary?: "plugins" | "shortcuts";
 }
 
 /** Resolve i18n keys once, so search / render work on plain strings. */

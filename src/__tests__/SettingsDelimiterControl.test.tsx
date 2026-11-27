@@ -4,6 +4,7 @@ import { LanguageProvider } from "@/i18n";
 import { SettingsTabContent } from "@/components/setting/SettingsTabContent";
 import { buildSettingsModel } from "@/components/setting/settingsSections";
 import { filterSettings } from "@/utils/settingsSearch";
+import { DEFAULT_SHORTCUTS } from "@/lib/shortcuts";
 import type { Translations } from "@/i18n/translations/types";
 
 // Structure lives in `settingsSections`; these suites only care about one
@@ -62,6 +63,9 @@ function renderSettings(
         onOpenLogsDir={vi.fn()}
         aiConfig={aiConfig}
         onAIConfigChange={vi.fn()}
+        shortcuts={DEFAULT_SHORTCUTS}
+        onShortcutChange={vi.fn()}
+        onResetShortcuts={vi.fn()}
         showToast={vi.fn()}
       />
     </LanguageProvider>,

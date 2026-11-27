@@ -8,6 +8,7 @@ import {
   SETTINGS_GROUPS,
   sectionElementId,
 } from "@/components/setting/settingsSections";
+import { DEFAULT_SHORTCUTS } from "@/lib/shortcuts";
 import type { DelimiterMode } from "@/types/xan";
 
 /**
@@ -62,6 +63,9 @@ function renderDialog(overrides: Record<string, unknown> = {}) {
     onAutoShowLogPanelChange: vi.fn(),
     onOpenLogsDir: vi.fn(),
     onResetOnboarding: vi.fn(),
+    shortcuts: { ...DEFAULT_SHORTCUTS },
+    onShortcutChange: vi.fn(),
+    onResetShortcuts: vi.fn(),
     onSave: vi.fn(),
     aiConfig,
     onAIConfigChange: vi.fn(),
@@ -112,10 +116,14 @@ describe("settings dialog — structure contracts (design 030 §0.4)", () => {
 
     // No static row may be missing…
     for (const id of expected) expect(rendered).toContain(id);
-    // …and the only rows that do not come from `settingsSections` are the
-    // plugin group's, which are built from the catalogue at runtime.
+    // …and the only rows that do not come from `settingsSections` are built at
+    // runtime: the plugin catalogue's, and the shortcut panel's keycaps.
     const extra = rendered.filter((id) => !expected.includes(id));
-    expect(extra.every((id) => id?.startsWith("plugin-"))).toBe(true);
+    expect(
+      extra.every(
+        (id) => id?.startsWith("plugin-") || id?.startsWith("shortcut-"),
+      ),
+    ).toBe(true);
   });
 
   it("renders a heading for every group, with the anchor the nav targets", () => {
@@ -144,10 +152,10 @@ describe("settings dialog — structure contracts (design 030 §0.4)", () => {
     expect(rowIds(container)).not.toContain("plugins");
   });
 
-  // The `01`…`09` beside each group name is decoration rendered from
+  // The `01`…`10` beside each group name is decoration rendered from
   // `data-index` (see `.settings-index` in `index.css`), but the *order* it
-  // encodes is a product decision: run and logs sit between window and
-  // plugins (071), plugins before AI, update before the final maintenance.
+  // encodes is a product decision: shortcuts sit after window (083), run and
+  // logs before plugins (071), plugins before AI, update before maintenance.
   it("numbers the groups in definition order — plugins before AI", () => {
     const { container } = renderDialog();
 
@@ -159,12 +167,13 @@ describe("settings dialog — structure contracts (design 030 §0.4)", () => {
     expect(indexOf("appearance")).toBe("01");
     expect(indexOf("data")).toBe("02");
     expect(indexOf("window")).toBe("03");
-    expect(indexOf("run")).toBe("04");
-    expect(indexOf("logs")).toBe("05");
-    expect(indexOf("plugins")).toBe("06");
-    expect(indexOf("ai")).toBe("07");
-    expect(indexOf("update")).toBe("08");
-    expect(indexOf("maintenance")).toBe("09");
+    expect(indexOf("shortcuts")).toBe("04");
+    expect(indexOf("run")).toBe("05");
+    expect(indexOf("logs")).toBe("06");
+    expect(indexOf("plugins")).toBe("07");
+    expect(indexOf("ai")).toBe("08");
+    expect(indexOf("update")).toBe("09");
+    expect(indexOf("maintenance")).toBe("10");
   });
 
   it("lists exactly the same groups in the directory as in the content", () => {
@@ -341,6 +350,67 @@ describe("settings dialog — accent row (design 034)", () => {
     expect(window.localStorage.getItem("easy-csv-accent")).toBe("ink");
     expect(window.localStorage.getItem("vite-ui-theme")).toBe("system");
     expect(document.documentElement.dataset.accent).toBe("ink");
+  });
+});
+
+describe("settings dialog — shortcuts (design 083)", () => {
+  const keycap = (container: HTMLElement, action: string) =>
+    container.querySelector(
+      `[data-settings-row="shortcut-${action}"] button`,
+    ) as HTMLElement;
+
+  it("renders one keycap per action, showing the current binding", () => {
+    const { container } = renderDialog();
+
+    expect(
+      container.querySelectorAll('[data-settings-row^="shortcut-"]').length,
+    ).toBe(12);
+    // Mod is shown as the platform's own key, never as the literal `Mod`.
+    expect(keycap(container, "savePipeline").textContent).toMatch(/\+ S$/);
+    expect(keycap(container, "savePipeline").textContent).not.toContain("Mod");
+  });
+
+  it("records a new combo when a keycap is clicked and keys are pressed", () => {
+    const { container, props } = renderDialog();
+
+    fireEvent.click(keycap(container, "openFile"));
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+
+    expect(props.onShortcutChange).toHaveBeenCalledWith("openFile", "Mod+K");
+  });
+
+  it("rejects a combo another action already uses", () => {
+    const { container, props } = renderDialog();
+
+    fireEvent.click(keycap(container, "openFile"));
+    fireEvent.keyDown(window, { key: "s", ctrlKey: true });
+
+    expect(props.onShortcutChange).not.toHaveBeenCalled();
+    expect(container.textContent).toMatch(/Conflicts with .*Save/);
+  });
+
+  it("rejects a bare letter, and Esc cancels recording", () => {
+    const { container, props } = renderDialog();
+
+    fireEvent.click(keycap(container, "openFile"));
+    fireEvent.keyDown(window, { key: "k" });
+    expect(props.onShortcutChange).not.toHaveBeenCalled();
+    expect(container.textContent).toMatch(/Needs Ctrl/);
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    // Recording ended: a plain Ctrl+K is no longer captured.
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+    expect(props.onShortcutChange).not.toHaveBeenCalled();
+  });
+
+  it("offers a reset only once a binding differs from the default", () => {
+    const { props } = renderDialog({
+      shortcuts: { ...DEFAULT_SHORTCUTS, openFile: "Mod+K" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Reset all/i }));
+
+    expect(props.onResetShortcuts).toHaveBeenCalledTimes(1);
   });
 });
 

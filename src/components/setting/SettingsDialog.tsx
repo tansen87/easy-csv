@@ -7,6 +7,7 @@ import { useTheme } from "@/components/setting/ThemeProvider";
 import { useScrollSpy } from "@/hooks/useScrollSpy";
 import { AIConfig } from "@/services/ai/types";
 import type { DelimiterMode } from "@/types/xan";
+import type { ShortcutActionId, ShortcutMap } from "@/lib/shortcuts";
 import { countMatches, filterSettings } from "@/utils/settingsSearch";
 import { SettingsNav } from "./SettingsNav";
 import { SettingsSearch } from "./SettingsSearch";
@@ -63,6 +64,10 @@ interface SettingsDialogProps {
   onOpenLogsDir: () => void;
   /** Clear the "intro seen" flag so the canvas guide shows again. */
   onResetOnboarding?: () => void;
+  /** Design 083: rebindable app shortcuts (written through immediately). */
+  shortcuts: ShortcutMap;
+  onShortcutChange: (id: ShortcutActionId, combo: string) => void;
+  onResetShortcuts: () => void;
   onSave: () => void;
   aiConfig: AIConfig;
   onAIConfigChange: (config: AIConfig) => void;
@@ -108,6 +113,9 @@ export function SettingsDialog({
   onAutoShowLogPanelChange,
   onOpenLogsDir,
   onResetOnboarding,
+  shortcuts,
+  onShortcutChange,
+  onResetShortcuts,
   onSave,
   aiConfig,
   onAIConfigChange,
@@ -313,6 +321,9 @@ export function SettingsDialog({
               onAutoShowLogPanelChange={onAutoShowLogPanelChange}
               onOpenLogsDir={onOpenLogsDir}
               onResetOnboarding={onResetOnboarding}
+              shortcuts={shortcuts}
+              onShortcutChange={onShortcutChange}
+              onResetShortcuts={onResetShortcuts}
               aiConfig={aiConfig}
               onAIConfigChange={onAIConfigChange}
               showToast={showToast}

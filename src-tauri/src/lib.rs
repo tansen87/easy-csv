@@ -109,6 +109,8 @@ pub fn invoke_handler() -> Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync>
     config::set_log_retention_days,
     config::get_auto_show_log_panel,
     config::set_auto_show_log_panel,
+    config::get_shortcuts,
+    config::set_shortcuts,
     update::get_install_form
   ])
 }

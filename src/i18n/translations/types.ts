@@ -245,6 +245,12 @@ export interface Translations {
   settingsGroupAppearance: string;
   settingsGroupData: string;
   settingsGroupWindow: string;
+  settingsGroupShortcuts: string;
+  shortcutRecording: string;
+  shortcutNeedsModifier: string;
+  /** `{action}` placeholder: the action already using the combo. */
+  shortcutConflict: string;
+  shortcutResetAll: string;
   settingsGroupUpdate: string;
   settingsGroupMaintenance: string;
   settingsClear: string;

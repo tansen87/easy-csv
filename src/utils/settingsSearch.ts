@@ -31,7 +31,7 @@ export interface SearchableGroup {
   groupKeywords?: string[];
   rows: SearchableRow[];
   /** A group summarised by its heading rather than by rows. */
-  summary?: "plugins";
+  summary?: "plugins" | "shortcuts";
 }
 
 /** Lower-cased terms; an empty array means "no filter". */
